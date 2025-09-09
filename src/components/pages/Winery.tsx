@@ -1,37 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { getAllInventoryItems, getTotalGrapeQuantity } from '../../lib/services/inventoryService';
-import { useGameUpdates } from '../../hooks/useGameUpdates';
 import { InventoryItem } from '../../lib/types';
+import { useAsyncData } from '../../hooks/useAsyncData';
 
 const Winery: React.FC = () => {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [totalGrapes, setTotalGrapes] = useState(0);
-  const { subscribe } = useGameUpdates();
-
-  // Refresh inventory data
-  const refreshInventory = async () => {
-    const [inventoryData, totalGrapesData] = await Promise.all([
-      getAllInventoryItems(),
-      getTotalGrapeQuantity()
-    ]);
-    setInventory(inventoryData);
-    setTotalGrapes(totalGrapesData);
-  };
-
-  // Update inventory when component mounts and subscribe to global updates
-  useEffect(() => {
-    refreshInventory();
-    
-    // Subscribe to global updates
-    const unsubscribe = subscribe(() => {
-      refreshInventory();
-    });
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [subscribe]);
+  const inventory = useAsyncData(getAllInventoryItems, [] as InventoryItem[]);
+  const totalGrapes = useAsyncData(getTotalGrapeQuantity, 0);
 
   return (
     <div className="space-y-6">

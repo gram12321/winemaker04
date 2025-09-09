@@ -1,7 +1,7 @@
 // Simplified vineyard management service with direct database operations
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety } from '../types';
-import { saveVineyard, loadVineyards, deleteVineyard } from '../database';
+import { saveVineyard, loadVineyards } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
 
@@ -118,15 +118,4 @@ export async function resetVineyard(vineyardId: string): Promise<boolean> {
 // Get all vineyards
 export async function getAllVineyards(): Promise<Vineyard[]> {
   return await loadVineyards();
-}
-
-// Delete a vineyard
-export async function deleteVineyardById(vineyardId: string): Promise<boolean> {
-  try {
-    await deleteVineyard(vineyardId);
-    triggerGameUpdate();
-    return true;
-  } catch (error) {
-    return false;
-  }
 }

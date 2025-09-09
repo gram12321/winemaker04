@@ -1,7 +1,7 @@
 // Simplified inventory management service with direct database operations
 import { v4 as uuidv4 } from 'uuid';
 import { InventoryItem, GrapeVariety } from '../types';
-import { saveInventoryItem, loadInventoryItems, deleteInventoryItem } from '../database';
+import { saveInventoryItem, loadInventoryItems } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 
 // Add grapes to inventory (simplified)
@@ -52,15 +52,4 @@ export async function getAllInventoryItems(): Promise<InventoryItem[]> {
 export async function getTotalGrapeQuantity(): Promise<number> {
   const inventory = await loadInventoryItems();
   return inventory.reduce((total, item) => total + item.quantity, 0);
-}
-
-// Delete an inventory item
-export async function deleteInventoryItemById(itemId: string): Promise<boolean> {
-  try {
-    await deleteInventoryItem(itemId);
-    triggerGameUpdate();
-    return true;
-  } catch (error) {
-    return false;
-  }
 }

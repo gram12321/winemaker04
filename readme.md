@@ -15,8 +15,14 @@ Players manage a winery, including vineyard operations, wine production, buildin
 
 ### 🧠 State & Logic
 
-- Centralize all game data and logic in `gameState.ts`.
-- Game logic (e.g., production, quality calculations, finances) must not live in components.
+- **Game State**: Time/season and financial data centralized in `gameState.ts`
+- **Database**: Vineyards and inventory stored in separate Supabase tables for scalability
+- **Game Logic**: All business logic (production, quality calculations, finances) in service files, not components
+
+#### React Hooks for State Management
+- **`useGameInit()`**: Initializes game state on app startup, handles loading/error states
+- **`useGameUpdates()`**: Global subscription system for reactive UI updates across components
+- **`useAsyncData<T>()`**: Reusable hook for loading async data with automatic updates via global subscription system
 
 ### 🔌 Supabase Backend (MCP Server Tools)
 
@@ -29,6 +35,18 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - The economy is **formula-based**, not dynamic or real-time.
 - Wine prices, land values, and prestige scores are **calculated**, not simulated.
 - Sales are resolved to randomized NPCs (non-interactive).
+
+### 🏗️ Database Architecture (v0.4)
+**Separate Tables for Scalability:**
+- **`vineyards`**: Individual vineyard records with proper indexing
+- **`inventory_items`**: Grape inventory with relationships to vineyards
+- **`game_state`**: Time/season and financial data only
+- **Performance**: Indexed queries, partial updates, no JSON blob storage
+
+**Reactive State Pattern:**
+- Services update database → trigger global updates → components auto-refresh
+- No manual refresh needed, fully reactive UI
+- Optimistic updates with error handling
 
 ## Core Game Systems & Features
 

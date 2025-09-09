@@ -1,6 +1,6 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
-import { Vineyard, InventoryItem, GameState } from './types';
+import { Vineyard, InventoryItem, GameState, Season } from './types';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
@@ -23,6 +23,9 @@ export const saveVineyard = async (vineyard: Vineyard, playerId: string = 'defau
         grape_variety: vineyard.grape,
         is_planted: vineyard.isPlanted,
         status: vineyard.status,
+        created_week: vineyard.createdAt.week,
+        created_season: vineyard.createdAt.season,
+        created_year: vineyard.createdAt.year,
         updated_at: new Date().toISOString()
       });
 
@@ -52,9 +55,9 @@ export const loadVineyards = async (playerId: string = 'default'): Promise<Viney
       isPlanted: row.is_planted,
       status: row.status,
       createdAt: {
-        week: 1,
-        season: 'Spring' as const,
-        year: 2024
+        week: row.created_week || 1,
+        season: (row.created_season || 'Spring') as Season,
+        year: row.created_year || 2024
       }
     }));
   } catch (error) {
@@ -62,18 +65,6 @@ export const loadVineyards = async (playerId: string = 'default'): Promise<Viney
   }
 };
 
-export const deleteVineyard = async (vineyardId: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from(VINEYARDS_TABLE)
-      .delete()
-      .eq('id', vineyardId);
-
-    if (error) throw error;
-  } catch (error) {
-    // Silently fail
-  }
-};
 
 // ===== INVENTORY OPERATIONS =====
 
@@ -117,18 +108,6 @@ export const loadInventoryItems = async (playerId: string = 'default'): Promise<
   }
 };
 
-export const deleteInventoryItem = async (itemId: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from(INVENTORY_TABLE)
-      .delete()
-      .eq('id', itemId);
-
-    if (error) throw error;
-  } catch (error) {
-    // Silently fail
-  }
-};
 
 // ===== GAME STATE OPERATIONS =====
 

@@ -33,10 +33,3 @@ export const useGameInit = () => {
     gameState: getGameState()
   };
 };
-
-// Hook to get current game state
-export const useGameState = () => {
-  return {
-    gameState: getGameState()
-  };
-};

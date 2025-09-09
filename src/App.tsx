@@ -9,7 +9,6 @@ import { useGameInit } from './hooks/useGameInit';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [, setRefreshCounter] = useState(0);
   const { isLoading, error } = useGameInit();
 
   const handlePageChange = (page: string) => {
@@ -17,8 +16,7 @@ function App() {
   };
 
   const handleTimeAdvance = () => {
-    // Force a re-render when time advances
-    setRefreshCounter(prev => prev + 1);
+    // Time changes are now handled by the reactive state system
   };
 
   const renderCurrentPage = () => {

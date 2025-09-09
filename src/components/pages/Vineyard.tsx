@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   createVineyard, 
   plantVineyard, 
@@ -11,7 +11,7 @@ import {
 } from '../../lib/services/vineyardService';
 import { addGrapesToInventory } from '../../lib/services/inventoryService';
 import { Vineyard as VineyardType, GrapeVariety } from '../../lib/types';
-import { useGameUpdates } from '../../hooks/useGameUpdates';
+import { useAsyncData } from '../../hooks/useAsyncData';
 
 interface CreateVineyardDialogProps {
   isOpen: boolean;
@@ -131,28 +131,7 @@ const Vineyard: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
-  const [vineyards, setVineyards] = useState<VineyardType[]>([]);
-  const { subscribe } = useGameUpdates();
-
-  // Update vineyards state when component mounts or when actions are performed
-  useEffect(() => {
-    const loadVineyards = async () => {
-      const vineyardData = await getAllVineyards();
-      setVineyards(vineyardData);
-    };
-    
-    loadVineyards();
-    
-    // Subscribe to global updates
-    const unsubscribe = subscribe(async () => {
-      const vineyardData = await getAllVineyards();
-      setVineyards(vineyardData);
-    });
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [subscribe]);
+  const vineyards = useAsyncData(getAllVineyards, []);
 
   const handleCreateVineyard = async (name: string) => {
     await createVineyard(name);
