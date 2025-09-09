@@ -1,3 +1,18 @@
+## Version 0.0006 - 2025-09-09
+
+### **Sales System Implementation**
+- `src/lib/services/salesService.ts` - New service with generateWineOrder(), fulfillWineOrder(), rejectWineOrder(), getPendingOrders()
+- `src/lib/constants.ts` - New centralized constants file with SALES_CONSTANTS and WINE_QUALITY_CONSTANTS
+- `src/lib/database.ts` - Added wine_orders table operations, extended wine_batches with quality/balance/basePrice fields
+- `src/components/pages/Sales.tsx` - Complete sales UI with wine cellar inventory display and order management
+- `src/lib/types.ts` - Added WineOrder, OrderType interfaces and extended WineBatch with quality properties
+- `src/lib/gameState.ts` - Added addMoney() and spendMoney() functions for financial transactions
+- `src/lib/services/wineBatchService.ts` - Updated to initialize quality/balance/basePrice when creating batches
+- Created `wine_orders` table, extended `wine_batches` with quality properties, removed unused `game_states` table
+- Sales system: Order generation with 4 customer types, pricing based on Quality × Balance × Base Rate, 6-bottle cases
+
+---
+
 ## Version 0.0005 - 2025-09-09 
 
 ### **Winery Operations System Implementation**

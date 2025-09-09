@@ -85,12 +85,19 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - Wage calculation and payment system
 - Team management and task assignment
 
-### 4. Sales System (NOT YET IMPLEMENTET)
-- Wine order generation
-- Dynamic pricing engine
+### 4. Sales System ✅ **IMPLEMENTED**
+- **Wine Order Generation**: Random order generation with weighted customer types
+- **Dynamic Pricing Engine**: Base Price = Quality × Balance × Base Rate with customer multipliers
+- **Order Management**: Accept/Reject orders with inventory validation and money transactions
+- **Customer Types**: Local Restaurant, Wine Shop, Private Collector, Export Order with different pricing
+- **Wine Case Sizes**: Proper European 6-bottle cases with realistic quantity ranges
+- **Quality Display**: Color-coded quality/balance indicators in sales interface
+
+**Future Advanced Features (NOT YET IMPLEMENTED):**
 - Contract system for stable income
 - Customer preferences and archetypes
 - Price negotiation mechanics
+- Sophisticated pricing based on land value, field prestige, vintage aging
 
 ### 5. Game Flow
 - End-day/tick system for game progression
