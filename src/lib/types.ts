@@ -48,9 +48,31 @@ export interface WineBatch {
   stage: WineBatchStage;
   process: WineBatchProcess;
   fermentationProgress?: number; // 0-100% for fermentation tracking
+  
+  // Wine quality properties (0-1 scale)
+  quality: number; // Overall wine quality (0-1)
+  balance: number; // Wine balance/body (0-1)
+  basePrice: number; // Calculated base price per bottle in euros
+  
   harvestDate: GameDate;
   createdAt: GameDate;
   completedAt?: GameDate; // When bottling is completed
+}
+
+// Wine order types for sales system
+export type OrderType = 'Local Restaurant' | 'Wine Shop' | 'Private Collector' | 'Export Order';
+
+// Wine order interface for sales operations
+export interface WineOrder {
+  id: string;
+  orderedAt: GameDate;
+  orderType: OrderType;
+  wineBatchId: string;
+  wineName: string; // Formatted wine name
+  requestedQuantity: number; // bottles requested
+  offeredPrice: number; // price per bottle
+  totalValue: number; // requestedQuantity × offeredPrice
+  status: 'pending' | 'fulfilled' | 'rejected';
 }
 
 // Game State (only time/financial data, vineyards/inventory now in separate DB tables)

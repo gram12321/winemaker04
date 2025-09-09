@@ -4,6 +4,7 @@ import { WineBatch, GrapeVariety } from '../types';
 import { saveWineBatch, loadWineBatches } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
+import { SALES_CONSTANTS, WINE_QUALITY_CONSTANTS } from '../constants';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -15,6 +16,22 @@ export async function createWineBatchFromHarvest(
   quantity: number
 ): Promise<WineBatch> {
   const gameState = getGameState();
+  
+  // Initialize wine quality properties with placeholder values and random variation
+  // TODO: Later this will be influenced by grape variety, vineyard characteristics, weather, etc.
+  const baseQuality = WINE_QUALITY_CONSTANTS.BASE_QUALITY;
+  const baseBalance = WINE_QUALITY_CONSTANTS.BASE_BALANCE;
+  
+  // Add random variation (±10%)
+  const quality = baseQuality + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION;
+  const balance = baseBalance + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION;
+  
+  // Calculate initial base price: Quality × Balance × Base Rate
+  const basePrice = Math.max(
+    SALES_CONSTANTS.MIN_PRICE_PER_BOTTLE, 
+    Math.round(quality * balance * SALES_CONSTANTS.BASE_RATE_PER_BOTTLE * 100) / 100
+  );
+  
   const wineBatch: WineBatch = {
     id: uuidv4(),
     vineyardId,
@@ -24,6 +41,9 @@ export async function createWineBatchFromHarvest(
     stage: 'grapes',
     process: 'none',
     fermentationProgress: 0,
+    quality,
+    balance,
+    basePrice,
     harvestDate: {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
@@ -40,6 +60,7 @@ export async function createWineBatchFromHarvest(
   triggerGameUpdate();
   return wineBatch;
 }
+
 
 // Get all wine batches
 export async function getAllWineBatches(): Promise<WineBatch[]> {

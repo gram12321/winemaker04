@@ -1,11 +1,12 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
-import { Vineyard, WineBatch, GameState, Season } from './types';
+import { Vineyard, WineBatch, GameState, Season, WineOrder, OrderType } from './types';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
 const WINE_BATCHES_TABLE = 'wine_batches';
 const GAME_STATE_TABLE = 'game_state';
+const WINE_ORDERS_TABLE = 'wine_orders';
 
 // ===== VINEYARD OPERATIONS =====
 
@@ -137,6 +138,9 @@ export const saveWineBatch = async (batch: WineBatch, playerId: string = 'defaul
         stage: batch.stage,
         process: batch.process,
         fermentation_progress: batch.fermentationProgress || 0,
+        quality: batch.quality,
+        balance: batch.balance,
+        base_price: batch.basePrice,
         harvest_week: batch.harvestDate.week,
         harvest_season: batch.harvestDate.season,
         harvest_year: batch.harvestDate.year,
@@ -174,6 +178,9 @@ export const loadWineBatches = async (playerId: string = 'default'): Promise<Win
       stage: row.stage,
       process: row.process,
       fermentationProgress: row.fermentation_progress || 0,
+      quality: row.quality || 0.7,
+      balance: row.balance || 0.6,
+      basePrice: row.base_price || 10.50,
       harvestDate: {
         week: row.harvest_week || 1,
         season: (row.harvest_season || 'Spring') as Season,
@@ -192,6 +199,82 @@ export const loadWineBatches = async (playerId: string = 'default'): Promise<Win
     }));
   } catch (error) {
     return [];
+  }
+};
+
+// ===== WINE ORDER OPERATIONS =====
+
+export const saveWineOrder = async (order: WineOrder, playerId: string = 'default'): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from(WINE_ORDERS_TABLE)
+      .upsert({
+        id: order.id,
+        player_id: playerId,
+        wine_batch_id: order.wineBatchId,
+        wine_name: order.wineName,
+        order_type: order.orderType,
+        requested_quantity: order.requestedQuantity,
+        offered_price: order.offeredPrice,
+        total_value: order.totalValue,
+        status: order.status,
+        ordered_week: order.orderedAt.week,
+        ordered_season: order.orderedAt.season,
+        ordered_year: order.orderedAt.year,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    // Silently fail - allow game to continue
+  }
+};
+
+export const loadWineOrders = async (playerId: string = 'default'): Promise<WineOrder[]> => {
+  try {
+    const { data, error } = await supabase
+      .from(WINE_ORDERS_TABLE)
+      .select('*')
+      .eq('player_id', playerId)
+      .eq('status', 'pending') // Only load pending orders
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(row => ({
+      id: row.id,
+      wineBatchId: row.wine_batch_id,
+      wineName: row.wine_name,
+      orderType: row.order_type as OrderType,
+      requestedQuantity: row.requested_quantity,
+      offeredPrice: row.offered_price,
+      totalValue: row.total_value,
+      status: row.status,
+      orderedAt: {
+        week: row.ordered_week || 1,
+        season: (row.ordered_season || 'Spring') as Season,
+        year: row.ordered_year || 2024
+      }
+    }));
+  } catch (error) {
+    return [];
+  }
+};
+
+export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected', playerId: string = 'default'): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from(WINE_ORDERS_TABLE)
+      .update({ 
+        status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId)
+      .eq('player_id', playerId);
+
+    if (error) throw error;
+  } catch (error) {
+    // Silently fail
   }
 };
 

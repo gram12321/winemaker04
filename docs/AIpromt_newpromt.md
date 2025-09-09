@@ -7,32 +7,19 @@ We already have the basic setup: React/Vite/TypeScript + ShadCN, connected to Su
  - WE now store winebatch from harvest and have winery actions to manipulate them from grape to bottled wine. 
 
 
-Next we want to implement the winery operations. We want to do this a little bit different than in the previus iteration  C:\GitHub\winemaker04\docs\old_iterations\gameState.ts Instead of just a single "Stage" we will give the winebatch (The grapes/must/wine in the inventory) a stage (grapes/must/wine) and a process 'None' |'fermentation' | 'aging' | 'bottled' 
-We want a winery action  'crushing', that for now simply change stage from grape -> must. Once this is done. The next winery action becomes avalible 'Start Fermentation' That changes proces from none (Initial value is none) to fermentation. It starts a timer, Fermentation Progress 0%->100% and as soon as > 0 a new btn "Stop fermentation" becomes avalible. 
-Once process = 100% or Stop fermentation is pressed. Process change from 'fermentation' to 'aging' and stage change from 'most' to 'wine'. And immidiatly a new winery action becomes avalible "Bottling". Once this is pressed. Process change from 'aging' to 'bottled'. 
+Next we want to implement the sales operations. We didn't do this in the most reasont iteration of the game, so we have to go all the way back to vanilla .js version for inspiration. At that point we had both sellorders and contract way of selling wines. We eventually do want both in this iteration as well, but for now we will do simple order sales. 
 
-Actions:
+The old sales.js has extreamly sofisticated price calculations and lots of different methods for pricecalculations,  haggling, negotiation, price range at extreams (quality and price). 
 
-Crushing
-Action button available if stage = grapes.
-Changes stage from grapes → must, process stays "none".
+For now we want to consider this, because we will want to implement most of it later (Maybe in a more sophisticated way, more ts,react freindly) but for now, we want it simple as possible. 
+Base Price = Quality × Wine Balance
+Sell Value = Quantity × Base Price
 
-Start Fermentation
-Action button available if stage = must and process = "none".
-Changes process to "fermentation".
-Starts a timer/progress bar (0–100%).
+And we dont have a finance system in place yet, so we will just use the addmoney() which i think is allready present somewhere in the codebase. 
 
-Stop Fermentation
-Button becomes available as soon as progress > 0.
-Or auto-completes at 100%.
-Changes process "fermentation" → "aging", and stage "must" → "wine".
 
-Bottling
-Action button available if process = "aging".
-Changes process to "bottled" and stage to "bottled".
-On bottling, mark the batch complete and format the display name.
 
 task is:
-1. Crate a type, or interface or class or whatever is needed for the winebatch IE the class of what is in the inventory. Inpiration can be found in the old gamestate, but avoid any complexity beside what is described here. 
-2. Create action btns in winery. And a way to show the user what stage and process is happening to the different winebatches. 
-3. In the end somehow we mark the winebatch as completed wine. And format it as "Grapevariety, VineyardName, Vintage"  IE . Pinot Noir, Sylvie, 2025, and we are likely gonna show amount of bottles. 
+1. Read sales.js and contract.js and think about that we want something that can eventually scale into similiar sophisticated sales methods. 
+2. Implement a create order function and a way to display to user what order is avalible
+3. Crate a sell/refuse order btn and funtions that remove the order and/or add money to playersmoney (IE finance is not implementet this is solely to show that sell is working)

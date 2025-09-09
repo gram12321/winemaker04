@@ -81,3 +81,21 @@ export const incrementWeek = (): Partial<GameState> => {
   updateGameState({ week, season, currentYear });
   return getGameState();
 };
+
+// Financial management functions
+export const addMoney = (amount: number): void => {
+  const currentState = getGameState();
+  const newMoney = (currentState.money || 0) + amount;
+  updateGameState({ money: newMoney });
+};
+
+export const spendMoney = (amount: number): boolean => {
+  const currentState = getGameState();
+  const currentMoney = currentState.money || 0;
+  
+  if (currentMoney >= amount) {
+    updateGameState({ money: currentMoney - amount });
+    return true;
+  }
+  return false;
+};
