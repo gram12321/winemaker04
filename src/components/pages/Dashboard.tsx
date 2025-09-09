@@ -1,6 +1,6 @@
 import { getGameState, updateGameState } from '@/lib/gameState';
 import { formatGameDate } from '@/lib/types';
-import { formatMoney } from '@/lib/formatUtils';
+import { formatMoney } from '@/lib/utils/formatUtils';
 
 const Dashboard: React.FC = () => {
   const gameState = getGameState();

@@ -1,6 +1,6 @@
 import { getGameState, incrementWeek } from '@/lib/gameState';
-import { formatMoney } from '@/lib/formatUtils';
-import { NAVIGATION_EMOJIS } from '@/lib/emojis';
+import { formatMoney } from '@/lib/utils/formatUtils';
+import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
