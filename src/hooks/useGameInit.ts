@@ -17,14 +17,10 @@ export const useGameInit = () => {
         const savedState = await loadGameState();
         
         if (savedState) {
-          console.log('Loaded saved game state');
           setGameState(savedState);
-        } else {
-          console.log('Starting new game with default state');
-          // Game state is already initialized with default values
         }
+        // Game state is already initialized with default values
       } catch (err) {
-        console.error('Failed to initialize game:', err);
         setError('Failed to load game state');
         // Continue with default state even if loading fails
       } finally {

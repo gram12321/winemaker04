@@ -13,8 +13,8 @@ export const getGameState = (): GameState => {
 export const updateGameState = (updates: Partial<GameState>): void => {
   gameState = { ...gameState, ...updates };
   // Auto-save to database (fire and forget)
-  persistGameState(gameState).catch(error => {
-    console.warn('Failed to persist game state:', error);
+  persistGameState(gameState).catch(() => {
+    // Silently fail - allow game to continue
   });
 };
 
@@ -25,8 +25,8 @@ export const setGameState = (newGameState: GameState): void => {
 export const resetGameState = (): void => {
   gameState = { ...initialGameState };
   // Auto-save reset state
-  persistGameState(gameState).catch(error => {
-    console.warn('Failed to persist reset game state:', error);
+  persistGameState(gameState).catch(() => {
+    // Silently fail - allow game to continue
   });
 };
 
