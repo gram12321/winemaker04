@@ -1,10 +1,10 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
-import { Vineyard, InventoryItem, GameState, Season } from './types';
+import { Vineyard, WineBatch, GameState, Season } from './types';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
-const INVENTORY_TABLE = 'inventory_items';
+const WINE_BATCHES_TABLE = 'wine_batches';
 const GAME_STATE_TABLE = 'game_state';
 
 // ===== VINEYARD OPERATIONS =====
@@ -66,47 +66,6 @@ export const loadVineyards = async (playerId: string = 'default'): Promise<Viney
 };
 
 
-// ===== INVENTORY OPERATIONS =====
-
-export const saveInventoryItem = async (item: InventoryItem, playerId: string = 'default'): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from(INVENTORY_TABLE)
-      .upsert({
-        id: item.id,
-        player_id: playerId,
-        grape_variety: item.grape,
-        quantity: item.quantity,
-        vineyard_name: item.vineyardName,
-        updated_at: new Date().toISOString()
-      });
-
-    if (error) throw error;
-  } catch (error) {
-    // Silently fail
-  }
-};
-
-export const loadInventoryItems = async (playerId: string = 'default'): Promise<InventoryItem[]> => {
-  try {
-    const { data, error } = await supabase
-      .from(INVENTORY_TABLE)
-      .select('*')
-      .eq('player_id', playerId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-
-    return (data || []).map(row => ({
-      id: row.id,
-      grape: row.grape_variety,
-      quantity: row.quantity,
-      vineyardName: row.vineyard_name
-    }));
-  } catch (error) {
-    return [];
-  }
-};
 
 
 // ===== GAME STATE OPERATIONS =====
@@ -158,6 +117,81 @@ export const loadGameState = async (playerId: string = 'default'): Promise<Parti
     };
   } catch (error) {
     return null;
+  }
+};
+
+
+// ===== WINE BATCH OPERATIONS =====
+
+export const saveWineBatch = async (batch: WineBatch, playerId: string = 'default'): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .upsert({
+        id: batch.id,
+        player_id: playerId,
+        vineyard_id: batch.vineyardId,
+        vineyard_name: batch.vineyardName,
+        grape_variety: batch.grape,
+        quantity: batch.quantity,
+        stage: batch.stage,
+        process: batch.process,
+        fermentation_progress: batch.fermentationProgress || 0,
+        harvest_week: batch.harvestDate.week,
+        harvest_season: batch.harvestDate.season,
+        harvest_year: batch.harvestDate.year,
+        created_week: batch.createdAt.week,
+        created_season: batch.createdAt.season,
+        created_year: batch.createdAt.year,
+        completed_week: batch.completedAt?.week,
+        completed_season: batch.completedAt?.season,
+        completed_year: batch.completedAt?.year,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    // Silently fail - allow game to continue
+  }
+};
+
+export const loadWineBatches = async (playerId: string = 'default'): Promise<WineBatch[]> => {
+  try {
+    const { data, error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .select('*')
+      .eq('player_id', playerId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(row => ({
+      id: row.id,
+      vineyardId: row.vineyard_id,
+      vineyardName: row.vineyard_name,
+      grape: row.grape_variety,
+      quantity: row.quantity,
+      stage: row.stage,
+      process: row.process,
+      fermentationProgress: row.fermentation_progress || 0,
+      harvestDate: {
+        week: row.harvest_week || 1,
+        season: (row.harvest_season || 'Spring') as Season,
+        year: row.harvest_year || 2024
+      },
+      createdAt: {
+        week: row.created_week || 1,
+        season: (row.created_season || 'Spring') as Season,
+        year: row.created_year || 2024
+      },
+      completedAt: row.completed_week ? {
+        week: row.completed_week,
+        season: row.completed_season as Season,
+        year: row.completed_year
+      } : undefined
+    }));
+  } catch (error) {
+    return [];
   }
 };
 

@@ -9,7 +9,6 @@ import {
   getAllVineyards,
   GRAPE_VARIETIES
 } from '../../lib/services/vineyardService';
-import { addGrapesToInventory } from '../../lib/services/inventoryService';
 import { Vineyard as VineyardType, GrapeVariety } from '../../lib/types';
 import { useAsyncData } from '../../hooks/useAsyncData';
 
@@ -146,9 +145,7 @@ const Vineyard: React.FC = () => {
   const handleHarvestVineyard = async (vineyard: VineyardType) => {
     const result = await harvestVineyard(vineyard.id);
     if (result.success && result.quantity && vineyard.grape) {
-      // Add grapes to inventory
-      await addGrapesToInventory(vineyard.grape, result.quantity, vineyard.name);
-      alert(`Harvested ${result.quantity} kg of ${vineyard.grape} grapes!`);
+      alert(`Harvested ${result.quantity} kg of ${vineyard.grape} grapes! Wine batch created in winery.`);
     }
   };
 

@@ -1,3 +1,25 @@
+## Version 0.0004 - 2025-09-09 
+
+### **Vineyard & Inventory System Implementation**
+- `src/lib/services/vineyardService.ts` - New service with createVineyard(), plantVineyard(), harvestVineyard(), growVineyard(), resetVineyard()
+- `src/lib/services/inventoryService.ts` - New service with addGrapesToInventory(), getAllInventoryItems(), getTotalGrapeQuantity()
+- `src/lib/database.ts` - Migrated to separate tables: vineyards, inventory_items, game_state with proper CRUD operations
+- `src/components/pages/Vineyard.tsx` - Complete vineyard management UI with create/plant/harvest/grow/reset functionality
+- `src/components/pages/Winery.tsx` - Inventory display with grape storage and batch tracking
+- `src/hooks/useGameUpdates.ts` - New global subscription system for reactive UI updates
+- `src/lib/types.ts` - Added Vineyard, InventoryItem, GrapeVariety, VineyardStatus interfaces
+- `package.json` - Added uuid dependency for unique ID generation
+
+### **Code Cleanup & Optimization**
+- `src/hooks/useAsyncData.ts` - New reusable hook for async data loading with automatic updates
+- `src/lib/types.ts` - Removed unused exports, simplified GrapeVariety type
+- `src/lib/database.ts` - Removed unused delete functions, added proper creation date handling
+- `src/hooks/useGameUpdates.ts` - Simplified logic, removed unused updateCounter and triggerUpdate
+- `src/components/pages/` - Refactored to use useAsyncData hook, removed manual refresh buttons
+- `readme.md` - Added documentation for new hooks and database architecture
+
+---
+
 ## Version 0.0003 - 2025-09-09 
 
 ### **Core Game Implementation**

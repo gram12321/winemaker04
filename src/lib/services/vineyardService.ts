@@ -4,6 +4,7 @@ import { Vineyard, GrapeVariety } from '../types';
 import { saveVineyard, loadVineyards } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
+import { createWineBatchFromHarvest } from './wineBatchService';
 
 export const GRAPE_VARIETIES: GrapeVariety[] = [
   'Chardonnay', 'Pinot Noir', 'Cabernet Sauvignon', 'Merlot'
@@ -78,12 +79,15 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
-  if (!vineyard || vineyard.status !== 'Growing') {
+  if (!vineyard || vineyard.status !== 'Growing' || !vineyard.grape) {
     return { success: false };
   }
 
   // Simple harvest: 1000kg per vineyard
   const quantity = 1000;
+
+  // Create wine batch from harvest
+  await createWineBatchFromHarvest(vineyard.id, vineyard.name, vineyard.grape, quantity);
 
   const updatedVineyard: Vineyard = {
     ...vineyard,

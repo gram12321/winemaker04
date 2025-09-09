@@ -33,12 +33,24 @@ export interface Vineyard {
   createdAt: GameDate;
 }
 
-// Inventory item interface
-export interface InventoryItem {
+
+// Wine batch stages and processes
+export type WineBatchStage = 'grapes' | 'must' | 'wine' | 'bottled';
+export type WineBatchProcess = 'none' | 'fermentation' | 'aging' | 'bottled';
+
+// Wine batch interface for winery operations
+export interface WineBatch {
   id: string;
-  grape: GrapeVariety;
-  quantity: number; // in kg
+  vineyardId: string;
   vineyardName: string;
+  grape: GrapeVariety;
+  quantity: number; // in kg or bottles
+  stage: WineBatchStage;
+  process: WineBatchProcess;
+  fermentationProgress?: number; // 0-100% for fermentation tracking
+  harvestDate: GameDate;
+  createdAt: GameDate;
+  completedAt?: GameDate; // When bottling is completed
 }
 
 // Game State (only time/financial data, vineyards/inventory now in separate DB tables)
