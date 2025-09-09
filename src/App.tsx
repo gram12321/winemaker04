@@ -1,32 +1,86 @@
-import { supabase } from './lib/supabase'
+import { useState } from 'react';
+import Header from './components/layout/Header';
+import Dashboard from './components/pages/Dashboard';
+import Vineyard from './components/pages/Vineyard';
+import Winery from './components/pages/Winery';
+import Sales from './components/pages/Sales';
+import Finance from './components/pages/Finance';
+import { useGameInit } from './hooks/useGameInit';
 
 function App() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <div className="container mx-auto px-4 py-8">
-        <header className="text-center mb-12">
-          <h1 className="text-6xl font-bold text-amber-800 mb-4">
-            🍷 Winery Management Game
-          </h1>
-          <p className="text-xl text-amber-700 max-w-2xl mx-auto">
-            Welcome to your winery! Build, manage, and grow your wine empire. 
-            Plant vineyards, produce wine, and build your legacy.
-          </p>
-        </header>
-        
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">
-              Supabase connected: {supabase ? '✅' : '❌'}
-            </p>
-            <p className="text-sm text-gray-500">
-              Ready to start building your winery management game!
-            </p>
-          </div>
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [, setRefreshCounter] = useState(0);
+  const { isLoading, error } = useGameInit();
+
+  const handlePageChange = (page: string) => {
+    setCurrentPage(page);
+  };
+
+  const handleTimeAdvance = () => {
+    // Force a re-render when time advances
+    setRefreshCounter(prev => prev + 1);
+  };
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'vineyard':
+        return <Vineyard />;
+      case 'winery':
+        return <Winery />;
+      case 'sales':
+        return <Sales />;
+      case 'finance':
+        return <Finance />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
+  // Show loading screen while initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-amber-800 mb-4">🍷 Loading Winery...</h2>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-800 mx-auto"></div>
         </div>
       </div>
+    );
+  }
+
+  // Show error if initialization failed
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Game</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+      <Header 
+        currentPage={currentPage} 
+        onPageChange={handlePageChange}
+        onTimeAdvance={handleTimeAdvance}
+      />
+      
+      <main className="container mx-auto px-4 py-8">
+        {renderCurrentPage()}
+      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
