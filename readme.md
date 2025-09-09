@@ -35,6 +35,7 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - The economy is **formula-based**, not dynamic or real-time.
 - Wine prices, land values, and prestige scores are **calculated**, not simulated.
 - Sales are resolved to randomized NPCs (non-interactive).
+- **Mathematical Functions**: Centralized in `src/lib/utils/calculator.ts` with sophisticated multi-segment scaling algorithms
 
 ### 🏗️ Database Architecture (v0.5)
 **Separate Tables for Scalability:**
@@ -87,7 +88,8 @@ Players manage a winery, including vineyard operations, wine production, buildin
 
 ### 4. Sales System ✅ **IMPLEMENTED**
 - **Wine Order Generation**: Random order generation with weighted customer types
-- **Dynamic Pricing Engine**: Base Price = Quality × Balance × Base Rate with customer multipliers
+- **Sophisticated Pricing Engine**: Base Price = (Land Value + Prestige) × Base Rate, Final Price = Base Price × Quality Multiplier
+- **Mathematical Quality Scaling**: Multi-segment scaling with polynomial, logarithmic, linear, and exponential curves
 - **Order Management**: Accept/Reject orders with inventory validation and money transactions
 - **Customer Types**: Local Restaurant, Wine Shop, Private Collector, Export Order with different pricing
 - **Wine Case Sizes**: Proper European 6-bottle cases with realistic quantity ranges

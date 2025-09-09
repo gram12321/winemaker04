@@ -1,3 +1,19 @@
+## Version 0.0007 - 2025-09-09
+
+### **Advanced Mathematical Pricing System**
+- `src/lib/utils/calculator.ts` - New centralized mathematical functions with sophisticated pricing calculations
+- `src/lib/constants.ts` - Updated quality constants (BASE_QUALITY: 0.5, QUALITY_VARIATION: 2.0) and added PRICING_PLACEHOLDER_CONSTANTS
+- `src/lib/types.ts` - Renamed basePrice to finalPrice in WineBatch interface for clarity
+- `src/lib/database.ts` - Updated database operations to use final_price instead of base_price
+- `src/lib/services/wineBatchService.ts` - Implemented sophisticated pricing: Base Price × Quality Multiplier with bounds checking
+- `src/lib/services/salesService.ts` - Updated to use new pricing system with calculateBaseWinePrice() and calculateExtremeQualityMultiplier()
+- `src/components/pages/Sales.tsx` - Fixed useGameUpdates hook usage and updated UI to show "Selling Price"
+- Database schema migration: Renamed base_price column to final_price in wine_batches table
+- **Mathematical Functions**: calculateExtremeQualityMultiplier() with multi-segment scaling (polynomial, logarithmic, linear, exponential curves)
+- **Unused Functions**: calculateSteppedBalance(), getRandomAcres(), farmlandAgePrestigeModifier(), calculateOrderAmount() - prepared for future implementation
+
+---
+
 ## Version 0.0006 - 2025-09-09
 
 ### **Sales System Implementation**
