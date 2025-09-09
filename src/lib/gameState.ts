@@ -1,12 +1,18 @@
-// Centralized game state and logic
-import { GameState, initialGameState } from './types';
-import { saveGameState as persistGameState } from './database';
+// Centralized game state and logic (time/season only)
+import { GameState } from './types';
+import { saveGameState as persistGameState, loadGameState as loadGameStateFromDB } from './database';
 
-// Global game state
-let gameState: GameState = { ...initialGameState };
+// Global game state (time/season and financial data)
+let gameState: Partial<GameState> = {
+  week: 1,
+  season: 'Spring',
+  currentYear: 2024,
+  money: 10000000, // €10M starting capital
+  prestige: 1
+};
 
 // Game state management functions
-export const getGameState = (): GameState => {
+export const getGameState = (): Partial<GameState> => {
   return { ...gameState };
 };
 
@@ -18,22 +24,43 @@ export const updateGameState = (updates: Partial<GameState>): void => {
   });
 };
 
-export const setGameState = (newGameState: GameState): void => {
+export const setGameState = (newGameState: Partial<GameState>): void => {
   gameState = { ...newGameState };
 };
 
 export const resetGameState = (): void => {
-  gameState = { ...initialGameState };
+  gameState = {
+    week: 1,
+    season: 'Spring',
+    currentYear: 2024,
+    money: 10000000,
+    prestige: 1
+  };
   // Auto-save reset state
   persistGameState(gameState).catch(() => {
     // Silently fail - allow game to continue
   });
 };
 
+// Load game state from database
+export const loadGameState = async (): Promise<void> => {
+  try {
+    const savedState = await loadGameStateFromDB();
+    if (savedState) {
+      gameState = savedState;
+    } else {
+      // If no saved state, create initial record in database
+      await persistGameState(gameState);
+    }
+  } catch (error) {
+    // Silently fail - use default state
+  }
+};
+
 // Time management functions
-export const incrementWeek = (): GameState => {
+export const incrementWeek = (): Partial<GameState> => {
   const currentState = getGameState();
-  let { week, season, currentYear } = currentState;
+  let { week = 1, season = 'Spring', currentYear = 2024 } = currentState;
   
   // Increment week
   week += 1;

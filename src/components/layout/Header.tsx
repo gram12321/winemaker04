@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
           
           <Badge variant="outline" className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center">
             <span className="mr-1">€</span>
-            <span className="font-medium">{formatMoney(gameState.money)}</span>
+            <span className="font-medium">{formatMoney(gameState.money || 0)}</span>
           </Badge>
           
           <Button 

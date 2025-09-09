@@ -6,13 +6,13 @@ const Dashboard: React.FC = () => {
   const gameState = getGameState();
   
   const gameDate = {
-    week: gameState.week,
-    season: gameState.season,
-    year: gameState.currentYear
+    week: gameState.week || 1,
+    season: gameState.season || 'Spring',
+    year: gameState.currentYear || 2024
   };
 
   const handleAddMoney = () => {
-    updateGameState({ money: gameState.money + 1000000 });
+    updateGameState({ money: (gameState.money || 0) + 1000000 });
   };
 
   return (
@@ -40,12 +40,12 @@ const Dashboard: React.FC = () => {
         
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Treasury</h3>
-          <p className="text-2xl font-bold text-green-600">{formatMoney(gameState.money)}</p>
+          <p className="text-2xl font-bold text-green-600">{formatMoney(gameState.money || 0)}</p>
         </div>
         
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Prestige</h3>
-          <p className="text-2xl font-bold text-purple-600">{gameState.prestige.toFixed(1)}</p>
+          <p className="text-2xl font-bold text-purple-600">{(gameState.prestige || 1).toFixed(1)}</p>
         </div>
       </div>
     </div>

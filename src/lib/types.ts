@@ -19,6 +19,33 @@ export function formatGameDate(date: GameDate): string {
   return `Week ${date.week}, ${date.season} ${date.year}`;
 }
 
+// Grape varieties
+export type GrapeVariety = 'Barbera' | 'Chardonnay' | 'Pinot Noir' | 'Primitivo' | 'Sauvignon Blanc' | 'Cabernet Sauvignon' | 'Merlot';
+
+// Vineyard status types
+export type VineyardStatus = 'Barren' | 'Planted' | 'Growing' | 'Harvested' | 'Dormant';
+
+// Vineyard interface
+export interface Vineyard {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  acres: number;
+  grape: GrapeVariety | null;
+  isPlanted: boolean; // Boolean for planted/barren state
+  status: VineyardStatus;
+  createdAt: GameDate;
+}
+
+// Inventory item interface
+export interface InventoryItem {
+  id: string;
+  grape: GrapeVariety;
+  quantity: number; // in kg
+  vineyardName: string;
+}
+
 // Game State
 export interface GameState {
   // Time Management
@@ -30,9 +57,9 @@ export interface GameState {
   money: number;
   prestige: number;
   
-  // Core systems (basic placeholders for now)
-  vineyards: any[];
-  wines: any[];
+  // Core systems
+  vineyards: Vineyard[];
+  inventory: InventoryItem[];
 }
 
 // Initial game state
@@ -48,5 +75,5 @@ export const initialGameState: GameState = {
   
   // Systems
   vineyards: [],
-  wines: []
+  inventory: []
 };
