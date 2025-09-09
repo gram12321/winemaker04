@@ -18,7 +18,12 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - Centralize all game data and logic in `gameState.ts`.
 - Game logic (e.g., production, quality calculations, finances) must not live in components.
 
-### 🔌 supabase backend. (USE MCP SERVER TOOLS)
+### 🔌 Supabase Backend (MCP Server Tools)
+
+- **MCP Configuration**: Supabase MCP server configured in `.cursor/mcp.json`
+- **Access Levels**: Both anon and service role keys available for different operations
+- **Management API**: Personal Access Token (PAT) required for database management operations
+- **Environment**: All Supabase credentials managed through MCP server configuration
 
 ### 📈 Economic System
 - The economy is **formula-based**, not dynamic or real-time.

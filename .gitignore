@@ -26,3 +26,6 @@ dist-ssr
 
 # Environment variables
 .env
+
+# Old iterations directory
+docs/old_iterations/
