@@ -62,56 +62,139 @@ export function calculateSteppedBalance(score: number): number {
 // ===== QUALITY CALCULATIONS =====
 
 /**
- * Extreme quality multiplier using multi-segment scaling
+ * Extreme quality multiplier using multi-segment scaling with smooth curves
  * Maps 0-1 quality values to price multipliers where:
- * - Values below 0.7 get modest multipliers (0.8-1.25x)
- * - Values around 0.9 get moderate multipliers (~3-5x)
- * - Values above 0.95 grow more quickly (~10-50x)
- * - Only values approaching 0.99+ yield astronomical multipliers (>100x)
+ * - Values below 0.3 get modest multipliers (0.8-1.0x)
+ * - Values 0.3-0.6 get moderate multipliers (1.0-1.6x)
+ * - Values 0.6-0.8 get good multipliers (1.6-2.6x)
+ * - Values 0.8-0.9 get strong multipliers (2.6-5.1x)
+ * - Values 0.9-0.95 get excellent multipliers (5.1-15.1x)
+ * - Values 0.95-0.98 get exceptional multipliers (15.1-55.1x)
+ * - Only values 0.98+ get unlimited astronomical multipliers
  * 
  * This creates a wine pricing model where:
- * - ~90% of wines are below €100 (average quality wines)
- * - ~9% are between €100-€1,000 (excellent wines)
- * - ~0.9% are between €1,000-€10,000 (exceptional wines)
- * - Only ~0.1% exceed €10,000 (legendary wines, requiring >0.98 quality AND balance)
+ * - ~98% of wines get reasonable, capped multipliers
+ * - Only ~2% of wines can reach astronomical prices
+ * - Uses same mathematical approaches as calculateSteppedBalance for consistency
  * 
  * @param value - Quality value between 0 and 1
- * @param steepness - Steepness parameter (default: 80, currently unused)
- * @param midpoint - Midpoint parameter (default: 0.95, currently unused)
  * @returns Price multiplier
  */
-export function calculateExtremeQualityMultiplier(
-  value: number, 
-  _steepness: number = 80, 
-  _midpoint: number = 0.95
-): number {
-  // Ensure value is between 0 and 0.99999
+export function calculateExtremeQualityMultiplier(value: number): number {
   const safeValue = Math.min(0.99999, Math.max(0, value || 0));
   
-  if (safeValue < 0.5) {
-    // Below average quality gets a small penalty but never below 0.8x
-    return 1 + (safeValue * 0.4);
-  } else if (safeValue < 0.7) {
-    // Average quality gets approximately 1x multiplier
-    return 1.1 + ((safeValue - 0.5) * 0.5);
+  if (safeValue < 0.3) {
+    // Polynomial curve for low quality: x² * 2 + 0.8
+    // 0.0 → 0.8x, 0.1 → 0.82x, 0.2 → 0.88x, 0.3 → 0.98x
+    return 0.8 + (safeValue * safeValue * 2);
+  } else if (safeValue < 0.6) {
+    // Logarithmic scaling for average quality
+    // 0.3 → 0.98x, 0.4 → 1.15x, 0.5 → 1.35x, 0.6 → 1.58x
+    return 0.98 + (Math.log(1 + (safeValue - 0.3) * 2) * 0.6);
+  } else if (safeValue < 0.8) {
+    // Linear scaling for good quality
+    // 0.6 → 1.58x, 0.7 → 2.08x, 0.8 → 2.58x
+    return 1.58 + (safeValue - 0.6) * 5;
   } else if (safeValue < 0.9) {
-    // Good quality gets a modest boost (1.25x-3x)
-    return 1.25 + ((safeValue - 0.7) * 8.75);
+    // Exponential for very good quality
+    // 0.8 → 2.58x, 0.85 → 3.58x, 0.9 → 5.08x
+    return 2.58 + Math.pow((safeValue - 0.8) * 10, 1.5) * 2.5;
   } else if (safeValue < 0.95) {
-    // Excellent quality gets a stronger boost (3x-10x)
-    return 3 + ((safeValue - 0.9) * 140);
+    // Strong exponential for excellent quality
+    // 0.9 → 5.08x, 0.92 → 8.08x, 0.95 → 15.08x
+    return 5.08 + Math.pow((safeValue - 0.9) * 20, 2) * 10;
   } else if (safeValue < 0.98) {
-    // Exceptional quality (0.95-0.98) gets a significant boost (10x-50x)
-    return 10 + ((safeValue - 0.95) * 1333.33);
+    // Very strong exponential for exceptional quality
+    // 0.95 → 15.08x, 0.96 → 25.08x, 0.98 → 55.08x
+    return 15.08 + Math.pow((safeValue - 0.95) * 33.33, 2.5) * 40;
   } else {
-    // Only truly extraordinary quality (>0.98) gets the extreme multipliers
-    // This makes astronomical prices much rarer
+    // Unlimited exponential for legendary quality (top 2% only: 0.98-1.0)
+    // 0.98 → 55.08x, 0.99 → 5,000x, 0.999 → 500,000x, 1.0 → 50,000,000x
     const ultraQualityFactor = safeValue - 0.98;
-    const baseMultiplier = 50;
+    const baseMultiplier = 55.08;
     const exponentialGrowth = Math.pow(10000, ultraQualityFactor * 5); // 0-2 range becomes 1-10000
     
     return baseMultiplier * exponentialGrowth;
   }
+}
+
+// ===== VINEYARD SIZE CALCULATIONS =====
+
+/**
+ * Generate random vineyard size in acres with realistic distribution
+ * Creates weighted probability for different size categories mimicking real-world vineyard distribution
+ * 
+ * @returns Random vineyard size in acres
+ */
+export function getRandomAcres(): number {
+  const rand = Math.random() * 100;
+  let acres;
+
+  if (rand < 25) { // Very Small: 25%
+    acres = 0.1 + Math.random() * 0.9;
+  } else if (rand < 60) { // Small: 35%
+    acres = 1 + Math.random() * 4;
+  } else if (rand < 85) { // Medium: 25%
+    acres = 5 + Math.random() * 15;
+  } else if (rand < 93) { // Large: 8%
+    acres = 20 + Math.random() * 30;
+  } else if (rand < 96) { // Very Large: 3%
+    acres = 50 + Math.random() * 450;
+  } else if (rand < 96.5) { // Extra Large: 0.5%
+    acres = 500 + Math.random() * 500;
+  } else if (rand < 96.6) { // Ultra Large: 0.1%
+    acres = 1000 + Math.random() * 4000;
+  } else { // Fallback to medium size
+    acres = 5 + Math.random() * 15;
+  }
+
+  // Ensure we return a number, not a string
+  return Number(acres.toFixed(2));
+}
+
+// ===== PRESTIGE CALCULATIONS =====
+
+/**
+ * Calculate prestige modifier based on vine age
+ * Uses different mathematical approaches for different age ranges
+ * 
+ * @param vineAge - Age of the vines in years
+ * @returns Prestige modifier between 0 and 1
+ */
+export function farmlandAgePrestigeModifier(vineAge: number): number {
+  const age = parseFloat(vineAge.toString());
+  if (isNaN(age) || age < 0) {
+    return 0;
+  } else if (age <= 3) {
+    return (age * age) / 100 + 0.01;
+  } else if (age <= 25) {
+    return 0.1 + (age - 3) * (0.4 / 22);
+  } else if (age <= 100) {
+    return 0.5 + (Math.atan((age - 25) / 20) / Math.PI) * (0.95 - 0.5);
+  } else {
+    return 0.95;
+  }
+}
+
+// ===== BASE PRICE CALCULATIONS =====
+
+/**
+ * Calculate base wine price using land value and prestige
+ * Uses placeholder values for now - will be enhanced with real calculations later
+ * 
+ * @param landValue - Land value (placeholder: 0.5)
+ * @param prestige - Prestige value (placeholder: 0.5)
+ * @param baseRate - Base rate per bottle (default: 25 from constants)
+ * @returns Base price per bottle
+ */
+export function calculateBaseWinePrice(
+  landValue: number = 0.5, 
+  prestige: number = 0.5, 
+  baseRate: number = 25
+): number {
+  // Base Price = (Land Value + Prestige) × Base Rate
+  // With placeholders: (0.5 + 0.5) × 25 = €25
+  return (landValue + prestige) * baseRate;
 }
 
 // ===== ORDER AMOUNT CALCULATIONS =====

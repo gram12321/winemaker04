@@ -52,7 +52,7 @@ export interface WineBatch {
   // Wine quality properties (0-1 scale)
   quality: number; // Overall wine quality (0-1)
   balance: number; // Wine balance/body (0-1)
-  basePrice: number; // Calculated base price per bottle in euros
+  finalPrice: number; // Calculated base price per bottle in euros
   
   harvestDate: GameDate;
   createdAt: GameDate;

@@ -13,7 +13,8 @@ const Sales: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Listen to game updates to refresh data
-  useGameUpdates(() => {
+  const { subscribe } = useGameUpdates();
+  subscribe(() => {
     loadData();
   });
 
@@ -146,7 +147,7 @@ const Sales: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Harvest</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quality</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Base Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Selling Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bottles</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
@@ -189,7 +190,7 @@ const Sales: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500 font-medium">
-                        €{wine.basePrice.toFixed(2)}
+                        €{wine.finalPrice.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                         {wine.quantity}

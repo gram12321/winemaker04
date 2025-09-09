@@ -41,14 +41,25 @@ export const SALES_CONSTANTS = {
 
 // ===== WINE QUALITY CONSTANTS =====
 
-// Simple quality constants for placeholder values
+// Quality constants for wine generation
 export const WINE_QUALITY_CONSTANTS = {
   // Base placeholder values (will be replaced with proper calculations later)
-  BASE_QUALITY: 0.7, // Placeholder quality value
-  BASE_BALANCE: 0.6, // Placeholder balance value
+  BASE_QUALITY: 0.5, // Placeholder quality value (middle of 0-1 range)
+  BASE_BALANCE: 0.5, // Placeholder balance value (middle of 0-1 range)
   
-  // Random variation applied to base values (±10%)
-  QUALITY_VARIATION: 0.2, // ±20% variation (0.1 to 0.3)
+  // Random variation applied to base values (full 0-1 range)
+  QUALITY_VARIATION: 2.0, // ±100% variation (0.0 to 1.0)
+} as const;
+
+// ===== PRICING PLACEHOLDER CONSTANTS =====
+
+// Placeholder values for pricing calculations (will be replaced with real calculations later)
+export const PRICING_PLACEHOLDER_CONSTANTS = {
+  // Land value placeholder (0-1 scale)
+  LAND_VALUE_PLACEHOLDER: 0.5,
+  
+  // Prestige placeholder (0-1 scale)
+  PRESTIGE_PLACEHOLDER: 0.5,
 } as const;
 
 // ===== FUTURE CONSTANTS =====

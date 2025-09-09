@@ -4,7 +4,8 @@ import { WineBatch, GrapeVariety } from '../types';
 import { saveWineBatch, loadWineBatches } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
-import { SALES_CONSTANTS, WINE_QUALITY_CONSTANTS } from '../constants';
+import { SALES_CONSTANTS, WINE_QUALITY_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
+import { calculateBaseWinePrice, calculateExtremeQualityMultiplier } from '../utils/calculator';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -22,14 +23,26 @@ export async function createWineBatchFromHarvest(
   const baseQuality = WINE_QUALITY_CONSTANTS.BASE_QUALITY;
   const baseBalance = WINE_QUALITY_CONSTANTS.BASE_BALANCE;
   
-  // Add random variation (±10%)
-  const quality = baseQuality + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION;
-  const balance = baseBalance + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION;
+  // Add random variation (QUALITY_VARIATION already handles the math)
+  const quality = Math.max(0, Math.min(1, baseQuality + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION));
+  const balance = Math.max(0, Math.min(1, baseBalance + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION));
   
-  // Calculate initial base price: Quality × Balance × Base Rate
-  const basePrice = Math.max(
+  // Calculate base price using new sophisticated system
+  // Base Price = (Land Value + Prestige) × Base Rate (with placeholders)
+  const basePrice = calculateBaseWinePrice(
+    PRICING_PLACEHOLDER_CONSTANTS.LAND_VALUE_PLACEHOLDER, 
+    PRICING_PLACEHOLDER_CONSTANTS.PRESTIGE_PLACEHOLDER, 
+    SALES_CONSTANTS.BASE_RATE_PER_BOTTLE
+  );
+  
+  // Calculate quality/balance multiplier (50/50 combination)
+  const combinedScore = (quality + balance) / 2;
+  const qualityMultiplier = calculateExtremeQualityMultiplier(combinedScore);
+  
+  // Calculate final price: Base Price × Quality/Balance Multiplier
+  const finalPrice = Math.max(
     SALES_CONSTANTS.MIN_PRICE_PER_BOTTLE, 
-    Math.round(quality * balance * SALES_CONSTANTS.BASE_RATE_PER_BOTTLE * 100) / 100
+    Math.round(basePrice * qualityMultiplier * 100) / 100
   );
   
   const wineBatch: WineBatch = {
@@ -43,7 +56,7 @@ export async function createWineBatchFromHarvest(
     fermentationProgress: 0,
     quality,
     balance,
-    basePrice,
+    finalPrice: finalPrice,
     harvestDate: {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',

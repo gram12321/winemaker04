@@ -5,7 +5,8 @@ import { saveWineOrder, loadWineOrders, updateWineOrderStatus, loadWineBatches, 
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState, addMoney } from '../gameState';
 import { formatCompletedWineName } from './wineBatchService';
-import { SALES_CONSTANTS } from '../constants';
+import { SALES_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
+import { calculateBaseWinePrice, calculateExtremeQualityMultiplier } from '../utils/calculator';
 
 // Use order type configurations from constants
 const ORDER_TYPE_CONFIG = SALES_CONSTANTS.ORDER_TYPES;
@@ -16,17 +17,29 @@ const ORDER_TYPE_CONFIG = SALES_CONSTANTS.ORDER_TYPES;
 export function getWineBasePrice(wineBatch: WineBatch): number {
   // The base price is already calculated and stored in the wine batch
   // This allows for future manipulation during winemaking process
-  return wineBatch.basePrice;
+  return wineBatch.finalPrice;
 }
 
 // Recalculate base price when wine properties change (for future use)
 export function recalculateWineBasePrice(wineBatch: WineBatch): number {
-  // Simple formula: Quality × Balance × Base Rate
-  const basePrice = wineBatch.quality * wineBatch.balance * SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
+  // Use new sophisticated pricing system
+  // Base Price = (Land Value + Prestige) × Base Rate (with placeholders)
+  const basePrice = calculateBaseWinePrice(
+    PRICING_PLACEHOLDER_CONSTANTS.LAND_VALUE_PLACEHOLDER, 
+    PRICING_PLACEHOLDER_CONSTANTS.PRESTIGE_PLACEHOLDER, 
+    SALES_CONSTANTS.BASE_RATE_PER_BOTTLE
+  );
+  
+  // Calculate quality/balance multiplier (50/50 combination)
+  const combinedScore = (wineBatch.quality + wineBatch.balance) / 2;
+  const qualityMultiplier = calculateExtremeQualityMultiplier(combinedScore);
+  
+  // Calculate final price: Base Price × Quality/Balance Multiplier
+  const finalPrice = basePrice * qualityMultiplier;
   
   return Math.max(
     SALES_CONSTANTS.MIN_PRICE_PER_BOTTLE, 
-    Math.round(basePrice * 100) / 100
+    Math.round(finalPrice * 100) / 100
   );
 }
 

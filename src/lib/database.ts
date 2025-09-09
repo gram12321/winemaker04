@@ -140,7 +140,7 @@ export const saveWineBatch = async (batch: WineBatch, playerId: string = 'defaul
         fermentation_progress: batch.fermentationProgress || 0,
         quality: batch.quality,
         balance: batch.balance,
-        base_price: batch.basePrice,
+        final_price: batch.finalPrice,
         harvest_week: batch.harvestDate.week,
         harvest_season: batch.harvestDate.season,
         harvest_year: batch.harvestDate.year,
@@ -180,7 +180,7 @@ export const loadWineBatches = async (playerId: string = 'default'): Promise<Win
       fermentationProgress: row.fermentation_progress || 0,
       quality: row.quality || 0.7,
       balance: row.balance || 0.6,
-      basePrice: row.base_price || 10.50,
+      finalPrice: row.final_price || 10.50,
       harvestDate: {
         week: row.harvest_week || 1,
         season: (row.harvest_season || 'Spring') as Season,
