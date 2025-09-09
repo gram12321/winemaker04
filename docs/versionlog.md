@@ -1,3 +1,26 @@
+## Version 0.0005 - 2025-09-09 
+
+### **Winery Operations System Implementation**
+- `src/lib/services/wineryService.ts` - New service with crushGrapes(), startFermentation(), stopFermentation(), bottleWine(), progressFermentation()
+- `src/lib/services/wineBatchService.ts` - Renamed from inventoryService, now handles WineBatch operations with createWineBatchFromHarvest(), updateWineBatch(), formatCompletedWineName()
+- `src/lib/database.ts` - Added wine_batches table operations, removed old inventory_items operations
+- `src/components/pages/Winery.tsx` - Complete winery operations UI with action buttons, progress tracking, and wine batch management
+- `src/lib/types.ts` - Added WineBatch, WineBatchStage, WineBatchProcess interfaces, removed InventoryItem interface
+- `src/components/pages/Vineyard.tsx` - Updated harvest to create wine batches directly instead of simple inventory items
+
+### **Database Schema Updates**
+- Created `wine_batches` table with stage/process tracking, fermentation progress, and completion dates
+- Dropped `inventory_items` table completely (no backward compatibility needed)
+- Added proper constraints and RLS policies for wine batch operations
+
+### **Wine Production Flow**
+- **Stage Flow**: grapes → must → wine → bottled
+- **Process Flow**: none → fermentation → aging → bottled
+- **Actions**: Crushing, Start/Stop Fermentation, Progress Tracking, Bottling
+- **Completed Wine Format**: "Grape Variety, Vineyard Name, Vintage" with bottle count
+
+---
+
 ## Version 0.0004 - 2025-09-09 
 
 ### **Vineyard & Inventory System Implementation**

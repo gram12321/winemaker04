@@ -4,6 +4,7 @@ We already have the basic setup: React/Vite/TypeScript + ShadCN, connected to Su
  - We  have a basic UI. With state update hooks
  - We have basic vineyard functions to create vineyard, plant, and harvest.
  - We have very basic inventory where harvest can be stores. 
+ - WE now store winebatch from harvest and have winery actions to manipulate them from grape to bottled wine. 
 
 
 Next we want to implement the winery operations. We want to do this a little bit different than in the previus iteration  C:\GitHub\winemaker04\docs\old_iterations\gameState.ts Instead of just a single "Stage" we will give the winebatch (The grapes/must/wine in the inventory) a stage (grapes/must/wine) and a process 'None' |'fermentation' | 'aging' | 'bottled' 

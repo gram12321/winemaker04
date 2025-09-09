@@ -36,10 +36,10 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - Wine prices, land values, and prestige scores are **calculated**, not simulated.
 - Sales are resolved to randomized NPCs (non-interactive).
 
-### 🏗️ Database Architecture (v0.4)
+### 🏗️ Database Architecture (v0.5)
 **Separate Tables for Scalability:**
 - **`vineyards`**: Individual vineyard records with proper indexing
-- **`inventory_items`**: Grape inventory with relationships to vineyards
+- **`wine_batches`**: Wine production pipeline with stage/process tracking
 - **`game_state`**: Time/season and financial data only
 - **Performance**: Indexed queries, partial updates, no JSON blob storage
 
@@ -50,17 +50,31 @@ Players manage a winery, including vineyard operations, wine production, buildin
 
 ## Core Game Systems & Features
 
-### 1. Wine Production System (advenced ideas NOT YET IMPLEMENTET))
+### 1. Wine Production System ✅ **IMPLEMENTED**
+- **Wine Batch Pipeline**: grapes → must → wine → bottled
+- **Process Tracking**: none → fermentation → aging → bottled
+- **Winery Actions**: Crushing, Start/Stop Fermentation, Progress Tracking, Bottling
+- **Fermentation Progress**: 0-100% with manual progress control
+- **Completed Wine Format**: "Grape Variety, Vineyard Name, Vintage" with bottle count
+- **Database Integration**: Full CRUD operations with reactive UI updates
+
+**Future Advanced Features (NOT YET IMPLEMENTED):**
 - Wine characteristics (Sweetness, Acidity, Tannins, Body, Spice, Aroma)
 - Quality tracking through production stages
 - Balance calculation system with archetypes
 - Processing influence on characteristics (crushing methods, fermentation)
 - Wine archetypes for style matching
 
-### 2. Field Management
+### 2. Vineyard Management ✅ **IMPLEMENTED**
+- **Vineyard Creation**: Create vineyards with name, country, region, acres
+- **Planting System**: Plant grape varieties (Chardonnay, Pinot Noir, Cabernet Sauvignon, Merlot)
+- **Status Management**: Barren → Planted → Growing → Harvested → Dormant cycle
+- **Harvest System**: Collect grapes and automatically create wine batches
+- **Database Integration**: Full CRUD operations with reactive UI updates
+
+**Future Advanced Features (NOT YET IMPLEMENTED):**
 - Dynamic health system (0-1 scale)
 - Field clearing and preparation
-- Planting with grape variety selection
 - Environmental factors (soil, altitude, aspect)
 - Harvest timing and ripeness tracking
 
