@@ -1,3 +1,19 @@
+## Version 0.0008 - 2025-09-10
+
+### **Player Menu & Notification System Implementation**
+- `src/components/ui/` - Added ShadCN UI components: avatar, badge, button, card, dropdown-menu, scroll-area, navigation-menu, accordion, tooltip, toast, toaster
+- `src/lib/toast.ts` - New toast notification system with global state management and message dispatching
+- `src/components/layout/Console.tsx` - In-game console with message history, filtering, and real-time updates
+- `src/components/pages/` - Added player menu pages: Profile, Settings, AdminDashboard, Achievements, Winepedia
+- `src/components/layout/Header.tsx` - Integrated player dropdown menu with avatar, console access, and reactive state management
+- `src/App.tsx` - Added routing for new player menu pages and toast notification system
+- `src/lib/utils/utils.ts` - Added global formatTime() function for consistent timestamp formatting
+- **Admin Dashboard**: Data clearing functionality for localStorage and Supabase with proper UUID handling for vineyards table
+- **Console System**: Message history with filtering, timestamps, and integration with toast notifications
+- **Player Menu**: Dropdown navigation with Profile, Settings, Admin Dashboard, Achievements, Wine-Pedia, and Logout options
+
+---
+
 ## Version 0.0007 - 2025-09-09
 
 ### **Advanced Mathematical Pricing System**
