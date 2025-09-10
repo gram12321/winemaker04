@@ -1,3 +1,23 @@
+## Version 0.0009 - 2025-09-10
+
+### **Finance System Implementation**
+- `src/lib/services/financeService.ts` - New comprehensive finance service with transaction management, financial calculations, and Supabase integration
+- `src/components/finance/` - Complete finance UI system with FinanceView, IncomeBalanceView, CashFlowView, and UpgradesPlaceholder
+- `src/components/ui/` - Added ShadCN UI components: separator, table, tabs for finance interface
+- `src/lib/constants.ts` - Added GAME_INITIALIZATION constants for starting values (money, time, prestige)
+- `src/lib/gameState.ts` - Refactored to remove direct financial operations, start with 0 money (initial capital via transactions)
+- `src/lib/utils/formatUtils.ts` - Consolidated formatting functions, removed redundant formatMoney/formatPercent functions
+- `src/components/pages/AdminDashboard.tsx` - Added financial management tools and fixed Supabase clearing for transactions table
+- `src/components/pages/Dashboard.tsx` - Removed direct "Add Money" button (moved to Admin Dashboard)
+- `src/components/pages/Finance.tsx` - Updated to render new FinanceView component
+- `src/hooks/useGameInit.ts` - Added initializeStartingCapital call for proper transaction initialization
+- `src/lib/services/salesService.ts` - Updated to use financeService.addTransaction for order fulfillment
+- **Database**: Created transactions table with UUID primary key, proper RLS policies
+- **Financial Features**: Income/expense tracking, balance sheet calculations, cash flow statements, asset valuation
+- **Integration**: All money flows now go through transaction system with proper audit trail
+
+---
+
 ## Version 0.0008 - 2025-09-10
 
 ### **Player Menu & Notification System Implementation**
