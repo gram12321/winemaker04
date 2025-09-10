@@ -1,9 +1,12 @@
+import { useState, useEffect } from 'react';
 import { getGameState, incrementWeek } from '@/lib/gameState';
 import { formatMoney } from '@/lib/utils/formatUtils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Console, useConsole } from '@/components/layout/Console';
 import { CalendarDays, MessageSquareText } from 'lucide-react';
 
 interface HeaderProps {
@@ -13,10 +16,17 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance }) => {
-  const gameState = getGameState();
+  const [gameState, setGameState] = useState(getGameState());
+  const consoleHook = useConsole();
+
+  // Update game state when onTimeAdvance is called
+  useEffect(() => {
+    setGameState(getGameState());
+  }, [onTimeAdvance]);
 
   const handleIncrementWeek = () => {
     incrementWeek();
+    setGameState(getGameState()); // Update local state immediately
     onTimeAdvance();
   };
 
@@ -79,17 +89,65 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
           <Button 
             variant="ghost" 
             size="icon"
+            onClick={() => consoleHook.openHistory()}
             className="rounded-full h-10 w-10 flex items-center justify-center text-white hover:bg-red-700"
           >
             <MessageSquareText className="h-5 w-5" />
           </Button>
           
-          <Avatar>
-            <AvatarImage src="/assets/icon/winery-icon.png" alt="Winery" />
-            <AvatarFallback className="bg-red-600 text-white">WM</AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center space-x-2 p-1 rounded-full h-10 w-10 text-white hover:bg-red-700">
+                <Avatar>
+                  <AvatarImage src="/assets/icon/winery-icon.png" alt="Winery" />
+                  <AvatarFallback className="bg-red-600 text-white">WM</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <DropdownMenuLabel>
+                {(gameState as any).companyName || 'My Winery'}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onPageChange('profile')}>
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPageChange('settings')}>
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPageChange('admin')}>
+                Admin Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPageChange('achievements')}>
+                Achievements
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPageChange('winepedia')}>
+                Wine-Pedia
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => {
+                  // Clear local storage and reset game
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                className="text-red-600 focus:text-red-500"
+              >
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+      
+      {/* Message History Modal - controlled by Console component */}
+      {consoleHook.isHistoryOpen && 
+        <Console 
+          showConsole={true} 
+          isOpen={consoleHook.isHistoryOpen} 
+          onClose={consoleHook.closeHistory} 
+        />
+      }
     </header>
   );
 };

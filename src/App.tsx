@@ -5,6 +5,12 @@ import Vineyard from './components/pages/Vineyard';
 import Winery from './components/pages/Winery';
 import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
+import Profile from './components/pages/Profile';
+import Settings from './components/pages/Settings';
+import AdminDashboard from './components/pages/AdminDashboard';
+import Achievements from './components/pages/Achievements';
+import Winepedia from './components/pages/Winepedia';
+import { Toaster } from './components/ui/toaster';
 import { useGameInit } from './hooks/useGameInit';
 
 function App() {
@@ -31,6 +37,16 @@ function App() {
         return <Sales />;
       case 'finance':
         return <Finance />;
+      case 'profile':
+        return <Profile />;
+      case 'settings':
+        return <Settings />;
+      case 'admin':
+        return <AdminDashboard />;
+      case 'achievements':
+        return <Achievements />;
+      case 'winepedia':
+        return <Winepedia />;
       default:
         return <Dashboard />;
     }
@@ -77,6 +93,8 @@ function App() {
       <main className="container mx-auto px-4 py-8">
         {renderCurrentPage()}
       </main>
+      
+      <Toaster />
     </div>
   );
 }

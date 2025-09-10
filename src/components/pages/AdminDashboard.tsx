@@ -1,0 +1,183 @@
+import { useState } from 'react';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { AlertCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { consoleService } from '../layout/Console';
+
+interface AdminDashboardProps {
+  view?: string;
+}
+
+export default function AdminDashboard({ view }: AdminDashboardProps) {
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isLoading, setIsLoading] = useState<{
+    clearStorage: boolean;
+    clearSupabase: boolean;
+  }>({
+    clearStorage: false,
+    clearSupabase: false,
+  });
+
+  if (view && view !== 'admin') return null;
+
+  const clearLocalStorage = async () => {
+    try {
+      setIsLoading(prev => ({ ...prev, clearStorage: true }));
+      
+      // Clear all game-related data from localStorage
+      const keysToRemove = ['gameState', 'consoleMessages', 'showConsole', 'timeFormat', 'landUnit', 'tutorialsEnabled'];
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
+      // Clear console messages from the console service
+      consoleService.clearMessages();
+      
+      setMessage({ type: 'success', text: 'Local storage and console messages cleared successfully.' });
+      consoleService.success('Local storage and console messages cleared');
+    } catch (error) {
+      console.error('Error clearing local storage:', error);
+      setMessage({ type: 'error', text: 'Error clearing local storage.' });
+      consoleService.error('Failed to clear local storage');
+    } finally {
+      setIsLoading(prev => ({ ...prev, clearStorage: false }));
+    }
+  };
+
+  const clearSupabaseData = async () => {
+    if (!confirm('Are you sure you want to delete all data from Supabase? This will remove ALL game data and cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      setIsLoading(prev => ({ ...prev, clearSupabase: true }));
+      
+      // Define the actual tables that exist in our Supabase database
+      const gameTables = [
+        'vineyards',
+        'game_state',
+        'wine_batches', 
+        'wine_orders'
+      ];
+
+      // Clear each known table
+      const clearPromises = gameTables.map(async (tableName) => {
+        try {
+          // Use different delete strategies based on table structure
+          let deleteQuery;
+          if (tableName === 'vineyards') {
+            // For UUID tables, use a valid UUID that won't exist
+            deleteQuery = supabase
+              .from(tableName)
+              .delete()
+              .neq('id', '00000000-0000-0000-0000-000000000000');
+          } else {
+            // For text ID tables, use a string that won't exist
+            deleteQuery = supabase
+              .from(tableName)
+              .delete()
+              .neq('id', 'impossible-id');
+          }
+          
+          const { error } = await deleteQuery;
+          
+          if (error) {
+            console.error(`Failed to clear table ${tableName}:`, error);
+            return { success: false, table: tableName, error: error.message };
+          }
+          
+          return { success: true, table: tableName };
+        } catch (err) {
+          console.error(`Error clearing table ${tableName}:`, err);
+          return { success: false, table: tableName, error: String(err) };
+        }
+      });
+
+      const results = await Promise.all(clearPromises);
+      
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+      
+      if (failed.length === 0) {
+        setMessage({ type: 'success', text: `Successfully cleared ${successful.length} tables from Supabase.` });
+        consoleService.success(`Cleared ${successful.length} Supabase tables`);
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: `Cleared ${successful.length} tables, but ${failed.length} failed. Check console for details.` 
+        });
+        consoleService.warning(`Partially cleared Supabase: ${successful.length} success, ${failed.length} failed`);
+        console.log('Failed tables:', failed);
+      }
+    } catch (error) {
+      console.error('Error clearing Supabase:', error);
+      setMessage({ type: 'error', text: `Error clearing Supabase data: ${error}` });
+      consoleService.error('Failed to clear Supabase data');
+    } finally {
+      setIsLoading(prev => ({ ...prev, clearSupabase: false }));
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-6">
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      
+      {message && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          message.type === 'error' 
+            ? 'bg-red-50 border-red-200 text-red-700' 
+            : 'bg-green-50 border-green-200 text-green-700'
+        }`}>
+          <div className="flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <div>
+              <h4 className="font-medium">{message.type === 'error' ? 'Error' : 'Success'}</h4>
+              <p className="text-sm">{message.text}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Game Data Management</CardTitle>
+          <CardDescription>
+            Advanced options for managing game data. Use with caution!
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Local Storage</h3>
+            <p className="text-sm text-gray-500">
+              Clear all locally stored game data from this browser. This action cannot be undone.
+            </p>
+            <Button 
+              variant="destructive" 
+              onClick={clearLocalStorage} 
+              disabled={isLoading.clearStorage}
+            >
+              {isLoading.clearStorage ? 'Clearing...' : 'Clear Local Storage'}
+            </Button>
+          </div>
+          
+          <hr className="my-4" />
+          
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Supabase Database</h3>
+            <p className="text-sm text-gray-500">
+              Delete all game data from the Supabase database. This affects all users and cannot be undone.
+            </p>
+            <Button 
+              variant="destructive" 
+              onClick={clearSupabaseData}
+              disabled={isLoading.clearSupabase}
+            >
+              {isLoading.clearSupabase ? 'Clearing...' : 'Clear Supabase Data'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
