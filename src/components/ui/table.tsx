@@ -67,16 +67,35 @@ TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & {
+    sortable?: boolean;
+    sortIndicator?: string;
+    onSort?: () => void;
+    isSorted?: boolean;
+  }
+>(({ className, sortable, sortIndicator, onSort, isSorted, children, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
       "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      sortable && "cursor-pointer hover:bg-muted/50 select-none",
+      isSorted && "text-foreground",
       className
     )}
+    onClick={sortable ? onSort : undefined}
     {...props}
-  />
+  >
+    {sortable ? (
+      <div className="flex items-center justify-between">
+        <span>{children}</span>
+        <span className="text-xs ml-1 opacity-60">
+          {sortIndicator || '↕️'}
+        </span>
+      </div>
+    ) : (
+      children
+    )}
+  </th>
 ))
 TableHead.displayName = "TableHead"
 

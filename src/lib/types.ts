@@ -53,6 +53,7 @@ export interface WineBatch {
   quality: number; // Overall wine quality (0-1)
   balance: number; // Wine balance/body (0-1)
   finalPrice: number; // Calculated base price per bottle in euros
+  askingPrice?: number; // User-set asking price per bottle in euros (defaults to finalPrice)
   
   harvestDate: GameDate;
   createdAt: GameDate;
@@ -72,7 +73,10 @@ export interface WineOrder {
   requestedQuantity: number; // bottles requested
   offeredPrice: number; // price per bottle
   totalValue: number; // requestedQuantity × offeredPrice
-  status: 'pending' | 'fulfilled' | 'rejected';
+  fulfillableQuantity?: number; // bottles that can actually be fulfilled (calculated at fulfillment time)
+  fulfillableValue?: number; // fulfillableQuantity × offeredPrice
+  askingPriceAtOrderTime?: number; // asking price at the time the order was placed
+  status: 'pending' | 'fulfilled' | 'rejected' | 'partially_fulfilled';
 }
 
 // Game State (only time/financial data, vineyards/inventory now in separate DB tables)

@@ -6,7 +6,7 @@ import { SALES_CONSTANTS } from '../constants';
 // ===== TYPE DEFINITIONS =====
 
 interface SelectedWine {
-  customPrice: number;
+  askingPrice: number;
   // Add other properties as needed when integrating
 }
 
@@ -203,7 +203,7 @@ export function calculateBaseWinePrice(
  * Calculate order amount adjustment based on price difference
  * Creates realistic market behavior where deep discounts attract massive order quantities
  * 
- * @param selectedWine - Wine object with customPrice property
+ * @param selectedWine - Wine object with askingPrice property
  * @param calculatedBasePrice - The calculated base price for comparison
  * @param orderType - Type of order (key for WINE_ORDER_TYPES)
  * @returns Order amount multiplier
@@ -220,8 +220,8 @@ export function calculateOrderAmount(
     return 1.0; // Default multiplier
   }
   
-  // Calculate price difference from base price (ratio of custom price to calculated base price)
-  const priceDifference = selectedWine.customPrice / calculatedBasePrice;
+  // Calculate price difference from base price (ratio of asking price to calculated base price)
+  const priceDifference = selectedWine.askingPrice / calculatedBasePrice;
   
   // Enhanced price adjustment with more aggressive formula for discounts
   let amountAdjustment = 1.0;
@@ -264,6 +264,41 @@ export function calculateOrderAmount(
       // Cap at MAX_DISCOUNT_MODIFIER to avoid excessive orders
       amountAdjustment = Math.min(amountAdjustment, MAX_DISCOUNT_MODIFIER);
     }
+  } else {
+    // Higher price than base (premium) - Harsh punishment for overpricing
+    const premiumLevel = priceDifference - 1; // 0 = no premium, 1 = 100% premium, 9 = 900% premium
+    
+    // Define premium punishment thresholds
+    const SMALL_PREMIUM_THRESHOLD = 0.2;   // 20% premium threshold
+    const MEDIUM_PREMIUM_THRESHOLD = 1.0;  // 100% premium threshold (2x price)
+    const LARGE_PREMIUM_THRESHOLD = 5.0;   // 500% premium threshold (6x price)
+    
+    // Moderate premium punishment formula (half as harsh):
+    // 20% premium -> 0.9x quantity (10% reduction)
+    // 50% premium -> 0.75x quantity (25% reduction)
+    // 100% premium -> 0.5x quantity (50% reduction)
+    // 200% premium -> 0.25x quantity (75% reduction)
+    // 300% premium -> 0.125x quantity (87.5% reduction)
+    // 500% premium -> 0.05x quantity (95% reduction)
+    if (premiumLevel <= SMALL_PREMIUM_THRESHOLD) {
+      // Linear punishment for small premiums: 0.5:1 reduction up to 20%
+      amountAdjustment = 1 - (premiumLevel * 0.5);
+    } else if (premiumLevel <= MEDIUM_PREMIUM_THRESHOLD) {
+      // Progressive punishment between 20-100% premium
+      // 0.2 -> 0.9, 0.5 -> 0.75, 1.0 -> 0.5
+      amountAdjustment = 1 - (premiumLevel * 0.5);
+    } else if (premiumLevel <= LARGE_PREMIUM_THRESHOLD) {
+      // Moderate punishment between 100-500% premium
+      // 1.0 -> 0.5, 2.0 -> 0.25, 3.0 -> 0.125, 5.0 -> 0.05
+      amountAdjustment = Math.pow(0.5, premiumLevel);
+    } else {
+      // Severe punishment for massive premiums (500%+)
+      // 5.0 -> 0.05, 10.0 -> 0.005, 20.0 -> 0.0005
+      amountAdjustment = Math.pow(0.1, premiumLevel / 10);
+    }
+    
+    // Ensure minimum quantity (at least 1% of base quantity)
+    amountAdjustment = Math.max(amountAdjustment, 0.01);
   }
   
   return amountAdjustment;

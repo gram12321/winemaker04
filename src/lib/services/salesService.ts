@@ -7,17 +7,24 @@ import { getGameState } from '../gameState';
 import { addTransaction } from './financeService';
 import { formatCompletedWineName } from './wineBatchService';
 import { SALES_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
-import { calculateBaseWinePrice, calculateExtremeQualityMultiplier } from '../utils/calculator';
+import { calculateBaseWinePrice, calculateExtremeQualityMultiplier, calculateOrderAmount } from '../utils/calculator';
+import { notificationService } from '../../components/layout/NotificationCenter';
 
 // Use order type configurations from constants
 const ORDER_TYPE_CONFIG = SALES_CONSTANTS.ORDER_TYPES;
 
 // ===== PRICING CALCULATIONS =====
 
-// Get the base price from the wine batch (already calculated and stored)
+// Get the asking price from the wine batch (user-set or defaults to finalPrice)
+export function getWineAskingPrice(wineBatch: WineBatch): number {
+  // Use askingPrice if set, otherwise fall back to finalPrice
+  return wineBatch.askingPrice ?? wineBatch.finalPrice;
+}
+
+// Get the base price from the wine batch (calculated price for comparison)
 export function getWineBasePrice(wineBatch: WineBatch): number {
   // The base price is already calculated and stored in the wine batch
-  // This allows for future manipulation during winemaking process
+  // This is used for calculateOrderAmount comparison
   return wineBatch.finalPrice;
 }
 
@@ -71,14 +78,43 @@ export async function generateWineOrder(): Promise<WineOrder | null> {
   
   const config = ORDER_TYPE_CONFIG[selectedType];
   
-  // Get base price from wine batch and apply order type multiplier
+  // Get asking price (user-set or default) and base calculated price
+  const askingPrice = getWineAskingPrice(selectedBatch);
   const basePrice = getWineBasePrice(selectedBatch);
-  const offeredPrice = Math.round(basePrice * config.priceMultiplier * 100) / 100;
+  const offeredPrice = Math.round(askingPrice * config.priceMultiplier * 100) / 100;
   
-  // Generate random quantity within range, but not more than available
+  // Calculate order amount adjustment based on price difference
+  const orderAmountMultiplier = calculateOrderAmount(
+    { askingPrice },
+    basePrice,
+    selectedType
+  );
+  
+  // Generate baseline quantity from order type range, then scale by price sensitivity
+  // The range acts as a baseline market appetite; calculateOrderAmount scales this.
   const [minQty, maxQty] = config.quantityRange;
-  const maxAvailable = Math.min(selectedBatch.quantity, maxQty);
-  const requestedQuantity = Math.max(minQty, Math.floor(Math.random() * maxAvailable) + 1);
+  const baseQuantity = Math.floor(Math.random() * (maxQty - minQty + 1)) + minQty;
+
+  // Scale baseline by the computed multiplier - unlimited multiplication allowed
+  const desiredQuantity = Math.floor(baseQuantity * orderAmountMultiplier);
+
+  // Check if the desired quantity meets the minimum order requirement
+  if (desiredQuantity < minQty) {
+    // Order rejected - asking price too high, customer backs down
+    const notificationMessage = `A ${selectedType} would have liked to buy ${formatCompletedWineName(selectedBatch)}, but the asking price was too high, so they decided to back down.`;
+    
+    // Trigger notification for rejected order
+    notificationService.info(notificationMessage);
+    
+    return null; // No order generated
+  }
+
+  // No inventory cap - allow orders larger than available inventory
+  const requestedQuantity = desiredQuantity;
+  
+  // Calculate fulfillable quantity based on current inventory
+  const fulfillableQuantity = Math.min(requestedQuantity, selectedBatch.quantity);
+  const fulfillableValue = fulfillableQuantity * offeredPrice;
   
   const gameState = getGameState();
   const order: WineOrder = {
@@ -94,6 +130,9 @@ export async function generateWineOrder(): Promise<WineOrder | null> {
     requestedQuantity,
     offeredPrice,
     totalValue: requestedQuantity * offeredPrice,
+    fulfillableQuantity,
+    fulfillableValue,
+    askingPriceAtOrderTime: askingPrice, // Store the asking price at order time
     status: 'pending'
   };
   
@@ -124,7 +163,7 @@ export async function getPendingOrders(): Promise<WineOrder[]> {
   return await loadWineOrders();
 }
 
-// Fulfill a wine order (sell the wine)
+// Fulfill a wine order (sell the wine) - supports partial fulfillment
 export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   const orders = await loadWineOrders();
   const order = orders.find(o => o.id === orderId);
@@ -141,28 +180,38 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     return false;
   }
   
-  // Check if we have enough bottles
-  if (wineBatch.quantity < order.requestedQuantity) {
-    return false; // Not enough inventory
+  // Calculate how many bottles we can actually fulfill
+  const fulfillableQuantity = Math.min(order.requestedQuantity, wineBatch.quantity);
+  const fulfillableValue = fulfillableQuantity * order.offeredPrice;
+  
+  if (fulfillableQuantity === 0) {
+    return false; // No inventory available
   }
   
   // Remove bottles from inventory
   const updatedBatch: WineBatch = {
     ...wineBatch,
-    quantity: wineBatch.quantity - order.requestedQuantity
+    quantity: wineBatch.quantity - fulfillableQuantity
   };
   
   await saveWineBatch(updatedBatch);
   
   // Add money to player account through finance system
   await addTransaction(
-    order.totalValue,
-    `Wine Sale: ${order.wineName}`,
+    fulfillableValue,
+    `Wine Sale: ${order.wineName}${fulfillableQuantity < order.requestedQuantity ? ` (${fulfillableQuantity}/${order.requestedQuantity} bottles)` : ''}`,
     'Wine Sales'
   );
   
-  // Mark order as fulfilled
-  await updateWineOrderStatus(orderId, 'fulfilled');
+  // Update order with fulfillment details and mark as fulfilled or partially fulfilled
+  const updatedOrder: WineOrder = {
+    ...order,
+    fulfillableQuantity,
+    fulfillableValue,
+    status: fulfillableQuantity < order.requestedQuantity ? 'partially_fulfilled' : 'fulfilled'
+  };
+  
+  await saveWineOrder(updatedOrder);
   
   triggerGameUpdate();
   return true;

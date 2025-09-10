@@ -2,15 +2,18 @@
 import { useState, useEffect } from 'react';
 import { WineOrder, WineBatch } from '../../lib/types';
 import { getPendingOrders, fulfillWineOrder, rejectWineOrder, generateWineOrder } from '../../lib/services/salesService';
-import { loadWineBatches } from '../../lib/database';
+import { loadWineBatches, saveWineBatch } from '../../lib/database';
 import { useGameUpdates } from '../../hooks/useGameUpdates';
 import { formatGameDate } from '../../lib/types';
+import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../ui/table';
 
 const Sales: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
   const [orders, setOrders] = useState<WineOrder[]>([]);
   const [bottledWines, setBottledWines] = useState<WineBatch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
 
   // Listen to game updates to refresh data
   const { subscribe } = useGameUpdates();
@@ -40,6 +43,82 @@ const Sales: React.FC = () => {
       console.error('Failed to load sales data:', error);
     }
   };
+
+  // Helper function to get asking price for an order
+  const getAskingPriceForOrder = (order: WineOrder): number => {
+    // Use the asking price at order time if available, otherwise fall back to current asking price
+    if (order.askingPriceAtOrderTime !== undefined && order.askingPriceAtOrderTime !== null) {
+      return order.askingPriceAtOrderTime;
+    }
+    
+    // Fallback to current asking price for old orders without stored asking price
+    const wineBatch = bottledWines.find(batch => batch.id === order.wineBatchId);
+    return wineBatch ? (wineBatch.askingPrice ?? wineBatch.finalPrice) : 0;
+  };
+
+  // Define sortable columns for orders
+  const orderColumns: SortableColumn<WineOrder>[] = [
+    { key: 'orderType', label: 'Order Type', sortable: true },
+    { key: 'wineName', label: 'Wine', sortable: true },
+    { key: 'requestedQuantity', label: 'Quantity', sortable: true },
+    { 
+      key: 'wineBatchId', 
+      label: 'Asking Price', 
+      sortable: true,
+      accessor: (order) => getAskingPriceForOrder(order)
+    },
+    { key: 'offeredPrice', label: 'Offered Price', sortable: true },
+    { key: 'totalValue', label: 'Total Value', sortable: true },
+    { 
+      key: 'fulfillableQuantity', 
+      label: 'Fulfillable', 
+      sortable: true,
+      accessor: (order) => order.fulfillableQuantity ?? order.requestedQuantity
+    },
+    { 
+      key: 'orderedAt', 
+      label: 'Ordered', 
+      sortable: true,
+      accessor: (order) => `${order.orderedAt.year}-${order.orderedAt.season}-${order.orderedAt.week}`
+    }
+  ];
+
+  // Define sortable columns for wine cellar
+  const cellarColumns: SortableColumn<WineBatch>[] = [
+    { key: 'grape', label: 'Wine', sortable: true },
+    { key: 'vineyardName', label: 'Vineyard', sortable: true },
+    { 
+      key: 'harvestDate', 
+      label: 'Harvest', 
+      sortable: true,
+      accessor: (wine) => `${wine.harvestDate.year}-${wine.harvestDate.season}-${wine.harvestDate.week}`
+    },
+    { key: 'quality', label: 'Quality', sortable: true },
+    { key: 'balance', label: 'Balance', sortable: true },
+    { key: 'finalPrice', label: 'Base Price', sortable: true },
+    { 
+      key: 'askingPrice', 
+      label: 'Asking Price', 
+      sortable: true,
+      accessor: (wine) => wine.askingPrice ?? wine.finalPrice
+    },
+    { key: 'quantity', label: 'Bottles', sortable: true }
+  ];
+
+  // Use sorting hooks
+  const {
+    sortedData: sortedOrders,
+    handleSort: handleOrderSort,
+    getSortIndicator: getOrderSortIndicator,
+    isColumnSorted: isOrderColumnSorted
+  } = useTableSortWithAccessors(orders, orderColumns);
+
+  const {
+    sortedData: sortedBottledWines,
+    handleSort: handleCellarSort,
+    getSortIndicator: getCellarSortIndicator,
+    isColumnSorted: isCellarColumnSorted
+  } = useTableSortWithAccessors(bottledWines, cellarColumns);
 
   // Load data on component mount
   useEffect(() => {
@@ -85,12 +164,106 @@ const Sales: React.FC = () => {
       const newOrder = await generateWineOrder();
       if (newOrder) {
         await loadData(); // Refresh data
-      } else {
-        alert('No bottled wines available for orders');
       }
+      // If newOrder is null, it means the order was rejected due to high asking price
+      // The notification system already handles this case with appropriate messaging
     } catch (error) {
       console.error('Error generating order:', error);
       alert('Error generating order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle price editing
+  const handlePriceEdit = (wineId: string, currentPrice: number) => {
+    setEditingPrices(prev => ({
+      ...prev,
+      [wineId]: currentPrice.toFixed(2)
+    }));
+  };
+
+  const handlePriceChange = (wineId: string, value: string) => {
+    setEditingPrices(prev => ({
+      ...prev,
+      [wineId]: value
+    }));
+  };
+
+  const handlePriceSave = async (wine: WineBatch) => {
+    const newPriceStr = editingPrices[wine.id];
+    const newPrice = parseFloat(newPriceStr);
+    
+    // Enhanced validation
+    if (isNaN(newPrice) || newPrice < 0) {
+      alert('Please enter a valid price (must be positive)');
+      return;
+    }
+    
+    if (newPrice < 0.01) {
+      alert('Price must be at least €0.01');
+      return;
+    }
+    
+    if (newPrice > 10000) {
+      alert('Price seems unusually high. Please confirm this is correct.');
+      return;
+    }
+
+    try {
+      const updatedWine: WineBatch = {
+        ...wine,
+        askingPrice: newPrice
+      };
+      
+      await saveWineBatch(updatedWine);
+      setEditingPrices(prev => {
+        const updated = { ...prev };
+        delete updated[wine.id];
+        return updated;
+      });
+      await loadData(); // Refresh data
+    } catch (error) {
+      console.error('Error updating price:', error);
+      alert('Error updating price');
+    }
+  };
+
+  const handlePriceCancel = (wineId: string) => {
+    setEditingPrices(prev => {
+      const updated = { ...prev };
+      delete updated[wineId];
+      return updated;
+    });
+  };
+
+  // Bulk actions for orders
+  const handleAcceptAll = async () => {
+    if (orders.length === 0) return;
+
+    setLoading(true);
+    try {
+      await Promise.allSettled(
+        orders.map(order => fulfillWineOrder(order.id))
+      );
+      
+      await loadData(); // Refresh data
+    } catch (error) {
+      console.error('Error in bulk accept:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectAll = async () => {
+    if (orders.length === 0) return;
+
+    setLoading(true);
+    try {
+      await Promise.all(orders.map(order => rejectWineOrder(order.id)));
+      await loadData(); // Refresh data
+    } catch (error) {
+      console.error('Error in bulk reject:', error);
     } finally {
       setLoading(false);
     }
@@ -145,39 +318,96 @@ const Sales: React.FC = () => {
             <h3 className="text-lg font-semibold">Bottled Wines Available for Sale</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wine</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vineyard</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Harvest</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quality</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Selling Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bottles</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {bottledWines.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('grape')}
+                    sortIndicator={getCellarSortIndicator('grape')}
+                    isSorted={isCellarColumnSorted('grape')}
+                  >
+                    Wine
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('vineyardName')}
+                    sortIndicator={getCellarSortIndicator('vineyardName')}
+                    isSorted={isCellarColumnSorted('vineyardName')}
+                  >
+                    Vineyard
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('harvestDate')}
+                    sortIndicator={getCellarSortIndicator('harvestDate')}
+                    isSorted={isCellarColumnSorted('harvestDate')}
+                  >
+                    Harvest
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('quality')}
+                    sortIndicator={getCellarSortIndicator('quality')}
+                    isSorted={isCellarColumnSorted('quality')}
+                  >
+                    Quality
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('balance')}
+                    sortIndicator={getCellarSortIndicator('balance')}
+                    isSorted={isCellarColumnSorted('balance')}
+                  >
+                    Balance
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('finalPrice')}
+                    sortIndicator={getCellarSortIndicator('finalPrice')}
+                    isSorted={isCellarColumnSorted('finalPrice')}
+                  >
+                    Base Price
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('askingPrice')}
+                    sortIndicator={getCellarSortIndicator('askingPrice')}
+                    isSorted={isCellarColumnSorted('askingPrice')}
+                  >
+                    Asking Price
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('quantity')}
+                    sortIndicator={getCellarSortIndicator('quantity')}
+                    isSorted={isCellarColumnSorted('quantity')}
+                  >
+                    Bottles
+                  </TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedBottledWines.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                       No bottled wines available for sale
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  bottledWines.map((wine) => (
-                    <tr key={wine.id}>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                  sortedBottledWines.map((wine) => (
+                    <TableRow key={wine.id}>
+                      <TableCell className="font-medium text-gray-900">
                         {wine.grape}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      </TableCell>
+                      <TableCell className="text-gray-500">
                         {wine.vineyardName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      </TableCell>
+                      <TableCell className="text-gray-500">
                         {formatGameDate(wine.harvestDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      </TableCell>
+                      <TableCell className="text-gray-500">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           wine.quality >= 0.8 ? 'bg-green-100 text-green-800' :
                           wine.quality >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
@@ -185,8 +415,8 @@ const Sales: React.FC = () => {
                         }`}>
                           {(wine.quality * 100).toFixed(0)}%
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      </TableCell>
+                      <TableCell className="text-gray-500">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           wine.balance >= 0.8 ? 'bg-green-100 text-green-800' :
                           wine.balance >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
@@ -194,92 +424,262 @@ const Sales: React.FC = () => {
                         }`}>
                           {(wine.balance * 100).toFixed(0)}%
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500 font-medium">
+                      </TableCell>
+                      <TableCell className="text-gray-500 font-medium">
                         €{wine.finalPrice.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      </TableCell>
+                      <TableCell className="text-gray-500 font-medium">
+                        {editingPrices[wine.id] !== undefined ? (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editingPrices[wine.id]}
+                              onChange={(e) => handlePriceChange(wine.id, e.target.value)}
+                              className="w-20 px-2 py-1 border rounded text-sm"
+                            />
+                            <button
+                              onClick={() => handlePriceSave(wine)}
+                              className="text-green-600 hover:text-green-800 text-sm"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => handlePriceCancel(wine.id)}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <span className={`${
+                              wine.askingPrice !== undefined 
+                                ? wine.askingPrice < wine.finalPrice
+                                  ? 'text-red-600 font-medium' // Discounted
+                                  : wine.askingPrice > wine.finalPrice
+                                  ? 'text-orange-600 font-medium' // Premium
+                                  : 'text-gray-900' // Same as base
+                                : 'text-gray-900' // Default
+                            }`}>
+                              €{(wine.askingPrice ?? wine.finalPrice).toFixed(2)}
+                            </span>
+                            {wine.askingPrice !== undefined && wine.askingPrice !== wine.finalPrice && (
+                              <span className="text-xs text-gray-500">
+                                {wine.askingPrice < wine.finalPrice ? '📉' : '📈'}
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.finalPrice)}
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
                         {wine.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell>
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                           Ready for Sale
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
 
       {activeTab === 'orders' && (
         <div className="space-y-4">
-          {/* Generate Order Button */}
+          {/* Order Management */}
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-semibold">Order Management</h3>
                 <p className="text-gray-500 text-sm">Generate test orders or manage pending orders</p>
               </div>
+              <div className="flex space-x-2">
+                {orders.length > 0 && (
+                  <>
+                    <button
+                      onClick={handleAcceptAll}
+                      disabled={loading}
+                      className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm"
+                    >
+                      Accept All ({orders.length})
+                    </button>
+                    <button
+                      onClick={handleRejectAll}
+                      disabled={loading}
+                      className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 disabled:bg-gray-400 text-sm"
+                    >
+                      Reject All
+                    </button>
+                  </>
+                )}
               <button
                 onClick={handleGenerateOrder}
                 disabled={loading || bottledWines.length === 0}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
               >
                 {loading ? 'Generating...' : 'Generate Order'}
               </button>
+              </div>
             </div>
           </div>
 
           {/* Orders Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wine</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price/Bottle</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Value</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ordered</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {orders.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('orderType')}
+                      sortIndicator={getOrderSortIndicator('orderType')}
+                      isSorted={isOrderColumnSorted('orderType')}
+                    >
+                      Order Type
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('wineName')}
+                      sortIndicator={getOrderSortIndicator('wineName')}
+                      isSorted={isOrderColumnSorted('wineName')}
+                    >
+                      Wine
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('requestedQuantity')}
+                      sortIndicator={getOrderSortIndicator('requestedQuantity')}
+                      isSorted={isOrderColumnSorted('requestedQuantity')}
+                    >
+                      Quantity
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('wineBatchId')}
+                      sortIndicator={getOrderSortIndicator('wineBatchId')}
+                      isSorted={isOrderColumnSorted('wineBatchId')}
+                    >
+                      Asking Price
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('offeredPrice')}
+                      sortIndicator={getOrderSortIndicator('offeredPrice')}
+                      isSorted={isOrderColumnSorted('offeredPrice')}
+                    >
+                      Offered Price
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('totalValue')}
+                      sortIndicator={getOrderSortIndicator('totalValue')}
+                      isSorted={isOrderColumnSorted('totalValue')}
+                    >
+                      Total Value
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('fulfillableQuantity')}
+                      sortIndicator={getOrderSortIndicator('fulfillableQuantity')}
+                      isSorted={isOrderColumnSorted('fulfillableQuantity')}
+                    >
+                      Fulfillable
+                    </TableHead>
+                    <TableHead 
+                      sortable 
+                      onSort={() => handleOrderSort('orderedAt')}
+                      sortIndicator={getOrderSortIndicator('orderedAt')}
+                      isSorted={isOrderColumnSorted('orderedAt')}
+                    >
+                      Ordered
+                    </TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                         No pending orders
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : (
-                    orders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                    sortedOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell>
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                             {order.orderType}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        </TableCell>
+                        <TableCell className="font-medium text-gray-900">
                           {order.wineName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                          {order.requestedQuantity} bottles
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                        </TableCell>
+                        <TableCell className="text-gray-500">
+                          <div className="flex flex-col">
+                            <span>{order.requestedQuantity} bottles</span>
+                            {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
+                              <span className="text-xs text-orange-600">
+                                (Can fulfill: {order.fulfillableQuantity})
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-gray-500 font-medium">
+                          €{getAskingPriceForOrder(order).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-gray-500">
+                          <div className="flex items-center space-x-1">
+                            <span className={`${
+                              order.offeredPrice > getAskingPriceForOrder(order)
+                                ? 'text-green-600 font-medium' // Above asking price
+                                : order.offeredPrice < getAskingPriceForOrder(order)
+                                ? 'text-red-600 font-medium' // Below asking price
+                                : 'text-gray-900' // Equal to asking price
+                            }`}>
                           €{order.offeredPrice.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-green-600">
-                          €{order.totalValue.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
+                            </span>
+                            {order.offeredPrice !== getAskingPriceForOrder(order) && (
+                              <span className="text-xs text-gray-500">
+                                {order.offeredPrice > getAskingPriceForOrder(order) ? '📈' : '📉'}
+                                <span className="ml-1 text-xs">
+                                  {order.offeredPrice > getAskingPriceForOrder(order) 
+                                    ? `+${(((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order)) * 100).toFixed(0)}%`
+                                    : `${(((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order)) * 100).toFixed(0)}%`
+                                  }
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-green-600">
+                          <div className="flex flex-col">
+                            <span>€{order.totalValue.toFixed(2)}</span>
+                            {order.fulfillableValue !== undefined && order.fulfillableValue !== null && order.fulfillableValue < order.totalValue && (
+                              <span className="text-xs text-orange-600">
+                                (Can earn: €{order.fulfillableValue.toFixed(2)})
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-gray-500">
+                          {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null ? order.fulfillableQuantity : order.requestedQuantity} bottles
+                        </TableCell>
+                        <TableCell className="text-gray-500 text-sm">
                           {formatGameDate(order.orderedAt)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        </TableCell>
+                        <TableCell className="text-sm font-medium space-x-2">
                           <button
                             onClick={() => handleFulfillOrder(order.id)}
                             disabled={loading}
@@ -294,12 +694,12 @@ const Sales: React.FC = () => {
                           >
                             Reject
                           </button>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>

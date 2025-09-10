@@ -141,6 +141,7 @@ export const saveWineBatch = async (batch: WineBatch, playerId: string = 'defaul
         quality: batch.quality,
         balance: batch.balance,
         final_price: batch.finalPrice,
+        asking_price: batch.askingPrice,
         harvest_week: batch.harvestDate.week,
         harvest_season: batch.harvestDate.season,
         harvest_year: batch.harvestDate.year,
@@ -181,6 +182,7 @@ export const loadWineBatches = async (playerId: string = 'default'): Promise<Win
       quality: row.quality || 0.7,
       balance: row.balance || 0.6,
       finalPrice: row.final_price || 10.50,
+      askingPrice: row.asking_price, // Will default to undefined if not set
       harvestDate: {
         week: row.harvest_week || 1,
         season: (row.harvest_season || 'Spring') as Season,
@@ -217,6 +219,9 @@ export const saveWineOrder = async (order: WineOrder, playerId: string = 'defaul
         requested_quantity: order.requestedQuantity,
         offered_price: order.offeredPrice,
         total_value: order.totalValue,
+        fulfillable_quantity: order.fulfillableQuantity,
+        fulfillable_value: order.fulfillableValue,
+        asking_price_at_order_time: order.askingPriceAtOrderTime,
         status: order.status,
         ordered_week: order.orderedAt.week,
         ordered_season: order.orderedAt.season,
@@ -249,6 +254,9 @@ export const loadWineOrders = async (playerId: string = 'default'): Promise<Wine
       requestedQuantity: row.requested_quantity,
       offeredPrice: row.offered_price,
       totalValue: row.total_value,
+      fulfillableQuantity: row.fulfillable_quantity,
+      fulfillableValue: row.fulfillable_value,
+      askingPriceAtOrderTime: row.asking_price_at_order_time,
       status: row.status,
       orderedAt: {
         week: row.ordered_week || 1,
