@@ -6,49 +6,55 @@ import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
 import { addTransaction } from './financeService';
 import { formatCompletedWineName } from './wineBatchService';
-import { SALES_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
-import { calculateBaseWinePrice, calculateExtremeQualityMultiplier, calculateOrderAmount } from '../utils/calculator';
+import { SALES_CONSTANTS } from '../constants';
+import { calculateOrderAmount, calculateSymmetricalMultiplier, calculateSteppedBalance } from '../utils/calculator';
 import { notificationService } from '../../components/layout/NotificationCenter';
 
 // Use order type configurations from constants
 const ORDER_TYPE_CONFIG = SALES_CONSTANTS.ORDER_TYPES;
 
-// ===== PRICING CALCULATIONS =====
+// ===== SALES-SPECIFIC CALCULATIONS =====
 
-// Get the asking price from the wine batch (user-set or defaults to finalPrice)
-export function getWineAskingPrice(wineBatch: WineBatch): number {
-  // Use askingPrice if set, otherwise fall back to finalPrice
-  return wineBatch.askingPrice ?? wineBatch.finalPrice;
-}
-
-// Get the base price from the wine batch (calculated price for comparison)
-export function getWineBasePrice(wineBatch: WineBatch): number {
-  // The base price is already calculated and stored in the wine batch
-  // This is used for calculateOrderAmount comparison
-  return wineBatch.finalPrice;
-}
-
-// Recalculate base price when wine properties change (for future use)
-export function recalculateWineBasePrice(wineBatch: WineBatch): number {
-  // Use new sophisticated pricing system
-  // Base Price = (Land Value + Prestige) × Base Rate (with placeholders)
-  const basePrice = calculateBaseWinePrice(
-    PRICING_PLACEHOLDER_CONSTANTS.LAND_VALUE_PLACEHOLDER, 
-    PRICING_PLACEHOLDER_CONSTANTS.PRESTIGE_PLACEHOLDER, 
-    SALES_CONSTANTS.BASE_RATE_PER_BOTTLE
-  );
+/**
+ * Calculate rejection probability based on price ratio
+ * Uses asymmetrical multiplier to create increasing rejection chance as bid price becomes too high
+ * 
+ * Business Logic:
+ * - bidPrice: The value the buyer has to bid to get the wine (computer-generated customer offer)
+ * - finalPrice: The calculated perceived value of the wine (not production cost, which isn't simulated)
+ * - Customers reject when they have to pay MORE than the wine's perceived value (bad deal)
+ * - Customers never reject when they can get wine at or below its perceived value (good deal)
+ * - Premium order types (Private Collector, Export) are more tolerant of high prices
+ * 
+ * @param bidPrice - The price the customer is bidding (their offer)
+ * @param finalPrice - The calculated perceived value of the wine
+ * @returns Rejection probability between 0 and 1
+ */
+function calculateRejectionProbability(bidPrice: number, finalPrice: number): number {
+  if (bidPrice <= finalPrice) {
+    console.log(`  → No rejection: bidPrice (€${bidPrice.toFixed(2)}) <= finalPrice (€${finalPrice.toFixed(2)})`);
+    return 0; // No rejection if getting wine at or below its perceived value (good deal)
+  }
   
-  // Calculate quality/balance multiplier (50/50 combination)
-  const combinedScore = (wineBatch.quality + wineBatch.balance) / 2;
-  const qualityMultiplier = calculateExtremeQualityMultiplier(combinedScore);
+  // Calculate how much above wine value the customer has to pay
+  const premiumRatio = bidPrice / finalPrice; // > 1.0 means paying premium
   
-  // Calculate final price: Base Price × Quality/Balance Multiplier
-  const finalPrice = basePrice * qualityMultiplier;
+  // Map unlimited premium ratio to 0-1 using sigmoid mapping (no tolerance)
+  const mappedInput = 1 - (1 / premiumRatio);
   
-  return Math.max(
-    SALES_CONSTANTS.MIN_PRICE_PER_BOTTLE, 
-    Math.round(finalPrice * 100) / 100
-  );
+  // Shift input up by 0.4 to skip polynomial range and get higher rejection rates
+  const shiftedInput = Math.min(1.0, mappedInput + 0.4);
+  
+  console.log(`  → Premium Ratio: ${premiumRatio.toFixed(2)}x`);
+  console.log(`  → Sigmoid Mapped Input: ${mappedInput.toFixed(3)}`);
+  console.log(`  → Shifted Input (+0.4): ${shiftedInput.toFixed(3)}`);
+  
+  // Use stepped balance function to get rejection probability
+  // This creates sophisticated rejection curve with proper 0-1 output
+  const rejectionProbability = calculateSteppedBalance(shiftedInput);
+  console.log(`  → Stepped Balance Output: ${rejectionProbability.toFixed(3)}`);
+  
+  return rejectionProbability;
 }
 
 // ===== ORDER GENERATION =====
@@ -79,9 +85,40 @@ export async function generateWineOrder(): Promise<WineOrder | null> {
   const config = ORDER_TYPE_CONFIG[selectedType];
   
   // Get asking price (user-set or default) and base calculated price
-  const askingPrice = getWineAskingPrice(selectedBatch);
-  const basePrice = getWineBasePrice(selectedBatch);
-  const offeredPrice = Math.round(askingPrice * config.priceMultiplier * 100) / 100;
+  const askingPrice = selectedBatch.askingPrice ?? selectedBatch.finalPrice;
+  const basePrice = selectedBatch.finalPrice;
+  
+  // Generate sophisticated price multiplier using symmetrical distribution
+  const [minMultiplier, maxMultiplier] = config.priceMultiplierRange;
+  const randomValue = Math.random(); // 0-1 random input
+  const sophisticatedMultiplier = calculateSymmetricalMultiplier(randomValue, minMultiplier, maxMultiplier);
+  const bidPrice = Math.round(askingPrice * sophisticatedMultiplier * 100) / 100;
+  
+  // Check for outright rejection based on price ratio
+  const rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
+  const rejectionRandomValue = Math.random();
+  
+  console.log(`=== PRICE REJECTION CHECK ===`);
+  console.log(`Order Type: ${selectedType}`);
+  console.log(`Wine: ${formatCompletedWineName(selectedBatch)}`);
+  console.log(`Final Price (wine value): €${basePrice.toFixed(2)}`);
+  console.log(`Asking Price: €${askingPrice.toFixed(2)}`);
+  console.log(`Bid Price: €${bidPrice.toFixed(2)}`);
+  console.log(`Premium Ratio: ${(bidPrice / basePrice).toFixed(2)}x`);
+  console.log(`Rejection Probability: ${(rejectionProbability * 100).toFixed(1)}%`);
+  console.log(`Random Value: ${(rejectionRandomValue * 100).toFixed(1)}%`);
+  console.log(`Rejected: ${rejectionRandomValue < rejectionProbability ? 'YES' : 'NO'}`);
+  console.log(`=============================`);
+  
+  if (rejectionRandomValue < rejectionProbability) {
+    // Customer outright rejects the price and walks away
+    const notificationMessage = `A ${selectedType} was interested in ${formatCompletedWineName(selectedBatch)}, but outright rejected our asking price.`;
+    
+    // Trigger notification for rejected order
+    notificationService.info(notificationMessage);
+    
+    return null; // No order generated
+  }
   
   // Calculate order amount adjustment based on price difference
   const orderAmountMultiplier = calculateOrderAmount(
@@ -100,8 +137,23 @@ export async function generateWineOrder(): Promise<WineOrder | null> {
 
   // Check if the desired quantity meets the minimum order requirement
   if (desiredQuantity < minQty) {
+    console.log(`=== QUANTITY REJECTION CHECK ===`);
+    console.log(`Order Type: ${selectedType}`);
+    console.log(`Wine: ${formatCompletedWineName(selectedBatch)}`);
+    console.log(`Final Price (wine value): €${basePrice.toFixed(2)}`);
+    console.log(`Asking Price: €${askingPrice.toFixed(2)}`);
+    console.log(`Bid Price: €${bidPrice.toFixed(2)}`);
+    console.log(`Price Difference: ${((askingPrice / basePrice - 1) * 100).toFixed(1)}%`);
+    console.log(`Base Quantity Range: [${minQty}, ${maxQty}]`);
+    console.log(`Base Quantity: ${baseQuantity}`);
+    console.log(`Order Amount Multiplier: ${orderAmountMultiplier.toFixed(2)}x`);
+    console.log(`Desired Quantity: ${desiredQuantity}`);
+    console.log(`Minimum Required: ${minQty}`);
+    console.log(`Rejected: YES (quantity too low)`);
+    console.log(`===============================`);
+    
     // Order rejected - asking price too high, customer backs down
-    const notificationMessage = `A ${selectedType} would have liked to buy ${formatCompletedWineName(selectedBatch)}, but the asking price was too high, so they decided to back down.`;
+    const notificationMessage = `A ${selectedType} wanted to buy ${formatCompletedWineName(selectedBatch)}, but with our current asking price the amount they could afford simply became too low.`;
     
     // Trigger notification for rejected order
     notificationService.info(notificationMessage);
@@ -114,7 +166,7 @@ export async function generateWineOrder(): Promise<WineOrder | null> {
   
   // Calculate fulfillable quantity based on current inventory
   const fulfillableQuantity = Math.min(requestedQuantity, selectedBatch.quantity);
-  const fulfillableValue = fulfillableQuantity * offeredPrice;
+  const fulfillableValue = Math.round(fulfillableQuantity * bidPrice * 100) / 100;
   
   const gameState = getGameState();
   const order: WineOrder = {
@@ -128,8 +180,8 @@ export async function generateWineOrder(): Promise<WineOrder | null> {
     wineBatchId: selectedBatch.id,
     wineName: formatCompletedWineName(selectedBatch),
     requestedQuantity,
-    offeredPrice,
-    totalValue: requestedQuantity * offeredPrice,
+    offeredPrice: bidPrice, // Store as offeredPrice in the order object for compatibility
+    totalValue: Math.round(requestedQuantity * bidPrice * 100) / 100,
     fulfillableQuantity,
     fulfillableValue,
     askingPriceAtOrderTime: askingPrice, // Store the asking price at order time
@@ -182,7 +234,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   
   // Calculate how many bottles we can actually fulfill
   const fulfillableQuantity = Math.min(order.requestedQuantity, wineBatch.quantity);
-  const fulfillableValue = fulfillableQuantity * order.offeredPrice;
+  const fulfillableValue = Math.round(fulfillableQuantity * order.offeredPrice * 100) / 100; // order.offeredPrice is the bidPrice
   
   if (fulfillableQuantity === 0) {
     return false; // No inventory available

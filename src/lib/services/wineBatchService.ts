@@ -5,7 +5,7 @@ import { saveWineBatch, loadWineBatches } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
 import { SALES_CONSTANTS, WINE_QUALITY_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
-import { calculateBaseWinePrice, calculateExtremeQualityMultiplier } from '../utils/calculator';
+import { calculateBaseWinePrice, calculateAsymmetricalMultiplier } from '../utils/calculator';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -37,7 +37,7 @@ export async function createWineBatchFromHarvest(
   
   // Calculate quality/balance multiplier (50/50 combination)
   const combinedScore = (quality + balance) / 2;
-  const qualityMultiplier = calculateExtremeQualityMultiplier(combinedScore);
+  const qualityMultiplier = calculateAsymmetricalMultiplier(combinedScore);
   
   // Calculate final price: Base Price × Quality/Balance Multiplier
   const finalPrice = Math.max(

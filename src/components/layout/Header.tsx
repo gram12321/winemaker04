@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
+import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { CalendarDays, MessageSquareText } from 'lucide-react';
 
 interface HeaderProps {
@@ -18,11 +19,22 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance }) => {
   const [gameState, setGameState] = useState(getGameState());
   const consoleHook = useNotifications();
+  const { subscribe } = useGameUpdates();
 
   // Update game state when onTimeAdvance is called
   useEffect(() => {
     setGameState(getGameState());
   }, [onTimeAdvance]);
+
+  // Subscribe to game updates to refresh header data
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      setGameState(getGameState());
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [subscribe]);
 
   const handleIncrementWeek = () => {
     incrementWeek();

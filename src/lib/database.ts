@@ -73,18 +73,20 @@ export const loadVineyards = async (playerId: string = 'default'): Promise<Viney
 
 export const saveGameState = async (gameState: Partial<GameState>, playerId: string = 'default'): Promise<void> => {
   try {
+    const dataToSave = {
+      id: playerId,
+      player_name: 'Player',
+      week: gameState.week,
+      season: gameState.season,
+      current_year: gameState.currentYear,
+      money: Math.round((gameState.money || 0) * 100), // Convert to cents (integer)
+      prestige: gameState.prestige,
+      updated_at: new Date().toISOString()
+    };
+    
     const { error } = await supabase
       .from(GAME_STATE_TABLE)
-      .upsert({
-        id: playerId,
-        player_name: 'Player',
-        week: gameState.week,
-        season: gameState.season,
-        current_year: gameState.currentYear,
-        money: gameState.money,
-        prestige: gameState.prestige,
-        updated_at: new Date().toISOString()
-      });
+      .upsert(dataToSave);
 
     if (error) throw error;
   } catch (error) {
@@ -113,7 +115,7 @@ export const loadGameState = async (playerId: string = 'default'): Promise<Parti
       week: record.week,
       season: record.season,
       currentYear: record.current_year,
-      money: record.money,
+      money: record.money / 100, // Convert from cents to euros
       prestige: record.prestige
     };
   } catch (error) {

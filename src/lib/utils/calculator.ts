@@ -62,25 +62,24 @@ export function calculateSteppedBalance(score: number): number {
 // ===== QUALITY CALCULATIONS =====
 
 /**
- * Extreme quality multiplier using multi-segment scaling with smooth curves
- * Maps 0-1 quality values to price multipliers where:
- * - Values below 0.3 get modest multipliers (0.8-1.0x)
- * - Values 0.3-0.6 get moderate multipliers (1.0-1.6x)
- * - Values 0.6-0.8 get good multipliers (1.6-2.6x)
- * - Values 0.8-0.9 get strong multipliers (2.6-5.1x)
- * - Values 0.9-0.95 get excellent multipliers (5.1-15.1x)
- * - Values 0.95-0.98 get exceptional multipliers (15.1-55.1x)
- * - Only values 0.98+ get unlimited astronomical multipliers
+ * Asymmetrical multiplier using multi-segment scaling with smooth curves
+ * Maps 0-1 input values to multipliers using polynomial → logarithmic → linear → exponential → strong exponential → sigmoid progression
  * 
- * This creates a wine pricing model where:
- * - ~98% of wines get reasonable, capped multipliers
- * - Only ~2% of wines can reach astronomical prices
- * - Uses same mathematical approaches as calculateSteppedBalance for consistency
+ * This creates an asymmetrical distribution where:
+ * - Low values (0-0.3) get modest multipliers
+ * - Medium values (0.3-0.6) get moderate multipliers  
+ * - High values (0.6-0.8) get good multipliers
+ * - Very high values (0.8-0.9) get strong multipliers
+ * - Excellent values (0.9-0.95) get excellent multipliers
+ * - Exceptional values (0.95-0.98) get exceptional multipliers
+ * - Only extreme values (0.98+) get unlimited astronomical multipliers
  * 
- * @param value - Quality value between 0 and 1
- * @returns Price multiplier
+ * Generic function for any asymmetrical scaling needs (quality multipliers, rejection probabilities, etc.)
+ * 
+ * @param value - Input value between 0 and 1
+ * @returns Multiplier value
  */
-export function calculateExtremeQualityMultiplier(value: number): number {
+export function calculateAsymmetricalMultiplier(value: number): number {
   const safeValue = Math.min(0.99999, Math.max(0, value || 0));
   
   if (safeValue < 0.3) {
@@ -195,6 +194,79 @@ export function calculateBaseWinePrice(
   // Base Price = (Land Value + Prestige) × Base Rate
   // With placeholders: (0.5 + 0.5) × 25 = €25
   return (landValue + prestige) * baseRate;
+}
+
+// ===== SYMMETRICAL MULTIPLIER CALCULATIONS =====
+
+/**
+ * Calculate symmetrical multiplier using same mathematical progression as calculateExtremeQualityMultiplier
+ * Maps 0-1 input to min-max output using polynomial → logarithmic → linear → exponential → strong exponential → sigmoid
+ * 
+ * This creates a bell curve distribution where:
+ * - Input 0.0 approaches minimum multiplier (never quite reaches it)
+ * - Input 0.5 maps to exactly 1.0x multiplier (perfect symmetry)
+ * - Input 1.0 approaches maximum multiplier (never quite reaches it)
+ * - Most values cluster around 1.0x with rare extremes
+ * 
+ * @param value - Input value between 0 and 1
+ * @param minMultiplier - Minimum multiplier (e.g., 0.7)
+ * @param maxMultiplier - Maximum multiplier (e.g., 1.3)
+ * @returns Multiplier value between min and max
+ */
+export function calculateSymmetricalMultiplier(
+  value: number,
+  minMultiplier: number,
+  maxMultiplier: number
+): number {
+  const safeValue = Math.min(0.99999, Math.max(0.00001, value || 0.5));
+  
+  // Calculate distance from center (0.5)
+  const distanceFromCenter = Math.abs(safeValue - 0.5);
+  
+  // Map distance to 0-1 scale for mathematical progression
+  const progressionInput = distanceFromCenter * 2; // 0-1 scale
+  
+  let progressionValue: number;
+  
+  if (progressionInput < 0.1) {
+    // Sigmoid approach to extremes (0-0.1)
+    progressionValue = 1 - (1 - Math.exp(-progressionInput * 10)) * 0.1;
+  } else if (progressionInput < 0.2) {
+    // Very strong exponential (0.1-0.2)
+    progressionValue = 0.9 + Math.pow((progressionInput - 0.1) * 10, 2.5) * 0.1;
+  } else if (progressionInput < 0.3) {
+    // Strong exponential (0.2-0.3)
+    progressionValue = 0.8 + Math.pow((progressionInput - 0.2) * 10, 2) * 0.1;
+  } else if (progressionInput < 0.4) {
+    // Exponential (0.3-0.4)
+    progressionValue = 0.7 + Math.pow((progressionInput - 0.3) * 10, 1.5) * 0.1;
+  } else if (progressionInput < 0.5) {
+    // Linear (0.4-0.5)
+    progressionValue = 0.6 + (progressionInput - 0.4) * 1;
+  } else if (progressionInput < 0.6) {
+    // Logarithmic (0.5-0.6)
+    progressionValue = 0.5 + Math.log(1 + (progressionInput - 0.5) * 10) * 0.1;
+  } else if (progressionInput < 0.7) {
+    // Polynomial (0.6-0.7)
+    progressionValue = 0.4 + (progressionInput - 0.6) * (progressionInput - 0.6) * 10;
+  } else if (progressionInput < 0.8) {
+    // Polynomial (0.7-0.8)
+    progressionValue = 0.3 + (progressionInput - 0.7) * (progressionInput - 0.7) * 10;
+  } else if (progressionInput < 0.9) {
+    // Polynomial (0.8-0.9)
+    progressionValue = 0.2 + (progressionInput - 0.8) * (progressionInput - 0.8) * 10;
+  } else {
+    // Sigmoid approach to extremes (0.9-1.0)
+    progressionValue = 0.1 + (1 - Math.exp(-(progressionInput - 0.9) * 10)) * 0.1;
+  }
+  
+  // Map progression value to multiplier range
+  const range = maxMultiplier - minMultiplier;
+  const multiplier = minMultiplier + (progressionValue * range);
+  
+  // Ensure we never quite reach the extremes
+  const buffer = range * 0.001; // 0.1% buffer from extremes
+  return Math.max(minMultiplier + buffer, Math.min(maxMultiplier - buffer, multiplier));
 }
 
 // ===== ORDER AMOUNT CALCULATIONS =====

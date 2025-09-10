@@ -14,22 +14,22 @@ export const SALES_CONSTANTS = {
   // Order type configurations (using 6-bottle cases)
   ORDER_TYPES: {
     'Local Restaurant': {
-      priceMultiplier: 0.8, // Restaurants pay slightly less
+      priceMultiplierRange: [0.4, 0.9], // Restaurants: 50% discount to 90% discount (wide range, most near 0.65x)
       quantityRange: [12, 80], // 2-13 cases (6 bottles each) - increased for better scaling
       chance: 0.4
     },
     'Wine Shop': {
-      priceMultiplier: 0.9, // Standard retail price
+      priceMultiplierRange: [0.6, 1.0], // Wine shops: 40% discount to 0% premium (wide range, most near 0.8x)
       quantityRange: [18, 120], // 3-20 cases (6 bottles each) - increased for better scaling
       chance: 0.3
     },
     'Private Collector': {
-      priceMultiplier: 1.2, // Collectors pay premium
+      priceMultiplierRange: [1.1, 1.6], // Collectors: 10% premium to 60% premium (wide range, most near 1.2x)
       quantityRange: [3, 36], // 0.5-6 cases (6 bottles each) - increased for better scaling
       chance: 0.2
     },
     'Export Order': {
-      priceMultiplier: 1.1, // Export premium
+      priceMultiplierRange: [1.0, 1.5], // Export: 0% premium to 50% premium (wide range, most near 1.1x)
       quantityRange: [60, 300], // 10-50 cases (6 bottles each) - increased for better scaling
       chance: 0.1
     }

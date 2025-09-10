@@ -67,7 +67,7 @@ const Sales: React.FC = () => {
       sortable: true,
       accessor: (order) => getAskingPriceForOrder(order)
     },
-    { key: 'offeredPrice', label: 'Offered Price', sortable: true },
+    { key: 'offeredPrice', label: 'Bid Price', sortable: true },
     { key: 'totalValue', label: 'Total Value', sortable: true },
     { 
       key: 'fulfillableQuantity', 
@@ -131,7 +131,22 @@ const Sales: React.FC = () => {
     try {
       const success = await fulfillWineOrder(orderId);
       if (success) {
-        await loadData(); // Refresh data
+        // Remove the fulfilled order from state
+        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        // Update wine quantities in state
+        setBottledWines(prevWines => {
+          return prevWines.map(wine => {
+            const order = orders.find(o => o.id === orderId);
+            if (order && order.wineBatchId === wine.id) {
+              const fulfillableQuantity = Math.min(order.requestedQuantity, wine.quantity);
+              return {
+                ...wine,
+                quantity: wine.quantity - fulfillableQuantity
+              };
+            }
+            return wine;
+          });
+        });
       } else {
         alert('Failed to fulfill order - insufficient inventory');
       }
@@ -148,7 +163,8 @@ const Sales: React.FC = () => {
     setLoading(true);
     try {
       await rejectWineOrder(orderId);
-      await loadData(); // Refresh data
+      // Remove the rejected order from state
+      setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
     } catch (error) {
       console.error('Error rejecting order:', error);
       alert('Error rejecting order');
@@ -163,7 +179,8 @@ const Sales: React.FC = () => {
     try {
       const newOrder = await generateWineOrder();
       if (newOrder) {
-        await loadData(); // Refresh data
+        // Add the new order to state
+        setOrders(prevOrders => [...prevOrders, newOrder]);
       }
       // If newOrder is null, it means the order was rejected due to high asking price
       // The notification system already handles this case with appropriate messaging
@@ -222,7 +239,10 @@ const Sales: React.FC = () => {
         delete updated[wine.id];
         return updated;
       });
-      await loadData(); // Refresh data
+      // Update the wine in state
+      setBottledWines(prevWines => 
+        prevWines.map(w => w.id === wine.id ? updatedWine : w)
+      );
     } catch (error) {
       console.error('Error updating price:', error);
       alert('Error updating price');
@@ -243,11 +263,34 @@ const Sales: React.FC = () => {
 
     setLoading(true);
     try {
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         orders.map(order => fulfillWineOrder(order.id))
       );
       
-      await loadData(); // Refresh data
+      // Update state based on successful fulfillments
+      const successfulOrders = results
+        .map((result, index) => result.status === 'fulfilled' ? orders[index] : null)
+        .filter(Boolean);
+      
+      // Remove successful orders from state
+      setOrders(prevOrders => 
+        prevOrders.filter(order => !successfulOrders.some(so => so?.id === order.id))
+      );
+      
+      // Update wine quantities for successful orders
+      setBottledWines(prevWines => {
+        return prevWines.map(wine => {
+          const successfulOrder = successfulOrders.find(so => so?.wineBatchId === wine.id);
+          if (successfulOrder) {
+            const fulfillableQuantity = Math.min(successfulOrder.requestedQuantity, wine.quantity);
+            return {
+              ...wine,
+              quantity: wine.quantity - fulfillableQuantity
+            };
+          }
+          return wine;
+        });
+      });
     } catch (error) {
       console.error('Error in bulk accept:', error);
     } finally {
@@ -261,7 +304,8 @@ const Sales: React.FC = () => {
     setLoading(true);
     try {
       await Promise.all(orders.map(order => rejectWineOrder(order.id)));
-      await loadData(); // Refresh data
+      // Clear all orders from state
+      setOrders([]);
     } catch (error) {
       console.error('Error in bulk reject:', error);
     } finally {
@@ -579,7 +623,7 @@ const Sales: React.FC = () => {
                       sortIndicator={getOrderSortIndicator('offeredPrice')}
                       isSorted={isOrderColumnSorted('offeredPrice')}
                     >
-                      Offered Price
+                      Bid Price
                     </TableHead>
                     <TableHead 
                       sortable 
