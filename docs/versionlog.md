@@ -3,13 +3,13 @@
 ### **Player Menu & Notification System Implementation**
 - `src/components/ui/` - Added ShadCN UI components: avatar, badge, button, card, dropdown-menu, scroll-area, navigation-menu, accordion, tooltip, toast, toaster
 - `src/lib/toast.ts` - New toast notification system with global state management and message dispatching
-- `src/components/layout/Console.tsx` - In-game console with message history, filtering, and real-time updates
+- `src/components/layout/NotificationCenter.tsx` - In-app notification center with message history, filtering, and real-time updates (renamed from Console)
 - `src/components/pages/` - Added player menu pages: Profile, Settings, AdminDashboard, Achievements, Winepedia
-- `src/components/layout/Header.tsx` - Integrated player dropdown menu with avatar, console access, and reactive state management
+- `src/components/layout/Header.tsx` - Integrated player dropdown menu with avatar, notification history access, and reactive state management
 - `src/App.tsx` - Added routing for new player menu pages and toast notification system
 - `src/lib/utils/utils.ts` - Added global formatTime() function for consistent timestamp formatting
 - **Admin Dashboard**: Data clearing functionality for localStorage and Supabase with proper UUID handling for vineyards table
-- **Console System**: Message history with filtering, timestamps, and integration with toast notifications
+- **Notification System**: Message history with filtering, timestamps, and integration with toast notifications
 - **Player Menu**: Dropdown navigation with Profile, Settings, Admin Dashboard, Achievements, Wine-Pedia, and Logout options
 
 ---

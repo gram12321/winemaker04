@@ -7,137 +7,112 @@ import { InfoIcon, AlertTriangleIcon, XCircleIcon, CheckCircleIcon } from 'lucid
 import { toast } from "@/lib/toast";
 import { formatTime } from "@/lib/utils/utils";
 
-type MessageType = 'info' | 'warning' | 'error' | 'success';
+type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
-export interface ConsoleMessage {
+export interface PlayerNotification {
   id: string;
   timestamp: Date;
   text: string;
-  type: MessageType;
+  type: NotificationType;
 }
 
-interface ConsoleProps {
-  showConsole?: boolean;
+interface NotificationCenterProps {
   onClose?: () => void;
   isOpen?: boolean;
 }
 
-// Create a singleton for managing console messages
-let consoleMessages: ConsoleMessage[] = [];
-let messageListeners: ((messages: ConsoleMessage[]) => void)[] = [];
+let notifications: PlayerNotification[] = [];
+let listeners: ((messages: PlayerNotification[]) => void)[] = [];
 
-// Function to notify all listeners of message changes
 function notifyListeners() {
-  messageListeners.forEach(listener => listener(consoleMessages));
-  
-  // Also save to localStorage
-  localStorage.setItem('consoleMessages', JSON.stringify(consoleMessages));
+  listeners.forEach(listener => listener(notifications));
+  localStorage.setItem('notifications', JSON.stringify(notifications));
 }
 
-// Load saved messages on initial script execution
 try {
-  // Initialize showConsole to true by default if not set
-  if (localStorage.getItem('showConsole') === null) {
-    localStorage.setItem('showConsole', 'true');
+  if (localStorage.getItem('showNotifications') === null) {
+    localStorage.setItem('showNotifications', 'true');
   }
 
-  const savedMessages = localStorage.getItem('consoleMessages');
-  if (savedMessages) {
-    const parsedMessages = JSON.parse(savedMessages);
-    // Convert string timestamps back to Date objects
-    consoleMessages = parsedMessages.map((msg: any) => ({
+  const saved = localStorage.getItem('notifications');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    notifications = parsed.map((msg: any) => ({
       ...msg,
       timestamp: new Date(msg.timestamp)
     }));
   }
 } catch (error) {
-  console.error('Failed to parse saved console messages:', error);
+  console.error('Failed to parse saved notifications:', error);
 }
 
-// Console service - Global object to manage messages
-export const consoleService = {
-  // Get all messages
+export const notificationService = {
   getMessages() {
-    return [...consoleMessages];
+    return [...notifications];
   },
-  
-  // Add a message
-  addMessage(text: string, type: MessageType = 'info') {
-    const message: ConsoleMessage = {
+
+  addMessage(text: string, type: NotificationType = 'info') {
+    const message: PlayerNotification = {
       id: Date.now().toString(),
       timestamp: new Date(),
       text,
       type
     };
-    
-    // Add to messages array
-    consoleMessages = [message, ...consoleMessages];
-    
-    // Notify listeners
+
+    notifications = [message, ...notifications];
     notifyListeners();
-    
-    // Show toast if enabled (default to true if not set)
-    const showConsoleToasts = localStorage.getItem('showConsole') !== 'false';
-    if (showConsoleToasts) {
+
+    const showToasts = localStorage.getItem('showNotifications') !== 'false';
+    if (showToasts) {
       toast({
         title: type.charAt(0).toUpperCase() + type.slice(1),
         description: text,
         variant: type === 'error' ? 'destructive' : 'default',
       });
     }
-    
+
     return message;
   },
-  
-  // Clear all messages
+
   clearMessages() {
-    consoleMessages = [];
-    localStorage.removeItem('consoleMessages');
+    notifications = [];
+    localStorage.removeItem('notifications');
     notifyListeners();
   },
-  
-  // Helper methods for different message types
+
   info(text: string) {
     return this.addMessage(text, 'info');
   },
-  
   warning(text: string) {
     return this.addMessage(text, 'warning');
   },
-  
   error(text: string) {
     return this.addMessage(text, 'error');
   },
-  
   success(text: string) {
     return this.addMessage(text, 'success');
   }
 };
 
-export function Console({ onClose, isOpen = false }: ConsoleProps) {
-  const [messages, setMessages] = useState<ConsoleMessage[]>(consoleMessages);
+export function NotificationCenter({ onClose, isOpen = false }: NotificationCenterProps) {
+  const [messages, setMessages] = useState<PlayerNotification[]>(notifications);
   const [isHistoryOpen, setIsHistoryOpen] = useState(isOpen);
-  
-  // Load and subscribe to message changes
+
   useEffect(() => {
-    const messageListener = (updatedMessages: ConsoleMessage[]) => {
-      setMessages([...updatedMessages]);
+    const listener = (updated: PlayerNotification[]) => {
+      setMessages([...updated]);
     };
-    
-    messageListeners.push(messageListener);
-    
-    // Cleanup
+    listeners.push(listener);
     return () => {
-      messageListeners = messageListeners.filter(l => l !== messageListener);
+      listeners = listeners.filter(l => l !== listener);
     };
   }, []);
-  
-  // Update history open state based on prop
+
   useEffect(() => {
     setIsHistoryOpen(isOpen);
   }, [isOpen]);
 
-  const getIconForType = (type: MessageType) => {
+  const getIconForType = (type: NotificationType) => {
     switch (type) {
       case 'info':
         return <InfoIcon className="h-4 w-4" />;
@@ -152,37 +127,33 @@ export function Console({ onClose, isOpen = false }: ConsoleProps) {
     }
   };
 
-  
   const handleClose = () => {
     setIsHistoryOpen(false);
-    if (onClose) {
-      onClose();
-    }
+    if (onClose) onClose();
   };
 
   return (
     <>
-      {/* Message History Dialog */}
       {isHistoryOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24">
           <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
           <Card className="z-50 w-full max-w-lg max-h-[80vh] overflow-hidden">
             <CardHeader>
-              <CardTitle>Message History</CardTitle>
-              <CardDescription>Recent game updates and notifications</CardDescription>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>Recent game updates and messages</CardDescription>
             </CardHeader>
             <ScrollArea className="h-[50vh]">
               <CardContent>
                 {messages.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No messages yet</p>
+                  <p className="text-center text-gray-500 py-8">No notifications</p>
                 ) : (
                   <div className="space-y-3">
                     {messages.slice().reverse().map((message) => (
-                      <div 
-                        key={message.id} 
+                      <div
+                        key={message.id}
                         className={`p-3 rounded-md border flex items-start gap-2 ${
-                          message.type === 'error' 
-                            ? 'bg-red-50 border-red-200' 
+                          message.type === 'error'
+                            ? 'bg-red-50 border-red-200'
                             : message.type === 'warning'
                               ? 'bg-yellow-50 border-yellow-200'
                               : message.type === 'success'
@@ -217,43 +188,35 @@ export function Console({ onClose, isOpen = false }: ConsoleProps) {
   );
 }
 
-// Simpler hook for components that need console access
-export function useConsole() {
-  const [messages, setMessages] = useState<ConsoleMessage[]>(consoleMessages);
+export function useNotifications() {
+  const [messages, setMessages] = useState<PlayerNotification[]>(notifications);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  
-  // Subscribe to message changes
+
   useEffect(() => {
-    const messageListener = (updatedMessages: ConsoleMessage[]) => {
-      setMessages([...updatedMessages]);
+    const listener = (updated: PlayerNotification[]) => {
+      setMessages([...updated]);
     };
-    
-    messageListeners.push(messageListener);
-    
-    // Cleanup
+    listeners.push(listener);
     return () => {
-      messageListeners = messageListeners.filter(l => l !== messageListener);
+      listeners = listeners.filter(l => l !== listener);
     };
   }, []);
-  
-  const openHistory = () => {
-    setIsHistoryOpen(true);
-  };
-  
-  const closeHistory = () => {
-    setIsHistoryOpen(false);
-  };
-  
+
+  const openHistory = () => setIsHistoryOpen(true);
+  const closeHistory = () => setIsHistoryOpen(false);
+
   return {
     messages,
     isHistoryOpen,
     openHistory,
     closeHistory,
-    addMessage: consoleService.addMessage.bind(consoleService),
-    clearMessages: consoleService.clearMessages.bind(consoleService),
-    info: consoleService.info.bind(consoleService),
-    warning: consoleService.warning.bind(consoleService),
-    error: consoleService.error.bind(consoleService),
-    success: consoleService.success.bind(consoleService)
+    addMessage: notificationService.addMessage.bind(notificationService),
+    clearMessages: notificationService.clearMessages.bind(notificationService),
+    info: notificationService.info.bind(notificationService),
+    warning: notificationService.warning.bind(notificationService),
+    error: notificationService.error.bind(notificationService),
+    success: notificationService.success.bind(notificationService)
   };
 }
+
+

@@ -6,6 +6,7 @@ We already have the basic setup: React/Vite/TypeScript + ShadCN, connected to Su
  - We have very basic inventory where harvest can be stores. 
  - WE now store winebatch from harvest and have winery actions to manipulate them from grape to bottled wine. 
  - We now have a salesService.ts that provide functions to create and fullfill orders. And we have a calculator.ts that provide advanced math functions
+ - We have updated the header, with a navigation menu (Players menu) and we have implementet a notification service. 
 
 Allright next lets copy the playersmenu in the UI. Most will be placeholder pages, but we do want to create the admindashboard, especially the ability to clear data in supabase. 
 

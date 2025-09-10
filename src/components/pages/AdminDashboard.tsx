@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { consoleService } from '../layout/Console';
+import { notificationService } from '../layout/NotificationCenter';
 
 interface AdminDashboardProps {
   view?: string;
@@ -26,20 +26,20 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
       setIsLoading(prev => ({ ...prev, clearStorage: true }));
       
       // Clear all game-related data from localStorage
-      const keysToRemove = ['gameState', 'consoleMessages', 'showConsole', 'timeFormat', 'landUnit', 'tutorialsEnabled'];
+      const keysToRemove = ['gameState', 'notifications', 'showNotifications'];
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
       });
       
-      // Clear console messages from the console service
-      consoleService.clearMessages();
+      // Clear messages from the notification service
+      notificationService.clearMessages();
       
-      setMessage({ type: 'success', text: 'Local storage and console messages cleared successfully.' });
-      consoleService.success('Local storage and console messages cleared');
+      setMessage({ type: 'success', text: 'Local storage and notifications cleared successfully.' });
+      notificationService.success('Local storage and notifications cleared');
     } catch (error) {
       console.error('Error clearing local storage:', error);
       setMessage({ type: 'error', text: 'Error clearing local storage.' });
-      consoleService.error('Failed to clear local storage');
+      notificationService.error('Failed to clear local storage');
     } finally {
       setIsLoading(prev => ({ ...prev, clearStorage: false }));
     }
@@ -101,19 +101,19 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
       
       if (failed.length === 0) {
         setMessage({ type: 'success', text: `Successfully cleared ${successful.length} tables from Supabase.` });
-        consoleService.success(`Cleared ${successful.length} Supabase tables`);
+        notificationService.success(`Cleared ${successful.length} Supabase tables`);
       } else {
         setMessage({ 
           type: 'error', 
           text: `Cleared ${successful.length} tables, but ${failed.length} failed. Check console for details.` 
         });
-        consoleService.warning(`Partially cleared Supabase: ${successful.length} success, ${failed.length} failed`);
+        notificationService.warning(`Partially cleared Supabase: ${successful.length} success, ${failed.length} failed`);
         console.log('Failed tables:', failed);
       }
     } catch (error) {
       console.error('Error clearing Supabase:', error);
       setMessage({ type: 'error', text: `Error clearing Supabase data: ${error}` });
-      consoleService.error('Failed to clear Supabase data');
+      notificationService.error('Failed to clear Supabase data');
     } finally {
       setIsLoading(prev => ({ ...prev, clearSupabase: false }));
     }

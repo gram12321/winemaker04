@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Console, useConsole } from '@/components/layout/Console';
+import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { CalendarDays, MessageSquareText } from 'lucide-react';
 
 interface HeaderProps {
@@ -17,7 +17,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance }) => {
   const [gameState, setGameState] = useState(getGameState());
-  const consoleHook = useConsole();
+  const consoleHook = useNotifications();
 
   // Update game state when onTimeAdvance is called
   useEffect(() => {
@@ -140,10 +140,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
         </div>
       </div>
       
-      {/* Message History Modal - controlled by Console component */}
+      {/* Notification History Modal - controlled by NotificationCenter component */}
       {consoleHook.isHistoryOpen && 
-        <Console 
-          showConsole={true} 
+        <NotificationCenter 
           isOpen={consoleHook.isHistoryOpen} 
           onClose={consoleHook.closeHistory} 
         />
