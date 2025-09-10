@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGameState, incrementWeek } from '@/lib/gameState';
-import { formatMoney } from '@/lib/utils/formatUtils';
+import { formatCurrency } from '@/lib/utils/formatUtils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,8 +82,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
           </Button>
           
           <Badge variant="outline" className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center">
-            <span className="mr-1">€</span>
-            <span className="font-medium">{formatMoney(gameState.money || 0)}</span>
+            <span className="font-medium">{formatCurrency(gameState.money || 0)}</span>
           </Badge>
           
           <Button 

@@ -1,6 +1,7 @@
 // Hook for initializing game state on app startup
 import { useEffect, useState } from 'react';
 import { loadGameState, getGameState } from '@/lib/gameState';
+import { initializeStartingCapital } from '@/lib/services/financeService';
 
 export const useGameInit = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -14,6 +15,9 @@ export const useGameInit = () => {
         
         // Load game state (time/season data)
         await loadGameState();
+        
+        // Initialize starting capital in finance system (if new game)
+        await initializeStartingCapital();
         
         // Note: Vineyards and inventory are loaded separately by their components
       } catch (err) {

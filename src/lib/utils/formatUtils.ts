@@ -1,9 +1,3 @@
-// Formatting utilities for the winery management game
-
-export function formatCurrency(value: number, decimals = 0): string {
-  return `€${formatNumber(value, decimals)}`;
-}
-
 export function formatNumber(value: number, decimals = 0): string {
   return value.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
@@ -11,21 +5,23 @@ export function formatNumber(value: number, decimals = 0): string {
   });
 }
 
-export function formatPercent(value: number, decimals = 1): string {
-  return `${(value * 100).toLocaleString('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  })}%`;
+export function formatCurrency(value: number, decimals = 0): string {
+  return `€${formatNumber(value, decimals)}`;
 }
 
-export function formatMoney(value: number): string {
-  if (value >= 1000000) {
-    return `€${(value / 1000000).toFixed(2)} Mio`;
-  } else if (value >= 1000) {
-    return `€${(value / 1000).toFixed(0)}K`;
-  } else {
-    return `€${value.toLocaleString()}`;
-  }
+export function getCountryCodeForFlag(countryName: string | undefined | null): string {
+  if (!countryName) return ''; // Handle undefined or null input
+
+  const countryToCodeMap: Record<string, string> = {
+    "Italy": "it",
+    "France": "fr",
+    "Spain": "es",
+    "US": "us", 
+    "United States": "us",
+    "Germany": "de",
+  };
+
+  return countryToCodeMap[countryName] || ''; 
 }
 
 export function getColorClass(value: number): string {
@@ -42,7 +38,7 @@ export function getColorClass(value: number): string {
     8: 'text-green-700',
     9: 'text-green-800',
   };
-  return colorMap[level] || 'text-gray-500';
+  return colorMap[level] || 'text-gray-500'; // Default to gray if level is unexpected
 }
 
 export function getWineQualityCategory(quality: number): string {

@@ -62,6 +62,22 @@ export const PRICING_PLACEHOLDER_CONSTANTS = {
   PRESTIGE_PLACEHOLDER: 0.5,
 } as const;
 
+// ===== GAME INITIALIZATION CONSTANTS =====
+
+// Starting values for new games
+export const GAME_INITIALIZATION = {
+  // Starting financial capital
+  STARTING_MONEY: 10000000, // €10M starting capital
+  
+  // Starting time
+  STARTING_WEEK: 1,
+  STARTING_SEASON: 'Spring' as const,
+  STARTING_YEAR: 2024,
+  
+  // Starting prestige
+  STARTING_PRESTIGE: 1,
+} as const;
+
 // ===== FUTURE CONSTANTS =====
 // This file can be extended with other game constants as needed:
 // - Vineyard constants (land values, prestige factors)

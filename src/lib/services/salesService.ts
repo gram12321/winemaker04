@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { WineOrder, WineBatch, OrderType } from '../types';
 import { saveWineOrder, loadWineOrders, updateWineOrderStatus, loadWineBatches, saveWineBatch } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
-import { getGameState, addMoney } from '../gameState';
+import { getGameState } from '../gameState';
+import { addTransaction } from './financeService';
 import { formatCompletedWineName } from './wineBatchService';
 import { SALES_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
 import { calculateBaseWinePrice, calculateExtremeQualityMultiplier } from '../utils/calculator';
@@ -153,8 +154,12 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   
   await saveWineBatch(updatedBatch);
   
-  // Add money to player account
-  addMoney(order.totalValue);
+  // Add money to player account through finance system
+  await addTransaction(
+    order.totalValue,
+    `Wine Sale: ${order.wineName}`,
+    'Wine Sales'
+  );
   
   // Mark order as fulfilled
   await updateWineOrderStatus(orderId, 'fulfilled');

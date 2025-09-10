@@ -1,14 +1,15 @@
 // Centralized game state and logic (time/season only)
 import { GameState } from './types';
 import { saveGameState as persistGameState, loadGameState as loadGameStateFromDB } from './database';
+import { GAME_INITIALIZATION } from './constants';
 
 // Global game state (time/season and financial data)
 let gameState: Partial<GameState> = {
-  week: 1,
-  season: 'Spring',
-  currentYear: 2024,
-  money: 10000000, // €10M starting capital
-  prestige: 1
+  week: GAME_INITIALIZATION.STARTING_WEEK,
+  season: GAME_INITIALIZATION.STARTING_SEASON,
+  currentYear: GAME_INITIALIZATION.STARTING_YEAR,
+  money: 0, // Start with 0 money - initial capital will be added through transaction
+  prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
 };
 
 // Game state management functions
@@ -30,11 +31,11 @@ export const setGameState = (newGameState: Partial<GameState>): void => {
 
 export const resetGameState = (): void => {
   gameState = {
-    week: 1,
-    season: 'Spring',
-    currentYear: 2024,
-    money: 10000000,
-    prestige: 1
+    week: GAME_INITIALIZATION.STARTING_WEEK,
+    season: GAME_INITIALIZATION.STARTING_SEASON,
+    currentYear: GAME_INITIALIZATION.STARTING_YEAR,
+    money: 0, // Start with 0 money - initial capital will be added through transaction
+    prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
   };
   // Auto-save reset state
   persistGameState(gameState).catch(() => {
@@ -60,7 +61,11 @@ export const loadGameState = async (): Promise<void> => {
 // Time management functions
 export const incrementWeek = (): Partial<GameState> => {
   const currentState = getGameState();
-  let { week = 1, season = 'Spring', currentYear = 2024 } = currentState;
+  let { 
+    week = GAME_INITIALIZATION.STARTING_WEEK, 
+    season = GAME_INITIALIZATION.STARTING_SEASON, 
+    currentYear = GAME_INITIALIZATION.STARTING_YEAR 
+  } = currentState;
   
   // Increment week
   week += 1;
@@ -80,22 +85,4 @@ export const incrementWeek = (): Partial<GameState> => {
   
   updateGameState({ week, season, currentYear });
   return getGameState();
-};
-
-// Financial management functions
-export const addMoney = (amount: number): void => {
-  const currentState = getGameState();
-  const newMoney = (currentState.money || 0) + amount;
-  updateGameState({ money: newMoney });
-};
-
-export const spendMoney = (amount: number): boolean => {
-  const currentState = getGameState();
-  const currentMoney = currentState.money || 0;
-  
-  if (currentMoney >= amount) {
-    updateGameState({ money: currentMoney - amount });
-    return true;
-  }
-  return false;
 };

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { notificationService } from '../layout/NotificationCenter';
+import { addTransaction } from '@/lib/services/financeService';
 
 interface AdminDashboardProps {
   view?: string;
@@ -14,9 +15,11 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
   const [isLoading, setIsLoading] = useState<{
     clearStorage: boolean;
     clearSupabase: boolean;
+    addMoney: boolean;
   }>({
     clearStorage: false,
     clearSupabase: false,
+    addMoney: false,
   });
 
   if (view && view !== 'admin') return null;
@@ -58,7 +61,8 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
         'vineyards',
         'game_state',
         'wine_batches', 
-        'wine_orders'
+        'wine_orders',
+        'transactions'
       ];
 
       // Clear each known table
@@ -66,7 +70,7 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
         try {
           // Use different delete strategies based on table structure
           let deleteQuery;
-          if (tableName === 'vineyards') {
+          if (tableName === 'vineyards' || tableName === 'transactions') {
             // For UUID tables, use a valid UUID that won't exist
             deleteQuery = supabase
               .from(tableName)
@@ -116,6 +120,28 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
       notificationService.error('Failed to clear Supabase data');
     } finally {
       setIsLoading(prev => ({ ...prev, clearSupabase: false }));
+    }
+  };
+
+  const handleAddMoney = async () => {
+    try {
+      setIsLoading(prev => ({ ...prev, addMoney: true }));
+      
+      // Add €1,000,000 through the finance system
+      await addTransaction(
+        1000000,
+        'Admin: Capital Injection',
+        'Capital'
+      );
+
+      setMessage({ type: 'success', text: 'Added €1,000,000 to treasury successfully.' });
+      notificationService.success('Added €1,000,000 to treasury');
+    } catch (error) {
+      console.error('Error adding money:', error);
+      setMessage({ type: 'error', text: `Error adding money: ${error}` });
+      notificationService.error('Failed to add money');
+    } finally {
+      setIsLoading(prev => ({ ...prev, addMoney: false }));
     }
   };
 
@@ -174,6 +200,22 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
               disabled={isLoading.clearSupabase}
             >
               {isLoading.clearSupabase ? 'Clearing...' : 'Clear Supabase Data'}
+            </Button>
+          </div>
+          
+          <hr className="my-4" />
+          
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Financial Management</h3>
+            <p className="text-sm text-gray-500">
+              Add money to the treasury through the finance system.
+            </p>
+            <Button 
+              variant="default" 
+              onClick={handleAddMoney}
+              disabled={isLoading.addMoney}
+            >
+              {isLoading.addMoney ? 'Adding...' : 'Add €1,000,000'}
             </Button>
           </div>
         </CardContent>

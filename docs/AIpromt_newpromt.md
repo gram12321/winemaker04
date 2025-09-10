@@ -1,18 +1,10 @@
 We already have the basic setup: React/Vite/TypeScript + ShadCN, connected to Supabase. As descriped in the @readme.md We have succesfully enabled MCP tools for git and supabase. 
 
- - We have connected gamestate (datemanement) to database for persistant datemanagement
- - We  have a basic UI. With state update hooks
- - We have basic vineyard functions to create vineyard, plant, and harvest.
- - We have very basic inventory where harvest can be stores. 
- - WE now store winebatch from harvest and have winery actions to manipulate them from grape to bottled wine. 
+ - We have connected gamestate.ts (datemanement) to database for persistant datemanagement database.ts
+ - We have a basic UI mosty in \components. With state update hooks \hooks
+ - We have basic vineyard functions to create vineyard, plant, and harvest. and basic inventory where harvest can be stores. services/vineyardService.ts and  services/wineBatchService.ts
+ - WE now store winebatch from harvest and have winery actions to manipulate them from grape to bottled wine. (wineryService.ts)
  - We now have a salesService.ts that provide functions to create and fullfill orders. And we have a calculator.ts that provide advanced math functions
- - We have updated the header, with a navigation menu (Players menu) and we have implementet a notification service. 
+ - We have updated the header, with a navigation menu (Players menu) and we have implementet a notification service. layout/notificationCenter.tsx 
 
-Allright next lets copy the playersmenu in the UI. Most will be placeholder pages, but we do want to create the admindashboard, especially the ability to clear data in supabase. 
-
-
-
-task is:
-1. Read sales.js and contract.js and think about that we want something that can eventually scale into similiar sophisticated sales methods. 
-2. Implement a create order function and a way to display to user what order is avalible
-3. Crate a sell/refuse order btn and funtions that remove the order and/or add money to playersmoney (IE finance is not implementet this is solely to show that sell is working)
+Next up we want to implement the finance system. I have attached a bunch of files from the old iteration. Its not simple at all, and should be connected to the notificationSystem, but we should be pretty much able to copy it 1to1 from the old iteration. For now lets just make a placeholder for everything that has to do with research and upgrade. 

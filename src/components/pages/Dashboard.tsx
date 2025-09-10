@@ -1,6 +1,6 @@
-import { getGameState, updateGameState } from '@/lib/gameState';
+import { getGameState } from '@/lib/gameState';
 import { formatGameDate } from '@/lib/types';
-import { formatMoney } from '@/lib/utils/formatUtils';
+import { formatCurrency } from '@/lib/utils/formatUtils';
 
 const Dashboard: React.FC = () => {
   const gameState = getGameState();
@@ -11,24 +11,11 @@ const Dashboard: React.FC = () => {
     year: gameState.currentYear || 2024
   };
 
-  const handleAddMoney = () => {
-    updateGameState({ money: (gameState.money || 0) + 1000000 });
-  };
-
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome to the Game!</h2>
         <p className="text-gray-600">Start playing now.</p>
-        
-        <div className="mt-6 flex space-x-4">
-          <button 
-            onClick={handleAddMoney}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold"
-          >
-            Add €1,000,000 €
-          </button>
-        </div>
       </div>
 
       {/* Game Status Overview */}
@@ -40,7 +27,7 @@ const Dashboard: React.FC = () => {
         
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Treasury</h3>
-          <p className="text-2xl font-bold text-green-600">{formatMoney(gameState.money || 0)}</p>
+          <p className="text-2xl font-bold text-green-600">{formatCurrency(gameState.money || 0)}</p>
         </div>
         
         <div className="bg-white rounded-lg shadow p-6">
