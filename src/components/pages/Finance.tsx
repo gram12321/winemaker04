@@ -1,4 +1,3 @@
-import React from 'react';
 import { FinanceView } from '../finance';
 
 const Finance: React.FC = () => {

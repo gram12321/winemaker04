@@ -24,38 +24,50 @@ const DataRow: React.FC<{ label: string; value: string | number; valueClass?: st
   </div>
 );
 
+const defaultFinancialData = {
+  income: 0,
+  expenses: 0,
+  netIncome: 0,
+  incomeDetails: [] as { description: string; amount: number }[],
+  expenseDetails: [] as { description: string; amount: number }[],
+  cashBalance: 0,
+  totalAssets: 0,
+  fixedAssets: 0,
+  currentAssets: 0,
+  buildingsValue: 0,
+  farmlandValue: 0,
+  wineValue: 0,
+  grapesValue: 0
+};
+
 export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
-  const [financialData, setFinancialData] = useState({
-    income: 0,
-    expenses: 0,
-    netIncome: 0,
-    incomeDetails: [] as { description: string; amount: number }[],
-    expenseDetails: [] as { description: string; amount: number }[],
-    cashBalance: 0,
-    totalAssets: 0,
-    fixedAssets: 0,
-    currentAssets: 0,
-    buildingsValue: 0,
-    farmlandValue: 0,
-    wineValue: 0,
-    grapesValue: 0
-  });
+  const [financialData, setFinancialData] = useState(defaultFinancialData);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const loadData = async () => {
       setLoading(true);
       try {
         const data = await calculateFinancialData(period);
-        setFinancialData(data);
+        if (isMounted) {
+          setFinancialData(data);
+        }
       } catch (error) {
         console.error('Error loading financial data:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     loadData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [period]);
 
   if (loading) {

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -10,34 +9,10 @@ import {
 import { formatCurrency } from '@/lib/utils/formatUtils';
 import { loadTransactions, Transaction } from '@/lib/services/financeService';
 import { formatGameDate } from '@/lib/types';
+import { useAsyncData } from '@/hooks/useAsyncData';
 
 export function CashFlowView() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const loadedTransactions = await loadTransactions();
-        setTransactions(loadedTransactions);
-      } catch (error) {
-        console.error('Error loading transactions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-gray-500">Loading transaction history...</div>
-      </div>
-    );
-  }
+  const transactions = useAsyncData(loadTransactions, [] as Transaction[]);
 
   return (
     <div>

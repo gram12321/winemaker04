@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { WineOrder, WineBatch } from '../../lib/types';
 import { getPendingOrders, fulfillWineOrder, rejectWineOrder, generateWineOrder } from '../../lib/services/salesService';
 import { loadWineBatches } from '../../lib/database';
@@ -14,9 +14,15 @@ const Sales: React.FC = () => {
 
   // Listen to game updates to refresh data
   const { subscribe } = useGameUpdates();
-  subscribe(() => {
-    loadData();
-  });
+  
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      loadData();
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [subscribe]);
 
   // Load data function
   const loadData = async () => {
