@@ -1,3 +1,38 @@
+## Version 0.0012 - 2025-09-10
+
+### **Better Rejection Math**
+- `src/lib/services/salesService.ts` - Improved rejection probability calculation with sigmoid mapping and stepped balance
+- `src/lib/utils/calculator.ts` - Renamed calculateExtremeQualityMultiplier to calculateAsymmetricalMultiplier, added calculateSymmetricalMultiplier
+- `src/lib/constants.ts` - Replaced priceMultiplier with priceMultiplierRange arrays for each order type
+- `src/components/pages/Sales.tsx` - Updated UI to use React state management instead of manual data refreshes
+- `src/components/layout/Header.tsx` - Added useGameUpdates hook for real-time cash balance updates
+- `src/lib/database.ts` - Fixed money storage to use cents (integers) to prevent floating-point precision errors
+- **Mathematical Improvements**: Sophisticated price multiplier distribution, better rejection probability curves
+- **UI Improvements**: Real-time updates, proper React state management, fixed header cash balance updates
+- **Database Fixes**: Resolved 400 errors from floating-point precision issues in money calculations
+
+---
+
+## Version 0.0011 - 2025-09-10
+
+### **Better Sales Math**
+- `src/lib/services/salesService.ts` - Implemented sophisticated price multiplier system with symmetrical distribution
+- `src/lib/utils/calculator.ts` - Added calculateSymmetricalMultiplier for bell-curve price distribution
+- `src/lib/constants.ts` - Widened priceMultiplierRange for all order types with sophisticated probability curves
+- **Price System**: Replaced fixed multipliers with ranges using advanced mathematical distributions
+- **Customer Behavior**: More realistic bidding patterns with sophisticated probability curves
+
+---
+
+## Version 0.0010 - 2025-09-10
+
+### **Update Status Coregame Implementation + Cleaning of Coregame Features Implemented**
+- Updated core game implementation status and cleaned up core game features
+- Improved code organization and removed unused functions
+- Enhanced system stability and performance
+
+---
+
 ## Version 0.0009 - 2025-09-10
 
 ### **Finance System Implementation**
