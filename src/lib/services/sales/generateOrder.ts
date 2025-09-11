@@ -1,38 +1,17 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
-import { WineOrder, OrderType, Vineyard, WineBatch } from '../../types';
+import { WineOrder, OrderType } from '../../types';
 import { saveWineOrder, loadWineBatches, loadVineyards } from '../../database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../../gameState';
 import { formatCompletedWineName } from '../wineBatchService';
 import { SALES_CONSTANTS } from '../../constants';
-import { calculateOrderAmount, calculateSymmetricalMultiplier, calculateSteppedBalance, calculateAsymmetricalMultiplier } from '../../utils/calculator';
+import { calculateOrderAmount, calculateSymmetricalMultiplier, calculateSteppedBalance } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
-import { calculateWineValueIndex } from './wineValueIndexCalculationService';
-import { calculateWineQuality } from './wineQualityIndexCalculationService';
+import { getAvailableBottledWines } from '../../utils/wineFilters';
 
 // Use order type configurations from constants
 const ORDER_TYPE_CONFIG = SALES_CONSTANTS.ORDER_TYPES;
-
-// ===== PRICING CALCULATIONS =====
-
-export function calculateFinalWinePrice(wineBatch: WineBatch, vineyard: Vineyard): number {
-  // Calculate Wine Value Index (0-1 scale) - vineyard prestige/land value
-  const wineValueIndex = calculateWineValueIndex(vineyard);
-  
-  // Calculate Quality Index (0-1 scale) - wine quality/balance
-  const qualityIndex = calculateWineQuality(wineBatch);
-  
-  // Calculate Base Price from Wine Value Index
-  const basePrice = wineValueIndex * SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
-  
-  // Calculate Quality Multiplier from Quality Index
-  const qualityMultiplier = calculateAsymmetricalMultiplier(qualityIndex);
-  
-  // Calculate Final Price and round to 2 decimal places
-  const finalPrice = basePrice * qualityMultiplier;
-  return Math.round(finalPrice * 100) / 100;
-}
 
 // ===== REJECTION CALCULATIONS =====
 
@@ -49,10 +28,9 @@ export function calculateFinalWinePrice(wineBatch: WineBatch, vineyard: Vineyard
  * 
  * @param bidPrice - The price the customer is bidding (their offer)
  * @param finalPrice - The calculated perceived value of the wine (from pricing service)
- * @param vineyard - The vineyard for additional pricing context
  * @returns Rejection probability between 0 and 1
  */
-function calculateRejectionProbability(bidPrice: number, finalPrice: number, _vineyard?: Vineyard): number {
+function calculateRejectionProbability(bidPrice: number, finalPrice: number): number {
   if (bidPrice <= finalPrice) {
     console.log(`  → No rejection: bidPrice (€${bidPrice.toFixed(2)}) <= finalPrice (€${finalPrice.toFixed(2)})`);
     return 0; // No rejection if getting wine at or below its perceived value (good deal)
@@ -96,11 +74,7 @@ export async function generateOrder(): Promise<WineOrder | null> {
   const allVineyards = await loadVineyards();
   
   // Filter to only bottled wines with quantity > 0
-  const bottledWines = allBatches.filter(batch => 
-    batch.stage === 'bottled' && 
-    batch.process === 'bottled' && 
-    batch.quantity > 0
-  );
+  const bottledWines = getAvailableBottledWines(allBatches);
   
   if (bottledWines.length === 0) {
     return null; // No wines available for sale
@@ -135,7 +109,7 @@ export async function generateOrder(): Promise<WineOrder | null> {
   const bidPrice = Math.round(askingPrice * sophisticatedMultiplier * 100) / 100;
   
   // Check for outright rejection based on price ratio
-  const rejectionProbability = calculateRejectionProbability(bidPrice, basePrice, vineyard);
+  const rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
   const rejectionRandomValue = Math.random();
   
   console.log(`=== PRICE REJECTION CHECK ===`);
@@ -187,11 +161,8 @@ export async function generateOrder(): Promise<WineOrder | null> {
     return null; // No order generated
   }
 
-  // No inventory cap - allow orders larger than available inventory
-  const requestedQuantity = desiredQuantity;
-  
-  // Calculate fulfillable quantity based on current inventory
-  const fulfillableQuantity = Math.min(requestedQuantity, selectedBatch.quantity);
+  // Calculate fulfillable quantity based on current inventory  
+  const fulfillableQuantity = Math.min(desiredQuantity, selectedBatch.quantity);
   const fulfillableValue = Math.round(fulfillableQuantity * bidPrice * 100) / 100;
   
   const gameState = getGameState();
@@ -205,9 +176,9 @@ export async function generateOrder(): Promise<WineOrder | null> {
     orderType: selectedType,
     wineBatchId: selectedBatch.id,
     wineName: formatCompletedWineName(selectedBatch),
-    requestedQuantity,
+    requestedQuantity: desiredQuantity,
     offeredPrice: bidPrice, // Store as offeredPrice in the order object for compatibility
-    totalValue: Math.round(requestedQuantity * bidPrice * 100) / 100,
+    totalValue: Math.round(desiredQuantity * bidPrice * 100) / 100,
     fulfillableQuantity,
     fulfillableValue,
     askingPriceAtOrderTime: askingPrice, // Store the asking price at order time

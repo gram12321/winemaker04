@@ -5,7 +5,7 @@ import { saveWineBatch, loadWineBatches, loadVineyards } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
 import { generateWineCharacteristics } from './sales/wineQualityIndexCalculationService';
-import { calculateFinalWinePrice } from './sales/generateOrder';
+import { calculateFinalWinePrice } from './sales/pricingService';
 
 // ===== WINE BATCH OPERATIONS =====
 

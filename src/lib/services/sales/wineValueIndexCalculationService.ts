@@ -24,41 +24,8 @@ export function calculateWineValueIndex(vineyard: Vineyard): number {
   return Math.max(0, Math.min(1, wineValueIndex));
 }
 
-/**
- * Calculate land value factor based on regional characteristics
- * This will eventually include soil type, altitude, aspect, climate, etc.
- * 
- * @param vineyard - The vineyard to calculate land value for
- * @returns Land value factor (0-1 scale)
- */
-export function calculateLandValue(_vineyard: Vineyard): number {
-  // TODO: Implement regional data lookup
-  // - Look up region in prestige rankings (from names.js equivalent)
-  // - Factor in soil type suitability
-  // - Factor in altitude and aspect ratings
-  // - Factor in climate suitability for grape variety
-  
-  // For now, return placeholder
-  return _vineyard.landValue || 0.5;
-}
-
-/**
- * Calculate field prestige factor based on vineyard characteristics
- * This will eventually include vine age, health, density, past performance, etc.
- * 
- * @param vineyard - The vineyard to calculate field prestige for
- * @returns Field prestige factor (0-1 scale)
- */
-export function calculateFieldPrestige(_vineyard: Vineyard): number {
-  // TODO: Implement vineyard characteristic calculations
-  // - Vine age contribution (mature vines = higher prestige)
-  // - Vineyard health (healthy vines = higher prestige)
-  // - Vine density (optimal density = higher prestige)
-  // - Historical yield and quality performance
-  // - Grape variety suitability for this specific vineyard
-  
-  // For now, return placeholder
-  return _vineyard.fieldPrestige || 0.5;
-}
+// TODO: Future implementations for when the game expands
+// - calculateLandValue(): Regional data, soil, altitude, climate effects
+// - calculateFieldPrestige(): Vine age, health, density, performance history
 
 
