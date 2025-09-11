@@ -4,6 +4,24 @@
 - **Complex Pricing:** Calculates wine price using land value, field prestige, quality, and balance.
 - **Extreme Quality Multipliers:** Uses logistic functions for realistic, exponential price scaling.
 - **Dynamic Order Generation:** Order frequency scales with company prestige (diminishing returns).
+
+1. Prestige-Based Order Frequency
+The old system's approach was more sophisticated:
+// Old system scaled order chance based on company prestige
+const baseChance = MIN_BASE_CHANCE + (prestige / PRESTIGE_THRESHOLD) * (MAX_BASE_CHANCE - MIN_BASE_CHANCE);
+
+2. Multi-Factor Order Generation
+Consider implementing:
+Vineyard Prestige Influence: Higher prestige vineyards should attract more orders
+Wine Quality Attraction: Exceptional wines should have higher order generation chances
+Market Saturation: Diminishing returns when you have many wines available
+
+4. Order Type Sophistication
+The old system had more nuanced order type selection based on:
+Importer Relationships: Different customer types based on relationships
+Market Share: Larger customers for established relationships
+Regional Preferences: Different order patterns by region
+
 - **Price Negotiation:** Haggling system adjusts final sale price.
 - **Order Amounts:** Order sizes respond to pricing and prestige.
 

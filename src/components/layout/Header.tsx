@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getGameState, incrementWeek } from '@/lib/gameState';
+import { getGameState } from '@/lib/gameState';
+import { processGameTick } from '@/lib/services/gameTickService';
 import { formatCurrency } from '@/lib/utils/formatUtils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
 import { Button } from '@/components/ui/button';
@@ -36,10 +37,14 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
     };
   }, [subscribe]);
 
-  const handleIncrementWeek = () => {
-    incrementWeek();
-    setGameState(getGameState()); // Update local state immediately
-    onTimeAdvance();
+  const handleIncrementWeek = async () => {
+    try {
+      await processGameTick();
+      setGameState(getGameState()); // Update local state immediately
+      onTimeAdvance();
+    } catch (error) {
+      console.error('Error advancing time:', error);
+    }
   };
 
   const navItems = [

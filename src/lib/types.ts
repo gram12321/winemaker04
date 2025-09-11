@@ -31,6 +31,10 @@ export interface Vineyard {
   isPlanted: boolean; // Boolean for planted/barren state
   status: VineyardStatus;
   createdAt: GameDate;
+  
+  // Pricing factors (using placeholders for now)
+  landValue?: number; // Land value factor (0-1 scale) - will be calculated from region/soil/etc
+  fieldPrestige?: number; // Field prestige factor (0-1 scale) - will be calculated from vine age/health/etc
 }
 
 
@@ -79,14 +83,18 @@ export interface WineOrder {
   status: 'pending' | 'fulfilled' | 'rejected' | 'partially_fulfilled';
 }
 
-// Game State (only time/financial data, vineyards/inventory now in separate DB tables)
+// Game State (time/financial/company data, vineyards/inventory now in separate DB tables)
 export interface GameState {
   // Time Management
   week: number;
   season: Season;
   currentYear: number;
   
-  // Financial
+  // Company Identity
+  companyName: string;
+  foundedYear: number; // Year the company was founded
+  
+  // Financial & Reputation
   money: number;
-  prestige: number;
+  prestige: number; // Company prestige for order generation scaling
 }

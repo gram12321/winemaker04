@@ -1,12 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { WineOrder, WineBatch } from '../../lib/types';
-import { getPendingOrders, fulfillWineOrder, rejectWineOrder, generateWineOrder } from '../../lib/services/salesService';
+import { getPendingOrders, fulfillWineOrder, rejectWineOrder } from '../../lib/services/salesService';
+import { generateWineOrder } from '../../lib/services/sales/salesOrderService';
+import { generateCustomer } from '../../lib/services/sales/generateCustomer';
 import { loadWineBatches, saveWineBatch } from '../../lib/database';
 import { useGameUpdates } from '../../hooks/useGameUpdates';
 import { formatGameDate } from '../../lib/types';
 import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const Sales: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
@@ -14,6 +17,15 @@ const Sales: React.FC = () => {
   const [bottledWines, setBottledWines] = useState<WineBatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
+  const [orderChanceInfo, setOrderChanceInfo] = useState<{
+    companyPrestige: number;
+    availableWines: number;
+    pendingOrders: number;
+    baseChance: number;
+    pendingPenalty: number;
+    finalChance: number;
+    randomRoll: number;
+  } | null>(null);
 
   // Listen to game updates to refresh data
   const { subscribe } = useGameUpdates();
@@ -120,9 +132,20 @@ const Sales: React.FC = () => {
     isColumnSorted: isCellarColumnSorted
   } = useTableSortWithAccessors(bottledWines, cellarColumns);
 
+  // Load current customer acquisition chance
+  const loadCustomerChance = async () => {
+    try {
+      const { chanceInfo } = await generateCustomer({ dryRun: true }); // dry run for display
+      setOrderChanceInfo(chanceInfo);
+    } catch (error) {
+      console.error('Error loading customer acquisition chance:', error);
+    }
+  };
+
   // Load data on component mount
   useEffect(() => {
     loadData();
+    loadCustomerChance();
   }, []);
 
   // Handle order fulfillment
@@ -173,17 +196,24 @@ const Sales: React.FC = () => {
     }
   };
 
-  // Generate test order
+  // Generate test order (customer acquisition + order creation)
   const handleGenerateOrder = async () => {
     setLoading(true);
     try {
-      const newOrder = await generateWineOrder();
-      if (newOrder) {
+      const { order, chanceInfo } = await generateWineOrder();
+      
+      // Store chance information for tooltip display
+      setOrderChanceInfo(chanceInfo);
+      
+      if (order) {
         // Add the new order to state
-        setOrders(prevOrders => [...prevOrders, newOrder]);
+        setOrders(prevOrders => [...prevOrders, order]);
       }
-      // If newOrder is null, it means the order was rejected due to high asking price
-      // The notification system already handles this case with appropriate messaging
+      // If order is null, it could be due to:
+      // 1. Company prestige too low / too many pending orders (no customer)
+      // 2. Customer rejected due to high asking price (customer not interested)
+      // 3. No bottled wines available
+      // The notification system and tooltip handle messaging
     } catch (error) {
       console.error('Error generating order:', error);
       alert('Error generating order');
@@ -542,6 +572,60 @@ const Sales: React.FC = () => {
 
       {activeTab === 'orders' && (
         <div className="space-y-4">
+          {/* Customer Acquisition Chance Display */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold">Customer Acquisition</h3>
+                <p className="text-gray-500 text-sm">Current chance to attract new customers</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200 cursor-help">
+                        <div className="text-sm text-blue-700">
+                          <span className="font-medium">Customer Chance:</span>
+                          <span className="ml-2 text-lg font-bold text-blue-800">
+                            {orderChanceInfo ? `${(orderChanceInfo.finalChance * 100).toFixed(1)}%` : '--'}
+                          </span>
+                        </div>
+                        <div className="text-blue-500">ℹ️</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      {orderChanceInfo ? (
+                        <div className="space-y-2 text-sm">
+                          <div className="font-semibold">Customer Acquisition Details</div>
+                          <div className="space-y-1">
+                            <div>Company Prestige: <span className="font-medium">{orderChanceInfo.companyPrestige.toFixed(1)}</span></div>
+                            <div>Available Wines: <span className="font-medium">{orderChanceInfo.availableWines}</span></div>
+                            <div>Pending Orders: <span className="font-medium">{orderChanceInfo.pendingOrders}</span></div>
+                            <div>Base Chance: <span className="font-medium">{(orderChanceInfo.baseChance * 100).toFixed(1)}%</span></div>
+                            <div>Pending Penalty: <span className="font-medium">{orderChanceInfo.pendingPenalty.toFixed(2)}x</span></div>
+                            <div className="border-t pt-1">
+                              <div>Final Chance: <span className="font-bold text-blue-300">{(orderChanceInfo.finalChance * 100).toFixed(1)}%</span></div>
+                              {orderChanceInfo.randomRoll > 0 ? (
+                                <div>Last Roll: <span className="font-medium">{orderChanceInfo.randomRoll < orderChanceInfo.finalChance ? '✅ Customer Acquired' : '❌ No Customer'}</span></div>
+                              ) : (
+                                <div className="text-xs text-gray-400">Click "Generate Order" to see roll result</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm">
+                          <div className="font-semibold">Customer Acquisition</div>
+                          <div>Click "Generate Order" to see your customer acquisition chance</div>
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          </div>
+
           {/* Order Management */}
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex justify-between items-center">
@@ -571,7 +655,7 @@ const Sales: React.FC = () => {
               <button
                 onClick={handleGenerateOrder}
                 disabled={loading || bottledWines.length === 0}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
               >
                 {loading ? 'Generating...' : 'Generate Order'}
               </button>

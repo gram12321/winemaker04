@@ -1,11 +1,11 @@
 // Wine batch management service for winery operations
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety } from '../types';
-import { saveWineBatch, loadWineBatches } from '../database';
+import { saveWineBatch, loadWineBatches, loadVineyards } from '../database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
-import { SALES_CONSTANTS, WINE_QUALITY_CONSTANTS, PRICING_PLACEHOLDER_CONSTANTS } from '../constants';
-import { calculateBaseWinePrice, calculateAsymmetricalMultiplier } from '../utils/calculator';
+import { generateWineCharacteristics } from './sales/wineQualityIndexCalculationService';
+import { calculateFinalWinePrice } from './sales/generateOrder';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -18,33 +18,18 @@ export async function createWineBatchFromHarvest(
 ): Promise<WineBatch> {
   const gameState = getGameState();
   
-  // Initialize wine quality properties with placeholder values and random variation
-  // TODO: Later this will be influenced by grape variety, vineyard characteristics, weather, etc.
-  const baseQuality = WINE_QUALITY_CONSTANTS.BASE_QUALITY;
-  const baseBalance = WINE_QUALITY_CONSTANTS.BASE_BALANCE;
+  // Get vineyard data for pricing calculations
+  const vineyards = await loadVineyards();
+  const vineyard = vineyards.find(v => v.id === vineyardId);
   
-  // Add random variation (QUALITY_VARIATION already handles the math)
-  const quality = Math.max(0, Math.min(1, baseQuality + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION));
-  const balance = Math.max(0, Math.min(1, baseBalance + (Math.random() - 0.5) * WINE_QUALITY_CONSTANTS.QUALITY_VARIATION));
+  if (!vineyard) {
+    throw new Error(`Vineyard not found: ${vineyardId}`);
+  }
   
-  // Calculate base price using new sophisticated system
-  // Base Price = (Land Value + Prestige) × Base Rate (with placeholders)
-  const basePrice = calculateBaseWinePrice(
-    PRICING_PLACEHOLDER_CONSTANTS.LAND_VALUE_PLACEHOLDER, 
-    PRICING_PLACEHOLDER_CONSTANTS.PRESTIGE_PLACEHOLDER, 
-    SALES_CONSTANTS.BASE_RATE_PER_BOTTLE
-  );
+  // Generate wine quality characteristics using the new quality service
+  const { quality, balance } = generateWineCharacteristics(grape, vineyardId);
   
-  // Calculate quality/balance multiplier (50/50 combination)
-  const combinedScore = (quality + balance) / 2;
-  const qualityMultiplier = calculateAsymmetricalMultiplier(combinedScore);
-  
-  // Calculate final price: Base Price × Quality/Balance Multiplier
-  const finalPrice = Math.max(
-    SALES_CONSTANTS.MIN_PRICE_PER_BOTTLE, 
-    Math.round(basePrice * qualityMultiplier * 100) / 100
-  );
-  
+  // Create initial wine batch without final price
   const wineBatch: WineBatch = {
     id: uuidv4(),
     vineyardId,
@@ -56,7 +41,7 @@ export async function createWineBatchFromHarvest(
     fermentationProgress: 0,
     quality,
     balance,
-    finalPrice: finalPrice,
+    finalPrice: 0, // Will be calculated below
     harvestDate: {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
@@ -68,6 +53,10 @@ export async function createWineBatchFromHarvest(
       year: gameState.currentYear || 2024
     }
   };
+
+  // Calculate final price using the new pricing service
+  const finalPrice = calculateFinalWinePrice(wineBatch, vineyard);
+  wineBatch.finalPrice = finalPrice;
 
   await saveWineBatch(wineBatch);
   triggerGameUpdate();

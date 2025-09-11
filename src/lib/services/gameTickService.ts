@@ -1,0 +1,94 @@
+// Game tick service - handles time progression and automatic game events
+import { getGameState, updateGameState } from '../gameState';
+import { GAME_INITIALIZATION } from '../constants';
+import { generateWineOrder } from './sales/salesOrderService';
+import { notificationService } from '../../components/layout/NotificationCenter';
+
+/**
+ * Enhanced time advancement with automatic game events
+ * This replaces the simple incrementWeek() function with a more sophisticated system
+ */
+export const processGameTick = async (): Promise<void> => {
+  const currentState = getGameState();
+  let { 
+    week = GAME_INITIALIZATION.STARTING_WEEK, 
+    season = GAME_INITIALIZATION.STARTING_SEASON, 
+    currentYear = GAME_INITIALIZATION.STARTING_YEAR 
+  } = currentState;
+  
+  const previousSeason = season;
+  const previousYear = currentYear;
+  
+  // Increment week
+  week += 1;
+  
+  // Check if season changes (every 12 weeks)
+  if (week > 12) {
+    week = 1;
+    const currentSeasonIndex = ['Spring', 'Summer', 'Fall', 'Winter'].indexOf(season);
+    const nextSeasonIndex = (currentSeasonIndex + 1) % 4;
+    season = ['Spring', 'Summer', 'Fall', 'Winter'][nextSeasonIndex] as 'Spring' | 'Summer' | 'Fall' | 'Winter';
+    
+    // If we're back to Spring, increment year
+    if (season === 'Spring') {
+      currentYear += 1;
+      await onNewYear(previousYear, currentYear);
+    }
+    
+    // Process season change
+    await onSeasonChange(previousSeason, season);
+  }
+  
+  // Update game state with new time values
+  updateGameState({ week, season, currentYear });
+  
+  // Process weekly effects
+  await processWeeklyEffects();
+  
+  // Log the time advancement
+  notificationService.info(`Time advanced to Week ${week}, ${season}, ${currentYear}`);
+};
+
+/**
+ * Handle effects that happen on season change
+ */
+const onSeasonChange = async (_previousSeason: string, newSeason: string): Promise<void> => {
+
+  notificationService.info(`The season has changed to ${newSeason}!`);
+  
+  // TODO: Add seasonal effects when vineyard system is ready
+
+};
+
+/**
+ * Handle effects that happen at the start of a new year
+ */
+const onNewYear = async (_previousYear: number, newYear: number): Promise<void> => {
+
+  notificationService.info(`A new year has begun! Welcome to ${newYear}!`);
+  
+  // TODO: Add yearly effects when ready
+  // - Vineyard age updates
+  // - Annual financial summaries
+  // - Prestige adjustments
+};
+
+/**
+ * Process effects that happen every week
+ */
+const processWeeklyEffects = async (): Promise<void> => {
+  // Automatic customer acquisition and order generation
+  try {
+    const { order } = await generateWineOrder();
+    if (order) {
+      notificationService.info(`New order received: ${order.wineName} from ${order.orderType}`);
+    }
+  } catch (error) {
+    // No logging
+  }
+  
+  // TODO: Add other weekly effects when ready
+  // - Vineyard growth/ripening
+  // - Wine aging effects
+  // - Financial transactions
+};

@@ -3,11 +3,13 @@ import { GameState } from './types';
 import { saveGameState as persistGameState, loadGameState as loadGameStateFromDB } from './database';
 import { GAME_INITIALIZATION } from './constants';
 
-// Global game state (time/season and financial data)
+// Global game state (time/season, company, and financial data)
 let gameState: Partial<GameState> = {
   week: GAME_INITIALIZATION.STARTING_WEEK,
   season: GAME_INITIALIZATION.STARTING_SEASON,
   currentYear: GAME_INITIALIZATION.STARTING_YEAR,
+  companyName: GAME_INITIALIZATION.DEFAULT_COMPANY_NAME,
+  foundedYear: GAME_INITIALIZATION.STARTING_YEAR,
   money: 0, // Start with 0 money - initial capital will be added through transaction
   prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
 };
@@ -34,6 +36,8 @@ export const resetGameState = (): void => {
     week: GAME_INITIALIZATION.STARTING_WEEK,
     season: GAME_INITIALIZATION.STARTING_SEASON,
     currentYear: GAME_INITIALIZATION.STARTING_YEAR,
+    companyName: GAME_INITIALIZATION.DEFAULT_COMPANY_NAME,
+    foundedYear: GAME_INITIALIZATION.STARTING_YEAR,
     money: 0, // Start with 0 money - initial capital will be added through transaction
     prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
   };
@@ -56,33 +60,4 @@ export const loadGameState = async (): Promise<void> => {
   } catch (error) {
     // Silently fail - use default state
   }
-};
-
-// Time management functions
-export const incrementWeek = (): Partial<GameState> => {
-  const currentState = getGameState();
-  let { 
-    week = GAME_INITIALIZATION.STARTING_WEEK, 
-    season = GAME_INITIALIZATION.STARTING_SEASON, 
-    currentYear = GAME_INITIALIZATION.STARTING_YEAR 
-  } = currentState;
-  
-  // Increment week
-  week += 1;
-  
-  // Check if season changes (every 12 weeks)
-  if (week > 12) {
-    week = 1;
-    const currentSeasonIndex = ['Spring', 'Summer', 'Fall', 'Winter'].indexOf(season);
-    const nextSeasonIndex = (currentSeasonIndex + 1) % 4;
-    season = ['Spring', 'Summer', 'Fall', 'Winter'][nextSeasonIndex] as 'Spring' | 'Summer' | 'Fall' | 'Winter';
-    
-    // If we're back to Spring, increment year
-    if (season === 'Spring') {
-      currentYear += 1;
-    }
-  }
-  
-  updateGameState({ week, season, currentYear });
-  return getGameState();
 };

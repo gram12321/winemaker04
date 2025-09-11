@@ -26,7 +26,10 @@ export async function createVineyard(name: string): Promise<Vineyard> {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024
-    }
+    },
+    // Pricing factors (using placeholders for now)
+    landValue: 0.5, // Default land value placeholder
+    fieldPrestige: 0.5 // Default field prestige placeholder
   };
 
   await saveVineyard(vineyard);

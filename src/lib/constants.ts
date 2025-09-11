@@ -8,9 +8,6 @@ export const SALES_CONSTANTS = {
   // Base rate per bottle for wine pricing calculations
   BASE_RATE_PER_BOTTLE: 25, // €25 base rate
   
-  // Minimum price per bottle (floor price)
-  MIN_PRICE_PER_BOTTLE: 0.01, // €0.01 minimum
-  
   // Order type configurations (using 6-bottle cases)
   ORDER_TYPES: {
     'Local Restaurant': {
@@ -74,8 +71,31 @@ export const GAME_INITIALIZATION = {
   STARTING_SEASON: 'Spring' as const,
   STARTING_YEAR: 2024,
   
+  // Starting company
+  DEFAULT_COMPANY_NAME: 'My Winery',
+  
   // Starting prestige
   STARTING_PRESTIGE: 1,
+} as const;
+
+// ===== PRESTIGE-BASED ORDER GENERATION =====
+
+// Constants for scaling order generation based on company prestige
+export const PRESTIGE_ORDER_GENERATION = {
+  // Base order generation chances
+  MIN_BASE_CHANCE: 0.05,    // 5% minimum chance at 0 prestige
+  MID_PRESTIGE_CHANCE: 0.15, // 15% chance at threshold prestige
+  MAX_BASE_CHANCE: 0.35,    // 35% maximum chance at high prestige
+  
+  // Prestige scaling thresholds
+  PRESTIGE_THRESHOLD: 100,   // Prestige value where mid-chance is reached
+  HIGH_PRESTIGE_THRESHOLD: 500, // Prestige value where diminishing returns start
+  
+  // Diminishing returns for high prestige
+  DIMINISHING_FACTOR: 200,   // Factor for arctan scaling beyond threshold
+  
+  // Pending order penalties (to avoid order spam)
+  PENDING_ORDER_PENALTY: 0.8, // Penalty multiplier per pending order (diminishing returns)
 } as const;
 
 // ===== FUTURE CONSTANTS =====
