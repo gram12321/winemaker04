@@ -84,7 +84,6 @@ export interface Customer {
   
   // Behavioral multipliers (calculated from characteristics)
   priceMultiplier: number; // How much they're willing to pay relative to base price
-  quantityMultiplier: number; // How much they buy relative to base order size
   
   // Relationship tracking (for future contract system)
   relationship?: number; // 0-100 scale for relationship strength
@@ -109,6 +108,29 @@ export interface WineOrder {
   customerId: string; // Reference to the Customer who placed this order
   customerName: string; // For display purposes
   customerCountry: CustomerCountry; // For display and regional analysis
+  
+  // Calculation data for tooltips and analysis
+  calculationData?: {
+    // Price multiplier calculation
+    estimatedBaseMultiplier: number;
+    purchasingPowerMultiplier: number;
+    wineTraditionMultiplier: number;
+    marketShareMultiplier: number;
+    finalPriceMultiplier: number;
+    
+    // Quantity calculation
+    baseQuantity: number;
+    priceSensitivity: number;
+    quantityMarketShareMultiplier: number;
+    finalQuantity: number;
+    
+    // Rejection analysis
+    baseRejectionProbability: number;
+    multipleOrderModifier: number;
+    finalRejectionProbability: number;
+    randomValue: number;
+    wasRejected: boolean;
+  };
 }
 
 // Game State (time/financial/company data, vineyards/inventory now in separate DB tables)

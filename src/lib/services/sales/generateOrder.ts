@@ -1,15 +1,13 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
 import { WineOrder, Customer } from '../../types';
-import { saveWineOrder, loadWineBatches, loadVineyards } from '../../database';
+import { saveWineOrder, loadVineyards } from '../../database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../../gameState';
 import { formatCompletedWineName } from '../wineBatchService';
 import { SALES_CONSTANTS } from '../../constants';
 import { calculateOrderAmount, calculateSteppedBalance } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
-import { getAvailableBottledWines } from '../../utils/wineFilters';
-import { createCustomer } from './createCustomer';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
@@ -33,7 +31,6 @@ const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
  */
 function calculateRejectionProbability(bidPrice: number, finalPrice: number): number {
   if (bidPrice <= finalPrice) {
-    console.log(`  → No rejection: bidPrice (€${bidPrice.toFixed(2)}) <= finalPrice (€${finalPrice.toFixed(2)})`);
     return 0; // No rejection if getting wine at or below its perceived value (good deal)
   }
   
@@ -56,22 +53,12 @@ function calculateRejectionProbability(bidPrice: number, finalPrice: number): nu
 
 
 // Generate a wine order when a customer is interested (wine value + quality-based decision)
-export async function generateOrder(customer?: Customer): Promise<WineOrder | null> {
-  const allBatches = await loadWineBatches();
+export async function generateOrder(customer: Customer, specificWineBatch: any, multipleOrderModifier: number = 1.0): Promise<WineOrder | null> {
   const allVineyards = await loadVineyards();
   
-  // Filter to only bottled wines with quantity > 0
-  const bottledWines = getAvailableBottledWines(allBatches);
-  
-  if (bottledWines.length === 0) {
-    return null; // No wines available for sale
-  }
-  
-  // Generate customer if not provided (single order scenario)
-  const orderCustomer = customer || createCustomer();
-  
-  // Randomly select a wine batch
-  const selectedBatch = bottledWines[Math.floor(Math.random() * bottledWines.length)];
+  // Use the provided customer and wine batch (no backwards compatibility)
+  const orderCustomer = customer;
+  const selectedBatch = specificWineBatch;
   
   // Find the corresponding vineyard for pricing context
   const vineyard = allVineyards.find(v => v.id === selectedBatch.vineyardId);
@@ -92,20 +79,25 @@ export async function generateOrder(customer?: Customer): Promise<WineOrder | nu
   const bidPrice = Math.round(askingPrice * orderCustomer.priceMultiplier * 100) / 100;
   
   // Check for outright rejection based on price ratio
-  const rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
+  let rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
+  
+  // Apply multiple order modifier - add rejection penalty for multiple orders
+  // If base rejection is 0% (discount), add penalty instead of multiplying
+  // If base rejection > 0%, multiply as before
+  if (rejectionProbability === 0) {
+    // No base rejection (discount situation) - add multiple order penalty
+    // Convert modifier to penalty: 0.6x modifier = 40% penalty, 0.1x modifier = 90% penalty
+    const multipleOrderPenalty = 1 - multipleOrderModifier;
+    rejectionProbability = multipleOrderPenalty;
+  } else {
+    // Has base rejection - multiply as before
+    rejectionProbability = rejectionProbability / multipleOrderModifier;
+  }
+  rejectionProbability = Math.max(0, Math.min(1, rejectionProbability)); // Clamp to 0-1 range
+  
   const rejectionRandomValue = Math.random();
   
-  console.log(`=== SOPHISTICATED ORDER PRICING ===`);
-  console.log(`Customer: ${orderCustomer.name} (${orderCustomer.country})`);
-  console.log(`Customer Type: ${orderCustomer.customerType}`);
-  console.log(`Customer Characteristics:`);
-  console.log(`  - Purchasing Power: ${(orderCustomer.purchasingPower * 100).toFixed(1)}%`);
-  console.log(`  - Wine Tradition: ${(orderCustomer.wineTradition * 100).toFixed(1)}%`);
-  console.log(`  - Market Share: ${(orderCustomer.marketShare * 100).toFixed(1)}%`);
-  console.log(`Price Multiplier Calculation:`);
-  console.log(`  - Base Range: ${config.priceMultiplierRange[0]}x - ${config.priceMultiplierRange[1]}x`);
-  
-  // Calculate the multipliers for display
+  // Calculate the multipliers for storage
   const purchasingPowerMultiplier = orderCustomer.purchasingPower;
   const wineTraditionMultiplier = orderCustomer.wineTradition;
   const marketShareMultiplier = 1 - orderCustomer.marketShare; // Relative to 1
@@ -114,23 +106,7 @@ export async function generateOrder(customer?: Customer): Promise<WineOrder | nu
   const totalMultiplier = purchasingPowerMultiplier * wineTraditionMultiplier * marketShareMultiplier;
   const estimatedBaseMultiplier = orderCustomer.priceMultiplier / totalMultiplier;
   
-  console.log(`  - Estimated Base Multiplier: ${estimatedBaseMultiplier.toFixed(3)}x (random from range)`);
-  console.log(`  - Purchasing Power: ${(orderCustomer.purchasingPower * 100).toFixed(1)}% → ${purchasingPowerMultiplier.toFixed(3)}x`);
-  console.log(`  - Wine Tradition: ${(orderCustomer.wineTradition * 100).toFixed(1)}% → ${wineTraditionMultiplier.toFixed(3)}x`);
-  console.log(`  - Market Share: ${(orderCustomer.marketShare * 100).toFixed(1)}% → ${marketShareMultiplier.toFixed(3)}x (relative to 1)`);
-  console.log(`  - Formula: ${estimatedBaseMultiplier.toFixed(3)} × ${purchasingPowerMultiplier.toFixed(3)} × ${wineTraditionMultiplier.toFixed(3)} × ${marketShareMultiplier.toFixed(3)} = ${orderCustomer.priceMultiplier.toFixed(3)}x`);
-  console.log(`Quantity Multiplier: ${orderCustomer.quantityMultiplier.toFixed(3)}x (base: ${config.baseQuantityMultiplier}x)`);
-  console.log(`Wine: ${formatCompletedWineName(selectedBatch)}`);
-  console.log(`Pricing Breakdown:`);
-  console.log(`  - Final Price (wine value): €${basePrice.toFixed(2)}`);
-  console.log(`  - Asking Price: €${askingPrice.toFixed(2)}`);
-  console.log(`  - Customer Bid: €${askingPrice.toFixed(2)} × ${orderCustomer.priceMultiplier.toFixed(3)}x = €${bidPrice.toFixed(2)}`);
-  console.log(`  - Premium Ratio: ${(bidPrice / basePrice).toFixed(2)}x`);
-  console.log(`Rejection Analysis:`);
-  console.log(`  - Rejection Probability: ${(rejectionProbability * 100).toFixed(1)}%`);
-  console.log(`  - Random Value: ${(rejectionRandomValue * 100).toFixed(1)}%`);
-  console.log(`  - Rejected: ${rejectionRandomValue < rejectionProbability ? 'YES' : 'NO'}`);
-  console.log(`====================================`);
+  // Order evaluation in progress (no logging needed)
   
   if (rejectionRandomValue < rejectionProbability) {
     // Customer outright rejects the price and walks away
@@ -166,17 +142,7 @@ export async function generateOrder(customer?: Customer): Promise<WineOrder | nu
     quantityMarketShareMultiplier
   );
 
-  console.log(`=== QUANTITY CALCULATION ===`);
-  console.log(`Customer Type Range: ${minQty} - ${maxQty} bottles (typical order size for ${orderCustomer.customerType})`);
-  console.log(`Base Quantity (random): ${baseQuantity} bottles (randomly selected from range)`);
-  console.log(`Price Sensitivity: ${orderAmountMultiplier.toFixed(3)}x (bid €${bidPrice.toFixed(2)} vs asking €${askingPrice.toFixed(2)} = ${(bidPrice/askingPrice).toFixed(3)}x ratio)`);
-  console.log(`Regional Factors:`);
-  console.log(`  - Purchasing Power: ${(orderCustomer.purchasingPower * 100).toFixed(1)}% → ${orderCustomer.purchasingPower.toFixed(3)}x`);
-  console.log(`  - Wine Tradition: ${(orderCustomer.wineTradition * 100).toFixed(1)}% → ${orderCustomer.wineTradition.toFixed(3)}x`);
-  console.log(`  - Market Share: ${(orderCustomer.marketShare * 100).toFixed(1)}% → ${quantityMarketShareMultiplier.toFixed(3)}x (1 + ${orderCustomer.marketShare.toFixed(3)})`);
-  console.log(`Calculation: ${baseQuantity} × ${orderAmountMultiplier.toFixed(3)} × ${orderCustomer.purchasingPower.toFixed(3)} × ${orderCustomer.wineTradition.toFixed(3)} × ${quantityMarketShareMultiplier.toFixed(3)} = ${desiredQuantity} bottles`);
-  console.log(`Minimum Required: ${minQty} bottles (if below this, order is rejected)`);
-  console.log(`=============================`);
+  // Quantity calculation completed (no logging needed)
 
   // Check if the desired quantity meets the minimum order requirement
   if (desiredQuantity < minQty) {
@@ -216,21 +182,36 @@ export async function generateOrder(customer?: Customer): Promise<WineOrder | nu
     // Customer information for sophisticated order tracking
     customerId: orderCustomer.id,
     customerName: orderCustomer.name,
-    customerCountry: orderCustomer.country
+    customerCountry: orderCustomer.country,
+    
+    // Calculation data for tooltips and analysis
+    calculationData: {
+      // Price multiplier calculation
+      estimatedBaseMultiplier,
+      purchasingPowerMultiplier,
+      wineTraditionMultiplier,
+      marketShareMultiplier,
+      finalPriceMultiplier: orderCustomer.priceMultiplier,
+      
+      // Quantity calculation
+      baseQuantity,
+      priceSensitivity: orderAmountMultiplier,
+      quantityMarketShareMultiplier,
+      finalQuantity: desiredQuantity,
+      
+      // Rejection analysis
+      baseRejectionProbability: calculateRejectionProbability(bidPrice, basePrice),
+      multipleOrderModifier,
+      finalRejectionProbability: rejectionProbability,
+      randomValue: rejectionRandomValue,
+      wasRejected: false // This order was accepted
+    }
   };
   
   await saveWineOrder(order);
   triggerGameUpdate();
   
-  console.log(`=== ORDER CREATED ===`);
-  console.log(`Order ID: ${order.id}`);
-  console.log(`Customer: ${orderCustomer.name} (${orderCustomer.country})`);
-  console.log(`Wine: ${order.wineName}`);
-  console.log(`Quantity: ${order.requestedQuantity} bottles`);
-  console.log(`Bid Price: €${order.offeredPrice.toFixed(2)}`);
-  console.log(`Total Value: €${order.totalValue.toFixed(2)}`);
-  console.log(`Fulfillable: ${order.fulfillableQuantity} bottles (€${order.fulfillableValue?.toFixed(2) || 'N/A'})`);
-  console.log(`====================`);
+  // Order created successfully (no logging needed)
   
   return order;
 }

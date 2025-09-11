@@ -1,7 +1,7 @@
 // Game tick service - handles time progression and automatic game events
 import { getGameState, updateGameState } from '../gameState';
 import { GAME_INITIALIZATION } from '../constants';
-import { generateWineOrder, generateSophisticatedWineOrders } from './sales/salesOrderService';
+import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
 
 /**
@@ -95,16 +95,7 @@ const processWeeklyEffects = async (): Promise<void> => {
     }
   } catch (error) {
     console.warn('Error during sophisticated order generation:', error);
-    
-    // Fallback to legacy single order system
-    try {
-      const { order } = await generateWineOrder();
-      if (order) {
-        notificationService.info(`New order received: ${order.wineName} from ${order.customerType}`);
-      }
-    } catch (fallbackError) {
-      // Ignore failures in order generation
-    }
+    // No fallback - sophisticated system is the only system now
   }
   
   // TODO: Add other weekly effects when ready

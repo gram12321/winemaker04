@@ -4,40 +4,14 @@ import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { createCustomer } from './createCustomer';
 import { notificationService } from '../../../components/layout/NotificationCenter';
+import { loadWineBatches } from '../../database';
+import { getAvailableBottledWines } from '../../utils/wineFilters';
+import { SALES_CONSTANTS } from '../../constants';
+
 
 /**
- * Legacy single-order generation (kept for compatibility)
- * Complete order generation process: Customer acquisition + Order creation
- * 
- * @returns Object with order result and customer acquisition chance information
- */
-export async function generateWineOrder(): Promise<{
-  order: WineOrder | null;
-  chanceInfo: {
-    companyPrestige: number;
-    availableWines: number;
-    pendingOrders: number;
-    baseChance: number;
-    pendingPenalty: number;
-    finalChance: number;
-    randomRoll: number;
-  };
-}> {
-  // Step 1: Check if company prestige allows customer acquisition
-  const { customerAcquired, chanceInfo } = await generateCustomer({ dryRun: false }); // actual roll
-  
-  if (!customerAcquired) {
-    return { order: null, chanceInfo }; // No customer acquired due to company prestige/pending orders
-  }
-  
-  // Step 2: Customer is interested, now create their order (wine value + quality-based)
-  const order = await generateOrder();
-  return { order, chanceInfo };
-}
-
-/**
- * Simplified sophisticated order generation system
- * Single customer per tick, but they can browse all available wines
+ * Full wine iteration system - customers browse ALL available wines
+ * Single customer per tick, iterates through all wines and places 0-N orders
  * 
  * @returns Object with all orders and customer acquisition info
  */
@@ -69,29 +43,77 @@ export async function generateSophisticatedWineOrders(): Promise<{
   
   // Step 2: Generate a single sophisticated customer
   const customer = createCustomer();
+  const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
+  
+    // Customer is browsing wine selection (no logging needed)
   
   try {
-    // Step 3: Generate a single order for this customer
-    const order = await generateOrder(customer);
+    // Step 3: Load all available wines
+    const allBatches = await loadWineBatches();
+    const availableWines = getAvailableBottledWines(allBatches);
     
-    // Log successful customer interaction
-    if (order) {
-      console.log(`[Sophisticated Orders] ${customer.name} (${customer.country}) placed an order for ${order.wineName}`);
+    if (availableWines.length === 0) {
+      // No wines available for customer to browse (no logging needed)
+      return {
+        orders: [],
+        customersGenerated: 1,
+        totalOrdersCreated: 0,
+        chanceInfo
+      };
+    }
+    
+    // Step 4: Iterate through each available wine with diminishing returns for multiple orders
+    const orders: WineOrder[] = [];
+    // Customer is browsing wines (no logging needed)
+    
+    for (let i = 0; i < availableWines.length; i++) {
+      const wineBatch = availableWines[i];
+      const ordersPlaced = orders.length;
       
-      // Show notification for the customer
-      notificationService.info(
-        `${customer.name} from ${customer.country} placed an order for ${order.wineName}`
-      );
+      // Calculate diminishing returns: each accepted order reduces chance for next order
+      const multipleOrderModifier = Math.pow(customerTypeConfig.multipleOrderPenalty, ordersPlaced);
+      
+      // Evaluate wine for order (no logging needed)
+      
+      // Use the existing generateOrder system - it handles all pricing, rejection, quantity logic
+      // Apply multiple order modifier to affect rejection probability
+      const order = await generateOrder(customer, wineBatch, multipleOrderModifier);
+      
+      if (order) {
+        orders.push(order);
+        // Order placed successfully (no logging needed)
+      } else {
+        // Order rejected (no logging needed)
+      }
+    }
+    
+    // Step 5: Log results and send notifications
+    if (orders.length > 0) {
+      const totalValue = orders.reduce((sum, order) => sum + (order.offeredPrice * order.requestedQuantity), 0);
+      // Customer completed browsing (no logging needed)
+      
+      // Send notification about successful customer
+      if (orders.length === 1) {
+        notificationService.info(
+          `${customer.name} from ${customer.country} placed an order for ${orders[0].wineName}`
+        );
+      } else {
+        notificationService.info(
+          `${customer.name} from ${customer.country} placed ${orders.length} orders worth €${totalValue.toFixed(2)}`
+        );
+      }
+    } else {
+      // Customer browsed all wines but didn't place any orders (no logging needed)
     }
     
     return {
-      orders: order ? [order] : [],
+      orders,
       customersGenerated: 1,
-      totalOrdersCreated: order ? 1 : 0,
+      totalOrdersCreated: orders.length,
       chanceInfo
     };
   } catch (error) {
-    console.warn(`Failed to generate order for customer ${customer.name}:`, error);
+    console.warn(`Failed to generate orders for customer ${customer.name}:`, error);
     return {
       orders: [],
       customersGenerated: 1,

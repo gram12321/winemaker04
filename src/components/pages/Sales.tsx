@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { WineOrder, WineBatch } from '../../lib/types';
 import { fulfillWineOrder, rejectWineOrder } from '../../lib/services/salesService';
-import { generateWineOrder } from '../../lib/services/sales/salesOrderService';
+import { generateSophisticatedWineOrders } from '../../lib/services/sales/salesOrderService';
 import { generateCustomer } from '../../lib/services/sales/generateCustomer';
 import { loadWineBatches, saveWineBatch, loadWineOrders } from '../../lib/database';
 import { useGameUpdates } from '../../hooks/useGameUpdates';
@@ -10,6 +10,7 @@ import { formatGameDate } from '../../lib/types';
 import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { getFlagIcon } from '../../lib/utils/flags';
 
 const Sales: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
@@ -79,6 +80,7 @@ const Sales: React.FC = () => {
 
   // Define sortable columns for orders
   const orderColumns: SortableColumn<WineOrder>[] = [
+    { key: 'customerName', label: 'Customer', sortable: true },
     { key: 'customerType', label: 'Customer Type', sortable: true },
     { key: 'wineName', label: 'Wine', sortable: true },
     { key: 'requestedQuantity', label: 'Quantity', sortable: true },
@@ -89,6 +91,12 @@ const Sales: React.FC = () => {
       accessor: (order) => getAskingPriceForOrder(order)
     },
     { key: 'offeredPrice', label: 'Bid Price', sortable: true },
+    { 
+      key: 'wineBatchId', 
+      label: 'Premium/Discount', 
+      sortable: true,
+      accessor: (order) => (order.offeredPrice / getAskingPriceForOrder(order) - 1) * 100
+    },
     { key: 'totalValue', label: 'Total Value', sortable: true },
     { 
       key: 'fulfillableQuantity', 
@@ -203,12 +211,12 @@ const Sales: React.FC = () => {
   const handleGenerateOrder = async () => {
     setLoading(true);
     try {
-      const { chanceInfo } = await generateWineOrder();
+      const { chanceInfo } = await generateSophisticatedWineOrders();
       
       // Store chance information for tooltip display
       setOrderChanceInfo(chanceInfo);
       
-      // Reload all data to get the new order
+      // Reload all data to get the new order(s)
       await loadData();
     } catch (error) {
       console.error('Error generating order:', error);
@@ -675,6 +683,14 @@ const Sales: React.FC = () => {
                   <TableRow>
                     <TableHead 
                       sortable 
+                      onSort={() => handleOrderSort('customerName')}
+                      sortIndicator={getOrderSortIndicator('customerName')}
+                      isSorted={isOrderColumnSorted('customerName')}
+                    >
+                      Customer
+                    </TableHead>
+                    <TableHead 
+                      sortable 
                       onSort={() => handleOrderSort('customerType')}
                       sortIndicator={getOrderSortIndicator('customerType')}
                       isSorted={isOrderColumnSorted('customerType')}
@@ -715,6 +731,14 @@ const Sales: React.FC = () => {
                     </TableHead>
                     <TableHead 
                       sortable 
+                      onSort={() => handleOrderSort('wineBatchId')}
+                      sortIndicator={getOrderSortIndicator('wineBatchId')}
+                      isSorted={isOrderColumnSorted('wineBatchId')}
+                    >
+                      Premium/Discount
+                    </TableHead>
+                    <TableHead 
+                      sortable 
                       onSort={() => handleOrderSort('totalValue')}
                       sortIndicator={getOrderSortIndicator('totalValue')}
                       isSorted={isOrderColumnSorted('totalValue')}
@@ -744,17 +768,67 @@ const Sales: React.FC = () => {
                 <TableBody>
                   {sortedOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={12} className="text-center text-gray-500 py-8">
                         {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                       </TableCell>
                     </TableRow>
                   ) : (
                     sortedOrders.map((order) => (
                       <TableRow key={order.id}>
+                        <TableCell className="font-medium text-gray-900">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <span className="cursor-help underline decoration-dotted flex items-center space-x-2">
+                                    <span className={getFlagIcon(order.customerCountry || '')}></span>
+                                    <span>{order.customerName || 'Unknown Customer'}</span>
+                                  </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm">
+                                <div className="space-y-2 text-sm">
+                                  {order.calculationData ? (
+                                    <>
+                                      <div className="font-semibold">Price Multiplier Calculation</div>
+                                      <div className="space-y-1 text-xs">
+                                        <div>Formula: {order.calculationData.estimatedBaseMultiplier.toFixed(3)} (B) × {order.calculationData.purchasingPowerMultiplier.toFixed(3)} (PP) × {order.calculationData.wineTraditionMultiplier.toFixed(3)} (WT) × {order.calculationData.marketShareMultiplier.toFixed(3)} (MS) = {order.calculationData.finalPriceMultiplier.toFixed(3)}x (Mtp)</div>
+                                      </div>
+                                      <div className="font-semibold">Quantity Calculation</div>
+                                      <div className="space-y-1 text-xs">
+                                        <div>{order.calculationData.baseQuantity} (B) × {order.calculationData.priceSensitivity.toFixed(3)} (SENS) × {order.calculationData.purchasingPowerMultiplier.toFixed(3)} (PP) × {order.calculationData.wineTraditionMultiplier.toFixed(3)} (WT) × {order.calculationData.quantityMarketShareMultiplier.toFixed(3)} (MS) = {order.calculationData.finalQuantity} bottles</div>
+                                      </div>
+                                      <div className="text-xs text-gray-500 pt-2 border-t border-gray-600">
+                                        B=Base, PP=Purchasing Power, WT=Wine Tradition, MS=Market Share, SENS=Sensitivity
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="text-gray-500">Calculation data not available</div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
                         <TableCell>
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {order.customerType}
-                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 cursor-help">
+                                  {order.customerType}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="text-sm">
+                                  <div className="font-semibold">Type Range</div>
+                                  <div className="text-xs text-gray-500">
+                                    {order.customerType === 'Local Restaurant' && '12-80 bottles (2-13 cases)'}
+                                    {order.customerType === 'Wine Shop' && '18-120 bottles (3-20 cases)'}
+                                    {order.customerType === 'Private Collector' && '3-36 bottles (0.5-6 cases)'}
+                                    {order.customerType === 'Export Order' && '60-300 bottles (10-50 cases)'}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell className="font-medium text-gray-900">
                           {order.wineName}
@@ -783,18 +857,41 @@ const Sales: React.FC = () => {
                             }`}>
                           €{order.offeredPrice.toFixed(2)}
                             </span>
-                            {order.offeredPrice !== getAskingPriceForOrder(order) && (
-                              <span className="text-xs text-gray-500">
-                                {order.offeredPrice > getAskingPriceForOrder(order) ? '📈' : '📉'}
-                                <span className="ml-1 text-xs">
-                                  {order.offeredPrice > getAskingPriceForOrder(order) 
-                                    ? `+${(((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order)) * 100).toFixed(0)}%`
-                                    : `${(((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order)) * 100).toFixed(0)}%`
-                                  }
-                                </span>
-                              </span>
-                            )}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-gray-500">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`cursor-help font-medium ${
+                                  order.offeredPrice > getAskingPriceForOrder(order)
+                                    ? 'text-green-600' // Above asking price
+                                    : order.offeredPrice < getAskingPriceForOrder(order)
+                                    ? 'text-red-600' // Below asking price
+                                    : 'text-gray-600' // Equal to asking price
+                                }`}>
+                                  {order.offeredPrice > getAskingPriceForOrder(order) ? '+' : ''}
+                                  {(((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order)) * 100).toFixed(1)}%
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="text-sm space-y-1">
+                                  <div className="font-semibold">Order Analysis</div>
+                                  <div className="text-xs text-gray-500">
+                                    {order.calculationData ? (
+                                      <>
+                                        <div>Multiple Order Penalty: {order.calculationData.multipleOrderModifier.toFixed(3)}x</div>
+                                        <div>Final Rejection Probability: {(order.calculationData.finalRejectionProbability * 100).toFixed(1)}%</div>
+                                        <div>Random Value: {(order.calculationData.randomValue * 100).toFixed(1)}%</div>
+                                      </>
+                                    ) : (
+                                      <div>Analysis data not available</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell className="font-medium text-green-600">
                           <div className="flex flex-col">

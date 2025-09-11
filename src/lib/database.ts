@@ -231,6 +231,7 @@ export const saveWineOrder = async (order: WineOrder, playerId: string = 'defaul
         ordered_week: order.orderedAt.week,
         ordered_season: order.orderedAt.season,
         ordered_year: order.orderedAt.year,
+        calculation_data: order.calculationData || null,
         updated_at: new Date().toISOString()
       });
 
@@ -275,7 +276,8 @@ export const loadWineOrders = async (playerId: string = 'default', status?: stri
         week: row.ordered_week || 1,
         season: (row.ordered_season || 'Spring') as Season,
         year: row.ordered_year || 2024
-      }
+      },
+      calculationData: row.calculation_data || undefined
     }));
   } catch (error) {
     return [];

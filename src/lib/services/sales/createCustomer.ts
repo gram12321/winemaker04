@@ -49,17 +49,6 @@ export function createCustomer(): Customer {
   // Ensure multiplier stays within reasonable bounds
   const finalPriceMultiplier = Math.max(0.1, Math.min(2.0, priceMultiplier));
   
-  // Generate individual quantity multiplier from base + regional influences
-  let quantityMultiplier: number = customerTypeConfig.baseQuantityMultiplier;
-  
-  // Apply regional influences (market share and purchasing power)
-  const qtyMarketShareInfluence = (marketShare - 0.5) * 0.2; // ±10% influence
-  const qtyPurchasingPowerInfluence = (regionalData.purchasingPower - 0.5) * 0.1; // ±5% influence
-  
-  quantityMultiplier *= (1 + qtyMarketShareInfluence + qtyPurchasingPowerInfluence);
-  
-  // Ensure reasonable bounds
-  quantityMultiplier = Math.max(0.1, Math.min(2.0, quantityMultiplier));
   
   return {
     id: uuidv4(),
@@ -70,7 +59,6 @@ export function createCustomer(): Customer {
     wineTradition: regionalData.wineTradition,
     marketShare,
     priceMultiplier: finalPriceMultiplier,
-    quantityMultiplier,
     relationship: 0 // Start with no relationship - will be developed through transactions
   };
 }
