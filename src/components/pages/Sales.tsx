@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { WineOrder, WineBatch } from '../../lib/types';
-import { getPendingOrders, fulfillWineOrder, rejectWineOrder } from '../../lib/services/salesService';
+import { fulfillWineOrder, rejectWineOrder } from '../../lib/services/salesService';
 import { generateWineOrder } from '../../lib/services/sales/salesOrderService';
 import { generateCustomer } from '../../lib/services/sales/generateCustomer';
-import { loadWineBatches, saveWineBatch } from '../../lib/database';
+import { loadWineBatches, saveWineBatch, loadWineOrders } from '../../lib/database';
 import { useGameUpdates } from '../../hooks/useGameUpdates';
 import { formatGameDate } from '../../lib/types';
 import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
@@ -14,6 +14,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 const Sales: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
   const [orders, setOrders] = useState<WineOrder[]>([]);
+  const [allOrders, setAllOrders] = useState<WineOrder[]>([]);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('all');
   const [bottledWines, setBottledWines] = useState<WineBatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
@@ -42,12 +44,19 @@ const Sales: React.FC = () => {
   // Load data function
   const loadData = async () => {
     try {
-      const [pendingOrders, allBatches] = await Promise.all([
-        getPendingOrders(),
+      const [allOrdersData, allBatches] = await Promise.all([
+        loadWineOrders(), // Load all orders
         loadWineBatches()
       ]);
       
-      setOrders(pendingOrders);
+      setAllOrders(allOrdersData);
+      
+      // Filter orders based on current filter
+      const filteredOrders = orderStatusFilter === 'all' 
+        ? allOrdersData 
+        : allOrdersData.filter(order => order.status === orderStatusFilter);
+      
+      setOrders(filteredOrders);
       setBottledWines(allBatches.filter(batch => 
         batch.stage === 'bottled' && batch.process === 'bottled'
       ));
@@ -70,7 +79,7 @@ const Sales: React.FC = () => {
 
   // Define sortable columns for orders
   const orderColumns: SortableColumn<WineOrder>[] = [
-    { key: 'orderType', label: 'Order Type', sortable: true },
+    { key: 'customerType', label: 'Customer Type', sortable: true },
     { key: 'wineName', label: 'Wine', sortable: true },
     { key: 'requestedQuantity', label: 'Quantity', sortable: true },
     { 
@@ -148,28 +157,22 @@ const Sales: React.FC = () => {
     loadCustomerChance();
   }, []);
 
+  // Re-filter orders when filter changes
+  useEffect(() => {
+    const filteredOrders = orderStatusFilter === 'all' 
+      ? allOrders 
+      : allOrders.filter(order => order.status === orderStatusFilter);
+    setOrders(filteredOrders);
+  }, [orderStatusFilter, allOrders]);
+
   // Handle order fulfillment
   const handleFulfillOrder = async (orderId: string) => {
     setLoading(true);
     try {
       const success = await fulfillWineOrder(orderId);
       if (success) {
-        // Remove the fulfilled order from state
-        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
-        // Update wine quantities in state
-        setBottledWines(prevWines => {
-          return prevWines.map(wine => {
-            const order = orders.find(o => o.id === orderId);
-            if (order && order.wineBatchId === wine.id) {
-              const fulfillableQuantity = Math.min(order.requestedQuantity, wine.quantity);
-              return {
-                ...wine,
-                quantity: wine.quantity - fulfillableQuantity
-              };
-            }
-            return wine;
-          });
-        });
+        // Reload all data to get updated order statuses
+        await loadData();
       } else {
         alert('Failed to fulfill order - insufficient inventory');
       }
@@ -186,8 +189,8 @@ const Sales: React.FC = () => {
     setLoading(true);
     try {
       await rejectWineOrder(orderId);
-      // Remove the rejected order from state
-      setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+      // Reload all data to get updated order statuses
+      await loadData();
     } catch (error) {
       console.error('Error rejecting order:', error);
       alert('Error rejecting order');
@@ -200,20 +203,13 @@ const Sales: React.FC = () => {
   const handleGenerateOrder = async () => {
     setLoading(true);
     try {
-      const { order, chanceInfo } = await generateWineOrder();
+      const { chanceInfo } = await generateWineOrder();
       
       // Store chance information for tooltip display
       setOrderChanceInfo(chanceInfo);
       
-      if (order) {
-        // Add the new order to state
-        setOrders(prevOrders => [...prevOrders, order]);
-      }
-      // If order is null, it could be due to:
-      // 1. Company prestige too low / too many pending orders (no customer)
-      // 2. Customer rejected due to high asking price (customer not interested)
-      // 3. No bottled wines available
-      // The notification system and tooltip handle messaging
+      // Reload all data to get the new order
+      await loadData();
     } catch (error) {
       console.error('Error generating order:', error);
       alert('Error generating order');
@@ -293,34 +289,12 @@ const Sales: React.FC = () => {
 
     setLoading(true);
     try {
-      const results = await Promise.allSettled(
+      await Promise.allSettled(
         orders.map(order => fulfillWineOrder(order.id))
       );
       
-      // Update state based on successful fulfillments
-      const successfulOrders = results
-        .map((result, index) => result.status === 'fulfilled' ? orders[index] : null)
-        .filter(Boolean);
-      
-      // Remove successful orders from state
-      setOrders(prevOrders => 
-        prevOrders.filter(order => !successfulOrders.some(so => so?.id === order.id))
-      );
-      
-      // Update wine quantities for successful orders
-      setBottledWines(prevWines => {
-        return prevWines.map(wine => {
-          const successfulOrder = successfulOrders.find(so => so?.wineBatchId === wine.id);
-          if (successfulOrder) {
-            const fulfillableQuantity = Math.min(successfulOrder.requestedQuantity, wine.quantity);
-            return {
-              ...wine,
-              quantity: wine.quantity - fulfillableQuantity
-            };
-          }
-          return wine;
-        });
-      });
+      // Reload all data to get updated order statuses
+      await loadData();
     } catch (error) {
       console.error('Error in bulk accept:', error);
     } finally {
@@ -334,8 +308,8 @@ const Sales: React.FC = () => {
     setLoading(true);
     try {
       await Promise.all(orders.map(order => rejectWineOrder(order.id)));
-      // Clear all orders from state
-      setOrders([]);
+      // Reload all data to get updated order statuses
+      await loadData();
     } catch (error) {
       console.error('Error in bulk reject:', error);
     } finally {
@@ -367,7 +341,7 @@ const Sales: React.FC = () => {
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
-          Orders ({orders.length})
+          Orders ({allOrders.filter(o => o.status === 'pending').length})
         </button>
       </div>
 
@@ -572,6 +546,36 @@ const Sales: React.FC = () => {
 
       {activeTab === 'orders' && (
         <div className="space-y-4">
+          {/* Order Status Filter */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold">Order Filter</h3>
+                <p className="text-gray-500 text-sm">Filter orders by status</p>
+              </div>
+              <div className="flex space-x-2">
+                {(['all', 'pending', 'fulfilled', 'rejected'] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setOrderStatusFilter(status)}
+                    className={`px-3 py-1 rounded text-sm font-medium ${
+                      orderStatusFilter === status
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {status === 'all' ? 'All Orders' : status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status !== 'all' && (
+                      <span className="ml-1 text-xs">
+                        ({allOrders.filter(o => o.status === status).length})
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Customer Acquisition Chance Display */}
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex justify-between items-center">
@@ -634,7 +638,7 @@ const Sales: React.FC = () => {
                 <p className="text-gray-500 text-sm">Generate test orders or manage pending orders</p>
               </div>
               <div className="flex space-x-2">
-                {orders.length > 0 && (
+                {orders.length > 0 && orderStatusFilter === 'pending' && (
                   <>
                     <button
                       onClick={handleAcceptAll}
@@ -671,11 +675,11 @@ const Sales: React.FC = () => {
                   <TableRow>
                     <TableHead 
                       sortable 
-                      onSort={() => handleOrderSort('orderType')}
-                      sortIndicator={getOrderSortIndicator('orderType')}
-                      isSorted={isOrderColumnSorted('orderType')}
+                      onSort={() => handleOrderSort('customerType')}
+                      sortIndicator={getOrderSortIndicator('customerType')}
+                      isSorted={isOrderColumnSorted('customerType')}
                     >
-                      Order Type
+                      Customer Type
                     </TableHead>
                     <TableHead 
                       sortable 
@@ -733,14 +737,15 @@ const Sales: React.FC = () => {
                     >
                       Ordered
                     </TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">
-                        No pending orders
+                      <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                        {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -748,7 +753,7 @@ const Sales: React.FC = () => {
                       <TableRow key={order.id}>
                         <TableCell>
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {order.orderType}
+                            {order.customerType}
                           </span>
                         </TableCell>
                         <TableCell className="font-medium text-gray-900">
@@ -807,21 +812,38 @@ const Sales: React.FC = () => {
                         <TableCell className="text-gray-500 text-sm">
                           {formatGameDate(order.orderedAt)}
                         </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'fulfilled' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-sm font-medium space-x-2">
-                          <button
-                            onClick={() => handleFulfillOrder(order.id)}
-                            disabled={loading}
-                            className="text-green-600 hover:text-green-900 disabled:text-gray-400"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleRejectOrder(order.id)}
-                            disabled={loading}
-                            className="text-red-600 hover:text-red-900 disabled:text-gray-400"
-                          >
-                            Reject
-                          </button>
+                          {order.status === 'pending' ? (
+                            <>
+                              <button
+                                onClick={() => handleFulfillOrder(order.id)}
+                                disabled={loading}
+                                className="text-green-600 hover:text-green-900 disabled:text-gray-400"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => handleRejectOrder(order.id)}
+                                disabled={loading}
+                                className="text-red-600 hover:text-red-900 disabled:text-gray-400"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-gray-400 text-xs">
+                              {order.status === 'fulfilled' ? 'Completed' : 'Declined'}
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))

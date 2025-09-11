@@ -1,17 +1,18 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
-import { WineOrder, OrderType } from '../../types';
+import { WineOrder, Customer } from '../../types';
 import { saveWineOrder, loadWineBatches, loadVineyards } from '../../database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../../gameState';
 import { formatCompletedWineName } from '../wineBatchService';
 import { SALES_CONSTANTS } from '../../constants';
-import { calculateOrderAmount, calculateSymmetricalMultiplier, calculateSteppedBalance } from '../../utils/calculator';
+import { calculateOrderAmount, calculateSteppedBalance } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { getAvailableBottledWines } from '../../utils/wineFilters';
+import { createCustomer } from './createCustomer';
 
-// Use order type configurations from constants
-const ORDER_TYPE_CONFIG = SALES_CONSTANTS.ORDER_TYPES;
+// Use customer type configurations from constants
+const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
 
 // ===== REJECTION CALCULATIONS =====
 
@@ -53,23 +54,9 @@ function calculateRejectionProbability(bidPrice: number, finalPrice: number): nu
 
 // ===== ORDER GENERATION =====
 
-// Weighted random selection helper
-function weightedRandomSelect<T>(items: T[], weights: number[]): T {
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  let random = Math.random() * totalWeight;
-  
-  for (let i = 0; i < items.length; i++) {
-    random -= weights[i];
-    if (random <= 0) {
-      return items[i];
-    }
-  }
-  
-  return items[items.length - 1]; // Fallback
-}
 
 // Generate a wine order when a customer is interested (wine value + quality-based decision)
-export async function generateOrder(): Promise<WineOrder | null> {
+export async function generateOrder(customer?: Customer): Promise<WineOrder | null> {
   const allBatches = await loadWineBatches();
   const allVineyards = await loadVineyards();
   
@@ -79,6 +66,9 @@ export async function generateOrder(): Promise<WineOrder | null> {
   if (bottledWines.length === 0) {
     return null; // No wines available for sale
   }
+  
+  // Generate customer if not provided (single order scenario)
+  const orderCustomer = customer || createCustomer();
   
   // Randomly select a wine batch
   const selectedBatch = bottledWines[Math.floor(Math.random() * bottledWines.length)];
@@ -91,42 +81,60 @@ export async function generateOrder(): Promise<WineOrder | null> {
     return null;
   }
   
-  // Randomly select order type
-  const orderTypes = Object.keys(ORDER_TYPE_CONFIG) as OrderType[];
-  const weights = orderTypes.map(type => ORDER_TYPE_CONFIG[type].chance);
-  const selectedType = weightedRandomSelect(orderTypes, weights);
-  
-  const config = ORDER_TYPE_CONFIG[selectedType];
+  // Use customer's order type and characteristics
+  const config = CUSTOMER_TYPE_CONFIG[orderCustomer.customerType];
   
   // Get asking price (user-set or default) and base calculated price
   const askingPrice = selectedBatch.askingPrice ?? selectedBatch.finalPrice;
   const basePrice = selectedBatch.finalPrice; // This is now calculated by the new pricing service
   
-  // Generate sophisticated price multiplier using symmetrical distribution
-  const [minMultiplier, maxMultiplier] = config.priceMultiplierRange;
-  const randomValue = Math.random(); // 0-1 random input
-  const sophisticatedMultiplier = calculateSymmetricalMultiplier(randomValue, minMultiplier, maxMultiplier);
-  const bidPrice = Math.round(askingPrice * sophisticatedMultiplier * 100) / 100;
+  // Use customer's individual price multiplier (already generated from range during customer creation)
+  const bidPrice = Math.round(askingPrice * orderCustomer.priceMultiplier * 100) / 100;
   
   // Check for outright rejection based on price ratio
   const rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
   const rejectionRandomValue = Math.random();
   
-  console.log(`=== PRICE REJECTION CHECK ===`);
-  console.log(`Order Type: ${selectedType}`);
+  console.log(`=== SOPHISTICATED ORDER PRICING ===`);
+  console.log(`Customer: ${orderCustomer.name} (${orderCustomer.country})`);
+  console.log(`Customer Type: ${orderCustomer.customerType}`);
+  console.log(`Customer Characteristics:`);
+  console.log(`  - Purchasing Power: ${(orderCustomer.purchasingPower * 100).toFixed(1)}%`);
+  console.log(`  - Wine Tradition: ${(orderCustomer.wineTradition * 100).toFixed(1)}%`);
+  console.log(`  - Market Share: ${(orderCustomer.marketShare * 100).toFixed(1)}%`);
+  console.log(`Price Multiplier Calculation:`);
+  console.log(`  - Base Range: ${config.priceMultiplierRange[0]}x - ${config.priceMultiplierRange[1]}x`);
+  
+  // Calculate the multipliers for display
+  const purchasingPowerMultiplier = orderCustomer.purchasingPower;
+  const wineTraditionMultiplier = orderCustomer.wineTradition;
+  const marketShareMultiplier = 1 - orderCustomer.marketShare; // Relative to 1
+  
+  // Estimate the base multiplier
+  const totalMultiplier = purchasingPowerMultiplier * wineTraditionMultiplier * marketShareMultiplier;
+  const estimatedBaseMultiplier = orderCustomer.priceMultiplier / totalMultiplier;
+  
+  console.log(`  - Estimated Base Multiplier: ${estimatedBaseMultiplier.toFixed(3)}x (random from range)`);
+  console.log(`  - Purchasing Power: ${(orderCustomer.purchasingPower * 100).toFixed(1)}% → ${purchasingPowerMultiplier.toFixed(3)}x`);
+  console.log(`  - Wine Tradition: ${(orderCustomer.wineTradition * 100).toFixed(1)}% → ${wineTraditionMultiplier.toFixed(3)}x`);
+  console.log(`  - Market Share: ${(orderCustomer.marketShare * 100).toFixed(1)}% → ${marketShareMultiplier.toFixed(3)}x (relative to 1)`);
+  console.log(`  - Formula: ${estimatedBaseMultiplier.toFixed(3)} × ${purchasingPowerMultiplier.toFixed(3)} × ${wineTraditionMultiplier.toFixed(3)} × ${marketShareMultiplier.toFixed(3)} = ${orderCustomer.priceMultiplier.toFixed(3)}x`);
+  console.log(`Quantity Multiplier: ${orderCustomer.quantityMultiplier.toFixed(3)}x (base: ${config.baseQuantityMultiplier}x)`);
   console.log(`Wine: ${formatCompletedWineName(selectedBatch)}`);
-  console.log(`Final Price (wine value): €${basePrice.toFixed(2)}`);
-  console.log(`Asking Price: €${askingPrice.toFixed(2)}`);
-  console.log(`Bid Price: €${bidPrice.toFixed(2)}`);
-  console.log(`Premium Ratio: ${(bidPrice / basePrice).toFixed(2)}x`);
-  console.log(`Rejection Probability: ${(rejectionProbability * 100).toFixed(1)}%`);
-  console.log(`Random Value: ${(rejectionRandomValue * 100).toFixed(1)}%`);
-  console.log(`Rejected: ${rejectionRandomValue < rejectionProbability ? 'YES' : 'NO'}`);
-  console.log(`=============================`);
+  console.log(`Pricing Breakdown:`);
+  console.log(`  - Final Price (wine value): €${basePrice.toFixed(2)}`);
+  console.log(`  - Asking Price: €${askingPrice.toFixed(2)}`);
+  console.log(`  - Customer Bid: €${askingPrice.toFixed(2)} × ${orderCustomer.priceMultiplier.toFixed(3)}x = €${bidPrice.toFixed(2)}`);
+  console.log(`  - Premium Ratio: ${(bidPrice / basePrice).toFixed(2)}x`);
+  console.log(`Rejection Analysis:`);
+  console.log(`  - Rejection Probability: ${(rejectionProbability * 100).toFixed(1)}%`);
+  console.log(`  - Random Value: ${(rejectionRandomValue * 100).toFixed(1)}%`);
+  console.log(`  - Rejected: ${rejectionRandomValue < rejectionProbability ? 'YES' : 'NO'}`);
+  console.log(`====================================`);
   
   if (rejectionRandomValue < rejectionProbability) {
     // Customer outright rejects the price and walks away
-    const notificationMessage = `A ${selectedType} was interested in ${formatCompletedWineName(selectedBatch)}, but outright rejected our asking price.`;
+    const notificationMessage = `${orderCustomer.name} from ${orderCustomer.country} was interested in ${formatCompletedWineName(selectedBatch)}, but outright rejected our asking price.`;
     
     // Trigger notification for rejected order
     notificationService.info(notificationMessage);
@@ -135,25 +143,46 @@ export async function generateOrder(): Promise<WineOrder | null> {
   }
   
   // Calculate order amount adjustment based on price difference
+  // Use customer's bid price vs our asking price to determine quantity sensitivity
   const orderAmountMultiplier = calculateOrderAmount(
-    { askingPrice },
-    basePrice,
-    selectedType
+    { askingPrice: bidPrice }, // Customer's actual bid price
+    askingPrice,               // Our asking price (what we want to charge)
+    orderCustomer.customerType
   );
   
-  // Generate baseline quantity from order type range, then scale by price sensitivity
-  // The range acts as a baseline market appetite; calculateOrderAmount scales this.
+  // Generate baseline quantity from order type range, then scale by price sensitivity and customer characteristics
+  // The range acts as a baseline market appetite; calculateOrderAmount and customer quantityMultiplier scale this.
   const [minQty, maxQty] = config.quantityRange;
   const baseQuantity = Math.floor(Math.random() * (maxQty - minQty + 1)) + minQty;
 
-  // Scale baseline by the computed multiplier - unlimited multiplication allowed
-  const desiredQuantity = Math.floor(baseQuantity * orderAmountMultiplier);
+  // Scale baseline by price sensitivity and regional factors (removed customer quantity multiplier)
+  // Convert market share from decimal (0.01) to percentage multiplier (1.01) for quantity calculation
+  const quantityMarketShareMultiplier = 1 + orderCustomer.marketShare; // 0.01 → 1.01x
+  const desiredQuantity = Math.floor(
+    baseQuantity * 
+    orderAmountMultiplier * 
+    orderCustomer.purchasingPower * 
+    orderCustomer.wineTradition * 
+    quantityMarketShareMultiplier
+  );
+
+  console.log(`=== QUANTITY CALCULATION ===`);
+  console.log(`Customer Type Range: ${minQty} - ${maxQty} bottles (typical order size for ${orderCustomer.customerType})`);
+  console.log(`Base Quantity (random): ${baseQuantity} bottles (randomly selected from range)`);
+  console.log(`Price Sensitivity: ${orderAmountMultiplier.toFixed(3)}x (bid €${bidPrice.toFixed(2)} vs asking €${askingPrice.toFixed(2)} = ${(bidPrice/askingPrice).toFixed(3)}x ratio)`);
+  console.log(`Regional Factors:`);
+  console.log(`  - Purchasing Power: ${(orderCustomer.purchasingPower * 100).toFixed(1)}% → ${orderCustomer.purchasingPower.toFixed(3)}x`);
+  console.log(`  - Wine Tradition: ${(orderCustomer.wineTradition * 100).toFixed(1)}% → ${orderCustomer.wineTradition.toFixed(3)}x`);
+  console.log(`  - Market Share: ${(orderCustomer.marketShare * 100).toFixed(1)}% → ${quantityMarketShareMultiplier.toFixed(3)}x (1 + ${orderCustomer.marketShare.toFixed(3)})`);
+  console.log(`Calculation: ${baseQuantity} × ${orderAmountMultiplier.toFixed(3)} × ${orderCustomer.purchasingPower.toFixed(3)} × ${orderCustomer.wineTradition.toFixed(3)} × ${quantityMarketShareMultiplier.toFixed(3)} = ${desiredQuantity} bottles`);
+  console.log(`Minimum Required: ${minQty} bottles (if below this, order is rejected)`);
+  console.log(`=============================`);
 
   // Check if the desired quantity meets the minimum order requirement
   if (desiredQuantity < minQty) {
     
     // Order rejected - asking price too high, customer backs down
-    const notificationMessage = `A ${selectedType} wanted to buy ${formatCompletedWineName(selectedBatch)}, but with our current asking price the amount they could afford simply became too low.`;
+    const notificationMessage = `${orderCustomer.name} from ${orderCustomer.country} wanted to buy ${formatCompletedWineName(selectedBatch)}, but with our current asking price the amount they could afford simply became too low.`;
     
     // Trigger notification for rejected order
     notificationService.info(notificationMessage);
@@ -173,7 +202,7 @@ export async function generateOrder(): Promise<WineOrder | null> {
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024
     },
-    orderType: selectedType,
+    customerType: orderCustomer.customerType,
     wineBatchId: selectedBatch.id,
     wineName: formatCompletedWineName(selectedBatch),
     requestedQuantity: desiredQuantity,
@@ -182,11 +211,27 @@ export async function generateOrder(): Promise<WineOrder | null> {
     fulfillableQuantity,
     fulfillableValue,
     askingPriceAtOrderTime: askingPrice, // Store the asking price at order time
-    status: 'pending'
+    status: 'pending',
+    
+    // Customer information for sophisticated order tracking
+    customerId: orderCustomer.id,
+    customerName: orderCustomer.name,
+    customerCountry: orderCustomer.country
   };
   
   await saveWineOrder(order);
   triggerGameUpdate();
+  
+  console.log(`=== ORDER CREATED ===`);
+  console.log(`Order ID: ${order.id}`);
+  console.log(`Customer: ${orderCustomer.name} (${orderCustomer.country})`);
+  console.log(`Wine: ${order.wineName}`);
+  console.log(`Quantity: ${order.requestedQuantity} bottles`);
+  console.log(`Bid Price: €${order.offeredPrice.toFixed(2)}`);
+  console.log(`Total Value: €${order.totalValue.toFixed(2)}`);
+  console.log(`Fulfillable: ${order.fulfillableQuantity} bottles (€${order.fulfillableValue?.toFixed(2) || 'N/A'})`);
+  console.log(`====================`);
+  
   return order;
 }
 

@@ -1,6 +1,6 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
-import { Vineyard, WineBatch, GameState, Season, WineOrder, OrderType } from './types';
+import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType } from './types';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
@@ -217,7 +217,10 @@ export const saveWineOrder = async (order: WineOrder, playerId: string = 'defaul
         player_id: playerId,
         wine_batch_id: order.wineBatchId,
         wine_name: order.wineName,
-        order_type: order.orderType,
+        order_type: order.customerType,
+        customer_id: order.customerId,
+        customer_name: order.customerName,
+        customer_country: order.customerCountry,
         requested_quantity: order.requestedQuantity,
         offered_price: order.offeredPrice,
         total_value: order.totalValue,
@@ -237,14 +240,19 @@ export const saveWineOrder = async (order: WineOrder, playerId: string = 'defaul
   }
 };
 
-export const loadWineOrders = async (playerId: string = 'default'): Promise<WineOrder[]> => {
+export const loadWineOrders = async (playerId: string = 'default', status?: string): Promise<WineOrder[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from(WINE_ORDERS_TABLE)
       .select('*')
-      .eq('player_id', playerId)
-      .eq('status', 'pending') // Only load pending orders
-      .order('created_at', { ascending: true });
+      .eq('player_id', playerId);
+    
+    // Filter by status if provided, otherwise load all orders
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: true });
 
     if (error) throw error;
 
@@ -252,7 +260,10 @@ export const loadWineOrders = async (playerId: string = 'default'): Promise<Wine
       id: row.id,
       wineBatchId: row.wine_batch_id,
       wineName: row.wine_name,
-      orderType: row.order_type as OrderType,
+      customerType: row.order_type as CustomerType,
+      customerId: row.customer_id || '',
+      customerName: row.customer_name || '',
+      customerCountry: row.customer_country || '',
       requestedQuantity: row.requested_quantity,
       offeredPrice: row.offered_price,
       totalValue: row.total_value,

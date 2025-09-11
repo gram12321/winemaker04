@@ -1,3 +1,55 @@
+## Version 0.0021a - 2025-09-11
+
+### **Sales System Code Cleanup**
+- `src/lib/utils/wineFilters.ts` - New shared utility for bottled wine filtering logic
+- `src/lib/services/sales/pricingService.ts` - Extracted pricing calculations from order generation
+- `src/lib/services/sales/generateCustomer.ts` - Updated to use shared wine filtering utility
+- `src/lib/services/sales/generateOrder.ts` - Removed pricing logic, cleaned up redundant variables
+- `src/lib/services/sales/wineQualityIndexCalculationService.ts` - Removed unused functions (applyFermentationEffects, applyAgingEffects, getGrapeQualityPotential, calculateVintageEffects)
+- `src/lib/services/sales/wineValueIndexCalculationService.ts` - Removed unused functions (calculateLandValue, calculateFieldPrestige)
+- `src/lib/services/wineBatchService.ts` - Updated import to use new pricingService
+- **Code Organization**: Better separation of concerns, eliminated duplicate filtering logic
+- **Performance**: Reduced code duplication, improved maintainability
+- **Cleanup**: Removed 179 lines of unused code, added 70 lines of focused functionality
+
+---
+
+## Version 0.0021 - 2025-09-11
+
+### **Dynamic Order Generation System**
+- `src/lib/services/gameTickService.ts` - New service for time progression and automatic order generation
+- `src/lib/services/sales/generateCustomer.ts` - Company prestige-based customer acquisition with sophisticated scaling
+- `src/lib/services/sales/generateOrder.ts` - Wine value + quality-based order creation with rejection logic
+- `src/lib/services/sales/salesOrderService.ts` - Orchestration service combining customer acquisition and order generation
+- `src/lib/services/sales/wineValueIndexCalculationService.ts` - Wine value index calculation from vineyard factors
+- `src/lib/services/sales/wineQualityIndexCalculationService.ts` - Wine quality index calculation from wine characteristics
+- `src/lib/constants.ts` - Added PRESTIGE_ORDER_GENERATION constants for dynamic scaling
+- `src/lib/types.ts` - Extended GameState with company identity (companyName, foundedYear)
+- `src/lib/gameState.ts` - Added company initialization, removed incrementWeek wrapper
+- `src/components/layout/Header.tsx` - Updated to use gameTickService for time advancement
+- `src/components/pages/Profile.tsx` - Enhanced to display company information and years in business
+- `src/components/pages/Sales.tsx` - Added customer acquisition chance display with detailed tooltip
+- `src/lib/services/vineyardService.ts` - Added pricing factors (landValue, fieldPrestige) to vineyard creation
+- `src/lib/services/wineBatchService.ts` - Updated to use new pricing system with vineyard context
+- `src/lib/services/salesService.ts` - Simplified to focus on order fulfillment, removed order generation logic
+- **Architecture**: Clear separation between customer acquisition (company prestige) and order creation (wine value/quality)
+- **UI Enhancement**: Real-time customer acquisition chance display with detailed breakdown
+- **Automatic Events**: Weekly order generation through game tick system
+- **Mathematical Scaling**: Sophisticated prestige-based order frequency with diminishing returns
+
+---
+
+## Version 0.002 - 2025-09-11
+
+### **Sales System Refactoring & Documentation**
+- `docs/salesv2.md` - Comprehensive documentation of advanced sales system components from legacy iterations
+- `docs/AIpromt_newpromt.md` - Updated development roadmap for sales system enhancement
+- **Documentation**: Detailed analysis of legacy sales system features and recommendations for modernization
+- **Planning**: Clear roadmap for implementing sophisticated pricing, importer management, and contract systems
+- **Architecture**: Foundation for advanced sales system with multi-factor pricing and dynamic market behavior
+
+---
+
 ## Version 0.0012 - 2025-09-10
 
 ### **Better Rejection Math**

@@ -1,7 +1,7 @@
 // Game tick service - handles time progression and automatic game events
 import { getGameState, updateGameState } from '../gameState';
 import { GAME_INITIALIZATION } from '../constants';
-import { generateWineOrder } from './sales/salesOrderService';
+import { generateWineOrder, generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
 
 /**
@@ -77,14 +77,34 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
  * Process effects that happen every week
  */
 const processWeeklyEffects = async (): Promise<void> => {
-  // Automatic customer acquisition and order generation
+  // Enhanced automatic customer acquisition and sophisticated order generation
   try {
-    const { order } = await generateWineOrder();
-    if (order) {
-      notificationService.info(`New order received: ${order.wineName} from ${order.orderType}`);
+    const result = await generateSophisticatedWineOrders(); // Generate 1 customer who browses all wines
+    
+    if (result.totalOrdersCreated > 0) {
+      console.log(`[Weekly Orders] Generated ${result.totalOrdersCreated} orders from ${result.customersGenerated} customers`);
+      
+      // Show summary notification for significant activity
+      if (result.totalOrdersCreated > 1) {
+        const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
+        notificationService.info(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`);
+      } else if (result.orders.length > 0) {
+        const order = result.orders[0];
+        notificationService.info(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`);
+      }
     }
   } catch (error) {
-    // No logging
+    console.warn('Error during sophisticated order generation:', error);
+    
+    // Fallback to legacy single order system
+    try {
+      const { order } = await generateWineOrder();
+      if (order) {
+        notificationService.info(`New order received: ${order.wineName} from ${order.customerType}`);
+      }
+    } catch (fallbackError) {
+      // Ignore failures in order generation
+    }
   }
   
   // TODO: Add other weekly effects when ready

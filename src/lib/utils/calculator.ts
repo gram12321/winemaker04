@@ -277,15 +277,15 @@ export function calculateSymmetricalMultiplier(
  * 
  * @param selectedWine - Wine object with askingPrice property
  * @param calculatedBasePrice - The calculated base price for comparison
- * @param orderType - Type of order (key for WINE_ORDER_TYPES)
+ * @param orderType - Type of order (key for CUSTOMER_TYPES)
  * @returns Order amount multiplier
  */
 export function calculateOrderAmount(
   selectedWine: SelectedWine, 
   calculatedBasePrice: number, 
-  orderType: keyof typeof SALES_CONSTANTS.ORDER_TYPES
+  orderType: keyof typeof SALES_CONSTANTS.CUSTOMER_TYPES
 ): number {
-  const selectedOrderType = SALES_CONSTANTS.ORDER_TYPES[orderType];
+  const selectedOrderType = SALES_CONSTANTS.CUSTOMER_TYPES[orderType];
   
   if (!selectedOrderType) {
     console.warn(`Unknown order type: ${orderType}`);

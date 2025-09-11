@@ -64,14 +64,37 @@ export interface WineBatch {
   completedAt?: GameDate; // When bottling is completed
 }
 
-// Wine order types for sales system
-export type OrderType = 'Local Restaurant' | 'Wine Shop' | 'Private Collector' | 'Export Order';
+// Customer types for sales system
+export type CustomerType = 'Local Restaurant' | 'Wine Shop' | 'Private Collector' | 'Export Order';
+
+// Customer countries and regional data
+export type CustomerCountry = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
+
+// Customer characteristics for sophisticated order generation
+export interface Customer {
+  id: string;
+  name: string;
+  country: CustomerCountry;
+  customerType: CustomerType;
+  
+  // Regional characteristics (0-1 scale)
+  purchasingPower: number; // Affects price tolerance and order amounts
+  wineTradition: number; // Affects wine quality preferences and price premiums
+  marketShare: number; // Affects order size multipliers (0-100 scale)
+  
+  // Behavioral multipliers (calculated from characteristics)
+  priceMultiplier: number; // How much they're willing to pay relative to base price
+  quantityMultiplier: number; // How much they buy relative to base order size
+  
+  // Relationship tracking (for future contract system)
+  relationship?: number; // 0-100 scale for relationship strength
+}
 
 // Wine order interface for sales operations
 export interface WineOrder {
   id: string;
   orderedAt: GameDate;
-  orderType: OrderType;
+  customerType: CustomerType;
   wineBatchId: string;
   wineName: string; // Formatted wine name
   requestedQuantity: number; // bottles requested
@@ -81,6 +104,11 @@ export interface WineOrder {
   fulfillableValue?: number; // fulfillableQuantity × offeredPrice
   askingPriceAtOrderTime?: number; // asking price at the time the order was placed
   status: 'pending' | 'fulfilled' | 'rejected' | 'partially_fulfilled';
+  
+  // Customer information
+  customerId: string; // Reference to the Customer who placed this order
+  customerName: string; // For display purposes
+  customerCountry: CustomerCountry; // For display and regional analysis
 }
 
 // Game State (time/financial/company data, vineyards/inventory now in separate DB tables)

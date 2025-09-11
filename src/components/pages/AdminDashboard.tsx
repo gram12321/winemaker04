@@ -5,6 +5,7 @@ import { AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { notificationService } from '../layout/NotificationCenter';
 import { addTransaction } from '@/lib/services/financeService';
+import { getGameState, updateGameState } from '@/lib/gameState';
 
 interface AdminDashboardProps {
   view?: string;
@@ -16,10 +17,12 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
     clearStorage: boolean;
     clearSupabase: boolean;
     addMoney: boolean;
+    addPrestige: boolean;
   }>({
     clearStorage: false,
     clearSupabase: false,
     addMoney: false,
+    addPrestige: false,
   });
 
   if (view && view !== 'admin') return null;
@@ -145,6 +148,28 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
     }
   };
 
+  const handleAddPrestige = async () => {
+    try {
+      setIsLoading(prev => ({ ...prev, addPrestige: true }));
+      
+      // Get current game state and increase prestige by 100
+      const currentState = getGameState();
+      const newPrestige = (currentState.prestige || 0) + 100;
+      
+      // Update game state with new prestige value
+      updateGameState({ prestige: newPrestige });
+
+      setMessage({ type: 'success', text: `Added +100 prestige. New prestige: ${newPrestige}` });
+      notificationService.success(`Added +100 prestige (Total: ${newPrestige})`);
+    } catch (error) {
+      console.error('Error adding prestige:', error);
+      setMessage({ type: 'error', text: `Error adding prestige: ${error}` });
+      notificationService.error('Failed to add prestige');
+    } finally {
+      setIsLoading(prev => ({ ...prev, addPrestige: false }));
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
@@ -216,6 +241,22 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
               disabled={isLoading.addMoney}
             >
               {isLoading.addMoney ? 'Adding...' : 'Add €1,000,000'}
+            </Button>
+          </div>
+          
+          <hr className="my-4" />
+          
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Company Prestige</h3>
+            <p className="text-sm text-gray-500">
+              Increase company prestige by +100. Higher prestige affects order generation and customer behavior.
+            </p>
+            <Button 
+              variant="default" 
+              onClick={handleAddPrestige}
+              disabled={isLoading.addPrestige}
+            >
+              {isLoading.addPrestige ? 'Adding...' : 'Add +100 Prestige'}
             </Button>
           </div>
         </CardContent>
