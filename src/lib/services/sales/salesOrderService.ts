@@ -42,7 +42,7 @@ export async function generateSophisticatedWineOrders(): Promise<{
   }
   
   // Step 2: Generate a single sophisticated customer
-  const customer = createCustomer();
+  const customer = createCustomer(chanceInfo.companyPrestige);
   const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
   
     // Customer is browsing wine selection (no logging needed)

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { notificationService } from '../layout/NotificationCenter';
 import { addTransaction } from '@/lib/services/financeService';
 import { getGameState, updateGameState } from '@/lib/gameState';
+import { initializeCustomers } from '@/lib/services/sales/createCustomer';
 
 interface AdminDashboardProps {
   view?: string;
@@ -18,11 +19,13 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
     clearSupabase: boolean;
     addMoney: boolean;
     addPrestige: boolean;
+    reinitializeCustomers: boolean;
   }>({
     clearStorage: false,
     clearSupabase: false,
     addMoney: false,
     addPrestige: false,
+    reinitializeCustomers: false,
   });
 
   if (view && view !== 'admin') return null;
@@ -170,6 +173,32 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
     }
   };
 
+  const handleReinitializeCustomers = async () => {
+    if (!confirm('Are you sure you want to clear all customers and regenerate them? This will delete all existing customer data and create new customers based on current prestige.')) {
+      return;
+    }
+    
+    try {
+      setIsLoading(prev => ({ ...prev, reinitializeCustomers: true }));
+      
+      // Get current game state for prestige
+      const currentState = getGameState();
+      const currentPrestige = currentState.prestige || 1;
+      
+      // Clear existing customers and reinitialize
+      await initializeCustomers(currentPrestige);
+
+      setMessage({ type: 'success', text: `Successfully reinitialized customers with prestige ${currentPrestige}.` });
+      notificationService.success('Customers reinitialized successfully');
+    } catch (error) {
+      console.error('Error reinitializing customers:', error);
+      setMessage({ type: 'error', text: `Error reinitializing customers: ${error}` });
+      notificationService.error('Failed to reinitialize customers');
+    } finally {
+      setIsLoading(prev => ({ ...prev, reinitializeCustomers: false }));
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
@@ -257,6 +286,22 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
               disabled={isLoading.addPrestige}
             >
               {isLoading.addPrestige ? 'Adding...' : 'Add +100 Prestige'}
+            </Button>
+          </div>
+          
+          <hr className="my-4" />
+          
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Customer Management</h3>
+            <p className="text-sm text-gray-500">
+              Clear all existing customers and regenerate them with the new market share distribution system. Uses current company prestige for relationship calculations.
+            </p>
+            <Button 
+              variant="default" 
+              onClick={handleReinitializeCustomers}
+              disabled={isLoading.reinitializeCustomers}
+            >
+              {isLoading.reinitializeCustomers ? 'Reinitializing...' : 'Reinitialize Customers'}
             </Button>
           </div>
         </CardContent>

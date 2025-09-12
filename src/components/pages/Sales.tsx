@@ -820,10 +820,10 @@ const Sales: React.FC = () => {
                                 <div className="text-sm">
                                   <div className="font-semibold">Type Range</div>
                                   <div className="text-xs text-gray-500">
-                                    {order.customerType === 'Local Restaurant' && '12-80 bottles (2-13 cases)'}
+                                    {order.customerType === 'Restaurant' && '12-80 bottles (2-13 cases)'}
                                     {order.customerType === 'Wine Shop' && '18-120 bottles (3-20 cases)'}
                                     {order.customerType === 'Private Collector' && '3-36 bottles (0.5-6 cases)'}
-                                    {order.customerType === 'Export Order' && '60-300 bottles (10-50 cases)'}
+                                    {order.customerType === 'Chain Store' && '60-300 bottles (10-50 cases)'}
                                   </div>
                                 </div>
                               </TooltipContent>

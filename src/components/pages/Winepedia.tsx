@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
+import { getAllCustomers, getCountryCode } from '../../lib/services/sales/createCustomer';
+import { Customer } from '../../lib/types';
 
 interface WinepediaProps {
   view?: string;
@@ -7,8 +11,97 @@ interface WinepediaProps {
 
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState('grapeVarieties');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [countryFilter, setCountryFilter] = useState<string>('');
+  const [sortConfig, setSortConfig] = useState<{key: keyof Customer; direction: 'asc' | 'desc'} | null>(null);
 
   if (view && view !== 'winepedia') return null;
+
+  // Load customers when the customers tab is first accessed
+  useEffect(() => {
+    if (activeTab === 'customers' && customers.length === 0) {
+      console.log('[Winepedia] Loading customers from database...');
+      const loadCustomersData = async () => {
+        try {
+          const loadedCustomers = await getAllCustomers();
+          setCustomers(loadedCustomers);
+          setFilteredCustomers(loadedCustomers);
+        } catch (error) {
+          console.error('[Winepedia] Failed to load customers:', error);
+          // Fallback to empty array
+          setCustomers([]);
+          setFilteredCustomers([]);
+        }
+      };
+      loadCustomersData();
+    }
+  }, [activeTab, customers.length]);
+
+  // Filter customers by country
+  useEffect(() => {
+    let filtered = customers;
+    
+    if (countryFilter) {
+      filtered = customers.filter(customer => customer.country === countryFilter);
+    }
+    
+    // Apply sorting
+    if (sortConfig) {
+      filtered = [...filtered].sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortConfig.direction === 'asc' 
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortConfig.direction === 'asc' 
+            ? aValue - bValue
+            : bValue - aValue;
+        }
+        
+        return 0;
+      });
+    }
+    
+    setFilteredCustomers(filtered);
+  }, [customers, countryFilter, sortConfig]);
+
+  // Handle sorting
+  const handleSort = (key: keyof Customer) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Helper function to format relationship display
+  const formatRelationship = (value: number) => {
+    // Normalize relationship to 0-1 range for color coding
+    const normalizedValue = Math.min(value / 100, 1);
+    const colorClass = normalizedValue > 0.7 ? 'text-green-600' : 
+                      normalizedValue > 0.4 ? 'text-yellow-600' : 'text-red-600';
+    
+    return (
+      <span className={colorClass}>
+        {value.toFixed(1)}
+      </span>
+    );
+  };
+
+  // Get unique countries from customers for filter dropdown
+  const availableCountries = [...new Set(customers.map(customer => customer.country))];
+
+  // Get sort indicator
+  const getSortIndicator = (key: keyof Customer) => {
+    if (!sortConfig || sortConfig.key !== key) return ' ↕️';
+    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+  };
 
   // Mock grape varieties
   const grapeVarieties = [
@@ -43,9 +136,11 @@ export default function Winepedia({ view }: WinepediaProps) {
         <div className="flex space-x-1 border-b">
           {[
             { id: 'grapeVarieties', label: 'Grape Varieties' },
+            { id: 'customerTypes', label: 'Customer Types' },
+            { id: 'countries', label: 'Countries' },
             { id: 'wineRegions', label: 'Wine Regions' },
             { id: 'winemaking', label: 'Winemaking' },
-            { id: 'importers', label: 'Importers' }
+            { id: 'customers', label: 'Customers' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -83,6 +178,94 @@ export default function Winepedia({ view }: WinepediaProps) {
           </div>
         )}
         
+        {activeTab === 'customerTypes' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(SALES_CONSTANTS.CUSTOMER_TYPES).map(([typeName, config]) => (
+              <Card key={typeName} className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-700 font-bold">{typeName.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{typeName}</CardTitle>
+                    <CardDescription>{(config.chance * 100).toFixed(0)}% chance of appearing</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-700">Price Range:</span>
+                      <p className="text-gray-600">
+                        {(config.priceMultiplierRange[0] * 100).toFixed(0)}% - {(config.priceMultiplierRange[1] * 100).toFixed(0)}% of base price
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Quantity Range:</span>
+                      <p className="text-gray-600">
+                        {config.quantityRange[0]} - {config.quantityRange[1]} bottles
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Base Multiplier:</span>
+                      <p className="text-gray-600">{config.baseQuantityMultiplier}x</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Multiple Order Penalty:</span>
+                      <p className="text-gray-600">{(config.multipleOrderPenalty * 100).toFixed(0)}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+        
+        {activeTab === 'countries' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Object.entries(CUSTOMER_REGIONAL_DATA).map(([countryName, data]) => (
+              <Card key={countryName} className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-green-700 font-bold">{countryName.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{countryName}</CardTitle>
+                    <CardDescription>Regional characteristics</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-700">Purchasing Power:</span>
+                      <span className={`font-bold ${data.purchasingPower >= 1.0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {(data.purchasingPower * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-700">Wine Tradition:</span>
+                      <span className={`font-bold ${data.wineTradition >= 1.0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {(data.wineTradition * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-3">
+                    <h4 className="font-medium text-gray-700 mb-2">Customer Type Distribution:</h4>
+                    <div className="space-y-1">
+                      {Object.entries(data.customerTypeWeights).map(([type, weight]) => (
+                        <div key={type} className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">{type}:</span>
+                          <span className="font-medium">{(weight * 100).toFixed(0)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+        
         {activeTab === 'wineRegions' && (
           <Card>
             <CardHeader>
@@ -107,14 +290,113 @@ export default function Winepedia({ view }: WinepediaProps) {
           </Card>
         )}
         
-        {activeTab === 'importers' && (
+        {activeTab === 'customers' && (
           <Card>
             <CardHeader>
-              <CardTitle>Wine Importers Directory</CardTitle>
-              <CardDescription>Global wine importers and their relationships</CardDescription>
+              <CardTitle>Wine Customers Directory</CardTitle>
+              <CardDescription>
+                Global wine customers and their market relationships. Total customers: {customers.length}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Content coming soon...</p>
+              {/* Filter controls */}
+              <div className="mb-4 flex gap-4 items-center">
+                <div>
+                  <label htmlFor="country-filter" className="text-sm font-medium text-gray-700 mr-2">
+                    Filter by Country:
+                  </label>
+                  <select
+                    id="country-filter"
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+                  >
+                    <option value="">All Countries</option>
+                    {availableCountries.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Showing {filteredCustomers.length} of {customers.length} customers
+                </div>
+              </div>
+
+              {/* Customers table */}
+              {filteredCustomers.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('country')}
+                        >
+                          Country{getSortIndicator('country')}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('name')}
+                        >
+                          Name{getSortIndicator('name')}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('customerType')}
+                        >
+                          Type{getSortIndicator('customerType')}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('marketShare')}
+                        >
+                          Market Share{getSortIndicator('marketShare')}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('purchasingPower')}
+                        >
+                          Purchasing Power{getSortIndicator('purchasingPower')}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('wineTradition')}
+                        >
+                          Wine Tradition{getSortIndicator('wineTradition')}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleSort('relationship')}
+                        >
+                          Relationship{getSortIndicator('relationship')}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCustomers.map((customer) => (
+                        <TableRow key={customer.id} className="hover:bg-gray-50">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={`fi fi-${getCountryCode(customer.country)} text-lg`}></span>
+                              {customer.country}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{customer.name}</TableCell>
+                          <TableCell>{customer.customerType}</TableCell>
+                          <TableCell>{(customer.marketShare * 100).toFixed(1)}%</TableCell>
+                          <TableCell>{(customer.purchasingPower * 100).toFixed(0)}%</TableCell>
+                          <TableCell>{(customer.wineTradition * 100).toFixed(0)}%</TableCell>
+                          <TableCell>{formatRelationship(customer.relationship || 0)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  {customers.length === 0 ? 'Loading customers...' : 'No customers match the current filter.'}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

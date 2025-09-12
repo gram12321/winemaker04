@@ -10,7 +10,7 @@ export const SALES_CONSTANTS = {
   
   // Customer type configurations (using 6-bottle cases)
   CUSTOMER_TYPES: {
-    'Local Restaurant': {
+    'Restaurant': {
       priceMultiplierRange: [0.4, 0.9], // Restaurants: 50% discount to 90% discount (wide range, most near 0.65x)
       quantityRange: [12, 80], // 2-13 cases (6 bottles each) - increased for better scaling
       baseQuantityMultiplier: 2.2, // Restaurants buy smaller amounts
@@ -31,11 +31,11 @@ export const SALES_CONSTANTS = {
       multipleOrderPenalty: 0.8, // Collectors often buy diverse wines
       chance: 0.2
     },
-    'Export Order': {
-      priceMultiplierRange: [1.0, 1.5], // Export: 0% premium to 50% premium (wide range, most near 1.1x)
+    'Chain Store': {
+      priceMultiplierRange: [1.0, 1.5], // Chain stores: 0% premium to 50% premium (wide range, most near 1.1x)
       quantityRange: [60, 300], // 10-50 cases (6 bottles each) - increased for better scaling
-      baseQuantityMultiplier: 10.0, // Export orders buy in bulk
-      multipleOrderPenalty: 0.9, // Export orders often buy multiple varietals
+      baseQuantityMultiplier: 10.0, // Chain stores buy in bulk
+      multipleOrderPenalty: 0.9, // Chain stores often buy multiple varietals
       chance: 0.1
     }
   },
@@ -115,50 +115,50 @@ export const CUSTOMER_REGIONAL_DATA = {
     purchasingPower: 0.85, // 85% = 15% below average
     wineTradition: 1.10,   // 110% = 10% above average
     customerTypeWeights: {
-      'Local Restaurant': 0.35,
-      'Wine Shop': 0.30,
-      'Private Collector': 0.25,
-      'Export Order': 0.10
+      'Restaurant': 0.35,
+      'Wine Shop': 0.05,
+      'Private Collector': 0.55,
+      'Chain Store': 0.05
     }
   },
   'Germany': { 
     purchasingPower: 0.80, // 80% = 20% below average
     wineTradition: 0.75,  // 75% = 25% below average
     customerTypeWeights: {
-      'Local Restaurant': 0.30,
-      'Wine Shop': 0.35,
-      'Private Collector': 0.20,
-      'Export Order': 0.15
+      'Restaurant': 0.16,
+      'Wine Shop': 0.10,
+      'Private Collector': 0.70,
+      'Chain Store': 0.04
     }
   },
   'Italy': { 
     purchasingPower: 0.75, // 75% = 25% below average
     wineTradition: 1.05,  // 105% = 5% above average
     customerTypeWeights: {
-      'Local Restaurant': 0.40,
-      'Wine Shop': 0.25,
-      'Private Collector': 0.20,
-      'Export Order': 0.15
-    }
+      'Restaurant': 0.26,
+      'Wine Shop': 0.10,
+      'Private Collector': 0.60,
+      'Chain Store': 0.04
+      }
   },
   'Spain': { 
     purchasingPower: 0.70, // 70% = 30% below average
     wineTradition: 0.85,  // 85% = 15% below average
     customerTypeWeights: {
-      'Local Restaurant': 0.45,
-      'Wine Shop': 0.25,
-      'Private Collector': 0.15,
-      'Export Order': 0.15
+      'Restaurant': 0.15,
+      'Wine Shop': 0.12,
+      'Private Collector': 0.70,
+      'Chain Store': 0.03
     }
   },
   'United States': { 
     purchasingPower: 1.20, // 120% = 20% above average
     wineTradition: 0.60,  // 60% = 40% below average
     customerTypeWeights: {
-      'Local Restaurant': 0.25,
-      'Wine Shop': 0.25,
-      'Private Collector': 0.30,
-      'Export Order': 0.20
+      'Restaurant': 0.08,
+      'Wine Shop': 0.10,
+      'Private Collector': 0.80,
+      'Chain Store': 0.02
     }
   }
 } as const;
@@ -172,10 +172,10 @@ export const CUSTOMER_NAMES = {
     },
     lastNames: ["Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Durand", "Leroy", "Moreau", "Simon", "Laurent", "Lefèvre", "Michel", "Garcia"],
     businessSuffixes: {
-      'Local Restaurant': ["Restaurant", "Bistro", "Brasserie"],
+      'Restaurant': ["Restaurant", "Bistro", "Brasserie"],
       'Wine Shop': ["Wine Merchants", "Wine & Spirits", "Wine Cellar"],
       'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Export Order': ["International", "Group", "Distribution"]
+      'Chain Store': ["International", "Group", "Distribution"]
     }
   },
   'Germany': {
@@ -185,10 +185,10 @@ export const CUSTOMER_NAMES = {
     },
     lastNames: ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann", "Schäfer", "Koch", "Bauer", "Richter", "Klein"],
     businessSuffixes: {
-      'Local Restaurant': ["Restaurant", "Gasthaus", "Weinhaus"],
+      'Restaurant': ["Restaurant", "Gasthaus", "Weinhaus"],
       'Wine Shop': ["Wine Merchants", "Wine Gallery", "Vintage Wines"],
       'Private Collector': ["Wines", "Wine Import", "Wine Selection"],
-      'Export Order': ["Corporation", "Holdings", "International"]
+      'Chain Store': ["Corporation", "Holdings", "International"]
     }
   },
   'Italy': {
@@ -198,10 +198,10 @@ export const CUSTOMER_NAMES = {
     },
     lastNames: ["Rossi", "Bianchi", "Romano", "Colombo", "Ricci", "Conti", "Greco", "Gallo", "Ferrara", "Rizzo", "Caruso", "Moretti", "Lombardi", "Esposito", "Marchetti"],
     businessSuffixes: {
-      'Local Restaurant': ["Ristorante", "Trattoria", "Osteria"],
+      'Restaurant': ["Ristorante", "Trattoria", "Osteria"],
       'Wine Shop': ["Wine Merchants", "Wine Cellar", "Vintage Wines"],
       'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Export Order': ["International", "Corporation", "Group"]
+      'Chain Store': ["International", "Corporation", "Group"]
     }
   },
   'Spain': {
@@ -211,10 +211,10 @@ export const CUSTOMER_NAMES = {
     },
     lastNames: ["García", "Martínez", "Rodríguez", "Fernández", "López", "González", "Pérez", "Sánchez", "Ramírez", "Torres", "Castro", "Ramos", "Delgado", "Morales", "Ortiz"],
     businessSuffixes: {
-      'Local Restaurant': ["Restaurant", "Bistro"],
+      'Restaurant': ["Restaurant", "Bistro", "Bodega"],
       'Wine Shop': ["Wine Merchants", "Wine & Spirits", "Wine Cellar"],
       'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Export Order': ["International", "Group", "Distribution"]
+      'Chain Store': ["International", "Group", "Distribution"]
     }
   },
   'United States': {
@@ -224,13 +224,15 @@ export const CUSTOMER_NAMES = {
     },
     lastNames: ["Smith", "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris"],
     businessSuffixes: {
-      'Local Restaurant': ["Restaurant", "Bistro"],
+      'Restaurant': ["Restaurant", "Bistro"],
       'Wine Shop': ["Wine Merchants", "Wine & Spirits", "Wine Gallery"],
       'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Export Order': ["Inc.", "Corporation", "International"]
+      'Chain Store': ["Inc.", "Corporation", "International"]
     }
   }
 } as const;
+
+
 
 // ===== FUTURE CONSTANTS =====
 // This file can be extended with other game constants as needed:

@@ -64,8 +64,8 @@ export interface WineBatch {
   completedAt?: GameDate; // When bottling is completed
 }
 
-// Customer types for sales system
-export type CustomerType = 'Local Restaurant' | 'Wine Shop' | 'Private Collector' | 'Export Order';
+// Customer types for sales system (matching importer types)
+export type CustomerType = 'Restaurant' | 'Wine Shop' | 'Private Collector' | 'Chain Store';
 
 // Customer countries and regional data
 export type CustomerCountry = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
@@ -80,7 +80,7 @@ export interface Customer {
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
   wineTradition: number; // Affects wine quality preferences and price premiums
-  marketShare: number; // Affects order size multipliers (0-100 scale)
+  marketShare: number; // Affects order size multipliers (0-1 scale)
   
   // Behavioral multipliers (calculated from characteristics)
   priceMultiplier: number; // How much they're willing to pay relative to base price
@@ -88,6 +88,7 @@ export interface Customer {
   // Relationship tracking (for future contract system)
   relationship?: number; // 0-100 scale for relationship strength
 }
+
 
 // Wine order interface for sales operations
 export interface WineOrder {

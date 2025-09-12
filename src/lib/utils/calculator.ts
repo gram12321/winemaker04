@@ -229,34 +229,34 @@ export function calculateSymmetricalMultiplier(
   let progressionValue: number;
   
   if (progressionInput < 0.1) {
-    // Sigmoid approach to extremes (0-0.1)
+    // Sigmoid (0-0.1) - 0.0-0.1 and 0.9-1.0 range - extremes
     progressionValue = 1 - (1 - Math.exp(-progressionInput * 10)) * 0.1;
   } else if (progressionInput < 0.2) {
-    // Very strong exponential (0.1-0.2)
-    progressionValue = 0.9 + Math.pow((progressionInput - 0.1) * 10, 2.5) * 0.1;
+    // Logarithmic (0.1-0.2) - 0.1-0.2 and 0.8-0.9 range
+    progressionValue = 0.9 + Math.log(1 + (progressionInput - 0.1) * 10) * 0.1;
   } else if (progressionInput < 0.3) {
-    // Strong exponential (0.2-0.3)
-    progressionValue = 0.8 + Math.pow((progressionInput - 0.2) * 10, 2) * 0.1;
+    // Exponential (0.2-0.3) - 0.2-0.3 and 0.7-0.8 range
+    progressionValue = 0.8 + Math.pow((progressionInput - 0.2) * 10, 1.5) * 0.1;
   } else if (progressionInput < 0.4) {
-    // Exponential (0.3-0.4)
-    progressionValue = 0.7 + Math.pow((progressionInput - 0.3) * 10, 1.5) * 0.1;
+    // Linear (0.3-0.4) - 0.3-0.4 and 0.6-0.7 range
+    progressionValue = 0.7 + (progressionInput - 0.3) * 1;
   } else if (progressionInput < 0.5) {
-    // Linear (0.4-0.5)
-    progressionValue = 0.6 + (progressionInput - 0.4) * 1;
+    // Polynomial (0.4-0.5) - 0.4-0.6 range (closest to center)
+    progressionValue = 0.6 + (progressionInput - 0.4) * (progressionInput - 0.4) * 10;
   } else if (progressionInput < 0.6) {
-    // Logarithmic (0.5-0.6)
-    progressionValue = 0.5 + Math.log(1 + (progressionInput - 0.5) * 10) * 0.1;
+    // Polynomial (0.5-0.6) - 0.4-0.6 range (symmetrical)
+    progressionValue = 0.5 + (progressionInput - 0.5) * (progressionInput - 0.5) * 10;
   } else if (progressionInput < 0.7) {
-    // Polynomial (0.6-0.7)
-    progressionValue = 0.4 + (progressionInput - 0.6) * (progressionInput - 0.6) * 10;
+    // Linear (0.6-0.7) - 0.3-0.4 and 0.6-0.7 range (symmetrical)
+    progressionValue = 0.4 + (progressionInput - 0.6) * 1;
   } else if (progressionInput < 0.8) {
-    // Polynomial (0.7-0.8)
-    progressionValue = 0.3 + (progressionInput - 0.7) * (progressionInput - 0.7) * 10;
+    // Exponential (0.7-0.8) - 0.2-0.3 and 0.7-0.8 range (symmetrical)
+    progressionValue = 0.3 + Math.pow((progressionInput - 0.7) * 10, 1.5) * 0.1;
   } else if (progressionInput < 0.9) {
-    // Polynomial (0.8-0.9)
-    progressionValue = 0.2 + (progressionInput - 0.8) * (progressionInput - 0.8) * 10;
+    // Logarithmic (0.8-0.9) - 0.1-0.2 and 0.8-0.9 range (symmetrical)
+    progressionValue = 0.2 + Math.log(1 + (progressionInput - 0.8) * 10) * 0.1;
   } else {
-    // Sigmoid approach to extremes (0.9-1.0)
+    // Sigmoid (0.9-1.0) - 0.0-0.1 and 0.9-1.0 range (symmetrical) - extremes
     progressionValue = 0.1 + (1 - Math.exp(-(progressionInput - 0.9) * 10)) * 0.1;
   }
   

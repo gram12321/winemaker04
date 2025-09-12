@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { loadGameState, getGameState } from '@/lib/gameState';
 import { initializeStartingCapital } from '@/lib/services/financeService';
+import { initializeCustomers } from '@/lib/services/sales/createCustomer';
 
 export const useGameInit = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +19,10 @@ export const useGameInit = () => {
         
         // Initialize starting capital in finance system (if new game)
         await initializeStartingCapital();
+        
+        // Initialize customers system (load existing or generate new)
+        const gameState = getGameState();
+        await initializeCustomers(gameState.prestige || 1);
         
         // Note: Vineyards and inventory are loaded separately by their components
       } catch (err) {

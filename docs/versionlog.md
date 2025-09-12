@@ -1,3 +1,42 @@
+## Version 0.0023 - 2025-09-11
+
+### **Multi-Factor Order System Fixes & UI Improvements**
+- `src/lib/services/sales/generateOrder.ts` - Fixed multiple order penalty logic, added calculation data storage for tooltips
+- `src/lib/services/sales/salesOrderService.ts` - Implemented full wine iteration system with diminishing returns for multiple orders
+- `src/lib/services/sales/createCustomer.ts` - Removed unused quantityMultiplier calculation, streamlined customer creation
+- `src/lib/types.ts` - Added calculationData interface to WineOrder, removed quantityMultiplier from Customer interface
+- `src/lib/database.ts` - Added calculation_data JSONB column support for storing detailed order calculations
+- `src/components/pages/Sales.tsx` - Enhanced UI with customer names, country flags, detailed tooltips, and Premium/Discount column
+- `src/lib/utils/flags.ts` - New utility for country flag display using flag-icon CSS classes
+- `index.html` - Added flag-icon-css stylesheet for country flag display
+- `src/lib/constants.ts` - Renamed multipleOrderChanceBonus to multipleOrderPenalty for clarity
+- `src/lib/services/gameTickService.ts` - Removed legacy fallback system, streamlined to sophisticated orders only
+- **UI Enhancements**: Customer names with country flags, detailed calculation tooltips, order status filtering
+- **System Improvements**: Full wine iteration with diminishing returns, calculation data persistence, cleaner console output
+- **Bug Fixes**: Multiple order penalty logic, quantity multiplier redundancy, market share scaling issues
+
+---
+
+## Version 0.0022 - 2025-09-11
+
+### **Sales System Multi-Factor Implementation**
+- `src/lib/services/sales/createCustomer.ts` - New sophisticated customer generation with regional characteristics
+- `src/lib/services/sales/generateOrder.ts` - Enhanced order generation with customer-specific pricing and quantity calculations
+- `src/lib/services/sales/salesOrderService.ts` - Added sophisticated order generation system with customer browsing
+- `src/lib/constants.ts` - Added CUSTOMER_REGIONAL_DATA and CUSTOMER_NAMES with realistic regional characteristics
+- `src/lib/types.ts` - Added Customer interface, CustomerCountry type, and extended WineOrder with customer information
+- `src/lib/database.ts` - Updated to support customer_id, customer_name, customer_country fields in wine_orders table
+- `src/components/pages/Sales.tsx` - Enhanced UI with order status filtering, customer information display, and improved order management
+- `src/components/pages/AdminDashboard.tsx` - Added prestige management tools for testing sophisticated order generation
+- `src/components/layout/Header.tsx` - Added prestige display in header for better game state visibility
+- `src/lib/services/gameTickService.ts` - Updated to use sophisticated order generation system
+- **Multi-Factor System**: Regional purchasing power, wine tradition, and market share influence pricing and quantity
+- **Customer Sophistication**: Realistic customer names, country-specific characteristics, and behavioral multipliers
+- **Database Schema**: Extended wine_orders table with customer tracking fields
+- **UI Improvements**: Order status filtering, customer information display, prestige management tools
+
+---
+
 ## Version 0.0021a - 2025-09-11
 
 ### **Sales System Code Cleanup**
