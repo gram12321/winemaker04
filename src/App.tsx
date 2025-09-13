@@ -12,10 +12,14 @@ import Achievements from './components/pages/Achievements';
 import Winepedia from './components/pages/Winepedia';
 import { Toaster } from './components/ui/toaster';
 import { useGameInit } from './hooks/useGameInit';
+import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const { isLoading, error } = useGameInit();
+  
+  // Monitor prestige changes and update customer relationships
+  usePrestigeUpdates();
 
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
@@ -34,7 +38,7 @@ function App() {
       case 'winery':
         return <Winery />;
       case 'sales':
-        return <Sales />;
+        return <Sales onNavigateToWinepedia={() => setCurrentPage('winepedia-customers')} />;
       case 'finance':
         return <Finance />;
       case 'profile':
@@ -47,6 +51,8 @@ function App() {
         return <Achievements />;
       case 'winepedia':
         return <Winepedia />;
+      case 'winepedia-customers':
+        return <Winepedia view="customers" />;
       default:
         return <Dashboard />;
     }

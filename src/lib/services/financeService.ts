@@ -1,7 +1,7 @@
 import { getGameState, updateGameState } from '../gameState';
 import { GameDate } from '../types';
-import { supabase } from '../supabase';
-import { loadVineyards, loadWineBatches } from '../database';
+import { supabase } from '../database/supabase';
+import { loadVineyards, loadWineBatches } from '../database/database';
 import { GAME_INITIALIZATION } from '../constants';
 
 export interface Transaction {

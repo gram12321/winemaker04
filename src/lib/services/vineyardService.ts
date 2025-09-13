@@ -1,9 +1,10 @@
 // Simplified vineyard management service with direct database operations
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety } from '../types';
-import { saveVineyard, loadVineyards } from '../database';
+import { saveVineyard, loadVineyards } from '../database/database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
+import { updateVineyardPrestigeEvents } from '../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
 
 export const GRAPE_VARIETIES: GrapeVariety[] = [
@@ -29,10 +30,19 @@ export async function createVineyard(name: string): Promise<Vineyard> {
     },
     // Pricing factors (using placeholders for now)
     landValue: 0.5, // Default land value placeholder
-    fieldPrestige: 0.5 // Default field prestige placeholder
+    fieldPrestige: 1 // Default field prestige placeholder
   };
 
   await saveVineyard(vineyard);
+  
+  // Update vineyard prestige events
+  try {
+    await updateVineyardPrestigeEvents();
+    // Vineyard prestige events updated - will be reflected in next calculation
+  } catch (error) {
+    console.error('Failed to update vineyard prestige events:', error);
+  }
+  
   triggerGameUpdate();
   return vineyard;
 }

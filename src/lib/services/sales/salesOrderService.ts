@@ -2,9 +2,9 @@
 import { WineOrder } from '../../types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
-import { createCustomer } from './createCustomer';
+import { getAllCustomers } from './createCustomer';
 import { notificationService } from '../../../components/layout/NotificationCenter';
-import { loadWineBatches } from '../../database';
+import { loadWineBatches } from '../../database/database';
 import { getAvailableBottledWines } from '../../utils/wineFilters';
 import { SALES_CONSTANTS } from '../../constants';
 
@@ -41,8 +41,20 @@ export async function generateSophisticatedWineOrders(): Promise<{
     };
   }
   
-  // Step 2: Generate a single sophisticated customer
-  const customer = createCustomer(chanceInfo.companyPrestige);
+  // Step 2: Select an existing customer
+  const allCustomers = await getAllCustomers();
+  
+  if (allCustomers.length === 0) {
+    return {
+      orders: [],
+      customersGenerated: 0,
+      totalOrdersCreated: 0,
+      chanceInfo
+    };
+  }
+  
+  // Randomly select a customer
+  const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
   const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
   
     // Customer is browsing wine selection (no logging needed)

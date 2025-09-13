@@ -1,5 +1,5 @@
 // Customer database service - handles Supabase CRUD operations for customers
-import { supabase } from '../supabase';
+import { supabase } from './supabase';
 import { Customer } from '../types';
 
 /**
@@ -28,7 +28,8 @@ export async function saveCustomers(customers: Customer[]): Promise<void> {
       purchasing_power: customer.purchasingPower,
       wine_tradition: customer.wineTradition,
       price_multiplier: customer.priceMultiplier,
-      relationship: customer.relationship || 0
+      relationship: customer.relationship || 0,
+      active_customer: customer.activeCustomer || false
     }));
 
     const { error: insertError } = await supabase
@@ -40,7 +41,6 @@ export async function saveCustomers(customers: Customer[]): Promise<void> {
       throw insertError;
     }
 
-    console.log(`[CustomerDB] Successfully saved ${customers.length} customers`);
   } catch (error) {
     console.error('Failed to save customers:', error);
     throw error;
@@ -64,11 +64,9 @@ export async function loadCustomers(): Promise<Customer[] | null> {
     }
 
     if (!data || data.length === 0) {
-      console.log('[CustomerDB] No customers found in database');
       return null;
     }
 
-    console.log(`[CustomerDB] Successfully loaded ${data.length} customers`);
     
     // Map from database format to Customer interface
     const customers: Customer[] = data.map(row => ({
@@ -80,7 +78,8 @@ export async function loadCustomers(): Promise<Customer[] | null> {
       purchasingPower: row.purchasing_power,
       wineTradition: row.wine_tradition,
       priceMultiplier: row.price_multiplier,
-      relationship: row.relationship
+      relationship: row.relationship,
+      activeCustomer: row.active_customer || false
     }));
     
     return customers;
@@ -111,10 +110,74 @@ export async function updateCustomerRelationships(customers: Customer[]): Promis
       throw new Error(`Failed to update ${errors.length} customer relationships`);
     }
 
-    console.log(`[CustomerDB] Successfully updated ${customers.length} customer relationships`);
   } catch (error) {
     console.error('Failed to update customer relationships:', error);
     throw error;
+  }
+}
+
+/**
+ * Activate a customer (mark them as active and store their initial relationship)
+ */
+export async function activateCustomer(customerId: string, initialRelationship: number): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('customers')
+      .update({ 
+        active_customer: true,
+        relationship: initialRelationship
+      })
+      .eq('id', customerId);
+
+    if (error) {
+      console.error('Error activating customer:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Failed to activate customer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Load only active customers (for performance optimization)
+ */
+export async function loadActiveCustomers(): Promise<Customer[]> {
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('active_customer', true)
+      .order('country', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error loading active customers:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Map from database format to Customer interface
+    const customers: Customer[] = data.map(row => ({
+      id: row.id,
+      name: row.name,
+      country: row.country,
+      customerType: row.customer_type,
+      marketShare: row.market_share,
+      purchasingPower: row.purchasing_power,
+      wineTradition: row.wine_tradition,
+      priceMultiplier: row.price_multiplier,
+      relationship: row.relationship,
+      activeCustomer: row.active_customer || false
+    }));
+    
+    return customers;
+  } catch (error) {
+    console.error('Failed to load active customers:', error);
+    return [];
   }
 }
 
@@ -133,7 +196,6 @@ export async function checkCustomersExist(): Promise<boolean> {
     }
 
     const count = data?.length || 0;
-    console.log(`[CustomerDB] Found ${count} existing customers`);
     return count > 0;
   } catch (error) {
     console.error('Failed to check customers existence:', error);

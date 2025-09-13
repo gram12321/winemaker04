@@ -79,7 +79,7 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
 const processWeeklyEffects = async (): Promise<void> => {
   // Enhanced automatic customer acquisition and sophisticated order generation
   try {
-    const result = await generateSophisticatedWineOrders(); // Generate 1 customer who browses all wines
+    const result = await generateSophisticatedWineOrders(); // Generate customer event and orders
     
     if (result.totalOrdersCreated > 0) {
       console.log(`[Weekly Orders] Generated ${result.totalOrdersCreated} orders from ${result.customersGenerated} customers`);

@@ -11,6 +11,8 @@ import {
 } from '../../lib/services/vineyardService';
 import { Vineyard as VineyardType, GrapeVariety } from '../../lib/types';
 import { useAsyncData } from '../../hooks/useAsyncData';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Button } from '../ui/button';
 
 interface CreateVineyardDialogProps {
   isOpen: boolean;
@@ -21,8 +23,6 @@ interface CreateVineyardDialogProps {
 const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onClose, onSubmit }) => {
   const [name, setName] = useState('');
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(name);
@@ -31,9 +31,14 @@ const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onC
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-96">
-        <h3 className="text-lg font-bold mb-4">Create New Vineyard</h3>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-96">
+        <DialogHeader>
+          <DialogTitle>Create New Vineyard</DialogTitle>
+          <DialogDescription>
+            Create a new vineyard to start growing grapes for your winery.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -48,23 +53,23 @@ const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onC
             </div>
           </div>
           <div className="flex justify-end space-x-2 mt-6">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700"
+              className="bg-amber-600 hover:bg-amber-700"
             >
               Create
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -78,18 +83,23 @@ interface PlantDialogProps {
 const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, onSubmit }) => {
   const [selectedGrape, setSelectedGrape] = useState<GrapeVariety>('Chardonnay');
 
-  if (!isOpen || !vineyard) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(selectedGrape);
     onClose();
   };
 
+  if (!vineyard) return null;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-96">
-        <h3 className="text-lg font-bold mb-4">Plant Vineyard: {vineyard.name}</h3>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-96">
+        <DialogHeader>
+          <DialogTitle>Plant Vineyard: {vineyard.name}</DialogTitle>
+          <DialogDescription>
+            Choose a grape variety to plant in this vineyard.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -106,23 +116,23 @@ const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, on
             </div>
           </div>
           <div className="flex justify-end space-x-2 mt-6">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700"
             >
               Plant
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

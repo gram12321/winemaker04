@@ -1,8 +1,9 @@
 // Hook for initializing game state on app startup
 import { useEffect, useState } from 'react';
-import { loadGameState, getGameState } from '@/lib/gameState';
+import { loadGameState } from '@/lib/gameState';
 import { initializeStartingCapital } from '@/lib/services/financeService';
 import { initializeCustomers } from '@/lib/services/sales/createCustomer';
+import { getCurrentPrestige } from '@/lib/gameState';
 
 export const useGameInit = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -21,8 +22,8 @@ export const useGameInit = () => {
         await initializeStartingCapital();
         
         // Initialize customers system (load existing or generate new)
-        const gameState = getGameState();
-        await initializeCustomers(gameState.prestige || 1);
+        const currentPrestige = await getCurrentPrestige();
+        await initializeCustomers(currentPrestige);
         
         // Note: Vineyards and inventory are loaded separately by their components
       } catch (err) {
@@ -38,7 +39,6 @@ export const useGameInit = () => {
 
   return {
     isLoading,
-    error,
-    gameState: getGameState()
+    error
   };
 };

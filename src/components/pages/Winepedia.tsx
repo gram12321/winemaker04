@@ -1,32 +1,45 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
 import { getAllCustomers, getCountryCode } from '../../lib/services/sales/createCustomer';
 import { Customer } from '../../lib/types';
+import { loadFormattedRelationshipBreakdown } from '../../lib/utils/relationshipUtils';
 
 interface WinepediaProps {
   view?: string;
 }
 
 export default function Winepedia({ view }: WinepediaProps) {
-  const [activeTab, setActiveTab] = useState('grapeVarieties');
+  const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [countryFilter, setCountryFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{key: keyof Customer; direction: 'asc' | 'desc'} | null>(null);
+  const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[customerId: string]: string}>({});
 
-  if (view && view !== 'winepedia') return null;
+  // Remove this condition as it was preventing navigation with view prop
+  // if (view && view !== 'winepedia') return null;
+
+  // Update active tab when view prop changes
+  useEffect(() => {
+    if (view === 'customers') {
+      setActiveTab('customers');
+    }
+  }, [view]);
 
   // Load customers when the customers tab is first accessed
   useEffect(() => {
     if (activeTab === 'customers' && customers.length === 0) {
-      console.log('[Winepedia] Loading customers from database...');
       const loadCustomersData = async () => {
         try {
           const loadedCustomers = await getAllCustomers();
           setCustomers(loadedCustomers);
           setFilteredCustomers(loadedCustomers);
+          
+          // Don't auto-load all relationship breakdowns to avoid heavy database queries
+          // They will be loaded on-demand when hovering over relationship values
         } catch (error) {
           console.error('[Winepedia] Failed to load customers:', error);
           // Fallback to empty array
@@ -92,6 +105,19 @@ export default function Winepedia({ view }: WinepediaProps) {
         {value.toFixed(1)}
       </span>
     );
+  };
+
+  // Load relationship breakdown for a customer on-demand
+  const loadRelationshipBreakdown = async (customer: Customer) => {
+    try {
+      const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
+      setRelationshipBreakdowns(prev => ({
+        ...prev,
+        [customer.id]: formattedBreakdown
+      }));
+    } catch (error) {
+      console.error('Error loading relationship breakdown:', error);
+    }
   };
 
   // Get unique countries from customers for filter dropdown
@@ -188,7 +214,7 @@ export default function Winepedia({ view }: WinepediaProps) {
                   </div>
                   <div>
                     <CardTitle className="text-lg">{typeName}</CardTitle>
-                    <CardDescription>{(config.chance * 100).toFixed(0)}% chance of appearing</CardDescription>
+                    <CardDescription>Customer type characteristics</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -386,7 +412,42 @@ export default function Winepedia({ view }: WinepediaProps) {
                           <TableCell>{(customer.marketShare * 100).toFixed(1)}%</TableCell>
                           <TableCell>{(customer.purchasingPower * 100).toFixed(0)}%</TableCell>
                           <TableCell>{(customer.wineTradition * 100).toFixed(0)}%</TableCell>
-                          <TableCell>{formatRelationship(customer.relationship || 0)}</TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span 
+                                    onMouseEnter={() => {
+                                      if (!relationshipBreakdowns[customer.id]) {
+                                        loadRelationshipBreakdown(customer);
+                                      }
+                                    }}
+                                    className="cursor-help"
+                                  >
+                                    {formatRelationship(customer.relationship || 0)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <div className="text-sm">
+                                    <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
+                                    {relationshipBreakdowns[customer.id] ? (
+                                      <div className="space-y-1 text-xs">
+                                        {relationshipBreakdowns[customer.id].split('\n').map((line, index) => (
+                                          <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
+                                            {line}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="text-xs text-gray-500">
+                                        Hover to load detailed breakdown...
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

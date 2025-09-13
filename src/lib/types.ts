@@ -87,6 +87,7 @@ export interface Customer {
   
   // Relationship tracking (for future contract system)
   relationship?: number; // 0-100 scale for relationship strength
+  activeCustomer?: boolean; // True if customer has placed orders (actively interacting with company)
 }
 
 
@@ -109,6 +110,7 @@ export interface WineOrder {
   customerId: string; // Reference to the Customer who placed this order
   customerName: string; // For display purposes
   customerCountry: CustomerCountry; // For display and regional analysis
+  customerRelationship?: number; // Customer relationship strength (0-100)
   
   // Calculation data for tooltips and analysis
   calculationData?: {
@@ -133,6 +135,31 @@ export interface WineOrder {
     wasRejected: boolean;
   };
 }
+
+// Prestige system interfaces
+export interface PrestigeEvent {
+  id: string;
+  type: 'vineyard' | 'company_value' | 'sale' | 'contract' | 'penalty';
+  amount: number;
+  timestamp: number;
+  decayRate: number; // 0 for base, 0.95 for sales, etc.
+  description: string;
+  sourceId?: string; // vineyard ID, etc.
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RelationshipBoost {
+  id: string;
+  customerId: string;
+  amount: number;
+  timestamp: number;
+  decayRate: number;
+  description: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 
 // Game State (time/financial/company data, vineyards/inventory now in separate DB tables)
 export interface GameState {

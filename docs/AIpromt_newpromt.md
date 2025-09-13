@@ -8,4 +8,4 @@ We already have the basic setup: React/Vite/TypeScript + ShadCN, connected to Su
  - We have updated the header, with a navigation menu (Players menu) and we have implementet a notification service. layout/notificationCenter.tsx 
  - We have a financesystem, financeservice.ts with a transaction system that should be used for all moneytrary transfers. 
 
-Next up I want to go a bit deeper in the sales calculation. We can draw on some of the old iterations. Ill post some files from the old iteration
+We have been working a lot on the customers. They are now created a gameinit and have a type, that makes them act in different ways.  lib\services\sales\*.ts and C:\GitHub\winemaker04\src\lib\services\customerDatabaseService.ts

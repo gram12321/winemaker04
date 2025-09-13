@@ -1,18 +1,23 @@
 
 import { useState, useEffect } from 'react';
-import { WineOrder, WineBatch } from '../../lib/types';
+import { WineOrder, WineBatch, Customer } from '../../lib/types';
 import { fulfillWineOrder, rejectWineOrder } from '../../lib/services/salesService';
 import { generateSophisticatedWineOrders } from '../../lib/services/sales/salesOrderService';
 import { generateCustomer } from '../../lib/services/sales/generateCustomer';
-import { loadWineBatches, saveWineBatch, loadWineOrders } from '../../lib/database';
+import { loadWineBatches, saveWineBatch, loadWineOrders } from '../../lib/database/database';
 import { useGameUpdates } from '../../hooks/useGameUpdates';
 import { formatGameDate } from '../../lib/types';
 import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { getFlagIcon } from '../../lib/utils/flags';
+import { loadFormattedRelationshipBreakdown, createCustomerFromOrderData } from '../../lib/utils/relationshipUtils';
 
-const Sales: React.FC = () => {
+interface SalesProps {
+  onNavigateToWinepedia?: () => void;
+}
+
+const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
   const [orders, setOrders] = useState<WineOrder[]>([]);
   const [allOrders, setAllOrders] = useState<WineOrder[]>([]);
@@ -29,6 +34,7 @@ const Sales: React.FC = () => {
     finalChance: number;
     randomRoll: number;
   } | null>(null);
+  const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[customerId: string]: string}>({});
 
   // Listen to game updates to refresh data
   const { subscribe } = useGameUpdates();
@@ -61,6 +67,9 @@ const Sales: React.FC = () => {
       setBottledWines(allBatches.filter(batch => 
         batch.stage === 'bottled' && batch.process === 'bottled'
       ));
+
+      // Don't auto-load all relationship breakdowns to avoid heavy database queries
+      // They will be loaded on-demand when hovering over relationship values
     } catch (error) {
       console.error('Failed to load sales data:', error);
     }
@@ -81,6 +90,12 @@ const Sales: React.FC = () => {
   // Define sortable columns for orders
   const orderColumns: SortableColumn<WineOrder>[] = [
     { key: 'customerName', label: 'Customer', sortable: true },
+    { 
+      key: 'customerRelationship', 
+      label: 'Relationship', 
+      sortable: true,
+      accessor: (order) => order.customerRelationship ?? 0
+    },
     { key: 'customerType', label: 'Customer Type', sortable: true },
     { key: 'wineName', label: 'Wine', sortable: true },
     { key: 'requestedQuantity', label: 'Quantity', sortable: true },
@@ -156,6 +171,19 @@ const Sales: React.FC = () => {
       setOrderChanceInfo(chanceInfo);
     } catch (error) {
       console.error('Error loading customer acquisition chance:', error);
+    }
+  };
+
+  // Load relationship breakdown for a customer on-demand
+  const loadRelationshipBreakdown = async (customerId: string, customer: Customer) => {
+    try {
+      const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
+      setRelationshipBreakdowns(prev => ({
+        ...prev,
+        [customerId]: formattedBreakdown
+      }));
+    } catch (error) {
+      console.error('Error loading relationship breakdown:', error);
     }
   };
 
@@ -691,6 +719,14 @@ const Sales: React.FC = () => {
                     </TableHead>
                     <TableHead 
                       sortable 
+                      onSort={() => handleOrderSort('customerRelationship')}
+                      sortIndicator={getOrderSortIndicator('customerRelationship')}
+                      isSorted={isOrderColumnSorted('customerRelationship')}
+                    >
+                      Relationship
+                    </TableHead>
+                    <TableHead 
+                      sortable 
                       onSort={() => handleOrderSort('customerType')}
                       sortIndicator={getOrderSortIndicator('customerType')}
                       isSorted={isOrderColumnSorted('customerType')}
@@ -768,7 +804,7 @@ const Sales: React.FC = () => {
                 <TableBody>
                   {sortedOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={13} className="text-center text-gray-500 py-8">
                         {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                       </TableCell>
                     </TableRow>
@@ -779,10 +815,14 @@ const Sales: React.FC = () => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                  <span className="cursor-help underline decoration-dotted flex items-center space-x-2">
+                                  <button 
+                                    onClick={() => onNavigateToWinepedia?.()}
+                                    className="cursor-pointer hover:text-blue-600 hover:underline decoration-dotted flex items-center space-x-2 text-left"
+                                    title="Click to view customer details in Winepedia"
+                                  >
                                     <span className={getFlagIcon(order.customerCountry || '')}></span>
                                     <span>{order.customerName || 'Unknown Customer'}</span>
-                                  </span>
+                                  </button>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-sm">
                                 <div className="space-y-2 text-sm">
@@ -802,6 +842,61 @@ const Sales: React.FC = () => {
                                     </>
                                   ) : (
                                     <div className="text-gray-500">Calculation data not available</div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell className="text-gray-500">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span 
+                                  onMouseEnter={() => {
+                                    if (!relationshipBreakdowns[order.customerId]) {
+                                      // Create a minimal customer object for the breakdown calculation
+                                      const customer = createCustomerFromOrderData(
+                                        order.customerId,
+                                        order.customerName,
+                                        order.customerCountry as any,
+                                        order.customerType,
+                                        order.customerRelationship
+                                      );
+                                      loadRelationshipBreakdown(order.customerId, customer);
+                                    }
+                                  }}
+                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full cursor-help ${
+                                    (order.customerRelationship ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
+                                    (order.customerRelationship ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                    (order.customerRelationship ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                  {(order.customerRelationship ?? 0).toFixed(0)}%
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-md">
+                                <div className="text-sm">
+                                  <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
+                                  {relationshipBreakdowns[order.customerId] ? (
+                                    <div className="space-y-1 text-xs">
+                                      {relationshipBreakdowns[order.customerId].split('\n').map((line, index) => (
+                                        <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
+                                          {line}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-gray-500">
+                                      {order.customerRelationship === undefined ? 'New customer - no relationship established yet' :
+                                       order.customerRelationship >= 80 ? 'Excellent relationship - loyal customer' :
+                                       order.customerRelationship >= 60 ? 'Good relationship - regular customer' :
+                                       order.customerRelationship >= 40 ? 'Fair relationship - occasional customer' :
+                                       'Poor relationship - needs improvement'}
+                                      <div className="mt-2 text-blue-500">
+                                        Hover to load detailed breakdown...
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
                               </TooltipContent>

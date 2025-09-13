@@ -1,6 +1,6 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
-import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType } from './types';
+import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType } from '../types';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
@@ -27,6 +27,8 @@ export const saveVineyard = async (vineyard: Vineyard, playerId: string = 'defau
         created_week: vineyard.createdAt.week,
         created_season: vineyard.createdAt.season,
         created_year: vineyard.createdAt.year,
+        land_value: vineyard.landValue,
+        field_prestige: vineyard.fieldPrestige,
         updated_at: new Date().toISOString()
       });
 
@@ -59,7 +61,9 @@ export const loadVineyards = async (playerId: string = 'default'): Promise<Viney
         week: row.created_week || 1,
         season: (row.created_season || 'Spring') as Season,
         year: row.created_year || 2024
-      }
+      },
+      landValue: row.land_value,
+      fieldPrestige: row.field_prestige
     }));
   } catch (error) {
     return [];
@@ -243,6 +247,7 @@ export const saveWineOrder = async (order: WineOrder, playerId: string = 'defaul
 
 export const loadWineOrders = async (playerId: string = 'default', status?: string): Promise<WineOrder[]> => {
   try {
+    // First, load orders without the join to avoid Supabase query issues
     let query = supabase
       .from(WINE_ORDERS_TABLE)
       .select('*')
@@ -253,11 +258,24 @@ export const loadWineOrders = async (playerId: string = 'default', status?: stri
       query = query.eq('status', status);
     }
     
-    const { data, error } = await query.order('created_at', { ascending: true });
+    const { data: ordersData, error: ordersError } = await query.order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (ordersError) throw ordersError;
 
-    return (data || []).map(row => ({
+    // Load customer relationships separately
+    const { data: customersData, error: customersError } = await supabase
+      .from('customers')
+      .select('id, relationship');
+
+    // Create a map of customer relationships for quick lookup
+    const customerRelationships = new Map();
+    if (!customersError && customersData) {
+      customersData.forEach(customer => {
+        customerRelationships.set(customer.id, customer.relationship || 0);
+      });
+    }
+
+    return (ordersData || []).map(row => ({
       id: row.id,
       wineBatchId: row.wine_batch_id,
       wineName: row.wine_name,
@@ -265,6 +283,7 @@ export const loadWineOrders = async (playerId: string = 'default', status?: stri
       customerId: row.customer_id || '',
       customerName: row.customer_name || '',
       customerCountry: row.customer_country || '',
+      customerRelationship: customerRelationships.get(row.customer_id) || 0,
       requestedQuantity: row.requested_quantity,
       offeredPrice: row.offered_price,
       totalValue: row.total_value,

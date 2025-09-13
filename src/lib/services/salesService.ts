@@ -1,8 +1,10 @@
 // Sales service for wine order management (fulfillment and rejection)
 import { WineOrder, WineBatch } from '../types';
-import { loadWineOrders, updateWineOrderStatus, loadWineBatches, saveWineBatch, saveWineOrder } from '../database';
+import { loadWineOrders, updateWineOrderStatus, loadWineBatches, saveWineBatch, saveWineOrder } from '../database/database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { addTransaction } from './financeService';
+import { createRelationshipBoost, addSalePrestigeEvent } from '../database/prestigeService';
+import { getCurrentPrestige } from '../gameState';
 
 // ===== ORDER MANAGEMENT =====
 
@@ -50,6 +52,31 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     `Wine Sale: ${order.wineName}${fulfillableQuantity < order.requestedQuantity ? ` (${fulfillableQuantity}/${order.requestedQuantity} bottles)` : ''}`,
     'Wine Sales'
   );
+  
+  // Create relationship boost and prestige event for successful order
+  try {
+    const currentPrestige = await getCurrentPrestige();
+    
+    // Create relationship boost
+    await createRelationshipBoost(
+      order.customerId,
+      fulfillableValue,
+      currentPrestige,
+      `Order fulfilled: ${order.wineName} (${fulfillableQuantity} bottles)`
+    );
+    
+    // Create prestige event for the sale
+    await addSalePrestigeEvent(
+      fulfillableValue,
+      order.customerName,
+      order.wineName
+    );
+    
+    // Prestige events created - will be reflected in next calculation
+  } catch (error) {
+    console.error('Failed to create relationship boost or prestige event:', error);
+    // Don't fail the order fulfillment if these fail
+  }
   
   // Update order with fulfillment details and mark as fulfilled or partially fulfilled
   const updatedOrder: WineOrder = {

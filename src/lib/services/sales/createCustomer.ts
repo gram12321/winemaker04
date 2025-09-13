@@ -8,8 +8,9 @@ import {
   saveCustomers, 
   loadCustomers, 
   updateCustomerRelationships, 
-  checkCustomersExist 
-} from '../customerDatabaseService';
+  checkCustomersExist,
+  loadActiveCustomers
+} from '../../database/customerDatabaseService';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -46,66 +47,9 @@ export function calculateCustomerRelationship(marketShare: number, companyPresti
   return Math.max(baseRelationship, relationship);
 }
 
-/**
- * Create a sophisticated customer with regional characteristics
- * Based on the legacy importer system but updated for TypeScript/React
- * 
- * @param companyPrestige - Current company prestige for relationship calculation
- * @returns Customer with realistic characteristics and behavioral multipliers
- */
-export function createCustomer(companyPrestige: number = 1): Customer {
-  // Select country randomly
-  const countries = Object.keys(CUSTOMER_REGIONAL_DATA) as CustomerCountry[];
-  const selectedCountry = countries[Math.floor(Math.random() * countries.length)];
-  
-  const regionalData = CUSTOMER_REGIONAL_DATA[selectedCountry];
-  
-  // Select customer type based on regional weights
-  const selectedCustomerType = weightedRandomSelect(
-    Object.keys(regionalData.customerTypeWeights) as CustomerType[],
-    Object.values(regionalData.customerTypeWeights)
-  );
-  
-  // Generate market share (0-1 scale, realistic distribution)
-  const marketSharePercent = generateMarketShare();
-  const marketShare = marketSharePercent / 100; // Convert to 0-1 scale
-  
-  // Generate customer name
-  const customerName = generateCustomerName(selectedCountry, selectedCustomerType);
-  
-  // Get pricing from unified constants system
-  const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[selectedCustomerType];
-  
-  // Generate individual price multiplier from range, influenced by customer characteristics
-  const basePriceMultiplier = customerTypeConfig.priceMultiplierRange[0] + 
-    (Math.random() * (customerTypeConfig.priceMultiplierRange[1] - customerTypeConfig.priceMultiplierRange[0]));
-  
-  // Apply customer characteristics to price multiplier - direct percentage multiplication
-  // Purchasing Power: 100% = neutral, 110% = 10% higher prices, 90% = 10% lower prices
-  // Wine Tradition: 100% = neutral, 110% = 10% higher prices, 90% = 10% lower prices  
-  // Market Share: 100% = neutral, 110% = 10% LOWER prices (inverted - higher market share = more negotiating power)
-  const purchasingPowerMultiplier = regionalData.purchasingPower; // 0.8 = 80% = 20% lower prices
-  const wineTraditionMultiplier = regionalData.wineTradition; // 0.75 = 75% = 25% lower prices
-  const marketShareMultiplier = 1 - marketShare; // Relative to 1: 0.006 = 0.6% = 0.994x multiplier
-  
-  const priceMultiplier = basePriceMultiplier * purchasingPowerMultiplier * wineTraditionMultiplier * marketShareMultiplier;
-  
-  // Ensure multiplier stays within reasonable bounds
-  const finalPriceMultiplier = Math.max(0.1, Math.min(2.0, priceMultiplier));
-  
-  
-  return {
-    id: uuidv4(),
-    name: customerName,
-    country: selectedCountry,
-    customerType: selectedCustomerType,
-    purchasingPower: regionalData.purchasingPower,
-    wineTradition: regionalData.wineTradition,
-    marketShare,
-    priceMultiplier: finalPriceMultiplier,
-    relationship: calculateCustomerRelationship(marketShare, companyPrestige)
-  };
-}
+// Note: calculateCustomerRelationshipWithBoosts function removed as it's now redundant
+// Fresh relationships are calculated directly in generateOrder.ts using current prestige
+
 
 /**
  * Generate realistic customer names based on country and order type
@@ -147,63 +91,10 @@ function generateCustomerName(country: CustomerCountry, customerType: CustomerTy
   }
 }
 
-/**
- * Generate realistic market share distribution
- * Most customers have small market share, few have large share
- */
-function generateMarketShare(): number { // TODO: Replace with non-linear distribution from calculator.ts
-  // Use exponential distribution to create realistic market share
-  // Most customers: 0.1-2%, Some: 2-10%, Few: 10%+
-  const random = Math.random();
-  
-  if (random < 0.7) {
-    // 70% have small market share (0.1-2%)
-    return 0.1 + Math.random() * 1.9;
-  } else if (random < 0.95) {
-    // 25% have medium market share (2-10%)
-    return 2 + Math.random() * 8;
-  } else {
-    // 5% have large market share (10-50%)
-    return 10 + Math.random() * 40;
-  }
-}
 
 
 
-/**
- * Weighted random selection helper
- */
-function weightedRandomSelect<T>(items: T[], weights: number[]): T {
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  let random = Math.random() * totalWeight;
-  
-  for (let i = 0; i < items.length; i++) {
-    random -= weights[i];
-    if (random <= 0) {
-      return items[i];
-    }
-  }
-  
-  return items[items.length - 1]; // Fallback
-}
 
-/**
- * Generate multiple customers for multi-customer order generation
- * Uses regional distribution to create realistic customer mix
- * 
- * @param count - Number of customers to generate
- * @param companyPrestige - Current company prestige for relationship calculation
- * @returns Array of customers with diverse characteristics
- */
-export function createMultipleCustomers(count: number, companyPrestige: number = 1): Customer[] {
-  const customers: Customer[] = [];
-  
-  for (let i = 0; i < count; i++) {
-    customers.push(createCustomer(companyPrestige));
-  }
-  
-  return customers;
-}
 
 
 // ===== BULK CUSTOMER GENERATION (GAME INITIALIZATION) =====
@@ -217,7 +108,6 @@ function generateMarketSharesUntilFull(customerTypes: CustomerType[]): number[] 
   const marketShares: number[] = [];
   let totalMarketShare = 0;
   
-  console.log('[Market Share Generation] Starting generation...');
   
   // Customer type market share multipliers
   const marketShareMultipliers: Record<CustomerType, number> = {
@@ -271,11 +161,8 @@ function generateMarketSharesUntilFull(customerTypes: CustomerType[]): number[] 
     marketShares.push(marketShare);
     totalMarketShare += marketShare;
     
-    console.log(`[Market Share Generation] Customer ${marketShares.length} (${customerType}): ${marketShare.toFixed(1)}%, Total: ${totalMarketShare.toFixed(1)}%`);
-    
     // Safety check to prevent infinite loops
     if (marketShares.length > 1000) {
-      console.warn('[Market Share Generation] Reached maximum customer limit, stopping generation');
       break;
     }
   }
@@ -287,7 +174,6 @@ function generateMarketSharesUntilFull(customerTypes: CustomerType[]): number[] 
     totalMarketShare = 100.0;
   }
   
-  console.log(`[Market Share Generation] Final: ${marketShares.length} customers, Total: ${totalMarketShare.toFixed(1)}%`);
   
   return marketShares;
 }
@@ -329,7 +215,8 @@ function createCustomerWithSpecificData(
     wineTradition: regionalData.wineTradition,
     marketShare,
     priceMultiplier: finalPriceMultiplier,
-    relationship: calculateCustomerRelationship(marketShare, companyPrestige)
+    relationship: calculateCustomerRelationship(marketShare, companyPrestige),
+    activeCustomer: false // Default to inactive until first order
   };
 }
 
@@ -338,13 +225,11 @@ function createCustomerWithSpecificData(
  * Now uses the consolidated customer creation logic to avoid duplication
  */
 export function generateCustomersForAllCountries(companyPrestige: number = 1): Customer[] {
-  console.log('[Customer Generation] Starting customer generation...');
   const allCustomers: Customer[] = [];
   
   const countries = Object.keys(CUSTOMER_REGIONAL_DATA) as CustomerCountry[];
   
   countries.forEach(country => {
-    console.log(`[Customer Generation] Generating customers for ${country}`);
     
     // Get customer type weights for this country
     const typeWeights = CUSTOMER_REGIONAL_DATA[country].customerTypeWeights;
@@ -354,8 +239,6 @@ export function generateCustomersForAllCountries(companyPrestige: number = 1): C
     const customerTypes: CustomerType[] = [];
     let totalWeight = Object.values(typeWeights).reduce((sum, weight) => sum + weight, 0);
     
-    console.log(`[Customer Type Generation] Weights for ${country}:`, typeWeights);
-    console.log(`[Customer Type Generation] Total weight: ${totalWeight}`);
     
     // Generate enough customer types (we'll generate more as needed)
     for (let i = 0; i < 100; i++) { // Generate up to 100 customer types
@@ -374,19 +257,11 @@ export function generateCustomersForAllCountries(companyPrestige: number = 1): C
       customerTypes.push(selectedType);
     }
     
-    // Log the distribution of generated customer types
-    const typeCounts = customerTypes.reduce((counts, type) => {
-      counts[type] = (counts[type] || 0) + 1;
-      return counts;
-    }, {} as Record<CustomerType, number>);
-    
-    console.log(`[Customer Type Generation] Generated type distribution:`, typeCounts);
     
     // Generate market shares with customer type modifiers
     const marketShares = generateMarketSharesUntilFull(customerTypes);
     const customerCount = marketShares.length;
     
-    console.log(`[Customer Generation] Generated ${customerCount} customers for ${country} with total market share: ${marketShares.reduce((a, b) => a + b, 0).toFixed(2)}%`);
     
     // Create customers for this country
     for (let i = 0; i < customerCount; i++) {
@@ -400,94 +275,75 @@ export function generateCustomersForAllCountries(companyPrestige: number = 1): C
     }
   });
   
-  // Calculate and log the initial total relationship sum
-  const initialTotalRelationship = allCustomers.reduce((sum, customer) => sum + (customer.relationship || 0), 0);
-  
-  console.log('[Customer Generation] Generation complete:', {
-    totalCustomers: allCustomers.length,
-    totalRelationship: initialTotalRelationship,
-    averageRelationship: initialTotalRelationship / allCustomers.length
-  });
   
   return allCustomers;
-}
-
-/**
- * Update all customer relationships based on current company prestige
- */
-export function updateAllCustomerRelationships(customers: Customer[], companyPrestige: number): Customer[] {
-  return customers.map(customer => ({
-    ...customer,
-    relationship: calculateCustomerRelationship(customer.marketShare, companyPrestige)
-  }));
 }
 
 /**
  * Initialize customers for the game - either load existing or generate new ones
  */
 export async function initializeCustomers(companyPrestige: number = 1): Promise<Customer[]> {
-  console.log('[Customer Init] Checking for existing customers...');
   
   try {
     // Check if customers already exist
     const customersExist = await checkCustomersExist();
     
     if (customersExist) {
-      console.log('[Customer Init] Found existing customers, loading from database...');
       const existingCustomers = await loadCustomers();
       
       if (existingCustomers && existingCustomers.length > 0) {
-        console.log(`[Customer Init] Successfully loaded ${existingCustomers.length} existing customers`);
         return existingCustomers;
       }
     }
     
     // No existing customers found, generate new ones
-    console.log('[Customer Init] No existing customers found, generating new ones...');
     const newCustomers = generateCustomersForAllCountries(companyPrestige);
     
     // Save to database
     await saveCustomers(newCustomers);
     
-    console.log(`[Customer Init] Successfully initialized ${newCustomers.length} customers`);
     return newCustomers;
     
   } catch (error) {
     console.error('[Customer Init] Failed to initialize customers:', error);
     // Fallback: return generated customers without saving
-    console.log('[Customer Init] Using fallback generation without database save');
     return generateCustomersForAllCountries(companyPrestige);
   }
 }
 
 /**
- * Update all customer relationships when company prestige changes
+ * Update only active customer relationships when company prestige changes
+ * This dramatically improves performance by only updating customers who have actually placed orders
  */
 export async function updateCustomerRelationshipsForPrestige(companyPrestige: number): Promise<Customer[]> {
   try {
-    console.log(`[Customer Update] Updating relationships for prestige: ${companyPrestige}`);
+    console.log('[Customer Update] Updating relationships for active customers only...');
     
-    // Load current customers
-    const currentCustomers = await loadCustomers();
+    // Load only active customers (customers who have placed orders)
+    const activeCustomers = await loadActiveCustomers();
     
-    if (!currentCustomers || currentCustomers.length === 0) {
-      console.log('[Customer Update] No customers found, initializing new ones');
-      return await initializeCustomers(companyPrestige);
+    if (activeCustomers.length === 0) {
+      console.log('[Customer Update] No active customers found, skipping relationship updates');
+      return [];
     }
     
-    // Update relationships
-    const updatedCustomers = updateAllCustomerRelationships(currentCustomers, companyPrestige);
+    console.log(`[Customer Update] Updating relationships for ${activeCustomers.length} active customers`);
+    
+    // Update relationships only for active customers
+    const updatedCustomers = activeCustomers.map(customer => ({
+      ...customer,
+      relationship: calculateCustomerRelationship(customer.marketShare, companyPrestige)
+    }));
     
     // Save updated relationships back to database
     await updateCustomerRelationships(updatedCustomers);
     
-    console.log(`[Customer Update] Successfully updated ${updatedCustomers.length} customer relationships`);
+    console.log('[Customer Update] Successfully updated active customer relationships');
     return updatedCustomers;
     
   } catch (error) {
     console.error('[Customer Update] Failed to update customer relationships:', error);
-    // Fallback: reinitialize
-    return await initializeCustomers(companyPrestige);
+    throw error; // Don't fallback to reinitializing all customers
   }
 }
 

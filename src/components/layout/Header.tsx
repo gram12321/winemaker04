@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getGameState } from '@/lib/gameState';
+import { getGameState, getCurrentPrestige } from '@/lib/gameState';
 import { processGameTick } from '@/lib/services/gameTickService';
 import { formatCurrency } from '@/lib/utils/formatUtils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
@@ -10,6 +10,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { CalendarDays, MessageSquareText } from 'lucide-react';
+import PrestigeModal from '@/components/ui/prestige-modal';
+import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
 
 interface HeaderProps {
   currentPage: string;
@@ -19,6 +21,9 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance }) => {
   const [gameState, setGameState] = useState(getGameState());
+  const [currentPrestige, setCurrentPrestige] = useState(0);
+  const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
+  const [prestigeData, setPrestigeData] = useState({ totalPrestige: 0, eventBreakdown: [] });
   const consoleHook = useNotifications();
   const { subscribe } = useGameUpdates();
 
@@ -29,13 +34,41 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
 
   // Subscribe to game updates to refresh header data
   useEffect(() => {
-    const unsubscribe = subscribe(() => {
+    const unsubscribe = subscribe(async () => {
       setGameState(getGameState());
+      // Update prestige when game state changes
+      try {
+        const prestige = await getCurrentPrestige();
+        setCurrentPrestige(prestige);
+      } catch (error) {
+        console.error('Failed to update prestige:', error);
+      }
     });
     return () => {
       unsubscribe();
     };
   }, [subscribe]);
+
+  // Load initial prestige and set up periodic refresh
+  useEffect(() => {
+    const loadInitialPrestige = async () => {
+      try {
+        const prestige = await getCurrentPrestige();
+        setCurrentPrestige(prestige);
+      } catch (error) {
+        console.error('Failed to load initial prestige:', error);
+      }
+    };
+    
+    loadInitialPrestige();
+    
+    // Set up periodic prestige refresh every 2 seconds for more responsive updates
+    const intervalId = setInterval(loadInitialPrestige, 2000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const handleIncrementWeek = async () => {
     try {
@@ -44,6 +77,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
       onTimeAdvance();
     } catch (error) {
       console.error('Error advancing time:', error);
+    }
+  };
+
+  const handlePrestigeClick = async () => {
+    try {
+      const prestigeInfo = await calculateCurrentPrestige();
+      setPrestigeData(prestigeInfo);
+      setPrestigeModalOpen(true);
+    } catch (error) {
+      console.error('Error loading prestige data:', error);
     }
   };
 
@@ -102,8 +145,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
             <span className="font-medium">{formatCurrency(gameState.money || 0)}</span>
           </Badge>
           
-          <Badge variant="outline" className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center">
-            <span className="font-medium">⭐ {gameState.prestige || 0}</span>
+          <Badge 
+            variant="outline" 
+            className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center cursor-pointer hover:bg-red-600 transition-colors"
+            onClick={handlePrestigeClick}
+          >
+            <span className="font-medium">⭐ {currentPrestige.toFixed(1)}</span>
           </Badge>
           
           <Button 
@@ -167,6 +214,14 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
           onClose={consoleHook.closeHistory} 
         />
       }
+      
+      {/* Prestige Breakdown Modal */}
+      <PrestigeModal
+        isOpen={prestigeModalOpen}
+        onClose={() => setPrestigeModalOpen(false)}
+        totalPrestige={prestigeData.totalPrestige}
+        eventBreakdown={prestigeData.eventBreakdown}
+      />
     </header>
   );
 };

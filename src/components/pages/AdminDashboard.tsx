@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { AlertCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/database/supabase';
 import { notificationService } from '../layout/NotificationCenter';
 import { addTransaction } from '@/lib/services/financeService';
 import { getGameState, updateGameState } from '@/lib/gameState';
@@ -68,7 +68,10 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
         'game_state',
         'wine_batches', 
         'wine_orders',
-        'transactions'
+        'transactions',
+        'customers',
+        'prestige_events',
+        'relationship_boosts'
       ];
 
       // Clear each known table
@@ -76,7 +79,9 @@ export default function AdminDashboard({ view }: AdminDashboardProps) {
         try {
           // Use different delete strategies based on table structure
           let deleteQuery;
-          if (tableName === 'vineyards' || tableName === 'transactions') {
+          if (tableName === 'vineyards' || tableName === 'transactions' || 
+              tableName === 'customers' || tableName === 'prestige_events' || 
+              tableName === 'relationship_boosts') {
             // For UUID tables, use a valid UUID that won't exist
             deleteQuery = supabase
               .from(tableName)
