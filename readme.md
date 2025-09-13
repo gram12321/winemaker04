@@ -23,6 +23,7 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - **`useGameInit()`**: Initializes game state on app startup, handles loading/error states
 - **`useGameUpdates()`**: Global subscription system for reactive UI updates across components
 - **`useAsyncData<T>()`**: Reusable hook for loading async data with automatic updates via global subscription system
+- **`usePrestigeUpdates()`**: Monitors prestige changes and updates customer relationships for active customers only
 
 ### 🔌 Supabase Backend (MCP Server Tools)
 
@@ -41,6 +42,10 @@ Players manage a winery, including vineyard operations, wine production, buildin
 **Separate Tables for Scalability:**
 - **`vineyards`**: Individual vineyard records with proper indexing
 - **`wine_batches`**: Wine production pipeline with stage/process tracking
+- **`wine_orders`**: Customer orders with relationship tracking and calculation data
+- **`customers`**: Global customer database with regional characteristics and relationship management
+- **`relationship_boosts`**: Customer relationship boost events with decay tracking
+- **`transactions`**: Financial transaction history with categorization
 - **`game_state`**: Time/season and financial data only
 - **Performance**: Indexed queries, partial updates, no JSON blob storage
 
@@ -87,21 +92,31 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - Team management and task assignment
 
 ### 4. Sales System ✅ **IMPLEMENTED**
-- **Wine Order Generation**: Random order generation with weighted customer types
-- **Sophisticated Pricing Engine**: Base Price = (Land Value + Prestige) × Base Rate, Final Price = Base Price × Quality Multiplier
-- **Mathematical Quality Scaling**: Multi-segment scaling with polynomial, logarithmic, linear, and exponential curves
-- **Order Management**: Accept/Reject orders with inventory validation and money transactions
-- **Customer Types**: Local Restaurant, Wine Shop, Private Collector, Export Order with different pricing
-- **Wine Case Sizes**: Proper European 6-bottle cases with realistic quantity ranges
-- **Quality Display**: Color-coded quality/balance indicators in sales interface
+- **Sophisticated Customer System**: Global customer database with regional characteristics (purchasing power, wine tradition, market share)
+- **Dynamic Order Generation**: Company prestige-based customer acquisition with sophisticated scaling and diminishing returns
+- **Multi-Factor Pricing**: Customer-specific pricing based on regional characteristics, market share, and relationship strength
+- **Customer Relationship Management**: Hybrid system with active customer tracking and relationship boost events
+- **Order Management**: Accept/Reject orders with inventory validation, relationship tracking, and detailed calculation data
+- **Customer Types**: Restaurant, Wine Shop, Private Collector, Chain Store with realistic quantity ranges and pricing
+- **Relationship Display**: Color-coded relationship indicators with detailed breakdown tooltips
+- **Performance Optimization**: Only updates relationships for active customers (those who have placed orders)
 
 **Future Advanced Features (NOT YET IMPLEMENTED):**
 - Contract system for stable income
 - Customer preferences and archetypes
 - Price negotiation mechanics
-- Sophisticated pricing based on land value, field prestige, vintage aging
+- Advanced relationship events and customer loyalty programs
 
-### 5. Finance System ✅ **IMPLEMENTED**
+### 5. Customer Relationship System ✅ **IMPLEMENTED**
+- **Global Customer Database**: 300+ customers across multiple countries with realistic regional characteristics
+- **Relationship Calculation**: Sophisticated formula combining company prestige, customer market share, and relationship boosts
+- **Active Customer Optimization**: Only tracks and updates relationships for customers who have placed orders
+- **Relationship Boosts**: Sales create relationship boost events that decay over time
+- **Hybrid Data Management**: Combines stored relationship values for display with fresh calculations for game logic
+- **Performance Monitoring**: Automatic prestige change detection with selective relationship updates
+- **UI Integration**: Detailed relationship breakdowns in tooltips with formula explanations and discrepancy notes
+
+### 6. Finance System ✅ **IMPLEMENTED**
 - **Transaction Management**: Complete financial transaction system with Supabase integration
 - **Financial Reporting**: Income statements, balance sheets, and cash flow statements with period filtering
 - **Asset Valuation**: Automatic calculation of vineyard, wine inventory, and grape values
@@ -109,7 +124,7 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - **Integration**: All money flows (sales, admin tools) go through transaction system
 - **UI Components**: Tabbed finance interface with Income/Balance, Cash Flow, and Research/Upgrades sections
 
-### 6. Player Interface & Navigation ✅ **IMPLEMENTED** But mostly with placeholders**
+### 7. Player Interface & Navigation ✅ **IMPLEMENTED** But mostly with placeholders**
 - **Player Menu System**: Dropdown navigation accessible via player avatar in header
 - **Notification Center**: In-app message history with filtering, timestamps, and real-time updates
 - **Toast Notifications**: Global notification system for game events and user feedback
@@ -117,7 +132,7 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - **Settings Management**: Game preferences and notification visibility controls
 - **Page Routing**: Complete navigation between Dashboard, Vineyard, Winery, Sales, Finance, and player menu pages
 
-### 7. Game Flow
+### 8. Game Flow
 - End-day/tick system for game progression
 - Tutorial system with guided learning (NOT YET IMPLEMENTET)
 - Work calculation system for tasks (NOT YET IMPLEMENTET)

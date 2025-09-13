@@ -1,3 +1,36 @@
+## Version 0.0025 - 2025-09-11
+
+### **Sales/Customer System Code Review & Optimization**
+- `src/hooks/useGameInit.ts` - Fixed to use getCurrentPrestige() instead of deprecated gameState.prestige
+- `src/lib/services/sales/generateCustomer.ts` - Updated to use consistent prestige access and optimized database queries
+- `src/lib/services/sales/createCustomer.ts` - Removed redundant calculateCustomerRelationshipWithBoosts function, cleaned up unused imports
+- `src/lib/services/sales/generateOrder.ts` - Added customerRelationship field to order objects, fixed import paths
+- `src/lib/utils/relationshipUtils.ts` - New shared utility for relationship breakdown display, consolidated duplicate UI code
+- `src/components/pages/Sales.tsx` - Updated to use shared relationship utilities, fixed import paths
+- `src/components/pages/Winepedia.tsx` - Updated to use shared relationship utilities, improved code consistency
+- **Code Quality**: Eliminated redundant functions, consolidated duplicate relationship loading logic
+- **Performance**: Optimized database queries to load only pending orders instead of all orders + filtering
+- **Consistency**: All components now use getCurrentPrestige() for dynamic prestige access
+- **Architecture**: Better separation of concerns with shared utilities and cleaner import structure
+
+---
+
+## Version 0.0024 - 2025-09-11
+
+### **Hybrid Customer Relationship Management System**
+- `src/lib/types.ts` - Added activeCustomer field to Customer interface for performance optimization
+- `src/lib/database/customerDatabaseService.ts` - New service with activateCustomer() and loadActiveCustomers() functions
+- `src/lib/services/sales/createCustomer.ts` - Updated to only update relationships for active customers, improved performance
+- `src/lib/services/sales/generateOrder.ts` - Fixed to always calculate fresh relationships using current prestige, added customer activation
+- `src/hooks/usePrestigeUpdates.ts` - Optimized to only update active customer relationships, dramatically reduced database load
+- `src/lib/database/relationshipBreakdownService.ts` - Enhanced to show both stored and calculated relationship values with discrepancy notes
+- **Performance**: Only updates relationships for customers who have actually placed orders (active customers)
+- **Data Consistency**: Game logic now always uses fresh relationship calculations with current prestige
+- **Customer Lifecycle**: Customers are automatically activated when they place their first order
+- **Hybrid Approach**: Combines stored relationship values for display with fresh calculations for game logic
+
+---
+
 ## Version 0.0023 - 2025-09-11
 
 ### **Multi-Factor Order System Fixes & UI Improvements**
