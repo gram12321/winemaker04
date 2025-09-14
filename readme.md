@@ -22,8 +22,18 @@ Players manage a winery, including vineyard operations, wine production, buildin
 #### React Hooks for State Management
 - **`useGameInit()`**: Initializes game state on app startup, handles loading/error states
 - **`useGameUpdates()`**: Global subscription system for reactive UI updates across components
-- **`useAsyncData<T>()`**: Reusable hook for loading async data with automatic updates via global subscription system
-- **`usePrestigeUpdates()`**: Monitors prestige changes and updates customer relationships for active customers only
+- **`useGameStateWithData<T>()`**: Enhanced hook for loading async data with automatic updates via global subscription system (replaces useAsyncData)
+- **`usePrestigeUpdates()`**: Event-driven hook that monitors prestige changes and updates customer relationships for active customers only
+- **`useLoadingState()`**: Simplified loading state hook with withLoading wrapper for async operations
+- **`useTableSortWithAccessors()`**: Hook for table sorting functionality with type-safe accessors
+
+#### Barrel Export/Import System
+- **Centralized Imports**: All components, hooks, services, and utilities use barrel exports for cleaner imports
+- **`@/components/ui`**: Single import for all ShadCN UI components
+- **`@/hooks`**: Single import for all custom hooks
+- **`@/lib/services`**: Single import for all service functions
+- **`@/lib/utils`**: Single import for all utility functions
+- **Shared Interfaces**: `@/components/UItypes` provides consistent prop types across components
 
 ### 🔌 Supabase Backend (MCP Server Tools)
 
