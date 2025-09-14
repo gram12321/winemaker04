@@ -1,21 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import React, { useState, useEffect } from 'react';
+import { useGameStateWithData } from '@/hooks';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui";
 import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
-import { getAllCustomers, getCountryCode } from '../../lib/services/sales/createCustomer';
-import { Customer } from '../../lib/types';
-import { loadFormattedRelationshipBreakdown } from '../../lib/utils/relationshipUtils';
-import { formatNumber, formatPercent } from '../../lib/utils/utils';
+import { getAllCustomers, getCountryCode } from '@/lib/services';
+import { Customer } from '@/lib/types';
+import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
+import { formatNumber, formatPercent } from '@/lib/utils/utils';
+import { PageProps } from '../UItypes';
 
-interface WinepediaProps {
+interface WinepediaProps extends PageProps {
   view?: string;
 }
 
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [countryFilter, setCountryFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{key: keyof Customer; direction: 'asc' | 'desc'} | null>(null);
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[customerId: string]: string}>({});
@@ -30,30 +28,14 @@ export default function Winepedia({ view }: WinepediaProps) {
     }
   }, [view]);
 
-  // Load customers when the customers tab is first accessed
-  useEffect(() => {
-    if (activeTab === 'customers' && customers.length === 0) {
-      const loadCustomersData = async () => {
-        try {
-          const loadedCustomers = await getAllCustomers();
-          setCustomers(loadedCustomers);
-          setFilteredCustomers(loadedCustomers);
-          
-          // Don't auto-load all relationship breakdowns to avoid heavy database queries
-          // They will be loaded on-demand when hovering over relationship values
-        } catch (error) {
-          console.error('[Winepedia] Failed to load customers:', error);
-          // Fallback to empty array
-          setCustomers([]);
-          setFilteredCustomers([]);
-        }
-      };
-      loadCustomersData();
-    }
-  }, [activeTab, customers.length]);
+  // Use consolidated hook for reactive customer loading (only when customers tab is active)
+  const customers = useGameStateWithData(
+    () => activeTab === 'customers' ? getAllCustomers() : Promise.resolve([]),
+    []
+  );
 
-  // Filter customers by country
-  useEffect(() => {
+  // Filter and sort customers (computed value instead of useEffect)
+  const filteredCustomers = React.useMemo(() => {
     let filtered = customers;
     
     if (countryFilter) {
@@ -82,7 +64,7 @@ export default function Winepedia({ view }: WinepediaProps) {
       });
     }
     
-    setFilteredCustomers(filtered);
+    return filtered;
   }, [customers, countryFilter, sortConfig]);
 
   // Handle sorting

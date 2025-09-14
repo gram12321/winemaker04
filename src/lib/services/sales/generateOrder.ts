@@ -12,7 +12,6 @@ import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoost } from '../../database/prestigeService';
 import { getCurrentPrestige } from '../gameState';
 import { activateCustomer } from '../../database/customerDatabaseService';
-import { getCurrentCompany } from '../gameState';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
@@ -59,11 +58,7 @@ function calculateRejectionProbability(bidPrice: number, finalPrice: number): nu
 
 // Generate a wine order when a customer is interested (wine value + quality-based decision)
 export async function generateOrder(customer: Customer, specificWineBatch: any, multipleOrderModifier: number = 1.0): Promise<WineOrder | null> {
-  // Get current company ID for loading vineyards
-  const currentCompany = getCurrentCompany();
-  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
-  
-  const allVineyards = await loadVineyards(companyId);
+  const allVineyards = await loadVineyards();
   
   // Use the provided customer and wine batch (no backwards compatibility)
   const orderCustomer = customer;
@@ -233,11 +228,11 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
     }
   };
   
-  await saveWineOrder(order, companyId);
+  await saveWineOrder(order);
   
   // Activate customer if they're not already active (store their relationship)
   if (!orderCustomer.activeCustomer) {
-    await activateCustomer(orderCustomer.id, currentRelationship, companyId);
+    await activateCustomer(orderCustomer.id, currentRelationship);
   }
   
   triggerGameUpdate();

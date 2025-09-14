@@ -5,21 +5,17 @@ import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { addTransaction } from './financeService';
 import { createRelationshipBoost, addSalePrestigeEvent } from '../database/prestigeService';
 import { getCurrentPrestige } from './gameState';
-import { getCurrentCompanyId } from '../utils/companyUtils';
 
 // ===== ORDER MANAGEMENT =====
 
 // Get all pending wine orders
 export async function getPendingOrders(): Promise<WineOrder[]> {
-  const companyId = getCurrentCompanyId();
-  return await loadWineOrders(companyId);
+  return await loadWineOrders();
 }
 
 // Fulfill a wine order (sell the wine) - supports partial fulfillment
 export async function fulfillWineOrder(orderId: string): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  
-  const orders = await loadWineOrders(companyId);
+  const orders = await loadWineOrders();
   const order = orders.find(o => o.id === orderId);
   
   if (!order) {
@@ -27,7 +23,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   }
   
   // Get the wine batch
-  const allBatches = await loadWineBatches(companyId);
+  const allBatches = await loadWineBatches();
   const wineBatch = allBatches.find(batch => batch.id === order.wineBatchId);
   
   if (!wineBatch) {
@@ -48,15 +44,14 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     quantity: wineBatch.quantity - fulfillableQuantity
   };
   
-  await saveWineBatch(updatedBatch, companyId);
+  await saveWineBatch(updatedBatch);
   
   // Add money to player account through finance system
   await addTransaction(
     fulfillableValue,
     `Wine Sale: ${order.wineName}${fulfillableQuantity < order.requestedQuantity ? ` (${fulfillableQuantity}/${order.requestedQuantity} bottles)` : ''}`,
     'Wine Sales',
-    false,
-    companyId
+    false
   );
   
   // Create relationship boost and prestige event for successful order
@@ -92,7 +87,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     status: fulfillableQuantity < order.requestedQuantity ? 'partially_fulfilled' : 'fulfilled'
   };
   
-  await saveWineOrder(updatedOrder, companyId);
+  await saveWineOrder(updatedOrder);
   
   triggerGameUpdate();
   return true;
@@ -100,8 +95,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
 
 // Reject a wine order
 export async function rejectWineOrder(orderId: string): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  await updateWineOrderStatus(orderId, 'rejected', companyId);
+  await updateWineOrderStatus(orderId, 'rejected');
   triggerGameUpdate();
   return true;
 }

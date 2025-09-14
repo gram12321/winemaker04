@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { 
   createVineyard, 
   plantVineyard, 
@@ -8,15 +9,12 @@ import {
   resetVineyard,
   getAllVineyards,
   GRAPE_VARIETIES
-} from '../../lib/services/vineyardService';
-import { Vineyard as VineyardType, GrapeVariety } from '../../lib/types';
-import { useAsyncData } from '../../hooks/useAsyncData';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { Button } from '../ui/button';
+} from '@/lib/services';
+import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '../ui';
+import { DialogProps } from '../UItypes';
 
-interface CreateVineyardDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface CreateVineyardDialogProps extends DialogProps {
   onSubmit: (name: string) => void;
 }
 
@@ -73,10 +71,8 @@ const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onC
   );
 };
 
-interface PlantDialogProps {
-  isOpen: boolean;
+interface PlantDialogProps extends DialogProps {
   vineyard: VineyardType | null;
-  onClose: () => void;
   onSubmit: (grape: GrapeVariety) => void;
 }
 
@@ -137,35 +133,36 @@ const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, on
 };
 
 const Vineyard: React.FC = () => {
+  const { withLoading } = useLoadingState();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
-  const vineyards = useAsyncData(getAllVineyards, []);
+  const vineyards = useGameStateWithData(getAllVineyards, []);
 
-  const handleCreateVineyard = async (name: string) => {
+  const handleCreateVineyard = (name: string) => withLoading(async () => {
     await createVineyard(name);
-  };
+  });
 
-  const handlePlantVineyard = async (grape: GrapeVariety) => {
+  const handlePlantVineyard = (grape: GrapeVariety) => withLoading(async () => {
     if (selectedVineyard) {
       await plantVineyard(selectedVineyard.id, grape);
     }
-  };
+  });
 
-  const handleHarvestVineyard = async (vineyard: VineyardType) => {
+  const handleHarvestVineyard = (vineyard: VineyardType) => withLoading(async () => {
     const result = await harvestVineyard(vineyard.id);
     if (result.success && result.quantity && vineyard.grape) {
       alert(`Harvested ${result.quantity} kg of ${vineyard.grape} grapes! Wine batch created in winery.`);
     }
-  };
+  });
 
-  const handleGrowVineyard = async (vineyard: VineyardType) => {
+  const handleGrowVineyard = (vineyard: VineyardType) => withLoading(async () => {
     await growVineyard(vineyard.id);
-  };
+  });
 
-  const handleResetVineyard = async (vineyard: VineyardType) => {
+  const handleResetVineyard = (vineyard: VineyardType) => withLoading(async () => {
     await resetVineyard(vineyard.id);
-  };
+  });
 
   const getActionButtons = (vineyard: VineyardType) => {
     if (!vineyard.isPlanted) {

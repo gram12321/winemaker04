@@ -1,27 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { ScrollArea } from '../ui/scroll-area';
+import { useLoadingState } from '@/hooks';
+import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
-import { companyService, Company } from '@/lib/services/companyService';
-import { highscoreService, HighscoreEntry } from '@/lib/services/highscoreService';
-import { formatNumber, formatDate } from '@/lib/utils/utils';
-import { createNewCompany } from '@/lib/services/gameState';
+import { companyService, Company, highscoreService, HighscoreEntry, createNewCompany } from '@/lib/services';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
 import versionLogContent from '../../../docs/versionlog.md?raw';
+import { CompanyProps } from '../UItypes';
 
-interface LoginProps {
+interface LoginProps extends CompanyProps {
   onCompanySelected: (company: Company) => void;
 }
 
 export function Login({ onCompanySelected }: LoginProps) {
   // State
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, withLoading } = useLoadingState();
   const [error, setError] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [userName, setUserName] = useState('');
@@ -35,7 +29,6 @@ export function Login({ onCompanySelected }: LoginProps) {
     company_value_per_week: []
   });
   const [showCreateCompany, setShowCreateCompany] = useState(false);
-  const [isHighscoresLoading, setIsHighscoresLoading] = useState(true);
   const [deletingCompany, setDeletingCompany] = useState<string | null>(null);
   const [isReadmeOpen, setIsReadmeOpen] = useState(false);
   const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
@@ -55,28 +48,20 @@ export function Login({ onCompanySelected }: LoginProps) {
     }
   };
 
-  const loadHighscores = async () => {
-    setIsHighscoresLoading(true);
-    try {
-      const [companyValue, companyValuePerWeek] = await Promise.all([
-        highscoreService.getHighscores('company_value', 5),
-        highscoreService.getHighscores('company_value_per_week', 5)
-      ]);
+  const loadHighscores = () => withLoading(async () => {
+    const [companyValue, companyValuePerWeek] = await Promise.all([
+      highscoreService.getHighscores('company_value', 5),
+      highscoreService.getHighscores('company_value_per_week', 5)
+    ]);
 
-      setHighscores({
-        company_value: companyValue,
-        company_value_per_week: companyValuePerWeek
-      });
-    } catch (error) {
-      console.error('Error loading highscores:', error);
-    } finally {
-      setIsHighscoresLoading(false);
-    }
-  };
+    setHighscores({
+      company_value: companyValue,
+      company_value_per_week: companyValuePerWeek
+    });
+  });
 
-  const handleCreateCompany = async (e: React.FormEvent) => {
+  const handleCreateCompany = (e: React.FormEvent) => withLoading(async () => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
 
     const company = await createNewCompany(companyName, createUserProfile, createUserProfile ? userName : undefined);
@@ -93,20 +78,17 @@ export function Login({ onCompanySelected }: LoginProps) {
     } else {
       setError('Failed to create company');
     }
-
-    setIsLoading(false);
-  };
+  });
 
   const handleSelectCompany = (company: Company) => {
     onCompanySelected(company);
   };
 
-  const handleDeleteCompany = async (companyId: string, event: React.MouseEvent) => {
+  const handleDeleteCompany = (companyId: string, event: React.MouseEvent) => withLoading(async () => {
     event.stopPropagation(); // Prevent card click from triggering
     
     if (deletingCompany === companyId) {
       // Confirm delete - second click
-      setIsLoading(true);
       setError('');
 
       const result = await companyService.deleteCompany(companyId);
@@ -119,8 +101,6 @@ export function Login({ onCompanySelected }: LoginProps) {
         setError(result.error || 'Failed to delete company');
         setDeletingCompany(null);
       }
-
-      setIsLoading(false);
     } else {
       // First click - show confirmation state
       setDeletingCompany(companyId);
@@ -130,7 +110,7 @@ export function Login({ onCompanySelected }: LoginProps) {
         setDeletingCompany(null);
       }, 5000);
     }
-  };
+  });
 
   const formatLastPlayed = (date: Date): string => {
     const now = new Date();
@@ -151,7 +131,7 @@ export function Login({ onCompanySelected }: LoginProps) {
           <Trophy className="h-4 w-4" />
           {title}
         </div>
-        {isHighscoresLoading ? (
+        {isLoading ? (
           <div className="text-xs text-muted-foreground">Loading...</div>
         ) : scores.length === 0 ? (
           <div className="text-xs text-muted-foreground">No data</div>
@@ -163,7 +143,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                   {idx + 1}. {score.companyName}
                 </span>
                 <span className="font-medium">
-                  €{formatNumber(score.scoreValue, 0)}
+                  {formatCurrency(score.scoreValue, 0)}
                 </span>
               </div>
             ))}
@@ -227,7 +207,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                                   Week {company.currentWeek}, {company.currentSeason} {company.currentYear}
                                 </p>
                                 <p className="text-sm">
-                                  €{formatNumber(company.money, 0)}
+                                  {formatCurrency(company.money, 0)}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">

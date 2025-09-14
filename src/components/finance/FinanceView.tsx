@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger, Button, Separator } from "@/components/ui";
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { UpgradesPlaceholder } from './UpgradesPlaceholder';

@@ -1,3 +1,66 @@
+## Version 0.0031 - 2025-09-14
+
+### **Code Cleanup & Performance Optimization**
+- `src/lib/utils/companyUtils.ts` - New utility for centralized company ID management with DEFAULT_COMPANY_ID constant
+- `src/components/finance/CashFlowView.tsx` - Updated to use getCurrentCompanyId() instead of getCurrentCompany()
+- `src/components/layout/Header.tsx` - Optimized company access, added useGameUpdates hook for reactive prestige updates
+- `src/components/pages/CompanyOverview.tsx` - Added navigation buttons for Profile and Leaderboards
+- `src/components/pages/Settings.tsx` - Added Sign Out button and improved layout
+- `src/hooks/useGameInit.ts` - Removed redundant setIsLoading call
+- `src/hooks/useGameState.ts` - Removed redundant initial state loading
+- `src/lib/constants.ts` - Added DEFAULT_COMPANY_ID constant for consistent fallback values
+- `src/lib/database/customerDatabaseService.ts` - Updated all functions to use DEFAULT_COMPANY_ID constant
+- `src/lib/database/database.ts` - Updated all functions to use DEFAULT_COMPANY_ID constant
+- `src/lib/database/relationshipBreakdownService.ts` - Updated to use getCurrentCompanyId() utility
+- `src/lib/services/financeService.ts` - Updated to use getCurrentCompanyId() and improved transaction sorting
+- `src/lib/services/sales/createCustomer.ts` - Updated to use getCurrentCompanyId() utility
+- `src/lib/services/salesService.ts` - Updated to use getCurrentCompanyId() utility
+- `src/lib/services/vineyardService.ts` - Updated to use getCurrentCompanyId() utility
+- `src/lib/types.ts` - Removed unused formatGameDate function
+- **Code Quality**: Eliminated code duplication with centralized company ID management
+- **Performance**: Reduced redundant function calls and improved reactive state management
+- **Consistency**: All services now use consistent company ID handling patterns
+
+---
+
+## Version 0.003 - 2025-09-14
+
+### **User Login & Company Management System**
+- `package.json` - Added new dependencies: @radix-ui/react-label, @radix-ui/react-select, @radix-ui/react-switch, @tailwindcss/typography, react-markdown
+- `public/assets/pic/loginbg.webp` - Added login background image
+- `src/App.tsx` - Complete rewrite with company selection, login flow, and navigation management
+- `src/components/finance/CashFlowView.tsx` - Updated to use company-specific data loading
+- `src/components/finance/FinanceView.tsx` - Added banner with background image and improved layout
+- `src/components/finance/IncomeBalanceView.tsx` - Enhanced with Card components and improved data display
+- `src/components/layout/Header.tsx` - Added company switching functionality and improved prestige display
+- `src/components/pages/Achievements.tsx` - Complete rewrite with achievement system, progress tracking, and filtering
+- `src/components/pages/AdminDashboard.tsx` - Complete rewrite with tabbed interface, database management, and cheat tools
+- `src/components/pages/CompanyOverview.tsx` - New component with company stats, rankings, and navigation
+- `src/components/pages/Highscores.tsx` - New global leaderboard system with company value rankings
+- `src/components/pages/Login.tsx` - New login system with company creation, selection, and highscores display
+- `src/components/pages/Profile.tsx` - Complete rewrite with user management, company switching, and portfolio stats
+- `src/components/pages/Sales.tsx` - Updated to use company-specific data and improved formatting
+- `src/components/pages/Settings.tsx` - Complete rewrite with company-specific settings and improved UI
+- `src/components/pages/Winepedia.tsx` - Updated to use improved formatting utilities
+- `src/components/pages/Winery.tsx` - Added banner with background image
+- `src/components/ui/input.tsx` - New ShadCN input component
+- `src/components/ui/label.tsx` - New ShadCN label component
+- `src/components/ui/select.tsx` - New ShadCN select component
+- `src/components/ui/switch.tsx` - New ShadCN switch component
+- `src/hooks/useGameInit.ts` - Updated to work with new company system
+- `src/hooks/useGameState.ts` - New hook for reactive game state management
+- `src/hooks/usePrestigeUpdates.ts` - Updated import path
+- `src/index.css` - Added wine-themed CSS variables
+- `src/lib/constants.ts` - Updated game initialization constants
+- `src/lib/database/customerDatabaseService.ts` - Enhanced with company-specific customer management
+- `src/lib/database/database.ts` - Updated all operations to use company_id instead of player_id
+- **Architecture**: Complete shift from single-player to multi-company system
+- **UI/UX**: Modern login system with company selection, highscores, and improved navigation
+- **Database**: All tables now use company_id for proper data isolation
+- **Features**: Global leaderboards, user profiles, company switching, and enhanced admin tools
+
+---
+
 ## Version 0.0025 - 2025-09-11
 
 ### **Sales/Customer System Code Review & Optimization**

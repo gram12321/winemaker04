@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { useLoadingState } from '@/hooks';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
 import { 
   Settings, 
   Database, 
@@ -14,97 +11,82 @@ import {
   DollarSign,
   Trash2,
 } from 'lucide-react';
-import { highscoreService } from '@/lib/services/highscoreService';
+import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, getCurrentCompany, clearPrestigeCache } from '@/lib/services';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/supabase';
-import { initializeCustomers } from '@/lib/services/sales/createCustomer';
+import { PageProps, NavigationProps } from '../UItypes';
 
-interface AdminDashboardProps {
-  onBack?: () => void;
-  onNavigateToLogin?: () => void;
+interface AdminDashboardProps extends PageProps, NavigationProps {
+  // Inherits onBack and onNavigateToLogin from shared interfaces
 }
 
 export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, withLoading } = useLoadingState();
   const [goldAmount, setGoldAmount] = useState('10000');
   const [prestigeAmount, setPrestigeAmount] = useState('100');
 
   // Cheat functions (for development/testing)
-  const handleAddGold = async () => {
-    setIsLoading(true);
-    try {
-      const amount = parseFloat(goldAmount) || 10000;
-      // This would need to be implemented in the company service
-      // For now, just show a notification
-      notificationService.success(`Added ${formatCurrency(amount)} to active company (feature pending)`);
-    } catch (error) {
-      notificationService.error('Failed to add gold');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleAddGold = () => withLoading(async () => {
+    const amount = parseFloat(goldAmount) || 10000;
+    await addTransaction(amount, `Admin: Added ${formatCurrency(amount)}`, 'admin_cheat');
+    notificationService.success(`Added ${formatCurrency(amount)} to active company`);
+  });
 
-  const handleAddPrestige = async () => {
-    setIsLoading(true);
-    try {
-      const amount = parseFloat(prestigeAmount) || 100;
-      // This would need to be implemented in the company service
-      notificationService.success(`Added ${amount} prestige to active company (feature pending)`);
-    } catch (error) {
+  const handleAddPrestige = () => withLoading(async () => {
+    const amount = parseFloat(prestigeAmount) || 100;
+    
+    // Add a prestige event directly to the database
+    const { error } = await supabase.from('prestige_events').insert([{
+      id: crypto.randomUUID(),
+      type: 'admin_cheat',
+      amount: amount,
+      timestamp: Date.now(),
+      decay_rate: 0, // Admin prestige doesn't decay
+      description: `Admin: Added ${amount} prestige`,
+      source_id: null,
+      company_id: getCurrentCompany()?.id || '00000000-0000-0000-0000-000000000000'
+    }]);
+    
+    if (error) {
+      console.error('Failed to add prestige event:', error);
       notificationService.error('Failed to add prestige');
-    } finally {
-      setIsLoading(false);
+      return;
     }
-  };
+    
+    // Clear prestige cache to force recalculation
+    clearPrestigeCache();
+    await getCurrentPrestige();
+    
+    notificationService.success(`Added ${amount} prestige to active company`);
+  });
 
-  const handleClearAllHighscores = async () => {
-    setIsLoading(true);
-    try {
-      const result = await highscoreService.clearHighscores();
-      if (result.success) {
-        notificationService.success('All highscores cleared successfully');
-      } else {
-        notificationService.error(result.error || 'Failed to clear highscores');
-      }
-    } catch (error) {
-      notificationService.error('Failed to clear highscores');
-    } finally {
-      setIsLoading(false);
+  const handleClearAllHighscores = () => withLoading(async () => {
+    const result = await highscoreService.clearHighscores();
+    if (result.success) {
+      notificationService.success('All highscores cleared successfully');
+    } else {
+      notificationService.error(result.error || 'Failed to clear highscores');
     }
-  };
+  });
 
-  const handleClearCompanyValueHighscores = async () => {
-    setIsLoading(true);
-    try {
-      const result = await highscoreService.clearHighscores('company_value');
-      if (result.success) {
-        notificationService.success('Company value highscores cleared');
-      } else {
-        notificationService.error(result.error || 'Failed to clear company value highscores');
-      }
-    } catch (error) {
-      notificationService.error('Failed to clear company value highscores');
-    } finally {
-      setIsLoading(false);
+  const handleClearCompanyValueHighscores = () => withLoading(async () => {
+    const result = await highscoreService.clearHighscores('company_value');
+    if (result.success) {
+      notificationService.success('Company value highscores cleared');
+    } else {
+      notificationService.error(result.error || 'Failed to clear company value highscores');
     }
-  };
+  });
 
-  const handleClearCompanyValuePerWeekHighscores = async () => {
-    setIsLoading(true);
-    try {
-      const result = await highscoreService.clearHighscores('company_value_per_week');
-      if (result.success) {
-        notificationService.success('Company value per week highscores cleared');
-      } else {
-        notificationService.error(result.error || 'Failed to clear company value per week highscores');
-      }
-    } catch (error) {
-      notificationService.error('Failed to clear company value per week highscores');
-    } finally {
-      setIsLoading(false);
+  const handleClearCompanyValuePerWeekHighscores = () => withLoading(async () => {
+    const result = await highscoreService.clearHighscores('company_value_per_week');
+    if (result.success) {
+      notificationService.success('Company value per week highscores cleared');
+    } else {
+      notificationService.error(result.error || 'Failed to clear company value per week highscores');
     }
-  };
+  });
 
   const handleTestNotifications = () => {
     notificationService.info('This is an info notification');
@@ -114,164 +96,144 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   };
 
   // Database cleanup functions
-  const handleClearAllCompanies = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (error) throw error;
-      notificationService.success('All companies cleared successfully');
-      
-      // Navigate to login and refresh browser
-      if (onNavigateToLogin) {
-        onNavigateToLogin();
-      }
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error clearing companies:', error);
-      notificationService.error('Failed to clear companies');
-    } finally {
-      setIsLoading(false);
+  const handleClearAllCompanies = () => withLoading(async () => {
+    const { error } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
+    notificationService.success('All companies cleared successfully');
+    
+    // Navigate to login and refresh browser
+    if (onNavigateToLogin) {
+      onNavigateToLogin();
     }
-  };
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  });
 
-  const handleClearAllUsers = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (error) throw error;
-      notificationService.success('All users cleared successfully');
-      
-      // Navigate to login and refresh browser
-      if (onNavigateToLogin) {
-        onNavigateToLogin();
-      }
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error clearing users:', error);
-      notificationService.error('Failed to clear users');
-    } finally {
-      setIsLoading(false);
+  const handleClearAllUsers = () => withLoading(async () => {
+    const { error } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
+    notificationService.success('All users cleared successfully');
+    
+    // Navigate to login and refresh browser
+    if (onNavigateToLogin) {
+      onNavigateToLogin();
     }
-  };
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  });
 
   const handleClearAllCompaniesAndUsers = async () => {
-    setIsLoading(true);
-    try {
-      // Clear companies first (due to foreign key constraints)
-      const { error: companiesError } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (companiesError) throw companiesError;
-      
-      // Then clear users
-      const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (usersError) throw usersError;
-      
-      notificationService.success('All companies and users cleared successfully');
-      
-      // Navigate to login and refresh browser
-      if (onNavigateToLogin) {
-        onNavigateToLogin();
+    withLoading(async () => {
+      try {
+        // Clear companies first (due to foreign key constraints)
+        const { error: companiesError } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (companiesError) throw companiesError;
+        
+        // Then clear users
+        const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (usersError) throw usersError;
+        
+        notificationService.success('All companies and users cleared successfully');
+        
+        // Navigate to login and refresh browser
+        if (onNavigateToLogin) {
+          onNavigateToLogin();
+        }
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (error) {
+        console.error('Error clearing companies and users:', error);
+        notificationService.error('Failed to clear companies and users');
       }
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error clearing companies and users:', error);
-      notificationService.error('Failed to clear companies and users');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
 
 
   const handleRecreateCustomers = async () => {
-    setIsLoading(true);
-    try {
-      // First clear all existing customers
-      const { error: deleteError } = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (deleteError) throw deleteError;
-      
-      // Then recreate them
-      await initializeCustomers(1); // Initialize with base prestige
-      
-      notificationService.success('All customers cleared and recreated successfully');
-    } catch (error) {
-      console.error('Error recreating customers:', error);
-      notificationService.error('Failed to recreate customers');
-    } finally {
-      setIsLoading(false);
-    }
+    withLoading(async () => {
+      try {
+        // First clear all existing customers
+        const { error: deleteError } = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (deleteError) throw deleteError;
+        
+        // Then recreate them
+        await initializeCustomers(1); // Initialize with base prestige
+        
+        notificationService.success('All customers cleared and recreated successfully');
+      } catch (error) {
+        console.error('Error recreating customers:', error);
+        notificationService.error('Failed to recreate customers');
+      }
+    });
   };
 
 
   const handleClearAllAchievements = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (error) throw error;
-      notificationService.success('All achievements cleared successfully');
-    } catch (error) {
-      console.error('Error clearing achievements:', error);
-      notificationService.error('Failed to clear achievements');
-    } finally {
-      setIsLoading(false);
-    }
+    withLoading(async () => {
+      try {
+        const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw error;
+        notificationService.success('All achievements cleared successfully');
+      } catch (error) {
+        console.error('Error clearing achievements:', error);
+        notificationService.error('Failed to clear achievements');
+      }
+    });
   };
 
 
   const handleFullDatabaseReset = async () => {
-    setIsLoading(true);
-    try {
-      // Clear all tables in the correct order to respect foreign key constraints
-      const tables = [
-        'relationship_boosts',
-        'wine_orders', 
-        'wine_batches',
-        'vineyards',
-        'achievements',
-        'user_settings',
-        'highscores',
-        'prestige_events',
-        'transactions',
-        'companies',
-        'users',
-        'customers',
-        'game_state'
-      ];
+    withLoading(async () => {
+      try {
+        // Clear all tables in the correct order to respect foreign key constraints
+        const tables = [
+          'relationship_boosts',
+          'wine_orders', 
+          'wine_batches',
+          'vineyards',
+          'achievements',
+          'user_settings',
+          'highscores',
+          'prestige_events',
+          'transactions',
+          'companies',
+          'users',
+          'customers',
+          'game_state'
+        ];
 
-      // Clear all tables (RLS is now disabled)
-      for (const table of tables) {
-        try {
-          const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          if (error) {
-            console.error(`Error clearing table ${table}:`, error);
-          } else {
-            console.log(`Successfully cleared table: ${table}`);
+        // Clear all tables (RLS is now disabled)
+        for (const table of tables) {
+          try {
+            const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (error) {
+              console.error(`Error clearing table ${table}:`, error);
+            } else {
+              // Table cleared successfully
+            }
+          } catch (err) {
+            console.error(`Exception clearing table ${table}:`, err);
           }
-        } catch (err) {
-          console.error(`Exception clearing table ${table}:`, err);
         }
-      }
 
-      notificationService.success('Full database reset completed successfully');
-      
-      // Navigate to login and refresh browser
-      if (onNavigateToLogin) {
-        onNavigateToLogin();
+        notificationService.success('Full database reset completed successfully');
+        
+        // Navigate to login and refresh browser
+        if (onNavigateToLogin) {
+          onNavigateToLogin();
+        }
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (error) {
+        console.error('Error during full database reset:', error);
+        notificationService.error('Failed to complete full database reset');
       }
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error during full database reset:', error);
-      notificationService.error('Failed to complete full database reset');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (

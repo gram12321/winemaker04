@@ -28,6 +28,44 @@ export function formatNumber(value: number, decimals: number = 0): string {
 }
 
 /**
+ * Format a number as currency (Euros) with optional compact notation
+ * @param value The amount to format
+ * @param decimals Number of decimal places (default: 0 for regular, 1 for compact)
+ * @param compact Whether to use compact notation (K, M, B, T) (default: false)
+ * @returns Formatted currency string
+ */
+export function formatCurrency(value: number, decimals?: number, compact: boolean = false): string {
+  if (typeof value !== 'number' || isNaN(value)) return '€0';
+  
+  // Set default decimals based on compact mode
+  const defaultDecimals = compact ? 1 : 0;
+  const finalDecimals = decimals !== undefined ? decimals : defaultDecimals;
+  
+  if (compact) {
+    const absValue = Math.abs(value);
+    
+    if (absValue >= 1e12) {
+      return '€' + (value / 1e12).toFixed(finalDecimals) + 'T';
+    } else if (absValue >= 1e9) {
+      return '€' + (value / 1e9).toFixed(finalDecimals) + 'B';
+    } else if (absValue >= 1e6) {
+      return '€' + (value / 1e6).toFixed(finalDecimals) + 'M';
+    } else if (absValue >= 1e3) {
+      return '€' + (value / 1e3).toFixed(finalDecimals) + 'K';
+    } else {
+      return '€' + value.toFixed(finalDecimals);
+    }
+  }
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: finalDecimals,
+    maximumFractionDigits: finalDecimals
+  }).format(value);
+}
+
+/**
  * Format a number in compact notation (K, M, B, T)
  * @param value The number to format
  * @param decimals Number of decimal places (default: 1)
@@ -49,23 +87,6 @@ export function formatCompact(value: number, decimals: number = 1): string {
   } else {
     return value.toFixed(decimals);
   }
-}
-
-/**
- * Format a number as currency (Euros)
- * @param value The amount to format
- * @param decimals Number of decimal places (default: 0)
- * @returns Formatted currency string
- */
-export function formatCurrency(value: number, decimals: number = 0): string {
-  if (typeof value !== 'number' || isNaN(value)) return '€0';
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  }).format(value);
 }
 
 /**
@@ -230,20 +251,3 @@ export function getColorClass(value: number): string {
   return colorMap[level] || 'text-gray-500';
 }
 
-/**
- * Get wine quality category description
- * @param quality Quality value between 0 and 1
- * @returns Quality category description
- */
-export function getWineQualityCategory(quality: number): string {
-  if (quality < 0.1) return "Undrinkable";
-  if (quality < 0.2) return "Vinegar Surprise";
-  if (quality < 0.3) return "House Pour";
-  if (quality < 0.4) return "Everyday Sipper";
-  if (quality < 0.5) return "Solid Bottle";
-  if (quality < 0.6) return "Well-Balanced";
-  if (quality < 0.7) return "Sommelier's Choice";
-  if (quality < 0.8) return "Cellar Reserve";
-  if (quality < 0.9) return "Connoisseur's Pick";
-  return "Vintage Perfection";
-}

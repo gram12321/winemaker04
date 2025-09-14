@@ -1,37 +1,33 @@
 
 import React from 'react';
-import { getAllWineBatches, formatCompletedWineName } from '../../lib/services/wineBatchService';
-import { crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '../../lib/services/wineryService';
-import { WineBatch } from '../../lib/types';
-import { useAsyncData } from '../../hooks/useAsyncData';
-import { Button } from '../ui/button';
+import { useLoadingState, useGameStateWithData } from '@/hooks';
+import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
+import { WineBatch } from '@/lib/types';
+import { Button } from '../ui';
 
 const Winery: React.FC = () => {
-  const wineBatches = useAsyncData(getAllWineBatches, [] as WineBatch[]);
+  const { withLoading } = useLoadingState();
+  const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
 
-  const handleAction = async (batchId: string, action: 'crush' | 'ferment' | 'stop' | 'bottle' | 'progress') => {
-    try {
-      switch (action) {
-        case 'crush':
-          await crushGrapes(batchId);
-          break;
-        case 'ferment':
-          await startFermentation(batchId);
-          break;
-        case 'stop':
-          await stopFermentation(batchId);
-          break;
-        case 'bottle':
-          await bottleWine(batchId);
-          break;
-        case 'progress':
-          await progressFermentation(batchId, 25); // Progress by 25%
-          break;
-      }
-    } catch (error) {
-      console.error('Action failed:', error);
+  const handleAction = (batchId: string, action: 'crush' | 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
+    switch (action) {
+      case 'crush':
+        await crushGrapes(batchId);
+        break;
+      case 'ferment':
+        await startFermentation(batchId);
+        break;
+      case 'stop':
+        await stopFermentation(batchId);
+        break;
+      case 'bottle':
+        await bottleWine(batchId);
+        break;
+      case 'progress':
+        await progressFermentation(batchId, 25); // Progress by 25%
+        break;
     }
-  };
+  });
 
   // Separate batches by completion status
   const activeBatches = wineBatches.filter(batch => batch.process !== 'bottled');

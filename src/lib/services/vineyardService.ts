@@ -6,7 +6,6 @@ import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from './gameState';
 import { updateVineyardPrestigeEvents } from '../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
-import { getCurrentCompanyId } from '../utils/companyUtils';
 
 export const GRAPE_VARIETIES: GrapeVariety[] = [
   'Chardonnay', 'Pinot Noir', 'Cabernet Sauvignon', 'Merlot'
@@ -14,7 +13,6 @@ export const GRAPE_VARIETIES: GrapeVariety[] = [
 
 // Create a new vineyard
 export async function createVineyard(name: string): Promise<Vineyard> {
-  const companyId = getCurrentCompanyId();
   const gameState = getGameState();
   const vineyard: Vineyard = {
     id: uuidv4(),
@@ -35,7 +33,7 @@ export async function createVineyard(name: string): Promise<Vineyard> {
     fieldPrestige: 1 // Default field prestige placeholder
   };
 
-  await saveVineyard(vineyard, companyId);
+  await saveVineyard(vineyard);
   
   // Update vineyard prestige events
   try {
@@ -51,8 +49,7 @@ export async function createVineyard(name: string): Promise<Vineyard> {
 
 // Plant a vineyard
 export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  const vineyards = await loadVineyards(companyId);
+  const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
   if (!vineyard) {
@@ -66,15 +63,14 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Pr
     status: 'Planted'
   };
 
-  await saveVineyard(updatedVineyard, companyId);
+  await saveVineyard(updatedVineyard);
   triggerGameUpdate();
   return true;
 }
 
 // Grow vineyard (Planted -> Growing)
 export async function growVineyard(vineyardId: string): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  const vineyards = await loadVineyards(companyId);
+  const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
   if (!vineyard || vineyard.status !== 'Planted') {
@@ -86,15 +82,14 @@ export async function growVineyard(vineyardId: string): Promise<boolean> {
     status: 'Growing'
   };
 
-  await saveVineyard(updatedVineyard, companyId);
+  await saveVineyard(updatedVineyard);
   triggerGameUpdate();
   return true;
 }
 
 // Harvest vineyard
 export async function harvestVineyard(vineyardId: string): Promise<{ success: boolean; quantity?: number }> {
-  const companyId = getCurrentCompanyId();
-  const vineyards = await loadVineyards(companyId);
+  const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
   if (!vineyard || vineyard.status !== 'Growing' || !vineyard.grape) {
@@ -112,7 +107,7 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
     status: 'Harvested'
   };
 
-  await saveVineyard(updatedVineyard, companyId);
+  await saveVineyard(updatedVineyard);
   triggerGameUpdate();
 
   return { success: true, quantity };
@@ -120,8 +115,7 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
 
 // Reset vineyard to dormant, then back to growing
 export async function resetVineyard(vineyardId: string): Promise<boolean> {
-  const companyId = getCurrentCompanyId();
-  const vineyards = await loadVineyards(companyId);
+  const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
   if (!vineyard || vineyard.status !== 'Harvested') {
@@ -133,13 +127,12 @@ export async function resetVineyard(vineyardId: string): Promise<boolean> {
     status: 'Growing'
   };
 
-  await saveVineyard(updatedVineyard, companyId);
+  await saveVineyard(updatedVineyard);
   triggerGameUpdate();
   return true;
 }
 
 // Get all vineyards
 export async function getAllVineyards(): Promise<Vineyard[]> {
-  const companyId = getCurrentCompanyId();
-  return await loadVineyards(companyId);
+  return await loadVineyards();
 }

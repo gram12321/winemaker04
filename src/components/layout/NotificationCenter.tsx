@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "../ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { ScrollArea } from "../ui/scroll-area";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Button, Badge, ScrollArea } from "../ui";
 import { InfoIcon, AlertTriangleIcon, XCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { toast } from "@/lib/toast";
 import { formatTime } from "@/lib/utils/utils";

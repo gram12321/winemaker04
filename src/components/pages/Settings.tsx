@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
+import { useLoadingState } from '@/hooks';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label } from '../ui';
 import { Settings as SettingsIcon, Bell } from 'lucide-react';
-import { Company } from '@/lib/services/companyService';
+// import { Company } from '@/lib/services'; // Not needed with shared interfaces
+import { PageProps, CompanyProps } from '../UItypes';
 
-interface SettingsProps {
-  currentCompany?: Company | null;
-  onBack?: () => void;
+interface SettingsProps extends PageProps, CompanyProps {
   onSignOut?: () => void;
 }
 
@@ -17,10 +14,10 @@ interface SimpleSettings {
 }
 
 export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
+  const { isLoading, withLoading } = useLoadingState();
   const [settings, setSettings] = useState<SimpleSettings>({
     showNotifications: true
   });
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Load settings from localStorage
@@ -43,27 +40,20 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
     }
   };
 
-  const saveSettings = async (updates: Partial<SimpleSettings>) => {
+  const saveSettings = (updates: Partial<SimpleSettings>) => withLoading(async () => {
     if (!currentCompany) return;
 
-    setIsSaving(true);
-    try {
-      const updatedSettings = { ...settings, ...updates };
-      
-      // Save to localStorage
-      const key = `settings_${currentCompany.id}`;
-      localStorage.setItem(key, JSON.stringify(updatedSettings));
-      
-      setSettings(updatedSettings);
-    } catch (error) {
-      console.error('Error saving settings:', error);
-    } finally {
-      setTimeout(() => setIsSaving(false), 500); // Brief delay to show saving state
-    }
-  };
+    const updatedSettings = { ...settings, ...updates };
+    
+    // Save to localStorage
+    const key = `settings_${currentCompany.id}`;
+    localStorage.setItem(key, JSON.stringify(updatedSettings));
+    
+    setSettings(updatedSettings);
+  });
 
-  const handleNotificationToggle = async (checked: boolean) => {
-    await saveSettings({ showNotifications: checked });
+  const handleNotificationToggle = (checked: boolean) => {
+    saveSettings({ showNotifications: checked });
   };
 
 
@@ -139,7 +129,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
                 <Switch
                   checked={settings.showNotifications}
                   onCheckedChange={handleNotificationToggle}
-                  disabled={isSaving}
+                  disabled={isLoading}
                 />
               </div>
             </CardContent>
@@ -148,7 +138,7 @@ export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
       </div>
 
       {/* Save Status */}
-      {isSaving && (
+      {isLoading && (
         <div className="fixed bottom-4 right-4">
           <Card>
             <CardContent className="p-3">

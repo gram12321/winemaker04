@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { useLoadingState } from '@/hooks';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '../ui';
 import { Trophy, Award, Medal, Lock, Calendar, TrendingUp } from 'lucide-react';
-import { Company } from '@/lib/services/companyService';
-import { formatNumber } from '@/lib/utils/utils';
+// import { Company } from '@/lib/services'; // Not needed with shared interfaces
+import { formatNumber, formatCompact } from '@/lib/utils/utils';
+import { PageProps, CompanyProps } from '../UItypes';
 
-interface AchievementsProps {
-  currentCompany?: Company | null;
-  onBack?: () => void;
+interface AchievementsProps extends PageProps, CompanyProps {
+  // Inherits currentCompany and onBack from shared interfaces
 }
 
 // Placeholder achievement definitions
@@ -98,6 +97,7 @@ const PLACEHOLDER_ACHIEVEMENTS: Achievement[] = [
 ];
 
 export function Achievements({ currentCompany, onBack }: AchievementsProps) {
+  const { withLoading } = useLoadingState();
   const [achievements, setAchievements] = useState<Achievement[]>(PLACEHOLDER_ACHIEVEMENTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -108,7 +108,7 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
     }
   }, [currentCompany]);
 
-  const updateAchievementProgress = () => {
+  const updateAchievementProgress = () => withLoading(async () => {
     if (!currentCompany) return;
 
     const updatedAchievements = achievements.map(achievement => {
@@ -140,7 +140,7 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
     });
 
     setAchievements(updatedAchievements);
-  };
+  });
 
   const getRarityColor = (rarity: Achievement['rarity']) => {
     switch (rarity) {
@@ -351,7 +351,7 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
                     <div className="flex justify-between text-xs">
                       <span>Progress</span>
                       <span>
-                        {formatNumber(achievement.progress.current)} / {formatNumber(achievement.progress.target)} {achievement.progress.unit}
+                        {achievement.progress.target >= 1000 ? formatCompact(achievement.progress.current) : formatNumber(achievement.progress.current)} / {achievement.progress.target >= 1000 ? formatCompact(achievement.progress.target) : formatNumber(achievement.progress.target)} {achievement.progress.unit}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5">

@@ -1,18 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLoadingState } from '@/hooks';
+import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
-import { authService, AuthUser } from '@/lib/services/authService';
-import { companyService, Company, CompanyStats } from '@/lib/services/companyService';
-import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
+import { authService, AuthUser, companyService, Company, CompanyStats } from '@/lib/services';
+import { formatNumber, formatCurrency, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/supabase';
+import { PageProps, CompanyProps } from '../UItypes';
 
 // Avatar options
 const AVATAR_OPTIONS = [
@@ -46,19 +39,17 @@ const COLOR_OPTIONS = [
   { id: 'gray', value: 'bg-gray-100 text-gray-800', label: 'Gray' }
 ];
 
-interface ProfileProps {
-  currentCompany?: Company | null;
+interface ProfileProps extends PageProps, CompanyProps {
   onCompanySelected: (company: Company) => void;
   onBackToLogin: () => void;
 }
 
 export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: ProfileProps) {
   // State
+  const { isLoading, withLoading } = useLoadingState();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userCompanies, setUserCompanies] = useState<Company[]>([]);
   const [companyStats, setCompanyStats] = useState<CompanyStats>({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   // Edit profile state
@@ -104,23 +95,15 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     return unsubscribe;
   }, [currentCompany]);
 
-  const loadUserData = async (userId: string) => {
-    try {
-      setIsRefreshing(true);
-      const [companies, stats] = await Promise.all([
-        companyService.getUserCompanies(userId),
-        companyService.getCompanyStats(userId)
-      ]);
-      
-      setUserCompanies(companies);
-      setCompanyStats(stats);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      setError('Failed to load user data');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  const loadUserData = (userId: string) => withLoading(async () => {
+    const [companies, stats] = await Promise.all([
+      companyService.getUserCompanies(userId),
+      companyService.getCompanyStats(userId)
+    ]);
+    
+    setUserCompanies(companies);
+    setCompanyStats(stats);
+  });
 
   const loadCompanyUserData = async (userId: string) => {
     try {
@@ -158,16 +141,15 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     }
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     if (currentUser) {
-      await loadUserData(currentUser.id);
+      loadUserData(currentUser.id);
     }
   };
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateProfile = () => withLoading(async () => {
     if (!currentUser) return;
 
-    setIsLoading(true);
     setError('');
 
     const result = await authService.updateProfile({
@@ -181,37 +163,30 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     } else {
       setError(result.error || 'Failed to update profile');
     }
+  });
 
-    setIsLoading(false);
-  };
-
-  const handleSelectCompany = async (company: Company) => {
-    setIsLoading(true);
-    
+  const handleSelectCompany = (company: Company) => withLoading(async () => {
     // Update the company's last played time
     await companyService.updateCompany(company.id, {});
     
     onCompanySelected(company);
-    setIsLoading(false);
-  };
+  });
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = () => withLoading(async () => {
     if (!currentUser) return;
     
     if (confirm('Are you sure you want to permanently delete your account? This will delete all your companies and cannot be undone.')) {
-      setIsLoading(true);
       const result = await authService.deleteAccount();
       
       if (result.success) {
         onBackToLogin();
       } else {
         setError(result.error || 'Failed to delete account');
-        setIsLoading(false);
       }
     }
-  };
+  });
 
-  const formatLastPlayed = (date: Date): string => {
+  const formatLastPlayed = useCallback((date: Date): string => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -221,13 +196,13 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     if (diffDays < 7) return `${diffDays} days ago`;
     
     return date.toLocaleDateString();
-  };
+  }, []);
 
   const getColorClass = (colorId: string) => {
     return COLOR_OPTIONS.find(c => c.id === colorId)?.value || COLOR_OPTIONS[0].value;
   };
 
-  const getSortedCompanies = () => {
+  const getSortedCompanies = useMemo(() => {
     return [...userCompanies].sort((a, b) => {
       switch (sortOption) {
         case 'name':
@@ -245,7 +220,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
           return 0;
       }
     });
-  };
+  }, [userCompanies, sortOption]);
 
   if (!currentUser && !currentCompany) {
     return (
@@ -452,13 +427,13 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                   <Card className="bg-primary/5">
                     <CardContent className="p-4 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Total Money</p>
-                      <p className="text-xl font-semibold">€{formatNumber(companyStats.totalGold, 0)}</p>
+                      <p className="text-xl font-semibold">{formatCurrency(companyStats.totalGold, 0, companyStats.totalGold >= 1000)}</p>
                     </CardContent>
                   </Card>
                   <Card className="bg-primary/5">
                     <CardContent className="p-4 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Total Value</p>
-                      <p className="text-xl font-semibold">€{formatNumber(companyStats.totalValue, 0)}</p>
+                      <p className="text-xl font-semibold">{formatCurrency(companyStats.totalValue, 0, companyStats.totalValue >= 1000)}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -499,9 +474,9 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                         size="sm" 
                         variant="outline" 
                         onClick={handleRefresh}
-                        disabled={isRefreshing || isLoading}
+                        disabled={isLoading}
                       >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -522,7 +497,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {getSortedCompanies().map(company => (
+                  {getSortedCompanies.map((company: Company) => (
                     <Card 
                       key={company.id}
                       className={`hover:bg-accent/50 cursor-pointer transition-colors ${

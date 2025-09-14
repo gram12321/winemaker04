@@ -1,30 +1,48 @@
 
 import { useState, useEffect } from 'react';
-import { WineOrder, WineBatch, Customer } from '../../lib/types';
-import { fulfillWineOrder, rejectWineOrder } from '../../lib/services/salesService';
-import { generateSophisticatedWineOrders } from '../../lib/services/sales/salesOrderService';
-import { generateCustomer } from '../../lib/services/sales/generateCustomer';
-import { loadWineBatches, saveWineBatch, loadWineOrders } from '../../lib/database/database';
-import { useGameUpdates } from '../../hooks/useGameUpdates';
-import { getCurrentCompany } from '../../lib/services/gameState';
-import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '../../lib/utils/utils';
-import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../ui/table';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { getFlagIcon } from '../../lib/utils/flags';
-import { loadFormattedRelationshipBreakdown, createCustomerFromOrderData } from '../../lib/utils/relationshipUtils';
+import { useLoadingState, useGameStateWithData } from '@/hooks';
+import { WineOrder, WineBatch, Customer } from '@/lib/types';
+import { fulfillWineOrder, rejectWineOrder, generateSophisticatedWineOrders, generateCustomer } from '@/lib/services';
+import { loadWineBatches, saveWineBatch, loadWineOrders } from '@/lib/database/database';
+import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
+import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
+import { getFlagIcon } from '@/lib/utils/flags';
+import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
+import { NavigationProps } from '../UItypes';
 
-interface SalesProps {
-  onNavigateToWinepedia?: () => void;
+interface SalesProps extends NavigationProps {
+  // Inherits onNavigateToWinepedia from NavigationProps
+}
+
+/**
+ * Create minimal customer object for relationship breakdown from order data
+ * Used in Sales.tsx where we only have order information
+ */
+function createCustomerFromOrderData(
+  customerId: string,
+  customerName: string,
+  customerCountry: any,
+  customerType: any,
+  customerRelationship?: number
+): Customer {
+  return {
+    id: customerId,
+    name: customerName,
+    country: customerCountry,
+    customerType,
+    marketShare: 0.01, // Default value, will be overridden by actual customer data
+    purchasingPower: 1.0,
+    wineTradition: 1.0,
+    priceMultiplier: 1.0,
+    relationship: customerRelationship
+  };
 }
 
 const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
+  const { isLoading, withLoading } = useLoadingState();
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
-  const [orders, setOrders] = useState<WineOrder[]>([]);
-  const [allOrders, setAllOrders] = useState<WineOrder[]>([]);
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('all');
-  const [bottledWines, setBottledWines] = useState<WineBatch[]>([]);
-  const [loading, setLoading] = useState(false);
   const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
   const [orderChanceInfo, setOrderChanceInfo] = useState<{
     companyPrestige: number;
@@ -37,46 +55,27 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   } | null>(null);
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[customerId: string]: string}>({});
 
-  // Listen to game updates to refresh data
-  const { subscribe } = useGameUpdates();
-  
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      loadData();
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, [subscribe]);
 
-  // Load data function
-  const loadData = async () => {
-    try {
-      const currentCompany = getCurrentCompany();
-      const companyId = currentCompany?.id || 'default';
-      const [allOrdersData, allBatches] = await Promise.all([
-        loadWineOrders(companyId), // Load all orders
-        loadWineBatches(companyId)
-      ]);
-      
-      setAllOrders(allOrdersData);
-      
-      // Filter orders based on current filter
-      const filteredOrders = orderStatusFilter === 'all' 
-        ? allOrdersData 
-        : allOrdersData.filter(order => order.status === orderStatusFilter);
-      
-      setOrders(filteredOrders);
-      setBottledWines(allBatches.filter(batch => 
-        batch.stage === 'bottled' && batch.process === 'bottled'
-      ));
+  // Use consolidated hooks for reactive data loading
+  const allOrders = useGameStateWithData(
+    () => loadWineOrders(),
+    []
+  );
 
-      // Don't auto-load all relationship breakdowns to avoid heavy database queries
-      // They will be loaded on-demand when hovering over relationship values
-    } catch (error) {
-      console.error('Failed to load sales data:', error);
-    }
-  };
+  const allBatches = useGameStateWithData(
+    () => loadWineBatches(),
+    []
+  );
+
+  // Filter orders based on current filter
+  const orders = orderStatusFilter === 'all' 
+    ? allOrders 
+    : allOrders.filter(order => order.status === orderStatusFilter);
+
+  // Filter bottled wines
+  const bottledWines = allBatches.filter(batch => 
+    batch.stage === 'bottled' && batch.process === 'bottled'
+  );
 
   // Helper function to get asking price for an order
   const getAskingPriceForOrder = (order: WineOrder): number => {
@@ -190,72 +189,33 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     }
   };
 
-  // Load data on component mount
+  // Load customer chance info on component mount
   useEffect(() => {
-    loadData();
     loadCustomerChance();
   }, []);
 
-  // Re-filter orders when filter changes
-  useEffect(() => {
-    const filteredOrders = orderStatusFilter === 'all' 
-      ? allOrders 
-      : allOrders.filter(order => order.status === orderStatusFilter);
-    setOrders(filteredOrders);
-  }, [orderStatusFilter, allOrders]);
-
   // Handle order fulfillment
-  const handleFulfillOrder = async (orderId: string) => {
-    setLoading(true);
-    try {
-      const success = await fulfillWineOrder(orderId);
-      if (success) {
-        // Reload all data to get updated order statuses
-        await loadData();
-      } else {
-        alert('Failed to fulfill order - insufficient inventory');
-      }
-    } catch (error) {
-      console.error('Error fulfilling order:', error);
-      alert('Error fulfilling order');
-    } finally {
-      setLoading(false);
+  const handleFulfillOrder = (orderId: string) => withLoading(async () => {
+    const success = await fulfillWineOrder(orderId);
+    if (!success) {
+      alert('Failed to fulfill order - insufficient inventory');
     }
-  };
+  });
 
   // Handle order rejection
-  const handleRejectOrder = async (orderId: string) => {
-    setLoading(true);
-    try {
-      await rejectWineOrder(orderId);
-      // Reload all data to get updated order statuses
-      await loadData();
-    } catch (error) {
-      console.error('Error rejecting order:', error);
-      alert('Error rejecting order');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleRejectOrder = (orderId: string) => withLoading(async () => {
+    await rejectWineOrder(orderId);
+  });
 
   // Generate test order (customer acquisition + order creation)
-  const handleGenerateOrder = async () => {
-    setLoading(true);
-    try {
-      const { chanceInfo } = await generateSophisticatedWineOrders();
-      
-      // Store chance information for tooltip display
-      setOrderChanceInfo(chanceInfo);
-      
-      // Reload all data to get the new order(s)
-      await loadData();
-    } catch (error) {
-      console.error('Error generating order:', error);
-      alert('Error generating order');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleGenerateOrder = () => withLoading(async () => {
+    const { chanceInfo } = await generateSophisticatedWineOrders();
+    
+    // Store chance information for tooltip display
+    setOrderChanceInfo(chanceInfo);
+    
+    // Data will be automatically refreshed by the reactive hooks
+  });
 
   // Handle price editing
   const handlePriceEdit = (wineId: string, currentPrice: number) => {
@@ -298,18 +258,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         askingPrice: newPrice
       };
       
-      const currentCompany = getCurrentCompany();
-      const companyId = currentCompany?.id || 'default';
-      await saveWineBatch(updatedWine, companyId);
+      await saveWineBatch(updatedWine);
       setEditingPrices(prev => {
         const updated = { ...prev };
         delete updated[wine.id];
         return updated;
       });
-      // Update the wine in state
-      setBottledWines(prevWines => 
-        prevWines.map(w => w.id === wine.id ? updatedWine : w)
-      );
+      // Data will be automatically refreshed by the reactive hooks
     } catch (error) {
       console.error('Error updating price:', error);
       alert('Error updating price');
@@ -325,38 +280,22 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   };
 
   // Bulk actions for orders
-  const handleAcceptAll = async () => {
+  const handleAcceptAll = () => withLoading(async () => {
     if (orders.length === 0) return;
 
-    setLoading(true);
-    try {
-      await Promise.allSettled(
-        orders.map(order => fulfillWineOrder(order.id))
-      );
-      
-      // Reload all data to get updated order statuses
-      await loadData();
-    } catch (error) {
-      console.error('Error in bulk accept:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    await Promise.allSettled(
+      orders.map(order => fulfillWineOrder(order.id))
+    );
+    
+    // Data will be automatically refreshed by the reactive hooks
+  });
 
-  const handleRejectAll = async () => {
+  const handleRejectAll = () => withLoading(async () => {
     if (orders.length === 0) return;
 
-    setLoading(true);
-    try {
-      await Promise.all(orders.map(order => rejectWineOrder(order.id)));
-      // Reload all data to get updated order statuses
-      await loadData();
-    } catch (error) {
-      console.error('Error in bulk reject:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    await Promise.all(orders.map(order => rejectWineOrder(order.id)));
+    // Data will be automatically refreshed by the reactive hooks
+  });
 
   return (
     <div className="space-y-6">
@@ -683,14 +622,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                   <>
                     <button
                       onClick={handleAcceptAll}
-                      disabled={loading}
+                      disabled={isLoading}
                       className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm"
                     >
                       Accept All ({orders.length})
                     </button>
                     <button
                       onClick={handleRejectAll}
-                      disabled={loading}
+                      disabled={isLoading}
                       className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 disabled:bg-gray-400 text-sm"
                     >
                       Reject All
@@ -699,10 +638,10 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                 )}
               <button
                 onClick={handleGenerateOrder}
-                disabled={loading || bottledWines.length === 0}
+                disabled={isLoading || bottledWines.length === 0}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
               >
-                {loading ? 'Generating...' : 'Generate Order'}
+                {isLoading ? 'Generating...' : 'Generate Order'}
               </button>
               </div>
             </div>
@@ -1023,14 +962,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                             <>
                               <button
                                 onClick={() => handleFulfillOrder(order.id)}
-                                disabled={loading}
+                                disabled={isLoading}
                                 className="text-green-600 hover:text-green-900 disabled:text-gray-400"
                               >
                                 Accept
                               </button>
                               <button
                                 onClick={() => handleRejectOrder(order.id)}
-                                disabled={loading}
+                                disabled={isLoading}
                                 className="text-red-600 hover:text-red-900 disabled:text-gray-400"
                               >
                                 Reject

@@ -1,63 +1,40 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { useLoadingState } from '@/hooks';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
-import { highscoreService, HighscoreEntry, ScoreType } from '@/lib/services/highscoreService';
-import { formatNumber } from '@/lib/utils/utils';
+import { highscoreService, HighscoreEntry, ScoreType } from '@/lib/services';
+import { formatCurrency } from '@/lib/utils';
+import { PageProps, CompanyProps } from '../UItypes';
 
-interface HighscoresProps {
-  currentCompanyId?: string;
-  onBack?: () => void;
+interface HighscoresProps extends PageProps, CompanyProps {
+  // Inherits currentCompanyId and onBack from shared interfaces
 }
 
 export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
+  const { isLoading, withLoading } = useLoadingState();
   const [highscores, setHighscores] = useState<Record<ScoreType, HighscoreEntry[]>>({
     company_value: [],
     company_value_per_week: []
   });
-  const [loading, setLoading] = useState<Record<ScoreType, boolean>>({
-    company_value: true,
-    company_value_per_week: true
-  });
   const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadAllHighscores();
   }, []);
 
-  const loadAllHighscores = async () => {
-    setIsRefreshing(true);
-    setLoading({
-      company_value: true,
-      company_value_per_week: true
-    });
+  const loadAllHighscores = () => withLoading(async () => {
     setError(null);
 
-    try {
-      const [companyValueScores, companyValuePerWeekScores] = await Promise.all([
-        highscoreService.getHighscores('company_value', 50),
-        highscoreService.getHighscores('company_value_per_week', 50)
-      ]);
+    const [companyValueScores, companyValuePerWeekScores] = await Promise.all([
+      highscoreService.getHighscores('company_value', 50),
+      highscoreService.getHighscores('company_value_per_week', 50)
+    ]);
 
-      setHighscores({
-        company_value: companyValueScores,
-        company_value_per_week: companyValuePerWeekScores
-      });
-    } catch (err) {
-      console.error('Failed to fetch highscores:', err);
-      setError('Failed to load leaderboards. Please try again later.');
-    } finally {
-      setLoading({
-        company_value: false,
-        company_value_per_week: false
-      });
-      setIsRefreshing(false);
-    }
-  };
+    setHighscores({
+      company_value: companyValueScores,
+      company_value_per_week: companyValuePerWeekScores
+    });
+  });
 
   const formatGameDate = (entry: HighscoreEntry): string => {
     if (!entry.gameWeek || !entry.gameSeason || !entry.gameYear) {
@@ -115,7 +92,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   const renderHighscoreTable = (scoreType: ScoreType) => {
     const scores = highscores[scoreType];
     
-    if (loading[scoreType]) {
+    if (isLoading) {
       return (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
@@ -182,7 +159,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                 </div>
               </TableCell>
               <TableCell className="text-right font-mono">
-                €{formatNumber(score.scoreValue, 2)}
+                {formatCurrency(score.scoreValue, 2)}
               </TableCell>
               <TableCell className="text-right text-sm text-muted-foreground">
                 {formatGameDate(score)}
@@ -220,9 +197,9 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
             <Button 
               variant="outline" 
               onClick={loadAllHighscores}
-              disabled={isRefreshing}
+              disabled={isLoading}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>

@@ -1,22 +1,29 @@
 // Hook to detect prestige changes and update customer relationships
 import { useEffect, useRef } from 'react';
-import { getCurrentPrestige } from '../lib/services/gameState';
+import { getCurrentPrestige, getCurrentCompany } from '../lib/services/gameState';
 import { updateCustomerRelationshipsForPrestige } from '../lib/services/sales/createCustomer';
+import { useGameUpdates } from './useGameUpdates';
 
 /**
  * Hook that monitors prestige changes and updates customer relationships accordingly
  * Only updates relationships when prestige changes significantly (>5% or >1 point)
+ * Now event-driven instead of polling - subscribes to game updates
  */
 export function usePrestigeUpdates() {
   const lastPrestigeRef = useRef<number | null>(null);
   const isUpdatingRef = useRef(false);
+  const { subscribe } = useGameUpdates();
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
     const checkPrestigeChanges = async () => {
       // Prevent multiple simultaneous updates
       if (isUpdatingRef.current) return;
+
+      // Check if a company is active before checking prestige
+      const currentCompany = getCurrentCompany();
+      if (!currentCompany) {
+        return; // No company active, skip prestige updates
+      }
 
       try {
         const currentPrestige = await getCurrentPrestige();
@@ -52,16 +59,16 @@ export function usePrestigeUpdates() {
       }
     };
 
-    // Check for prestige changes every 10 seconds
-    intervalId = setInterval(checkPrestigeChanges, 10000);
+    // Subscribe to game updates instead of polling
+    const unsubscribe = subscribe(() => {
+      checkPrestigeChanges();
+    });
 
-    // Initial check
+    // Initial check on mount
     checkPrestigeChanges();
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      unsubscribe();
     };
-  }, []);
+  }, [subscribe]);
 }

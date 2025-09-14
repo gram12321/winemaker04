@@ -38,7 +38,7 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
   
   // Update base prestige events if money changed
   if (updates.money !== undefined && updates.money !== oldMoney) {
-    updateCompanyValuePrestige(updates.money);
+    await updateCompanyValuePrestige(updates.money);
   }
   
   // Update company in database if we have an active company
@@ -92,6 +92,9 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   // Initialize prestige system for this company
   try {
     await initializePrestigeSystem();
+    
+    // Ensure company value prestige is updated with current money
+    await updateCompanyValuePrestige(company.money);
   } catch (error) {
     console.error('Failed to initialize prestige system:', error);
   }
@@ -249,4 +252,9 @@ async function submitHighscores(): Promise<void> {
 // Force highscore submission (for manual triggers)
 export const forceSubmitHighscores = async (): Promise<void> => {
   await submitHighscores();
+};
+
+// Clear prestige cache (for admin functions)
+export const clearPrestigeCache = (): void => {
+  prestigeCache = null;
 };

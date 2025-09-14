@@ -4,7 +4,7 @@ import { supabase } from '../database/supabase';
 import { loadVineyards, loadWineBatches } from '../database/database';
 import { GAME_INITIALIZATION } from '../constants';
 import { getCurrentCompany, updateGameState } from './gameState';
-import { getCurrentCompanyId, DEFAULT_COMPANY_ID } from '../utils/companyUtils';
+import { getCurrentCompanyId } from '../utils/companyUtils';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { companyService } from './companyService';
 
@@ -47,7 +47,7 @@ export const initializeStartingCapital = async (companyId?: string): Promise<voi
     }
     
     // Check if starting capital transaction already exists for this company
-    const existingTransactions = await loadTransactions(companyId);
+    const existingTransactions = await loadTransactions();
     const hasStartingCapital = existingTransactions.some(t => 
       t.description === 'Starting Capital' && t.category === 'Initial Investment'
     );
@@ -95,7 +95,7 @@ export const addTransaction = async (
     
     // Get current company money directly from database
     let currentMoney = 0;
-    if (companyId !== DEFAULT_COMPANY_ID) {
+    if (companyId) {
       const company = await companyService.getCompany(companyId);
       if (company) {
         currentMoney = company.money;
@@ -167,7 +167,7 @@ export const addTransaction = async (
       return b.date.week - a.date.week;
     });
     
-    console.log('addTransaction completed successfully, returning ID:', data.id);
+    // Transaction added successfully
     return data.id;
   } catch (error) {
     console.error('Error adding transaction:', error);
@@ -179,12 +179,12 @@ export const addTransaction = async (
  * Load transactions from Supabase
  * @returns Promise resolving to array of transactions
  */
-export const loadTransactions = async (companyId: string = DEFAULT_COMPANY_ID): Promise<Transaction[]> => {
+export const loadTransactions = async (): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .select('*')
-      .eq('company_id', companyId)
+      .eq('company_id', getCurrentCompanyId())
       .order('year', { ascending: false })
       .order('season', { ascending: false })  
       .order('week', { ascending: false });
@@ -222,8 +222,7 @@ export const loadTransactions = async (companyId: string = DEFAULT_COMPANY_ID): 
 export const getTransactions = (): Transaction[] => {
   // If cache is empty, load transactions from Supabase (but return empty array for now)
   if (transactionsCache.length === 0) {
-    const companyId = getCurrentCompanyId();
-    loadTransactions(companyId).catch(console.error);
+    loadTransactions().catch(console.error);
     return [];
   }
   
@@ -238,14 +237,11 @@ export const getTransactions = (): Transaction[] => {
 export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year'): Promise<FinancialData> => {
   const gameState = getGameState();
   
-  // Get current company ID
-  const companyId = getCurrentCompanyId();
-  
   // Load fresh data
   const [transactions, vineyards, wineBatches] = await Promise.all([
-    loadTransactions(companyId),
-    loadVineyards(companyId),
-    loadWineBatches(companyId)
+    loadTransactions(),
+    loadVineyards(),
+    loadWineBatches()
   ]);
   
   // Filter transactions by period

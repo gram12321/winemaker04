@@ -82,7 +82,7 @@ export async function calculateCurrentPrestige(companyId?: string): Promise<{
       .from('prestige_events')
       .delete()
       .in('id', cleanupCandidates)
-      .then(() => console.log(`[Prestige] Cleaned up ${cleanupCandidates.length} decayed events`));
+      .then(() => { /* Cleaned up decayed events */ });
   }
 
   const totalPrestige = eventBreakdown.reduce((sum, event) => sum + event.currentAmount, 0);
@@ -129,6 +129,7 @@ export async function updateBasePrestigeEvent(
       .from('prestige_events')
       .update({ 
         amount: newAmount,
+        description: description,
         timestamp: Date.now() // Update timestamp for base prestige changes
       })
       .eq('id', existingEvents[0].id);
@@ -230,7 +231,7 @@ export async function updateVineyardPrestigeEvents(companyId?: string): Promise<
   }
 
   try {
-    const vineyards = await loadVineyards(companyId);
+    const vineyards = await loadVineyards();
     
     for (const vineyard of vineyards) {
       const vineyardPrestige = vineyard.fieldPrestige || 1; // Use fieldPrestige or default to 1
@@ -346,7 +347,7 @@ export async function calculateCustomerRelationshipBoost(customerId: string, com
       .from('relationship_boosts')
       .delete()
       .in('id', cleanupCandidates)
-      .then(() => console.log(`[Relationship] Cleaned up ${cleanupCandidates.length} decayed boosts`));
+      .then(() => { /* Cleaned up decayed boosts */ });
   }
 
   return totalBoost;

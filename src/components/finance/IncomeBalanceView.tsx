@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils/utils';
 import { calculateFinancialData } from '@/lib/services/financeService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { useGameStateWithData } from '@/hooks';
 
 interface IncomeBalanceViewProps {
   period: 'weekly' | 'season' | 'year';
@@ -42,42 +42,11 @@ const defaultFinancialData = {
 };
 
 export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
-  const [financialData, setFinancialData] = useState(defaultFinancialData);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const data = await calculateFinancialData(period);
-        if (isMounted) {
-          setFinancialData(data);
-        }
-      } catch (error) {
-        console.error('Error loading financial data:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-    
-    loadData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [period]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-gray-500">Loading financial data...</div>
-      </div>
-    );
-  }
+  // Use consolidated hook for reactive financial data loading
+  const financialData = useGameStateWithData(
+    () => calculateFinancialData(period),
+    defaultFinancialData
+  );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

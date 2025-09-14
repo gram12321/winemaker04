@@ -6,18 +6,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { formatCurrency, formatGameDateFromObject } from '@/lib/utils/utils';
 import { loadTransactions } from '@/lib/services/financeService';
 import { Transaction } from '@/lib/types';
-import { useAsyncData } from '@/hooks/useAsyncData';
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { useGameStateWithData } from '@/hooks';
 
 export function CashFlowView() {
-  const companyId = getCurrentCompanyId();
-  
-  const transactions = useAsyncData(
-    () => loadTransactions(companyId), 
+  const transactions = useGameStateWithData(
+    () => loadTransactions(), 
     [] as Transaction[]
   );
 

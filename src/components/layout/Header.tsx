@@ -1,15 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getCurrentPrestige } from '@/lib/services/gameState';
 import { processGameTick } from '@/lib/services/gameTick';
-import { formatCurrency, formatGameDate, formatNumber } from '@/lib/utils/utils';
+import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
-import { useGameState } from '@/hooks/useGameState';
-import { useGameUpdates } from '@/hooks/useGameUpdates';
+import { useGameState, useGameStateWithData } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/prestige-modal';
 import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
@@ -26,8 +22,6 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance, onBackToLogin }) => {
   const gameState = useGameState();
-  const { subscribe } = useGameUpdates();
-  const [currentPrestige, setCurrentPrestige] = useState(0);
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
   const [prestigeData, setPrestigeData] = useState<any>({ totalPrestige: 0, eventBreakdown: [] });
   const consoleHook = useNotifications();
@@ -35,27 +29,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
   // Get current company once instead of multiple calls
   const currentCompany = getCurrentCompany();
 
-  // Load prestige and update on game events
-  useEffect(() => {
-    const updatePrestige = async () => {
-      try {
-        const prestige = await getCurrentPrestige();
-        setCurrentPrestige(prestige);
-      } catch (error) {
-        console.error('Failed to load prestige:', error);
-      }
-    };
-    
-    // Initial load
-    updatePrestige();
-    
-    // Subscribe to game updates (triggered by money changes, sales, etc.)
-    const unsubscribe = subscribe(updatePrestige);
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [subscribe]);
+  // Use consolidated hook for reactive prestige loading
+  const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);
 
   const handleIncrementWeek = async () => {
     try {
@@ -137,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
             className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center cursor-pointer hover:bg-red-600 transition-colors"
             onClick={handlePrestigeClick}
           >
-            <span className="font-medium">⭐ {formatNumber(currentPrestige, 1)}</span>
+            <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatCompact(currentPrestige, 1) : formatNumber(currentPrestige, 1)}</span>
           </Badge>
           
           <Button 

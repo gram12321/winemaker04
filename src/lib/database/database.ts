@@ -1,7 +1,9 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
 import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType } from '../types';
-import { DEFAULT_COMPANY_ID } from '../utils/companyUtils';
+import { getCompanyQuery } from '../utils/companyUtils';
+import { getCurrentCompanyId } from '../utils/companyUtils';
+// Removed DEFAULT_COMPANY_ID import - company ID is now required
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
@@ -11,13 +13,13 @@ const WINE_ORDERS_TABLE = 'wine_orders';
 
 // ===== VINEYARD OPERATIONS =====
 
-export const saveVineyard = async (vineyard: Vineyard, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
+export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
   try {
     const { error } = await supabase
       .from(VINEYARDS_TABLE)
       .upsert({
         id: vineyard.id,
-        company_id: companyId,
+        company_id: getCurrentCompanyId(),
         name: vineyard.name,
         country: vineyard.country,
         region: vineyard.region,
@@ -39,12 +41,9 @@ export const saveVineyard = async (vineyard: Vineyard, companyId: string = DEFAU
   }
 };
 
-export const loadVineyards = async (companyId: string = DEFAULT_COMPANY_ID): Promise<Vineyard[]> => {
+export const loadVineyards = async (): Promise<Vineyard[]> => {
   try {
-    const { data, error } = await supabase
-      .from(VINEYARDS_TABLE)
-      .select('*')
-      .eq('company_id', companyId)
+    const { data, error } = await getCompanyQuery(VINEYARDS_TABLE)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -76,10 +75,10 @@ export const loadVineyards = async (companyId: string = DEFAULT_COMPANY_ID): Pro
 
 // ===== GAME STATE OPERATIONS =====
 
-export const saveGameState = async (gameState: Partial<GameState>, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
+export const saveGameState = async (gameState: Partial<GameState>): Promise<void> => {
   try {
     const dataToSave = {
-      id: companyId,
+      id: getCurrentCompanyId(),
       player_name: 'Player',
       week: gameState.week,
       season: gameState.season,
@@ -99,12 +98,12 @@ export const saveGameState = async (gameState: Partial<GameState>, companyId: st
   }
 };
 
-export const loadGameState = async (companyId: string = DEFAULT_COMPANY_ID): Promise<Partial<GameState> | null> => {
+export const loadGameState = async (): Promise<Partial<GameState> | null> => {
   try {
     const { data, error } = await supabase
       .from(GAME_STATE_TABLE)
       .select('*')
-      .eq('id', companyId);
+      .eq('id', getCurrentCompanyId());
 
     if (error) {
       throw error;
@@ -131,13 +130,13 @@ export const loadGameState = async (companyId: string = DEFAULT_COMPANY_ID): Pro
 
 // ===== WINE BATCH OPERATIONS =====
 
-export const saveWineBatch = async (batch: WineBatch, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
+export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_BATCHES_TABLE)
       .upsert({
         id: batch.id,
-        company_id: companyId,
+        company_id: getCurrentCompanyId(),
         vineyard_id: batch.vineyardId,
         vineyard_name: batch.vineyardName,
         grape_variety: batch.grape,
@@ -167,12 +166,9 @@ export const saveWineBatch = async (batch: WineBatch, companyId: string = DEFAUL
   }
 };
 
-export const loadWineBatches = async (companyId: string = DEFAULT_COMPANY_ID): Promise<WineBatch[]> => {
+export const loadWineBatches = async (): Promise<WineBatch[]> => {
   try {
-    const { data, error } = await supabase
-      .from(WINE_BATCHES_TABLE)
-      .select('*')
-      .eq('company_id', companyId)
+    const { data, error } = await getCompanyQuery(WINE_BATCHES_TABLE)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -213,13 +209,13 @@ export const loadWineBatches = async (companyId: string = DEFAULT_COMPANY_ID): P
 
 // ===== WINE ORDER OPERATIONS =====
 
-export const saveWineOrder = async (order: WineOrder, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
+export const saveWineOrder = async (order: WineOrder): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)
       .upsert({
         id: order.id,
-        company_id: companyId,
+        company_id: getCurrentCompanyId(),
         wine_batch_id: order.wineBatchId,
         wine_name: order.wineName,
         order_type: order.customerType,
@@ -246,13 +242,10 @@ export const saveWineOrder = async (order: WineOrder, companyId: string = DEFAUL
   }
 };
 
-export const loadWineOrders = async (companyId: string = DEFAULT_COMPANY_ID, status?: string): Promise<WineOrder[]> => {
+export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
   try {
     // First, load orders without the join to avoid Supabase query issues
-    let query = supabase
-      .from(WINE_ORDERS_TABLE)
-      .select('*')
-      .eq('company_id', companyId);
+    let query = getCompanyQuery(WINE_ORDERS_TABLE);
     
     // Filter by status if provided, otherwise load all orders
     if (status) {
@@ -263,9 +256,8 @@ export const loadWineOrders = async (companyId: string = DEFAULT_COMPANY_ID, sta
 
     if (ordersError) throw ordersError;
 
-    // Load customer relationships separately
-    const { data: customersData, error: customersError } = await supabase
-      .from('customers')
+    // Load customer relationships separately (filtered by company)
+    const { data: customersData, error: customersError } = await getCompanyQuery('customers')
       .select('id, relationship');
 
     // Create a map of customer relationships for quick lookup
@@ -304,7 +296,7 @@ export const loadWineOrders = async (companyId: string = DEFAULT_COMPANY_ID, sta
   }
 };
 
-export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected', companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
+export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected'): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)
@@ -313,7 +305,7 @@ export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled'
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId)
-      .eq('company_id', companyId);
+      .eq('company_id', getCurrentCompanyId());
 
     if (error) throw error;
   } catch (error) {

@@ -34,6 +34,9 @@ function App() {
       setCurrentCompany(existingCompany);
       setCurrentPage('company-overview');
       setIsGameInitialized(true);
+      
+      // Initialize game systems for the existing company
+      initializeGameForCompany();
     }
   }, []);
 
@@ -43,8 +46,25 @@ function App() {
       setCurrentCompany(company);
       setCurrentPage('company-overview');
       setIsGameInitialized(true);
+      
+      // Initialize game systems for the selected company
+      await initializeGameForCompany();
     } catch (error) {
       console.error('Error setting active company:', error);
+    }
+  };
+
+  const initializeGameForCompany = async () => {
+    try {
+      // Initialize customers system for the active company
+      const { getCurrentPrestige } = await import('@/lib/services/gameState');
+      const { initializeCustomers } = await import('@/lib/services/sales/createCustomer');
+      
+      const currentPrestige = await getCurrentPrestige();
+      await initializeCustomers(currentPrestige);
+    } catch (error) {
+      console.error('Error initializing game for company:', error);
+      // Don't throw - allow game to continue even if customer initialization fails
     }
   };
 

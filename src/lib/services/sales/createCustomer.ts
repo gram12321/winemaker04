@@ -11,7 +11,6 @@ import {
   checkCustomersExist,
   loadActiveCustomers
 } from '../../database/customerDatabaseService';
-import { getCurrentCompanyId } from '../../utils/companyUtils';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -286,14 +285,11 @@ export function generateCustomersForAllCountries(companyPrestige: number = 1): C
 export async function initializeCustomers(companyPrestige: number = 1): Promise<Customer[]> {
   
   try {
-    // Get current company ID for customer operations
-    const companyId = getCurrentCompanyId();
-    
     // Check if customers already exist for this company
-    const customersExist = await checkCustomersExist(companyId);
+    const customersExist = await checkCustomersExist();
     
     if (customersExist) {
-      const existingCustomers = await loadCustomers(companyId);
+      const existingCustomers = await loadCustomers();
       
       if (existingCustomers && existingCustomers.length > 0) {
         return existingCustomers;
@@ -304,7 +300,7 @@ export async function initializeCustomers(companyPrestige: number = 1): Promise<
     const newCustomers = generateCustomersForAllCountries(companyPrestige);
     
     // Save to database for this company
-    await saveCustomers(newCustomers, companyId);
+    await saveCustomers(newCustomers);
     
     return newCustomers;
     
@@ -321,20 +317,17 @@ export async function initializeCustomers(companyPrestige: number = 1): Promise<
  */
 export async function updateCustomerRelationshipsForPrestige(companyPrestige: number): Promise<Customer[]> {
   try {
-    console.log('[Customer Update] Updating relationships for active customers only...');
-    
-    // Get current company ID for customer operations
-    const companyId = getCurrentCompanyId();
+    // Updating relationships for active customers only
     
     // Load only active customers (customers who have placed orders)
-    const activeCustomers = await loadActiveCustomers(companyId);
+    const activeCustomers = await loadActiveCustomers();
     
     if (activeCustomers.length === 0) {
-      console.log('[Customer Update] No active customers found, skipping relationship updates');
+      // No active customers found, skipping relationship updates
       return [];
     }
     
-    console.log(`[Customer Update] Updating relationships for ${activeCustomers.length} active customers`);
+    // Updating relationships for active customers
     
     // Update relationships only for active customers
     const updatedCustomers = activeCustomers.map(customer => ({
@@ -345,7 +338,7 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
     // Save updated relationships back to database
     await updateCustomerRelationships(updatedCustomers);
     
-    console.log('[Customer Update] Successfully updated active customer relationships');
+    // Successfully updated active customer relationships
     return updatedCustomers;
     
   } catch (error) {
@@ -359,10 +352,7 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
  */
 export async function getAllCustomers(): Promise<Customer[]> {
   try {
-    // Get current company ID for customer operations
-    const companyId = getCurrentCompanyId();
-    
-    const customers = await loadCustomers(companyId);
+    const customers = await loadCustomers();
     return customers || [];
   } catch (error) {
     console.error('[Customer Service] Failed to get customers:', error);

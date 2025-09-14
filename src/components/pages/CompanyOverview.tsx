@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLoadingState } from '@/hooks';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
 import { Building2, TrendingUp, Trophy, Calendar, BarChart3 } from 'lucide-react';
-import { formatGameDateFromObject, formatNumber, calculateCompanyWeeks, formatGameDate } from '@/lib/utils/utils';
-import { useGameState } from '@/hooks/useGameState';
-import { getCurrentCompany } from '@/lib/services/gameState';
-import { highscoreService } from '@/lib/services/highscoreService';
+import { formatGameDateFromObject, formatCurrency, calculateCompanyWeeks, formatGameDate } from '@/lib/utils/utils';
+import { useGameState } from '@/hooks';
+import { getCurrentCompany, highscoreService } from '@/lib/services';
+import { NavigationProps } from '../UItypes';
 
-interface CompanyOverviewProps {
-  onNavigate?: (page: string) => void;
+interface CompanyOverviewProps extends NavigationProps {
+  // Inherits onNavigate from NavigationProps
 }
 
 interface CompanyRankings {
@@ -17,6 +17,7 @@ interface CompanyRankings {
 }
 
 const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
+  const { isLoading, withLoading } = useLoadingState();
   const gameState = useGameState();
   const company = getCurrentCompany();
   
@@ -24,7 +25,6 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     company_value: { position: 0, total: 0 },
     company_value_per_week: { position: 0, total: 0 }
   });
-  const [isLoadingRankings, setIsLoadingRankings] = useState(true);
 
   const gameDate = {
     week: gameState.week || 1,
@@ -38,34 +38,30 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     }
   }, [company?.id]);
 
-  const loadCompanyRankings = async () => {
+  const loadCompanyRankings = () => withLoading(async () => {
     if (!company) return;
     
-    setIsLoadingRankings(true);
-    try {
-      const companyRankings = await highscoreService.getCompanyRankings(company.id);
-      setRankings(companyRankings);
-    } catch (error) {
-      console.error('Error loading company rankings:', error);
-    } finally {
-      setIsLoadingRankings(false);
-    }
-  };
+    const companyRankings = await highscoreService.getCompanyRankings(company.id);
+    setRankings(companyRankings);
+  });
 
-  const formatCompanyGameDate = () => {
+  const formatCompanyGameDate = useCallback(() => {
     if (!company) return formatGameDateFromObject(gameDate);
     return formatGameDate(company.currentWeek, company.currentSeason, company.currentYear);
-  };
+  }, [company, gameDate]);
 
-  const formatRanking = (ranking: { position: number; total: number }): string => {
+  const formatRanking = useCallback((ranking: { position: number; total: number }): string => {
     if (ranking.position === 0) return "Not ranked";
     return `${ranking.position} / ${ranking.total}`;
-  };
+  }, []);
 
-  // Calculate some basic stats using utility functions
-  const weeksElapsed = company ? calculateCompanyWeeks(company.foundedYear, company.currentWeek, company.currentSeason, company.currentYear) : 1;
-  const avgMoneyPerWeek = (gameState.money || 0) / weeksElapsed;
-  const companyAge = `${Math.floor(weeksElapsed / 52)} years, ${weeksElapsed % 52} weeks`;
+  // Calculate some basic stats using utility functions - memoized for performance
+  const { weeksElapsed, avgMoneyPerWeek, companyAge } = useMemo(() => {
+    const weeks = company ? calculateCompanyWeeks(company.foundedYear, company.currentWeek, company.currentSeason, company.currentYear) : 1;
+    const avgMoney = (gameState.money || 0) / weeks;
+    const age = `${Math.floor(weeks / 52)} years, ${weeks % 52} weeks`;
+    return { weeksElapsed: weeks, avgMoneyPerWeek: avgMoney, companyAge: age };
+  }, [company, gameState.money]);
 
   return (
     <div className="space-y-6">
@@ -116,7 +112,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Current Money</p>
-                  <p className="text-2xl font-bold">€{formatNumber(gameState.money || 0, 0)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(gameState.money || 0, 0, (gameState.money || 0) >= 1000)}</p>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                   💰
@@ -130,7 +126,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Prestige</p>
-                  <p className="text-2xl font-bold">{formatNumber(gameState.prestige || 1, 1)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(gameState.prestige || 1, 1, (gameState.prestige || 1) >= 1000).replace('€', '')}</p>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
                   <Trophy className="h-6 w-6 text-purple-600" />
@@ -144,7 +140,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Avg/Week</p>
-                  <p className="text-2xl font-bold">€{formatNumber(avgMoneyPerWeek, 0)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</p>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6 text-blue-600" />
@@ -184,7 +180,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Cash Money:</span>
-                  <span className="text-lg font-semibold">€{formatNumber(gameState.money || 0, 2)}</span>
+                  <span className="text-lg font-semibold">{formatCurrency(gameState.money || 0, 2, (gameState.money || 0) >= 1000)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Founded:</span>
@@ -200,7 +196,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Average per Week:</span>
-                  <span>€{formatNumber(avgMoneyPerWeek, 0)}</span>
+                  <span>{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</span>
                 </div>
               </div>
             </CardContent>
@@ -227,7 +223,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               )}
             </CardHeader>
             <CardContent>
-              {isLoadingRankings ? (
+              {isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading rankings...</p>
               ) : (
                 <div className="space-y-4">
