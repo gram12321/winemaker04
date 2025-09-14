@@ -8,9 +8,6 @@ export const useGameState = () => {
   const { subscribe } = useGameUpdates();
 
   useEffect(() => {
-    // Initial load - always get fresh state
-    setGameState(getGameState());
-
     // Subscribe to updates
     const unsubscribe = subscribe(() => {
       // Always get fresh state when updates are triggered

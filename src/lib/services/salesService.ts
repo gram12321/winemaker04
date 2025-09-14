@@ -5,21 +5,19 @@ import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { addTransaction } from './financeService';
 import { createRelationshipBoost, addSalePrestigeEvent } from '../database/prestigeService';
 import { getCurrentPrestige } from './gameState';
-import { getCurrentCompany } from './gameState';
+import { getCurrentCompanyId } from '../utils/companyUtils';
 
 // ===== ORDER MANAGEMENT =====
 
 // Get all pending wine orders
 export async function getPendingOrders(): Promise<WineOrder[]> {
-  const currentCompany = getCurrentCompany();
-  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  const companyId = getCurrentCompanyId();
   return await loadWineOrders(companyId);
 }
 
 // Fulfill a wine order (sell the wine) - supports partial fulfillment
 export async function fulfillWineOrder(orderId: string): Promise<boolean> {
-  const currentCompany = getCurrentCompany();
-  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  const companyId = getCurrentCompanyId();
   
   const orders = await loadWineOrders(companyId);
   const order = orders.find(o => o.id === orderId);
@@ -102,8 +100,7 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
 
 // Reject a wine order
 export async function rejectWineOrder(orderId: string): Promise<boolean> {
-  const currentCompany = getCurrentCompany();
-  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  const companyId = getCurrentCompanyId();
   await updateWineOrderStatus(orderId, 'rejected', companyId);
   triggerGameUpdate();
   return true;

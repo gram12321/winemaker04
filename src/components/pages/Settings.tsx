@@ -16,7 +16,7 @@ interface SimpleSettings {
   showNotifications: boolean;
 }
 
-export function Settings({ currentCompany, onBack }: SettingsProps) {
+export function Settings({ currentCompany, onBack, onSignOut }: SettingsProps) {
   const [settings, setSettings] = useState<SimpleSettings>({
     showNotifications: true
   });
@@ -102,11 +102,18 @@ export function Settings({ currentCompany, onBack }: SettingsProps) {
             Configure your game preferences for {currentCompany.name}
           </p>
         </div>
-        {onBack && (
-          <Button variant="outline" onClick={onBack}>
-            Back
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {onBack && (
+            <Button variant="outline" onClick={onBack}>
+              Back
+            </Button>
+          )}
+          {onSignOut && (
+            <Button variant="destructive" onClick={onSignOut}>
+              Sign Out
+            </Button>
+          )}
+        </div>
       </div>
 
         <div className="space-y-6">

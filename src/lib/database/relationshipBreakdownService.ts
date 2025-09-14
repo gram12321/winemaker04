@@ -2,7 +2,7 @@
 import { Customer } from '../types';
 import { calculateCustomerRelationshipBoost } from './prestigeService';
 import { calculateCurrentPrestige } from './prestigeService';
-import { getCurrentCompany } from '../services/gameState';
+import { getCurrentCompanyId } from '../utils/companyUtils';
 import { supabase } from './supabase';
 
 export interface RelationshipBreakdown {
@@ -32,8 +32,7 @@ export interface RelationshipBreakdown {
 export async function calculateRelationshipBreakdown(customer: Customer, companyId?: string): Promise<RelationshipBreakdown> {
   // Get current company ID if not provided
   if (!companyId) {
-    const currentCompany = getCurrentCompany();
-    companyId = currentCompany?.id || 'default';
+    companyId = getCurrentCompanyId();
   }
 
   // Get current company prestige
@@ -85,8 +84,7 @@ async function getRelationshipBoostDetails(customerId: string, companyId?: strin
   try {
     // Get current company ID if not provided
     if (!companyId) {
-      const currentCompany = getCurrentCompany();
-      companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+      companyId = getCurrentCompanyId();
     }
 
     

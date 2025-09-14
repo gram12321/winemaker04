@@ -77,6 +77,7 @@ export const GAME_INITIALIZATION = {
   
   // Starting company
   DEFAULT_COMPANY_NAME: 'My Winery',
+  DEFAULT_COMPANY_ID: '00000000-0000-0000-0000-000000000000', // Default fallback company ID
   
   // Starting prestige
   STARTING_PRESTIGE: 1,

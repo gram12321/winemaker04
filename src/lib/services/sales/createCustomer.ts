@@ -11,7 +11,7 @@ import {
   checkCustomersExist,
   loadActiveCustomers
 } from '../../database/customerDatabaseService';
-import { getCurrentCompany } from '../gameState';
+import { getCurrentCompanyId } from '../../utils/companyUtils';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -287,8 +287,7 @@ export async function initializeCustomers(companyPrestige: number = 1): Promise<
   
   try {
     // Get current company ID for customer operations
-    const currentCompany = getCurrentCompany();
-    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    const companyId = getCurrentCompanyId();
     
     // Check if customers already exist for this company
     const customersExist = await checkCustomersExist(companyId);
@@ -325,8 +324,7 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
     console.log('[Customer Update] Updating relationships for active customers only...');
     
     // Get current company ID for customer operations
-    const currentCompany = getCurrentCompany();
-    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    const companyId = getCurrentCompanyId();
     
     // Load only active customers (customers who have placed orders)
     const activeCustomers = await loadActiveCustomers(companyId);
@@ -362,8 +360,7 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
 export async function getAllCustomers(): Promise<Customer[]> {
   try {
     // Get current company ID for customer operations
-    const currentCompany = getCurrentCompany();
-    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    const companyId = getCurrentCompanyId();
     
     const customers = await loadCustomers(companyId);
     return customers || [];

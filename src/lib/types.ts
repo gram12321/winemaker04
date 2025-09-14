@@ -10,9 +10,7 @@ export interface GameDate {
   year: number;
 }
 
-export function formatGameDate(date: GameDate): string {
-  return `Week ${date.week}, ${date.season} ${date.year}`;
-}
+
 
 // Grape varieties (simplified to match what's actually used)
 export type GrapeVariety = 'Chardonnay' | 'Pinot Noir' | 'Cabernet Sauvignon' | 'Merlot';

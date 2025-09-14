@@ -4,6 +4,7 @@ import { supabase } from '../database/supabase';
 import { loadVineyards, loadWineBatches } from '../database/database';
 import { GAME_INITIALIZATION } from '../constants';
 import { getCurrentCompany, updateGameState } from './gameState';
+import { getCurrentCompanyId, DEFAULT_COMPANY_ID } from '../utils/companyUtils';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { companyService } from './companyService';
 
@@ -84,12 +85,17 @@ export const addTransaction = async (
   description: string,
   category: string,
   recurring = false,
-  companyId: string = '00000000-0000-0000-0000-000000000000'
+  companyId?: string
 ): Promise<string> => {
   try {
+    // Get current company ID if not provided
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
     // Get current company money directly from database
     let currentMoney = 0;
-    if (companyId !== '00000000-0000-0000-0000-000000000000') {
+    if (companyId !== DEFAULT_COMPANY_ID) {
       const company = await companyService.getCompany(companyId);
       if (company) {
         currentMoney = company.money;
@@ -173,13 +179,15 @@ export const addTransaction = async (
  * Load transactions from Supabase
  * @returns Promise resolving to array of transactions
  */
-export const loadTransactions = async (companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<Transaction[]> => {
+export const loadTransactions = async (companyId: string = DEFAULT_COMPANY_ID): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .select('*')
       .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
+      .order('year', { ascending: false })
+      .order('season', { ascending: false })  
+      .order('week', { ascending: false });
     
     if (error) throw error;
     
@@ -196,18 +204,6 @@ export const loadTransactions = async (companyId: string = '00000000-0000-0000-0
       recurring: row.recurring || false,
       money: row.money
     }));
-    
-    // Sort transactions in memory (newest first)
-    transactions.sort((a, b) => {
-      if (a.date.year !== b.date.year) return b.date.year - a.date.year;
-      
-      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-      const aSeasonIndex = seasons.indexOf(a.date.season);
-      const bSeasonIndex = seasons.indexOf(b.date.season);
-      if (aSeasonIndex !== bSeasonIndex) return bSeasonIndex - aSeasonIndex;
-      
-      return b.date.week - a.date.week;
-    });
     
     // Update the cache
     transactionsCache = transactions;
@@ -226,9 +222,7 @@ export const loadTransactions = async (companyId: string = '00000000-0000-0000-0
 export const getTransactions = (): Transaction[] => {
   // If cache is empty, load transactions from Supabase (but return empty array for now)
   if (transactionsCache.length === 0) {
-    // Get current company ID for loading transactions
-    const currentCompany = getCurrentCompany();
-    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    const companyId = getCurrentCompanyId();
     loadTransactions(companyId).catch(console.error);
     return [];
   }
@@ -245,8 +239,7 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   const gameState = getGameState();
   
   // Get current company ID
-  const currentCompany = getCurrentCompany();
-  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  const companyId = getCurrentCompanyId();
   
   // Load fresh data
   const [transactions, vineyards, wineBatches] = await Promise.all([

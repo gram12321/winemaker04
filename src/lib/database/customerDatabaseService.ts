@@ -1,11 +1,12 @@
 // Customer database service - handles Supabase CRUD operations for customers
 import { supabase } from './supabase';
 import { Customer } from '../types';
+import { DEFAULT_COMPANY_ID } from '../utils/companyUtils';
 
 /**
  * Save customers to database for a specific company
  */
-export async function saveCustomers(customers: Customer[], companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<void> {
+export async function saveCustomers(customers: Customer[], companyId: string = DEFAULT_COMPANY_ID): Promise<void> {
   try {
     // Clear existing customers for this company first
     const { error: deleteError } = await supabase
@@ -51,7 +52,7 @@ export async function saveCustomers(customers: Customer[], companyId: string = '
 /**
  * Load customers from database for a specific company
  */
-export async function loadCustomers(companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<Customer[] | null> {
+export async function loadCustomers(companyId: string = DEFAULT_COMPANY_ID): Promise<Customer[] | null> {
   try {
     const { data, error } = await supabase
       .from('customers')
@@ -122,7 +123,7 @@ export async function updateCustomerRelationships(customers: Customer[]): Promis
  * Activate a customer (mark them as active and store their initial relationship)
  * Updates both the customers table and creates a company_customers record
  */
-export async function activateCustomer(customerId: string, initialRelationship: number, companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<void> {
+export async function activateCustomer(customerId: string, initialRelationship: number, companyId: string = DEFAULT_COMPANY_ID): Promise<void> {
   try {
     // Update the main customers table
     const { error: updateError } = await supabase
@@ -166,7 +167,7 @@ export async function activateCustomer(customerId: string, initialRelationship: 
  * Load only active customers (for performance optimization)
  * Uses the company_customers table for fast lookups
  */
-export async function loadActiveCustomers(companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<Customer[]> {
+export async function loadActiveCustomers(companyId: string = DEFAULT_COMPANY_ID): Promise<Customer[]> {
   try {
     // Join customers with company_customers for active customers only
     const { data, error } = await supabase
@@ -213,7 +214,7 @@ export async function loadActiveCustomers(companyId: string = '00000000-0000-000
 /**
  * Check if customers exist for a specific company
  */
-export async function checkCustomersExist(companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<boolean> {
+export async function checkCustomersExist(companyId: string = DEFAULT_COMPANY_ID): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('customers')

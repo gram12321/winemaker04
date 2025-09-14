@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameState } from '@/hooks/useGameState';
+import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/prestige-modal';
 import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
@@ -25,31 +26,36 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance, onBackToLogin }) => {
   const gameState = useGameState();
+  const { subscribe } = useGameUpdates();
   const [currentPrestige, setCurrentPrestige] = useState(0);
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
   const [prestigeData, setPrestigeData] = useState<any>({ totalPrestige: 0, eventBreakdown: [] });
   const consoleHook = useNotifications();
+  
+  // Get current company once instead of multiple calls
+  const currentCompany = getCurrentCompany();
 
-  // Load initial prestige and set up periodic refresh
+  // Load prestige and update on game events
   useEffect(() => {
-    const loadInitialPrestige = async () => {
+    const updatePrestige = async () => {
       try {
         const prestige = await getCurrentPrestige();
         setCurrentPrestige(prestige);
       } catch (error) {
-        console.error('Failed to load initial prestige:', error);
+        console.error('Failed to load prestige:', error);
       }
     };
     
-    loadInitialPrestige();
+    // Initial load
+    updatePrestige();
     
-    // Set up periodic prestige refresh every 2 seconds for more responsive updates
-    const intervalId = setInterval(loadInitialPrestige, 2000);
+    // Subscribe to game updates (triggered by money changes, sales, etc.)
+    const unsubscribe = subscribe(updatePrestige);
     
     return () => {
-      clearInterval(intervalId);
+      unsubscribe();
     };
-  }, []);
+  }, [subscribe]);
 
   const handleIncrementWeek = async () => {
     try {
@@ -149,8 +155,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
                 <Avatar>
                   <AvatarImage src="/assets/icon/winery-icon.png" alt="Winery" />
                   <AvatarFallback className="bg-red-600 text-white">
-                    {getCurrentCompany()?.name ? (() => {
-                      const name = getCurrentCompany()!.name;
+                    {currentCompany?.name ? (() => {
+                      const name = currentCompany.name;
                       const words = name.split(' ').filter(word => word.length > 0);
                       
                       if (words.length === 1) {
@@ -167,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuLabel>
-                {getCurrentCompany()?.name || gameState.companyName || 'My Winery'}
+                {currentCompany?.name || gameState.companyName || 'My Winery'}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onPageChange('profile')}>

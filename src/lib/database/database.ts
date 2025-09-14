@@ -1,6 +1,7 @@
 // Database operations for separate tables
 import { supabase } from './supabase';
 import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType } from '../types';
+import { DEFAULT_COMPANY_ID } from '../utils/companyUtils';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
@@ -10,7 +11,7 @@ const WINE_ORDERS_TABLE = 'wine_orders';
 
 // ===== VINEYARD OPERATIONS =====
 
-export const saveVineyard = async (vineyard: Vineyard, companyId: string = 'default'): Promise<void> => {
+export const saveVineyard = async (vineyard: Vineyard, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
   try {
     const { error } = await supabase
       .from(VINEYARDS_TABLE)
@@ -38,7 +39,7 @@ export const saveVineyard = async (vineyard: Vineyard, companyId: string = 'defa
   }
 };
 
-export const loadVineyards = async (companyId: string = 'default'): Promise<Vineyard[]> => {
+export const loadVineyards = async (companyId: string = DEFAULT_COMPANY_ID): Promise<Vineyard[]> => {
   try {
     const { data, error } = await supabase
       .from(VINEYARDS_TABLE)
@@ -75,7 +76,7 @@ export const loadVineyards = async (companyId: string = 'default'): Promise<Vine
 
 // ===== GAME STATE OPERATIONS =====
 
-export const saveGameState = async (gameState: Partial<GameState>, companyId: string = 'default'): Promise<void> => {
+export const saveGameState = async (gameState: Partial<GameState>, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
   try {
     const dataToSave = {
       id: companyId,
@@ -98,7 +99,7 @@ export const saveGameState = async (gameState: Partial<GameState>, companyId: st
   }
 };
 
-export const loadGameState = async (companyId: string = 'default'): Promise<Partial<GameState> | null> => {
+export const loadGameState = async (companyId: string = DEFAULT_COMPANY_ID): Promise<Partial<GameState> | null> => {
   try {
     const { data, error } = await supabase
       .from(GAME_STATE_TABLE)
@@ -130,7 +131,7 @@ export const loadGameState = async (companyId: string = 'default'): Promise<Part
 
 // ===== WINE BATCH OPERATIONS =====
 
-export const saveWineBatch = async (batch: WineBatch, companyId: string = 'default'): Promise<void> => {
+export const saveWineBatch = async (batch: WineBatch, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_BATCHES_TABLE)
@@ -166,7 +167,7 @@ export const saveWineBatch = async (batch: WineBatch, companyId: string = 'defau
   }
 };
 
-export const loadWineBatches = async (companyId: string = 'default'): Promise<WineBatch[]> => {
+export const loadWineBatches = async (companyId: string = DEFAULT_COMPANY_ID): Promise<WineBatch[]> => {
   try {
     const { data, error } = await supabase
       .from(WINE_BATCHES_TABLE)
@@ -212,7 +213,7 @@ export const loadWineBatches = async (companyId: string = 'default'): Promise<Wi
 
 // ===== WINE ORDER OPERATIONS =====
 
-export const saveWineOrder = async (order: WineOrder, companyId: string = 'default'): Promise<void> => {
+export const saveWineOrder = async (order: WineOrder, companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)
@@ -245,7 +246,7 @@ export const saveWineOrder = async (order: WineOrder, companyId: string = 'defau
   }
 };
 
-export const loadWineOrders = async (companyId: string = 'default', status?: string): Promise<WineOrder[]> => {
+export const loadWineOrders = async (companyId: string = DEFAULT_COMPANY_ID, status?: string): Promise<WineOrder[]> => {
   try {
     // First, load orders without the join to avoid Supabase query issues
     let query = supabase
@@ -303,7 +304,7 @@ export const loadWineOrders = async (companyId: string = 'default', status?: str
   }
 };
 
-export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected', companyId: string = 'default'): Promise<void> => {
+export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected', companyId: string = DEFAULT_COMPANY_ID): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)

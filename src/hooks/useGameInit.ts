@@ -10,7 +10,6 @@ export const useGameInit = () => {
   useEffect(() => {
     const initializeGame = async () => {
       try {
-        setIsLoading(true);
         setError(null);
         
         // Game state is now loaded automatically when companies are set

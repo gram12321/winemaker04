@@ -11,11 +11,10 @@ import { formatCurrency, formatGameDateFromObject } from '@/lib/utils/utils';
 import { loadTransactions } from '@/lib/services/financeService';
 import { Transaction } from '@/lib/types';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { getCurrentCompany } from '@/lib/services/gameState';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
 export function CashFlowView() {
-  const currentCompany = getCurrentCompany();
-  const companyId = currentCompany?.id || 'default';
+  const companyId = getCurrentCompanyId();
   
   const transactions = useAsyncData(
     () => loadTransactions(companyId), 
