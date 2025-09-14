@@ -1,18 +1,11 @@
-import { getGameState, updateGameState } from '../gameState';
-import { GameDate } from '../types';
+import { getGameState } from './gameState';
+import { Transaction } from '../types';
 import { supabase } from '../database/supabase';
 import { loadVineyards, loadWineBatches } from '../database/database';
 import { GAME_INITIALIZATION } from '../constants';
-
-export interface Transaction {
-  id: string;
-  date: GameDate;
-  amount: number; // Positive for income, negative for expense
-  description: string;
-  category: string;
-  recurring: boolean;
-  balance: number; // Balance after transaction
-}
+import { getCurrentCompany, updateGameState } from './gameState';
+import { triggerGameUpdate } from '../../hooks/useGameUpdates';
+import { companyService } from './companyService';
 
 interface FinancialData {
   income: number;
@@ -20,7 +13,7 @@ interface FinancialData {
   netIncome: number;
   incomeDetails: { description: string; amount: number }[];
   expenseDetails: { description: string; amount: number }[];
-  cashBalance: number;
+  cashMoney: number;
   totalAssets: number;
   fixedAssets: number;
   currentAssets: number;
@@ -41,10 +34,19 @@ let transactionsCache: Transaction[] = [];
  * This should be called when starting a new game to ensure the starting money
  * is properly recorded in the finance system
  */
-export const initializeStartingCapital = async (playerId: string = 'default'): Promise<void> => {
+export const initializeStartingCapital = async (companyId?: string): Promise<void> => {
   try {
-    // Check if starting capital transaction already exists
-    const existingTransactions = await loadTransactions(playerId);
+    // Get the current company ID if not provided
+    if (!companyId) {
+      const currentCompany = getCurrentCompany();
+      if (!currentCompany) {
+        return;
+      }
+      companyId = currentCompany.id;
+    }
+    
+    // Check if starting capital transaction already exists for this company
+    const existingTransactions = await loadTransactions(companyId);
     const hasStartingCapital = existingTransactions.some(t => 
       t.description === 'Starting Capital' && t.category === 'Initial Investment'
     );
@@ -59,8 +61,10 @@ export const initializeStartingCapital = async (playerId: string = 'default'): P
       'Starting Capital',
       'Initial Investment',
       false,
-      playerId
+      companyId
     );
+    
+    // Note: triggerGameUpdate() is already called by addTransaction()
   } catch (error) {
     console.error('Error initializing starting capital:', error);
     // Don't throw - allow game to continue even if finance system fails
@@ -80,30 +84,46 @@ export const addTransaction = async (
   description: string,
   category: string,
   recurring = false,
-  playerId: string = 'default'
+  companyId: string = '00000000-0000-0000-0000-000000000000'
 ): Promise<string> => {
-  const gameState = getGameState();
-  
   try {
-    // Calculate new balance
-    const newBalance = (gameState.money || 0) + amount;
+    // Get current company money directly from database
+    let currentMoney = 0;
+    if (companyId !== '00000000-0000-0000-0000-000000000000') {
+      const company = await companyService.getCompany(companyId);
+      if (company) {
+        currentMoney = company.money;
+      }
+    } else {
+      const gameState = getGameState();
+      currentMoney = gameState.money || 0;
+    }
+    
+    // Calculate new money amount
+    const newMoney = currentMoney + amount;
+    
+    // Get game state for date information
+    const gameState = getGameState();
     
     // Create transaction object
     const transaction = {
-      player_id: playerId,
+      company_id: companyId,
       amount,
       description,
       category,
       recurring,
-      balance: newBalance,
+      money: newMoney,
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024,
       created_at: new Date().toISOString()
     };
     
-    // Update player money in game state
-    updateGameState({ money: newBalance });
+    // Update company money in the system
+    await updateGameState({ money: newMoney });
+    
+    // Trigger game update to notify components
+    triggerGameUpdate();
     
     // Add to Supabase
     const { data, error } = await supabase
@@ -126,7 +146,7 @@ export const addTransaction = async (
       description: data.description,
       category: data.category,
       recurring: data.recurring,
-      balance: data.balance
+      money: data.money
     };
     
     transactionsCache.push(newTransaction);
@@ -141,6 +161,7 @@ export const addTransaction = async (
       return b.date.week - a.date.week;
     });
     
+    console.log('addTransaction completed successfully, returning ID:', data.id);
     return data.id;
   } catch (error) {
     console.error('Error adding transaction:', error);
@@ -152,12 +173,12 @@ export const addTransaction = async (
  * Load transactions from Supabase
  * @returns Promise resolving to array of transactions
  */
-export const loadTransactions = async (playerId: string = 'default'): Promise<Transaction[]> => {
+export const loadTransactions = async (companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .select('*')
-      .eq('player_id', playerId)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -173,7 +194,7 @@ export const loadTransactions = async (playerId: string = 'default'): Promise<Tr
       description: row.description,
       category: row.category,
       recurring: row.recurring || false,
-      balance: row.balance
+      money: row.money
     }));
     
     // Sort transactions in memory (newest first)
@@ -205,7 +226,10 @@ export const loadTransactions = async (playerId: string = 'default'): Promise<Tr
 export const getTransactions = (): Transaction[] => {
   // If cache is empty, load transactions from Supabase (but return empty array for now)
   if (transactionsCache.length === 0) {
-    loadTransactions().catch(console.error);
+    // Get current company ID for loading transactions
+    const currentCompany = getCurrentCompany();
+    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    loadTransactions(companyId).catch(console.error);
     return [];
   }
   
@@ -220,11 +244,15 @@ export const getTransactions = (): Transaction[] => {
 export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year'): Promise<FinancialData> => {
   const gameState = getGameState();
   
+  // Get current company ID
+  const currentCompany = getCurrentCompany();
+  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  
   // Load fresh data
   const [transactions, vineyards, wineBatches] = await Promise.all([
-    loadTransactions(),
-    loadVineyards(),
-    loadWineBatches()
+    loadTransactions(companyId),
+    loadVineyards(companyId),
+    loadWineBatches(companyId)
   ]);
   
   // Filter transactions by period
@@ -318,10 +346,10 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   }, 0);
   
   // Calculate totals
-  const cashBalance = gameState.money || 0;
+  const cashMoney = gameState.money || 0;
   const fixedAssets = buildingsValue + farmlandValue;
   const currentAssets = wineValue + grapesValue;
-  const totalAssets = cashBalance + fixedAssets + currentAssets;
+  const totalAssets = cashMoney + fixedAssets + currentAssets;
   
   return {
     income,
@@ -329,7 +357,7 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     netIncome: income - expenses,
     incomeDetails,
     expenseDetails,
-    cashBalance,
+    cashMoney,
     totalAssets,
     fixedAssets,
     currentAssets,

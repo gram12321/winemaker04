@@ -161,18 +161,24 @@ export interface RelationshipBoost {
 }
 
 
-// Game State (time/financial/company data, vineyards/inventory now in separate DB tables)
+// Financial transaction interface
+export interface Transaction {
+  id: string;
+  date: GameDate;
+  amount: number; // Positive for income, negative for expense
+  description: string;
+  category: string;
+  recurring: boolean;
+  money: number; // Money amount after transaction
+}
+
+
 export interface GameState {
-  // Time Management
   week: number;
   season: Season;
   currentYear: number;
-  
-  // Company Identity
   companyName: string;
   foundedYear: number; // Year the company was founded
-  
-  // Financial & Reputation
   money: number;
   prestige: number; // Company prestige for order generation scaling
 }

@@ -6,7 +6,8 @@ import { generateSophisticatedWineOrders } from '../../lib/services/sales/salesO
 import { generateCustomer } from '../../lib/services/sales/generateCustomer';
 import { loadWineBatches, saveWineBatch, loadWineOrders } from '../../lib/database/database';
 import { useGameUpdates } from '../../hooks/useGameUpdates';
-import { formatGameDate } from '../../lib/types';
+import { getCurrentCompany } from '../../lib/services/gameState';
+import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '../../lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '../../hooks/useTableSort';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
@@ -51,9 +52,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   // Load data function
   const loadData = async () => {
     try {
+      const currentCompany = getCurrentCompany();
+      const companyId = currentCompany?.id || 'default';
       const [allOrdersData, allBatches] = await Promise.all([
-        loadWineOrders(), // Load all orders
-        loadWineBatches()
+        loadWineOrders(companyId), // Load all orders
+        loadWineBatches(companyId)
       ]);
       
       setAllOrders(allOrdersData);
@@ -258,7 +261,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   const handlePriceEdit = (wineId: string, currentPrice: number) => {
     setEditingPrices(prev => ({
       ...prev,
-      [wineId]: currentPrice.toFixed(2)
+      [wineId]: formatNumber(currentPrice, 2)
     }));
   };
 
@@ -295,7 +298,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         askingPrice: newPrice
       };
       
-      await saveWineBatch(updatedWine);
+      const currentCompany = getCurrentCompany();
+      const companyId = currentCompany?.id || 'default';
+      await saveWineBatch(updatedWine, companyId);
       setEditingPrices(prev => {
         const updated = { ...prev };
         delete updated[wine.id];
@@ -489,7 +494,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         {wine.vineyardName}
                       </TableCell>
                       <TableCell className="text-gray-500">
-                        {formatGameDate(wine.harvestDate)}
+                        {formatGameDateFromObject(wine.harvestDate)}
                       </TableCell>
                       <TableCell className="text-gray-500">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -497,7 +502,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           wine.quality >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {(wine.quality * 100).toFixed(0)}%
+                          {formatPercent(wine.quality, 0, true)}
                         </span>
                       </TableCell>
                       <TableCell className="text-gray-500">
@@ -506,11 +511,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           wine.balance >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {(wine.balance * 100).toFixed(0)}%
+                          {formatPercent(wine.balance, 0, true)}
                         </span>
                       </TableCell>
                       <TableCell className="text-gray-500 font-medium">
-                        €{wine.finalPrice.toFixed(2)}
+                        {formatCurrency(wine.finalPrice, 2)}
                       </TableCell>
                       <TableCell className="text-gray-500 font-medium">
                         {editingPrices[wine.id] !== undefined ? (
@@ -547,7 +552,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                   : 'text-gray-900' // Same as base
                                 : 'text-gray-900' // Default
                             }`}>
-                              €{(wine.askingPrice ?? wine.finalPrice).toFixed(2)}
+                              {formatCurrency(wine.askingPrice ?? wine.finalPrice, 2)}
                             </span>
                             {wine.askingPrice !== undefined && wine.askingPrice !== wine.finalPrice && (
                               <span className="text-xs text-gray-500">
@@ -627,7 +632,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         <div className="text-sm text-blue-700">
                           <span className="font-medium">Customer Chance:</span>
                           <span className="ml-2 text-lg font-bold text-blue-800">
-                            {orderChanceInfo ? `${(orderChanceInfo.finalChance * 100).toFixed(1)}%` : '--'}
+                            {orderChanceInfo ? formatPercent(orderChanceInfo.finalChance, 1, true) : '--'}
                           </span>
                         </div>
                         <div className="text-blue-500">ℹ️</div>
@@ -638,13 +643,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         <div className="space-y-2 text-sm">
                           <div className="font-semibold">Customer Acquisition Details</div>
                           <div className="space-y-1">
-                            <div>Company Prestige: <span className="font-medium">{orderChanceInfo.companyPrestige.toFixed(1)}</span></div>
+                            <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, 1)}</span></div>
                             <div>Available Wines: <span className="font-medium">{orderChanceInfo.availableWines}</span></div>
                             <div>Pending Orders: <span className="font-medium">{orderChanceInfo.pendingOrders}</span></div>
-                            <div>Base Chance: <span className="font-medium">{(orderChanceInfo.baseChance * 100).toFixed(1)}%</span></div>
-                            <div>Pending Penalty: <span className="font-medium">{orderChanceInfo.pendingPenalty.toFixed(2)}x</span></div>
+                            <div>Base Chance: <span className="font-medium">{formatPercent(orderChanceInfo.baseChance, 1, true)}</span></div>
+                            <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, 2)}x</span></div>
                             <div className="border-t pt-1">
-                              <div>Final Chance: <span className="font-bold text-blue-300">{(orderChanceInfo.finalChance * 100).toFixed(1)}%</span></div>
+                              <div>Final Chance: <span className="font-bold text-blue-300">{formatPercent(orderChanceInfo.finalChance, 1, true)}</span></div>
                               {orderChanceInfo.randomRoll > 0 ? (
                                 <div>Last Roll: <span className="font-medium">{orderChanceInfo.randomRoll < orderChanceInfo.finalChance ? '✅ Customer Acquired' : '❌ No Customer'}</span></div>
                               ) : (
@@ -830,11 +835,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                     <>
                                       <div className="font-semibold">Price Multiplier Calculation</div>
                                       <div className="space-y-1 text-xs">
-                                        <div>Formula: {order.calculationData.estimatedBaseMultiplier.toFixed(3)} (B) × {order.calculationData.purchasingPowerMultiplier.toFixed(3)} (PP) × {order.calculationData.wineTraditionMultiplier.toFixed(3)} (WT) × {order.calculationData.marketShareMultiplier.toFixed(3)} (MS) = {order.calculationData.finalPriceMultiplier.toFixed(3)}x (Mtp)</div>
+                                        <div>Formula: {formatNumber(order.calculationData.estimatedBaseMultiplier, 3)} (B) × {formatNumber(order.calculationData.purchasingPowerMultiplier, 3)} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, 3)} (WT) × {formatNumber(order.calculationData.marketShareMultiplier, 3)} (MS) = {formatNumber(order.calculationData.finalPriceMultiplier, 3)}x (Mtp)</div>
                                       </div>
                                       <div className="font-semibold">Quantity Calculation</div>
                                       <div className="space-y-1 text-xs">
-                                        <div>{order.calculationData.baseQuantity} (B) × {order.calculationData.priceSensitivity.toFixed(3)} (SENS) × {order.calculationData.purchasingPowerMultiplier.toFixed(3)} (PP) × {order.calculationData.wineTraditionMultiplier.toFixed(3)} (WT) × {order.calculationData.quantityMarketShareMultiplier.toFixed(3)} (MS) = {order.calculationData.finalQuantity} bottles</div>
+                                        <div>{order.calculationData.baseQuantity} (B) × {formatNumber(order.calculationData.priceSensitivity, 3)} (SENS) × {formatNumber(order.calculationData.purchasingPowerMultiplier, 3)} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, 3)} (WT) × {formatNumber(order.calculationData.quantityMarketShareMultiplier, 3)} (MS) = {order.calculationData.finalQuantity} bottles</div>
                                       </div>
                                       <div className="text-xs text-gray-500 pt-2 border-t border-gray-600">
                                         B=Base, PP=Purchasing Power, WT=Wine Tradition, MS=Market Share, SENS=Sensitivity
@@ -872,7 +877,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                     (order.customerRelationship ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
                                     'bg-red-100 text-red-800'
                                   }`}>
-                                  {(order.customerRelationship ?? 0).toFixed(0)}%
+                                  {formatPercent((order.customerRelationship ?? 0) / 100, 0, true)}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-md">
@@ -939,7 +944,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           </div>
                         </TableCell>
                         <TableCell className="text-gray-500 font-medium">
-                          €{getAskingPriceForOrder(order).toFixed(2)}
+                          {formatCurrency(getAskingPriceForOrder(order), 2)}
                         </TableCell>
                         <TableCell className="text-gray-500">
                           <div className="flex items-center space-x-1">
@@ -950,7 +955,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                 ? 'text-red-600 font-medium' // Below asking price
                                 : 'text-gray-900' // Equal to asking price
                             }`}>
-                          €{order.offeredPrice.toFixed(2)}
+                          {formatCurrency(order.offeredPrice, 2)}
                             </span>
                           </div>
                         </TableCell>
@@ -966,7 +971,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                     : 'text-gray-600' // Equal to asking price
                                 }`}>
                                   {order.offeredPrice > getAskingPriceForOrder(order) ? '+' : ''}
-                                  {(((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order)) * 100).toFixed(1)}%
+                                  {formatPercent((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order), 1, true)}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -975,9 +980,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                   <div className="text-xs text-gray-500">
                                     {order.calculationData ? (
                                       <>
-                                        <div>Multiple Order Penalty: {order.calculationData.multipleOrderModifier.toFixed(3)}x</div>
-                                        <div>Final Rejection Probability: {(order.calculationData.finalRejectionProbability * 100).toFixed(1)}%</div>
-                                        <div>Random Value: {(order.calculationData.randomValue * 100).toFixed(1)}%</div>
+                                        <div>Multiple Order Penalty: {formatNumber(order.calculationData.multipleOrderModifier, 3)}x</div>
+                                        <div>Final Rejection Probability: {formatPercent(order.calculationData.finalRejectionProbability, 1, true)}</div>
+                                        <div>Random Value: {formatPercent(order.calculationData.randomValue, 1, true)}</div>
                                       </>
                                     ) : (
                                       <div>Analysis data not available</div>
@@ -990,10 +995,10 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         </TableCell>
                         <TableCell className="font-medium text-green-600">
                           <div className="flex flex-col">
-                            <span>€{order.totalValue.toFixed(2)}</span>
+                            <span>{formatCurrency(order.totalValue, 2)}</span>
                             {order.fulfillableValue !== undefined && order.fulfillableValue !== null && order.fulfillableValue < order.totalValue && (
                               <span className="text-xs text-orange-600">
-                                (Can earn: €{order.fulfillableValue.toFixed(2)})
+                                (Can earn: {formatCurrency(order.fulfillableValue, 2)})
                               </span>
                             )}
                           </div>
@@ -1002,7 +1007,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null ? order.fulfillableQuantity : order.requestedQuantity} bottles
                         </TableCell>
                         <TableCell className="text-gray-500 text-sm">
-                          {formatGameDate(order.orderedAt)}
+                          {formatGameDateFromObject(order.orderedAt)}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

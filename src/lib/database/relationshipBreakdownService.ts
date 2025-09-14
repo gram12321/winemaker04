@@ -2,6 +2,8 @@
 import { Customer } from '../types';
 import { calculateCustomerRelationshipBoost } from './prestigeService';
 import { calculateCurrentPrestige } from './prestigeService';
+import { getCurrentCompany } from '../services/gameState';
+import { supabase } from './supabase';
 
 export interface RelationshipBreakdown {
   totalRelationship: number;
@@ -27,9 +29,15 @@ export interface RelationshipBreakdown {
 /**
  * Calculate detailed relationship breakdown for a customer
  */
-export async function calculateRelationshipBreakdown(customer: Customer): Promise<RelationshipBreakdown> {
+export async function calculateRelationshipBreakdown(customer: Customer, companyId?: string): Promise<RelationshipBreakdown> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || 'default';
+  }
+
   // Get current company prestige
-  const { totalPrestige: companyPrestige } = await calculateCurrentPrestige();
+  const { totalPrestige: companyPrestige } = await calculateCurrentPrestige(companyId);
   
   // Calculate base relationship components
   const baseRelationship = 0.1;
@@ -37,10 +45,10 @@ export async function calculateRelationshipBreakdown(customer: Customer): Promis
   const marketShareImpact = 1 + 0.7 * Math.pow(customer.marketShare, 0.25) + Math.pow(customer.marketShare, 0.9);
   
   // Calculate relationship boosts
-  const relationshipBoosts = await calculateCustomerRelationshipBoost(customer.id);
+  const relationshipBoosts = await calculateCustomerRelationshipBoost(customer.id, companyId);
   
   // Get detailed boost information
-  const boostDetails = await getRelationshipBoostDetails(customer.id);
+  const boostDetails = await getRelationshipBoostDetails(customer.id, companyId);
   
   // Use the stored relationship value from the customer object
   const totalRelationship = customer.relationship || 0;
@@ -68,19 +76,25 @@ export async function calculateRelationshipBreakdown(customer: Customer): Promis
 /**
  * Get detailed information about relationship boosts for a customer
  */
-async function getRelationshipBoostDetails(customerId: string): Promise<Array<{
+async function getRelationshipBoostDetails(customerId: string, companyId?: string): Promise<Array<{
   description: string;
   amount: number;
   weeksAgo: number;
   decayedAmount: number;
 }>> {
   try {
-    const { supabase } = await import('./supabase');
+    // Get current company ID if not provided
+    if (!companyId) {
+      const currentCompany = getCurrentCompany();
+      companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    }
+
     
     const { data, error } = await supabase
       .from('relationship_boosts')
       .select('*')
       .eq('customer_id', customerId)
+      .eq('company_id', companyId)
       .order('timestamp', { ascending: false });
 
     if (error || !data) {

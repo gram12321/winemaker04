@@ -1,316 +1,539 @@
 import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { AlertCircle } from 'lucide-react';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { 
+  Settings, 
+  Database, 
+  Users, 
+  Building2, 
+  Trophy, 
+  AlertTriangle,
+  DollarSign,
+  Trash2,
+} from 'lucide-react';
+import { highscoreService } from '@/lib/services/highscoreService';
+import { notificationService } from '@/components/layout/NotificationCenter';
+import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/supabase';
-import { notificationService } from '../layout/NotificationCenter';
-import { addTransaction } from '@/lib/services/financeService';
-import { getGameState, updateGameState } from '@/lib/gameState';
 import { initializeCustomers } from '@/lib/services/sales/createCustomer';
 
 interface AdminDashboardProps {
-  view?: string;
+  onBack?: () => void;
+  onNavigateToLogin?: () => void;
 }
 
-export default function AdminDashboard({ view }: AdminDashboardProps) {
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isLoading, setIsLoading] = useState<{
-    clearStorage: boolean;
-    clearSupabase: boolean;
-    addMoney: boolean;
-    addPrestige: boolean;
-    reinitializeCustomers: boolean;
-  }>({
-    clearStorage: false,
-    clearSupabase: false,
-    addMoney: false,
-    addPrestige: false,
-    reinitializeCustomers: false,
-  });
+export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [goldAmount, setGoldAmount] = useState('10000');
+  const [prestigeAmount, setPrestigeAmount] = useState('100');
 
-  if (view && view !== 'admin') return null;
-
-  const clearLocalStorage = async () => {
+  // Cheat functions (for development/testing)
+  const handleAddGold = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(prev => ({ ...prev, clearStorage: true }));
-      
-      // Clear all game-related data from localStorage
-      const keysToRemove = ['gameState', 'notifications', 'showNotifications'];
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-      });
-      
-      // Clear messages from the notification service
-      notificationService.clearMessages();
-      
-      setMessage({ type: 'success', text: 'Local storage and notifications cleared successfully.' });
-      notificationService.success('Local storage and notifications cleared');
+      const amount = parseFloat(goldAmount) || 10000;
+      // This would need to be implemented in the company service
+      // For now, just show a notification
+      notificationService.success(`Added ${formatCurrency(amount)} to active company (feature pending)`);
     } catch (error) {
-      console.error('Error clearing local storage:', error);
-      setMessage({ type: 'error', text: 'Error clearing local storage.' });
-      notificationService.error('Failed to clear local storage');
+      notificationService.error('Failed to add gold');
     } finally {
-      setIsLoading(prev => ({ ...prev, clearStorage: false }));
-    }
-  };
-
-  const clearSupabaseData = async () => {
-    if (!confirm('Are you sure you want to delete all data from Supabase? This will remove ALL game data and cannot be undone.')) {
-      return;
-    }
-    
-    try {
-      setIsLoading(prev => ({ ...prev, clearSupabase: true }));
-      
-      // Define the actual tables that exist in our Supabase database
-      const gameTables = [
-        'vineyards',
-        'game_state',
-        'wine_batches', 
-        'wine_orders',
-        'transactions',
-        'customers',
-        'prestige_events',
-        'relationship_boosts'
-      ];
-
-      // Clear each known table
-      const clearPromises = gameTables.map(async (tableName) => {
-        try {
-          // Use different delete strategies based on table structure
-          let deleteQuery;
-          if (tableName === 'vineyards' || tableName === 'transactions' || 
-              tableName === 'customers' || tableName === 'prestige_events' || 
-              tableName === 'relationship_boosts') {
-            // For UUID tables, use a valid UUID that won't exist
-            deleteQuery = supabase
-              .from(tableName)
-              .delete()
-              .neq('id', '00000000-0000-0000-0000-000000000000');
-          } else {
-            // For text ID tables, use a string that won't exist
-            deleteQuery = supabase
-              .from(tableName)
-              .delete()
-              .neq('id', 'impossible-id');
-          }
-          
-          const { error } = await deleteQuery;
-          
-          if (error) {
-            console.error(`Failed to clear table ${tableName}:`, error);
-            return { success: false, table: tableName, error: error.message };
-          }
-          
-          return { success: true, table: tableName };
-        } catch (err) {
-          console.error(`Error clearing table ${tableName}:`, err);
-          return { success: false, table: tableName, error: String(err) };
-        }
-      });
-
-      const results = await Promise.all(clearPromises);
-      
-      const successful = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
-      
-      if (failed.length === 0) {
-        setMessage({ type: 'success', text: `Successfully cleared ${successful.length} tables from Supabase.` });
-        notificationService.success(`Cleared ${successful.length} Supabase tables`);
-      } else {
-        setMessage({ 
-          type: 'error', 
-          text: `Cleared ${successful.length} tables, but ${failed.length} failed. Check console for details.` 
-        });
-        notificationService.warning(`Partially cleared Supabase: ${successful.length} success, ${failed.length} failed`);
-        console.log('Failed tables:', failed);
-      }
-    } catch (error) {
-      console.error('Error clearing Supabase:', error);
-      setMessage({ type: 'error', text: `Error clearing Supabase data: ${error}` });
-      notificationService.error('Failed to clear Supabase data');
-    } finally {
-      setIsLoading(prev => ({ ...prev, clearSupabase: false }));
-    }
-  };
-
-  const handleAddMoney = async () => {
-    try {
-      setIsLoading(prev => ({ ...prev, addMoney: true }));
-      
-      // Add €1,000,000 through the finance system
-      await addTransaction(
-        1000000,
-        'Admin: Capital Injection',
-        'Capital'
-      );
-
-      setMessage({ type: 'success', text: 'Added €1,000,000 to treasury successfully.' });
-      notificationService.success('Added €1,000,000 to treasury');
-    } catch (error) {
-      console.error('Error adding money:', error);
-      setMessage({ type: 'error', text: `Error adding money: ${error}` });
-      notificationService.error('Failed to add money');
-    } finally {
-      setIsLoading(prev => ({ ...prev, addMoney: false }));
+      setIsLoading(false);
     }
   };
 
   const handleAddPrestige = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(prev => ({ ...prev, addPrestige: true }));
-      
-      // Get current game state and increase prestige by 100
-      const currentState = getGameState();
-      const newPrestige = (currentState.prestige || 0) + 100;
-      
-      // Update game state with new prestige value
-      updateGameState({ prestige: newPrestige });
-
-      setMessage({ type: 'success', text: `Added +100 prestige. New prestige: ${newPrestige}` });
-      notificationService.success(`Added +100 prestige (Total: ${newPrestige})`);
+      const amount = parseFloat(prestigeAmount) || 100;
+      // This would need to be implemented in the company service
+      notificationService.success(`Added ${amount} prestige to active company (feature pending)`);
     } catch (error) {
-      console.error('Error adding prestige:', error);
-      setMessage({ type: 'error', text: `Error adding prestige: ${error}` });
       notificationService.error('Failed to add prestige');
     } finally {
-      setIsLoading(prev => ({ ...prev, addPrestige: false }));
+      setIsLoading(false);
     }
   };
 
-  const handleReinitializeCustomers = async () => {
-    if (!confirm('Are you sure you want to clear all customers and regenerate them? This will delete all existing customer data and create new customers based on current prestige.')) {
-      return;
-    }
-    
+  const handleClearAllHighscores = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(prev => ({ ...prev, reinitializeCustomers: true }));
-      
-      // Get current game state for prestige
-      const currentState = getGameState();
-      const currentPrestige = currentState.prestige || 1;
-      
-      // Clear existing customers and reinitialize
-      await initializeCustomers(currentPrestige);
-
-      setMessage({ type: 'success', text: `Successfully reinitialized customers with prestige ${currentPrestige}.` });
-      notificationService.success('Customers reinitialized successfully');
+      const result = await highscoreService.clearHighscores();
+      if (result.success) {
+        notificationService.success('All highscores cleared successfully');
+      } else {
+        notificationService.error(result.error || 'Failed to clear highscores');
+      }
     } catch (error) {
-      console.error('Error reinitializing customers:', error);
-      setMessage({ type: 'error', text: `Error reinitializing customers: ${error}` });
-      notificationService.error('Failed to reinitialize customers');
+      notificationService.error('Failed to clear highscores');
     } finally {
-      setIsLoading(prev => ({ ...prev, reinitializeCustomers: false }));
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearCompanyValueHighscores = async () => {
+    setIsLoading(true);
+    try {
+      const result = await highscoreService.clearHighscores('company_value');
+      if (result.success) {
+        notificationService.success('Company value highscores cleared');
+      } else {
+        notificationService.error(result.error || 'Failed to clear company value highscores');
+      }
+    } catch (error) {
+      notificationService.error('Failed to clear company value highscores');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearCompanyValuePerWeekHighscores = async () => {
+    setIsLoading(true);
+    try {
+      const result = await highscoreService.clearHighscores('company_value_per_week');
+      if (result.success) {
+        notificationService.success('Company value per week highscores cleared');
+      } else {
+        notificationService.error(result.error || 'Failed to clear company value per week highscores');
+      }
+    } catch (error) {
+      notificationService.error('Failed to clear company value per week highscores');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestNotifications = () => {
+    notificationService.info('This is an info notification');
+    setTimeout(() => notificationService.success('This is a success notification'), 1000);
+    setTimeout(() => notificationService.warning('This is a warning notification'), 2000);
+    setTimeout(() => notificationService.error('This is an error notification'), 3000);
+  };
+
+  // Database cleanup functions
+  const handleClearAllCompanies = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      notificationService.success('All companies cleared successfully');
+      
+      // Navigate to login and refresh browser
+      if (onNavigateToLogin) {
+        onNavigateToLogin();
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error clearing companies:', error);
+      notificationService.error('Failed to clear companies');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearAllUsers = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      notificationService.success('All users cleared successfully');
+      
+      // Navigate to login and refresh browser
+      if (onNavigateToLogin) {
+        onNavigateToLogin();
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error clearing users:', error);
+      notificationService.error('Failed to clear users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearAllCompaniesAndUsers = async () => {
+    setIsLoading(true);
+    try {
+      // Clear companies first (due to foreign key constraints)
+      const { error: companiesError } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (companiesError) throw companiesError;
+      
+      // Then clear users
+      const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (usersError) throw usersError;
+      
+      notificationService.success('All companies and users cleared successfully');
+      
+      // Navigate to login and refresh browser
+      if (onNavigateToLogin) {
+        onNavigateToLogin();
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error clearing companies and users:', error);
+      notificationService.error('Failed to clear companies and users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  const handleRecreateCustomers = async () => {
+    setIsLoading(true);
+    try {
+      // First clear all existing customers
+      const { error: deleteError } = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (deleteError) throw deleteError;
+      
+      // Then recreate them
+      await initializeCustomers(1); // Initialize with base prestige
+      
+      notificationService.success('All customers cleared and recreated successfully');
+    } catch (error) {
+      console.error('Error recreating customers:', error);
+      notificationService.error('Failed to recreate customers');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const handleClearAllAchievements = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      notificationService.success('All achievements cleared successfully');
+    } catch (error) {
+      console.error('Error clearing achievements:', error);
+      notificationService.error('Failed to clear achievements');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const handleFullDatabaseReset = async () => {
+    setIsLoading(true);
+    try {
+      // Clear all tables in the correct order to respect foreign key constraints
+      const tables = [
+        'relationship_boosts',
+        'wine_orders', 
+        'wine_batches',
+        'vineyards',
+        'achievements',
+        'user_settings',
+        'highscores',
+        'prestige_events',
+        'transactions',
+        'companies',
+        'users',
+        'customers',
+        'game_state'
+      ];
+
+      // Clear all tables (RLS is now disabled)
+      for (const table of tables) {
+        try {
+          const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          if (error) {
+            console.error(`Error clearing table ${table}:`, error);
+          } else {
+            console.log(`Successfully cleared table: ${table}`);
+          }
+        } catch (err) {
+          console.error(`Exception clearing table ${table}:`, err);
+        }
+      }
+
+      notificationService.success('Full database reset completed successfully');
+      
+      // Navigate to login and refresh browser
+      if (onNavigateToLogin) {
+        onNavigateToLogin();
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error during full database reset:', error);
+      notificationService.error('Failed to complete full database reset');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-      
-      {message && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          message.type === 'error' 
-            ? 'bg-red-50 border-red-200 text-red-700' 
-            : 'bg-green-50 border-green-200 text-green-700'
-        }`}>
-          <div className="flex items-center">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            <div>
-              <h4 className="font-medium">{message.type === 'error' ? 'Error' : 'Success'}</h4>
-              <p className="text-sm">{message.text}</p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+            <Settings className="h-8 w-8" />
+            Admin Dashboard
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            Advanced game management and administrative tools
+          </p>
         </div>
-      )}
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Game Data Management</CardTitle>
-          <CardDescription>
-            Advanced options for managing game data. Use with caution!
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Local Storage</h3>
-            <p className="text-sm text-gray-500">
-              Clear all locally stored game data from this browser. This action cannot be undone.
-            </p>
-            <Button 
-              variant="destructive" 
-              onClick={clearLocalStorage} 
-              disabled={isLoading.clearStorage}
-            >
-              {isLoading.clearStorage ? 'Clearing...' : 'Clear Local Storage'}
-            </Button>
-          </div>
-          
-          <hr className="my-4" />
-          
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Supabase Database</h3>
-            <p className="text-sm text-gray-500">
-              Delete all game data from the Supabase database. This affects all users and cannot be undone.
-            </p>
-            <Button 
-              variant="destructive" 
-              onClick={clearSupabaseData}
-              disabled={isLoading.clearSupabase}
-            >
-              {isLoading.clearSupabase ? 'Clearing...' : 'Clear Supabase Data'}
-            </Button>
-          </div>
-          
-          <hr className="my-4" />
-          
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Financial Management</h3>
-            <p className="text-sm text-gray-500">
-              Add money to the treasury through the finance system.
-            </p>
-            <Button 
-              variant="default" 
-              onClick={handleAddMoney}
-              disabled={isLoading.addMoney}
-            >
-              {isLoading.addMoney ? 'Adding...' : 'Add €1,000,000'}
-            </Button>
-          </div>
-          
-          <hr className="my-4" />
-          
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Company Prestige</h3>
-            <p className="text-sm text-gray-500">
-              Increase company prestige by +100. Higher prestige affects order generation and customer behavior.
-            </p>
-            <Button 
-              variant="default" 
-              onClick={handleAddPrestige}
-              disabled={isLoading.addPrestige}
-            >
-              {isLoading.addPrestige ? 'Adding...' : 'Add +100 Prestige'}
-            </Button>
-          </div>
-          
-          <hr className="my-4" />
-          
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Customer Management</h3>
-            <p className="text-sm text-gray-500">
-              Clear all existing customers and regenerate them with the new market share distribution system. Uses current company prestige for relationship calculations.
-            </p>
-            <Button 
-              variant="default" 
-              onClick={handleReinitializeCustomers}
-              disabled={isLoading.reinitializeCustomers}
-            >
-              {isLoading.reinitializeCustomers ? 'Reinitializing...' : 'Reinitialize Customers'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {onBack && (
+          <Button variant="outline" onClick={onBack}>
+            Back
+          </Button>
+        )}
+      </div>
+
+
+        <Tabs defaultValue="database" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="database">Database</TabsTrigger>
+            <TabsTrigger value="cheats">Cheats</TabsTrigger>
+            <TabsTrigger value="tools">Tools</TabsTrigger>
+          </TabsList>
+
+          {/* Database Management */}
+          <TabsContent value="database">
+            <div className="space-y-6">
+
+              {/* Game Data Cleanup */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      Game Data
+                    </CardTitle>
+                    <CardDescription>
+                      Clear game-related data and progression
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      variant="destructive"
+                      onClick={handleClearAllCompanies}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear All Companies
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      onClick={handleClearAllUsers}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Clear All Users
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      onClick={handleClearAllCompaniesAndUsers}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear All Companies & Users
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5" />
+                      Highscores Management
+                    </CardTitle>
+                    <CardDescription>
+                      Manage global leaderboards and highscore data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      variant="destructive"
+                      onClick={handleClearAllHighscores}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear All Highscores
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={handleClearCompanyValueHighscores}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      Clear Company Value Highscores
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={handleClearCompanyValuePerWeekHighscores}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      Clear Company Value Per Week Highscores
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* System Data Cleanup */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5" />
+                      System Data
+                    </CardTitle>
+                    <CardDescription>
+                      Clear system and progression data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      variant="destructive"
+                      onClick={handleRecreateCustomers}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      👥 Clear & Recreate All Customers
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      onClick={handleClearAllAchievements}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      🏆 Clear All Achievements
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Full Database Reset */}
+              <Card className="border-destructive bg-destructive/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    NUCLEAR OPTION
+                  </CardTitle>
+                  <CardDescription className="text-destructive/80">
+                    Complete database wipe - removes ALL data from ALL tables
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    onClick={handleFullDatabaseReset}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    <AlertTriangle className="h-5 w-5 mr-2" />
+                    FULL DATABASE RESET
+                  </Button>
+                  <p className="text-xs text-destructive/70 mt-2 text-center">
+                    This will delete EVERYTHING and cannot be undone!
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+
+          {/* Cheat Tools */}
+          <TabsContent value="cheats">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Financial Cheats
+                  </CardTitle>
+                  <CardDescription>
+                    Add money and resources to the active company
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="goldAmount">Gold Amount</Label>
+                    <Input
+                      id="goldAmount"
+                      type="number"
+                      value={goldAmount}
+                      onChange={(e) => setGoldAmount(e.target.value)}
+                      placeholder="10000"
+                    />
+                    <Button
+                      onClick={handleAddGold}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      Add Gold to Active Company
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="prestigeAmount">Prestige Amount</Label>
+                    <Input
+                      id="prestigeAmount"
+                      type="number"
+                      value={prestigeAmount}
+                      onChange={(e) => setPrestigeAmount(e.target.value)}
+                      placeholder="100"
+                    />
+                    <Button
+                      onClick={handleAddPrestige}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      Add Prestige to Active Company
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
+          </TabsContent>
+
+
+          {/* Development Tools */}
+          <TabsContent value="tools">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notification Testing</CardTitle>
+                  <CardDescription>
+                    Test the notification system
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={handleTestNotifications} className="w-full">
+                    Test All Notification Types
+                  </Button>
+                </CardContent>
+              </Card>
+
+            </div>
+          </TabsContent>
+        </Tabs>
     </div>
   );
 }

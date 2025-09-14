@@ -7,6 +7,7 @@ import { notificationService } from '../../../components/layout/NotificationCent
 import { loadWineBatches } from '../../database/database';
 import { getAvailableBottledWines } from '../../utils/wineFilters';
 import { SALES_CONSTANTS } from '../../constants';
+import { getCurrentCompany } from '../gameState';
 
 
 /**
@@ -61,7 +62,11 @@ export async function generateSophisticatedWineOrders(): Promise<{
   
   try {
     // Step 3: Load all available wines
-    const allBatches = await loadWineBatches();
+    // Get current company ID for loading wine batches
+    const currentCompany = getCurrentCompany();
+    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    
+    const allBatches = await loadWineBatches(companyId);
     const availableWines = getAvailableBottledWines(allBatches);
     
     if (availableWines.length === 0) {

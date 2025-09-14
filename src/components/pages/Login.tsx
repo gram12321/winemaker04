@@ -1,0 +1,433 @@
+import { useState, useEffect } from 'react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { ScrollArea } from '../ui/scroll-area';
+import { Building2, Trophy, User, UserPlus } from 'lucide-react';
+import { companyService, Company } from '@/lib/services/companyService';
+import { highscoreService, HighscoreEntry } from '@/lib/services/highscoreService';
+import { formatNumber, formatDate } from '@/lib/utils/utils';
+import { createNewCompany } from '@/lib/services/gameState';
+import ReactMarkdown from 'react-markdown';
+import readmeContent from '../../../readme.md?raw';
+import versionLogContent from '../../../docs/versionlog.md?raw';
+
+interface LoginProps {
+  onCompanySelected: (company: Company) => void;
+}
+
+export function Login({ onCompanySelected }: LoginProps) {
+  // State
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [userName, setUserName] = useState('');
+  const [createUserProfile, setCreateUserProfile] = useState(false);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+  const [highscores, setHighscores] = useState<{
+    company_value: HighscoreEntry[];
+    company_value_per_week: HighscoreEntry[];
+  }>({
+    company_value: [],
+    company_value_per_week: []
+  });
+  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [isHighscoresLoading, setIsHighscoresLoading] = useState(true);
+  const [deletingCompany, setDeletingCompany] = useState<string | null>(null);
+  const [isReadmeOpen, setIsReadmeOpen] = useState(false);
+  const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
+
+  useEffect(() => {
+    loadAllCompanies();
+    loadHighscores();
+  }, []);
+
+  const loadAllCompanies = async () => {
+    const companies = await companyService.getAllCompanies(20);
+    setAllCompanies(companies);
+    
+    // If no companies exist, show create form
+    if (companies.length === 0) {
+      setShowCreateCompany(true);
+    }
+  };
+
+  const loadHighscores = async () => {
+    setIsHighscoresLoading(true);
+    try {
+      const [companyValue, companyValuePerWeek] = await Promise.all([
+        highscoreService.getHighscores('company_value', 5),
+        highscoreService.getHighscores('company_value_per_week', 5)
+      ]);
+
+      setHighscores({
+        company_value: companyValue,
+        company_value_per_week: companyValuePerWeek
+      });
+    } catch (error) {
+      console.error('Error loading highscores:', error);
+    } finally {
+      setIsHighscoresLoading(false);
+    }
+  };
+
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    const company = await createNewCompany(companyName, createUserProfile, createUserProfile ? userName : undefined);
+
+    if (company) {
+      setCompanyName('');
+      setUserName('');
+      setCreateUserProfile(false);
+      setShowCreateCompany(false);
+      loadAllCompanies();
+      
+      // Select the new company
+      onCompanySelected(company);
+    } else {
+      setError('Failed to create company');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleSelectCompany = (company: Company) => {
+    onCompanySelected(company);
+  };
+
+  const handleDeleteCompany = async (companyId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card click from triggering
+    
+    if (deletingCompany === companyId) {
+      // Confirm delete - second click
+      setIsLoading(true);
+      setError('');
+
+      const result = await companyService.deleteCompany(companyId);
+      
+      if (result.success) {
+        setDeletingCompany(null);
+        // Refresh the page to ensure clean state
+        window.location.reload();
+      } else {
+        setError(result.error || 'Failed to delete company');
+        setDeletingCompany(null);
+      }
+
+      setIsLoading(false);
+    } else {
+      // First click - show confirmation state
+      setDeletingCompany(companyId);
+      
+      // Auto-reset confirmation state after 5 seconds
+      setTimeout(() => {
+        setDeletingCompany(null);
+      }, 5000);
+    }
+  };
+
+  const formatLastPlayed = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    
+    return formatDate(date);
+  };
+
+  const renderHighscoreTable = (scores: HighscoreEntry[], title: string) => (
+    <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+      <CardContent className="p-3">
+        <div className="font-semibold text-sm mb-2 flex items-center gap-1 text-wine">
+          <Trophy className="h-4 w-4" />
+          {title}
+        </div>
+        {isHighscoresLoading ? (
+          <div className="text-xs text-muted-foreground">Loading...</div>
+        ) : scores.length === 0 ? (
+          <div className="text-xs text-muted-foreground">No data</div>
+        ) : (
+          <div className="space-y-1">
+            {scores.map((score, idx) => (
+              <div key={score.id} className="flex justify-between text-xs">
+                <span className="truncate max-w-[100px]">
+                  {idx + 1}. {score.companyName}
+                </span>
+                <span className="font-medium">
+                  €{formatNumber(score.scoreValue, 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div 
+      className="min-h-screen flex flex-col justify-center items-center p-4"
+      style={{
+        backgroundImage: 'url("/assets/pic/loginbg.webp")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Main Container */}
+      <div className="w-full max-w-4xl bg-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/20">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2 text-wine drop-shadow-lg">Welcome to Winemaker</h1>
+          <p className="text-muted-foreground drop-shadow-md">
+            Manage your wine empire and compete with other vintners
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-wine">
+                  <Building2 className="h-5 w-5" />
+                  Company Selection
+                </CardTitle>
+                <CardDescription>
+                  Select an existing company or create a new one
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Recent Companies */}
+                {allCompanies.length > 0 && !showCreateCompany && (
+                  <div className="mb-6">
+                    <h3 className="font-medium mb-3">Recent Companies</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {allCompanies.map((company) => (
+                        <Card 
+                          key={company.id}
+                          className="hover:bg-accent/50 transition-colors"
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div 
+                                className="flex-1 cursor-pointer"
+                                onClick={() => handleSelectCompany(company)}
+                              >
+                                <h4 className="font-medium">{company.name}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Week {company.currentWeek}, {company.currentSeason} {company.currentYear}
+                                </p>
+                                <p className="text-sm">
+                                  €{formatNumber(company.money, 0)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-right text-xs text-muted-foreground">
+                                  {formatLastPlayed(company.lastPlayed)}
+                                </div>
+                                <button
+                                  onClick={(e) => handleDeleteCompany(company.id, e)}
+                                  className={`p-1 rounded hover:bg-destructive/10 transition-colors ${
+                                    deletingCompany === company.id ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground'
+                                  }`}
+                                  title={deletingCompany === company.id ? 'Click again to confirm deletion' : 'Delete company'}
+                                >
+                                  {deletingCompany === company.id ? '🗑️' : '🗑️'}
+                                </button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Create Company */}
+                <div className="pt-4 border-t">
+                  {!showCreateCompany ? (
+                    <Button 
+                      onClick={() => setShowCreateCompany(true)}
+                      className="w-full border-wine text-wine hover:bg-wine hover:text-white"
+                      variant="outline"
+                    >
+                      Create New Company
+                    </Button>
+                  ) : (
+                    <form onSubmit={handleCreateCompany} className="space-y-4">
+                      <div>
+                        <Label htmlFor="companyName">Company Name</Label>
+                        <Input
+                          id="companyName"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          placeholder="Enter company name"
+                          required
+                        />
+                      </div>
+
+                      {/* User Creation Toggle */}
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border">
+                        <Switch
+                          id="createUser"
+                          checked={createUserProfile}
+                          onCheckedChange={setCreateUserProfile}
+                        />
+                        <Label htmlFor="createUser" className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                          {createUserProfile ? <User className="h-4 w-4 text-wine" /> : <UserPlus className="h-4 w-4 text-gray-500" />}
+                          Create a user profile?
+                        </Label>
+                      </div>
+
+                      {/* User Name Input - Only show when toggle is on */}
+                      {createUserProfile && (
+                        <div className="p-3 bg-wine/5 rounded-lg border border-wine/20">
+                          <Label htmlFor="userName" className="text-sm font-medium text-wine">User Name</Label>
+                          <Input
+                            id="userName"
+                            value={userName}
+                            onChange={(e) => setUserName(e.target.value)}
+                            placeholder="Enter your username"
+                            required={createUserProfile}
+                            className="mt-1 border-wine/30 focus:border-wine focus:ring-wine/20"
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button 
+                          type="submit" 
+                          disabled={isLoading}
+                          className="bg-wine hover:bg-wine-dark text-white"
+                        >
+                          {isLoading ? 'Creating...' : 'Start'}
+                        </Button>
+                        {allCompanies.length > 0 && (
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => setShowCreateCompany(false)}
+                            className="border-wine text-wine hover:bg-wine hover:text-white"
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="mt-4 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                    {error}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Highscores */}
+            <div className="grid grid-cols-1 gap-4">
+              {renderHighscoreTable(highscores.company_value, 'Top Companies')}
+              {renderHighscoreTable(highscores.company_value_per_week, 'Fastest Growing')}
+            </div>
+
+            {/* Info */}
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+              <CardContent className="p-4">
+                <h3 className="font-medium mb-2 text-wine">Getting Started</h3>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>• Create a company to start your wine empire</p>
+                  <p>• Plant vineyards and craft premium wines</p>
+                  <p>• Build relationships with customers</p>
+                  <p>• Compete on the global leaderboards</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Links Container */}
+        <div className="mt-6 flex items-center justify-center gap-4 text-sm">
+          <a 
+            href="#" 
+            onClick={(e) => {
+              e.preventDefault();
+              alert('Trello board coming soon!');
+            }}
+            className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
+            title="View Development Roadmap"
+          >
+            <span className="text-lg">📋</span>
+            <span>Trello Board</span>
+          </a>
+          
+          <button 
+            onClick={() => setIsReadmeOpen(true)}
+            className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
+            title="View technical README"
+          >
+            <span className="text-lg">📖</span>
+            <span>README</span>
+          </button>
+
+          <button 
+            onClick={() => setIsVersionLogOpen(true)}
+            className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
+            title="View Version Log"
+          >
+            <span className="text-lg">📝</span>
+            <span>Version Log</span>
+          </button>
+        </div>
+      </div>
+
+      {/* README Modal */}
+      <Dialog open={isReadmeOpen} onOpenChange={setIsReadmeOpen}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Winemaker - Project README</DialogTitle>
+            <DialogDescription>
+              Comprehensive overview of the Winemaker game project
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown>{readmeContent}</ReactMarkdown>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Version Log Modal */}
+      <Dialog open={isVersionLogOpen} onOpenChange={setIsVersionLogOpen}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Winemaker - Version Log</DialogTitle>
+            <DialogDescription>
+              Project development history and roadmap
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown>{versionLogContent}</ReactMarkdown>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

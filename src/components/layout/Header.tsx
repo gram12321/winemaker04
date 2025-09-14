@@ -1,53 +1,34 @@
 import { useState, useEffect } from 'react';
-import { getGameState, getCurrentPrestige } from '@/lib/gameState';
-import { processGameTick } from '@/lib/services/gameTickService';
-import { formatCurrency } from '@/lib/utils/formatUtils';
+import { getCurrentPrestige } from '@/lib/services/gameState';
+import { processGameTick } from '@/lib/services/gameTick';
+import { formatCurrency, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
-import { useGameUpdates } from '@/hooks/useGameUpdates';
-import { CalendarDays, MessageSquareText } from 'lucide-react';
+import { useGameState } from '@/hooks/useGameState';
+import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/prestige-modal';
 import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
+import { Company } from '@/lib/services/companyService';
+import { getCurrentCompany } from '@/lib/services/gameState';
 
 interface HeaderProps {
   currentPage: string;
   onPageChange: (page: string) => void;
   onTimeAdvance: () => void;
+  currentCompany?: Company | null;
+  onBackToLogin?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance }) => {
-  const [gameState, setGameState] = useState(getGameState());
+const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance, onBackToLogin }) => {
+  const gameState = useGameState();
   const [currentPrestige, setCurrentPrestige] = useState(0);
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
-  const [prestigeData, setPrestigeData] = useState({ totalPrestige: 0, eventBreakdown: [] });
+  const [prestigeData, setPrestigeData] = useState<any>({ totalPrestige: 0, eventBreakdown: [] });
   const consoleHook = useNotifications();
-  const { subscribe } = useGameUpdates();
-
-  // Update game state when onTimeAdvance is called
-  useEffect(() => {
-    setGameState(getGameState());
-  }, [onTimeAdvance]);
-
-  // Subscribe to game updates to refresh header data
-  useEffect(() => {
-    const unsubscribe = subscribe(async () => {
-      setGameState(getGameState());
-      // Update prestige when game state changes
-      try {
-        const prestige = await getCurrentPrestige();
-        setCurrentPrestige(prestige);
-      } catch (error) {
-        console.error('Failed to update prestige:', error);
-      }
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, [subscribe]);
 
   // Load initial prestige and set up periodic refresh
   useEffect(() => {
@@ -73,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
   const handleIncrementWeek = async () => {
     try {
       await processGameTick();
-      setGameState(getGameState()); // Update local state immediately
+      // Game state will be updated automatically via the useGameState hook
       onTimeAdvance();
     } catch (error) {
       console.error('Error advancing time:', error);
@@ -91,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: NAVIGATION_EMOJIS.dashboard },
+    { id: 'dashboard', label: 'Company', icon: NAVIGATION_EMOJIS.dashboard },
     { id: 'vineyard', label: 'Vineyard', icon: NAVIGATION_EMOJIS.vineyard },
     { id: 'winery', label: 'Winery', icon: NAVIGATION_EMOJIS.winery },
     { id: 'sales', label: 'Sales', icon: NAVIGATION_EMOJIS.sales },
@@ -127,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
           <div className="flex items-center space-x-2 mr-2">
             <CalendarDays className="h-4 w-4" />
             <span className="text-sm font-medium whitespace-nowrap">
-              W{gameState.week} | {gameState.season} | {gameState.currentYear}
+              {formatGameDate(gameState.week, gameState.season, gameState.currentYear)}
             </span>
           </div>
           
@@ -150,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
             className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center cursor-pointer hover:bg-red-600 transition-colors"
             onClick={handlePrestigeClick}
           >
-            <span className="font-medium">⭐ {currentPrestige.toFixed(1)}</span>
+            <span className="font-medium">⭐ {formatNumber(currentPrestige, 1)}</span>
           </Badge>
           
           <Button 
@@ -167,13 +148,26 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
               <Button variant="ghost" className="flex items-center space-x-2 p-1 rounded-full h-10 w-10 text-white hover:bg-red-700">
                 <Avatar>
                   <AvatarImage src="/assets/icon/winery-icon.png" alt="Winery" />
-                  <AvatarFallback className="bg-red-600 text-white">WM</AvatarFallback>
+                  <AvatarFallback className="bg-red-600 text-white">
+                    {getCurrentCompany()?.name ? (() => {
+                      const name = getCurrentCompany()!.name;
+                      const words = name.split(' ').filter(word => word.length > 0);
+                      
+                      if (words.length === 1) {
+                        // Single word: take first 2 letters
+                        return words[0].substring(0, 2).toUpperCase();
+                      } else {
+                        // Multiple words: take first letter from first 2 words
+                        return words.slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
+                      }
+                    })() : 'CO'}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuLabel>
-                {(gameState as any).companyName || 'My Winery'}
+                {getCurrentCompany()?.name || gameState.companyName || 'My Winery'}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onPageChange('profile')}>
@@ -185,6 +179,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
               <DropdownMenuItem onClick={() => onPageChange('admin')}>
                 Admin Dashboard
               </DropdownMenuItem>
+              {onBackToLogin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onBackToLogin} className="text-red-600">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Switch Company
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuItem onClick={() => onPageChange('achievements')}>
                 Achievements
               </DropdownMenuItem>

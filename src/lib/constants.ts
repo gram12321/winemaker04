@@ -67,8 +67,8 @@ export const PRICING_PLACEHOLDER_CONSTANTS = {
 
 // Starting values for new games
 export const GAME_INITIALIZATION = {
-  // Starting financial capital
-  STARTING_MONEY: 10000000, // €10M starting capital
+  // Starting financial capital (amount added as transaction)
+  STARTING_MONEY: 10000000, // €10M starting capital transaction
   
   // Starting time
   STARTING_WEEK: 1,

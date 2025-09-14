@@ -3,9 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety } from '../types';
 import { saveWineBatch, loadWineBatches, loadVineyards } from '../database/database';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
-import { getGameState } from '../gameState';
+import { getGameState } from './gameState';
 import { generateWineCharacteristics } from './sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from './sales/pricingService';
+import { getCurrentCompany } from './gameState';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -16,10 +17,12 @@ export async function createWineBatchFromHarvest(
   grape: GrapeVariety,
   quantity: number
 ): Promise<WineBatch> {
+  const currentCompany = getCurrentCompany();
+  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
   const gameState = getGameState();
   
   // Get vineyard data for pricing calculations
-  const vineyards = await loadVineyards();
+  const vineyards = await loadVineyards(companyId);
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
   if (!vineyard) {
@@ -58,7 +61,7 @@ export async function createWineBatchFromHarvest(
   const finalPrice = calculateFinalWinePrice(wineBatch, vineyard);
   wineBatch.finalPrice = finalPrice;
 
-  await saveWineBatch(wineBatch);
+  await saveWineBatch(wineBatch, companyId);
   triggerGameUpdate();
   return wineBatch;
 }
@@ -66,12 +69,16 @@ export async function createWineBatchFromHarvest(
 
 // Get all wine batches
 export async function getAllWineBatches(): Promise<WineBatch[]> {
-  return await loadWineBatches();
+  const currentCompany = getCurrentCompany();
+  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  return await loadWineBatches(companyId);
 }
 
 // Update wine batch
 export async function updateWineBatch(batchId: string, updates: Partial<WineBatch>): Promise<boolean> {
-  const batches = await loadWineBatches();
+  const currentCompany = getCurrentCompany();
+  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  const batches = await loadWineBatches(companyId);
   const batch = batches.find(b => b.id === batchId);
   
   if (!batch) {
@@ -83,7 +90,7 @@ export async function updateWineBatch(batchId: string, updates: Partial<WineBatc
     ...updates
   };
 
-  await saveWineBatch(updatedBatch);
+  await saveWineBatch(updatedBatch, companyId);
   triggerGameUpdate();
   return true;
 }

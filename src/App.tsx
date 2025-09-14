@@ -1,27 +1,65 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
-import Dashboard from './components/pages/Dashboard';
+import CompanyOverview from './components/pages/CompanyOverview';
 import Vineyard from './components/pages/Vineyard';
 import Winery from './components/pages/Winery';
 import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
-import Profile from './components/pages/Profile';
-import Settings from './components/pages/Settings';
-import AdminDashboard from './components/pages/AdminDashboard';
-import Achievements from './components/pages/Achievements';
+import { Profile } from './components/pages/Profile';
+import { Settings } from './components/pages/Settings';
+import { AdminDashboard } from './components/pages/AdminDashboard';
+import { Achievements } from './components/pages/Achievements';
 import Winepedia from './components/pages/Winepedia';
+import { Login } from './components/pages/Login';
+import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/toaster';
 import { useGameInit } from './hooks/useGameInit';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
+import { Company } from './lib/services/companyService';
+import { setActiveCompany, resetGameState, getCurrentCompany } from './lib/services/gameState';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('login');
+  const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
+  const [isGameInitialized, setIsGameInitialized] = useState(false);
   const { isLoading, error } = useGameInit();
   
   // Monitor prestige changes and update customer relationships
   usePrestigeUpdates();
 
+  useEffect(() => {
+    // Check for existing company on app start
+    const existingCompany = getCurrentCompany();
+    if (existingCompany) {
+      setCurrentCompany(existingCompany);
+      setCurrentPage('company-overview');
+      setIsGameInitialized(true);
+    }
+  }, []);
+
+  const handleCompanySelected = async (company: Company) => {
+    try {
+      await setActiveCompany(company);
+      setCurrentCompany(company);
+      setCurrentPage('company-overview');
+      setIsGameInitialized(true);
+    } catch (error) {
+      console.error('Error setting active company:', error);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    resetGameState();
+    setCurrentCompany(null);
+    setCurrentPage('login');
+    setIsGameInitialized(false);
+  };
+
   const handlePageChange = (page: string) => {
+    setCurrentPage(page);
+  };
+
+  const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
 
@@ -30,9 +68,24 @@ function App() {
   };
 
   const renderCurrentPage = () => {
+    // If no company is selected, show login
+    if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {
+      return <Login onCompanySelected={handleCompanySelected} />;
+    }
+
     switch (currentPage) {
+      case 'login':
+        return <Login onCompanySelected={handleCompanySelected} />;
+      case 'company-overview':
+        return currentCompany ? (
+          <CompanyOverview 
+            onNavigate={handleNavigate}
+          />
+        ) : (
+          <Login onCompanySelected={handleCompanySelected} />
+        );
       case 'dashboard':
-        return <Dashboard />;
+        return <CompanyOverview onNavigate={setCurrentPage} />;
       case 'vineyard':
         return <Vineyard />;
       case 'winery':
@@ -42,19 +95,48 @@ function App() {
       case 'finance':
         return <Finance />;
       case 'profile':
-        return <Profile />;
+        return (
+          <Profile 
+            currentCompany={currentCompany}
+            onCompanySelected={handleCompanySelected}
+            onBackToLogin={handleBackToLogin}
+          />
+        );
       case 'settings':
-        return <Settings />;
+        return (
+          <Settings 
+            currentCompany={currentCompany}
+            onBack={() => setCurrentPage('company-overview')}
+            onSignOut={handleBackToLogin}
+          />
+        );
       case 'admin':
-        return <AdminDashboard />;
+        return (
+          <AdminDashboard 
+            onBack={() => setCurrentPage('company-overview')}
+            onNavigateToLogin={handleBackToLogin}
+          />
+        );
       case 'achievements':
-        return <Achievements />;
+        return (
+          <Achievements 
+            currentCompany={currentCompany}
+            onBack={() => setCurrentPage('company-overview')}
+          />
+        );
+      case 'highscores':
+        return (
+          <Highscores 
+            currentCompanyId={currentCompany?.id}
+            onBack={() => setCurrentPage(currentCompany ? 'company-overview' : 'login')}
+          />
+        );
       case 'winepedia':
         return <Winepedia />;
       case 'winepedia-customers':
         return <Winepedia view="customers" />;
       default:
-        return <Dashboard />;
+        return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
     }
   };
 
@@ -88,12 +170,23 @@ function App() {
     );
   }
 
+  // Show login page if no company is selected
+  if (!isGameInitialized && currentPage === 'login') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+        <Login onCompanySelected={handleCompanySelected} />
+        <Toaster />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
       <Header 
         currentPage={currentPage} 
         onPageChange={handlePageChange}
         onTimeAdvance={handleTimeAdvance}
+        onBackToLogin={handleBackToLogin}
       />
       
       <main className="container mx-auto px-4 py-8">

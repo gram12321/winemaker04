@@ -3,15 +3,15 @@ import { supabase } from './supabase';
 import { Customer } from '../types';
 
 /**
- * Save customers to database
+ * Save customers to database for a specific company
  */
-export async function saveCustomers(customers: Customer[]): Promise<void> {
+export async function saveCustomers(customers: Customer[], companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<void> {
   try {
-    // Clear existing customers first
+    // Clear existing customers for this company first
     const { error: deleteError } = await supabase
       .from('customers')
       .delete()
-      .gte('created_at', '1970-01-01'); // Delete all rows (since all rows have created_at >= 1970)
+      .eq('company_id', companyId);
 
     if (deleteError) {
       console.error('Error clearing existing customers:', deleteError);
@@ -21,6 +21,7 @@ export async function saveCustomers(customers: Customer[]): Promise<void> {
     // Insert new customers (map to database format)
     const customersForDB = customers.map(customer => ({
       id: customer.id,
+      company_id: companyId,
       name: customer.name,
       country: customer.country,
       customer_type: customer.customerType,
@@ -48,13 +49,14 @@ export async function saveCustomers(customers: Customer[]): Promise<void> {
 }
 
 /**
- * Load customers from database
+ * Load customers from database for a specific company
  */
-export async function loadCustomers(): Promise<Customer[] | null> {
+export async function loadCustomers(companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<Customer[] | null> {
   try {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
+      .eq('company_id', companyId)
       .order('country', { ascending: true })
       .order('name', { ascending: true });
 
@@ -118,20 +120,41 @@ export async function updateCustomerRelationships(customers: Customer[]): Promis
 
 /**
  * Activate a customer (mark them as active and store their initial relationship)
+ * Updates both the customers table and creates a company_customers record
  */
-export async function activateCustomer(customerId: string, initialRelationship: number): Promise<void> {
+export async function activateCustomer(customerId: string, initialRelationship: number, companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<void> {
   try {
-    const { error } = await supabase
+    // Update the main customers table
+    const { error: updateError } = await supabase
       .from('customers')
       .update({ 
         active_customer: true,
         relationship: initialRelationship
       })
-      .eq('id', customerId);
+      .eq('id', customerId)
+      .eq('company_id', companyId);
 
-    if (error) {
-      console.error('Error activating customer:', error);
-      throw error;
+    if (updateError) {
+      console.error('Error updating customer in customers table:', updateError);
+      throw updateError;
+    }
+
+    // Create or update the company_customers record for performance optimization
+    const { error: upsertError } = await supabase
+      .from('company_customers')
+      .upsert({
+        company_id: companyId,
+        customer_id: customerId,
+        relationship: initialRelationship,
+        active_customer: true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'company_id,customer_id'
+      });
+
+    if (upsertError) {
+      console.error('Error upserting customer in company_customers table:', upsertError);
+      throw upsertError;
     }
   } catch (error) {
     console.error('Failed to activate customer:', error);
@@ -141,13 +164,19 @@ export async function activateCustomer(customerId: string, initialRelationship: 
 
 /**
  * Load only active customers (for performance optimization)
+ * Uses the company_customers table for fast lookups
  */
-export async function loadActiveCustomers(): Promise<Customer[]> {
+export async function loadActiveCustomers(companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<Customer[]> {
   try {
+    // Join customers with company_customers for active customers only
     const { data, error } = await supabase
       .from('customers')
-      .select('*')
-      .eq('active_customer', true)
+      .select(`
+        *,
+        company_customers!inner(relationship, active_customer)
+      `)
+      .eq('company_id', companyId)
+      .eq('company_customers.active_customer', true)
       .order('country', { ascending: true })
       .order('name', { ascending: true });
 
@@ -170,8 +199,8 @@ export async function loadActiveCustomers(): Promise<Customer[]> {
       purchasingPower: row.purchasing_power,
       wineTradition: row.wine_tradition,
       priceMultiplier: row.price_multiplier,
-      relationship: row.relationship,
-      activeCustomer: row.active_customer || false
+      relationship: row.company_customers.relationship,
+      activeCustomer: row.company_customers.active_customer
     }));
     
     return customers;
@@ -182,13 +211,14 @@ export async function loadActiveCustomers(): Promise<Customer[]> {
 }
 
 /**
- * Check if customers table exists and is populated
+ * Check if customers exist for a specific company
  */
-export async function checkCustomersExist(): Promise<boolean> {
+export async function checkCustomersExist(companyId: string = '00000000-0000-0000-0000-000000000000'): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('customers')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId);
 
     if (error) {
       console.error('Error checking customers existence:', error);

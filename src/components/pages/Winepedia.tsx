@@ -6,6 +6,7 @@ import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
 import { getAllCustomers, getCountryCode } from '../../lib/services/sales/createCustomer';
 import { Customer } from '../../lib/types';
 import { loadFormattedRelationshipBreakdown } from '../../lib/utils/relationshipUtils';
+import { formatNumber, formatPercent } from '../../lib/utils/utils';
 
 interface WinepediaProps {
   view?: string;
@@ -102,7 +103,7 @@ export default function Winepedia({ view }: WinepediaProps) {
     
     return (
       <span className={colorClass}>
-        {value.toFixed(1)}
+        {formatNumber(value, 1)}
       </span>
     );
   };
@@ -222,7 +223,7 @@ export default function Winepedia({ view }: WinepediaProps) {
                     <div>
                       <span className="font-medium text-gray-700">Price Range:</span>
                       <p className="text-gray-600">
-                        {(config.priceMultiplierRange[0] * 100).toFixed(0)}% - {(config.priceMultiplierRange[1] * 100).toFixed(0)}% of base price
+                        {formatPercent(config.priceMultiplierRange[0], 0, true)} - {formatPercent(config.priceMultiplierRange[1], 0, true)} of base price
                       </p>
                     </div>
                     <div>
@@ -237,7 +238,7 @@ export default function Winepedia({ view }: WinepediaProps) {
                     </div>
                     <div>
                       <span className="font-medium text-gray-700">Multiple Order Penalty:</span>
-                      <p className="text-gray-600">{(config.multipleOrderPenalty * 100).toFixed(0)}%</p>
+                      <p className="text-gray-600">{formatPercent(config.multipleOrderPenalty, 0, true)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -264,13 +265,13 @@ export default function Winepedia({ view }: WinepediaProps) {
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-gray-700">Purchasing Power:</span>
                       <span className={`font-bold ${data.purchasingPower >= 1.0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {(data.purchasingPower * 100).toFixed(0)}%
+                        {formatPercent(data.purchasingPower, 0, true)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-gray-700">Wine Tradition:</span>
                       <span className={`font-bold ${data.wineTradition >= 1.0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {(data.wineTradition * 100).toFixed(0)}%
+                        {formatPercent(data.wineTradition, 0, true)}
                       </span>
                     </div>
                   </div>
@@ -281,7 +282,7 @@ export default function Winepedia({ view }: WinepediaProps) {
                       {Object.entries(data.customerTypeWeights).map(([type, weight]) => (
                         <div key={type} className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">{type}:</span>
-                          <span className="font-medium">{(weight * 100).toFixed(0)}%</span>
+                          <span className="font-medium">{formatPercent(weight, 0, true)}</span>
                         </div>
                       ))}
                     </div>
@@ -409,9 +410,9 @@ export default function Winepedia({ view }: WinepediaProps) {
                           </TableCell>
                           <TableCell className="font-medium">{customer.name}</TableCell>
                           <TableCell>{customer.customerType}</TableCell>
-                          <TableCell>{(customer.marketShare * 100).toFixed(1)}%</TableCell>
-                          <TableCell>{(customer.purchasingPower * 100).toFixed(0)}%</TableCell>
-                          <TableCell>{(customer.wineTradition * 100).toFixed(0)}%</TableCell>
+                          <TableCell>{formatPercent(customer.marketShare, 1, true)}</TableCell>
+                          <TableCell>{formatPercent(customer.purchasingPower, 0, true)}</TableCell>
+                          <TableCell>{formatPercent(customer.wineTradition, 0, true)}</TableCell>
                           <TableCell>
                             <TooltipProvider>
                               <Tooltip>

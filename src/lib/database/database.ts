@@ -10,13 +10,13 @@ const WINE_ORDERS_TABLE = 'wine_orders';
 
 // ===== VINEYARD OPERATIONS =====
 
-export const saveVineyard = async (vineyard: Vineyard, playerId: string = 'default'): Promise<void> => {
+export const saveVineyard = async (vineyard: Vineyard, companyId: string = 'default'): Promise<void> => {
   try {
     const { error } = await supabase
       .from(VINEYARDS_TABLE)
       .upsert({
         id: vineyard.id,
-        player_id: playerId,
+        company_id: companyId,
         name: vineyard.name,
         country: vineyard.country,
         region: vineyard.region,
@@ -38,12 +38,12 @@ export const saveVineyard = async (vineyard: Vineyard, playerId: string = 'defau
   }
 };
 
-export const loadVineyards = async (playerId: string = 'default'): Promise<Vineyard[]> => {
+export const loadVineyards = async (companyId: string = 'default'): Promise<Vineyard[]> => {
   try {
     const { data, error } = await supabase
       .from(VINEYARDS_TABLE)
       .select('*')
-      .eq('player_id', playerId)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -75,15 +75,15 @@ export const loadVineyards = async (playerId: string = 'default'): Promise<Viney
 
 // ===== GAME STATE OPERATIONS =====
 
-export const saveGameState = async (gameState: Partial<GameState>, playerId: string = 'default'): Promise<void> => {
+export const saveGameState = async (gameState: Partial<GameState>, companyId: string = 'default'): Promise<void> => {
   try {
     const dataToSave = {
-      id: playerId,
+      id: companyId,
       player_name: 'Player',
       week: gameState.week,
       season: gameState.season,
       current_year: gameState.currentYear,
-      money: Math.round((gameState.money || 0) * 100), // Convert to cents (integer)
+      money: gameState.money || 0,
       prestige: gameState.prestige,
       updated_at: new Date().toISOString()
     };
@@ -98,12 +98,12 @@ export const saveGameState = async (gameState: Partial<GameState>, playerId: str
   }
 };
 
-export const loadGameState = async (playerId: string = 'default'): Promise<Partial<GameState> | null> => {
+export const loadGameState = async (companyId: string = 'default'): Promise<Partial<GameState> | null> => {
   try {
     const { data, error } = await supabase
       .from(GAME_STATE_TABLE)
       .select('*')
-      .eq('id', playerId);
+      .eq('id', companyId);
 
     if (error) {
       throw error;
@@ -119,7 +119,7 @@ export const loadGameState = async (playerId: string = 'default'): Promise<Parti
       week: record.week,
       season: record.season,
       currentYear: record.current_year,
-      money: record.money / 100, // Convert from cents to euros
+      money: record.money,
       prestige: record.prestige
     };
   } catch (error) {
@@ -130,13 +130,13 @@ export const loadGameState = async (playerId: string = 'default'): Promise<Parti
 
 // ===== WINE BATCH OPERATIONS =====
 
-export const saveWineBatch = async (batch: WineBatch, playerId: string = 'default'): Promise<void> => {
+export const saveWineBatch = async (batch: WineBatch, companyId: string = 'default'): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_BATCHES_TABLE)
       .upsert({
         id: batch.id,
-        player_id: playerId,
+        company_id: companyId,
         vineyard_id: batch.vineyardId,
         vineyard_name: batch.vineyardName,
         grape_variety: batch.grape,
@@ -166,12 +166,12 @@ export const saveWineBatch = async (batch: WineBatch, playerId: string = 'defaul
   }
 };
 
-export const loadWineBatches = async (playerId: string = 'default'): Promise<WineBatch[]> => {
+export const loadWineBatches = async (companyId: string = 'default'): Promise<WineBatch[]> => {
   try {
     const { data, error } = await supabase
       .from(WINE_BATCHES_TABLE)
       .select('*')
-      .eq('player_id', playerId)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -212,13 +212,13 @@ export const loadWineBatches = async (playerId: string = 'default'): Promise<Win
 
 // ===== WINE ORDER OPERATIONS =====
 
-export const saveWineOrder = async (order: WineOrder, playerId: string = 'default'): Promise<void> => {
+export const saveWineOrder = async (order: WineOrder, companyId: string = 'default'): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)
       .upsert({
         id: order.id,
-        player_id: playerId,
+        company_id: companyId,
         wine_batch_id: order.wineBatchId,
         wine_name: order.wineName,
         order_type: order.customerType,
@@ -245,13 +245,13 @@ export const saveWineOrder = async (order: WineOrder, playerId: string = 'defaul
   }
 };
 
-export const loadWineOrders = async (playerId: string = 'default', status?: string): Promise<WineOrder[]> => {
+export const loadWineOrders = async (companyId: string = 'default', status?: string): Promise<WineOrder[]> => {
   try {
     // First, load orders without the join to avoid Supabase query issues
     let query = supabase
       .from(WINE_ORDERS_TABLE)
       .select('*')
-      .eq('player_id', playerId);
+      .eq('company_id', companyId);
     
     // Filter by status if provided, otherwise load all orders
     if (status) {
@@ -303,7 +303,7 @@ export const loadWineOrders = async (playerId: string = 'default', status?: stri
   }
 };
 
-export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected', playerId: string = 'default'): Promise<void> => {
+export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected', companyId: string = 'default'): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)
@@ -312,7 +312,7 @@ export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled'
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId)
-      .eq('player_id', playerId);
+      .eq('company_id', companyId);
 
     if (error) throw error;
   } catch (error) {

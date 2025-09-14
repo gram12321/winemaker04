@@ -21,8 +21,29 @@ export default function FinanceView() {
   const inactivePeriodButtonStyle = "bg-blue-50 text-blue-600 hover:bg-blue-100";
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Finance Management</h1>
+    <div className="space-y-6">
+      {/* Finance Banner */}
+      <div 
+        className="h-48 bg-cover bg-center rounded-lg relative"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&h=400&fit=crop')"
+        }}
+      >
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-900 to-transparent p-4">
+          <div className="flex justify-between items-end">
+            <div>
+              <h2 className="text-white text-2xl font-semibold flex items-center gap-3">
+                <span className="text-2xl">💰</span>
+                Finance Management
+              </h2>
+              <p className="text-white/90 text-sm mt-1">Track your financial performance and growth</p>
+            </div>
+            <div className="text-white/80 text-sm">
+              {activeTab === 'income' ? 'Income & Balance' : activeTab === 'cashflow' ? 'Cash Flow' : 'Research & Upgrades'}
+            </div>
+          </div>
+        </div>
+      </div>
       
       <Tabs defaultValue="income" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-transparent p-0 mb-4 space-x-2">
@@ -66,17 +87,15 @@ export default function FinanceView() {
 
         <Separator className="mb-6 bg-gray-300" />
 
-        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <TabsContent value="income">
-            <IncomeBalanceView period={activePeriod} />
-          </TabsContent>
-          <TabsContent value="cashflow">
-            <CashFlowView />
-          </TabsContent>
-          <TabsContent value="upgrades">
-            <UpgradesPlaceholder />
-          </TabsContent>
-        </div>
+        <TabsContent value="income">
+          <IncomeBalanceView period={activePeriod} />
+        </TabsContent>
+        <TabsContent value="cashflow">
+          <CashFlowView />
+        </TabsContent>
+        <TabsContent value="upgrades">
+          <UpgradesPlaceholder />
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -1,5 +1,5 @@
 // Game tick service - handles time progression and automatic game events
-import { getGameState, updateGameState } from '../gameState';
+import { getGameState, updateGameState } from './gameState';
 import { GAME_INITIALIZATION } from '../constants';
 import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
@@ -40,7 +40,7 @@ export const processGameTick = async (): Promise<void> => {
   }
   
   // Update game state with new time values
-  updateGameState({ week, season, currentYear });
+  await updateGameState({ week, season, currentYear });
   
   // Process weekly effects
   await processWeeklyEffects();

@@ -39,7 +39,28 @@ const Winery: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-800">Winery Operations</h2>
+      {/* Winery Banner */}
+      <div 
+        className="h-48 bg-cover bg-center rounded-lg relative"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=400&fit=crop')"
+        }}
+      >
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-900 to-transparent p-4">
+          <div className="flex justify-between items-end">
+            <div>
+              <h2 className="text-white text-2xl font-semibold flex items-center gap-3">
+                <span className="text-2xl">🍷</span>
+                Winery Operations
+              </h2>
+              <p className="text-white/90 text-sm mt-1">Transform grapes into fine wines</p>
+            </div>
+            <div className="text-white/80 text-sm">
+              {activeBatches.length} Active • {completedWines.length} Completed
+            </div>
+          </div>
+        </div>
+      </div>
       
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

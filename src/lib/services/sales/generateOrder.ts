@@ -3,15 +3,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { WineOrder, Customer } from '../../types';
 import { saveWineOrder, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { getGameState } from '../../gameState';
+import { getGameState } from '../gameState';
 import { formatCompletedWineName } from '../wineBatchService';
 import { SALES_CONSTANTS } from '../../constants';
 import { calculateOrderAmount, calculateSteppedBalance } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoost } from '../../database/prestigeService';
-import { getCurrentPrestige } from '../../gameState';
+import { getCurrentPrestige } from '../gameState';
 import { activateCustomer } from '../../database/customerDatabaseService';
+import { getCurrentCompany } from '../gameState';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
@@ -58,7 +59,11 @@ function calculateRejectionProbability(bidPrice: number, finalPrice: number): nu
 
 // Generate a wine order when a customer is interested (wine value + quality-based decision)
 export async function generateOrder(customer: Customer, specificWineBatch: any, multipleOrderModifier: number = 1.0): Promise<WineOrder | null> {
-  const allVineyards = await loadVineyards();
+  // Get current company ID for loading vineyards
+  const currentCompany = getCurrentCompany();
+  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  
+  const allVineyards = await loadVineyards(companyId);
   
   // Use the provided customer and wine batch (no backwards compatibility)
   const orderCustomer = customer;
@@ -228,11 +233,11 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
     }
   };
   
-  await saveWineOrder(order);
+  await saveWineOrder(order, companyId);
   
   // Activate customer if they're not already active (store their relationship)
   if (!orderCustomer.activeCustomer) {
-    await activateCustomer(orderCustomer.id, currentRelationship);
+    await activateCustomer(orderCustomer.id, currentRelationship, companyId);
   }
   
   triggerGameUpdate();

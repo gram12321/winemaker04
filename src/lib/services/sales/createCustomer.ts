@@ -2,7 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Customer, CustomerCountry, CustomerType } from '../../types';
 import { CUSTOMER_REGIONAL_DATA, CUSTOMER_NAMES, SALES_CONSTANTS } from '../../constants';
-import { getCountryCodeForFlag } from '../../utils/formatUtils';
+import { getCountryCodeForFlag } from '../../utils/utils';
 import { calculateSteppedBalance } from '../../utils/calculator';
 import { 
   saveCustomers, 
@@ -11,6 +11,7 @@ import {
   checkCustomersExist,
   loadActiveCustomers
 } from '../../database/customerDatabaseService';
+import { getCurrentCompany } from '../gameState';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -285,11 +286,15 @@ export function generateCustomersForAllCountries(companyPrestige: number = 1): C
 export async function initializeCustomers(companyPrestige: number = 1): Promise<Customer[]> {
   
   try {
-    // Check if customers already exist
-    const customersExist = await checkCustomersExist();
+    // Get current company ID for customer operations
+    const currentCompany = getCurrentCompany();
+    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    
+    // Check if customers already exist for this company
+    const customersExist = await checkCustomersExist(companyId);
     
     if (customersExist) {
-      const existingCustomers = await loadCustomers();
+      const existingCustomers = await loadCustomers(companyId);
       
       if (existingCustomers && existingCustomers.length > 0) {
         return existingCustomers;
@@ -299,8 +304,8 @@ export async function initializeCustomers(companyPrestige: number = 1): Promise<
     // No existing customers found, generate new ones
     const newCustomers = generateCustomersForAllCountries(companyPrestige);
     
-    // Save to database
-    await saveCustomers(newCustomers);
+    // Save to database for this company
+    await saveCustomers(newCustomers, companyId);
     
     return newCustomers;
     
@@ -319,8 +324,12 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
   try {
     console.log('[Customer Update] Updating relationships for active customers only...');
     
+    // Get current company ID for customer operations
+    const currentCompany = getCurrentCompany();
+    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    
     // Load only active customers (customers who have placed orders)
-    const activeCustomers = await loadActiveCustomers();
+    const activeCustomers = await loadActiveCustomers(companyId);
     
     if (activeCustomers.length === 0) {
       console.log('[Customer Update] No active customers found, skipping relationship updates');
@@ -352,7 +361,11 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
  */
 export async function getAllCustomers(): Promise<Customer[]> {
   try {
-    const customers = await loadCustomers();
+    // Get current company ID for customer operations
+    const currentCompany = getCurrentCompany();
+    const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+    
+    const customers = await loadCustomers(companyId);
     return customers || [];
   } catch (error) {
     console.error('[Customer Service] Failed to get customers:', error);

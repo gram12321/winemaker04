@@ -1,13 +1,14 @@
 // Prestige events management service - handles dynamic prestige system
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
-import { getGameState } from '../gameState';
+import { getGameState } from '../services/gameState';
 import { loadVineyards } from './database';
+import { getCurrentCompany } from '../services/gameState';
 
 /**
  * Calculate current prestige from all events with decay
  */
-export async function calculateCurrentPrestige(): Promise<{
+export async function calculateCurrentPrestige(companyId?: string): Promise<{
   totalPrestige: number;
   eventBreakdown: Array<{
     id: string;
@@ -18,9 +19,16 @@ export async function calculateCurrentPrestige(): Promise<{
     decayRate: number;
   }>;
 }> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   const { data, error } = await supabase
     .from('prestige_events')
     .select('*')
+    .eq('company_id', companyId)
     .order('timestamp', { ascending: false });
 
   if (error) {
@@ -92,14 +100,22 @@ export async function updateBasePrestigeEvent(
   type: 'company_value' | 'vineyard',
   sourceId: string,
   newAmount: number,
-  description: string
+  description: string,
+  companyId?: string
 ): Promise<void> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   // Try to find existing event for this source
   const { data: existingEvents, error: fetchError } = await supabase
     .from('prestige_events')
     .select('id, amount')
     .eq('type', type)
     .eq('source_id', sourceId)
+    .eq('company_id', companyId)
     .limit(1);
 
   if (fetchError) {
@@ -131,7 +147,8 @@ export async function updateBasePrestigeEvent(
         timestamp: Date.now(),
         decay_rate: 0, // Base prestige doesn't decay
         description,
-        source_id: sourceId
+        source_id: sourceId,
+        company_id: companyId
       }]);
 
     if (error) {
@@ -146,8 +163,15 @@ export async function updateBasePrestigeEvent(
 export async function addSalePrestigeEvent(
   saleValue: number,
   customerName: string,
-  wineName: string
+  wineName: string,
+  companyId?: string
 ): Promise<void> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   const prestigeAmount = saleValue / 10000; // Same formula as old system
   const description = `Sale to ${customerName}: ${wineName}`;
   
@@ -160,7 +184,8 @@ export async function addSalePrestigeEvent(
       timestamp: Date.now(),
       decay_rate: 0.95, // 5% weekly decay
       description,
-      source_id: null
+      source_id: null,
+      company_id: companyId
     }]);
 
   if (error) {
@@ -171,7 +196,13 @@ export async function addSalePrestigeEvent(
 /**
  * Initialize base prestige events from current game state
  */
-export async function initializeBasePrestigeEvents(): Promise<void> {
+export async function initializeBasePrestigeEvents(companyId?: string): Promise<void> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   const gameState = getGameState();
   
   // Create company value prestige event
@@ -180,19 +211,26 @@ export async function initializeBasePrestigeEvents(): Promise<void> {
     'company_value',
     'company_money',
     companyValuePrestige,
-    `Company value: €${(gameState.money || 0).toLocaleString()}`
+    `Company value: €${(gameState.money || 0).toLocaleString()}`,
+    companyId
   );
   
   // Create vineyard prestige events
-  await updateVineyardPrestigeEvents();
+  await updateVineyardPrestigeEvents(companyId);
 }
 
 /**
  * Update vineyard prestige events based on current vineyards
  */
-export async function updateVineyardPrestigeEvents(): Promise<void> {
+export async function updateVineyardPrestigeEvents(companyId?: string): Promise<void> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   try {
-    const vineyards = await loadVineyards();
+    const vineyards = await loadVineyards(companyId);
     
     for (const vineyard of vineyards) {
       const vineyardPrestige = vineyard.fieldPrestige || 1; // Use fieldPrestige or default to 1
@@ -200,7 +238,8 @@ export async function updateVineyardPrestigeEvents(): Promise<void> {
         'vineyard',
         vineyard.id,
         vineyardPrestige,
-        `Vineyard: ${vineyard.name} (${vineyard.region}, ${vineyard.country})`
+        `Vineyard: ${vineyard.name} (${vineyard.region}, ${vineyard.country})`,
+        companyId
       );
     }
   } catch (error) {
@@ -217,8 +256,15 @@ export async function createRelationshipBoost(
   customerId: string,
   orderValue: number,
   companyPrestige: number,
-  description: string
+  description: string,
+  companyId?: string
 ): Promise<void> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   // Calculate boost amount with diminishing returns for higher prestige companies
   const prestigeFactor = 1 / (1 + companyPrestige / 100);
   const boostAmount = (orderValue / 10000) * prestigeFactor * 0.1;
@@ -231,7 +277,8 @@ export async function createRelationshipBoost(
       amount: boostAmount,
       timestamp: Date.now(),
       decay_rate: 0.95, // Same as sales prestige events
-      description
+      description,
+      company_id: companyId
     }]);
 
   if (error) {
@@ -242,11 +289,18 @@ export async function createRelationshipBoost(
 /**
  * Calculate current relationship boost for a customer with decay
  */
-export async function calculateCustomerRelationshipBoost(customerId: string): Promise<number> {
+export async function calculateCustomerRelationshipBoost(customerId: string, companyId?: string): Promise<number> {
+  // Get current company ID if not provided
+  if (!companyId) {
+    const currentCompany = getCurrentCompany();
+    companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  }
+
   const { data, error } = await supabase
     .from('relationship_boosts')
     .select('*')
     .eq('customer_id', customerId)
+    .eq('company_id', companyId)
     .order('timestamp', { ascending: false });
 
   if (error) {

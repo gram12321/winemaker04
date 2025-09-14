@@ -1,8 +1,9 @@
 // Customer acquisition service - handles company prestige-based customer generation
 import { loadWineBatches, loadWineOrders } from '../../database/database';
-import { getCurrentPrestige } from '../../gameState';
+import { getCurrentPrestige } from '../gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants';
 import { getAvailableBottledWines } from '../../utils/wineFilters';
+import { getCurrentCompany } from '../gameState';
 
 /**
  * Generate a customer based on company prestige
@@ -34,7 +35,11 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   const currentPrestige = await getCurrentPrestige();
   
   // Check if we have bottled wines available
-  const allBatches = await loadWineBatches();
+  // Get current company ID for loading wine batches
+  const currentCompany = getCurrentCompany();
+  const companyId = currentCompany?.id || '00000000-0000-0000-0000-000000000000';
+  
+  const allBatches = await loadWineBatches(companyId);
   const bottledWines = getAvailableBottledWines(allBatches);
   
   if (bottledWines.length === 0) {
@@ -53,7 +58,7 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   }
   
   // Check pending orders count (load only pending orders for efficiency)
-  const pendingOrders = await loadWineOrders('default', 'pending');
+  const pendingOrders = await loadWineOrders(companyId, 'pending');
   const pendingCount = pendingOrders.length;
   
   // Calculate base chance from prestige
