@@ -120,35 +120,37 @@ export function calculateAsymmetricalMultiplier(value: number): number {
 // ===== VINEYARD SIZE CALCULATIONS =====
 
 /**
- * Generate random vineyard size in acres with realistic distribution
+ * Generate random vineyard size in hectares with realistic distribution
  * Creates weighted probability for different size categories mimicking real-world vineyard distribution
  * 
- * @returns Random vineyard size in acres
+ * @returns Random vineyard size in hectares
  */
-export function getRandomAcres(): number {
+export function getRandomHectares(): number {
   const rand = Math.random() * 100;
-  let acres;
+  let hectares;
 
   if (rand < 25) { // Very Small: 25%
-    acres = 0.1 + Math.random() * 0.9;
+    hectares = 0.05 + Math.random() * 0.45; // 0.05-0.5 hectares
   } else if (rand < 60) { // Small: 35%
-    acres = 1 + Math.random() * 4;
-  } else if (rand < 85) { // Medium: 25%
-    acres = 5 + Math.random() * 15;
-  } else if (rand < 93) { // Large: 8%
-    acres = 20 + Math.random() * 30;
-  } else if (rand < 96) { // Very Large: 3%
-    acres = 50 + Math.random() * 450;
-  } else if (rand < 96.5) { // Extra Large: 0.5%
-    acres = 500 + Math.random() * 500;
-  } else if (rand < 96.6) { // Ultra Large: 0.1%
-    acres = 1000 + Math.random() * 4000;
+    hectares = 0.5 + Math.random() * 2; // 0.5-2.5 hectares
+  } else if (rand < 88) { // Medium: 28%
+    hectares = 2.5 + Math.random() * 2.5; // 2.5-5 hectares
+  } else if (rand < 95) { // Large: 7%
+    hectares = 5 + Math.random() * 5; // 5-10 hectares
+  } else if (rand < 98) { // Very Large: 3%
+    hectares = 10 + Math.random() * 10; // 10-20 hectares
+  } else if (rand < 99.4) { // Extra Large: 1.4%
+    hectares = 20 + Math.random() * 80; // 20-100 hectares
+  } else if (rand < 99.9) { // Ultra Large: 0.5%
+    hectares = 100 + Math.random() * 400; // 100-500 hectares
+  } else if (rand < 100) { // Massive: 0.1%
+    hectares = 500 + Math.random() * 1500; // 500-2000 hectares
   } else { // Fallback to medium size
-    acres = 5 + Math.random() * 15;
+    hectares = 2.5 + Math.random() * 2.5; // 2.5-5 hectares
   }
 
   // Ensure we return a number, not a string
-  return Number(acres.toFixed(2));
+  return Number(hectares.toFixed(2));
 }
 
 // ===== PRESTIGE CALCULATIONS =====

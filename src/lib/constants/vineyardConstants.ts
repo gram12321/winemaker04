@@ -1,0 +1,241 @@
+// Comprehensive vineyard constants - factor-based organization
+// Combines and organizes data from vineyardConstants.ts and names.js
+
+// Removed unused imports - types are only used in constants, not in functions
+
+// ===== COUNTRY-REGION MAPPING =====
+
+export const COUNTRY_REGION_MAP = {
+  "France": ["Bordeaux", "Bourgogne", "Champagne", "Loire Valley", "Rhone Valley", "Jura"],
+  "Germany": ["Ahr", "Mosel", "Pfalz", "Rheingau", "Rheinhessen"],
+  "Italy": ["Piedmont", "Puglia", "Sicily", "Tuscany", "Veneto"],
+  "Spain": ["Jumilla", "La Mancha", "Ribera del Duero", "Rioja", "Jerez"],
+  "United States": ["Central Coast", "Finger Lakes", "Napa Valley", "Sonoma County", "Willamette Valley"]
+} as const;
+
+// ===== REGIONAL CHARACTERISTICS =====
+
+// Soil types by region
+export const REGION_SOIL_TYPES = {
+  "France": {
+    "Bordeaux": ["Clay", "Gravel", "Limestone", "Sand"],
+    "Bourgogne": ["Clay-Limestone", "Limestone", "Marl"],
+    "Champagne": ["Chalk", "Clay", "Limestone"],
+    "Loire Valley": ["Clay", "Flint", "Limestone", "Sand", "Schist"],
+    "Rhone Valley": ["Clay", "Granite", "Limestone", "Sand"],
+    "Jura": ["Clay", "Limestone", "Marl"]
+  },
+  "Germany": {
+    "Ahr": ["Devonian Slate", "Greywacke", "Loess", "Volcanic Soil"],
+    "Mosel": ["Blue Devonian Slate", "Red Devonian Slate"],
+    "Pfalz": ["Basalt", "Limestone", "Loess", "Sandstone"],
+    "Rheingau": ["Loess", "Phyllite", "Quartzite", "Slate"],
+    "Rheinhessen": ["Clay", "Limestone", "Loess", "Quartz"]
+  },
+  "Italy": {
+    "Piedmont": ["Clay", "Limestone", "Marl", "Sand"],
+    "Puglia": ["Clay", "Limestone", "Red Earth", "Sand"],
+    "Sicily": ["Clay", "Limestone", "Sand", "Volcanic Soil"],
+    "Tuscany": ["Clay", "Galestro", "Limestone", "Sandstone"],
+    "Veneto": ["Alluvial", "Clay", "Limestone", "Volcanic Soil"]
+  },
+  "Spain": {
+    "Jumilla": ["Clay", "Limestone", "Sand"],
+    "La Mancha": ["Clay", "Clay-Limestone", "Sand"],
+    "Ribera del Duero": ["Alluvial", "Clay", "Limestone"],
+    "Rioja": ["Alluvial", "Clay", "Clay-Limestone", "Ferrous Clay"],
+    "Jerez": ["Albariza", "Barros", "Arenas"]
+  },
+  "United States": {
+    "Central Coast": ["Clay", "Loam", "Sand", "Shale"],
+    "Finger Lakes": ["Clay", "Gravel", "Limestone", "Shale"],
+    "Napa Valley": ["Alluvial", "Clay", "Loam", "Volcanic"],
+    "Sonoma County": ["Clay", "Loam", "Sand", "Volcanic"],
+    "Willamette Valley": ["Basalt", "Clay", "Marine Sediment", "Volcanic"]
+  }
+} as const;
+
+// Altitude ranges by region (in meters)
+export const REGION_ALTITUDE_RANGES = {
+  "France": {
+    "Bordeaux": [0, 100],
+    "Bourgogne": [200, 500],
+    "Champagne": [100, 300],
+    "Loire Valley": [50, 200],
+    "Rhone Valley": [100, 400],
+    "Jura": [250, 400]
+  },
+  "Germany": {
+    "Ahr": [100, 300],
+    "Mosel": [100, 350],
+    "Pfalz": [100, 300],
+    "Rheingau": [80, 250],
+    "Rheinhessen": [80, 250]
+  },
+  "Italy": {
+    "Piedmont": [150, 600],
+    "Puglia": [0, 200],
+    "Sicily": [50, 900],
+    "Tuscany": [150, 600],
+    "Veneto": [50, 400]
+  },
+  "Spain": {
+    "Jumilla": [400, 800],
+    "La Mancha": [600, 800],
+    "Ribera del Duero": [700, 900],
+    "Rioja": [300, 700],
+    "Jerez": [0, 100]
+  },
+  "United States": {
+    "Central Coast": [0, 500],
+    "Finger Lakes": [100, 300],
+    "Napa Valley": [0, 600],
+    "Sonoma County": [0, 500],
+    "Willamette Valley": [50, 300]
+  }
+} as const;
+
+// Aspect ratings by region (0-1 scale, where 1.0 is optimal)
+export const REGION_ASPECT_RATINGS = {
+  "Italy": {
+    "Piedmont": { "North": 0.25, "Northeast": 0.45, "East": 0.65, "Southeast": 1.00, "South": 0.90, "Southwest": 0.80, "West": 0.60, "Northwest": 0.40 },
+    "Tuscany": { "North": 0.30, "Northeast": 0.55, "East": 0.75, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.70, "Northwest": 0.50 },
+    "Veneto": { "North": 0.20, "Northeast": 0.40, "East": 0.60, "Southeast": 0.95, "South": 1.00, "Southwest": 0.85, "West": 0.65, "Northwest": 0.35 },
+    "Sicily": { "North": 0.45, "Northeast": 0.65, "East": 0.85, "Southeast": 1.00, "South": 0.90, "Southwest": 0.80, "West": 0.70, "Northwest": 0.55 },
+    "Puglia": { "North": 0.50, "Northeast": 0.65, "East": 0.85, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.75, "Northwest": 0.55 }
+  },
+  "France": {
+    "Bordeaux": { "North": 0.30, "Northeast": 0.40, "East": 0.60, "Southeast": 0.85, "South": 1.00, "Southwest": 0.95, "West": 0.80, "Northwest": 0.50 },
+    "Bourgogne": { "North": 0.25, "Northeast": 0.45, "East": 0.65, "Southeast": 1.00, "South": 0.90, "Southwest": 0.80, "West": 0.55, "Northwest": 0.40 },
+    "Champagne": { "North": 0.20, "Northeast": 0.35, "East": 0.55, "Southeast": 0.90, "South": 1.00, "Southwest": 0.80, "West": 0.60, "Northwest": 0.35 },
+    "Loire Valley": { "North": 0.30, "Northeast": 0.50, "East": 0.65, "Southeast": 0.85, "South": 1.00, "Southwest": 0.90, "West": 0.75, "Northwest": 0.45 },
+    "Rhone Valley": { "North": 0.25, "Northeast": 0.50, "East": 0.70, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.65, "Northwest": 0.40 },
+    "Jura": { "North": 0.20, "Northeast": 0.45, "East": 0.65, "Southeast": 0.95, "South": 1.00, "Southwest": 0.85, "West": 0.60, "Northwest": 0.35 }
+  },
+  "Spain": {
+    "Rioja": { "North": 0.40, "Northeast": 0.55, "East": 0.75, "Southeast": 0.85, "South": 1.00, "Southwest": 0.90, "West": 0.80, "Northwest": 0.60 },
+    "Ribera del Duero": { "North": 0.35, "Northeast": 0.60, "East": 0.80, "Southeast": 0.90, "South": 1.00, "Southwest": 0.85, "West": 0.70, "Northwest": 0.55 },
+    "Jumilla": { "North": 0.50, "Northeast": 0.65, "East": 0.85, "Southeast": 1.00, "South": 0.90, "Southwest": 0.80, "West": 0.70, "Northwest": 0.60 },
+    "La Mancha": { "North": 0.45, "Northeast": 0.60, "East": 0.85, "Southeast": 1.00, "South": 0.90, "Southwest": 0.80, "West": 0.75, "Northwest": 0.50 },
+    "Jerez": { "North": 0.50, "Northeast": 0.70, "East": 0.85, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.80, "Northwest": 0.60 }
+  },
+  "United States": {
+    "Napa Valley": { "North": 0.40, "Northeast": 0.65, "East": 0.85, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.75, "Northwest": 0.60 },
+    "Sonoma County": { "North": 0.35, "Northeast": 0.60, "East": 0.80, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.75, "Northwest": 0.55 },
+    "Willamette Valley": { "North": 0.20, "Northeast": 0.45, "East": 0.70, "Southeast": 0.85, "South": 1.00, "Southwest": 0.90, "West": 0.65, "Northwest": 0.35 },
+    "Finger Lakes": { "North": 0.25, "Northeast": 0.50, "East": 0.70, "Southeast": 0.85, "South": 1.00, "Southwest": 0.85, "West": 0.75, "Northwest": 0.45 },
+    "Central Coast": { "North": 0.35, "Northeast": 0.60, "East": 0.80, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.70, "Northwest": 0.50 }
+  },
+  "Germany": {
+    "Mosel": { "North": 0.15, "Northeast": 0.35, "East": 0.65, "Southeast": 0.95, "South": 1.00, "Southwest": 0.85, "West": 0.60, "Northwest": 0.30 },
+    "Rheingau": { "North": 0.20, "Northeast": 0.50, "East": 0.70, "Southeast": 0.90, "South": 1.00, "Southwest": 0.85, "West": 0.75, "Northwest": 0.40 },
+    "Rheinhessen": { "North": 0.25, "Northeast": 0.60, "East": 0.80, "Southeast": 0.90, "South": 1.00, "Southwest": 0.85, "West": 0.70, "Northwest": 0.50 },
+    "Pfalz": { "North": 0.30, "Northeast": 0.65, "East": 0.80, "Southeast": 0.90, "South": 1.00, "Southwest": 0.85, "West": 0.70, "Northwest": 0.50 },
+    "Ahr": { "North": 0.10, "Northeast": 0.40, "East": 0.65, "Southeast": 0.85, "South": 1.00, "Southwest": 0.80, "West": 0.65, "Northwest": 0.35 }
+  }
+} as const;
+
+// ===== MARKET DATA =====
+
+// Prestige rankings by region (0-1 scale, where 1.0 is highest prestige)
+export const REGION_PRESTIGE_RANKINGS = {
+  "Bourgogne, France": 1.00,
+  "Champagne, France": 0.98,
+  "Napa Valley, United States": 0.90,
+  "Bordeaux, France": 0.87,
+  "Tuscany, Italy": 0.83,
+  "Piedmont, Italy": 0.80,
+  "Sonoma County, United States": 0.76,
+  "Rheingau, Germany": 0.73,
+  "Mosel, Germany": 0.72,
+  "Rioja, Spain": 0.70,
+  "Willamette Valley, United States": 0.67,
+  "Ribera del Duero, Spain": 0.65,
+  "Jura, France": 0.65,
+  "Central Coast, United States": 0.63,
+  "Loire Valley, France": 0.61,
+  "Rhone Valley, France": 0.60,
+  "Pfalz, Germany": 0.57,
+  "Veneto, Italy": 0.55,
+  "Jerez, Spain": 0.51,
+  "Finger Lakes, United States": 0.48,
+  "Sicily, Italy": 0.46,
+  "La Mancha, Spain": 0.42,
+  "Ahr, Germany": 0.41,
+  "Jumilla, Spain": 0.39,
+  "Rheinhessen, Germany": 0.37,
+  "Puglia, Italy": 0.35
+} as const;
+
+// Real price ranges per hectare (in euros)
+export const REGION_PRICE_RANGES = {
+  "Bourgogne, France": [1000000, 10000000],
+  "Champagne, France": [500000, 2000000],
+  "Napa Valley, United States": [300000, 1000000],
+  "Bordeaux, France": [100000, 2000000],
+  "Tuscany, Italy": [80000, 1000000],
+  "Piedmont, Italy": [50000, 700000],
+  "Sonoma County, United States": [100000, 500000],
+  "Rheingau, Germany": [50000, 200000],
+  "Mosel, Germany": [30000, 150000],
+  "Rioja, Spain": [30000, 100000],
+  "Willamette Valley, United States": [50000, 250000],
+  "Ribera del Duero, Spain": [30000, 80000],
+  "Central Coast, United States": [20000, 150000],
+  "Loire Valley, France": [20000, 80000],
+  "Rhone Valley, France": [30000, 120000],
+  "Pfalz, Germany": [15000, 60000],
+  "Veneto, Italy": [20000, 100000],
+  "Jerez, Spain": [10000, 40000],
+  "Finger Lakes, United States": [10000, 50000],
+  "Sicily, Italy": [10000, 60000],
+  "La Mancha, Spain": [5000, 30000],
+  "Ahr, Germany": [20000, 50000],
+  "Jumilla, Spain": [5000, 25000],
+  "Rheinhessen, Germany": [10000, 40000],
+  "Puglia, Italy": [5000, 30000],
+  "Jura, France": [25000, 45000]
+} as const;
+
+// ===== GRAPE SUITABILITY =====
+
+// Grape variety suitability by region (0-1 scale, where 1.0 is optimal)
+export const REGION_GRAPE_SUITABILITY = {
+  "Italy": {
+    "Piedmont": { "Barbera": 1.0, "Chardonnay": 0.8, "Pinot Noir": 0.6, "Primitivo": 0.5, "Sauvignon Blanc": 0.6 },
+    "Tuscany": { "Barbera": 0.9, "Chardonnay": 0.7, "Pinot Noir": 0.5, "Primitivo": 0.7, "Sauvignon Blanc": 0.7 },
+    "Veneto": { "Barbera": 0.85, "Chardonnay": 0.75, "Pinot Noir": 0.7, "Primitivo": 0.6, "Sauvignon Blanc": 0.8 },
+    "Sicily": { "Barbera": 0.8, "Chardonnay": 0.6, "Pinot Noir": 0.3, "Primitivo": 0.8, "Sauvignon Blanc": 0.5 },
+    "Puglia": { "Barbera": 0.9, "Chardonnay": 0.65, "Pinot Noir": 0.4, "Primitivo": 1.0, "Sauvignon Blanc": 0.4 }
+  },
+  "France": {
+    "Bordeaux": { "Barbera": 0.7, "Chardonnay": 0.8, "Pinot Noir": 0.6, "Primitivo": 0.6, "Sauvignon Blanc": 0.9 },
+    "Bourgogne": { "Barbera": 0.4, "Chardonnay": 1.0, "Pinot Noir": 0.9, "Primitivo": 0.3, "Sauvignon Blanc": 0.7 },
+    "Champagne": { "Barbera": 0.2, "Chardonnay": 0.9, "Pinot Noir": 0.8, "Primitivo": 0.2, "Sauvignon Blanc": 0.6 },
+    "Loire Valley": { "Barbera": 0.35, "Chardonnay": 0.85, "Pinot Noir": 0.7, "Primitivo": 0.3, "Sauvignon Blanc": 1.0 },
+    "Rhone Valley": { "Barbera": 0.85, "Chardonnay": 0.75, "Pinot Noir": 0.5, "Primitivo": 0.7, "Sauvignon Blanc": 0.7 },
+    "Jura": { "Barbera": 0.3, "Chardonnay": 0.9, "Pinot Noir": 0.8, "Primitivo": 0.2, "Sauvignon Blanc": 0.6 }
+  },
+  "Spain": {
+    "Rioja": { "Barbera": 0.85, "Chardonnay": 0.7, "Pinot Noir": 0.4, "Primitivo": 0.5, "Sauvignon Blanc": 0.6 },
+    "Ribera del Duero": { "Barbera": 0.8, "Chardonnay": 0.6, "Pinot Noir": 0.35, "Primitivo": 0.4, "Sauvignon Blanc": 0.5 },
+    "Jumilla": { "Barbera": 0.9, "Chardonnay": 0.5, "Pinot Noir": 0.3, "Primitivo": 0.85, "Sauvignon Blanc": 0.4 },
+    "La Mancha": { "Barbera": 0.85, "Chardonnay": 0.55, "Pinot Noir": 0.25, "Primitivo": 0.8, "Sauvignon Blanc": 0.5 },
+    "Jerez": { "Barbera": 0.8, "Chardonnay": 0.5, "Pinot Noir": 0.2, "Primitivo": 0.7, "Sauvignon Blanc": 0.4 }
+  },
+  "United States": {
+    "Napa Valley": { "Barbera": 0.9, "Chardonnay": 1.0, "Pinot Noir": 0.7, "Primitivo": 0.85, "Sauvignon Blanc": 0.8 },
+    "Sonoma County": { "Barbera": 0.85, "Chardonnay": 0.95, "Pinot Noir": 0.75, "Primitivo": 0.8, "Sauvignon Blanc": 0.7 },
+    "Willamette Valley": { "Barbera": 0.4, "Chardonnay": 0.85, "Pinot Noir": 1.0, "Primitivo": 0.3, "Sauvignon Blanc": 0.6 },
+    "Finger Lakes": { "Barbera": 0.3, "Chardonnay": 0.7, "Pinot Noir": 0.75, "Primitivo": 0.2, "Sauvignon Blanc": 0.5 },
+    "Central Coast": { "Barbera": 0.85, "Chardonnay": 0.8, "Pinot Noir": 0.6, "Primitivo": 0.75, "Sauvignon Blanc": 0.7 }
+  },
+  "Germany": {
+    "Mosel": { "Barbera": 0.15, "Chardonnay": 0.8, "Pinot Noir": 1.0, "Primitivo": 0.1, "Sauvignon Blanc": 0.8 },
+    "Rheingau": { "Barbera": 0.2, "Chardonnay": 0.85, "Pinot Noir": 0.9, "Primitivo": 0.15, "Sauvignon Blanc": 0.85 },
+    "Rheinhessen": { "Barbera": 0.25, "Chardonnay": 0.8, "Pinot Noir": 0.85, "Primitivo": 0.2, "Sauvignon Blanc": 0.8 },
+    "Pfalz": { "Barbera": 0.3, "Chardonnay": 0.75, "Pinot Noir": 0.8, "Primitivo": 0.25, "Sauvignon Blanc": 0.75 },
+    "Ahr": { "Barbera": 0.1, "Chardonnay": 0.7, "Pinot Noir": 0.95, "Primitivo": 0.1, "Sauvignon Blanc": 0.6 }
+  }
+} as const;
+

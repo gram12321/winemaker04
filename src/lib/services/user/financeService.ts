@@ -312,7 +312,7 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   
   const farmlandValue = vineyards.reduce((sum, vineyard) => {
     // Basic estimate for farmland value
-    const baseValue = vineyard.acres * 10000; // €10k per acre
+    const baseValue = vineyard.hectares * 40000; // €40k per hectare (€10k per acre * 4)
     return sum + baseValue;
   }, 0);
   

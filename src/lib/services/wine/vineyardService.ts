@@ -5,6 +5,7 @@ import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
+// Removed imports for random assignment functions - using placeholder values instead
 
 export const GRAPE_VARIETIES: GrapeVariety[] = [
   'Barbera', 'Chardonnay', 'Pinot Noir', 'Primitivo', 'Sauvignon Blanc'
@@ -12,21 +13,21 @@ export const GRAPE_VARIETIES: GrapeVariety[] = [
 
 // Create a new vineyard
 export async function createVineyard(name: string): Promise<Vineyard> {
-  
+  // Use placeholder/middle values for now
   const vineyard: Vineyard = {
     id: uuidv4(),
     name,
-    country: 'France',
-    region: 'Burgundy',
-    acres: 1,
+    country: 'France', // Placeholder country
+    region: 'Bordeaux', // Placeholder region
+    hectares: 0.5, // Default vineyard size
     grape: null,
     vineAge: 0, // New vines
-    soil: ['Clay', 'Limestone'], // Default soil composition
-    altitude: 200, // Default altitude in meters
-    aspect: 'South', // Default south-facing aspect
-    landValue: 0.5, // Default land value placeholder
+    soil: ['Clay'], // Placeholder soil
+    altitude: 200, // Placeholder altitude
+    aspect: 'South', // Placeholder aspect
+    landValue: 0.5, // Placeholder land value (0-1 scale)
     status: 'Barren',
-    vineyardPrestige: 0 // Starting prestige
+    vineyardPrestige: 0.1 // Placeholder vineyard prestige
   };
 
   await saveVineyard(vineyard);

@@ -293,7 +293,7 @@
 - `src/components/pages/Sales.tsx` - Fixed useGameUpdates hook usage and updated UI to show "Selling Price"
 - Database schema migration: Renamed base_price column to final_price in wine_batches table
 - **Mathematical Functions**: calculateExtremeQualityMultiplier() with multi-segment scaling (polynomial, logarithmic, linear, exponential curves)
-- **Unused Functions**: calculateSteppedBalance(), getRandomAcres(), farmlandAgePrestigeModifier(), calculateOrderAmount() - prepared for future implementation
+- **Unused Functions**: calculateSteppedBalance(), getRandomHectares(), farmlandAgePrestigeModifier(), calculateOrderAmount() - prepared for future implementation
 
 ---
 

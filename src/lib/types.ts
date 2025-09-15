@@ -45,7 +45,7 @@ export interface Vineyard {
   name: string;
   country: string;
   region: string;
-  acres: number;
+  hectares: number;
   grape: GrapeVariety | null;
   vineAge: number;
   soil: string[];

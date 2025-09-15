@@ -86,7 +86,7 @@ Players manage a winery, including vineyard operations, wine production, buildin
 - Wine archetypes for style matching
 
 ### 2. Vineyard Management ✅ **IMPLEMENTED**
-- **Vineyard Creation**: Create vineyards with name, country, region, acres
+- **Vineyard Creation**: Create vineyards with name, country, region, hectares
 - **Planting System**: Plant grape varieties (Chardonnay, Pinot Noir, Cabernet Sauvignon, Merlot)
 - **Status Management**: Barren → Planted → Growing → Harvested → Dormant cycle
 - **Harvest System**: Collect grapes and automatically create wine batches

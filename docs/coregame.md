@@ -33,10 +33,10 @@ This document describes what has been **actually implemented** in the Winery Man
 **What's Implemented**:
 - **Vineyard Interface**: `src/lib/types.ts` - Complete vineyard interface
 - **Vineyard Service**: `src/lib/services/vineyardService.ts` - CRUD operations
-- **Properties**: `id`, `name`, `country`, `region`, `acres`, `grape`, `isPlanted`, `status`, `createdAt`
+- **Properties**: `id`, `name`, `country`, `region`, `hectares`, `grape`, `isPlanted`, `status`, `createdAt`
 - **Status Types**: `'Barren' | 'Planted' | 'Growing' | 'Harvested' | 'Dormant'`
 - **Key Functions**:
-  - `createVineyard()`: Create new vineyard (defaults: France/Burgundy, 1 acre)
+  - `createVineyard()`: Create new vineyard (defaults: France/Bordeaux, 0.5 hectares)
   - `plantVineyard()`: Plant grape varieties (sets isPlanted=true, status='Planted')
   - `growVineyard()`: Change status from 'Planted' to 'Growing'
   - `harvestVineyard()`: Collect grapes and create wine batches
