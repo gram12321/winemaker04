@@ -1,9 +1,33 @@
 
 import React from 'react';
-import { useLoadingState, useGameStateWithData } from '@/hooks';
+import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
 import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch } from '@/lib/types';
-import { Button } from '../ui';
+import { Button, WineCharacteristicsDisplay, CharacteristicBarLegend } from '../ui';
+
+// Component for wine batch balance display (needed to use hooks properly)
+const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const balanceResult = useWineBatchBalance(batch);
+  const formattedBalance = useFormattedBalance(balanceResult);
+  const balanceQuality = useBalanceQuality(balanceResult);
+  
+  return (
+    <div className="text-xs text-gray-600 mt-1">
+      Balance: <span className="font-medium">{formattedBalance}</span> ({balanceQuality})
+    </div>
+  );
+};
+
+// Component for detailed wine characteristics display
+const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  return (
+    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+      <h6 className="text-sm font-medium text-gray-800 mb-2">Wine Characteristics:</h6>
+      <WineCharacteristicsDisplay characteristics={batch.characteristics} />
+      <CharacteristicBarLegend />
+    </div>
+  );
+};
 
 const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
@@ -127,6 +151,10 @@ const Winery: React.FC = () => {
                       <p className="text-sm font-medium text-gray-800 mt-1">
                         {getBatchStatus(batch)}
                       </p>
+                      <WineBatchBalanceDisplay batch={batch} />
+                      
+                      {/* Wine Characteristics Display */}
+                      <WineBatchCharacteristicsDisplay batch={batch} />
                       
                       {/* Fermentation Progress Bar */}
                       {batch.process === 'fermentation' && (
@@ -225,6 +253,10 @@ const Winery: React.FC = () => {
                       <p className="text-xs text-gray-500 mt-1">
                         Completed Week {batch.completedAt?.week}, {batch.completedAt?.season} {batch.completedAt?.year}
                       </p>
+                      
+                      {/* Balance and Characteristics for completed wines */}
+                      <WineBatchBalanceDisplay batch={batch} />
+                      <WineBatchCharacteristicsDisplay batch={batch} />
                     </div>
                     <div className="text-2xl">🍷</div>
                   </div>

@@ -17,3 +17,4 @@ export { ScrollArea } from './scroll-area';
 export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './accordion';
 export { Avatar, AvatarFallback, AvatarImage } from './avatar';
 export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './dropdown-menu';
+export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend } from './CharacteristicBar';

@@ -12,6 +12,23 @@ export interface GameDate {
 
 
 
+// Wine characteristics interface
+export interface WineCharacteristics {
+  acidity: number;      // 0-1 scale
+  aroma: number;        // 0-1 scale
+  body: number;         // 0-1 scale
+  spice: number;        // 0-1 scale
+  sweetness: number;    // 0-1 scale
+  tannins: number;      // 0-1 scale
+}
+
+// Balance calculation result interface
+export interface BalanceResult {
+  score: number;        // 0-1 balance score
+  qualifies: boolean;   // Whether wine qualifies for any archetype (placeholder)
+  dynamicRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges (placeholder)
+}
+
 // Grape varieties (simplified to match what's actually used)
 export type GrapeVariety = 'Chardonnay' | 'Pinot Noir' | 'Cabernet Sauvignon' | 'Merlot';
 
@@ -54,6 +71,7 @@ export interface WineBatch {
   // Wine quality properties (0-1 scale)
   quality: number; // Overall wine quality (0-1)
   balance: number; // Wine balance/body (0-1)
+  characteristics: WineCharacteristics; // Individual wine characteristics
   finalPrice: number; // Calculated base price per bottle in euros
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to finalPrice)
   

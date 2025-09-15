@@ -1,0 +1,60 @@
+// React hook for wine balance calculations
+import { useMemo } from 'react';
+import { WineBatch, WineCharacteristics, BalanceResult } from '../lib/types';
+import { calculateWineBatchBalance, calculateWineBalance } from '../lib/services/balanceCalculator';
+
+/**
+ * Hook to calculate balance for a wine batch
+ * @param wineBatch - Wine batch to calculate balance for
+ * @returns BalanceResult with score and metadata
+ */
+export function useWineBatchBalance(wineBatch: WineBatch | null): BalanceResult | null {
+  return useMemo(() => {
+    if (!wineBatch) return null;
+    return calculateWineBatchBalance(wineBatch);
+  }, [wineBatch]);
+}
+
+/**
+ * Hook to calculate balance for wine characteristics
+ * @param characteristics - Wine characteristics to calculate balance for  
+ * @returns BalanceResult with score and metadata
+ */
+export function useWineBalance(characteristics: WineCharacteristics | null): BalanceResult | null {
+  return useMemo(() => {
+    if (!characteristics) return null;
+    return calculateWineBalance(characteristics);
+  }, [characteristics]);
+}
+
+/**
+ * Hook to get formatted balance score as percentage
+ * @param balanceResult - Balance result from useWineBalance
+ * @returns Formatted percentage string
+ */
+export function useFormattedBalance(balanceResult: BalanceResult | null): string {
+  return useMemo(() => {
+    if (!balanceResult) return '0%';
+    return `${Math.round(balanceResult.score * 100)}%`;
+  }, [balanceResult]);
+}
+
+/**
+ * Hook to get balance quality description
+ * @param balanceResult - Balance result from useWineBalance
+ * @returns Quality description string
+ */
+export function useBalanceQuality(balanceResult: BalanceResult | null): string {
+  return useMemo(() => {
+    if (!balanceResult) return 'Unknown';
+    
+    const score = balanceResult.score;
+    if (score >= 0.9) return 'Exceptional';
+    if (score >= 0.8) return 'Excellent';
+    if (score >= 0.7) return 'Very Good';
+    if (score >= 0.6) return 'Good';
+    if (score >= 0.5) return 'Average';
+    if (score >= 0.4) return 'Below Average';
+    return 'Poor';
+  }, [balanceResult]);
+}

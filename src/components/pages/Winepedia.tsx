@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStateWithData } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, WineCharacteristicsDisplay, CharacteristicBarLegend } from "../ui";
 import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
 import { getAllCustomers, getCountryCode } from '@/lib/services';
 import { Customer } from '@/lib/types';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
 import { formatNumber, formatPercent } from '@/lib/utils/utils';
 import { PageProps } from '../UItypes';
+import { generateDefaultCharacteristics } from '@/lib/services/balanceCalculator';
 
 interface WinepediaProps extends PageProps {
   view?: string;
 }
+
+// Remove the old inline component since we now have the proper one
 
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
@@ -116,27 +119,27 @@ export default function Winepedia({ view }: WinepediaProps) {
     return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
   };
 
-  // Mock grape varieties
+  // Grape varieties with characteristics
   const grapeVarieties = [
     {
-      name: 'Barbera',
-      description: 'A versatile grape known for high acidity and moderate tannins, producing medium-bodied wines.'
-    },
-    {
       name: 'Chardonnay',
-      description: 'A noble grape variety producing aromatic, medium-bodied wines with moderate acidity.'
+      description: 'A noble grape variety producing aromatic, medium-bodied wines with moderate acidity.',
+      characteristics: generateDefaultCharacteristics('Chardonnay')
     },
     {
       name: 'Pinot Noir',
-      description: 'A delicate grape creating light-bodied, aromatic wines with high acidity and soft tannins.'
+      description: 'A delicate grape creating light-bodied, aromatic wines with high acidity and soft tannins.',
+      characteristics: generateDefaultCharacteristics('Pinot Noir')
     },
     {
-      name: 'Primitivo',
-      description: 'A robust grape yielding full-bodied, aromatic wines with natural sweetness and high tannins.'
+      name: 'Cabernet Sauvignon',
+      description: 'A bold grape producing full-bodied, structured wines with high tannins and good aging potential.',
+      characteristics: generateDefaultCharacteristics('Cabernet Sauvignon')
     },
     {
-      name: 'Sauvignon Blanc',
-      description: 'A crisp grape variety producing aromatic, light-bodied wines with high acidity.'
+      name: 'Merlot',
+      description: 'A smooth grape variety creating medium to full-bodied wines with soft tannins and rich fruit flavors.',
+      characteristics: generateDefaultCharacteristics('Merlot')
     }
   ];
 
@@ -183,8 +186,13 @@ export default function Winepedia({ view }: WinepediaProps) {
                   </div>
                   <CardTitle>{grape.name}</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <p className="text-gray-600">{grape.description}</p>
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Wine Characteristics:</h4>
+                    <WineCharacteristicsDisplay characteristics={grape.characteristics} />
+                    <CharacteristicBarLegend />
+                  </div>
                 </CardContent>
               </Card>
             ))}

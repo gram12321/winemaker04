@@ -6,6 +6,7 @@ import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 import { getGameState } from './gameState';
 import { generateWineCharacteristics } from './sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from './sales/pricingService';
+import { generateDefaultCharacteristics, calculateWineBalance } from './balanceCalculator';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -29,6 +30,12 @@ export async function createWineBatchFromHarvest(
   // Generate wine quality characteristics using the new quality service
   const { quality, balance } = generateWineCharacteristics(grape, vineyardId);
   
+  // Generate individual wine characteristics
+  const characteristics = generateDefaultCharacteristics(grape);
+  
+  // Calculate balance using the new balance calculator
+  const balanceResult = calculateWineBalance(characteristics);
+  
   // Create initial wine batch without final price
   const wineBatch: WineBatch = {
     id: uuidv4(),
@@ -40,7 +47,8 @@ export async function createWineBatchFromHarvest(
     process: 'none',
     fermentationProgress: 0,
     quality,
-    balance,
+    balance: balanceResult.score, // Use calculated balance
+    characteristics,
     finalPrice: 0, // Will be calculated below
     harvestDate: {
       week: gameState.week || 1,
