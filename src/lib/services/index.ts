@@ -11,7 +11,7 @@ export { generateCustomer } from './sales/generateCustomer';
 export { generateOrder } from './sales/generateOrder';
 export { processGameTick } from './gameTick';
 export { createVineyard, plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, GRAPE_VARIETIES } from './wine/vineyardService';
-export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect } from './wine/vineyardValueCalc';
+export { calculateLandValue, calculateVineyardPrestige, normalizeAltitude, normalizePrestige, normalizeAspect } from './wine/vineyardValueCalc';
 export { getAllWineBatches, formatCompletedWineName } from './wine/wineBatchService';
 export { crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from './wine/wineryService';
 export { recordBottledWine, loadWineLog, getVineyardWineHistory, calculateVineyardStats } from './wine/wineLogService';

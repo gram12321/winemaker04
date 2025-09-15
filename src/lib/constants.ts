@@ -37,6 +37,13 @@ export const PRESTIGE_ORDER_GENERATION = {
 
 // ===== WINE PRODUCTION CONSTANTS =====
 
+// Vineyard prestige calculation constants
+export const VINEYARD_PRESTIGE_CONSTANTS = {
+  // Land value normalization constant for prestige calculation
+  // Set to 200000 to match the max price of non-top3 regions like "Bordeaux, France"
+  LAND_VALUE_NORMALIZATION: 200000,
+} as const;
+
 // Quality constants for wine generation
 export const WINE_QUALITY_CONSTANTS = {
   // Base placeholder values (will be replaced with proper calculations later)

@@ -56,7 +56,7 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       region: row.region,
       hectares: row.hectares,
       grape: row.grape_variety,
-      vineAge: row.vine_age || 0,
+      vineAge: row.vine_age, // Allow null values
       soil: row.soil || ['Clay'], // Default soil if not set
       altitude: row.altitude || 200,
       aspect: row.aspect || 'South',

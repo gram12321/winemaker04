@@ -139,62 +139,82 @@ export const REGION_ASPECT_RATINGS = {
 
 // Prestige rankings by region (0-1 scale, where 1.0 is highest prestige)
 export const REGION_PRESTIGE_RANKINGS = {
-  "Bourgogne, France": 1.00,
-  "Champagne, France": 0.98,
-  "Napa Valley, United States": 0.90,
-  "Bordeaux, France": 0.87,
-  "Tuscany, Italy": 0.83,
-  "Piedmont, Italy": 0.80,
-  "Sonoma County, United States": 0.76,
-  "Rheingau, Germany": 0.73,
-  "Mosel, Germany": 0.72,
-  "Rioja, Spain": 0.70,
-  "Willamette Valley, United States": 0.67,
-  "Ribera del Duero, Spain": 0.65,
-  "Jura, France": 0.65,
-  "Central Coast, United States": 0.63,
-  "Loire Valley, France": 0.61,
-  "Rhone Valley, France": 0.60,
-  "Pfalz, Germany": 0.57,
-  "Veneto, Italy": 0.55,
-  "Jerez, Spain": 0.51,
-  "Finger Lakes, United States": 0.48,
-  "Sicily, Italy": 0.46,
-  "La Mancha, Spain": 0.42,
-  "Ahr, Germany": 0.41,
-  "Jumilla, Spain": 0.39,
-  "Rheinhessen, Germany": 0.37,
-  "Puglia, Italy": 0.35
+  "France": {
+    "Bourgogne": 1.00,
+    "Champagne": 0.98,
+    "Bordeaux": 0.87,
+    "Jura": 0.65,
+    "Loire Valley": 0.61,
+    "Rhone Valley": 0.60
+  },
+  "United States": {
+    "Napa Valley": 0.90,
+    "Sonoma County": 0.76,
+    "Willamette Valley": 0.67,
+    "Central Coast": 0.63,
+    "Finger Lakes": 0.48
+  },
+  "Italy": {
+    "Tuscany": 0.83,
+    "Piedmont": 0.80,
+    "Veneto": 0.55,
+    "Sicily": 0.46,
+    "Puglia": 0.35
+  },
+  "Germany": {
+    "Rheingau": 0.73,
+    "Mosel": 0.72,
+    "Pfalz": 0.57,
+    "Ahr": 0.41,
+    "Rheinhessen": 0.37
+  },
+  "Spain": {
+    "Rioja": 0.70,
+    "Ribera del Duero": 0.65,
+    "Jerez": 0.51,
+    "La Mancha": 0.42,
+    "Jumilla": 0.39
+  }
 } as const;
 
 // Real price ranges per hectare (in euros)
 export const REGION_PRICE_RANGES = {
-  "Bourgogne, France": [1000000, 10000000],
-  "Champagne, France": [500000, 2000000],
-  "Napa Valley, United States": [300000, 1000000],
-  "Bordeaux, France": [100000, 2000000],
-  "Tuscany, Italy": [80000, 1000000],
-  "Piedmont, Italy": [50000, 700000],
-  "Sonoma County, United States": [100000, 500000],
-  "Rheingau, Germany": [50000, 200000],
-  "Mosel, Germany": [30000, 150000],
-  "Rioja, Spain": [30000, 100000],
-  "Willamette Valley, United States": [50000, 250000],
-  "Ribera del Duero, Spain": [30000, 80000],
-  "Central Coast, United States": [20000, 150000],
-  "Loire Valley, France": [20000, 80000],
-  "Rhone Valley, France": [30000, 120000],
-  "Pfalz, Germany": [15000, 60000],
-  "Veneto, Italy": [20000, 100000],
-  "Jerez, Spain": [10000, 40000],
-  "Finger Lakes, United States": [10000, 50000],
-  "Sicily, Italy": [10000, 60000],
-  "La Mancha, Spain": [5000, 30000],
-  "Ahr, Germany": [20000, 50000],
-  "Jumilla, Spain": [5000, 25000],
-  "Rheinhessen, Germany": [10000, 40000],
-  "Puglia, Italy": [5000, 30000],
-  "Jura, France": [25000, 45000]
+  "France": {
+    "Bourgogne": [1000000, 10000000],
+    "Champagne": [500000, 2000000],
+    "Bordeaux": [100000, 2000000],
+    "Loire Valley": [20000, 80000],
+    "Rhone Valley": [30000, 120000],
+    "Jura": [25000, 45000]
+  },
+  "United States": {
+    "Napa Valley": [300000, 1000000],
+    "Sonoma County": [100000, 500000],
+    "Willamette Valley": [50000, 250000],
+    "Central Coast": [20000, 150000],
+    "Finger Lakes": [10000, 50000]
+  },
+  "Italy": {
+    "Tuscany": [80000, 1000000],
+    "Piedmont": [50000, 700000],
+    "Veneto": [20000, 100000],
+    "Sicily": [10000, 60000],
+    "Puglia": [5000, 30000]
+  },
+  "Germany": {
+    "Rheingau": [50000, 200000],
+    "Mosel": [30000, 150000],
+    "Pfalz": [15000, 60000],
+    "Ahr": [20000, 50000],
+    "Rheinhessen": [10000, 40000]
+  },
+  "Spain": {
+    "Rioja": [30000, 100000],
+    "Ribera del Duero": [30000, 80000],
+    "Jerez": [10000, 40000],
+    "La Mancha": [5000, 30000],
+    "Jumilla": [5000, 25000]
+  }
 } as const;
 
 // ===== GRAPE SUITABILITY =====

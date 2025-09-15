@@ -5,7 +5,7 @@ import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
-import { calculateLandValue } from './vineyardValueCalc';
+import { calculateLandValue, calculateVineyardPrestige } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { 
   COUNTRY_REGION_MAP, 
@@ -78,15 +78,18 @@ export async function createVineyard(name: string): Promise<Vineyard> {
     region,
     hectares,
     grape: null,
-    vineAge: 0, // New vines
+    vineAge: null, // Not planted yet
     soil,
     altitude,
     aspect,
     landValue, // Calculated land value in euros per hectare
     vineyardTotalValue: landValue * hectares, // Total vineyard value
     status: 'Barren',
-    vineyardPrestige: 0.1 // Will be calculated properly once we add more prestige factors
+    vineyardPrestige: 0 // Will be calculated after vineyard is created
   };
+
+  // Calculate prestige after other properties are set
+  vineyard.vineyardPrestige = calculateVineyardPrestige(vineyard);
 
   await saveVineyard(vineyard);
   
@@ -114,9 +117,12 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Pr
   const updatedVineyard: Vineyard = {
     ...vineyard,
     grape,
-    vineAge: 0, // Reset vine age when planting new vines
+    vineAge: 0, // Newly planted vines
     status: 'Planted'
   };
+
+  // Recalculate prestige since grape variety affects it
+  updatedVineyard.vineyardPrestige = calculateVineyardPrestige(updatedVineyard);
 
   await saveVineyard(updatedVineyard);
   triggerGameUpdate();
@@ -191,3 +197,4 @@ export async function resetVineyard(vineyardId: string): Promise<boolean> {
 export async function getAllVineyards(): Promise<Vineyard[]> {
   return await loadVineyards();
 }
+

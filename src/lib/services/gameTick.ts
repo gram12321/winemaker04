@@ -3,6 +3,8 @@ import { getGameState, updateGameState } from './gameState';
 import { GAME_INITIALIZATION } from '../constants';
 import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
+import { loadVineyards, saveVineyard } from '../database/database';
+import { calculateVineyardPrestige } from './wine/vineyardValueCalc';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -75,26 +77,26 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
   // - Prestige adjustments
 };
 
-/**
- * Update all vineyard ages by +1 year
- */
 const updateVineyardAges = async (): Promise<void> => {
   try {
-    const { loadVineyards, saveVineyard } = await import('../database/database');
     const vineyards = await loadVineyards();
     
     for (const vineyard of vineyards) {
-      // Only age vines that are planted (have a grape variety)
-      if (vineyard.grape) {
+      // Only age vines that are planted (have a grape variety) and have a vine age (not null)
+      if (vineyard.grape && vineyard.vineAge !== null) {
         const updatedVineyard = {
           ...vineyard,
           vineAge: vineyard.vineAge + 1
         };
+        
+        // Recalculate prestige since vine age affects it
+        updatedVineyard.vineyardPrestige = calculateVineyardPrestige(updatedVineyard);
+        
         await saveVineyard(updatedVineyard);
       }
     }
     
-
+    
   } catch (error) {
     console.error('Error updating vineyard ages:', error);
   }

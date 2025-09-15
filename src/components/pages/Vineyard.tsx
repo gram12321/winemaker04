@@ -350,10 +350,12 @@ const Vineyard: React.FC = () => {
                     {/* Vine Info */}
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-900">
-                        {vineyard.vineAge > 0 ? (
-                          <span>{vineyard.vineAge} years old</span>
+                        {vineyard.vineAge === null ? (
+                          <span className="text-gray-400">Not planted</span>
+                        ) : vineyard.vineAge === 0 ? (
+                          <span className="text-green-600">Newly planted</span>
                         ) : (
-                          <span className="text-gray-400">New vines</span>
+                          <span>{vineyard.vineAge} years old</span>
                         )}
                       </div>
                       <div className="text-xs text-gray-500">

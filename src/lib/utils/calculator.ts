@@ -162,7 +162,7 @@ export function getRandomHectares(): number {
  * @param vineAge - Age of the vines in years
  * @returns Prestige modifier between 0 and 1
  */
-export function farmlandAgePrestigeModifier(vineAge: number): number {
+export function vineyardAgePrestigeModifier(vineAge: number): number {
   const age = parseFloat(vineAge.toString());
   if (isNaN(age) || age < 0) {
     return 0;
@@ -181,21 +181,24 @@ export function farmlandAgePrestigeModifier(vineAge: number): number {
 
 /**
  * Calculate base wine price using land value and prestige
- * Uses placeholder values for now - will be enhanced with real calculations later
+ * Now uses real normalized values instead of placeholders
  * 
- * @param landValue - Land value (placeholder: 0.5)
- * @param prestige - Prestige value (placeholder: 0.5)
+ * @param landValue - Land value in euros per hectare
+ * @param prestige - Prestige value (0-1 scale)
  * @param baseRate - Base rate per bottle (default: 25 from constants)
  * @returns Base price per bottle
  */
 export function calculateBaseWinePrice(
-  landValue: number = 0.5, 
-  prestige: number = 0.5, 
+  landValue: number, 
+  prestige: number, 
   baseRate: number = 25
 ): number {
-  // Base Price = (Land Value + Prestige) × Base Rate
-  // With placeholders: (0.5 + 0.5) × 25 = €25
-  return (landValue + prestige) * baseRate;
+  // Normalize land value to 0-1 scale using the same constant as prestige calculation
+  const normalizedLandValue = landValue / 200000; // Using same constant as VINEYARD_PRESTIGE_CONSTANTS.LAND_VALUE_NORMALIZATION
+  
+  // Base Price = (Normalized Land Value + Prestige) × Base Rate
+  // This creates a price range based on both land value and prestige
+  return (normalizedLandValue + prestige) * baseRate;
 }
 
 // ===== SYMMETRICAL MULTIPLIER CALCULATIONS =====
