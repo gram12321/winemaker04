@@ -3,7 +3,7 @@ import React from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
 import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch } from '@/lib/types';
-import { Button, WineCharacteristicsDisplay, CharacteristicBarLegend } from '../ui';
+import { Button, WineCharacteristicsDisplay } from '../ui';
 import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 
 // Component for wine batch balance display (needed to use hooks properly)
@@ -34,26 +34,14 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
 
 // Component for detailed wine characteristics display
 const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  
   return (
     <div className="mt-3">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-      >
-        <span>Wine Characteristics</span>
-        <span className="text-xs">
-          {isExpanded ? '▼' : '▶'}
-        </span>
-      </button>
-      
-      {isExpanded && (
-        <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-          <WineCharacteristicsDisplay characteristics={batch.characteristics} />
-          <CharacteristicBarLegend />
-        </div>
-      )}
+      <WineCharacteristicsDisplay 
+        characteristics={batch.characteristics} 
+        collapsible={true}
+        defaultExpanded={false}
+        title="Wine Characteristics"
+      />
     </div>
   );
 };

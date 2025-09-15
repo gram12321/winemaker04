@@ -25,13 +25,13 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         region: vineyard.region,
         acres: vineyard.acres,
         grape_variety: vineyard.grape,
-        is_planted: vineyard.isPlanted,
-        status: vineyard.status,
-        created_week: vineyard.createdAt.week,
-        created_season: vineyard.createdAt.season,
-        created_year: vineyard.createdAt.year,
+        vine_age: vineyard.vineAge,
+        soil: vineyard.soil, // Store as JSON array
+        altitude: vineyard.altitude,
+        aspect: vineyard.aspect,
         land_value: vineyard.landValue,
-        field_prestige: vineyard.fieldPrestige,
+        status: vineyard.status,
+        vineyard_prestige: vineyard.vineyardPrestige,
         updated_at: new Date().toISOString()
       });
 
@@ -55,15 +55,13 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       region: row.region,
       acres: row.acres,
       grape: row.grape_variety,
-      isPlanted: row.is_planted,
+      vineAge: row.vine_age || 0,
+      soil: row.soil || ['Clay'], // Default soil if not set
+      altitude: row.altitude || 200,
+      aspect: row.aspect || 'South',
+      landValue: row.land_value || 0.5,
       status: row.status,
-      createdAt: {
-        week: row.created_week || 1,
-        season: (row.created_season || 'Spring') as Season,
-        year: row.created_year || 2024
-      },
-      landValue: row.land_value,
-      fieldPrestige: row.field_prestige
+      vineyardPrestige: row.vineyard_prestige || 0
     }));
   } catch (error) {
     return [];

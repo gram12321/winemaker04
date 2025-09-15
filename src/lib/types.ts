@@ -35,7 +35,11 @@ export type GrapeVariety = 'Barbera' | 'Chardonnay' | 'Pinot Noir' | 'Primitivo'
 // Vineyard status types
 export type VineyardStatus = 'Barren' | 'Planted' | 'Growing' | 'Harvested' | 'Dormant';
 
-// Vineyard interface
+// New vineyard-related types for v3 expansion
+export type Aspect = 'North' | 'Northeast' | 'East' | 'Southeast' | 'South' | 'Southwest' | 'West' | 'Northwest';
+export type FarmingMethod = 'Conventional' | 'Organic' | 'Biodynamic' | 'Sustainable';
+
+// Vineyard interface - expanded with v3 parameters
 export interface Vineyard {
   id: string;
   name: string;
@@ -43,13 +47,24 @@ export interface Vineyard {
   region: string;
   acres: number;
   grape: GrapeVariety | null;
-  isPlanted: boolean; // Boolean for planted/barren state
-  status: VineyardStatus;
-  createdAt: GameDate;
-  
-  // Pricing factors (using placeholders for now)
-  landValue?: number; // Land value factor (0-1 scale) - will be calculated from region/soil/etc
-  fieldPrestige?: number; // Field prestige factor (0-1 scale) - will be calculated from vine age/health/etc
+  vineAge: number;
+  soil: string[];
+  altitude: number;
+  aspect: Aspect;
+  // density: number; // Commented out as per request
+  // vineyardHealth: number; // Commented out as per request
+  landValue: number;
+  status: string;
+  // ripeness: number; // Commented out as per request
+  vineyardPrestige: number;
+  // completedClearingTasks: string[]; // Commented out as per request
+  // annualYieldFactor: number; // Random value simulating vintage yield Commented out as per request
+  // annualQualityFactor: number; // Random value simulating vintage quality Commented out as per request
+  // farmingMethod: FarmingMethod; // Commented out as per request
+  // organicYears: number; // Commented out as per request
+  // remainingYield: number | null; // Used in old iterations, for tracking yield doing harvest. Commented out as per request
+  // upgrades?: string[]; // Commented out as per request
+  // generateFarmlandPreview not implemented yet (Creates a specific Farmland instance based on country/region for starting conditions)
 }
 
 

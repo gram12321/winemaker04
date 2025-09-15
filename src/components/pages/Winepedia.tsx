@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStateWithData } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, WineCharacteristicsDisplay, CharacteristicBarLegend } from "../ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, WineCharacteristicsDisplay } from "../ui";
 import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
 import { getAllCustomers, getCountryCode } from '@/lib/services';
 import { Customer } from '@/lib/types';
@@ -172,11 +172,12 @@ export default function Winepedia({ view }: WinepediaProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-gray-600">{grape.description}</p>
-                  <div>
-                    <h4 className="font-medium text-gray-800 mb-2">Wine Characteristics:</h4>
-                    <WineCharacteristicsDisplay characteristics={grape.characteristics} />
-                    <CharacteristicBarLegend />
-                  </div>
+                  <WineCharacteristicsDisplay 
+                    characteristics={grape.characteristics} 
+                    collapsible={true}
+                    defaultExpanded={false}
+                    title="Wine Characteristics"
+                  />
                 </CardContent>
               </Card>
             ))}

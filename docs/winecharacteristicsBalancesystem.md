@@ -56,7 +56,7 @@ interface BalanceResult {
 - `BalanceResult` interface for balance analysis results
 - `BalanceCalculator` service with basic balance calculation
 - `useWineBalance` hook for React integration
-- `CharacteristicBar` component with visual balance ranges and expandable display
+- `CharacteristicBar` component with visual balance ranges and built-in expandable/collapsible functionality
 - Database integration for wine characteristics storage
 - Winery page integration showing balance for all wine batches (active and completed)
 - Winepedia page with clickable grape varieties showing characteristics

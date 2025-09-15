@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety } from '../../types';
 import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { getGameState } from '../gameState';
 import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
 
@@ -13,7 +12,7 @@ export const GRAPE_VARIETIES: GrapeVariety[] = [
 
 // Create a new vineyard
 export async function createVineyard(name: string): Promise<Vineyard> {
-  const gameState = getGameState();
+  
   const vineyard: Vineyard = {
     id: uuidv4(),
     name,
@@ -21,16 +20,13 @@ export async function createVineyard(name: string): Promise<Vineyard> {
     region: 'Burgundy',
     acres: 1,
     grape: null,
-    isPlanted: false,
-    status: 'Barren',
-    createdAt: {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
-    },
-    // Pricing factors (using placeholders for now)
+    vineAge: 0, // New vines
+    soil: ['Clay', 'Limestone'], // Default soil composition
+    altitude: 200, // Default altitude in meters
+    aspect: 'South', // Default south-facing aspect
     landValue: 0.5, // Default land value placeholder
-    fieldPrestige: 1 // Default field prestige placeholder
+    status: 'Barren',
+    vineyardPrestige: 0 // Starting prestige
   };
 
   await saveVineyard(vineyard);
@@ -59,7 +55,7 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Pr
   const updatedVineyard: Vineyard = {
     ...vineyard,
     grape,
-    isPlanted: true,
+    vineAge: 0, // Reset vine age when planting new vines
     status: 'Planted'
   };
 

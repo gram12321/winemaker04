@@ -190,7 +190,7 @@ const Vineyard: React.FC = () => {
   });
 
   const getActionButtons = (vineyard: VineyardType) => {
-    if (!vineyard.isPlanted) {
+    if (!vineyard.grape) {
       return (
         <button 
           onClick={() => {

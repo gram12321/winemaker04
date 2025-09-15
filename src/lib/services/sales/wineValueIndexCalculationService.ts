@@ -18,7 +18,7 @@ export function calculateWineValueIndex(vineyard: Vineyard): number {
 
   // Combine factors (simple average for now)
   // TODO: Implement sophisticated weighting based on importance of each factor
-  const wineValueIndex = ((vineyard.landValue || 0.5) + (vineyard.fieldPrestige || 0.5)) / 2;
+  const wineValueIndex = ((vineyard.landValue || 0.5) + (vineyard.vineyardPrestige || 0.5)) / 2;
   
   // Ensure result is within 0-1 range
   return Math.max(0, Math.min(1, wineValueIndex));

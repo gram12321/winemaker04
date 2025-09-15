@@ -67,10 +67,37 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
 
   notificationService.info(`A new year has begun! Welcome to ${newYear}!`);
   
-  // TODO: Add yearly effects when ready
-  // - Vineyard age updates
+  // Update vineyard ages
+  await updateVineyardAges();
+  
+  // TODO: Add other yearly effects when ready
   // - Annual financial summaries
   // - Prestige adjustments
+};
+
+/**
+ * Update all vineyard ages by +1 year
+ */
+const updateVineyardAges = async (): Promise<void> => {
+  try {
+    const { loadVineyards, saveVineyard } = await import('../database/database');
+    const vineyards = await loadVineyards();
+    
+    for (const vineyard of vineyards) {
+      // Only age vines that are planted (have a grape variety)
+      if (vineyard.grape) {
+        const updatedVineyard = {
+          ...vineyard,
+          vineAge: vineyard.vineAge + 1
+        };
+        await saveVineyard(updatedVineyard);
+      }
+    }
+    
+
+  } catch (error) {
+    console.error('Error updating vineyard ages:', error);
+  }
 };
 
 /**

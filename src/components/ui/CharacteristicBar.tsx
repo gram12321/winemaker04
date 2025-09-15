@@ -105,26 +105,61 @@ interface WineCharacteristicsDisplayProps {
   adjustedRanges?: Record<keyof WineCharacteristics, [number, number]>;
   showValues?: boolean;
   className?: string;
+  collapsible?: boolean;
+  defaultExpanded?: boolean;
+  title?: string;
 }
 
 export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProps> = ({
   characteristics,
   adjustedRanges,
   showValues = true,
-  className = ""
+  className = "",
+  collapsible = false,
+  defaultExpanded = true,
+  title = "Wine Characteristics"
 }) => {
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
+  const content = (
+    <div className="space-y-1">
+      {Object.entries(characteristics)
+        .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically by characteristic name
+        .map(([key, value]) => (
+          <CharacteristicBar
+            key={key}
+            characteristicName={key as keyof WineCharacteristics}
+            label={key.charAt(0).toUpperCase() + key.slice(1)}
+            value={value}
+            adjustedRanges={adjustedRanges?.[key as keyof WineCharacteristics]}
+            showValue={showValues}
+          />
+        ))}
+      <CharacteristicBarLegend />
+    </div>
+  );
+
+  if (!collapsible) {
+    return <div className={className}>{content}</div>;
+  }
+
   return (
-    <div className={`space-y-1 ${className}`}>
-      {Object.entries(characteristics).map(([key, value]) => (
-        <CharacteristicBar
-          key={key}
-          characteristicName={key as keyof WineCharacteristics}
-          label={key.charAt(0).toUpperCase() + key.slice(1)}
-          value={value}
-          adjustedRanges={adjustedRanges?.[key as keyof WineCharacteristics]}
-          showValue={showValues}
-        />
-      ))}
+    <div className={className}>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors mb-2"
+      >
+        <span>{title}</span>
+        <span className="text-xs">
+          {isExpanded ? '▼' : '▶'}
+        </span>
+      </button>
+      
+      {isExpanded && (
+        <div className="p-3 bg-gray-50 rounded-lg">
+          {content}
+        </div>
+      )}
     </div>
   );
 };

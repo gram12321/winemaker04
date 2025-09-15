@@ -234,7 +234,7 @@ export async function updateVineyardPrestigeEvents(companyId?: string): Promise<
     const vineyards = await loadVineyards();
     
     for (const vineyard of vineyards) {
-      const vineyardPrestige = vineyard.fieldPrestige || 1; // Use fieldPrestige or default to 1
+      const vineyardPrestige = vineyard.vineyardPrestige || 1; // Use vineyardPrestige or default to 1
       await updateBasePrestigeEvent(
         'vineyard',
         vineyard.id,
