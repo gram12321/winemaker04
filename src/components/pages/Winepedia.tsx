@@ -29,10 +29,14 @@ export default function Winepedia({ view }: WinepediaProps) {
   }, [view]);
 
   // Use consolidated hook for reactive customer loading (only when customers tab is active)
-  const customers = useGameStateWithData(
-    () => activeTab === 'customers' ? getAllCustomers() : Promise.resolve([]),
-    []
-  );
+  const loadCustomersData = React.useCallback(async () => {
+    if (activeTab === 'customers') {
+      return await getAllCustomers();
+    }
+    return [];
+  }, [activeTab]);
+
+  const customers = useGameStateWithData(loadCustomersData, []);
 
   // Filter and sort customers (computed value instead of useEffect)
   const filteredCustomers = React.useMemo(() => {
