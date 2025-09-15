@@ -19,7 +19,7 @@ interface FinancialData {
   fixedAssets: number;
   currentAssets: number;
   buildingsValue: number;
-  farmlandValue: number;
+  allVineyardsValue: number; // Sum of all vineyard total values (vineyard.landValue * vineyard.hectares
   wineValue: number;
   grapesValue: number;
 }
@@ -310,10 +310,9 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   // Calculate asset values
   const buildingsValue = 0; // Placeholder for buildings - not implemented yet
   
-  const farmlandValue = vineyards.reduce((sum, vineyard) => {
-    // Basic estimate for farmland value
-    const baseValue = vineyard.hectares * 40000; // €40k per hectare (€10k per acre * 4)
-    return sum + baseValue;
+  const allVineyardsValue = vineyards.reduce((sum, vineyard) => {
+    // Use the calculated vineyardTotalValue from the vineyard data
+    return sum + vineyard.vineyardTotalValue;
   }, 0);
   
   const wineValue = wineBatches.reduce((sum, batch) => {
@@ -336,7 +335,7 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   
   // Calculate totals
   const cashMoney = gameState.money || 0;
-  const fixedAssets = buildingsValue + farmlandValue;
+  const fixedAssets = buildingsValue + allVineyardsValue;
   const currentAssets = wineValue + grapesValue;
   const totalAssets = cashMoney + fixedAssets + currentAssets;
   
@@ -351,7 +350,7 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     fixedAssets,
     currentAssets,
     buildingsValue,
-    farmlandValue,
+    allVineyardsValue,
     wineValue,
     grapesValue
   };

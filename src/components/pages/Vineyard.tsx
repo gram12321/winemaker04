@@ -8,13 +8,12 @@ import {
   growVineyard,
   resetVineyard,
   getAllVineyards,
-  getAllWineBatches,
   GRAPE_VARIETIES
 } from '@/lib/services';
-import { Vineyard as VineyardType, GrapeVariety, WineBatch } from '@/lib/types';
+import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '../ui';
 import { DialogProps } from '../UItypes';
-import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
+import { formatCurrency } from '@/lib/utils/utils';
 
 interface CreateVineyardDialogProps extends DialogProps {
   onSubmit: (name: string) => void;
@@ -134,27 +133,6 @@ const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, on
   );
 };
 
-// Component to display wine quality information for a vineyard
-const VineyardWineQualityDisplay: React.FC<{ vineyard: VineyardType; wineBatches: WineBatch[] }> = ({ vineyard, wineBatches }) => {
-  // Filter wine batches for this vineyard
-  const vineyardBatches = wineBatches.filter(batch => batch.vineyardId === vineyard.id);
-  
-  if (vineyardBatches.length === 0) {
-    return null;
-  }
-  
-  // Calculate average quality for this vineyard
-  const averageQuality = vineyardBatches.reduce((sum, batch) => sum + batch.quality, 0) / vineyardBatches.length;
-  const qualityCategory = getWineQualityCategory(averageQuality);
-  const qualityLabel = getColorCategory(averageQuality);
-  const colorClass = getColorClass(averageQuality);
-  
-  return (
-    <div className="text-xs text-gray-600 mt-1">
-      Wine Quality: <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel}) • {vineyardBatches.length} batch{vineyardBatches.length !== 1 ? 'es' : ''}
-    </div>
-  );
-};
 
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
@@ -162,7 +140,6 @@ const Vineyard: React.FC = () => {
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
-  const wineBatches = useGameStateWithData(getAllWineBatches, []);
 
   const handleCreateVineyard = (name: string) => withLoading(async () => {
     await createVineyard(name);
@@ -197,7 +174,7 @@ const Vineyard: React.FC = () => {
             setSelectedVineyard(vineyard);
             setShowPlantDialog(true);
           }}
-          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-medium"
         >
           Plant
         </button>
@@ -209,7 +186,7 @@ const Vineyard: React.FC = () => {
         return (
           <button 
             onClick={() => handleGrowVineyard(vineyard)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium"
           >
             Grow
           </button>
@@ -218,7 +195,7 @@ const Vineyard: React.FC = () => {
         return (
           <button 
             onClick={() => handleHarvestVineyard(vineyard)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-medium"
           >
             Harvest
           </button>
@@ -227,7 +204,7 @@ const Vineyard: React.FC = () => {
         return (
           <button 
             onClick={() => handleResetVineyard(vineyard)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-2 py-1 rounded text-xs font-medium"
           >
             Reset
           </button>
@@ -237,20 +214,48 @@ const Vineyard: React.FC = () => {
     }
   };
 
+
+  // Status color mapping
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Barren': return 'text-gray-500';
-      case 'Planted': return 'text-green-500';
-      case 'Growing': return 'text-blue-500';
-      case 'Harvested': return 'text-purple-500';
-      case 'Dormant': return 'text-orange-500';
-      default: return 'text-gray-500';
-    }
+    const statusColors: Record<string, string> = {
+      'Barren': 'text-gray-500',
+      'Planted': 'text-green-500',
+      'Growing': 'text-blue-500',
+      'Harvested': 'text-purple-500',
+      'Dormant': 'text-orange-500'
+    };
+    return statusColors[status] || 'text-gray-500';
   };
+
+  // Calculate summary statistics
+  const totalHectares = vineyards.reduce((sum, v) => sum + v.hectares, 0);
+  const totalValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
+  const plantedVineyards = vineyards.filter(v => v.grape).length;
+  const activeVineyards = vineyards.filter(v => v.status === 'Growing').length;
 
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-gray-800">Vineyard Management</h2>
+      
+      {/* Summary Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-gray-900">{vineyards.length}</div>
+          <div className="text-sm text-gray-500">Total Vineyards</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-green-600">{totalHectares} ha</div>
+          <div className="text-sm text-gray-500">Total Area</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalValue)}</div>
+          <div className="text-sm text-gray-500">Total Value</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-purple-600">{activeVineyards}/{plantedVineyards}</div>
+          <div className="text-sm text-gray-500">Active/Planted</div>
+        </div>
+      </div>
       
       {/* Vineyard Image */}
       <div 
@@ -261,7 +266,7 @@ const Vineyard: React.FC = () => {
       >
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-4">
           <div className="flex justify-between items-end">
-            <h3 className="text-white text-xl font-semibold">Owned Vineyards ({vineyards.length})</h3>
+            <h3 className="text-white text-xl font-semibold">Vineyard Portfolio</h3>
             <button 
               onClick={() => setShowCreateDialog(true)}
               className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded"
@@ -274,41 +279,105 @@ const Vineyard: React.FC = () => {
 
       {/* Vineyards Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grape</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {vineyards.length === 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1200px]">
+            <thead className="bg-gray-50">
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                  No vineyards yet. Create your first vineyard to get started!
-                </td>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vineyard</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size & Value</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Characteristics</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vine Info</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status & Actions</th>
               </tr>
-            ) : (
-              vineyards.map((vineyard) => (
-                <tr key={vineyard.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{vineyard.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {vineyard.grape || 'None'}
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getStatusColor(vineyard.status)}`}>
-                    {vineyard.status}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                    {getActionButtons(vineyard)}
-                    <VineyardWineQualityDisplay vineyard={vineyard} wineBatches={wineBatches} />
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {vineyards.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    No vineyards yet. Create your first vineyard to get started!
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                vineyards.map((vineyard) => (
+                  <tr key={vineyard.id} className="hover:bg-gray-50">
+                    {/* Vineyard Name and Grape */}
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900">{vineyard.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {vineyard.grape ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {vineyard.grape}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">No grape planted</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Location */}
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-900">{vineyard.region}</div>
+                      <div className="text-xs text-gray-500">{vineyard.country}</div>
+                    </td>
+
+                    {/* Size & Value */}
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-900">{vineyard.hectares} ha</div>
+                      <div className="text-xs text-gray-500">
+                        {formatCurrency(vineyard.landValue)}/ha
+                      </div>
+                      <div className="text-xs font-medium text-blue-600">
+                        Total: {formatCurrency(vineyard.vineyardTotalValue)}
+                      </div>
+                    </td>
+
+                    {/* Characteristics */}
+                    <td className="px-4 py-4">
+                      <div className="text-xs text-gray-900">
+                        <div className="mb-1">
+                          <span className="font-medium">Soil:</span> {vineyard.soil.join(', ')}
+                        </div>
+                        <div className="mb-1">
+                          <span className="font-medium">Altitude:</span> {vineyard.altitude}m
+                        </div>
+                        <div>
+                          <span className="font-medium">Aspect:</span> {vineyard.aspect}
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Vine Info */}
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-900">
+                        {vineyard.vineAge > 0 ? (
+                          <span>{vineyard.vineAge} years old</span>
+                        ) : (
+                          <span className="text-gray-400">New vines</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Prestige: {vineyard.vineyardPrestige.toFixed(2)}
+                      </div>
+                    </td>
+
+                    {/* Status & Actions */}
+                    <td className="px-4 py-4">
+                      <div className="space-y-2">
+                        <div className={`text-sm font-medium ${getStatusColor(vineyard.status)}`}>
+                          {vineyard.status}
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          {getActionButtons(vineyard)}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <CreateVineyardDialog

@@ -5,29 +5,87 @@ import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
-// Removed imports for random assignment functions - using placeholder values instead
+import { calculateLandValue } from './vineyardValueCalc';
+import { getRandomHectares } from '../../utils/calculator';
+import { 
+  COUNTRY_REGION_MAP, 
+  REGION_SOIL_TYPES, 
+  REGION_ALTITUDE_RANGES 
+} from '../../constants/vineyardConstants';
+import { Aspect } from '../../types';
 
 export const GRAPE_VARIETIES: GrapeVariety[] = [
   'Barbera', 'Chardonnay', 'Pinot Noir', 'Primitivo', 'Sauvignon Blanc'
 ];
 
+// Helper functions for random vineyard generation
+function getRandomFromObject<T>(obj: Record<string, T>): string {
+  const keys = Object.keys(obj);
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+function getRandomFromArray<T>(array: readonly T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function getRandomAspect(): Aspect {
+  const aspects: Aspect[] = [
+    "North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"
+  ];
+  return getRandomFromArray(aspects);
+}
+
+function getRandomSoils(country: string, region: string): string[] {
+  const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
+  const soils = countryData ? (countryData[region as keyof typeof countryData] as readonly string[] || []) : [];
+  
+  const numberOfSoils = Math.floor(Math.random() * 3) + 1; // 1-3 soil types
+  const selectedSoils = new Set<string>();
+
+  while (selectedSoils.size < numberOfSoils && selectedSoils.size < soils.length) {
+    selectedSoils.add(getRandomFromArray(soils));
+  }
+
+  return Array.from(selectedSoils);
+}
+
+function getRandomAltitude(country: string, region: string): number {
+  const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
+  const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
+  const [min, max] = altitudeRange;
+  
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 // Create a new vineyard
 export async function createVineyard(name: string): Promise<Vineyard> {
-  // Use placeholder/middle values for now
+  // Generate random vineyard characteristics
+  const country = getRandomFromObject(COUNTRY_REGION_MAP);
+  const countryRegions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+  const region = countryRegions ? getRandomFromArray(countryRegions) : "Bordeaux";
+  const aspect = getRandomAspect();
+  const hectares = getRandomHectares();
+  const soil = getRandomSoils(country, region);
+  const altitude = getRandomAltitude(country, region);
+  
+  // Calculate land value using new calculation service
+  const landValue = calculateLandValue(country, region, altitude, aspect);
+  
   const vineyard: Vineyard = {
     id: uuidv4(),
     name,
-    country: 'France', // Placeholder country
-    region: 'Bordeaux', // Placeholder region
-    hectares: 0.5, // Default vineyard size
+    country,
+    region,
+    hectares,
     grape: null,
     vineAge: 0, // New vines
-    soil: ['Clay'], // Placeholder soil
-    altitude: 200, // Placeholder altitude
-    aspect: 'South', // Placeholder aspect
-    landValue: 0.5, // Placeholder land value (0-1 scale)
+    soil,
+    altitude,
+    aspect,
+    landValue, // Calculated land value in euros per hectare
+    vineyardTotalValue: landValue * hectares, // Total vineyard value
     status: 'Barren',
-    vineyardPrestige: 0.1 // Placeholder vineyard prestige
+    vineyardPrestige: 0.1 // Will be calculated properly once we add more prestige factors
   };
 
   await saveVineyard(vineyard);

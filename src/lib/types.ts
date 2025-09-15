@@ -54,6 +54,7 @@ export interface Vineyard {
   // density: number; // Commented out as per request
   // vineyardHealth: number; // Commented out as per request
   landValue: number;
+  vineyardTotalValue: number; // Calculated as landValue * hectares
   status: string;
   // ripeness: number; // Commented out as per request
   vineyardPrestige: number;
@@ -93,6 +94,23 @@ export interface WineBatch {
   harvestDate: GameDate;
   createdAt: GameDate;
   completedAt?: GameDate; // When bottling is completed
+}
+
+// Wine production log entry - recorded when wine is bottled
+export interface WineLogEntry {
+  id: string;
+  vineyardId: string;
+  vineyardName: string;
+  grape: GrapeVariety;
+  vintage: number; // Year the grapes were harvested
+  quantity: number; // Bottles produced
+  quality: number; // Overall wine quality (0-1)
+  balance: number; // Wine balance/body (0-1)
+  characteristics: WineCharacteristics; // Individual wine characteristics
+  finalPrice: number; // Price per bottle when bottled
+  harvestDate: GameDate;
+  bottledDate: GameDate;
+  created_at: string; // Database timestamp
 }
 
 // Customer types for sales system (matching importer types)

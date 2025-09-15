@@ -1,6 +1,6 @@
 // Custom hook for reactive game state management with async data loading
 import { useState, useEffect, useCallback } from 'react';
-import { getGameState } from '@/lib/services/gameState';
+import { getGameState, getCurrentCompany } from '@/lib/services/gameState';
 import { useGameUpdates } from './useGameUpdates';
 
 export const useGameState = () => {
@@ -35,6 +35,13 @@ export function useGameStateWithData<T>(
 
   const refreshData = useCallback(async () => {
     try {
+      // Check if we have an active company before loading data
+      const currentCompany = getCurrentCompany();
+      if (!currentCompany?.id) {
+        console.log('No active company found, skipping data load');
+        return;
+      }
+
       const newData = await loadData();
       setData(newData);
     } catch (error) {

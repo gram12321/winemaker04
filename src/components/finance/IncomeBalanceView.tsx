@@ -36,7 +36,7 @@ const defaultFinancialData = {
   fixedAssets: 0,
   currentAssets: 0,
   buildingsValue: 0,
-  farmlandValue: 0,
+  allVineyardsValue: 0,
   wineValue: 0,
   grapesValue: 0
 };
@@ -107,7 +107,7 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
           
           <FinancialSection title="FIXED ASSETS">
             <DataRow label="Buildings" value={financialData.buildingsValue} />
-            <DataRow label="Farmland" value={financialData.farmlandValue} />
+            <DataRow label="Vineyards" value={financialData.allVineyardsValue} />
              <hr className="my-1 border-gray-300" />
              <DataRow label="Total Fixed Assets" value={financialData.fixedAssets} />
           </FinancialSection>

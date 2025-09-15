@@ -30,6 +30,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         altitude: vineyard.altitude,
         aspect: vineyard.aspect,
         land_value: vineyard.landValue,
+        vineyard_total_value: vineyard.vineyardTotalValue,
         status: vineyard.status,
         vineyard_prestige: vineyard.vineyardPrestige,
         updated_at: new Date().toISOString()
@@ -59,7 +60,8 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       soil: row.soil || ['Clay'], // Default soil if not set
       altitude: row.altitude || 200,
       aspect: row.aspect || 'South',
-      landValue: row.land_value || 0.5,
+      landValue: row.land_value || 50000, // Default to 50k euros per hectare if not set
+      vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)), // Calculate if not set
       status: row.status,
       vineyardPrestige: row.vineyard_prestige || 0
     }));

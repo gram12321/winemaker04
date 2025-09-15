@@ -172,6 +172,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
               <DropdownMenuItem onClick={() => onPageChange('achievements')}>
                 Achievements
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPageChange('highscores')}>
+                Global Leaderboards
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onPageChange('winepedia')}>
                 Wine-Pedia
               </DropdownMenuItem>

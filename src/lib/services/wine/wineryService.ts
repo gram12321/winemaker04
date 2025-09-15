@@ -2,6 +2,7 @@
 import { WineBatch } from '../../types';
 import { updateWineBatch, getAllWineBatches } from './wineBatchService';
 import { getGameState } from '../gameState';
+import { recordBottledWine } from './wineLogService';
 
 // ===== WINERY ACTIONS =====
 
@@ -62,7 +63,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
 
   const gameState = getGameState();
   
-  return await updateWineBatch(batchId, {
+  const success = await updateWineBatch(batchId, {
     stage: 'bottled',
     process: 'bottled',
     quantity: Math.floor(batch.quantity / 1.5), // Convert kg to bottles (1.5kg per bottle)
@@ -72,6 +73,24 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       year: gameState.currentYear || 2024
     }
   });
+
+  // Record the bottled wine in the production log
+  if (success) {
+    try {
+      // Get the updated batch to record in the log
+      const updatedBatches = await getAllWineBatches();
+      const bottledBatch = updatedBatches.find(b => b.id === batchId);
+      
+      if (bottledBatch && bottledBatch.stage === 'bottled') {
+        await recordBottledWine(bottledBatch);
+      }
+    } catch (error) {
+      console.error('Failed to record bottled wine in production log:', error);
+      // Don't fail the bottling process if logging fails
+    }
+  }
+
+  return success;
 }
 
 // Progress Fermentation: Simulate fermentation progress over time
