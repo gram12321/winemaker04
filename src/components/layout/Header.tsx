@@ -9,7 +9,7 @@ import { useGameState, useGameStateWithData } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/prestige-modal';
 import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
-import { Company } from '@/lib/services/companyService';
+import { Company } from '@/lib/services/user/companyService';
 import { getCurrentCompany } from '@/lib/services/gameState';
 
 interface HeaderProps {

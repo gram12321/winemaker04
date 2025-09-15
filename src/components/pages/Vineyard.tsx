@@ -8,11 +8,13 @@ import {
   growVineyard,
   resetVineyard,
   getAllVineyards,
+  getAllWineBatches,
   GRAPE_VARIETIES
 } from '@/lib/services';
-import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
+import { Vineyard as VineyardType, GrapeVariety, WineBatch } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '../ui';
 import { DialogProps } from '../UItypes';
+import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 
 interface CreateVineyardDialogProps extends DialogProps {
   onSubmit: (name: string) => void;
@@ -132,12 +134,35 @@ const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, on
   );
 };
 
+// Component to display wine quality information for a vineyard
+const VineyardWineQualityDisplay: React.FC<{ vineyard: VineyardType; wineBatches: WineBatch[] }> = ({ vineyard, wineBatches }) => {
+  // Filter wine batches for this vineyard
+  const vineyardBatches = wineBatches.filter(batch => batch.vineyardId === vineyard.id);
+  
+  if (vineyardBatches.length === 0) {
+    return null;
+  }
+  
+  // Calculate average quality for this vineyard
+  const averageQuality = vineyardBatches.reduce((sum, batch) => sum + batch.quality, 0) / vineyardBatches.length;
+  const qualityCategory = getWineQualityCategory(averageQuality);
+  const qualityLabel = getColorCategory(averageQuality);
+  const colorClass = getColorClass(averageQuality);
+  
+  return (
+    <div className="text-xs text-gray-600 mt-1">
+      Wine Quality: <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel}) • {vineyardBatches.length} batch{vineyardBatches.length !== 1 ? 'es' : ''}
+    </div>
+  );
+};
+
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
+  const wineBatches = useGameStateWithData(getAllWineBatches, []);
 
   const handleCreateVineyard = (name: string) => withLoading(async () => {
     await createVineyard(name);
@@ -277,6 +302,7 @@ const Vineyard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                     {getActionButtons(vineyard)}
+                    <VineyardWineQualityDisplay vineyard={vineyard} wineBatches={wineBatches} />
                   </td>
                 </tr>
               ))

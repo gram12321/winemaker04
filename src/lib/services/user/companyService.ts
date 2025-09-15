@@ -1,8 +1,8 @@
-import { supabase } from '../database/supabase';
+import { supabase } from '../../database/supabase';
 import { authService } from './authService';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { Season } from '../types';
-import { GAME_INITIALIZATION } from '../constants';
+import { Season } from '../../types';
+import { GAME_INITIALIZATION } from '../../constants';
 
 export interface Company {
   id: string;

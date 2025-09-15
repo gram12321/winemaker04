@@ -45,6 +45,7 @@ interface BalanceResult {
 
 ## Phase 1 Implementation ✅ COMPLETED
 - Static base ranges: `[0.4, 0.6]` for all characteristics
+- Grape-specific base characteristics (Barbera, Chardonnay, Pinot Noir, Primitivo, Sauvignon Blanc)
 - Simple distance calculation from midpoint
 - Flat regional modifiers: `0.5` for all regions
 - No archetype matching
@@ -55,11 +56,13 @@ interface BalanceResult {
 - `BalanceResult` interface for balance analysis results
 - `BalanceCalculator` service with basic balance calculation
 - `useWineBalance` hook for React integration
-- `BalanceVisualizer` component for UI display
+- `CharacteristicBar` component with visual balance ranges and expandable display
 - Database integration for wine characteristics storage
-- Winery page integration showing balance for all wine batches
+- Winery page integration showing balance for all wine batches (active and completed)
 - Winepedia page with clickable grape varieties showing characteristics
-- Fixed React hooks order issues by creating separate components for wine batch cards
+- Constants moved to centralized location (`BASE_BALANCED_RANGES`, `BASE_GRAPE_CHARACTERISTICS`, and `GRAPE_VARIETY_INFO` in constants.ts)
+- Removed unnecessary wrapper functions and random variation
+- Grape-specific characteristics now differentiate wine varieties
 
 ## Placeholders
 - Archetype system: Return empty array

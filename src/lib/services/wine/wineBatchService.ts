@@ -1,11 +1,11 @@
 // Wine batch management service for winery operations
 import { v4 as uuidv4 } from 'uuid';
-import { WineBatch, GrapeVariety } from '../types';
-import { saveWineBatch, loadWineBatches, loadVineyards } from '../database/database';
-import { triggerGameUpdate } from '../../hooks/useGameUpdates';
-import { getGameState } from './gameState';
-import { generateWineCharacteristics } from './sales/wineQualityIndexCalculationService';
-import { calculateFinalWinePrice } from './sales/pricingService';
+import { WineBatch, GrapeVariety } from '../../types';
+import { saveWineBatch, loadWineBatches, loadVineyards } from '../../database/database';
+import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { getGameState } from '../gameState';
+import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
+import { calculateFinalWinePrice } from '../sales/pricingService';
 import { generateDefaultCharacteristics, calculateWineBalance } from './balanceCalculator';
 
 // ===== WINE BATCH OPERATIONS =====

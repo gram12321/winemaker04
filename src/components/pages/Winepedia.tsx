@@ -5,9 +5,10 @@ import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
 import { getAllCustomers, getCountryCode } from '@/lib/services';
 import { Customer } from '@/lib/types';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
-import { formatNumber, formatPercent } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getColorCategory, getColorClass, getWineQualityInfo } from '@/lib/utils/utils';
 import { PageProps } from '../UItypes';
-import { generateDefaultCharacteristics } from '@/lib/services/balanceCalculator';
+import { generateDefaultCharacteristics } from '@/lib/services/wine/balanceCalculator';
+import { GRAPE_VARIETY_INFO } from '@/lib/constants';
 
 interface WinepediaProps extends PageProps {
   view?: string;
@@ -87,8 +88,7 @@ export default function Winepedia({ view }: WinepediaProps) {
   const formatRelationship = (value: number) => {
     // Normalize relationship to 0-1 range for color coding
     const normalizedValue = Math.min(value / 100, 1);
-    const colorClass = normalizedValue > 0.7 ? 'text-green-600' : 
-                      normalizedValue > 0.4 ? 'text-yellow-600' : 'text-red-600';
+    const colorClass = getColorClass(normalizedValue);
     
     return (
       <span className={colorClass}>
@@ -119,29 +119,12 @@ export default function Winepedia({ view }: WinepediaProps) {
     return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
   };
 
-  // Grape varieties with characteristics
-  const grapeVarieties = [
-    {
-      name: 'Chardonnay',
-      description: 'A noble grape variety producing aromatic, medium-bodied wines with moderate acidity.',
-      characteristics: generateDefaultCharacteristics('Chardonnay')
-    },
-    {
-      name: 'Pinot Noir',
-      description: 'A delicate grape creating light-bodied, aromatic wines with high acidity and soft tannins.',
-      characteristics: generateDefaultCharacteristics('Pinot Noir')
-    },
-    {
-      name: 'Cabernet Sauvignon',
-      description: 'A bold grape producing full-bodied, structured wines with high tannins and good aging potential.',
-      characteristics: generateDefaultCharacteristics('Cabernet Sauvignon')
-    },
-    {
-      name: 'Merlot',
-      description: 'A smooth grape variety creating medium to full-bodied wines with soft tannins and rich fruit flavors.',
-      characteristics: generateDefaultCharacteristics('Merlot')
-    }
-  ];
+  // Grape varieties with characteristics (using constants)
+  const grapeVarieties = GRAPE_VARIETY_INFO.map(grape => ({
+    name: grape.name,
+    description: grape.description,
+    characteristics: generateDefaultCharacteristics(grape.name)
+  }));
 
   return (
     <div className="container mx-auto py-6">
@@ -152,6 +135,7 @@ export default function Winepedia({ view }: WinepediaProps) {
         <div className="flex space-x-1 border-b">
           {[
             { id: 'grapeVarieties', label: 'Grape Varieties' },
+            { id: 'wineQuality', label: 'Wine Quality' },
             { id: 'customerTypes', label: 'Customer Types' },
             { id: 'countries', label: 'Countries' },
             { id: 'wineRegions', label: 'Wine Regions' },
@@ -196,6 +180,86 @@ export default function Winepedia({ view }: WinepediaProps) {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+        
+        {activeTab === 'wineQuality' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Wine Quality Categories</CardTitle>
+                <CardDescription>
+                  Understanding wine quality ratings and what they mean for your winery
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { min: 0.9, max: 1.0 },
+                    { min: 0.8, max: 0.9 },
+                    { min: 0.7, max: 0.8 },
+                    { min: 0.6, max: 0.7 },
+                    { min: 0.5, max: 0.6 },
+                    { min: 0.4, max: 0.5 },
+                    { min: 0.3, max: 0.4 },
+                    { min: 0.2, max: 0.3 },
+                    { min: 0.1, max: 0.2 },
+                    { min: 0.0, max: 0.1 }
+                  ].map((quality, index) => {
+                    const sampleQuality = (quality.min + quality.max) / 2;
+                    const qualityInfo = getWineQualityInfo(sampleQuality);
+                    const colorClass = getColorClass(sampleQuality);
+                    const qualityLabel = getColorCategory(sampleQuality);
+                    
+                    return (
+                      <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className={`font-semibold ${colorClass}`}>{qualityInfo.category}</h4>
+                          <span className="text-sm text-gray-500">
+                            {Math.round(quality.min * 100)}-{Math.round(quality.max * 100)}%
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{qualityInfo.description}</p>
+                        <div className="text-xs text-gray-500">
+                          Quality Level: <span className="font-medium">{qualityLabel}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Quality Factors</CardTitle>
+                <CardDescription>
+                  What influences wine quality in your winery
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-3">Grape Quality</h4>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li>• Grape variety characteristics</li>
+                      <li>• Vineyard location and terroir</li>
+                      <li>• Harvest timing and conditions</li>
+                      <li>• Vine age and health</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-3">Winemaking Process</h4>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li>• Fermentation control and timing</li>
+                      <li>• Aging conditions and duration</li>
+                      <li>• Wine balance and characteristics</li>
+                      <li>• Bottling and storage practices</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
         
@@ -258,13 +322,13 @@ export default function Winepedia({ view }: WinepediaProps) {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-gray-700">Purchasing Power:</span>
-                      <span className={`font-bold ${data.purchasingPower >= 1.0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`font-bold ${getColorClass(data.purchasingPower)}`}>
                         {formatPercent(data.purchasingPower, 0, true)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-gray-700">Wine Tradition:</span>
-                      <span className={`font-bold ${data.wineTradition >= 1.0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`font-bold ${getColorClass(data.wineTradition)}`}>
                         {formatPercent(data.wineTradition, 0, true)}
                       </span>
                     </div>

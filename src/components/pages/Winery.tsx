@@ -4,6 +4,7 @@ import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormatte
 import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch } from '@/lib/types';
 import { Button, WineCharacteristicsDisplay, CharacteristicBarLegend } from '../ui';
+import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -18,13 +19,41 @@ const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   );
 };
 
+// Component for wine quality category display
+const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const qualityCategory = getWineQualityCategory(batch.quality);
+  const qualityLabel = getColorCategory(batch.quality);
+  const colorClass = getColorClass(batch.quality);
+  
+  return (
+    <div className="text-xs text-gray-600 mt-1">
+      Quality: <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
+    </div>
+  );
+};
+
 // Component for detailed wine characteristics display
 const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  
   return (
-    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-      <h6 className="text-sm font-medium text-gray-800 mb-2">Wine Characteristics:</h6>
-      <WineCharacteristicsDisplay characteristics={batch.characteristics} />
-      <CharacteristicBarLegend />
+    <div className="mt-3">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+      >
+        <span>Wine Characteristics</span>
+        <span className="text-xs">
+          {isExpanded ? '▼' : '▶'}
+        </span>
+      </button>
+      
+      {isExpanded && (
+        <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+          <WineCharacteristicsDisplay characteristics={batch.characteristics} />
+          <CharacteristicBarLegend />
+        </div>
+      )}
     </div>
   );
 };
@@ -152,6 +181,7 @@ const Winery: React.FC = () => {
                         {getBatchStatus(batch)}
                       </p>
                       <WineBatchBalanceDisplay batch={batch} />
+                      <WineQualityDisplay batch={batch} />
                       
                       {/* Wine Characteristics Display */}
                       <WineBatchCharacteristicsDisplay batch={batch} />
@@ -256,6 +286,7 @@ const Winery: React.FC = () => {
                       
                       {/* Balance and Characteristics for completed wines */}
                       <WineBatchBalanceDisplay batch={batch} />
+                      <WineQualityDisplay batch={batch} />
                       <WineBatchCharacteristicsDisplay batch={batch} />
                     </div>
                     <div className="text-2xl">🍷</div>

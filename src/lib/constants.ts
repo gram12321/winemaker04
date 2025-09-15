@@ -219,6 +219,52 @@ export const CUSTOMER_NAMES = {
   }
 } as const;
 
+// ===== WINE CHARACTERISTICS CONSTANTS =====
+
+// Base balanced ranges for wine characteristics (Phase 1: Static values)
+export const BASE_BALANCED_RANGES = {
+  acidity: [0.4, 0.6],
+  aroma: [0.4, 0.6], 
+  body: [0.4, 0.6],
+  spice: [0.4, 0.6],
+  sweetness: [0.4, 0.6],
+  tannins: [0.4, 0.6]
+} as const;
+
+// Base characteristics for grape varieties (Phase 1: Static values)
+// Values represent absolute position on a 0-1 scale (0.5 is midpoint)
+export const BASE_GRAPE_CHARACTERISTICS = {
+  'Barbera': { acidity: 0.7, aroma: 0.5, body: 0.6, spice: 0.5, sweetness: 0.5, tannins: 0.6 },
+  'Chardonnay': { acidity: 0.4, aroma: 0.65, body: 0.75, spice: 0.5, sweetness: 0.5, tannins: 0.35 },
+  'Pinot Noir': { acidity: 0.65, aroma: 0.6, body: 0.35, spice: 0.5, sweetness: 0.5, tannins: 0.4 },
+  'Primitivo': { acidity: 0.5, aroma: 0.7, body: 0.7, spice: 0.5, sweetness: 0.7, tannins: 0.7 },
+  'Sauvignon Blanc': { acidity: 0.8, aroma: 0.75, body: 0.3, spice: 0.6, sweetness: 0.4, tannins: 0.3 }
+} as const;
+
+// Grape variety information for UI display
+export const GRAPE_VARIETY_INFO = [
+  {
+    name: 'Barbera' as const,
+    description: 'A versatile grape known for high acidity and moderate tannins, producing medium-bodied wines.'
+  },
+  {
+    name: 'Chardonnay' as const,
+    description: 'A noble grape variety producing aromatic, medium-bodied wines with moderate acidity.'
+  },
+  {
+    name: 'Pinot Noir' as const,
+    description: 'A delicate grape creating light-bodied, aromatic wines with high acidity and soft tannins.'
+  },
+  {
+    name: 'Primitivo' as const,
+    description: 'A robust grape yielding full-bodied, aromatic wines with natural sweetness and high tannins.'
+  },
+  {
+    name: 'Sauvignon Blanc' as const,
+    description: 'A crisp grape variety producing aromatic, light-bodied wines with high acidity.'
+  }
+] as const;
+
 // ===== FUTURE CONSTANTS =====
 // This file can be extended with other game constants as needed:
 // - Vineyard constants (land values, prestige factors)

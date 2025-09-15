@@ -1,6 +1,6 @@
-import { supabase } from '../database/supabase';
+import { supabase } from '../../database/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { Season } from '../types';
+import { Season } from '../../types';
 
 export type ScoreType = 'company_value' | 'company_value_per_week';
 

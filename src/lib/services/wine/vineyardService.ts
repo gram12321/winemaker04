@@ -1,14 +1,14 @@
 // Simplified vineyard management service with direct database operations
 import { v4 as uuidv4 } from 'uuid';
-import { Vineyard, GrapeVariety } from '../types';
-import { saveVineyard, loadVineyards } from '../database/database';
-import { triggerGameUpdate } from '../../hooks/useGameUpdates';
-import { getGameState } from './gameState';
-import { updateVineyardPrestigeEvents } from '../database/prestigeService';
+import { Vineyard, GrapeVariety } from '../../types';
+import { saveVineyard, loadVineyards } from '../../database/database';
+import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { getGameState } from '../gameState';
+import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
 
 export const GRAPE_VARIETIES: GrapeVariety[] = [
-  'Chardonnay', 'Pinot Noir', 'Cabernet Sauvignon', 'Merlot'
+  'Barbera', 'Chardonnay', 'Pinot Noir', 'Primitivo', 'Sauvignon Blanc'
 ];
 
 // Create a new vineyard

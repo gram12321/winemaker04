@@ -15,7 +15,7 @@ import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/toaster';
 import { useGameInit } from './hooks/useGameInit';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
-import { Company } from './lib/services/companyService';
+import { Company } from './lib/services/user/companyService';
 import { setActiveCompany, resetGameState, getCurrentCompany } from './lib/services/gameState';
 
 function App() {

@@ -230,6 +230,72 @@ export function getCountryCodeForFlag(countryName: string | undefined | null): s
 }
 
 /**
+ * Get wine quality category based on quality value (0-1)
+ * @param quality Quality value between 0 and 1
+ * @returns Quality category string
+ */
+export function getWineQualityCategory(quality: number): string {
+  if (quality < 0.1) return "Undrinkable";
+  if (quality < 0.2) return "Vinegar Surprise";
+  if (quality < 0.3) return "House Pour";
+  if (quality < 0.4) return "Everyday Sipper";
+  if (quality < 0.5) return "Solid Bottle";
+  if (quality < 0.6) return "Well-Balanced";
+  if (quality < 0.7) return "Sommelier's Choice";
+  if (quality < 0.8) return "Cellar Reserve";
+  if (quality < 0.9) return "Connoisseur's Pick";
+  return "Vintage Perfection";
+}
+
+/**
+ * Get wine quality description based on quality value (0-1)
+ * @param quality Quality value between 0 and 1
+ * @returns Quality description string
+ */
+export function getWineQualityDescription(quality: number): string {
+  if (quality < 0.1) return "Wines that are not suitable for consumption";
+  if (quality < 0.2) return "Poor quality wines with significant flaws";
+  if (quality < 0.3) return "Simple wines typically served in restaurants";
+  if (quality < 0.4) return "Basic wines for casual drinking";
+  if (quality < 0.5) return "Decent wines suitable for everyday consumption";
+  if (quality < 0.6) return "Good quality wines with harmonious characteristics";
+  if (quality < 0.7) return "Well-crafted wines that professionals recommend";
+  if (quality < 0.8) return "Premium wines suitable for aging and special occasions";
+  if (quality < 0.9) return "High-quality wines that appeal to wine enthusiasts and collectors";
+  return "Exceptional wines that represent the pinnacle of winemaking artistry";
+}
+
+/**
+ * Get wine quality info (category and description) based on quality value (0-1)
+ * @param quality Quality value between 0 and 1
+ * @returns Object with category and description
+ */
+export function getWineQualityInfo(quality: number): { category: string; description: string } {
+  return {
+    category: getWineQualityCategory(quality),
+    description: getWineQualityDescription(quality)
+  };
+}
+
+/**
+ * Get color category based on quality value (0-1)
+ * @param value Quality value between 0 and 1
+ * @returns Color category string
+ */
+export function getColorCategory(value: number): string {
+  if (value < 0.1) return "Awful";
+  if (value < 0.2) return "Terrible";
+  if (value < 0.3) return "Poor";
+  if (value < 0.4) return "Below Average";
+  if (value < 0.5) return "Average";
+  if (value < 0.6) return "Above Average";
+  if (value < 0.7) return "Good";
+  if (value < 0.8) return "Very Good";
+  if (value < 0.9) return "Excellent";
+  return "Perfect";
+}
+
+/**
  * Get color class based on quality value (0-1)
  * @param value Quality value between 0 and 1
  * @returns CSS color class

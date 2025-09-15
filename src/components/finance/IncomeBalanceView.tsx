@@ -1,5 +1,5 @@
-import { formatCurrency } from '@/lib/utils/utils';
-import { calculateFinancialData } from '@/lib/services/financeService';
+import { formatCurrency, getColorClass } from '@/lib/utils/utils';
+import { calculateFinancialData } from '@/lib/services/user/financeService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 
@@ -70,18 +70,18 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
           <FinancialSection title={`${period.toUpperCase()} EXPENSES`}>
             {financialData.expenseDetails.length > 0 ? (
               financialData.expenseDetails.map((item, index) => (
-                <DataRow key={index} label={item.description} value={item.amount} valueClass="text-red-600" />
+                <DataRow key={index} label={item.description} value={item.amount} valueClass={getColorClass(0.2)} />
               ))
             ) : (
-              <DataRow label={`Total ${period} Expenses`} value={financialData.expenses} valueClass="text-red-600" />
+                <DataRow label={`Total ${period} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
             )}
           </FinancialSection>
 
           <FinancialSection title="NET INCOME">
-            <DataRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} Income`} value={financialData.income} valueClass="text-emerald-600" />
-            <DataRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} Expenses`} value={financialData.expenses} valueClass="text-red-600" />
+            <DataRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} Income`} value={financialData.income} valueClass={getColorClass(0.8)} />
+            <DataRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
              <hr className="my-1 border-gray-300" />
-             <DataRow label="Net Income" value={financialData.netIncome} valueClass={financialData.netIncome >= 0 ? "text-emerald-600" : "text-red-600"} />
+             <DataRow label="Net Income" value={financialData.netIncome} valueClass={getColorClass(financialData.netIncome >= 0 ? 0.8 : 0.2)} />
           </FinancialSection>
         </CardContent>
       </Card>

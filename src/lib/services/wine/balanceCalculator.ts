@@ -1,15 +1,6 @@
 // Phase 1 Balance Calculator - Simple balance calculation with static ranges
-import { WineCharacteristics, BalanceResult, WineBatch } from '../types';
-
-// Base balanced ranges for all characteristics (Phase 1: Static values)
-export const BASE_BALANCED_RANGES: Record<keyof WineCharacteristics, [number, number]> = {
-  acidity: [0.4, 0.6],
-  aroma: [0.4, 0.6], 
-  body: [0.4, 0.6],
-  spice: [0.4, 0.6],
-  sweetness: [0.4, 0.6],
-  tannins: [0.4, 0.6]
-};
+import { WineCharacteristics, BalanceResult, GrapeVariety } from '../../types';
+import { BASE_BALANCED_RANGES, BASE_GRAPE_CHARACTERISTICS } from '../../constants';
 
 /**
  * Calculate wine balance score using Phase 1 simple algorithm
@@ -54,33 +45,30 @@ export function calculateWineBalance(characteristics: WineCharacteristics): Bala
   };
 }
 
-/**
- * Calculate balance for a wine batch
- * @param wineBatch - Wine batch to calculate balance for
- * @returns BalanceResult
- */
-export function calculateWineBatchBalance(wineBatch: WineBatch): BalanceResult {
-  return calculateWineBalance(wineBatch.characteristics);
-}
+// Removed calculateWineBatchBalance - it was just a wrapper function
 
 /**
  * Generate default wine characteristics for a grape variety
- * Phase 1: Use flat values with slight variation
+ * Phase 1: Use grape-specific base characteristics
  * @param grape - Grape variety
- * @returns WineCharacteristics with default values
+ * @returns WineCharacteristics with grape-specific values
  */
-export function generateDefaultCharacteristics(_grape: string): WineCharacteristics {
-  // Phase 1: Simple generation with slight random variation
-  const baseValue = 0.5; // Midpoint of balanced range
-  const variation = 0.1; // Small random variation
+export function generateDefaultCharacteristics(grape: GrapeVariety): WineCharacteristics {
+  // Get grape-specific characteristics or fallback to balanced midpoint
+  const grapeCharacteristics = BASE_GRAPE_CHARACTERISTICS[grape];
   
+  if (grapeCharacteristics) {
+    return { ...grapeCharacteristics };
+  }
+  
+  // Fallback to balanced midpoint if grape not found
   return {
-    acidity: Math.max(0, Math.min(1, baseValue + (Math.random() - 0.5) * variation)),
-    aroma: Math.max(0, Math.min(1, baseValue + (Math.random() - 0.5) * variation)),
-    body: Math.max(0, Math.min(1, baseValue + (Math.random() - 0.5) * variation)),
-    spice: Math.max(0, Math.min(1, baseValue + (Math.random() - 0.5) * variation)),
-    sweetness: Math.max(0, Math.min(1, baseValue + (Math.random() - 0.5) * variation)),
-    tannins: Math.max(0, Math.min(1, baseValue + (Math.random() - 0.5) * variation))
+    acidity: 0.5,
+    aroma: 0.5,
+    body: 0.5,
+    spice: 0.5,
+    sweetness: 0.5,
+    tannins: 0.5
   };
 }
 

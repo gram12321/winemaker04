@@ -4,7 +4,7 @@ import { WineOrder, Customer } from '../../types';
 import { saveWineOrder, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
-import { formatCompletedWineName } from '../wineBatchService';
+import { formatCompletedWineName } from '../wine/wineBatchService';
 import { SALES_CONSTANTS } from '../../constants';
 import { calculateOrderAmount, calculateSteppedBalance } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';

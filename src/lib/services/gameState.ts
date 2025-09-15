@@ -2,9 +2,9 @@
 import { GameState } from '../types';
 import { GAME_INITIALIZATION } from '../constants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateBasePrestigeEvent } from '../database/prestigeService';
-import { companyService, Company } from './companyService';
-import { highscoreService } from './highscoreService';
-import { calculateFinancialData, initializeStartingCapital } from './financeService';
+import { companyService, Company } from './user/companyService';
+import { highscoreService } from './user/highscoreService';
+import { calculateFinancialData, initializeStartingCapital } from './user/financeService';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
 

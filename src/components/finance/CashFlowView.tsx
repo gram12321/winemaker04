@@ -7,8 +7,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
-import { formatCurrency, formatGameDateFromObject } from '@/lib/utils/utils';
-import { loadTransactions } from '@/lib/services/financeService';
+import { formatCurrency, formatGameDateFromObject, getColorClass } from '@/lib/utils/utils';
+import { loadTransactions } from '@/lib/services/user/financeService';
 import { Transaction } from '@/lib/types';
 import { useGameStateWithData } from '@/hooks';
 
@@ -42,12 +42,12 @@ export function CashFlowView() {
                   <TableRow key={transaction.id} className="hover:bg-gray-50">
                     <TableCell className="text-sm">{formatGameDateFromObject(transaction.date)}</TableCell>
                     <TableCell>
-                      <span className={`text-sm ${transaction.amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      <span className={`text-sm ${getColorClass(transaction.amount >= 0 ? 0.8 : 0.2)}`}>
                         {transaction.amount >= 0 ? "Income" : "Expense"}
                       </span>
                     </TableCell>
                     <TableCell className="text-sm">{transaction.description}</TableCell>
-                    <TableCell className={`text-sm text-right ${transaction.amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <TableCell className={`text-sm text-right ${getColorClass(transaction.amount >= 0 ? 0.8 : 0.2)}`}>
                       {transaction.amount >= 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
                     </TableCell>
                     <TableCell className="text-sm text-right font-medium">

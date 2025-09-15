@@ -1,6 +1,7 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types';
-import { BASE_BALANCED_RANGES } from '@/lib/services/balanceCalculator';
+import { BASE_BALANCED_RANGES } from '@/lib/constants';
+import { getColorClass } from '@/lib/utils/utils';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
@@ -32,13 +33,13 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   const getValueColor = () => {
     if (adjustedRanges) {
       const [adjMin, adjMax] = adjustedRanges;
-      if (displayValue >= adjMin && displayValue <= adjMax) return 'text-green-600';
-      if (displayValue < adjMin - 0.2 || displayValue > adjMax + 0.2) return 'text-red-600';
-      return 'text-yellow-600';
+      if (displayValue >= adjMin && displayValue <= adjMax) return getColorClass(0.8); // Good quality
+      if (displayValue < adjMin - 0.2 || displayValue > adjMax + 0.2) return getColorClass(0.2); // Poor quality
+      return getColorClass(0.5); // Average quality
     } else {
-      if (displayValue >= minBalance && displayValue <= maxBalance) return 'text-green-600';
-      if (displayValue < minBalance - 0.2 || displayValue > maxBalance + 0.2) return 'text-red-600';
-      return 'text-yellow-600';
+      if (displayValue >= minBalance && displayValue <= maxBalance) return getColorClass(0.8); // Good quality
+      if (displayValue < minBalance - 0.2 || displayValue > maxBalance + 0.2) return getColorClass(0.2); // Poor quality
+      return getColorClass(0.5); // Average quality
     }
   };
 
