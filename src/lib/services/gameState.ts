@@ -190,7 +190,7 @@ export async function getCurrentPrestige(): Promise<number> {
 // Update company value prestige event
 async function updateCompanyValuePrestige(money: number): Promise<void> {
   try {
-    const companyValuePrestige = money / 10000000; // Same formula as old system
+    const companyValuePrestige = Math.log(money / 1000000 + 1) * 2; // Logarithmic scaling for diminishing returns
     await updateBasePrestigeEvent(
       'company_value',
       'company_money',

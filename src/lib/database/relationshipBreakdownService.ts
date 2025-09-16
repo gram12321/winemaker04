@@ -36,7 +36,7 @@ export async function calculateRelationshipBreakdown(customer: Customer, company
   }
 
   // Get current company prestige
-  const { totalPrestige: companyPrestige } = await calculateCurrentPrestige(companyId);
+  const { totalPrestige: companyPrestige } = await calculateCurrentPrestige();
   
   // Calculate base relationship components
   const baseRelationship = 0.1;
@@ -44,7 +44,7 @@ export async function calculateRelationshipBreakdown(customer: Customer, company
   const marketShareImpact = 1 + 0.7 * Math.pow(customer.marketShare, 0.25) + Math.pow(customer.marketShare, 0.9);
   
   // Calculate relationship boosts
-  const relationshipBoosts = await calculateCustomerRelationshipBoost(customer.id, companyId);
+  const relationshipBoosts = await calculateCustomerRelationshipBoost(customer.id);
   
   // Get detailed boost information
   const boostDetails = await getRelationshipBoostDetails(customer.id, companyId);
