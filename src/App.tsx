@@ -60,15 +60,12 @@ function App() {
 
   const initializeGameForCompany = async () => {
     try {
-      // Initialize customers system for the active company
-      const { getCurrentPrestige } = await import('@/lib/services/gameState');
-      const { initializeCustomers } = await import('@/lib/services/sales/createCustomer');
-      
-      const currentPrestige = await getCurrentPrestige();
-      await initializeCustomers(currentPrestige);
+      // Customers are now initialized automatically via useGameInit hook
+      // No need to duplicate the initialization here
+      console.log('Game systems initialized for company');
     } catch (error) {
       console.error('Error initializing game for company:', error);
-      // Don't throw - allow game to continue even if customer initialization fails
+      // Don't throw - allow game to continue even if initialization fails
     }
   };
 
