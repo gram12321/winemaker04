@@ -9,7 +9,18 @@ import { getCompanyQuery } from '../utils/companyUtils';
  */
 export async function saveCustomers(customers: Customer[]): Promise<void> {
   try {
-    // Clear existing customers for this company first
+    // Clear dependent company_customers rows first to avoid FK violations
+    const { error: deleteCompanyCustomersError } = await supabase
+      .from('company_customers')
+      .delete()
+      .eq('company_id', getCurrentCompanyId());
+
+    if (deleteCompanyCustomersError) {
+      console.error('Error clearing existing company_customers:', deleteCompanyCustomersError);
+      throw deleteCompanyCustomersError;
+    }
+
+    // Clear existing customers for this company
     const { error: deleteError } = await supabase
       .from('customers')
       .delete()

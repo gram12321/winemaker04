@@ -3,19 +3,19 @@ import { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { 
   loadWineLog, 
-  calculateVineyardStats,
-  getAllVineyards,
+    getAllVineyards,
   type VineyardStats 
 } from '@/lib/services';
-import { WineLogEntry, Vineyard } from '@/lib/types';
+import { WineLogEntry } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
-import { Wine, TrendingUp, Award, Calendar, BarChart3 } from 'lucide-react';
+import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { 
   getWineQualityCategory, 
   getColorCategory, 
   getColorClass, 
   formatCurrency,
-  formatGameDate 
+  formatGameDate,
+  formatNumber
 } from '@/lib/utils/utils';
 
 interface WineLogProps {
@@ -88,7 +88,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                 <Wine className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{totalBottles.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{formatNumber(totalBottles, { decimals: 0, forceDecimals: true })}</div>
                 <div className="text-sm text-gray-500">Total Bottles Produced</div>
               </div>
             </div>

@@ -3,7 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { highscoreService, HighscoreEntry, ScoreType } from '@/lib/services';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../UItypes';
 
 interface HighscoresProps extends PageProps, CompanyProps {
@@ -224,8 +224,8 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                 {scoreType.includes('price') ? 
                   formatCurrency(score.scoreValue, 2) :
                   scoreType.includes('quality') || scoreType.includes('balance') ?
-                    `${(score.scoreValue * 100).toFixed(1)}%` :
-                    score.scoreValue.toLocaleString()
+                    formatPercent(score.scoreValue, 1, true) :
+                    formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
                 }
               </TableCell>
               <TableCell className="text-right text-sm text-muted-foreground">

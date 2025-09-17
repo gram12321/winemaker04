@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Customer, CustomerCountry, CustomerType } from '../../types';
 import { CUSTOMER_REGIONAL_DATA, CUSTOMER_NAMES, SALES_CONSTANTS } from '../../constants';
 import { getCountryCodeForFlag } from '../../utils/utils';
-import { calculateSteppedBalance } from '../../utils/calculator';
+import { calculateSkewedMultiplier } from '../../utils/calculator';
 import { 
   saveCustomers, 
   loadCustomers, 
@@ -100,7 +100,7 @@ function generateCustomerName(country: CustomerCountry, customerType: CustomerTy
 // ===== BULK CUSTOMER GENERATION (GAME INITIALIZATION) =====
 
 /**
- * Generate market shares using calculateSteppedBalance
+ * Generate market shares using calculateSkewedMultiplier
  * Creates heavily skewed distribution toward small values (0-1 range)
  * Converts to percentage (0-100%) and iterates until 100% total is reached
  */
@@ -120,7 +120,7 @@ function generateMarketSharesUntilFull(customerTypes: CustomerType[]): number[] 
   // Keep generating customers until we reach 100% market share
   while (totalMarketShare < 100.0) {
     const randomValue1 = Math.random();
-    const steppedValue1 = calculateSteppedBalance(randomValue1);
+    const steppedValue1 = calculateSkewedMultiplier(randomValue1);
     
     let steppedValue: number;
     let numDraws = 1;
@@ -144,7 +144,7 @@ function generateMarketSharesUntilFull(customerTypes: CustomerType[]): number[] 
     let minValue = steppedValue1;
     for (let i = 1; i < numDraws; i++) {
       const randomValue = Math.random();
-      const additionalValue = calculateSteppedBalance(randomValue);
+      const additionalValue = calculateSkewedMultiplier(randomValue);
       minValue = Math.min(minValue, additionalValue);
     }
     

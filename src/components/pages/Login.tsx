@@ -3,6 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
 import { companyService, Company, highscoreService, HighscoreEntry, createNewCompany } from '@/lib/services';
+import { getCurrentCompany, setActiveCompany } from '@/lib/services/gameState';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
@@ -36,6 +37,17 @@ export function Login({ onCompanySelected }: LoginProps) {
   useEffect(() => {
     loadAllCompanies();
     loadHighscores();
+    // Attempt auto-login to last active company
+    try {
+      const lastCompanyId = localStorage.getItem('lastCompanyId');
+      if (lastCompanyId) {
+        const match = allCompanies.find(c => c.id === lastCompanyId);
+        if (match) {
+          // Set as active silently
+          onCompanySelected(match);
+        }
+      }
+    } catch {}
   }, []);
 
   const loadAllCompanies = async () => {

@@ -3,19 +3,21 @@ import { Customer } from '../types';
 import { calculateCustomerRelationshipBoost } from './prestigeService';
 import { calculateCurrentPrestige } from './prestigeService';
 import { getCurrentCompanyId } from '../utils/companyUtils';
+import { calculateAbsoluteWeeks, formatNumber } from '../utils/utils';
+import { calculateInvertedSkewedMultiplier } from '../utils/calculator';
+import { getGameState } from '../services/gameState';
 import { supabase } from './supabase';
 
 export interface RelationshipBreakdown {
   totalRelationship: number;
-  baseRelationship: number;
   prestigeContribution: number;
-  marketShareImpact: number;
+  marketShareModifier: number;
   relationshipBoosts: number;
   factors: {
     companyPrestige: number;
     customerMarketShare: number;
     prestigeFactor: number;
-    marketShareDivisor: number;
+    marketShareModifier: number;
     boostCount: number;
     boostDetails: Array<{
       description: string;
@@ -38,10 +40,15 @@ export async function calculateRelationshipBreakdown(customer: Customer, company
   // Get current company prestige
   const { totalPrestige: companyPrestige } = await calculateCurrentPrestige();
   
-  // Calculate base relationship components
-  const baseRelationship = 0.1;
-  const prestigeContribution = Math.log(companyPrestige + 1) * 3.3;
-  const marketShareImpact = 1 + 0.7 * Math.pow(customer.marketShare, 0.25) + Math.pow(customer.marketShare, 0.9);
+  // Calculate relationship components (simplified model)
+  // Minimal baseline from prestige, scaled via natural log (no extra multiplier)
+  const prestigeContribution = Math.log(companyPrestige + 1);
+  // Market share acts as a difficulty modifier (larger customers reduce impact)
+  // Uses inverted skewed multiplier for optimal penalty distribution
+  // Use inverted skewed multiplier - but reverse the penalty
+  // High market share = harder to impress (lower modifier)
+  // Low market share = easier to impress (higher modifier)
+  const marketShareModifier = 1 - calculateInvertedSkewedMultiplier(customer.marketShare);
   
   // Calculate relationship boosts
   const relationshipBoosts = await calculateCustomerRelationshipBoost(customer.id);
@@ -49,23 +56,21 @@ export async function calculateRelationshipBreakdown(customer: Customer, company
   // Get detailed boost information
   const boostDetails = await getRelationshipBoostDetails(customer.id, companyId);
   
-  // Use the stored relationship value from the customer object
-  const totalRelationship = customer.relationship || 0;
-  
-  // Calculate what the base relationship would be without boosts
-  // const baseCalculatedRelationship = baseRelationship + (prestigeContribution / marketShareImpact);
+  // Compute current relationship purely from formula (no stored value)
+  const totalRelationship =
+    prestigeContribution * marketShareModifier +
+    relationshipBoosts * marketShareModifier;
   
   return {
     totalRelationship,
-    baseRelationship,
     prestigeContribution,
-    marketShareImpact,
+    marketShareModifier,
     relationshipBoosts,
     factors: {
       companyPrestige,
       customerMarketShare: customer.marketShare,
       prestigeFactor: prestigeContribution,
-      marketShareDivisor: marketShareImpact,
+      marketShareModifier,
       boostCount: boostDetails.length,
       boostDetails
     }
@@ -93,26 +98,29 @@ async function getRelationshipBoostDetails(customerId: string, companyId?: strin
       .select('*')
       .eq('customer_id', customerId)
       .eq('company_id', companyId)
-      .order('timestamp', { ascending: false });
+      // Order by game time only; avoid realtime timestamps
+      .order('created_game_week', { ascending: false });
 
     if (error || !data) {
       return [];
     }
 
-    const currentTime = Date.now();
+    const gs = getGameState();
+    const currentAbsWeeks = calculateAbsoluteWeeks(gs.week!, gs.season!, gs.currentYear!);
     
     return data.map(row => {
-      const timeElapsed = currentTime - row.timestamp;
-      const weeksElapsed = timeElapsed / (1000 * 60 * 60 * 24 * 7);
-      const decayedAmount = row.amount * Math.pow(row.decay_rate, weeksElapsed);
+      const createdWeek = (row as any).created_game_week || currentAbsWeeks;
+      const weeksElapsed = Math.max(0, currentAbsWeeks - createdWeek);
+      const currentAmount = row.amount;
       
       return {
         description: row.description,
         amount: row.amount,
         weeksAgo: Math.round(weeksElapsed * 10) / 10,
-        decayedAmount: Math.max(0, decayedAmount)
+        decayedAmount: Math.max(0, currentAmount)
       };
-    }).filter(boost => boost.decayedAmount > 0.01); // Only show meaningful boosts
+    // Show virtually all boosts; only exclude true zeros and negatives
+    }).filter(boost => boost.decayedAmount > 0.00001);
     
   } catch (error) {
     console.error('Failed to get relationship boost details:', error);
@@ -124,50 +132,33 @@ async function getRelationshipBoostDetails(customerId: string, companyId?: strin
  * Format relationship breakdown for display in tooltips
  */
 export function formatRelationshipBreakdown(breakdown: RelationshipBreakdown): string {
-  // Calculate what the formula would give us
-  const calculatedRelationship = breakdown.baseRelationship + (breakdown.prestigeContribution / breakdown.marketShareImpact) + breakdown.relationshipBoosts;
-  const baseRelationshipWithoutBoosts = breakdown.baseRelationship + (breakdown.prestigeContribution / breakdown.marketShareImpact);
+  // Calculate relationship per simplified model:
+  // (Prestige × Modifier) + (Boost × Modifier)
+  const calculatedRelationship =
+    breakdown.prestigeContribution * breakdown.marketShareModifier +
+    breakdown.relationshipBoosts * breakdown.marketShareModifier;
   
   const lines = [
-    `Total Relationship: ${breakdown.totalRelationship.toFixed(1)}% (stored value)`,
+    'Customer Relationship Breakdown',
+    `Relationship: ${formatNumber(calculatedRelationship, { decimals: 3, forceDecimals: true })}%`,
     '',
-    'Formula Calculation:',
-    `Base + (Prestige ÷ Market Impact) + Boosts`,
-    `= ${breakdown.baseRelationship.toFixed(1)}% + (${breakdown.prestigeContribution.toFixed(1)}% ÷ ${breakdown.marketShareImpact.toFixed(2)}) + ${breakdown.relationshipBoosts.toFixed(2)}%`,
-    `= ${breakdown.baseRelationship.toFixed(1)}% + ${(breakdown.prestigeContribution / breakdown.marketShareImpact).toFixed(1)}% + ${breakdown.relationshipBoosts.toFixed(2)}%`,
-    `= ${baseRelationshipWithoutBoosts.toFixed(1)}% + ${breakdown.relationshipBoosts.toFixed(2)}%`,
-    `= ${calculatedRelationship.toFixed(1)}%`,
+    'Current Model:',
+    `Relationship = ( (log(Prestige + 1)) × Market Modifier) + (Boost × Modifier)`,
+    `= (${formatNumber(breakdown.prestigeContribution, { decimals: 3, forceDecimals: true })} × ${formatNumber(breakdown.marketShareModifier, { decimals: 3, forceDecimals: true })}) + (${formatNumber(breakdown.relationshipBoosts, { decimals: 3, forceDecimals: true })} × ${formatNumber(breakdown.marketShareModifier, { decimals: 3, forceDecimals: true })}) = ${formatNumber(calculatedRelationship, { decimals: 3, forceDecimals: true })}%`,
     '',
-    // Add note if there's a discrepancy
-    ...(Math.abs(calculatedRelationship - breakdown.totalRelationship) > 0.1 ? [
-      '',
-      `Note: Formula calculates ${calculatedRelationship.toFixed(1)}% but stored value is ${breakdown.totalRelationship.toFixed(1)}%`,
-      `This difference (${(calculatedRelationship - breakdown.totalRelationship).toFixed(1)}%) may be due to:`,
-      `• Different calculation parameters when stored`,
-      `• Manual adjustments or corrections`,
-      `• Rounding differences in the original calculation`
-    ] : []),
-    '',
-    'Components:',
-    `• Base Relationship: ${breakdown.baseRelationship.toFixed(1)}% (fixed)`,
-    `• Prestige Contribution: ${breakdown.prestigeContribution.toFixed(1)}% (log(${breakdown.factors.companyPrestige.toFixed(1)} + 1) × 3.3)`,
-    `• Market Share Impact: ${breakdown.marketShareImpact.toFixed(2)}x divisor (1 + 0.7×${(breakdown.factors.customerMarketShare * 100).toFixed(1)}%^0.25 + ${(breakdown.factors.customerMarketShare * 100).toFixed(1)}%^0.9)`,
-    `• Relationship Boosts: ${breakdown.relationshipBoosts.toFixed(2)}% (from ${breakdown.factors.boostCount} sales)`,
-    '',
-    'Company Factors:',
-    `• Company Prestige: ${breakdown.factors.companyPrestige.toFixed(1)}`,
-    `• Customer Market Share: ${(breakdown.factors.customerMarketShare * 100).toFixed(1)}%`
+    `Market Share Modifier: ${formatNumber(breakdown.marketShareModifier, { decimals: 3, forceDecimals: true })} (customer market share: ${formatNumber(breakdown.factors.customerMarketShare * 100, { decimals: 3, forceDecimals: true })}%)`
   ];
   
   if (breakdown.factors.boostDetails.length > 0) {
     lines.push('');
     lines.push('Recent Boost Events:');
-    breakdown.factors.boostDetails.slice(0, 3).forEach(boost => {
-      lines.push(`• ${boost.description} (${boost.weeksAgo}w ago): +${boost.decayedAmount.toFixed(2)}%`);
+    // Show more events for better transparency
+    breakdown.factors.boostDetails.slice(0, 5).forEach(boost => {
+      lines.push(`• ${boost.description} (${formatNumber(boost.weeksAgo, { decimals: 3, forceDecimals: true })}w ago): +${formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%`);
     });
     
-    if (breakdown.factors.boostDetails.length > 3) {
-      lines.push(`• ... and ${breakdown.factors.boostDetails.length - 3} more`);
+    if (breakdown.factors.boostDetails.length > 5) {
+      lines.push(`• ... and ${breakdown.factors.boostDetails.length - 5} more`);
     }
   }
   

@@ -1,7 +1,7 @@
 // Quality calculation service - handles all wine characteristics that contribute to quality and balance
 import { WineBatch, GrapeVariety } from '../../types';
 import { WINE_QUALITY_CONSTANTS } from '../../constants';
-import { calculateSteppedBalance } from '../../utils/calculator';
+import { calculateSkewedMultiplier } from '../../utils/calculator';
 
 /**
  * Calculate the quality index for a wine batch
@@ -21,8 +21,8 @@ export function calculateWineQuality(wineBatch: WineBatch): number {
   // Current implementation: simple average of quality and balance
   const combinedScore = (wineBatch.quality + wineBatch.balance) / 2;
   
-  // Apply stepped balance scaling for more realistic distribution
-  return calculateSteppedBalance(combinedScore);
+  // Apply skewed multiplier scaling for more realistic distribution
+  return calculateSkewedMultiplier(combinedScore);
 }
 
 /**

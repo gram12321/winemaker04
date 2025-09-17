@@ -3,7 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
 import { Trophy, Award, Medal, Lock, Calendar, TrendingUp, Wine } from 'lucide-react';
 // import { Company } from '@/lib/services'; // Not needed with shared interfaces
-import { formatNumber, formatCompact } from '@/lib/utils/utils';
+import { formatNumber, formatCompact, formatPercent } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../UItypes';
 import { WineLog } from './WineLog';
 
@@ -251,7 +251,7 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-yellow-600">
-                  {Math.round((unlockedCount / totalCount) * 100)}%
+                  {formatPercent(unlockedCount / totalCount, 0, true)}
                 </div>
                 <p className="text-sm text-muted-foreground">Complete</p>
               </div>

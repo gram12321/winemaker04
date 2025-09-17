@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
 import { Building2, TrendingUp, Trophy, Calendar, BarChart3 } from 'lucide-react';
-import { formatGameDateFromObject, formatCurrency, calculateCompanyWeeks, formatGameDate } from '@/lib/utils/utils';
+import { formatGameDateFromObject, formatCurrency, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { useGameState } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
 import { NavigationProps } from '../UItypes';
@@ -59,7 +59,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   const { weeksElapsed, avgMoneyPerWeek, companyAge } = useMemo(() => {
     const weeks = company ? calculateCompanyWeeks(company.foundedYear, company.currentWeek, company.currentSeason, company.currentYear) : 1;
     const avgMoney = (gameState.money || 0) / weeks;
-    const age = `${Math.floor(weeks / 52)} years, ${weeks % 52} weeks`;
+    const age = `${formatNumber(Math.floor(weeks / 52), { decimals: 0, forceDecimals: true })} years, ${formatNumber(weeks % 52, { decimals: 0, forceDecimals: true })} weeks`;
     return { weeksElapsed: weeks, avgMoneyPerWeek: avgMoney, companyAge: age };
   }, [company, gameState.money]);
 

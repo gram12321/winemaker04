@@ -29,15 +29,32 @@ export interface BalanceResult {
   dynamicRanges: Record<keyof WineCharacteristics, readonly [number, number]>; // Adjusted ranges (placeholder)
 }
 
-// Grape varieties (matching the original 5 varieties with characteristics)
-export type GrapeVariety = 'Barbera' | 'Chardonnay' | 'Pinot Noir' | 'Primitivo' | 'Sauvignon Blanc';
+// Grape varieties - single source of truth
+export const GRAPE_VARIETIES = [
+  'Barbera',
+  'Chardonnay',
+  'Pinot Noir',
+  'Primitivo',
+  'Sauvignon Blanc'
+] as const;
+export type GrapeVariety = typeof GRAPE_VARIETIES[number];
 
 // Vineyard status types
 export type VineyardStatus = 'Barren' | 'Planted' | 'Growing' | 'Harvested' | 'Dormant';
 
 // New vineyard-related types for v3 expansion
-export type Aspect = 'North' | 'Northeast' | 'East' | 'Southeast' | 'South' | 'Southwest' | 'West' | 'Northwest';
-export type FarmingMethod = 'Conventional' | 'Organic' | 'Biodynamic' | 'Sustainable';
+export const ASPECTS = [
+  'North',
+  'Northeast',
+  'East',
+  'Southeast',
+  'South',
+  'Southwest',
+  'West',
+  'Northwest'
+] as const;
+export type Aspect = typeof ASPECTS[number];
+//export type FarmingMethod = 'Conventional' | 'Organic' | 'Biodynamic' | 'Sustainable';
 
 // Vineyard interface - expanded with v3 parameters
 export interface Vineyard {

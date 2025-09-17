@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Separator } from './separator';
 import { Star, TrendingUp, Building2, Grape, DollarSign } from 'lucide-react';
 import { PrestigeEvent } from '../../lib/types';
+import { formatNumber, formatPercent } from '@/lib/utils/utils';
 
 interface PrestigeEventDisplay extends PrestigeEvent {
   originalAmount: number;
@@ -76,11 +77,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const formatDecayRate = (decayRate: number) => {
     if (decayRate === 0) return 'No decay';
     const weeklyDecay = (1 - decayRate) * 100;
-    return `${weeklyDecay.toFixed(1)}% weekly decay`;
+    return `${formatPercent(weeklyDecay / 100, 1, true)} weekly decay`;
   };
 
   const formatAmount = (amount: number) => {
-    return amount.toFixed(2);
+    return formatNumber(amount, { decimals: 2, forceDecimals: true });
   };
 
   // Group events by type for better organization

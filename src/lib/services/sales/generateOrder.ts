@@ -2,11 +2,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { WineOrder, Customer } from '../../types';
 import { saveWineOrder, loadVineyards } from '../../database/database';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../gameState';
 import { formatCompletedWineName } from '../wine/wineBatchService';
 import { SALES_CONSTANTS } from '../../constants';
-import { calculateOrderAmount, calculateSteppedBalance } from '../../utils/calculator';
+import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoost } from '../../database/prestigeService';
@@ -48,7 +47,7 @@ function calculateRejectionProbability(bidPrice: number, finalPrice: number): nu
   const shiftedInput = Math.min(1.0, mappedInput + 0.4);
   
   // Use stepped balance function to get rejection probability 0-1
-  const rejectionProbability = calculateSteppedBalance(shiftedInput);
+  const rejectionProbability = calculateSkewedMultiplier(shiftedInput);
   
   return rejectionProbability;
 }
@@ -235,7 +234,8 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
     await activateCustomer(orderCustomer.id, currentRelationship);
   }
   
-  triggerGameUpdate();
+  // Don't trigger updates here - let the calling function batch them
+  // triggerGameUpdate() will be called once at the end of order generation
   
   // Order created successfully (no logging needed)
   

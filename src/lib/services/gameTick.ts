@@ -5,6 +5,7 @@ import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
 import { loadVineyards, saveVineyard } from '../database/database';
 import { calculateVineyardPrestige } from './wine/vineyardValueCalc';
+import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../database/prestigeService';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -106,6 +107,14 @@ const updateVineyardAges = async (): Promise<void> => {
  * Process effects that happen every week
  */
 const processWeeklyEffects = async (): Promise<void> => {
+  // Apply weekly decay to prestige events and relationship boosts
+  try {
+    await decayPrestigeEventsOneWeek();
+    await decayRelationshipBoostsOneWeek();
+  } catch (error) {
+    console.warn('Error applying weekly prestige decay:', error);
+  }
+
   // Enhanced automatic customer acquisition and sophisticated order generation
   try {
     const result = await generateSophisticatedWineOrders(); // Generate customer event and orders

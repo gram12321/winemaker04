@@ -526,11 +526,11 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Money</span>
-                            <div className="font-medium">€{formatNumber(company.money, 0)}</div>
+                            <div className="font-medium">€{formatNumber(company.money, { decimals: 0, forceDecimals: true })}</div>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Prestige</span>
-                            <div className="font-medium">{formatNumber(company.prestige, 1)}</div>
+                            <div className="font-medium">{formatNumber(company.prestige, { decimals: 1, forceDecimals: true })}</div>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Last Played</span>

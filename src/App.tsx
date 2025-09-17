@@ -37,7 +37,11 @@ function App() {
       
       // Initialize game systems for the existing company
       initializeGameForCompany();
+      return;
     }
+
+    // If no active company, navigate to login
+    setCurrentPage('login');
   }, []);
 
   const handleCompanySelected = async (company: Company) => {

@@ -13,7 +13,7 @@ import {
 import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '../ui';
 import { DialogProps } from '../UItypes';
-import { formatCurrency } from '@/lib/utils/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils/utils';
 
 interface CreateVineyardDialogProps extends DialogProps {
   onSubmit: (name: string) => void;
@@ -359,7 +359,7 @@ const Vineyard: React.FC = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Prestige: {vineyard.vineyardPrestige.toFixed(2)}
+                        Prestige: {formatNumber(vineyard.vineyardPrestige, { decimals: 2, forceDecimals: true })}
                       </div>
                     </td>
 

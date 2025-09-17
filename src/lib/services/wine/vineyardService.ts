@@ -7,16 +7,10 @@ import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
 import { calculateLandValue, calculateVineyardPrestige } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
-import { 
-  COUNTRY_REGION_MAP, 
-  REGION_SOIL_TYPES, 
-  REGION_ALTITUDE_RANGES 
-} from '../../constants/vineyardConstants';
-import { Aspect } from '../../types';
+import { getRandomFromArray } from '../../utils';
+import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
+import { Aspect, ASPECTS } from '../../types';
 
-export const GRAPE_VARIETIES: GrapeVariety[] = [
-  'Barbera', 'Chardonnay', 'Pinot Noir', 'Primitivo', 'Sauvignon Blanc'
-];
 
 // Helper functions for random vineyard generation
 function getRandomFromObject<T>(obj: Record<string, T>): string {
@@ -24,15 +18,8 @@ function getRandomFromObject<T>(obj: Record<string, T>): string {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
-function getRandomFromArray<T>(array: readonly T[]): T {
-  return array[Math.floor(Math.random() * array.length)];
-}
-
 function getRandomAspect(): Aspect {
-  const aspects: Aspect[] = [
-    "North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"
-  ];
-  return getRandomFromArray(aspects);
+  return getRandomFromArray(ASPECTS);
 }
 
 function getRandomSoils(country: string, region: string): string[] {

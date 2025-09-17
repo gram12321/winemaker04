@@ -4,7 +4,7 @@ import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormatte
 import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch } from '@/lib/types';
 import { Button, WineCharacteristicsDisplay } from '../ui';
-import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
+import { getWineQualityCategory, getColorCategory, getColorClass, formatPercent } from '@/lib/utils/utils';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -184,7 +184,7 @@ const Winery: React.FC = () => {
                             ></div>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
-                            Fermentation Progress: {batch.fermentationProgress || 0}%
+                            Fermentation Progress: {formatPercent((batch.fermentationProgress || 0) / 100, 0, true)}
                           </p>
                         </div>
                       )}
@@ -218,7 +218,7 @@ const Winery: React.FC = () => {
                           size="sm"
                           variant="outline"
                         >
-                          Progress (+25%)
+                          Progress (+{formatPercent(0.25, 0, true)})
                         </Button>
                       )}
                       

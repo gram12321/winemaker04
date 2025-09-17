@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
             className="bg-red-700 text-white border-red-500 px-3 py-1 flex items-center cursor-pointer hover:bg-red-600 transition-colors"
             onClick={handlePrestigeClick}
           >
-            <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatCompact(currentPrestige, 1) : formatNumber(currentPrestige, 1)}</span>
+            <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatCompact(currentPrestige, 1) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}</span>
           </Badge>
           
           <Button 

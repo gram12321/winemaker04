@@ -7,6 +7,7 @@ import { notificationService } from '../../../components/layout/NotificationCent
 import { loadWineBatches } from '../../database/database';
 import { getAvailableBottledWines } from '../../utils/UIWineFilters';
 import { SALES_CONSTANTS } from '../../constants';
+import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 
 
 /**
@@ -116,6 +117,11 @@ export async function generateSophisticatedWineOrders(): Promise<{
       }
     } else {
       // Customer browsed all wines but didn't place any orders (no logging needed)
+    }
+    
+    // Trigger update once at the end, after all orders are generated
+    if (orders.length > 0) {
+      triggerGameUpdate();
     }
     
     return {

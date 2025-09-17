@@ -1,7 +1,7 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
-import { getColorClass } from '@/lib/utils/utils';
+import { getColorClass, formatPercent } from '@/lib/utils/utils';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
@@ -27,7 +27,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   const [minBalance, maxBalance] = BASE_BALANCED_RANGES[characteristicName];
   
   // Format percentage for display
-  const formatPercentage = (val: number) => `${Math.round(val * 100)}%`;
+  const formatPercentage = (val: number) => formatPercent(val, 0, true);
   
   // Get color class based on whether value is in balanced range
   const getValueColor = () => {

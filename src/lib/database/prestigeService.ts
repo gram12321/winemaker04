@@ -6,6 +6,7 @@ import { loadVineyards } from './database';
 import { calculateVineyardPrestige } from '../services/wine/vineyardValueCalc';
 import { getCompanyQuery, getCurrentCompanyId } from '../utils/companyUtils';
 import { triggerGameUpdate } from '../../hooks/useGameUpdates';
+import { calculateAbsoluteWeeks } from '../utils/utils';
 
 /**
  * Calculate current prestige from all events with decay
@@ -22,7 +23,7 @@ export async function calculateCurrentPrestige(): Promise<{
   }>;
 }> {
   const { data, error } = await getCompanyQuery('prestige_events')
-    .order('timestamp', { ascending: false });
+    .order('created_game_week', { ascending: false });
 
   if (error) {
     console.error('Failed to load prestige events:', error);
@@ -30,54 +31,16 @@ export async function calculateCurrentPrestige(): Promise<{
   }
 
   const events = data || [];
-  const currentTime = Date.now();
-  const cleanupCandidates: string[] = [];
   
-  const eventBreakdown = events.map(row => {
-    const event = {
-      id: row.id,
-      type: row.type,
-      amount: row.amount,
-      timestamp: row.timestamp,
-      decayRate: row.decay_rate,
-      description: row.description,
-      sourceId: row.source_id
-    };
-
-    let currentAmount = event.amount;
-    
-    if (event.decayRate > 0 && event.decayRate < 1) {
-      // Calculate decay based on time elapsed
-      const timeElapsed = currentTime - event.timestamp;
-      const weeksElapsed = timeElapsed / (1000 * 60 * 60 * 24 * 7); // Convert to weeks
-      currentAmount = event.amount * Math.pow(event.decayRate, weeksElapsed);
-      
-      // Mark for cleanup if decayed below threshold
-      if (currentAmount < 0.1) {
-        cleanupCandidates.push(event.id);
-        currentAmount = 0; // Don't count in total
-      }
-    }
-    
-    return {
-      id: event.id,
-      type: event.type,
-      description: event.description,
-      originalAmount: event.amount,
-      currentAmount,
-      decayRate: event.decayRate
-    };
-  });
-
-  // Clean up decayed events (fire and forget)
-  if (cleanupCandidates.length > 0) {
-    supabase
-      .from('prestige_events')
-      .delete()
-      .in('id', cleanupCandidates)
-      .eq('company_id', getCurrentCompanyId())
-      .then(() => { /* Cleaned up decayed events */ });
-  }
+  // No real-time decay here. Amounts are assumed to have been decayed on weekly ticks.
+  const eventBreakdown = events.map(row => ({
+    id: row.id,
+    type: row.type,
+    description: row.description,
+    originalAmount: row.amount,
+    currentAmount: row.amount,
+    decayRate: row.decay_rate
+  }));
 
   const totalPrestige = eventBreakdown.reduce((sum, event) => sum + event.currentAmount, 0);
 
@@ -135,7 +98,7 @@ export async function updateBasePrestigeEvent(
         id: uuidv4(),
         type,
         amount: newAmount,
-        timestamp: Date.now(),
+        created_game_week: (() => { const gs = getGameState(); return calculateAbsoluteWeeks(gs.week!, gs.season!, gs.currentYear!); })(),
         decay_rate: 0, // Base prestige doesn't decay
         description,
         source_id: sourceId,
@@ -158,7 +121,7 @@ export async function addSalePrestigeEvent(
   customerName: string,
   wineName: string
 ): Promise<void> {
-  const prestigeAmount = saleValue / 10000; // Same formula as old system
+  const prestigeAmount = saleValue / 10000; // Reverted to original scaling
   const description = `Sale to ${customerName}: ${wineName}`;
   
   const { error } = await supabase
@@ -167,7 +130,7 @@ export async function addSalePrestigeEvent(
       id: uuidv4(),
       type: 'sale',
       amount: prestigeAmount,
-      timestamp: Date.now(),
+      created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
       decay_rate: 0.95, // 5% weekly decay
       description,
       source_id: null,
@@ -243,7 +206,7 @@ export async function createRelationshipBoost(
       id: uuidv4(),
       customer_id: customerId,
       amount: boostAmount,
-      timestamp: Date.now(),
+      created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
       decay_rate: 0.95, // Same as sales prestige events
       description,
       company_id: getCurrentCompanyId()
@@ -257,7 +220,7 @@ export async function createRelationshipBoost(
 }
 
 /**
- * Calculate current relationship boost for a customer with decay
+ * Calculate current relationship boost for a customer (amounts are pre-decayed on weekly ticks)
  */
 export async function calculateCustomerRelationshipBoost(customerId: string): Promise<number> {
   const { data, error } = await supabase
@@ -273,46 +236,101 @@ export async function calculateCustomerRelationshipBoost(customerId: string): Pr
   }
 
   const boosts = data || [];
-  const currentTime = Date.now();
-  const cleanupCandidates: string[] = [];
   
-  let totalBoost = 0;
-  
-  for (const row of boosts) {
-    const boost = {
-      id: row.id,
-      customerId: row.customer_id,
-      amount: row.amount,
-      timestamp: row.timestamp,
-      decayRate: row.decay_rate,
-      description: row.description
-    };
-
-    let currentAmount = boost.amount;
-    
-    if (boost.decayRate > 0 && boost.decayRate < 1) {
-      const timeElapsed = currentTime - boost.timestamp;
-      const weeksElapsed = timeElapsed / (1000 * 60 * 60 * 24 * 7);
-      currentAmount = boost.amount * Math.pow(boost.decayRate, weeksElapsed);
-      
-      if (currentAmount < 0.01) { // Lower threshold for relationship boosts
-        cleanupCandidates.push(boost.id);
-        currentAmount = 0;
-      }
-    }
-    
-    totalBoost += currentAmount;
-  }
-
-  // Clean up decayed boosts (fire and forget)
-  if (cleanupCandidates.length > 0) {
-    supabase
-      .from('relationship_boosts')
-      .delete()
-      .in('id', cleanupCandidates)
-      .eq('company_id', getCurrentCompanyId())
-      .then(() => { /* Cleaned up decayed boosts */ });
-  }
-
+  // Sum current amounts directly; decay occurs on weekly ticks
+  const totalBoost = boosts.reduce((sum, row) => sum + (row.amount || 0), 0);
   return totalBoost;
 }
+
+// ===== WEEKLY DECAY (game tick driven) =====
+
+/**
+ * Apply one week of decay to prestige events only.
+ * - Multiplies amount by decay_rate for rows with 0 < decay_rate < 1
+ * - Cleans up rows that fall below the minimum threshold
+ */
+export async function decayPrestigeEventsOneWeek(): Promise<void> {
+  const PRESTIGE_EVENT_MIN_AMOUNT = 0.001;
+
+  try {
+    // Decay prestige events
+    const { data: prestigeRows, error: prestigeLoadError } = await supabase
+      .from('prestige_events')
+      .select('id, amount, decay_rate')
+      .eq('company_id', getCurrentCompanyId())
+      .gt('decay_rate', 0)
+      .lt('decay_rate', 1);
+
+    if (!prestigeLoadError && prestigeRows && prestigeRows.length > 0) {
+      const toDelete: string[] = [];
+
+      for (const row of prestigeRows) {
+        const newAmount = (row.amount || 0) * (row.decay_rate || 1);
+        if (newAmount < PRESTIGE_EVENT_MIN_AMOUNT) {
+          toDelete.push(row.id);
+        } else {
+          await supabase
+            .from('prestige_events')
+            .update({ amount: newAmount })
+            .eq('id', row.id)
+            .eq('company_id', getCurrentCompanyId());
+        }
+      }
+
+      if (toDelete.length > 0) {
+        await supabase
+          .from('prestige_events')
+          .delete()
+          .in('id', toDelete)
+          .eq('company_id', getCurrentCompanyId());
+      }
+    }
+  } catch (error) {
+    console.error('Failed to apply weekly decay to prestige events:', error);
+  }
+}
+
+/**
+ * Apply one week of decay to relationship boosts only.
+ * - Multiplies amount by decay_rate for rows with 0 < decay_rate < 1
+ * - Cleans up rows that fall below the minimum threshold
+ */
+export async function decayRelationshipBoostsOneWeek(): Promise<void> {
+  const RELATIONSHIP_MIN_AMOUNT = 0.001;
+  try {
+    const { data: boostRows, error: boostLoadError } = await supabase
+      .from('relationship_boosts')
+      .select('id, amount, decay_rate')
+      .eq('company_id', getCurrentCompanyId())
+      .gt('decay_rate', 0)
+      .lt('decay_rate', 1);
+
+    if (!boostLoadError && boostRows && boostRows.length > 0) {
+      const toDeleteBoosts: string[] = [];
+
+      for (const row of boostRows) {
+        const newAmount = (row.amount || 0) * (row.decay_rate || 1);
+        if (newAmount < RELATIONSHIP_MIN_AMOUNT) {
+          toDeleteBoosts.push(row.id);
+        } else {
+          await supabase
+            .from('relationship_boosts')
+            .update({ amount: newAmount })
+            .eq('id', row.id)
+            .eq('company_id', getCurrentCompanyId());
+        }
+      }
+
+      if (toDeleteBoosts.length > 0) {
+        await supabase
+          .from('relationship_boosts')
+          .delete()
+          .in('id', toDeleteBoosts)
+          .eq('company_id', getCurrentCompanyId());
+      }
+    }
+  } catch (error) {
+    console.error('Failed to apply weekly decay to relationship boosts:', error);
+  }
+}
+

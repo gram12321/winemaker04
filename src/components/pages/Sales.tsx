@@ -9,7 +9,10 @@ import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
 import { getFlagIcon } from '@/lib/utils/flags';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
+import { calculateRelationshipBreakdown } from '@/lib/database/relationshipBreakdownService';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { NavigationProps } from '../UItypes';
+import { useGameUpdates } from '@/hooks';
 
 interface SalesProps extends NavigationProps {
   // Inherits onNavigateToWinepedia from NavigationProps
@@ -41,6 +44,17 @@ function createCustomerFromOrderData(
 
 const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   const { isLoading, withLoading } = useLoadingState();
+  
+  // Helper function to create company-scoped customer key
+  const getCustomerKey = (customerId: string): string => {
+    try {
+      const companyId = getCurrentCompanyId();
+      return `${companyId}:${customerId}`;
+    } catch (error) {
+      // Fallback to just customerId if no company context
+      return customerId;
+    }
+  };
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('all');
   const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
@@ -53,7 +67,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     finalChance: number;
     randomRoll: number;
   } | null>(null);
-  const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[customerId: string]: string}>({});
+  const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
+  const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
 
 
   // Use consolidated hooks for reactive data loading
@@ -179,10 +194,18 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   // Load relationship breakdown for a customer on-demand
   const loadRelationshipBreakdown = async (customerId: string, customer: Customer) => {
     try {
+      const breakdown = await calculateRelationshipBreakdown(customer);
       const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
+      const customerKey = getCustomerKey(customerId);
+      
       setRelationshipBreakdowns(prev => ({
         ...prev,
-        [customerId]: formattedBreakdown
+        [customerKey]: formattedBreakdown
+      }));
+      
+      setComputedRelationships(prev => ({
+        ...prev,
+        [customerKey]: breakdown.totalRelationship
       }));
     } catch (error) {
       console.error('Error loading relationship breakdown:', error);
@@ -193,6 +216,40 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   useEffect(() => {
     loadCustomerChance();
   }, []);
+
+  // Pre-compute relationships for all orders on component mount and when orders change
+  useEffect(() => {
+    const precomputeRelationships = async () => {
+      for (const order of allOrders) {
+        const customerKey = getCustomerKey(order.customerId);
+        if (!computedRelationships[customerKey]) {
+          // Create a minimal customer object for the breakdown calculation
+          const customer = createCustomerFromOrderData(
+            order.customerId,
+            order.customerName,
+            order.customerCountry as any,
+            order.customerType,
+            order.customerRelationship
+          );
+          await loadRelationshipBreakdown(order.customerId, customer);
+        }
+      }
+    };
+    
+    if (allOrders.length > 0) {
+      precomputeRelationships();
+    }
+  }, [allOrders]);
+
+  // Refresh relationship breakdown caches when game updates (e.g., order fulfilled)
+  const { subscribe } = useGameUpdates();
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      setRelationshipBreakdowns({});
+      setComputedRelationships({});
+    });
+    return () => { unsubscribe(); };
+  }, [subscribe]);
 
   // Handle order fulfillment
   const handleFulfillOrder = (orderId: string) => withLoading(async () => {
@@ -221,7 +278,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   const handlePriceEdit = (wineId: string, currentPrice: number) => {
     setEditingPrices(prev => ({
       ...prev,
-      [wineId]: formatNumber(currentPrice, 2)
+      [wineId]: formatNumber(currentPrice, { decimals: 2, forceDecimals: true })
     }));
   };
 
@@ -582,11 +639,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         <div className="space-y-2 text-sm">
                           <div className="font-semibold">Customer Acquisition Details</div>
                           <div className="space-y-1">
-                            <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, 1)}</span></div>
+                            <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, { decimals: 1, forceDecimals: true })}</span></div>
                             <div>Available Wines: <span className="font-medium">{orderChanceInfo.availableWines}</span></div>
                             <div>Pending Orders: <span className="font-medium">{orderChanceInfo.pendingOrders}</span></div>
                             <div>Base Chance: <span className="font-medium">{formatPercent(orderChanceInfo.baseChance, 1, true)}</span></div>
-                            <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, 2)}x</span></div>
+                            <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, { decimals: 2, forceDecimals: true })}x</span></div>
                             <div className="border-t pt-1">
                               <div>Final Chance: <span className="font-bold text-blue-300">{formatPercent(orderChanceInfo.finalChance, 1, true)}</span></div>
                               {orderChanceInfo.randomRoll > 0 ? (
@@ -774,11 +831,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                     <>
                                       <div className="font-semibold">Price Multiplier Calculation</div>
                                       <div className="space-y-1 text-xs">
-                                        <div>Formula: {formatNumber(order.calculationData.estimatedBaseMultiplier, 3)} (B) × {formatNumber(order.calculationData.purchasingPowerMultiplier, 3)} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, 3)} (WT) × {formatNumber(order.calculationData.marketShareMultiplier, 3)} (MS) = {formatNumber(order.calculationData.finalPriceMultiplier, 3)}x (Mtp)</div>
+                                        <div>Formula: {formatNumber(order.calculationData.estimatedBaseMultiplier, { decimals: 3, forceDecimals: true })} (B) × {formatNumber(order.calculationData.purchasingPowerMultiplier, { decimals: 3, forceDecimals: true })} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, { decimals: 3, forceDecimals: true })} (WT) × {formatNumber(order.calculationData.marketShareMultiplier, { decimals: 3, forceDecimals: true })} (MS) = {formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x (Mtp)</div>
                                       </div>
                                       <div className="font-semibold">Quantity Calculation</div>
                                       <div className="space-y-1 text-xs">
-                                        <div>{order.calculationData.baseQuantity} (B) × {formatNumber(order.calculationData.priceSensitivity, 3)} (SENS) × {formatNumber(order.calculationData.purchasingPowerMultiplier, 3)} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, 3)} (WT) × {formatNumber(order.calculationData.quantityMarketShareMultiplier, 3)} (MS) = {order.calculationData.finalQuantity} bottles</div>
+                                        <div>{order.calculationData.baseQuantity} (B) × {formatNumber(order.calculationData.priceSensitivity, { decimals: 3, forceDecimals: true })} (SENS) × {formatNumber(order.calculationData.purchasingPowerMultiplier, { decimals: 3, forceDecimals: true })} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, { decimals: 3, forceDecimals: true })} (WT) × {formatNumber(order.calculationData.quantityMarketShareMultiplier, { decimals: 3, forceDecimals: true })} (MS) = {order.calculationData.finalQuantity} bottles</div>
                                       </div>
                                       <div className="text-xs text-gray-500 pt-2 border-t border-gray-600">
                                         B=Base, PP=Purchasing Power, WT=Wine Tradition, MS=Market Share, SENS=Sensitivity
@@ -798,7 +855,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               <TooltipTrigger asChild>
                                 <span 
                                   onMouseEnter={() => {
-                                    if (!relationshipBreakdowns[order.customerId]) {
+                                    const customerKey = getCustomerKey(order.customerId);
+                                    if (!relationshipBreakdowns[customerKey]) {
                                       // Create a minimal customer object for the breakdown calculation
                                       const customer = createCustomerFromOrderData(
                                         order.customerId,
@@ -811,20 +869,20 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                     }
                                   }}
                                   className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full cursor-help ${
-                                    (order.customerRelationship ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
-                                    (order.customerRelationship ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                    (order.customerRelationship ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
+                                    (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
+                                    (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                    (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
                                     'bg-red-100 text-red-800'
                                   }`}>
-                                  {formatPercent((order.customerRelationship ?? 0) / 100, 0, true)}
+                                  {formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-md">
                                 <div className="text-sm">
                                   <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
-                                  {relationshipBreakdowns[order.customerId] ? (
+                                  {relationshipBreakdowns[getCustomerKey(order.customerId)] ? (
                                     <div className="space-y-1 text-xs">
-                                      {relationshipBreakdowns[order.customerId].split('\n').map((line, index) => (
+                                      {relationshipBreakdowns[getCustomerKey(order.customerId)].split('\n').map((line, index) => (
                                         <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
                                           {line}
                                         </div>
@@ -832,11 +890,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                     </div>
                                   ) : (
                                     <div className="text-xs text-gray-500">
-                                      {order.customerRelationship === undefined ? 'New customer - no relationship established yet' :
-                                       order.customerRelationship >= 80 ? 'Excellent relationship - loyal customer' :
-                                       order.customerRelationship >= 60 ? 'Good relationship - regular customer' :
-                                       order.customerRelationship >= 40 ? 'Fair relationship - occasional customer' :
-                                       'Poor relationship - needs improvement'}
+                                      Loading relationship breakdown...
                                       <div className="mt-2 text-blue-500">
                                         Hover to load detailed breakdown...
                                       </div>
@@ -919,7 +973,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                   <div className="text-xs text-gray-500">
                                     {order.calculationData ? (
                                       <>
-                                        <div>Multiple Order Penalty: {formatNumber(order.calculationData.multipleOrderModifier, 3)}x</div>
+                                        <div>Multiple Order Penalty: {formatNumber(order.calculationData.multipleOrderModifier, { decimals: 3, forceDecimals: true })}x</div>
                                         <div>Final Rejection Probability: {formatPercent(order.calculationData.finalRejectionProbability, 1, true)}</div>
                                         <div>Random Value: {formatPercent(order.calculationData.randomValue, 1, true)}</div>
                                       </>

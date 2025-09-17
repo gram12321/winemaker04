@@ -4,6 +4,12 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+// ===== GENERIC HELPERS =====
+
+export function getRandomFromArray<T>(array: readonly T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
 
 // Format timestamp as HH:MM:SS
 export function formatTime(date: Date): string {
@@ -13,18 +19,50 @@ export function formatTime(date: Date): string {
 // ===== NUMBER FORMATTING UTILITIES =====
 
 /**
- * Format a number with specified decimal places
+ * Format a number with appropriate thousand separators and decimal places
+ * More flexible version that handles different number sizes intelligently
  * @param value The number to format
- * @param decimals Number of decimal places (default: 0)
+ * @param options Formatting options
  * @returns Formatted number string
  */
-export function formatNumber(value: number, decimals: number = 0): string {
+export function formatNumber(value: number, options?: {
+  decimals?: number;
+  forceDecimals?: boolean;
+  smartDecimals?: boolean;
+}): string {
   if (typeof value !== 'number' || isNaN(value)) return '0';
   
-  return new Intl.NumberFormat('en-US', {
+  const { decimals = 2, forceDecimals = false, smartDecimals = false } = options || {};
+  
+  // For large numbers (>1000), don't show decimals unless forced
+  if (Math.abs(value) >= 1000 && !forceDecimals && !smartDecimals) {
+    return value.toLocaleString('de-DE', {
+      maximumFractionDigits: 0
+    });
+  }
+  
+  // For small whole numbers, don't show decimals unless forced
+  if (Number.isInteger(value) && !forceDecimals && !smartDecimals) {
+    return value.toLocaleString('de-DE', {
+      maximumFractionDigits: 0
+    });
+  }
+  
+  // Smart decimals mode: show up to specified decimals but remove trailing zeros
+  if (smartDecimals) {
+    const maxDecimals = Math.min(decimals, 5); // Cap at 5 decimals for readability
+    const formatted = value.toLocaleString('de-DE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: maxDecimals
+    });
+    return formatted;
+  }
+  
+  // For decimals or when forced, show specified decimal places
+  return value.toLocaleString('de-DE', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
-  }).format(value);
+  });
 }
 
 /**
