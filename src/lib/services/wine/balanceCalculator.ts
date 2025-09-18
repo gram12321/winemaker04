@@ -1,6 +1,6 @@
 // Phase 1 Balance Calculator - Simple balance calculation with static ranges
 import { WineCharacteristics, BalanceResult, GrapeVariety } from '../../types';
-import { BASE_BALANCED_RANGES, BASE_GRAPE_CHARACTERISTICS } from '../../constants';
+import { BASE_BALANCED_RANGES, BASE_GRAPE_CHARACTERISTICS } from '../../constants/constants';
 
 /**
  * Calculate wine balance score using Phase 1 simple algorithm

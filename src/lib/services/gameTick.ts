@@ -1,6 +1,6 @@
 // Game tick service - handles time progression and automatic game events
 import { getGameState, updateGameState } from './gameState';
-import { GAME_INITIALIZATION } from '../constants';
+import { GAME_INITIALIZATION } from '../constants/constants';
 import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
 import { loadVineyards, saveVineyard } from '../database/database';

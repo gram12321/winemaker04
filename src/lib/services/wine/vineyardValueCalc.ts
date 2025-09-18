@@ -9,7 +9,7 @@ import {
   REGION_GRAPE_SUITABILITY
 } from '../../constants/vineyardConstants';
 import { Aspect, GrapeVariety } from '../../types';
-import { VINEYARD_PRESTIGE_CONSTANTS } from '../../constants';
+import { VINEYARD_PRESTIGE_CONSTANTS } from '../../constants/constants';
 
 /**
  * Normalize altitude to 0-1 scale based on regional altitude ranges
@@ -120,10 +120,6 @@ export function calculateLandValueContribution(landValue: number): number {
   // Return the normalized value, allowing values potentially > 1 as per old comment
   return Math.max(0, normalizedValue); // Ensure non-negative
 }
-
-
-
-
 
 /**
  * Calculate grape suitability contribution for vineyard prestige

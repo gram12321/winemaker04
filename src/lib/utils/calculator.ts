@@ -1,4 +1,4 @@
-import { SALES_CONSTANTS } from '../constants';
+import { SALES_CONSTANTS } from '../constants/constants';
 
 // ===== TYPE DEFINITIONS =====
 

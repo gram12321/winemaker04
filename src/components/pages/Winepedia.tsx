@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, WineCharacteristicsDisplay } from "../ui";
-import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants';
+import { SALES_CONSTANTS, CUSTOMER_REGIONAL_DATA } from '../../lib/constants/constants';
 import { getAllCustomers, getCountryCode } from '@/lib/services';
 import { Customer } from '@/lib/types';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
@@ -10,7 +10,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber, formatPercent, getColorCategory, getColorClass, getWineQualityInfo } from '@/lib/utils/utils';
 import { PageProps } from '../UItypes';
 import { generateDefaultCharacteristics } from '@/lib/services/wine/balanceCalculator';
-import { GRAPE_VARIETY_INFO } from '@/lib/constants';
+import { GRAPE_VARIETY_INFO } from '@/lib/constants/constants';
 import { useGameUpdates } from '@/hooks';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateSymmetricalMultiplier, vineyardAgePrestigeModifier } from '@/lib/utils/calculator';

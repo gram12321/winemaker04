@@ -1,6 +1,6 @@
 // Central pricing service - combines vineyard value and wine quality to calculate final wine prices
 import { WineBatch, Vineyard } from '../../types';
-import { SALES_CONSTANTS } from '../../constants';
+import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateAsymmetricalMultiplier } from '../../utils/calculator';
 import { calculateWineValueIndex } from './wineValueIndexCalculationService';
 import { calculateWineQuality } from './wineQualityIndexCalculationService';

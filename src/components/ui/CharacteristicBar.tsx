@@ -1,6 +1,6 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types';
-import { BASE_BALANCED_RANGES } from '@/lib/constants';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/constants';
 import { getColorClass, formatPercent } from '@/lib/utils/utils';
 
 interface CharacteristicBarProps {

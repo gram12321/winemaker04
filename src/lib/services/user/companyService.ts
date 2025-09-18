@@ -2,7 +2,7 @@ import { supabase } from '../../database/supabase';
 import { authService } from './authService';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { Season } from '../../types';
-import { GAME_INITIALIZATION } from '../../constants';
+import { GAME_INITIALIZATION } from '../../constants/constants';
 
 export interface Company {
   id: string;

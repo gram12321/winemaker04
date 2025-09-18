@@ -1,6 +1,6 @@
 // Enhanced game state service that integrates with the new company system
 import { GameState } from '../types';
-import { GAME_INITIALIZATION } from '../constants';
+import { GAME_INITIALIZATION } from '../constants/constants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../database/prestigeService';
 import { companyService, Company } from './user/companyService';
 import { highscoreService } from './user/highscoreService';

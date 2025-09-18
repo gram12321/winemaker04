@@ -6,7 +6,7 @@ import { getAllCustomers } from './createCustomer';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { loadWineBatches } from '../../database/database';
 import { getAvailableBottledWines } from '../../utils/UIWineFilters';
-import { SALES_CONSTANTS } from '../../constants';
+import { SALES_CONSTANTS } from '../../constants/constants';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 
 

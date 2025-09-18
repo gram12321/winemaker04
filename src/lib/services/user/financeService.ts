@@ -2,7 +2,7 @@ import { getGameState } from '../gameState';
 import { Transaction } from '../../types';
 import { supabase } from '../../database/supabase';
 import { loadVineyards, loadWineBatches } from '../../database/database';
-import { GAME_INITIALIZATION } from '../../constants';
+import { GAME_INITIALIZATION } from '../../constants/constants';
 import { getCurrentCompany, updateGameState } from '../gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';

@@ -1,6 +1,6 @@
 // Quality calculation service - handles all wine characteristics that contribute to quality and balance
 import { WineBatch, GrapeVariety } from '../../types';
-import { WINE_QUALITY_CONSTANTS } from '../../constants';
+import { WINE_QUALITY_CONSTANTS } from '../../constants/constants';
 import { calculateSkewedMultiplier } from '../../utils/calculator';
 
 /**
