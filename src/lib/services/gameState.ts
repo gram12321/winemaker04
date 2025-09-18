@@ -1,7 +1,7 @@
 // Enhanced game state service that integrates with the new company system
 import { GameState } from '../types';
 import { GAME_INITIALIZATION } from '../constants';
-import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateBasePrestigeEvent } from '../database/prestigeService';
+import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../database/prestigeService';
 import { companyService, Company } from './user/companyService';
 import { highscoreService } from './user/highscoreService';
 import { calculateFinancialData, initializeStartingCapital } from './user/financeService';
@@ -74,6 +74,7 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
   // Update base prestige events if money changed
   if (updates.money !== undefined && updates.money !== oldMoney) {
     await updateCompanyValuePrestige(updates.money);
+    prestigeCache = null; // clear cached total after base prestige changes
   }
   
   // Update company in database if we have an active company
@@ -137,9 +138,9 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   // Initialize prestige system for this company
   try {
     await initializePrestigeSystem();
-    
     // Ensure company value prestige is updated with current money
     await updateCompanyValuePrestige(company.money);
+    prestigeCache = null;
   } catch (error) {
     console.error('Failed to initialize prestige system:', error);
   }
@@ -237,22 +238,7 @@ export async function getCurrentPrestige(): Promise<number> {
 }
 
 // Update company value prestige event
-async function updateCompanyValuePrestige(money: number): Promise<void> {
-  try {
-    const companyValuePrestige = Math.log(money / 1000000 + 1) * 2; // Logarithmic scaling for diminishing returns
-    await updateBasePrestigeEvent(
-      'company_value',
-      'company_money',
-      companyValuePrestige,
-      `Company value: €${money.toLocaleString()}`
-    );
-    
-    // Clear prestige cache when base prestige changes
-    prestigeCache = null;
-  } catch (error) {
-    console.error('Failed to update company value prestige:', error);
-  }
-}
+// removed local duplicate; centralised in prestigeService.updateCompanyValuePrestige
 
 // Initialize prestige system
 export async function initializePrestigeSystem(): Promise<void> {

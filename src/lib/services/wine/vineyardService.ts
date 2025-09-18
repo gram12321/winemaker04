@@ -3,9 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety } from '../../types';
 import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { updateVineyardPrestigeEvents } from '../../database/prestigeService';
+import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
-import { calculateLandValue, calculateVineyardPrestige } from './vineyardValueCalc';
+import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
@@ -75,17 +75,14 @@ export async function createVineyard(name: string): Promise<Vineyard> {
     vineyardPrestige: 0 // Will be calculated after vineyard is created
   };
 
-  // Calculate prestige after other properties are set
-  vineyard.vineyardPrestige = calculateVineyardPrestige(vineyard);
 
   await saveVineyard(vineyard);
   
-  // Update vineyard prestige events
+  // Ensure base vineyard prestige events exist immediately upon creation
   try {
-    await updateVineyardPrestigeEvents();
-    // Vineyard prestige events updated - will be reflected in next calculation
+    await updateBaseVineyardPrestigeEvent(vineyard.id);
   } catch (error) {
-    console.error('Failed to update vineyard prestige events:', error);
+    console.warn('Failed to initialize base vineyard prestige on creation:', error);
   }
   
   triggerGameUpdate();
@@ -108,10 +105,25 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Pr
     status: 'Planted'
   };
 
-  // Recalculate prestige since grape variety affects it
-  updatedVineyard.vineyardPrestige = calculateVineyardPrestige(updatedVineyard);
 
   await saveVineyard(updatedVineyard);
+  
+  // Add achievement prestige event for planting (uses base vineyard prestige as multiplier)
+  try {
+    // Ensure base vineyard prestige events exist/are up to date first
+    await updateBaseVineyardPrestigeEvent(vineyardId);
+    // Then read the base prestige as multiplier
+    const basePrestige = await getBaseVineyardPrestige(vineyardId);
+    await addVineyardAchievementPrestigeEvent(
+      'planting',
+      vineyardId,
+      basePrestige,
+      `Planted ${grape} vines`
+    );
+  } catch (error) {
+    console.error('Failed to create planting prestige event:', error);
+  }
+  
   triggerGameUpdate();
   return true;
 }
@@ -156,6 +168,20 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
   };
 
   await saveVineyard(updatedVineyard);
+  
+  // Add achievement prestige event for harvesting (uses base vineyard prestige as multiplier)
+  try {
+    const basePrestige = await getBaseVineyardPrestige(vineyardId);
+    await addVineyardAchievementPrestigeEvent(
+      'harvest',
+      vineyardId,
+      basePrestige,
+      `Harvested ${quantity}kg`
+    );
+  } catch (error) {
+    console.error('Failed to create harvest prestige event:', error);
+  }
+  
   triggerGameUpdate();
 
   return { success: true, quantity };

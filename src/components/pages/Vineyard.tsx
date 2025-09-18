@@ -1,15 +1,7 @@
 
 import { useState } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { 
-  createVineyard, 
-  plantVineyard, 
-  harvestVineyard, 
-  growVineyard,
-  resetVineyard,
-  getAllVineyards,
-  GRAPE_VARIETIES
-} from '@/lib/services';
+import { createVineyard, plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, GRAPE_VARIETIES } from '@/lib/services';
 import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '../ui';
 import { DialogProps } from '../UItypes';
@@ -140,6 +132,7 @@ const Vineyard: React.FC = () => {
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
+
 
   const handleCreateVineyard = (name: string) => withLoading(async () => {
     await createVineyard(name);
@@ -359,7 +352,7 @@ const Vineyard: React.FC = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Prestige: {formatNumber(vineyard.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                        Prestige: {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
                       </div>
                     </td>
 

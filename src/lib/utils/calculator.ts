@@ -239,7 +239,7 @@ export function getRandomHectares(): number {
 
 /**
  * Calculate prestige modifier based on vine age
- * Uses different mathematical approaches for different age ranges
+ * Uses Math.atan approach but with smooth progression across full 0-1 range
  * 
  * @param vineAge - Age of the vines in years
  * @returns Prestige modifier between 0 and 1
@@ -249,13 +249,18 @@ export function vineyardAgePrestigeModifier(vineAge: number): number {
   if (isNaN(age) || age < 0) {
     return 0;
   } else if (age <= 3) {
-    return (age * age) / 100 + 0.01;
+    return age === 0 ? 0 : (age * age) / 100 + 0.01;
   } else if (age <= 25) {
     return 0.1 + (age - 3) * (0.4 / 22);
-  } else if (age <= 100) {
-    return 0.5 + (Math.atan((age - 25) / 20) / Math.PI) * (0.95 - 0.5);
+  } else if (age <= 200) {
+    // Use Math.atan but scale it to reach 1.0 at 200 years instead of 100
+    // At age 200: (200-25)/20 = 8.75, Math.atan(8.75) ≈ 1.46, 1.46/π ≈ 0.46
+    // We need to scale this to reach 1.0, so: 0.5 + 0.46 * 1.09 ≈ 1.0
+    const atanResult = Math.atan((age - 25) / 20) / Math.PI;
+    return 0.5 + atanResult * 1.08; // Scale factor for 200-year max
   } else {
-    return 0.95;
+    // For ages > 200, keep at 1.0 (very old vines)
+    return 1.0;
   }
 }
 

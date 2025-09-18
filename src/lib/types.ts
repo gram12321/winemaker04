@@ -83,6 +83,9 @@ export interface Vineyard {
   // remainingYield: number | null; // Used in old iterations, for tracking yield doing harvest. Commented out as per request
   // upgrades?: string[]; // Commented out as per request
   // generateFarmlandPreview not implemented yet (Creates a specific Farmland instance based on country/region for starting conditions)
+  
+  // Prestige events for this vineyard
+  prestigeEvents?: PrestigeEvent[];
 }
 
 
@@ -205,7 +208,7 @@ export interface WineOrder {
 // Prestige system interfaces
 export interface PrestigeEvent {
   id: string;
-  type: 'vineyard' | 'company_value' | 'sale' | 'contract' | 'penalty';
+  type: 'vineyard' | 'company_value' | 'sale' | 'contract' | 'penalty' | 'vineyard_sale' | 'vineyard_base' | 'vineyard_achievement' | 'vineyard_age' | 'vineyard_land';
   amount: number;
   timestamp: number;
   decayRate: number; // 0 for base, 0.95 for sales, etc.

@@ -3,7 +3,7 @@ import { WineOrder, WineBatch } from '../../types';
 import { loadWineOrders, updateWineOrderStatus, loadWineBatches, saveWineBatch, saveWineOrder } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../user/financeService';
-import { createRelationshipBoost, addSalePrestigeEvent } from '../../database/prestigeService';
+import { createRelationshipBoost, addSalePrestigeEvent, addVineyardSalePrestigeEvent, calculateVineyardPrestigeFromEvents } from '../../database/prestigeService';
 import { getCurrentPrestige } from '../gameState';
 
 // ===== ORDER MANAGEMENT =====
@@ -66,12 +66,27 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
       `Order fulfilled: ${order.wineName} (${fulfillableQuantity} bottles)`
     );
     
-    // Create prestige event for the sale
-    await addSalePrestigeEvent(
-      fulfillableValue,
-      order.customerName,
-      order.wineName
-    );
+    // Create vineyard-specific prestige event for the sale
+    if (wineBatch.vineyardId) {
+      // Get vineyard prestige factor for this vineyard
+      const vineyardPrestigeFactor = await calculateVineyardPrestigeFromEvents(wineBatch.vineyardId);
+      
+      // Create vineyard-specific sale prestige event
+      await addVineyardSalePrestigeEvent(
+        fulfillableValue,
+        order.customerName,
+        order.wineName,
+        wineBatch.vineyardId,
+        Math.max(0.1, vineyardPrestigeFactor) // Ensure minimum factor of 0.1
+      );
+        } else {
+          // Fallback to company-level prestige event if no vineyard ID
+          await addSalePrestigeEvent(
+            fulfillableValue,
+            order.customerName,
+            order.wineName
+          );
+        }
     
     // Prestige events created - will be reflected in next calculation
   } catch (error) {

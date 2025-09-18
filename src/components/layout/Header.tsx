@@ -23,7 +23,13 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance, onBackToLogin }) => {
   const gameState = useGameState();
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
-  const [prestigeData, setPrestigeData] = useState<any>({ totalPrestige: 0, eventBreakdown: [] });
+  const [prestigeData, setPrestigeData] = useState<any>({ 
+    totalPrestige: 0, 
+    eventBreakdown: [],
+    companyPrestige: 0,
+    vineyardPrestige: 0,
+    vineyards: []
+  });
   const consoleHook = useNotifications();
   
   // Get current company once instead of multiple calls
@@ -45,7 +51,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
   const handlePrestigeClick = async () => {
     try {
       const prestigeInfo = await calculateCurrentPrestige();
-      setPrestigeData(prestigeInfo);
+      setPrestigeData({
+        totalPrestige: prestigeInfo.totalPrestige,
+        eventBreakdown: prestigeInfo.eventBreakdown,
+        companyPrestige: prestigeInfo.companyPrestige,
+        vineyardPrestige: prestigeInfo.vineyardPrestige,
+        vineyards: prestigeInfo.vineyards
+      });
       setPrestigeModalOpen(true);
     } catch (error) {
       console.error('Error loading prestige data:', error);
@@ -208,6 +220,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
         onClose={() => setPrestigeModalOpen(false)}
         totalPrestige={prestigeData.totalPrestige}
         eventBreakdown={prestigeData.eventBreakdown}
+        companyPrestige={prestigeData.companyPrestige}
+        vineyardPrestige={prestigeData.vineyardPrestige}
+        vineyards={prestigeData.vineyards}
       />
     </header>
   );

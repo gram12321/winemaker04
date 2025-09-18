@@ -14,6 +14,7 @@ import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/toaster';
 import { useGameInit } from './hooks/useGameInit';
+import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from './lib/services/user/companyService';
 import { setActiveCompany, resetGameState, getCurrentCompany } from './lib/services/gameState';
@@ -25,6 +26,8 @@ function App() {
   const { isLoading, error } = useGameInit();
   
   // Monitor prestige changes and update customer relationships
+  useCustomerRelationshipUpdates();
+  // Monitor all prestige changes (company and vineyard) and update prestige events
   usePrestigeUpdates();
 
   useEffect(() => {
