@@ -1,6 +1,5 @@
 export { useGameState, useGameStateWithData } from './useGameState';
 export { useGameUpdates } from './useGameUpdates';
-export { useGameInit } from './useGameInit';
 export { usePrestigeUpdates } from './usePrestigeUpdates';
 export { useLoadingState } from './useLoadingState';
 export { useTableSortWithAccessors } from './useTableSort';

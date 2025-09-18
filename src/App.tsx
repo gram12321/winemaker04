@@ -13,7 +13,6 @@ import Winepedia from './components/pages/Winepedia';
 import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/toaster';
-import { useGameInit } from './hooks/useGameInit';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from './lib/services/user/companyService';
@@ -24,8 +23,9 @@ function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
-  const { isLoading, error } = useGameInit();
-  const isInitializingRef = useRef(false);
+  
+  const lastInitializedCompanyIdRef = useRef<string | null>(null);
+  // With StrictMode disabled in dev, we don't need redundant init guards
   
   // Monitor prestige changes and update customer relationships
   useCustomerRelationshipUpdates();
@@ -41,7 +41,10 @@ function App() {
       setIsGameInitialized(true);
       
       // Initialize game systems for the existing company
-      initializeGameForCompany();
+      if (lastInitializedCompanyIdRef.current !== existingCompany.id) {
+        lastInitializedCompanyIdRef.current = existingCompany.id;
+        initializeGameForCompany();
+      }
       return;
     }
 
@@ -57,15 +60,16 @@ function App() {
       setIsGameInitialized(true);
       
       // Initialize game systems for the selected company
-      await initializeGameForCompany();
+      if (lastInitializedCompanyIdRef.current !== company.id) {
+        lastInitializedCompanyIdRef.current = company.id;
+        await initializeGameForCompany();
+      }
     } catch (error) {
       console.error('Error setting active company:', error);
     }
   };
 
   const initializeGameForCompany = async () => {
-    if (isInitializingRef.current) return;
-    isInitializingRef.current = true;
     try {
       // Ensure customers are initialized when a company becomes active
       const currentPrestige = await getCurrentPrestige();
@@ -171,36 +175,6 @@ function App() {
         return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
     }
   };
-
-  // Show loading screen while initializing
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-amber-800 mb-4">🍷 Loading Winery...</h2>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-800 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error if initialization failed
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Game</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // Show login page if no company is selected
   if (!isGameInitialized && currentPage === 'login') {
