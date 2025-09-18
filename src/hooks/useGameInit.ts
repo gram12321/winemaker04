@@ -1,11 +1,12 @@
 // Hook for initializing game state on app startup
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCurrentPrestige, getCurrentCompany } from '@/lib/services/gameState';
 import { initializeCustomers } from '@/lib/services/sales/createCustomer';
 
 export const useGameInit = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     const initializeGame = async () => {
@@ -19,11 +20,8 @@ export const useGameInit = () => {
           setIsLoading(false);
           return;
         }
-        
-        // Game state is now loaded automatically when companies are set
-        
-        // Initialize starting capital in finance system (if new game and company is active)
-        // This will be called when a company is selected, not here
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
         
         // Initialize customers system (load existing or generate new)
         const currentPrestige = await getCurrentPrestige();

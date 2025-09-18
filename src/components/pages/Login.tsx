@@ -37,17 +37,6 @@ export function Login({ onCompanySelected }: LoginProps) {
   useEffect(() => {
     loadAllCompanies();
     loadHighscores();
-    // Attempt auto-login to last active company
-    try {
-      const lastCompanyId = localStorage.getItem('lastCompanyId');
-      if (lastCompanyId) {
-        const match = allCompanies.find(c => c.id === lastCompanyId);
-        if (match) {
-          // Set as active silently
-          onCompanySelected(match);
-        }
-      }
-    } catch {}
   }, []);
 
   const loadAllCompanies = async () => {
@@ -57,7 +46,19 @@ export function Login({ onCompanySelected }: LoginProps) {
     // If no companies exist, show create form
     if (companies.length === 0) {
       setShowCreateCompany(true);
+      return;
     }
+
+    // Attempt auto-login to last active company AFTER companies are loaded
+    try {
+      const lastCompanyId = localStorage.getItem('lastCompanyId');
+      if (lastCompanyId) {
+        const match = companies.find(c => c.id === lastCompanyId);
+        if (match) {
+          onCompanySelected(match);
+        }
+      }
+    } catch {}
   };
 
   const loadHighscores = () => withLoading(async () => {

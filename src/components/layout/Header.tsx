@@ -193,8 +193,27 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => {
-                  // Clear local storage and reset game
-                  localStorage.clear();
+                  // Clear only app-specific keys and reset game
+                  try {
+                    const company = currentCompany;
+                    const keysToRemove = [
+                      'activeCompany',
+                      'lastCompanyId',
+                      'notifications',
+                      'showNotifications'
+                    ];
+                    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+                    // Remove company-scoped settings if present
+                    if (company?.id) {
+                      localStorage.removeItem(`company_settings_${company.id}`);
+                    }
+
+                    // Remove any legacy company settings keys
+                    Object.keys(localStorage)
+                      .filter((key) => key.startsWith('company_settings_'))
+                      .forEach((key) => localStorage.removeItem(key));
+                  } catch {}
                   window.location.reload();
                 }}
                 className="text-red-600 focus:text-red-500"

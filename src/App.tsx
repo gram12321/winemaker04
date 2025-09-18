@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from './components/layout/Header';
 import CompanyOverview from './components/pages/CompanyOverview';
 import Vineyard from './components/pages/Vineyard';
@@ -17,13 +17,15 @@ import { useGameInit } from './hooks/useGameInit';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from './lib/services/user/companyService';
-import { setActiveCompany, resetGameState, getCurrentCompany } from './lib/services/gameState';
+import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/gameState';
+import { initializeCustomers } from './lib/services';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
   const { isLoading, error } = useGameInit();
+  const isInitializingRef = useRef(false);
   
   // Monitor prestige changes and update customer relationships
   useCustomerRelationshipUpdates();
@@ -62,13 +64,19 @@ function App() {
   };
 
   const initializeGameForCompany = async () => {
+    if (isInitializingRef.current) return;
+    isInitializingRef.current = true;
     try {
-      // Customers are now initialized automatically via useGameInit hook
-      // No need to duplicate the initialization here
+      // Ensure customers are initialized when a company becomes active
+      const currentPrestige = await getCurrentPrestige();
+      await initializeCustomers(currentPrestige);
       console.log('Game systems initialized for company');
     } catch (error) {
       console.error('Error initializing game for company:', error);
       // Don't throw - allow game to continue even if initialization fails
+    } finally {
+      // Keep initialized; avoid duplicate init/log under StrictMode
+      // Leave the ref as true to guard against re-entry in this session
     }
   };
 
