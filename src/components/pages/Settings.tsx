@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label } from '../ui';
 import { Settings as SettingsIcon, Bell } from 'lucide-react';
-// import { Company } from '@/lib/services'; // Not needed with shared interfaces
 import { PageProps, CompanyProps } from '../UItypes';
 
 interface SettingsProps extends PageProps, CompanyProps {

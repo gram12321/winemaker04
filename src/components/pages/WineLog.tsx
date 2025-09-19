@@ -1,22 +1,11 @@
 // Wine production log component - shows history of bottled wines by vineyard
 import { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
-import { 
-  loadWineLog, 
-    getAllVineyards,
-  type VineyardStats 
-} from '@/lib/services';
+import { loadWineLog, getAllVineyards } from '@/lib/services';
 import { WineLogEntry } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
-import { 
-  getWineQualityCategory, 
-  getColorCategory, 
-  getColorClass, 
-  formatCurrency,
-  formatGameDate,
-  formatNumber
-} from '@/lib/utils/utils';
+import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber } from '@/lib/utils/utils';
 
 interface WineLogProps {
   currentCompany?: any;

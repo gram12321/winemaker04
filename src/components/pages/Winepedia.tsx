@@ -19,8 +19,6 @@ interface WinepediaProps extends PageProps {
   view?: string;
 }
 
-// Remove the old inline component since we now have the proper one
-
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
   const [countryFilter, setCountryFilter] = useState<string>('');
@@ -30,21 +28,6 @@ export default function Winepedia({ view }: WinepediaProps) {
 
   // Memoize chart data generation to prevent continuous rerendering
   const chartData = useMemo(() => {
-    const generateChartData = (func: (x: number) => number, start: number, end: number, steps: number, xLabel: string, yLabel: string) => {
-      const data = [];
-      for (let i = 0; i <= steps; i++) {
-        const x = start + (end - start) * (i / steps);
-        const y = func(x);
-        data.push({
-          [xLabel]: x,
-          [yLabel]: y,
-          displayX: formatNumber(x, { decimals: 2, forceDecimals: true }),
-          displayY: formatNumber(y, { decimals: 3, forceDecimals: true })
-        });
-      }
-      return data;
-    };
-
     // Generate skewed data with more points at extremes (0-0.1 and 0.9-1.0)
     const generateSkewedData = () => {
       const data = [];
