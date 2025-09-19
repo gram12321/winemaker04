@@ -17,11 +17,25 @@
 - **Business logic in services**: Never put calculations in components
 - **Reactive updates**: Services trigger global updates, components auto-refresh
 
-**Key Hooks:**
-- `useGameStateWithData<T>()` - Async data with auto-updates
-- `useLoadingState()` - Loading wrapper for async operations  
-- `usePrestigeUpdates()` - Event-driven prestige monitoring
-- `useTableSortWithAccessors()` - Type-safe table sorting
+### 🛠️ Architecture Guide
+
+**Utils Directory (`@/lib/utils`):** Specialized utility functions organized by purpose:
+- `utils.ts` - Formatting, UI helpers, generic utilities
+- `calculator.ts` - Mathematical calculations for pricing, quality, vineyard operations
+- `companyUtils.ts` - Database operations, company ID management, CRUD utilities
+- `UIWineFilters.ts`, `flags.ts`, `emojis.ts` - UI-specific utilities and internationalization
+
+**Hooks Directory (`@/hooks`):** Custom React hooks for state management:
+- `useGameState()` - Reactive game state with auto-updates
+- `useGameStateWithData<T>()` - Async data loading with caching and deduplication
+- `useLoadingState()` - Loading wrapper with `withLoading()` helper
+- `useTableSortWithAccessors<T>()` - Type-safe table sorting with custom accessors
+- `usePrestigeUpdates()`, `useCustomerRelationshipUpdates()` - Event-driven monitoring
+
+**Constants Directory (`@/lib/constants`):** Centralized configuration and data:
+- `constants.ts` - Game initialization, sales constants, wine quality, customer regional data
+- `vineyardConstants.ts` - Country-region mapping, soil types, altitude ranges, market data
+- `names.ts` - Country-specific name databases for vineyards and customers
 
 **MCP Integration:**
 - Supabase MCP configured in `.cursor/mcp.json`

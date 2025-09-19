@@ -1,3 +1,22 @@
+## Version 0.0051 - 2025-09-19
+
+### **Vineyard Land Buying System & Name Generation**
+- `src/lib/services/wine/landBuyingService.ts` - New comprehensive land buying service with vineyard purchase options generation
+- `src/components/ui/land-buying-modal.tsx` - New modal component for vineyard property selection with detailed characteristics display
+- `src/components/pages/Vineyard.tsx` - Replaced simple vineyard creation with sophisticated land buying system, added country flags and rating displays
+- `src/lib/services/wine/vineyardService.ts` - Added purchaseVineyard function with financial integration and auto-generated vineyard names
+- `src/lib/constants/names.ts` - New centralized name constants file with comprehensive name databases for all countries
+- `src/lib/constants/constants.ts` - Moved customer name data to dedicated names.ts file for better organization
+- `src/lib/services/sales/createCustomer.ts` - Updated to use new centralized name constants
+- `src/lib/services/wine/vineyardValueCalc.ts` - Added getAspectRating and getAltitudeRating functions for display purposes
+- `src/lib/utils/flags.ts` - Updated flag system to use flag-icon-css classes instead of emoji flags
+- `src/lib/utils/utils.ts` - Added getBadgeColorClasses function for rating display with color-coded badges
+- `src/components/pages/Profile.tsx` - Added null check for invalid dates in formatLastPlayed function
+- `src/lib/services/user/companyService.ts` - Fixed lastPlayed date handling for null values
+- **Architecture**: Complete vineyard acquisition system with realistic property generation, financial integration, and sophisticated UI
+- **UI Enhancement**: Interactive land buying modal with property characteristics, affordability checking, and visual rating displays
+- **Name System**: Centralized name generation for both vineyards and customers with country-specific databases
+
 ## Version 0.00492 - 2025-09-19
 
 ### **Code Cleanup & Optimization**
