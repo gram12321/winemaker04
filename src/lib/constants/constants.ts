@@ -157,74 +157,8 @@ export const CUSTOMER_REGIONAL_DATA = {
   }
 } as const;
 
-// Customer name data for realistic name generation
-export const CUSTOMER_NAMES = {
-  'France': {
-    firstNames: {
-      male: ["Thomas", "Hugo", "Arthur", "Lucas", "Jules", "Gabriel", "Théo", "Léon", "Valentin", "Pierre", "Quentin", "Clément", "Maxime", "Alexandre", "Antoine"],
-      female: ["Camille", "Léa", "Manon", "Inès", "Chloé", "Emma", "Jade", "Louise", "Alice", "Clara", "Julie", "Margaux", "Anaïs", "Mathilde", "Pauline"]
-    },
-    lastNames: ["Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Durand", "Leroy", "Moreau", "Simon", "Laurent", "Lefèvre", "Michel", "Garcia"],
-    businessSuffixes: {
-      'Restaurant': ["Restaurant", "Bistro", "Brasserie"],
-      'Wine Shop': ["Wine Merchants", "Wine & Spirits", "Wine Cellar"],
-      'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Chain Store': ["International", "Group", "Distribution"]
-    }
-  },
-  'Germany': {
-    firstNames: {
-      male: ["Maximilian", "Elias", "Paul", "Leon", "Jonas", "Tim", "Lukas", "Erik", "Julian", "Alexander", "Jan", "Fabian", "Florian", "Benjamin", "Niklas"],
-      female: ["Anna", "Lena", "Marie", "Laura", "Katharina", "Johanna", "Lisa", "Sophie", "Julia", "Alina", "Lea", "Clara", "Amelie", "Mia", "Emma"]
-    },
-    lastNames: ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann", "Schäfer", "Koch", "Bauer", "Richter", "Klein"],
-    businessSuffixes: {
-      'Restaurant': ["Restaurant", "Gasthaus", "Weinhaus"],
-      'Wine Shop': ["Wine Merchants", "Wine Gallery", "Vintage Wines"],
-      'Private Collector': ["Wines", "Wine Import", "Wine Selection"],
-      'Chain Store': ["Corporation", "Holdings", "International"]
-    }
-  },
-  'Italy': {
-    firstNames: {
-      male: ["Alessandro", "Andrea", "Marco", "Francesco", "Giuseppe", "Antonio", "Luca", "Giovanni", "Roberto", "Stefano", "Paolo", "Carlo", "Claudio", "Davide", "Massimo"],
-      female: ["Giulia", "Francesca", "Chiara", "Sara", "Alessia", "Anna", "Federica", "Valentina", "Paola", "Elisabetta", "Silvia", "Martina", "Cristina", "Elena", "Roberta"]
-    },
-    lastNames: ["Rossi", "Bianchi", "Romano", "Colombo", "Ricci", "Conti", "Greco", "Gallo", "Ferrara", "Rizzo", "Caruso", "Moretti", "Lombardi", "Esposito", "Marchetti"],
-    businessSuffixes: {
-      'Restaurant': ["Ristorante", "Trattoria", "Osteria"],
-      'Wine Shop': ["Wine Merchants", "Wine Cellar", "Vintage Wines"],
-      'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Chain Store': ["International", "Corporation", "Group"]
-    }
-  },
-  'Spain': {
-    firstNames: {
-      male: ["José", "Antonio", "Juan", "Francisco", "Javier", "Carlos", "Daniel", "Miguel", "Jesús", "Alejandro", "Manuel", "Rafael", "Luis", "Fernando", "Sergio"],
-      female: ["María", "Carmen", "Ana", "Laura", "Marta", "Sara", "Paola", "Isabel", "Cristina", "Patricia", "Sandra", "Raquel", "Pilar", "Rosa", "Elena"]
-    },
-    lastNames: ["García", "Martínez", "Rodríguez", "Fernández", "López", "González", "Pérez", "Sánchez", "Ramírez", "Torres", "Castro", "Ramos", "Delgado", "Morales", "Ortiz"],
-    businessSuffixes: {
-      'Restaurant': ["Restaurant", "Bistro", "Bodega"],
-      'Wine Shop': ["Wine Merchants", "Wine & Spirits", "Wine Cellar"],
-      'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Chain Store': ["International", "Group", "Distribution"]
-    }
-  },
-  'United States': {
-    firstNames: {
-      male: ["James", "Robert", "John", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Christopher", "Charles", "Daniel", "Matthew", "Anthony", "Mark"],
-      female: ["Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen", "Nancy", "Lisa", "Betty", "Helen", "Sandra"]
-    },
-    lastNames: ["Smith", "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris"],
-    businessSuffixes: {
-      'Restaurant': ["Restaurant", "Bistro"],
-      'Wine Shop': ["Wine Merchants", "Wine & Spirits", "Wine Gallery"],
-      'Private Collector': ["Wines", "Wine Trading", "Fine Wines"],
-      'Chain Store': ["Inc.", "Corporation", "International"]
-    }
-  }
-} as const;
+// Note: Customer name data has been moved to src/lib/constants/names.ts
+// This provides a centralized location for all name generation (vineyards and customers)
 
 // ===== WINE CHARACTERISTICS CONSTANTS =====
 

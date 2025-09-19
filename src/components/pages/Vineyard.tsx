@@ -8,16 +8,19 @@ import { DialogProps } from '../UItypes';
 import { formatCurrency, formatNumber } from '@/lib/utils/utils';
 
 interface CreateVineyardDialogProps extends DialogProps {
-  onSubmit: (name: string) => void;
+  onSubmit: (name?: string) => void;
 }
 
 const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onClose, onSubmit }) => {
   const [name, setName] = useState('');
+  const [useAutoName, setUseAutoName] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(name);
+    // If auto-name is selected, pass undefined to let the service generate a name
+    onSubmit(useAutoName ? undefined : name);
     setName('');
+    setUseAutoName(true);
     onClose();
   };
 
@@ -33,15 +36,42 @@ const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onC
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                required
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Naming Option</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="namingOption"
+                    checked={useAutoName}
+                    onChange={() => setUseAutoName(true)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Auto-generate name (recommended)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="namingOption"
+                    checked={!useAutoName}
+                    onChange={() => setUseAutoName(false)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Custom name</span>
+                </label>
+              </div>
             </div>
+            {!useAutoName && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Custom Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                  placeholder="Enter vineyard name"
+                />
+              </div>
+            )}
           </div>
           <div className="flex justify-end space-x-2 mt-6">
             <Button
@@ -132,7 +162,7 @@ const Vineyard: React.FC = () => {
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
 
-  const handleCreateVineyard = useCallback((name: string) => withLoading(async () => {
+  const handleCreateVineyard = useCallback((name?: string) => withLoading(async () => {
     await createVineyard(name);
   }), [withLoading]);
 

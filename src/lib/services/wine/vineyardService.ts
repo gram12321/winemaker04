@@ -9,6 +9,7 @@ import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
+import { NAMES } from '../../constants/names';
 import { Aspect, ASPECTS } from '../../types';
 
 
@@ -44,9 +45,29 @@ function getRandomAltitude(country: string, region: string): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Create a new vineyard
-export async function createVineyard(name: string): Promise<Vineyard> {
-  // Generate random vineyard characteristics
+// Generate a vineyard name based on country and aspect
+export function generateVineyardName(country: string, aspect: Aspect): string {
+  const isFemaleAspect = ["East", "Southeast", "South", "Southwest"].includes(aspect);
+  const nameData = NAMES[country as keyof typeof NAMES];
+  
+  if (!nameData) {
+    console.error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
+    throw new Error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
+  }
+  
+  // Select appropriate name list based on aspect gender
+  const names = isFemaleAspect ? nameData.firstNames.female : nameData.firstNames.male;
+  
+  // Select a random name
+  const randomIndex = Math.floor(Math.random() * names.length);
+  const selectedName = names[randomIndex];
+  
+  // Construct the name like "[Random Name]'s [Aspect] Vineyard"
+  return `${selectedName}'s ${aspect} Vineyard`;
+}
+
+// Create a new vineyard with auto-generated name by default
+export async function createVineyard(name?: string): Promise<Vineyard> {
   const country = getRandomFromObject(COUNTRY_REGION_MAP);
   const countryRegions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
   const region = countryRegions ? getRandomFromArray(countryRegions) : "Bordeaux";
@@ -55,12 +76,15 @@ export async function createVineyard(name: string): Promise<Vineyard> {
   const soil = getRandomSoils(country, region);
   const altitude = getRandomAltitude(country, region);
   
+  // Generate vineyard name if not provided
+  const vineyardName = name || generateVineyardName(country, aspect);
+  
   // Calculate land value using new calculation service
   const landValue = calculateLandValue(country, region, altitude, aspect);
   
   const vineyard: Vineyard = {
     id: uuidv4(),
-    name,
+    name: vineyardName,
     country,
     region,
     hectares,
