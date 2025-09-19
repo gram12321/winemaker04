@@ -18,3 +18,4 @@ export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 export { Avatar, AvatarFallback, AvatarImage } from './avatar';
 export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './dropdown-menu';
 export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend } from './CharacteristicBar';
+export { default as LandBuyingModal } from './land-buying-modal';

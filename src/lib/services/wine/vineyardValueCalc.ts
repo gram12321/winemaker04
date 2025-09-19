@@ -1,13 +1,4 @@
-// Vineyard land value calculation service
-// Adapted from old iteration with improved normalization (0-1 scale)
-
-import { 
-  REGION_PRESTIGE_RANKINGS, 
-  REGION_ASPECT_RATINGS, 
-  REGION_ALTITUDE_RANGES,
-  REGION_PRICE_RANGES,
-  REGION_GRAPE_SUITABILITY
-} from '../../constants/vineyardConstants';
+import { REGION_PRESTIGE_RANKINGS, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { Aspect, GrapeVariety } from '../../types';
 import { VINEYARD_PRESTIGE_CONSTANTS } from '../../constants/constants';
 
@@ -146,6 +137,32 @@ export function calculateGrapeSuitabilityContribution(grape: GrapeVariety | null
   // Return the suitability for the specific grape, with 0.1 floor
   const suitability = regionSuitability[grape as keyof typeof regionSuitability] ?? 0.5;
   return Math.max(0.1, suitability); // Ensure minimum 0.1
+}
+
+/**
+ * Get aspect rating for a specific vineyard
+ * @param country - Country name
+ * @param region - Region name
+ * @param aspect - Aspect direction
+ * @returns Aspect rating (0-1 scale)
+ */
+export function getAspectRating(country: string, region: string, aspect: string): number {
+  const countryAspects = REGION_ASPECT_RATINGS[country as keyof typeof REGION_ASPECT_RATINGS];
+  const regionAspects = countryAspects ? countryAspects[region as keyof typeof countryAspects] : null;
+  return regionAspects ? (regionAspects[aspect as keyof typeof regionAspects] ?? 0.5) : 0.5;
+}
+
+/**
+ * Get altitude rating for a specific vineyard
+ * @param country - Country name
+ * @param region - Region name
+ * @param altitude - Altitude in meters
+ * @returns Altitude rating (0-1 scale)
+ */
+export function getAltitudeRating(country: string, region: string, altitude: number): number {
+  const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
+  const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
+  return normalizeAltitude(altitude, altitudeRange);
 }
 
 

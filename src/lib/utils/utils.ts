@@ -355,3 +355,25 @@ export function getColorClass(value: number): string {
   return colorMap[level] || 'text-gray-500';
 }
 
+/**
+ * Get badge color classes based on rating value (0-1)
+ * @param value Rating value between 0 and 1
+ * @returns Object with text and background color classes
+ */
+export function getBadgeColorClasses(value: number): { text: string; bg: string } {
+  const level = Math.max(0, Math.min(9, Math.floor(value * 10)));
+  const colorMap: Record<number, { text: string; bg: string }> = {
+    0: { text: 'text-red-600', bg: 'bg-red-100' },
+    1: { text: 'text-red-500', bg: 'bg-red-100' },
+    2: { text: 'text-orange-500', bg: 'bg-orange-100' },
+    3: { text: 'text-amber-500', bg: 'bg-amber-100' },
+    4: { text: 'text-yellow-500', bg: 'bg-yellow-100' },
+    5: { text: 'text-lime-500', bg: 'bg-lime-100' },
+    6: { text: 'text-lime-600', bg: 'bg-lime-100' },
+    7: { text: 'text-green-600', bg: 'bg-green-100' },
+    8: { text: 'text-green-700', bg: 'bg-green-100' },
+    9: { text: 'text-green-800', bg: 'bg-green-100' },
+  };
+  return colorMap[level] || { text: 'text-gray-500', bg: 'bg-gray-100' };
+}
+

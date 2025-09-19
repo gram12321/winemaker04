@@ -187,6 +187,11 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
   });
 
   const formatLastPlayed = useCallback((date: Date): string => {
+    // Handle invalid dates
+    if (!date || isNaN(date.getTime())) {
+      return 'Unknown';
+    }
+    
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -11,6 +11,11 @@ import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
 import { NAMES } from '../../constants/names';
 import { Aspect, ASPECTS } from '../../types';
+import { addTransaction } from '../user/financeService';
+import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './landBuyingService';
+import { getGameState } from '../gameState';
+import { formatCurrency } from '../../utils/utils';
+import { notificationService } from '../../../components/layout/NotificationCenter';
 
 
 // Helper functions for random vineyard generation
@@ -233,5 +238,62 @@ export async function resetVineyard(vineyardId: string): Promise<boolean> {
 // Get all vineyards
 export async function getAllVineyards(): Promise<Vineyard[]> {
   return await loadVineyards();
+}
+
+// Purchase a vineyard from a purchase option
+export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<{ success: boolean; vineyard?: Vineyard; error?: string }> {
+  try {
+    // Check if user has enough money
+    const gameState = getGameState();
+    const currentMoney = gameState.money || 0;
+    if (currentMoney < option.totalPrice) {
+      const errorMsg = `Insufficient funds. You have ${formatCurrency(currentMoney)} but need ${formatCurrency(option.totalPrice)}.`;
+      notificationService.error(errorMsg);
+      return { 
+        success: false, 
+        error: errorMsg
+      };
+    }
+
+    // Convert purchase option to vineyard
+    const vineyardData = convertPurchaseOptionToVineyard(option);
+    const vineyard: Vineyard = {
+      ...vineyardData,
+      id: option.id // Use the option ID as the vineyard ID
+    };
+
+    // Save the vineyard
+    await saveVineyard(vineyard);
+
+    // Add transaction for the purchase
+    await addTransaction(
+      -option.totalPrice, // Negative amount for expense
+      `Purchase of ${option.name}`,
+      'Vineyard Purchase',
+      false
+    );
+
+    // Ensure base vineyard prestige events exist immediately upon creation
+    try {
+      await updateBaseVineyardPrestigeEvent(vineyard.id);
+    } catch (error) {
+      console.warn('Failed to initialize base vineyard prestige on purchase:', error);
+    }
+
+    triggerGameUpdate();
+    
+    // Add success notification
+    notificationService.success(`Successfully purchased ${option.name} for ${formatCurrency(option.totalPrice)}!`);
+    
+    return { success: true, vineyard };
+  } catch (error) {
+    console.error('Error purchasing vineyard:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+    notificationService.error(`Failed to purchase vineyard: ${errorMsg}`);
+    return { 
+      success: false, 
+      error: errorMsg
+    };
+  }
 }
 

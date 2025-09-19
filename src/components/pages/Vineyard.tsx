@@ -1,98 +1,14 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { createVineyard, plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, GRAPE_VARIETIES } from '@/lib/services';
+import { plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard, GRAPE_VARIETIES, getGameState, getAspectRating, getAltitudeRating } from '@/lib/services';
 import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '../ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button, LandBuyingModal } from '../ui';
 import { DialogProps } from '../UItypes';
-import { formatCurrency, formatNumber } from '@/lib/utils/utils';
+import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
+import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
+import { getCountryFlag } from '@/lib/utils/flags';
 
-interface CreateVineyardDialogProps extends DialogProps {
-  onSubmit: (name?: string) => void;
-}
-
-const CreateVineyardDialog: React.FC<CreateVineyardDialogProps> = ({ isOpen, onClose, onSubmit }) => {
-  const [name, setName] = useState('');
-  const [useAutoName, setUseAutoName] = useState(true);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // If auto-name is selected, pass undefined to let the service generate a name
-    onSubmit(useAutoName ? undefined : name);
-    setName('');
-    setUseAutoName(true);
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-96">
-        <DialogHeader>
-          <DialogTitle>Create New Vineyard</DialogTitle>
-          <DialogDescription>
-            Create a new vineyard to start growing grapes for your winery.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Naming Option</label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="namingOption"
-                    checked={useAutoName}
-                    onChange={() => setUseAutoName(true)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Auto-generate name (recommended)</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="namingOption"
-                    checked={!useAutoName}
-                    onChange={() => setUseAutoName(false)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Custom name</span>
-                </label>
-              </div>
-            </div>
-            {!useAutoName && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Custom Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                  placeholder="Enter vineyard name"
-                />
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              Create
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 interface PlantDialogProps extends DialogProps {
   vineyard: VineyardType | null;
@@ -157,14 +73,12 @@ const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, on
 
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPlantDialog, setShowPlantDialog] = useState(false);
+  const [showBuyLandModal, setShowBuyLandModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
+  const [landPurchaseOptions, setLandPurchaseOptions] = useState<VineyardPurchaseOption[]>([]);
   const vineyards = useGameStateWithData(getAllVineyards, []);
-
-  const handleCreateVineyard = useCallback((name?: string) => withLoading(async () => {
-    await createVineyard(name);
-  }), [withLoading]);
+  const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0 });
 
   const handlePlantVineyard = useCallback((grape: GrapeVariety) => withLoading(async () => {
     if (selectedVineyard) {
@@ -185,6 +99,16 @@ const Vineyard: React.FC = () => {
 
   const handleResetVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
     await resetVineyard(vineyard.id);
+  }), [withLoading]);
+
+  const handleShowBuyLandModal = useCallback(() => {
+    const options = generateVineyardPurchaseOptions(5, vineyards);
+    setLandPurchaseOptions(options);
+    setShowBuyLandModal(true);
+  }, [vineyards]);
+
+  const handlePurchaseVineyard = useCallback((option: VineyardPurchaseOption) => withLoading(async () => {
+    await purchaseVineyard(option);
   }), [withLoading]);
 
   const getActionButtons = useCallback((vineyard: VineyardType) => {
@@ -256,6 +180,7 @@ const Vineyard: React.FC = () => {
     return statusColors[status] || 'text-gray-500';
   };
 
+
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-gray-800">Vineyard Management</h2>
@@ -291,10 +216,10 @@ const Vineyard: React.FC = () => {
           <div className="flex justify-between items-end">
             <h3 className="text-white text-xl font-semibold">Vineyard Portfolio</h3>
             <button 
-              onClick={() => setShowCreateDialog(true)}
-              className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded"
+              onClick={handleShowBuyLandModal}
+              className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded"
             >
-              Create Vineyard
+              Buy Land
             </button>
           </div>
         </div>
@@ -341,7 +266,10 @@ const Vineyard: React.FC = () => {
                     {/* Location */}
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-900">{vineyard.region}</div>
-                      <div className="text-xs text-gray-500">{vineyard.country}</div>
+                      <div className="text-xs text-gray-500 flex items-center">
+                        <span className={`flag-icon flag-icon-${getCountryFlag(vineyard.country)} mr-1`}></span>
+                        {vineyard.country}
+                      </div>
                     </td>
 
                     {/* Size & Value */}
@@ -361,11 +289,31 @@ const Vineyard: React.FC = () => {
                         <div className="mb-1">
                           <span className="font-medium">Soil:</span> {vineyard.soil.join(', ')}
                         </div>
-                        <div className="mb-1">
-                          <span className="font-medium">Altitude:</span> {vineyard.altitude}m
+                        <div className="mb-1 flex items-center">
+                          <span className="font-medium">Altitude:</span> 
+                          <span className="ml-1">{vineyard.altitude}m</span>
+                          {(() => {
+                            const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
+                            const colors = getBadgeColorClasses(rating);
+                            return (
+                              <span className={`ml-1 px-1 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                                {formatNumber(rating, { decimals: 2, forceDecimals: true })}
+                              </span>
+                            );
+                          })()}
                         </div>
-                        <div>
-                          <span className="font-medium">Aspect:</span> {vineyard.aspect}
+                        <div className="flex items-center">
+                          <span className="font-medium">Aspect:</span> 
+                          <span className="ml-1">{vineyard.aspect}</span>
+                          {(() => {
+                            const rating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
+                            const colors = getBadgeColorClasses(rating);
+                            return (
+                              <span className={`ml-1 px-1 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                                {formatNumber(rating, { decimals: 2, forceDecimals: true })}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                     </td>
@@ -405,12 +353,6 @@ const Vineyard: React.FC = () => {
         </div>
       </div>
 
-      <CreateVineyardDialog
-        isOpen={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-        onSubmit={handleCreateVineyard}
-      />
-
       <PlantDialog
         isOpen={showPlantDialog}
         vineyard={selectedVineyard}
@@ -419,6 +361,14 @@ const Vineyard: React.FC = () => {
           setSelectedVineyard(null);
         }}
         onSubmit={handlePlantVineyard}
+      />
+
+      <LandBuyingModal
+        isOpen={showBuyLandModal}
+        onClose={() => setShowBuyLandModal(false)}
+        options={landPurchaseOptions}
+        onPurchase={handlePurchaseVineyard}
+        currentMoney={gameState.money || 0}
       />
     </div>
   );

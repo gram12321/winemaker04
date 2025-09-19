@@ -1,4 +1,4 @@
-// Flag utility functions for displaying country flags
+// Flag utility functions for displaying country flags using flag-icon-css
 export function getFlagIcon(countryName: string): string {
   const countryToFlagCode: { [key: string]: string } = {
     "Italy": "it",
@@ -14,12 +14,13 @@ export function getFlagIcon(countryName: string): string {
 
 export function getCountryFlag(countryName: string): string {
   const countryToFlagCode: { [key: string]: string } = {
-    "Italy": "🇮🇹",
-    "France": "🇫🇷",
-    "Spain": "🇪🇸", 
-    "United States": "🇺🇸",
-    "Germany": "🇩🇪",
+    "Italy": "it",
+    "France": "fr", 
+    "Spain": "es",
+    "United States": "us",
+    "Germany": "de",
   };
   
-  return countryToFlagCode[countryName] || "🏳️";
+  const flagCode = countryToFlagCode[countryName] || "xx";
+  return flagCode;
 }

@@ -282,7 +282,7 @@ class CompanyService {
       currentYear: dbCompany.current_year,
       money: dbCompany.money,
       prestige: dbCompany.prestige,
-      lastPlayed: new Date(dbCompany.last_played),
+      lastPlayed: dbCompany.last_played ? new Date(dbCompany.last_played) : new Date(),
       createdAt: new Date(dbCompany.created_at),
       updatedAt: new Date(dbCompany.updated_at)
     };
