@@ -1,6 +1,6 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
-import { WineOrder, Customer } from '../../types';
+import { WineOrder, Customer, WineBatch, Vineyard } from '../../types';
 import { saveWineOrder, loadVineyards } from '../../database/database';
 import { getGameState } from '../gameState';
 import { formatCompletedWineName } from '../wine/wineBatchService';
@@ -8,7 +8,7 @@ import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { calculateCustomerRelationship } from './createCustomer';
-import { calculateCustomerRelationshipBoost } from '../../database/prestigeService';
+import { calculateCustomerRelationshipBoosts } from '../../database/prestigeService';
 import { getCurrentPrestige } from '../gameState';
 import { activateCustomer } from '../../database/customerDatabaseService';
 
@@ -56,37 +56,41 @@ function calculateRejectionProbability(bidPrice: number, finalPrice: number): nu
 
 
 // Generate a wine order when a customer is interested (wine value + quality-based decision)
-export async function generateOrder(customer: Customer, specificWineBatch: any, multipleOrderModifier: number = 1.0): Promise<WineOrder | null> {
-  const allVineyards = await loadVineyards();
-  
-  // Use the provided customer and wine batch (no backwards compatibility)
-  const orderCustomer = customer;
-  const selectedBatch = specificWineBatch;
-  
-  // Find the corresponding vineyard for pricing context
-  const vineyard = allVineyards.find(v => v.id === selectedBatch.vineyardId);
-  
-  if (!vineyard) {
-    console.warn(`Vineyard not found for batch ${selectedBatch.id}`);
-    return null;
+export async function generateOrder(
+  customer: Customer, 
+  specificWineBatch: WineBatch, 
+  multipleOrderModifier: number = 1.0,
+  vineyard?: Vineyard,
+  currentPrestige?: number
+): Promise<WineOrder | null> {
+  // Use provided vineyard or load if not provided (for backwards compatibility)
+  let vineyardData = vineyard;
+  if (!vineyardData) {
+    const allVineyards = await loadVineyards();
+    vineyardData = allVineyards.find(v => v.id === specificWineBatch.vineyardId);
+    
+    if (!vineyardData) {
+      console.warn(`Vineyard not found for batch ${specificWineBatch.id}`);
+      return null;
+    }
   }
   
   // Use customer's order type and characteristics
-  const config = CUSTOMER_TYPE_CONFIG[orderCustomer.customerType];
+  const config = CUSTOMER_TYPE_CONFIG[customer.customerType];
   
   // Get asking price (user-set or default) and base calculated price
-  const askingPrice = selectedBatch.askingPrice ?? selectedBatch.finalPrice;
-  const basePrice = selectedBatch.finalPrice; // This is now calculated by the new pricing service
+  const askingPrice = specificWineBatch.askingPrice ?? specificWineBatch.finalPrice;
+  const basePrice = specificWineBatch.finalPrice; // This is now calculated by the new pricing service
   
-  // Calculate current relationship using fresh prestige value
-  const currentPrestige = await getCurrentPrestige();
-  const baseRelationship = calculateCustomerRelationship(orderCustomer.marketShare, currentPrestige);
-  const relationshipBoosts = await calculateCustomerRelationshipBoost(orderCustomer.id);
+  // Calculate current relationship using provided prestige or fresh lookup
+  const prestigeValue = currentPrestige ?? await getCurrentPrestige();
+  const baseRelationship = calculateCustomerRelationship(customer.marketShare, prestigeValue);
+  const relationshipBoosts = await calculateCustomerRelationshipBoosts(customer.id);
   const currentRelationship = baseRelationship + relationshipBoosts;
   
   // Apply relationship modifier to price multiplier
   const relationshipPriceBonus = 1 + currentRelationship * 0.001; // 0.1% per relationship point
-  const relationshipAdjustedMultiplier = orderCustomer.priceMultiplier * relationshipPriceBonus;
+  const relationshipAdjustedMultiplier = customer.priceMultiplier * relationshipPriceBonus;
   
   // Use customer's individual price multiplier with relationship bonus
   const bidPrice = Math.round(askingPrice * relationshipAdjustedMultiplier * 100) / 100;
@@ -115,19 +119,19 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
   const rejectionRandomValue = Math.random();
   
   // Calculate the multipliers for storage
-  const purchasingPowerMultiplier = orderCustomer.purchasingPower;
-  const wineTraditionMultiplier = orderCustomer.wineTradition;
-  const marketShareMultiplier = 1 - orderCustomer.marketShare; // Relative to 1
+  const purchasingPowerMultiplier = customer.purchasingPower;
+  const wineTraditionMultiplier = customer.wineTradition;
+  const marketShareMultiplier = 1 - customer.marketShare; // Relative to 1
   
   // Estimate the base multiplier
   const totalMultiplier = purchasingPowerMultiplier * wineTraditionMultiplier * marketShareMultiplier;
-  const estimatedBaseMultiplier = orderCustomer.priceMultiplier / totalMultiplier;
+  const estimatedBaseMultiplier = customer.priceMultiplier / totalMultiplier;
   
   // Order evaluation in progress (no logging needed)
   
   if (rejectionRandomValue < rejectionProbability) {
     // Customer outright rejects the price and walks away
-    const notificationMessage = `${orderCustomer.name} from ${orderCustomer.country} was interested in ${formatCompletedWineName(selectedBatch)}, but outright rejected our asking price.`;
+    const notificationMessage = `${customer.name} from ${customer.country} was interested in ${formatCompletedWineName(specificWineBatch)}, but outright rejected our asking price.`;
     
     // Trigger notification for rejected order
     notificationService.info(notificationMessage);
@@ -140,7 +144,7 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
   const orderAmountMultiplier = calculateOrderAmount(
     { askingPrice: bidPrice }, // Customer's actual bid price
     askingPrice,               // Our asking price (what we want to charge)
-    orderCustomer.customerType
+    customer.customerType
   );
   
   // Generate baseline quantity from order type range, then scale by price sensitivity and customer characteristics
@@ -151,12 +155,12 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
   // Scale baseline by price sensitivity and regional factors (removed customer quantity multiplier)
   // Convert market share from decimal (0.01) to percentage multiplier (1.01) for quantity calculation
   const relationshipQuantityBonus = 1 + currentRelationship * 0.002; // 0.2% per relationship point
-  const quantityMarketShareMultiplier = (1 + orderCustomer.marketShare) * relationshipQuantityBonus; // 0.01 → 1.01x + relationship bonus
+  const quantityMarketShareMultiplier = (1 + customer.marketShare) * relationshipQuantityBonus; // 0.01 → 1.01x + relationship bonus
   const desiredQuantity = Math.floor(
     baseQuantity * 
     orderAmountMultiplier * 
-    orderCustomer.purchasingPower * 
-    orderCustomer.wineTradition * 
+    customer.purchasingPower * 
+    customer.wineTradition * 
     quantityMarketShareMultiplier
   );
 
@@ -166,7 +170,7 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
   if (desiredQuantity < minQty) {
     
     // Order rejected - asking price too high, customer backs down
-    const notificationMessage = `${orderCustomer.name} from ${orderCustomer.country} wanted to buy ${formatCompletedWineName(selectedBatch)}, but with our current asking price the amount they could afford simply became too low.`;
+    const notificationMessage = `${customer.name} from ${customer.country} wanted to buy ${formatCompletedWineName(specificWineBatch)}, but with our current asking price the amount they could afford simply became too low.`;
     
     // Trigger notification for rejected order
     notificationService.info(notificationMessage);
@@ -175,7 +179,7 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
   }
 
   // Calculate fulfillable quantity based on current inventory  
-  const fulfillableQuantity = Math.min(desiredQuantity, selectedBatch.quantity);
+  const fulfillableQuantity = Math.min(desiredQuantity, specificWineBatch.quantity);
   const fulfillableValue = Math.round(fulfillableQuantity * bidPrice * 100) / 100;
   
   const gameState = getGameState();
@@ -186,9 +190,9 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024
     },
-    customerType: orderCustomer.customerType,
-    wineBatchId: selectedBatch.id,
-    wineName: formatCompletedWineName(selectedBatch),
+    customerType: customer.customerType,
+    wineBatchId: specificWineBatch.id,
+    wineName: formatCompletedWineName(specificWineBatch),
     requestedQuantity: desiredQuantity,
     offeredPrice: bidPrice, // Store as offeredPrice in the order object for compatibility
     totalValue: Math.round(desiredQuantity * bidPrice * 100) / 100,
@@ -198,9 +202,9 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
     status: 'pending',
     
     // Customer information for sophisticated order tracking
-    customerId: orderCustomer.id,
-    customerName: orderCustomer.name,
-    customerCountry: orderCustomer.country,
+    customerId: customer.id,
+    customerName: customer.name,
+    customerCountry: customer.country,
     customerRelationship: currentRelationship,
     
     // Calculation data for tooltips and analysis
@@ -210,7 +214,7 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
       purchasingPowerMultiplier,
       wineTraditionMultiplier,
       marketShareMultiplier,
-      finalPriceMultiplier: orderCustomer.priceMultiplier,
+      finalPriceMultiplier: customer.priceMultiplier,
       
       // Quantity calculation
       baseQuantity,
@@ -230,8 +234,8 @@ export async function generateOrder(customer: Customer, specificWineBatch: any, 
   await saveWineOrder(order);
   
   // Activate customer if they're not already active (store their relationship)
-  if (!orderCustomer.activeCustomer) {
-    await activateCustomer(orderCustomer.id, currentRelationship);
+  if (!customer.activeCustomer) {
+    await activateCustomer(customer.id, currentRelationship);
   }
   
   // Don't trigger updates here - let the calling function batch them

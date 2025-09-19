@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
@@ -70,7 +70,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     return `Week ${entry.gameWeek}, ${entry.gameSeason} ${entry.gameYear}`;
   };
 
-  const getRankIcon = (index: number) => {
+  const getRankIcon = useCallback((index: number) => {
     switch (index) {
       case 0:
         return <Trophy className="h-5 w-5 text-yellow-500" />;
@@ -81,15 +81,14 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       default:
         return <span className="w-5 text-center text-sm font-medium">{index + 1}</span>;
     }
-  };
+  }, []);
 
-  const getColumnTitle = (scoreType: ScoreType): string => {
+  const getColumnTitle = useCallback((scoreType: ScoreType): string => {
     return highscoreService.getScoreTypeName(scoreType);
-  };
+  }, []);
 
-  const getTabTitle = (scoreType: ScoreType): string => {
+  const getTabTitle = useCallback((scoreType: ScoreType): string => {
     const fullName = highscoreService.getScoreTypeName(scoreType);
-    // Shorten for tab display
     switch (scoreType) {
       case 'company_value':
         return 'Company Value';
@@ -110,9 +109,9 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       default:
         return fullName;
     }
-  };
+  }, []);
 
-  const getTabIcon = (scoreType: ScoreType) => {
+  const getTabIcon = useCallback((scoreType: ScoreType) => {
     switch (scoreType) {
       case 'company_value':
         return '🏢';
@@ -133,9 +132,17 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       default:
         return '🏆';
     }
-  };
+  }, []);
 
-  const renderHighscoreTable = (scoreType: ScoreType) => {
+  const firstTabGroup = useMemo(() => (
+    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as ScoreType[]
+  ), []);
+
+  const secondTabGroup = useMemo(() => (
+    ['highest_wine_quality', 'highest_wine_balance', 'highest_wine_price', 'lowest_wine_price'] as ScoreType[]
+  ), []);
+
+  const renderHighscoreTable = useCallback((scoreType: ScoreType) => {
     const scores = highscores[scoreType];
     
     if (isLoading) {
@@ -239,7 +246,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         </TableBody>
       </Table>
     );
-  };
+  }, [error, highscores, isLoading, currentCompanyId, getColumnTitle, getRankIcon]);
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -286,7 +293,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
           <CardContent>
             <Tabs defaultValue="company_value" className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-6">
-                {(['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as ScoreType[]).map((scoreType) => (
+                {firstTabGroup.map((scoreType) => (
                   <TabsTrigger key={scoreType} value={scoreType} className="flex items-center gap-2">
                     <span>{getTabIcon(scoreType)}</span>
                     <span className="hidden sm:inline">{getTabTitle(scoreType)}</span>
@@ -295,7 +302,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
               </TabsList>
               
               <TabsList className="grid w-full grid-cols-4 mb-6">
-                {(['highest_wine_quality', 'highest_wine_balance', 'highest_wine_price', 'lowest_wine_price'] as ScoreType[]).map((scoreType) => (
+                {secondTabGroup.map((scoreType) => (
                   <TabsTrigger key={scoreType} value={scoreType} className="flex items-center gap-2">
                     <span>{getTabIcon(scoreType)}</span>
                     <span className="hidden sm:inline">{getTabTitle(scoreType)}</span>
@@ -312,7 +319,6 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                 </div>
                 {renderHighscoreTable('company_value')}
               </TabsContent>
-
 
               <TabsContent value="company_value_per_week" className="space-y-4">
                 <div className="text-center mb-4">

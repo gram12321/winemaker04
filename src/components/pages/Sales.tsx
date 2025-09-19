@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { WineOrder, WineBatch, Customer } from '@/lib/types';
+import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types';
 import { fulfillWineOrder, rejectWineOrder, generateSophisticatedWineOrders, generateCustomer } from '@/lib/services';
 import { loadWineBatches, saveWineBatch, loadWineOrders } from '@/lib/database/database';
 import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
@@ -25,8 +25,8 @@ interface SalesProps extends NavigationProps {
 function createCustomerFromOrderData(
   customerId: string,
   customerName: string,
-  customerCountry: any,
-  customerType: any,
+  customerCountry: CustomerCountry,
+  customerType: CustomerType,
   customerRelationship?: number
 ): Customer {
   return {
@@ -69,6 +69,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   } | null>(null);
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
   const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
+  const [ordersPage, setOrdersPage] = useState<number>(1);
+  const ordersPageSize = 20;
 
 
   // Use consolidated hooks for reactive data loading
@@ -82,14 +84,20 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     []
   );
 
-  // Filter orders based on current filter
-  const orders = orderStatusFilter === 'all' 
-    ? allOrders 
-    : allOrders.filter(order => order.status === orderStatusFilter);
+  // Memoize filtered orders to prevent unnecessary recalculations
+  const orders = React.useMemo(() => 
+    orderStatusFilter === 'all' 
+      ? allOrders 
+      : allOrders.filter(order => order.status === orderStatusFilter),
+    [allOrders, orderStatusFilter]
+  );
 
-  // Filter bottled wines
-  const bottledWines = allBatches.filter(batch => 
-    batch.stage === 'bottled' && batch.process === 'bottled'
+  // Memoize filtered bottled wines
+  const bottledWines = React.useMemo(() => 
+    allBatches.filter(batch => 
+      batch.stage === 'bottled' && batch.process === 'bottled'
+    ),
+    [allBatches]
   );
 
   // Helper function to get asking price for an order
@@ -174,6 +182,19 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     isColumnSorted: isOrderColumnSorted
   } = useTableSortWithAccessors(orders, orderColumns);
 
+  // Paginate sorted orders
+  const paginatedOrders = React.useMemo(() => {
+    const start = (ordersPage - 1) * ordersPageSize;
+    return sortedOrders.slice(start, start + ordersPageSize);
+  }, [sortedOrders, ordersPage, ordersPageSize]);
+
+  // Reset to first page when filter changes
+  React.useEffect(() => {
+    setOrdersPage(1);
+  }, [orderStatusFilter]);
+
+  const totalOrdersPages = Math.max(1, Math.ceil(sortedOrders.length / ordersPageSize));
+
   const {
     sortedData: sortedBottledWines,
     handleSort: handleCellarSort,
@@ -191,8 +212,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     }
   };
 
-  // Load relationship breakdown for a customer on-demand
-  const loadRelationshipBreakdown = async (customerId: string, customer: Customer) => {
+  // Memoize relationship breakdown loading to prevent duplicate calls
+  const loadRelationshipBreakdown = React.useCallback(async (customerId: string, customer: Customer) => {
     try {
       const breakdown = await calculateRelationshipBreakdown(customer);
       const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
@@ -210,36 +231,15 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     } catch (error) {
       console.error('Error loading relationship breakdown:', error);
     }
-  };
+  }, []);
 
   // Load customer chance info on component mount
   useEffect(() => {
     loadCustomerChance();
   }, []);
 
-  // Pre-compute relationships for all orders on component mount and when orders change
-  useEffect(() => {
-    const precomputeRelationships = async () => {
-      for (const order of allOrders) {
-        const customerKey = getCustomerKey(order.customerId);
-        if (!computedRelationships[customerKey]) {
-          // Create a minimal customer object for the breakdown calculation
-          const customer = createCustomerFromOrderData(
-            order.customerId,
-            order.customerName,
-            order.customerCountry as any,
-            order.customerType,
-            order.customerRelationship
-          );
-          await loadRelationshipBreakdown(order.customerId, customer);
-        }
-      }
-    };
-    
-    if (allOrders.length > 0) {
-      precomputeRelationships();
-    }
-  }, [allOrders]);
+  // Remove N+1 precompute loop - relationships are now loaded on-demand when hovering
+  // This eliminates the performance bottleneck of loading all relationships upfront
 
   // Refresh relationship breakdown caches when game updates (e.g., order fulfilled)
   const { subscribe } = useGameUpdates();
@@ -803,14 +803,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedOrders.length === 0 ? (
+                  {paginatedOrders.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={13} className="text-center text-gray-500 py-8">
                         {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    sortedOrders.map((order) => (
+                    paginatedOrders.map((order) => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium text-gray-900">
                           <TooltipProvider>
@@ -861,7 +861,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                       const customer = createCustomerFromOrderData(
                                         order.customerId,
                                         order.customerName,
-                                        order.customerCountry as any,
+                                        order.customerCountry,
                                         order.customerType,
                                         order.customerRelationship
                                       );
@@ -1041,6 +1041,34 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination Controls */}
+            {sortedOrders.length > ordersPageSize && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  Showing {((ordersPage - 1) * ordersPageSize) + 1} to {Math.min(ordersPage * ordersPageSize, sortedOrders.length)} of {sortedOrders.length} orders
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={ordersPage <= 1}
+                    onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm">
+                    Page {ordersPage} of {totalOrdersPages}
+                  </span>
+                  <button
+                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={ordersPage >= totalOrdersPages}
+                    onClick={() => setOrdersPage(p => Math.min(totalOrdersPages, p + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

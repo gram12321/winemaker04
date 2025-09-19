@@ -290,22 +290,18 @@ export async function initializeCustomers(companyPrestige: number = 1): Promise<
     const customersExist = await checkCustomersExist();
     
     if (customersExist) {
-      console.log('[Customer Init] Loading existing customers for company');
       const existingCustomers = await loadCustomers();
       
       if (existingCustomers && existingCustomers.length > 0) {
-        console.log(`[Customer Init] Loaded ${existingCustomers.length} existing customers`);
         return existingCustomers;
       }
     }
     
     // No existing customers found, generate new ones (first time only)
-    console.log('[Customer Init] No existing customers found, generating new ones');
     const newCustomers = generateCustomersForAllCountries(companyPrestige);
     
     // Save to database for this company
     await saveCustomers(newCustomers);
-    console.log(`[Customer Init] Created and saved ${newCustomers.length} new customers`);
     
     return newCustomers;
     

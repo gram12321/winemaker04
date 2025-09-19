@@ -51,8 +51,3 @@ export function calculateWineValueIndex(vineyard: Vineyard): number {
   return Math.max(0, Math.min(1, wineValueIndex));
 }
 
-// TODO: Future implementations for when the game expands
-// - calculateLandValue(): Regional data, soil, altitude, climate effects
-// - calculateFieldPrestige(): Vine age, health, density, performance history
-
-

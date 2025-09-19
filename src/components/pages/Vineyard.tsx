@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { createVineyard, plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, GRAPE_VARIETIES } from '@/lib/services';
 import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
@@ -125,7 +125,6 @@ const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, on
   );
 };
 
-
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -133,33 +132,32 @@ const Vineyard: React.FC = () => {
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
 
-
-  const handleCreateVineyard = (name: string) => withLoading(async () => {
+  const handleCreateVineyard = useCallback((name: string) => withLoading(async () => {
     await createVineyard(name);
-  });
+  }), [withLoading]);
 
-  const handlePlantVineyard = (grape: GrapeVariety) => withLoading(async () => {
+  const handlePlantVineyard = useCallback((grape: GrapeVariety) => withLoading(async () => {
     if (selectedVineyard) {
       await plantVineyard(selectedVineyard.id, grape);
     }
-  });
+  }), [withLoading, selectedVineyard]);
 
-  const handleHarvestVineyard = (vineyard: VineyardType) => withLoading(async () => {
+  const handleHarvestVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
     const result = await harvestVineyard(vineyard.id);
     if (result.success && result.quantity && vineyard.grape) {
       alert(`Harvested ${result.quantity} kg of ${vineyard.grape} grapes! Wine batch created in winery.`);
     }
-  });
+  }), [withLoading]);
 
-  const handleGrowVineyard = (vineyard: VineyardType) => withLoading(async () => {
+  const handleGrowVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
     await growVineyard(vineyard.id);
-  });
+  }), [withLoading]);
 
-  const handleResetVineyard = (vineyard: VineyardType) => withLoading(async () => {
+  const handleResetVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
     await resetVineyard(vineyard.id);
-  });
+  }), [withLoading]);
 
-  const getActionButtons = (vineyard: VineyardType) => {
+  const getActionButtons = useCallback((vineyard: VineyardType) => {
     if (!vineyard.grape) {
       return (
         <button 
@@ -205,8 +203,16 @@ const Vineyard: React.FC = () => {
       default:
         return null;
     }
-  };
+  }, [handleGrowVineyard, handleHarvestVineyard, handleResetVineyard]);
 
+  // Memoize summary statistics
+  const { totalHectares, totalValue, plantedVineyards, activeVineyards } = useMemo(() => {
+    const totalHectares = vineyards.reduce((sum, v) => sum + v.hectares, 0);
+    const totalValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
+    const plantedVineyards = vineyards.filter(v => v.grape).length;
+    const activeVineyards = vineyards.filter(v => v.status === 'Growing').length;
+    return { totalHectares, totalValue, plantedVineyards, activeVineyards };
+  }, [vineyards]);
 
   // Status color mapping
   const getStatusColor = (status: string) => {
@@ -219,12 +225,6 @@ const Vineyard: React.FC = () => {
     };
     return statusColors[status] || 'text-gray-500';
   };
-
-  // Calculate summary statistics
-  const totalHectares = vineyards.reduce((sum, v) => sum + v.hectares, 0);
-  const totalValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
-  const plantedVineyards = vineyards.filter(v => v.grape).length;
-  const activeVineyards = vineyards.filter(v => v.status === 'Growing').length;
 
   return (
     <div className="space-y-6">

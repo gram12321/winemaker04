@@ -1,6 +1,6 @@
 // Relationship breakdown service - calculates and explains customer relationship factors
 import { Customer } from '../types';
-import { calculateCustomerRelationshipBoost } from './prestigeService';
+import { calculateCustomerRelationshipBoosts } from './prestigeService';
 import { calculateCurrentPrestige } from './prestigeService';
 import { getCurrentCompanyId } from '../utils/companyUtils';
 import { calculateAbsoluteWeeks, formatNumber } from '../utils/utils';
@@ -51,7 +51,7 @@ export async function calculateRelationshipBreakdown(customer: Customer, company
   const marketShareModifier = 1 - calculateInvertedSkewedMultiplier(customer.marketShare);
   
   // Calculate relationship boosts
-  const relationshipBoosts = await calculateCustomerRelationshipBoost(customer.id);
+  const relationshipBoosts = await calculateCustomerRelationshipBoosts(customer.id);
   
   // Get detailed boost information
   const boostDetails = await getRelationshipBoostDetails(customer.id, companyId);

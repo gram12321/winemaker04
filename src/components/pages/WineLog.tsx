@@ -1,5 +1,5 @@
 // Wine production log component - shows history of bottled wines by vineyard
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { loadWineLog, getAllVineyards } from '@/lib/services';
 import { WineLogEntry } from '@/lib/types';
@@ -13,29 +13,54 @@ interface WineLogProps {
 
 export function WineLog({ currentCompany }: WineLogProps) {
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 20;
+  
   const wineLog = useGameStateWithData(loadWineLog, []);
   const vineyards = useGameStateWithData(getAllVineyards, []);
 
-  // Filter wine log by selected vineyard
-  const filteredWineLog = selectedVineyard === 'all' 
-    ? wineLog 
-    : wineLog.filter(entry => entry.vineyardId === selectedVineyard);
+  // Memoize filtered wine log to prevent unnecessary recalculations
+  const filteredWineLog = React.useMemo(() => 
+    selectedVineyard === 'all' 
+      ? wineLog 
+      : wineLog.filter(entry => entry.vineyardId === selectedVineyard),
+    [wineLog, selectedVineyard]
+  );
 
-  // Group wine log entries by vineyard for statistics
-  const vineyardGroups = wineLog.reduce((groups, entry) => {
-    if (!groups[entry.vineyardId]) {
-      groups[entry.vineyardId] = [];
-    }
-    groups[entry.vineyardId].push(entry);
-    return groups;
-  }, {} as Record<string, WineLogEntry[]>);
+  // Paginate filtered results
+  const paginatedWineLog = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredWineLog.slice(start, start + pageSize);
+  }, [filteredWineLog, page, pageSize]);
 
-  // Calculate overall statistics
-  const totalBottles = wineLog.reduce((sum, entry) => sum + entry.quantity, 0);
-  const totalVintages = wineLog.length;
-  const averageQuality = wineLog.length > 0 
-    ? wineLog.reduce((sum, entry) => sum + entry.quality, 0) / wineLog.length 
-    : 0;
+  // Reset to first page when filter changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [selectedVineyard]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredWineLog.length / pageSize));
+
+  // Memoize vineyard groups and statistics to prevent recalculation on every render
+  const vineyardGroups = React.useMemo(() => 
+    wineLog.reduce((groups, entry) => {
+      if (!groups[entry.vineyardId]) {
+        groups[entry.vineyardId] = [];
+      }
+      groups[entry.vineyardId].push(entry);
+      return groups;
+    }, {} as Record<string, WineLogEntry[]>),
+    [wineLog]
+  );
+
+  // Memoize overall statistics
+  const statistics = React.useMemo(() => {
+    const totalBottles = wineLog.reduce((sum, entry) => sum + entry.quantity, 0);
+    const totalVintages = wineLog.length;
+    const averageQuality = wineLog.length > 0 
+      ? wineLog.reduce((sum, entry) => sum + entry.quality, 0) / wineLog.length 
+      : 0;
+    return { totalBottles, totalVintages, averageQuality };
+  }, [wineLog]);
 
   if (!currentCompany) {
     return (
@@ -77,7 +102,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                 <Wine className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{formatNumber(totalBottles, { decimals: 0, forceDecimals: true })}</div>
+                <div className="text-2xl font-bold">{formatNumber(statistics.totalBottles, { decimals: 0, forceDecimals: true })}</div>
                 <div className="text-sm text-gray-500">Total Bottles Produced</div>
               </div>
             </div>
@@ -91,7 +116,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                 <BarChart3 className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{totalVintages}</div>
+                <div className="text-2xl font-bold">{statistics.totalVintages}</div>
                 <div className="text-sm text-gray-500">Wine Batches Completed</div>
               </div>
             </div>
@@ -105,8 +130,8 @@ export function WineLog({ currentCompany }: WineLogProps) {
                 <Award className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <div className={`text-2xl font-bold ${getColorClass(averageQuality)}`}>
-                  {getWineQualityCategory(averageQuality)}
+                <div className={`text-2xl font-bold ${getColorClass(statistics.averageQuality)}`}>
+                  {getWineQualityCategory(statistics.averageQuality)}
                 </div>
                 <div className="text-sm text-gray-500">Average Quality</div>
               </div>
@@ -167,7 +192,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {filteredWineLog.length === 0 ? (
+              {paginatedWineLog.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Wine className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No wines have been bottled yet.</p>
@@ -188,7 +213,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {filteredWineLog.map((entry) => (
+                      {paginatedWineLog.map((entry) => (
                         <tr key={entry.id} className="text-sm">
                           <td className="py-3">
                             <div className="font-medium">{entry.grape}</div>
@@ -223,6 +248,34 @@ export function WineLog({ currentCompany }: WineLogProps) {
                       ))}
                     </tbody>
                   </table>
+                  
+                  {/* Pagination Controls */}
+                  {filteredWineLog.length > pageSize && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                      <div className="text-sm text-gray-500">
+                        Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredWineLog.length)} of {filteredWineLog.length} wines
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={page <= 1}
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                        >
+                          Previous
+                        </button>
+                        <span className="text-sm">
+                          Page {page} of {totalPages}
+                        </span>
+                        <button
+                          className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={page >= totalPages}
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
 import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch } from '@/lib/types';
@@ -50,7 +50,7 @@ const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
 
-  const handleAction = (batchId: string, action: 'crush' | 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
+  const handleAction = useCallback((batchId: string, action: 'crush' | 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
     switch (action) {
       case 'crush':
         await crushGrapes(batchId);
@@ -68,11 +68,11 @@ const Winery: React.FC = () => {
         await progressFermentation(batchId, 25); // Progress by 25%
         break;
     }
-  });
+  }), [withLoading]);
 
-  // Separate batches by completion status
-  const activeBatches = wineBatches.filter(batch => batch.process !== 'bottled');
-  const completedWines = wineBatches.filter(batch => batch.process === 'bottled');
+  // Separate batches by completion status (memoized)
+  const activeBatches = useMemo(() => wineBatches.filter(batch => batch.process !== 'bottled'), [wineBatches]);
+  const completedWines = useMemo(() => wineBatches.filter(batch => batch.process === 'bottled'), [wineBatches]);
 
   return (
     <div className="space-y-6">

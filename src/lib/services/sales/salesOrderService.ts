@@ -1,10 +1,10 @@
 // Sales order orchestration service - coordinates sophisticated customer acquisition and multiple order generation
-import { WineOrder } from '../../types';
+import { WineOrder, Vineyard } from '../../types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { getAllCustomers } from './createCustomer';
 import { notificationService } from '../../../components/layout/NotificationCenter';
-import { loadWineBatches } from '../../database/database';
+import { loadWineBatches, loadVineyards } from '../../database/database';
 import { getAvailableBottledWines } from '../../utils/UIWineFilters';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
@@ -61,12 +61,14 @@ export async function generateSophisticatedWineOrders(): Promise<{
     // Customer is browsing wine selection (no logging needed)
   
   try {
-    // Step 3: Load all available wines
-    const allBatches = await loadWineBatches();
+    // Step 3: Load all available wines and vineyards once (batched operations)
+    const [allBatches, allVineyards] = await Promise.all([
+      loadWineBatches(),
+      loadVineyards()
+    ]);
     const availableWines = getAvailableBottledWines(allBatches);
     
     if (availableWines.length === 0) {
-      // No wines available for customer to browse (no logging needed)
       return {
         orders: [],
         customersGenerated: 1,
@@ -75,9 +77,11 @@ export async function generateSophisticatedWineOrders(): Promise<{
       };
     }
     
+    // Get current prestige once for all order evaluations
+    const currentPrestige = chanceInfo.companyPrestige;
+    
     // Step 4: Iterate through each available wine with diminishing returns for multiple orders
     const orders: WineOrder[] = [];
-    // Customer is browsing wines (no logging needed)
     
     for (let i = 0; i < availableWines.length; i++) {
       const wineBatch = availableWines[i];
@@ -86,17 +90,18 @@ export async function generateSophisticatedWineOrders(): Promise<{
       // Calculate diminishing returns: each accepted order reduces chance for next order
       const multipleOrderModifier = Math.pow(customerTypeConfig.multipleOrderPenalty, ordersPlaced);
       
-      // Evaluate wine for order (no logging needed)
+      // Find vineyard for this wine batch
+      const vineyard = allVineyards.find((v: Vineyard) => v.id === wineBatch.vineyardId);
       
-      // Use the existing generateOrder system - it handles all pricing, rejection, quantity logic
-      // Apply multiple order modifier to affect rejection probability
-      const order = await generateOrder(customer, wineBatch, multipleOrderModifier);
+      if (!vineyard) {
+        continue; // Skip if vineyard not found
+      }
+      
+      // Use optimized generateOrder with pre-loaded data
+      const order = await generateOrder(customer, wineBatch, multipleOrderModifier, vineyard, currentPrestige);
       
       if (order) {
         orders.push(order);
-        // Order placed successfully (no logging needed)
-      } else {
-        // Order rejected (no logging needed)
       }
     }
     
