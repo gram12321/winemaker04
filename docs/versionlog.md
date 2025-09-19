@@ -1,3 +1,198 @@
+## Version 0.00492 - 2025-09-19
+
+### **Code Cleanup & Optimization**
+- `src/components/pages/Settings.tsx` - Removed unused import for cleaner code structure
+- `src/components/pages/WineLog.tsx` - Streamlined imports and removed unused type imports for better performance
+- `src/components/pages/Winepedia.tsx` - Removed commented code and unused chart generation function to improve maintainability
+
+## Version 0.00491b - 2025-09-18
+
+### **Constants File Organization**
+- `src/lib/constants/constants.ts` - Moved constants.ts to organized constants directory structure
+- Updated all import paths across the application to use new constants location
+- Improved code organization with better file structure for maintainability
+
+## Version 0.00491a - 2025-09-18
+
+### **Game Initialization & Customer Management Fixes**
+- `src/App.tsx` - Fixed duplicate initialization issues and improved company switching logic
+- `src/components/pages/Login.tsx` - Removed unused imports and improved auto-login functionality
+- `src/hooks/useGameInit.ts` - Removed redundant initialization hook to prevent double initialization
+- `src/main.tsx` - Disabled React StrictMode in development to prevent double initialization
+- Fixed customer creation and initialization to prevent duplicate processes
+
+## Version 0.00491 - 2025-09-18
+
+### **Company Login & Customer Creation Bug Fixes**
+- `src/App.tsx` - Enhanced game initialization with proper company switching guards
+- `src/components/layout/Header.tsx` - Improved localStorage cleanup with selective key removal
+- `src/components/pages/Login.tsx` - Fixed auto-login timing to occur after companies are loaded
+- `src/hooks/useGameInit.ts` - Added initialization guards to prevent duplicate customer creation
+- Fixed customer creation and company login flow issues
+
+## Version 0.0048a - 2025-09-17
+
+### **Customer Recreation Prevention**
+- `src/App.tsx` - Simplified game initialization to rely on useGameInit hook
+- `src/lib/database/customerDatabaseService.ts` - Enhanced customer existence checking with detailed logging
+- `src/lib/services/sales/createCustomer.ts` - Added comprehensive logging and prevention of customer recreation on reload
+- Fixed issue where customers were being recreated on page reload instead of loading existing ones
+
+## Version 0.0047a - 2025-09-16
+
+### **Prestige Service & Vineyard Calculation Fixes**
+- `src/lib/database/prestigeService.ts` - Major refactoring to use centralized company ID management and improved vineyard prestige calculations
+- `src/lib/database/relationshipBreakdownService.ts` - Updated to use new prestige service API
+- `src/lib/services/gameState.ts` - Improved company value prestige calculation with logarithmic scaling
+- Enhanced vineyard prestige calculation for non-planted vineyards and fixed company ID handling
+
+## Version 0.0049 - 2025-09-15
+
+### **Prestige Service & Database Integration**
+- `src/lib/database/prestigeService.ts` - Complete prestige system with vineyard prestige calculation, database integration, and service layer architecture
+- `src/lib/services/wine/vineyardValueCalc.ts` - Enhanced vineyard value calculation service with prestige integration
+- `src/lib/database/relationshipBreakdownService.ts` - New relationship breakdown service for database operations
+- `src/lib/utils/calculator.ts` - Updated calculator utilities to support prestige calculations
+- `src/components/pages/Vineyard.tsx` - Enhanced vineyard page with prestige integration and improved UI
+
+## Version 0.0048 - 2025-09-15
+
+### **Vineyard Value Calculation & Service Architecture**
+- `src/lib/services/wine/vineyardValueCalc.ts` - New vineyard value calculation service with comprehensive vineyard valuation logic
+- `src/lib/database/prestigeService.ts` - Enhanced prestige service with better database integration and vineyard prestige calculations
+- `src/lib/utils/calculator.ts` - Updated calculator utilities to support vineyard value calculations
+- `src/components/pages/Vineyard.tsx` - Enhanced vineyard page with value calculation integration
+
+## Version 0.0047 - 2025-09-15
+
+### **Prestige System & Database Services**
+- `src/lib/database/prestigeService.ts` - New prestige service with comprehensive prestige calculation system
+- `src/lib/database/relationshipBreakdownService.ts` - Enhanced relationship breakdown service with better database operations
+- `src/lib/services/wine/vineyardValueCalc.ts` - New vineyard value calculation service
+- `src/lib/utils/calculator.ts` - Updated calculator utilities to support prestige calculations
+- `src/components/pages/Vineyard.tsx` - Enhanced vineyard page with prestige integration
+
+## Version 0.0046 - 2025-09-15
+
+### **Database Services & Relationship Management**
+- `src/lib/database/relationshipBreakdownService.ts` - New relationship breakdown service for database operations
+- `src/lib/database/prestigeService.ts` - New prestige service with database integration
+- `src/lib/services/wine/vineyardValueCalc.ts` - New vineyard value calculation service
+- `src/lib/utils/calculator.ts` - Updated calculator utilities to support new database services
+- `src/components/pages/Vineyard.tsx` - Enhanced vineyard page with new service integrations
+
+## Version 0.0045 - 2025-09-15
+
+### **Vineyard Constants & Measurement System**
+- `src/lib/constants/vineyardConstants.ts` - New comprehensive vineyard constants with country-region mapping, soil types, altitude ranges, aspect ratings, market data, and grape suitability
+- `src/lib/database/database.ts` - Updated vineyard storage to use hectares instead of acres
+- `src/lib/services/user/financeService.ts` - Updated farmland value calculation to use hectares (€40k per hectare)
+- `src/lib/services/wine/vineyardService.ts` - Updated default vineyard creation to use hectares (0.5 hectares), simplified placeholder values
+- `src/lib/types.ts` - Changed vineyard interface from acres to hectares
+- `src/lib/utils/calculator.ts` - Renamed getRandomAcres() to getRandomHectares() with updated size ranges
+- `src/lib/utils/index.ts` - Updated exports to use getRandomHectares
+- `docs/coregame.md` - Updated documentation to reflect hectare measurements
+- `docs/versionlog.md` - Fixed function name reference
+- `readme.md` - Updated vineyard creation description to use hectares
+- **Architecture**: Comprehensive vineyard constants system with realistic regional data
+- **Measurement**: Complete migration from acres to hectares for international standardization
+- **Data**: 25 regions across 5 countries with soil types, altitude ranges, aspect ratings, and grape suitability scores
+
+---
+
+## Version 0.0044 - 2025-09-15
+
+### **Grape Varieties & Vineyard Interface Expansion**
+- `src/lib/types.ts` - Expanded Vineyard interface with vineAge, soil, altitude, aspect, landValue, vineyardPrestige properties
+- `src/lib/database/database.ts` - Updated vineyard storage to include new properties (vine_age, soil, altitude, aspect, vineyard_prestige)
+- `src/lib/database/prestigeService.ts` - Updated to use vineyardPrestige instead of fieldPrestige
+- `src/lib/services/gameTick.ts` - Added updateVineyardAges() function for yearly vine aging
+- `src/lib/services/sales/wineValueIndexCalculationService.ts` - Updated to use vineyardPrestige
+- `src/lib/services/wine/vineyardService.ts` - Updated vineyard creation with new properties, changed default region to Bordeaux
+- `src/components/pages/Vineyard.tsx` - Fixed vineyard planting logic to use grape property instead of isPlanted
+- `src/components/pages/Winepedia.tsx` - Updated grape variety display with collapsible characteristics
+- `src/components/pages/Winery.tsx` - Simplified wine characteristics display with built-in collapsible functionality
+- `src/components/ui/CharacteristicBar.tsx` - Enhanced with collapsible functionality, alphabetical sorting, and improved UI
+- `docs/winecharacteristicsBalancesystem.md` - Updated documentation for collapsible functionality
+- **Vineyard System**: Complete expansion with realistic vineyard properties (vine age, soil composition, altitude, aspect)
+- **UI Enhancement**: Collapsible wine characteristics display with improved user experience
+- **Game Mechanics**: Annual vine aging system for realistic vineyard progression
+
+---
+
+## Version 0.0043 - 2025-09-15
+
+### **Wine Characteristics Alpha 2 - Service Organization**
+- `src/lib/constants.ts` - Added BASE_BALANCED_RANGES, BASE_GRAPE_CHARACTERISTICS, and GRAPE_VARIETY_INFO constants
+- `src/lib/services/wine/balanceCalculator.ts` - Moved from services/ to services/wine/, updated to use constants, removed wrapper functions
+- `src/lib/services/user/` - New directory structure for user-related services (authService, companyService, financeService, highscoreService, userSettingsService)
+- `src/lib/services/sales/` - New directory structure for sales services (salesService, generateOrder, etc.)
+- `src/lib/services/wine/` - New directory structure for wine services (vineyardService, wineBatchService, wineryService, balanceCalculator)
+- `src/lib/services/index.ts` - Updated barrel exports to reflect new directory structure
+- `src/lib/types.ts` - Updated GrapeVariety type to include all 5 varieties (Barbera, Chardonnay, Pinot Noir, Primitivo, Sauvignon Blanc)
+- `src/components/ui/CharacteristicBar.tsx` - Updated to use constants and improved color coding with getColorClass utility
+- `src/components/pages/` - Updated all page components to use new service import paths
+- `src/hooks/useWineBalance.ts` - Updated to use new service structure
+- `src/lib/utils/utils.ts` - Added wine quality categorization functions (getWineQualityCategory, getWineQualityDescription, getColorCategory)
+- `src/lib/utils/index.ts` - Updated exports to include new utility functions
+- **Architecture**: Complete service reorganization with logical directory structure (user/, sales/, wine/)
+- **Constants**: Centralized wine characteristics and grape variety data
+- **UI Enhancement**: Improved wine quality display with categorization and color coding
+- **Code Organization**: Better separation of concerns with specialized service directories
+
+---
+
+## Version 0.0042 - 2025-09-15
+
+### **Wine Characteristics Alpha - Core Implementation**
+- `src/lib/types.ts` - Added WineCharacteristics and BalanceResult interfaces, extended WineBatch with characteristics property
+- `src/lib/services/balanceCalculator.ts` - New service with calculateWineBalance, generateDefaultCharacteristics functions
+- `src/lib/services/wineBatchService.ts` - Updated to generate wine characteristics and calculate balance during batch creation
+- `src/lib/database/database.ts` - Added characteristics storage to wine_batches table
+- `src/components/ui/CharacteristicBar.tsx` - New component with visual balance ranges, value markers, and legend
+- `src/components/ui/index.ts` - Added CharacteristicBar exports
+- `src/hooks/useWineBalance.ts` - New hooks for wine balance calculations (useWineBatchBalance, useFormattedBalance, useBalanceQuality)
+- `src/hooks/index.ts` - Added wine balance hook exports
+- `src/components/pages/Winery.tsx` - Added wine characteristics display for all wine batches with balance information
+- `src/components/pages/Winepedia.tsx` - Added grape variety characteristics display with interactive bars
+- `docs/winecharacteristicsBalancesystem.md` - Updated documentation with Phase 1 implementation details
+- **Wine System**: Complete wine characteristics system with 6 characteristics (acidity, aroma, body, spice, sweetness, tannins)
+- **Balance Calculation**: Phase 1 implementation with static balanced ranges and distance-based scoring
+- **UI Components**: Visual characteristic bars with balance ranges, expandable displays, and quality indicators
+- **Database Integration**: Wine characteristics storage and retrieval system
+
+---
+
+## Version 0.0041a - 2025-09-15
+
+### **Winepedia Freeze Bug Fix**
+- `src/components/pages/Winepedia.tsx` - Fixed React hooks order issue by creating loadCustomersData callback function
+- **Bug Fix**: Resolved Winepedia page freezing caused by improper hook usage in conditional data loading
+- **Performance**: Improved data loading pattern with proper React hooks compliance
+
+---
+
+## Version 0.0041 - 2025-09-15
+
+### **Wine Characteristics Initial Setup**
+- `src/components/ui/BalanceVisualizer.tsx` - Created placeholder component for future wine balance visualization
+- **Setup**: Initial preparation for wine characteristics system implementation
+
+---
+
+## Version 0.004 - 2025-09-14
+
+### **Documentation & Planning for Wine Characteristics System**
+- `docs/winecharacteristicsBalancesystem.md` - New comprehensive documentation for wine characteristics and balance system
+- `docs/AIpromt_newpromt.md` - Updated development roadmap with customer system completion and wine characteristics planning
+- `docs/versionlog.md` - Added Version 0.0032 entry with code architecture overhaul details
+- `readme.md` - Updated with barrel export system documentation and enhanced hooks information
+- **Documentation**: Complete planning and documentation for wine characteristics system implementation
+- **Architecture**: Detailed roadmap for Phase 1-4 implementation of wine balance calculations
+- **Planning**: Foundation for sophisticated wine quality and balance system with archetype matching
+
+---
+
 ## Version 0.0032 - 2025-09-14
 
 ### **Code Architecture & Import System Overhaul**
