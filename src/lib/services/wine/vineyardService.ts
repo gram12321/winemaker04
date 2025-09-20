@@ -11,6 +11,7 @@ import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
 import { NAMES } from '../../constants/names';
 import { Aspect, ASPECTS } from '../../types';
+import { DEFAULT_VINE_DENSITY } from '../work/workCalculator';
 import { addTransaction } from '../user/financeService';
 import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './landBuyingService';
 import { getGameState } from '../gameState';
@@ -98,6 +99,7 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     soil,
     altitude,
     aspect,
+    density: 0, // No density until planted
     landValue, // Calculated land value in euros per hectare
     vineyardTotalValue: landValue * hectares, // Total vineyard value
     status: 'Barren',
@@ -119,7 +121,7 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
 }
 
 // Plant a vineyard
-export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Promise<boolean> {
+export async function plantVineyard(vineyardId: string, grape: GrapeVariety, density?: number): Promise<boolean> {
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
@@ -131,6 +133,7 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety): Pr
     ...vineyard,
     grape,
     vineAge: 0, // Newly planted vines
+    density: density || DEFAULT_VINE_DENSITY, // Use provided density or default
     status: 'Planted'
   };
 
@@ -185,8 +188,11 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
     return { success: false };
   }
 
-  // Simple harvest: 1000kg per vineyard
-  const quantity = 1000;
+  // Calculate yield based on hectares and density
+  // Base yield: ~1.5 kg per vine (simplified calculation)
+  const baseYieldPerVine = 1.5; // kg per vine
+  const totalVines = vineyard.hectares * vineyard.density;
+  const quantity = Math.round(totalVines * baseYieldPerVine);
 
   // Create wine batch from harvest
   await createWineBatchFromHarvest(vineyard.id, vineyard.name, vineyard.grape, quantity);
@@ -259,7 +265,8 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     const vineyardData = convertPurchaseOptionToVineyard(option);
     const vineyard: Vineyard = {
       ...vineyardData,
-      id: option.id // Use the option ID as the vineyard ID
+      id: option.id, // Use the option ID as the vineyard ID
+      density: 0 // No density until planted
     };
 
     // Save the vineyard

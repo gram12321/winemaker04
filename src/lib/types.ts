@@ -68,7 +68,7 @@ export interface Vineyard {
   soil: string[];
   altitude: number;
   aspect: Aspect;
-  // density: number; // Commented out as per request
+  density: number; // Vine density (vines per hectare)
   // vineyardHealth: number; // Commented out as per request
   landValue: number;
   vineyardTotalValue: number; // Calculated as landValue * hectares

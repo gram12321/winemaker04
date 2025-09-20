@@ -7,7 +7,7 @@ import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, Dropd
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
-import PrestigeModal from '@/components/ui/prestige-modal';
+import PrestigeModal from '@/components/ui/prestigeModal';
 import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
 import { Company } from '@/lib/services/user/companyService';
 import { getCurrentCompany } from '@/lib/services/gameState';

@@ -22,3 +22,6 @@ export type { AuthUser } from './user/authService';
 export type { Company, CompanyStats } from './user/companyService';
 export type { HighscoreEntry, ScoreType } from './user/highscoreService';
 export type { VineyardPurchaseOption } from './wine/landBuyingService';
+
+// Work services
+export * from './work';

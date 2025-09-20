@@ -169,6 +169,7 @@ export function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption):
     soil: option.soil,
     altitude: option.altitude,
     aspect: option.aspect,
+    density: 0, // No density until planted
     landValue: option.landValue,
     vineyardTotalValue: option.totalPrice,
     status: 'Barren',

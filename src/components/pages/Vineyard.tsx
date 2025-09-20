@@ -1,75 +1,14 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard, GRAPE_VARIETIES, getGameState, getAspectRating, getAltitudeRating } from '@/lib/services';
+import { plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating } from '@/lib/services';
 import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button, LandBuyingModal } from '../ui';
-import { DialogProps } from '../UItypes';
+import { LandBuyingModal, PlantingOptionsModal } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
 import { getCountryFlag } from '@/lib/utils/flags';
 
 
-interface PlantDialogProps extends DialogProps {
-  vineyard: VineyardType | null;
-  onSubmit: (grape: GrapeVariety) => void;
-}
-
-const PlantDialog: React.FC<PlantDialogProps> = ({ isOpen, vineyard, onClose, onSubmit }) => {
-  const [selectedGrape, setSelectedGrape] = useState<GrapeVariety>('Chardonnay');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(selectedGrape);
-    onClose();
-  };
-
-  if (!vineyard) return null;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-96">
-        <DialogHeader>
-          <DialogTitle>Plant Vineyard: {vineyard.name}</DialogTitle>
-          <DialogDescription>
-            Choose a grape variety to plant in this vineyard.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Grape Variety</label>
-              <select
-                value={selectedGrape}
-                onChange={(e) => setSelectedGrape(e.target.value as GrapeVariety)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-              >
-                {GRAPE_VARIETIES.map((grape) => (
-                  <option key={grape} value={grape}>{grape}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Plant
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
@@ -80,9 +19,9 @@ const Vineyard: React.FC = () => {
   const vineyards = useGameStateWithData(getAllVineyards, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0 });
 
-  const handlePlantVineyard = useCallback((grape: GrapeVariety) => withLoading(async () => {
+  const handlePlantVineyard = useCallback((grape: GrapeVariety, density: number) => withLoading(async () => {
     if (selectedVineyard) {
-      await plantVineyard(selectedVineyard.id, grape);
+      await plantVineyard(selectedVineyard.id, grape, density);
     }
   }), [withLoading, selectedVineyard]);
 
@@ -332,6 +271,9 @@ const Vineyard: React.FC = () => {
                       <div className="text-xs text-gray-500">
                         Prestige: {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
                       </div>
+                      <div className="text-xs text-gray-500">
+                        Density: {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
+                      </div>
                     </td>
 
                     {/* Status & Actions */}
@@ -353,7 +295,7 @@ const Vineyard: React.FC = () => {
         </div>
       </div>
 
-      <PlantDialog
+      <PlantingOptionsModal
         isOpen={showPlantDialog}
         vineyard={selectedVineyard}
         onClose={() => {

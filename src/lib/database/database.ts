@@ -29,6 +29,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         soil: vineyard.soil, // Store as JSON array
         altitude: vineyard.altitude,
         aspect: vineyard.aspect,
+        density: vineyard.density,
         land_value: vineyard.landValue,
         vineyard_total_value: vineyard.vineyardTotalValue,
         status: vineyard.status,
@@ -60,6 +61,7 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       soil: row.soil || ['Clay'], // Default soil if not set
       altitude: row.altitude || 200,
       aspect: row.aspect || 'South',
+      density: row.density || 5000, // Default density if not set in database
       landValue: row.land_value || 50000, // Default to 50k euros per hectare if not set
       vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)), // Calculate if not set
       status: row.status,

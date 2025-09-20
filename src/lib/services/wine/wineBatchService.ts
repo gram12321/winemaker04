@@ -28,7 +28,7 @@ export async function createWineBatchFromHarvest(
   }
   
   // Generate wine quality characteristics using the new quality service
-  const { quality, balance } = generateWineCharacteristics(grape, vineyardId);
+  const { quality } = generateWineCharacteristics(grape, vineyardId);
   
   // Generate individual wine characteristics
   const characteristics = generateDefaultCharacteristics(grape);
