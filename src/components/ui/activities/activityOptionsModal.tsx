@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkFactor } from '@/lib/services/work';
+import { WorkFactor, WorkCategory } from '@/lib/services/work';
 import { WorkCalculationTable } from './workCalculationTable';
 
 export type ActivityOptionType = 'number' | 'select' | 'text' | 'checkbox' | 'range' | 'radio-group';
@@ -26,6 +26,7 @@ interface ActivityOptionsModalProps {
   onClose: () => void;
   title: string;
   subtitle?: string;
+  category: WorkCategory | string;
   fields: ActivityOptionField[];
   workEstimate: ActivityWorkEstimate;
   workFactors?: WorkFactor[];
@@ -48,6 +49,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
   onClose,
   title,
   subtitle,
+  category,
   fields,
   workEstimate,
   workFactors,
@@ -66,7 +68,11 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(options);
+    
+    // Add the category as a field in the options for reference (like old implementation)
+    const optionsWithCategory = { ...options, category };
+    
+    onSubmit(optionsWithCategory);
   };
   
   const isSubmitDisabled = canSubmit ? !canSubmit(options) : false;
@@ -209,7 +215,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
         
         {/* Warning Message */}
         {warningMessage && (
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded">
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded mb-4">
             {warningMessage}
           </div>
         )}

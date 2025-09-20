@@ -1,6 +1,3 @@
-// Global game constants
-// This file centralizes all game constants to avoid duplication and improve maintainability
-
 // ===== GAME CORE CONSTANTS =====
 
 // Starting values for new games

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety } from '../../types';
 import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent } from '../../database/prestigeService';
+import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateCurrentPrestige, calculateVineyardPrestigeFromEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
@@ -112,6 +112,13 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
   // Ensure base vineyard prestige events exist immediately upon creation
   try {
     await updateBaseVineyardPrestigeEvent(vineyard.id);
+    
+    // Calculate prestige for this specific vineyard only (more efficient than full recalculation)
+    const vineyardPrestige = await calculateVineyardPrestigeFromEvents(vineyard.id);
+    
+    // Update the vineyard with the calculated prestige
+    const updatedVineyard = { ...vineyard, vineyardPrestige };
+    await saveVineyard(updatedVineyard);
   } catch (error) {
     console.warn('Failed to initialize base vineyard prestige on creation:', error);
   }
@@ -241,9 +248,19 @@ export async function resetVineyard(vineyardId: string): Promise<boolean> {
   return true;
 }
 
-// Get all vineyards
+// Get all vineyards with refreshed prestige values
 export async function getAllVineyards(): Promise<Vineyard[]> {
-  return await loadVineyards();
+  try {
+    // First, ensure prestige calculations are up to date
+    await calculateCurrentPrestige();
+    
+    // Then load the vineyards (which should now have updated prestige values)
+    return await loadVineyards();
+  } catch (error) {
+    console.warn('Failed to refresh vineyard prestige, loading from cache:', error);
+    // Fallback to cached values if prestige calculation fails
+    return await loadVineyards();
+  }
 }
 
 // Purchase a vineyard from a purchase option

@@ -61,7 +61,7 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       soil: row.soil || ['Clay'], // Default soil if not set
       altitude: row.altitude || 200,
       aspect: row.aspect || 'South',
-      density: row.density || 5000, // Default density if not set in database
+      density: row.density ?? 0, // Use 0 for unplanted vineyards, don't default to 5000
       landValue: row.land_value || 50000, // Default to 50k euros per hectare if not set
       vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)), // Calculate if not set
       status: row.status,

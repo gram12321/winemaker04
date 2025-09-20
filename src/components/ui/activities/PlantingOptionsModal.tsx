@@ -144,6 +144,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
         onClose={onClose}
         title={`Plant Vineyard: ${vineyard.name}`}
         subtitle={`Configure planting options for this ${vineyard.hectares} hectare vineyard. Work calculations include grape suitability and altitude factors.`}
+        category={WorkCategory.PLANTING}
         fields={fields}
         workEstimate={workCalculation?.workEstimate || { totalWork: 0 }}
         workFactors={workCalculation?.workFactors}
