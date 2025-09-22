@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { GrapeVariety } from '@/lib/types';
 import { GRAPE_CONST, COUNTRY_REGION_MAP, REGION_GRAPE_SUITABILITY } from '@/lib/constants';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadCN/card';
+import { Button } from '@/components/ui/shadCN/button';
 import { WineCharacteristicsDisplay } from '@/components/ui';
 
 // Utility functions for formatting

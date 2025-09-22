@@ -11,7 +11,7 @@ import { getFlagIcon } from '@/lib/utils/flags';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
 import { calculateRelationshipBreakdown } from '@/lib/database/relationshipBreakdownService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { NavigationProps } from '../UItypes';
+import { NavigationProps } from '../ui/UItypes';
 import { useGameUpdates } from '@/hooks';
 
 interface SalesProps extends NavigationProps {

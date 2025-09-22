@@ -12,7 +12,7 @@ import { Achievements } from './components/pages/Achievements';
 import Winepedia from './components/pages/Winepedia';
 import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from './components/ui/shadCN/toaster';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from './lib/services/user/companyService';

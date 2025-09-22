@@ -15,7 +15,7 @@ import { highscoreService, initializeCustomers, addTransaction, getCurrentPresti
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/supabase';
-import { PageProps, NavigationProps } from '../UItypes';
+import { PageProps, NavigationProps } from '../ui/UItypes';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces

@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
 import versionLogContent from '../../../docs/versionlog.md?raw';
-import { CompanyProps } from '../UItypes';
+import { CompanyProps } from '../ui/UItypes';
 
 interface LoginProps extends CompanyProps {
   onCompanySelected: (company: Company) => void;

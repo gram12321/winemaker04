@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
-import { Button } from './button';
-import { Badge } from './badge';
-import { Card, CardContent, CardHeader, CardTitle } from './card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
+import { Button } from '../shadCN/button';
+import { Badge } from '../shadCN/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
 import { DialogProps } from '../UItypes';
 import { VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';

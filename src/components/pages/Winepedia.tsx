@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PageProps } from '../UItypes';
+import { PageProps } from '../ui/UItypes';
 import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab } from '../winepedia';
 
 interface WinepediaProps extends PageProps {

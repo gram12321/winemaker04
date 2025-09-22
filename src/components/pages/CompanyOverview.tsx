@@ -5,7 +5,7 @@ import { Building2, TrendingUp, Trophy, Calendar, BarChart3 } from 'lucide-react
 import { formatGameDateFromObject, formatCurrency, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { useGameState } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
-import { NavigationProps } from '../UItypes';
+import { NavigationProps } from '../ui/UItypes';
 
 interface CompanyOverviewProps extends NavigationProps {
   // Inherits onNavigate from NavigationProps

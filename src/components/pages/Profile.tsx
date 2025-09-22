@@ -5,7 +5,7 @@ import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-reac
 import { authService, AuthUser, companyService, Company, CompanyStats } from '@/lib/services';
 import { formatNumber, formatCurrency, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/supabase';
-import { PageProps, CompanyProps } from '../UItypes';
+import { PageProps, CompanyProps } from '../ui/UItypes';
 
 // Avatar options
 const AVATAR_OPTIONS = [
