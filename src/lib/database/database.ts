@@ -1,15 +1,15 @@
-// Database operations for separate tables
 import { supabase } from './supabase';
-import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType } from '../types';
+import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType, GrapeVariety } from '../types';
 import { getCompanyQuery } from '../utils/companyUtils';
 import { getCurrentCompanyId } from '../utils/companyUtils';
-// Removed DEFAULT_COMPANY_ID import - company ID is now required
+import { GRAPE_CONST } from '../constants/grapeConstants';
 
 // Table names
 const VINEYARDS_TABLE = 'vineyards';
 const WINE_BATCHES_TABLE = 'wine_batches';
 const GAME_STATE_TABLE = 'game_state';
 const WINE_ORDERS_TABLE = 'wine_orders';
+const NOTIFICATIONS_TABLE = 'notifications';
 
 // ===== VINEYARD OPERATIONS =====
 
@@ -72,11 +72,7 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
   }
 };
 
-
-
-
 // ===== GAME STATE OPERATIONS =====
-
 export const saveGameState = async (gameState: Partial<GameState>): Promise<void> => {
   try {
     const dataToSave = {
@@ -176,43 +172,52 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
 
     if (error) throw error;
 
-    return (data || []).map(row => ({
-      id: row.id,
-      vineyardId: row.vineyard_id,
-      vineyardName: row.vineyard_name,
-      grape: row.grape_variety,
-      quantity: row.quantity,
-      stage: row.stage,
-      process: row.process,
-      fermentationProgress: row.fermentation_progress || 0,
-      quality: row.quality || 0.7,
-      balance: row.balance || 0.6,
-      characteristics: row.characteristics || {
-        acidity: 0.5,
-        aroma: 0.5,
-        body: 0.5,
-        spice: 0.5,
-        sweetness: 0.5,
-        tannins: 0.5
-      }, // Default characteristics if not set
-      finalPrice: row.final_price || 10.50,
-      askingPrice: row.asking_price, // Will default to undefined if not set
-      harvestDate: {
-        week: row.harvest_week || 1,
-        season: (row.harvest_season || 'Spring') as Season,
-        year: row.harvest_year || 2024
-      },
-      createdAt: {
-        week: row.created_week || 1,
-        season: (row.created_season || 'Spring') as Season,
-        year: row.created_year || 2024
-      },
-      completedAt: row.completed_week ? {
-        week: row.completed_week,
-        season: row.completed_season as Season,
-        year: row.completed_year
-      } : undefined
-    }));
+    return (data || []).map(row => {
+      const grapeVariety = row.grape_variety as GrapeVariety;
+      const grapeData = GRAPE_CONST[grapeVariety] || GRAPE_CONST['Chardonnay']; // Fallback to Chardonnay
+      
+      return {
+        id: row.id,
+        vineyardId: row.vineyard_id,
+        vineyardName: row.vineyard_name,
+        grape: grapeVariety,
+        quantity: row.quantity,
+        stage: row.stage,
+        process: row.process,
+        fermentationProgress: row.fermentation_progress || 0,
+        quality: row.quality || 0.7,
+        balance: row.balance || 0.6,
+        characteristics: row.characteristics || {
+          acidity: 0.5,
+          aroma: 0.5,
+          body: 0.5,
+          spice: 0.5,
+          sweetness: 0.5,
+          tannins: 0.5
+        }, // Default characteristics if not set
+        finalPrice: row.final_price || 10.50,
+        askingPrice: row.asking_price, // Will default to undefined if not set
+        grapeColor: grapeData.grapeColor,
+        naturalYield: grapeData.naturalYield,
+        fragile: grapeData.fragile,
+        proneToOxidation: grapeData.proneToOxidation,
+        harvestDate: {
+          week: row.harvest_week || 1,
+          season: (row.harvest_season || 'Spring') as Season,
+          year: row.harvest_year || 2024
+        },
+        createdAt: {
+          week: row.created_week || 1,
+          season: (row.created_season || 'Spring') as Season,
+          year: row.created_year || 2024
+        },
+        completedAt: row.completed_week ? {
+          week: row.completed_week,
+          season: row.completed_season as Season,
+          year: row.completed_year
+        } : undefined
+      };
+    });
   } catch (error) {
     return [];
   }
@@ -324,3 +329,67 @@ export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled'
   }
 };
 
+
+// ===== NOTIFICATION OPERATIONS =====
+
+export type DbNotificationType = 'info' | 'warning' | 'error' | 'success';
+
+export interface DbNotificationRecord {
+  id: string;
+  timestamp: string;
+  text: string;
+  type: DbNotificationType;
+}
+
+export const saveNotification = async (notification: DbNotificationRecord): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from(NOTIFICATIONS_TABLE)
+      .upsert({
+        id: notification.id,
+        company_id: getCurrentCompanyId(),
+        timestamp: notification.timestamp,
+        text: notification.text,
+        type: notification.type,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+  } catch (error) {
+    // Silently fail - notifications are non-critical for gameplay
+  }
+};
+
+export const loadNotifications = async (): Promise<DbNotificationRecord[]> => {
+  try {
+    const { data, error } = await supabase
+      .from(NOTIFICATIONS_TABLE)
+      .select('*')
+      .eq('company_id', getCurrentCompanyId())
+      .order('timestamp', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(row => ({
+      id: row.id,
+      timestamp: row.timestamp,
+      text: row.text,
+      type: row.type as DbNotificationType
+    }));
+  } catch (error) {
+    return [];
+  }
+};
+
+export const clearNotifications = async (): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from(NOTIFICATIONS_TABLE)
+      .delete()
+      .eq('company_id', getCurrentCompanyId());
+
+    if (error) throw error;
+  } catch (error) {
+    // Silently fail
+  }
+};

@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, 
 import { InfoIcon, AlertTriangleIcon, XCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { toast } from "@/lib/toast";
 import { formatTime } from "@/lib/utils/utils";
+import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, DbNotificationType } from "@/lib/database/database";
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
@@ -20,27 +21,33 @@ interface NotificationCenterProps {
 
 let notifications: PlayerNotification[] = [];
 let listeners: ((messages: PlayerNotification[]) => void)[] = [];
+let hasLoadedFromDb = false;
 
 function notifyListeners() {
   listeners.forEach(listener => listener(notifications));
-  localStorage.setItem('notifications', JSON.stringify(notifications));
 }
 
 try {
   if (localStorage.getItem('showNotifications') === null) {
     localStorage.setItem('showNotifications', 'true');
   }
+} catch {}
 
-  const saved = localStorage.getItem('notifications');
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    notifications = parsed.map((msg: any) => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp)
+async function loadFromDbIfNeeded() {
+  if (hasLoadedFromDb) return;
+  try {
+    const records = await loadNotifications();
+    notifications = records.map(r => ({
+      id: r.id,
+      timestamp: new Date(r.timestamp),
+      text: r.text,
+      type: r.type as NotificationType
     }));
+    hasLoadedFromDb = true;
+    notifyListeners();
+  } catch {
+    // Non-critical
   }
-} catch (error) {
-  console.error('Failed to parse saved notifications:', error);
 }
 
 export const notificationService = {
@@ -49,15 +56,27 @@ export const notificationService = {
   },
 
   addMessage(text: string, type: NotificationType = 'info') {
+    const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+      ? (globalThis.crypto as any).randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const now = new Date();
     const message: PlayerNotification = {
-      id: Date.now().toString(),
-      timestamp: new Date(),
+      id,
+      timestamp: now,
       text,
       type
     };
 
     notifications = [message, ...notifications];
     notifyListeners();
+
+    // Persist to DB (best-effort)
+    saveNotification({
+      id,
+      timestamp: now.toISOString(),
+      text,
+      type: type as DbNotificationType
+    });
 
     const showToasts = localStorage.getItem('showNotifications') !== 'false';
     if (showToasts) {
@@ -73,8 +92,8 @@ export const notificationService = {
 
   clearMessages() {
     notifications = [];
-    localStorage.removeItem('notifications');
     notifyListeners();
+    clearNotificationsFromDb();
   },
 
   info(text: string) {
@@ -96,6 +115,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
   const [isHistoryOpen, setIsHistoryOpen] = useState(isOpen);
 
   useEffect(() => {
+    loadFromDbIfNeeded();
     const listener = (updated: PlayerNotification[]) => {
       setMessages([...updated]);
     };
@@ -190,6 +210,7 @@ export function useNotifications() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
+    loadFromDbIfNeeded();
     const listener = (updated: PlayerNotification[]) => {
       setMessages([...updated]);
     };
