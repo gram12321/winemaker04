@@ -111,6 +111,12 @@ export interface WineBatch {
   finalPrice: number; // Calculated base price per bottle in euros
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to finalPrice)
   
+  // Grape metadata (0-1 scale unless specified)
+  grapeColor: 'red' | 'white';
+  naturalYield: number; // 0-1 scale, affects harvest yield
+  fragile: number; // 0-1 scale, affects work requirements (0=robust, 1=fragile)
+  proneToOxidation: number; // 0-1 scale, affects wine stability
+  
   harvestDate: GameDate;
   createdAt: GameDate;
   completedAt?: GameDate; // When bottling is completed

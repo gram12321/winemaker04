@@ -1,6 +1,6 @@
-import React from 'react';
+ 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
-import { CUSTOMER_REGIONAL_DATA } from '@/lib/constants/constants';
+import { CUSTOMER_REGIONAL_DATA } from '@/lib/constants';
 import { formatPercent, getColorClass } from '@/lib/utils/utils';
 
 export function CountriesTab() {

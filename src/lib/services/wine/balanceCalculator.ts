@@ -1,6 +1,6 @@
 // Phase 1 Balance Calculator - Simple balance calculation with static ranges
 import { WineCharacteristics, BalanceResult, GrapeVariety } from '../../types';
-import { BASE_BALANCED_RANGES, BASE_GRAPE_CHARACTERISTICS } from '../../constants/constants';
+import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../constants/grapeConstants';
 
 /**
  * Calculate wine balance score using Phase 1 simple algorithm
@@ -55,20 +55,20 @@ export function calculateWineBalance(characteristics: WineCharacteristics): Bala
  */
 export function generateDefaultCharacteristics(grape: GrapeVariety): WineCharacteristics {
   // Get grape-specific characteristics or fallback to balanced midpoint
-  const grapeCharacteristics = BASE_GRAPE_CHARACTERISTICS[grape];
+  const grapeMetadata = GRAPE_CONST[grape];
   
-  if (grapeCharacteristics) {
-    return { ...grapeCharacteristics };
+  if (grapeMetadata) {
+    return { ...grapeMetadata.baseCharacteristics };
   }
   
   // Fallback to balanced midpoint if grape not found
   return {
-    acidity: 0.5,
-    aroma: 0.5,
-    body: 0.5,
-    spice: 0.5,
-    sweetness: 0.5,
-    tannins: 0.5
+    acidity: (BASE_BALANCED_RANGES.acidity[0] + BASE_BALANCED_RANGES.acidity[1]) / 2,
+    aroma: (BASE_BALANCED_RANGES.aroma[0] + BASE_BALANCED_RANGES.aroma[1]) / 2,
+    body: (BASE_BALANCED_RANGES.body[0] + BASE_BALANCED_RANGES.body[1]) / 2,
+    spice: (BASE_BALANCED_RANGES.spice[0] + BASE_BALANCED_RANGES.spice[1]) / 2,
+    sweetness: (BASE_BALANCED_RANGES.sweetness[0] + BASE_BALANCED_RANGES.sweetness[1]) / 2,
+    tannins: (BASE_BALANCED_RANGES.tannins[0] + BASE_BALANCED_RANGES.tannins[1]) / 2
   };
 }
 

@@ -1,6 +1,6 @@
-import React from 'react';
+ 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
-import { SALES_CONSTANTS } from '@/lib/constants/constants';
+import { SALES_CONSTANTS } from '@/lib/constants';
 import { formatPercent } from '@/lib/utils/utils';
 
 export function CustomerTypesTab() {

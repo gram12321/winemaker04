@@ -5,7 +5,8 @@ import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateCurrentPrestige, calculateVineyardPrestigeFromEvents } from '../../database/prestigeService';
 import { createWineBatchFromHarvest } from './wineBatchService';
-import { calculateLandValue } from './vineyardValueCalc';
+import { calculateLandValue, calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
+import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
@@ -195,11 +196,19 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
     return { success: false };
   }
 
-  // Calculate yield based on hectares and density
+  // Calculate yield based on hectares, density, grape suitability, and natural yield
   // Base yield: ~1.5 kg per vine (simplified calculation)
   const baseYieldPerVine = 1.5; // kg per vine
   const totalVines = vineyard.hectares * vineyard.density;
-  const quantity = Math.round(totalVines * baseYieldPerVine);
+  
+  // Get grape metadata for natural yield and suitability
+  const grapeMetadata = GRAPE_CONST[vineyard.grape];
+  const naturalYield = grapeMetadata.naturalYield; // 0-1 scale
+  const grapeSuitability = calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country);
+  
+  // Apply multipliers: suitability and natural yield both affect final yield
+  const yieldMultiplier = grapeSuitability * naturalYield; // Both factors combined
+  const quantity = Math.round(totalVines * baseYieldPerVine * yieldMultiplier);
 
   // Create wine batch from harvest
   await createWineBatchFromHarvest(vineyard.id, vineyard.name, vineyard.grape, quantity);

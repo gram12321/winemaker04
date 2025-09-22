@@ -7,6 +7,7 @@ import { getGameState } from '../gameState';
 import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from '../sales/pricingService';
 import { generateDefaultCharacteristics, calculateWineBalance } from './balanceCalculator';
+import { GRAPE_CONST } from '../../constants/grapeConstants';
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -26,6 +27,9 @@ export async function createWineBatchFromHarvest(
   if (!vineyard) {
     throw new Error(`Vineyard not found: ${vineyardId}`);
   }
+  
+  // Get grape metadata
+  const grapeMetadata = GRAPE_CONST[grape];
   
   // Generate wine quality characteristics using the new quality service
   const { quality } = generateWineCharacteristics(grape, vineyardId);
@@ -50,6 +54,10 @@ export async function createWineBatchFromHarvest(
     balance: balanceResult.score, // Use calculated balance
     characteristics,
     finalPrice: 0, // Will be calculated below
+    grapeColor: grapeMetadata.grapeColor,
+    naturalYield: grapeMetadata.naturalYield,
+    fragile: grapeMetadata.fragile,
+    proneToOxidation: grapeMetadata.proneToOxidation,
     harvestDate: {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',

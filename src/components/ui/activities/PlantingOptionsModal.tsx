@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { GrapeVariety, Vineyard } from '@/lib/types';
 import { GRAPE_VARIETIES } from '@/lib/services';
-import { calculateGrapeSuitabilityContribution, getAltitudeRating } from '@/lib/services/wine/vineyardValueCalc';
+import { getAltitudeRating } from '@/lib/services/wine/vineyardValueCalc';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { DEFAULT_VINE_DENSITY, calculateTotalWork, WorkCategory, TASK_RATES, INITIAL_WORK, DENSITY_BASED_TASKS, WorkFactor } from '@/lib/services/work';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 
@@ -52,19 +53,20 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   const workCalculation = useMemo((): { workEstimate: ActivityWorkEstimate; workFactors: WorkFactor[] } | null => {
     if (!vineyard) return null;
     
-    // Calculate grape suitability and altitude modifiers
-    const grapeSuitability = calculateGrapeSuitabilityContribution(options.grape, vineyard.region, vineyard.country);
+    // Calculate grape fragility and altitude modifiers
+    const grapeMetadata = GRAPE_CONST[options.grape];
+    const grapeFragility = grapeMetadata.fragile; // 0=robust, 1=fragile
     const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
     
-    // Convert ratings to work modifiers (poor conditions = more work)
-    const grapeSuitabilityModifier = (1 - grapeSuitability) * 0.5; // Max 50% increase
+    // Convert to work modifiers (higher fragility/altitude = more work)
+    const grapeFragilityModifier = grapeFragility; // Direct modifier: fragile grapes need more work
     const altitudeModifier = (1 - altitudeRating) * 0.3; // Max 30% increase
     
     // Use generic calculateTotalWork function
     const category = WorkCategory.PLANTING;
     const rate = TASK_RATES[category];
     const initialWork = INITIAL_WORK[category];
-    const workModifiers = [grapeSuitabilityModifier, altitudeModifier];
+    const workModifiers = [grapeFragilityModifier, altitudeModifier];
     
     const totalWork = calculateTotalWork(vineyard.hectares, {
       rate,
@@ -101,12 +103,12 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     ];
 
     // Add modifiers if they exist
-    if (grapeSuitabilityModifier > 0) {
+    if (grapeFragilityModifier > 0) {
       workFactors.push({
-        label: "Grape Suitability Impact",
-        value: "Challenging match",
-        modifier: grapeSuitabilityModifier,
-        modifierLabel: "grape-terroir match"
+        label: "Grape Fragility Impact",
+        value: `${(grapeFragility * 100).toFixed(0)}% fragile`,
+        modifier: grapeFragilityModifier,
+        modifierLabel: "grape fragility"
       });
     }
 
