@@ -20,40 +20,16 @@ let gameState: Partial<GameState> = {
   prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
 };
 
-// Company persistence
-const ACTIVE_COMPANY_KEY = 'activeCompany';
+// Persistence key
 const LAST_COMPANY_ID_KEY = 'lastCompanyId';
 
-// Load company from localStorage on module initialization
-function loadPersistedCompany(): Company | null {
+function setLastCompanyId(companyId: string): void {
   try {
-    const stored = localStorage.getItem(ACTIVE_COMPANY_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
+    localStorage.setItem(LAST_COMPANY_ID_KEY, companyId);
   } catch (error) {
-    console.error('Failed to load persisted company:', error);
-  }
-  return null;
-}
-
-// Save company to localStorage
-function persistCompany(company: Company | null): void {
-  try {
-    if (company) {
-      localStorage.setItem(ACTIVE_COMPANY_KEY, JSON.stringify(company));
-      localStorage.setItem(LAST_COMPANY_ID_KEY, company.id);
-    } else {
-      localStorage.removeItem(ACTIVE_COMPANY_KEY);
-      localStorage.removeItem(LAST_COMPANY_ID_KEY);
-    }
-  } catch (error) {
-    console.error('Failed to persist company:', error);
+    // no-op
   }
 }
-
-// Initialize with persisted company
-currentCompany = loadPersistedCompany();
 
 let prestigeCache: { value: number; timestamp: number } | null = null;
 const PRESTIGE_CACHE_TTL = 5000; // 5 seconds cache
@@ -121,8 +97,8 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   
   currentCompany = company;
   
-  // Persist the active company
-  persistCompany(company);
+  // Persist only the lastCompanyId for autologin
+  setLastCompanyId(company.id);
   
   // Update local game state to match company
   gameState = {
@@ -193,10 +169,7 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
 
 export const resetGameState = (): void => {
   currentCompany = null;
-  
-  // Clear persisted company
-  persistCompany(null);
-  
+
   gameState = {
     week: GAME_INITIALIZATION.STARTING_WEEK,
     season: GAME_INITIALIZATION.STARTING_SEASON,

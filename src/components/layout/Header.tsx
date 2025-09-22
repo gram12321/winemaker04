@@ -197,9 +197,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
                   try {
                     const company = currentCompany;
                     const keysToRemove = [
-                      'activeCompany',
                       'lastCompanyId',
-                      'notifications',
                       'showNotifications'
                     ];
                     keysToRemove.forEach((key) => localStorage.removeItem(key));
