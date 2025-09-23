@@ -1,24 +1,23 @@
 import React, { useState, useMemo } from 'react';
 import { GrapeVariety, Vineyard } from '@/lib/types';
-import { GRAPE_VARIETIES } from '@/lib/services';
+import { GRAPE_VARIETIES, createActivity } from '@/lib/services';
 import { getAltitudeRating } from '@/lib/services/wine/vineyardValueCalc';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { DEFAULT_VINE_DENSITY, calculateTotalWork, WorkCategory, TASK_RATES, INITIAL_WORK, DENSITY_BASED_TASKS, WorkFactor } from '@/lib/services/work';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
+import { notificationService } from '@/components/layout/NotificationCenter';
 
 
 interface PlantingOptionsModalProps {
   isOpen: boolean;
   onClose: () => void;
   vineyard: Vineyard | null;
-  onSubmit: (grape: GrapeVariety, density: number) => void;
 }
 
 export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({ 
   isOpen, 
   vineyard, 
-  onClose, 
-  onSubmit 
+  onClose
 }) => {
   const [options, setOptions] = useState({
     grape: 'Chardonnay' as GrapeVariety,
@@ -127,8 +126,32 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     };
   }, [vineyard, options.grape, options.density]);
 
-  const handleSubmit = (submittedOptions: Record<string, any>) => {
-    onSubmit(submittedOptions.grape as GrapeVariety, submittedOptions.density as number);
+  const handleSubmit = async (submittedOptions: Record<string, any>) => {
+    if (!vineyard || !workCalculation) return;
+    
+    const grape = submittedOptions.grape as GrapeVariety;
+    const density = submittedOptions.density as number;
+    
+    // Create activity instead of directly planting
+    const activityId = await createActivity({
+      category: WorkCategory.PLANTING,
+      title: `Planting ${vineyard.name}`,
+      totalWork: workCalculation.workEstimate.totalWork,
+      targetId: vineyard.id,
+      params: {
+        grape,
+        density,
+        targetName: vineyard.name
+      },
+      isCancellable: true
+    });
+    
+    if (activityId) {
+      // Success handled by notificationService in activityManager
+    } else {
+      notificationService.error('Failed to create planting activity.');
+    }
+    
     onClose();
   };
 
@@ -151,7 +174,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
         workEstimate={workCalculation?.workEstimate || { totalWork: 0 }}
         workFactors={workCalculation?.workFactors}
         onSubmit={handleSubmit}
-        submitLabel="Plant Vineyard"
+        submitLabel="Start Planting Activity"
         options={options}
         onOptionsChange={handleOptionsChange}
       />

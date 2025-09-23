@@ -31,6 +31,9 @@
 - `useLoadingState()` - Loading wrapper with `withLoading()` helper
 - `useTableSortWithAccessors<T>()` - Type-safe table sorting with custom accessors
 - `usePrestigeUpdates()`, `useCustomerRelationshipUpdates()` - Event-driven monitoring
+- `useIsMobile()` - Mobile responsiveness detection (768px breakpoint)
+
+**⚠️ Mobile Responsiveness:** The codebase includes `useIsMobile()` hook for responsive design. Future components should consider mobile layouts and test across different screen sizes.
 
 **Constants Directory (`@/lib/constants`):** Centralized configuration and data:
 - `constants.ts` - Game initialization, sales constants, wine quality, customer regional data

@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating } from '@/lib/services';
-import { Vineyard as VineyardType, GrapeVariety } from '@/lib/types';
+import { harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating } from '@/lib/services';
+import { Vineyard as VineyardType } from '@/lib/types';
 import { LandBuyingModal, PlantingOptionsModal } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
@@ -19,11 +19,6 @@ const Vineyard: React.FC = () => {
   const vineyards = useGameStateWithData(getAllVineyards, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0 });
 
-  const handlePlantVineyard = useCallback((grape: GrapeVariety, density: number) => withLoading(async () => {
-    if (selectedVineyard) {
-      await plantVineyard(selectedVineyard.id, grape, density);
-    }
-  }), [withLoading, selectedVineyard]);
 
   const handleHarvestVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
     const result = await harvestVineyard(vineyard.id);
@@ -302,7 +297,6 @@ const Vineyard: React.FC = () => {
           setShowPlantDialog(false);
           setSelectedVineyard(null);
         }}
-        onSubmit={handlePlantVineyard}
       />
 
       <LandBuyingModal

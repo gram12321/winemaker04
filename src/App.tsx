@@ -13,11 +13,12 @@ import Winepedia from './components/pages/Winepedia';
 import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/shadCN/toaster';
+import { ActivityPanel } from './components/layout/ActivityPanel';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from './lib/services/user/companyService';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/gameState';
-import { initializeCustomers } from './lib/services';
+import { initializeCustomers, initializeActivitySystem } from './lib/services';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -74,6 +75,10 @@ function App() {
       // Ensure customers are initialized when a company becomes active
       const currentPrestige = await getCurrentPrestige();
       await initializeCustomers(currentPrestige);
+      
+      // Initialize activity system
+      await initializeActivitySystem();
+      
       console.log('Game systems initialized for company');
     } catch (error) {
       console.error('Error initializing game for company:', error);
@@ -198,6 +203,11 @@ function App() {
       <main className="container mx-auto px-4 py-8">
         {renderCurrentPage()}
       </main>
+      
+      {/* Activity Panel - only show when logged in */}
+      {isGameInitialized && currentCompany && (
+        <ActivityPanel />
+      )}
       
       <Toaster />
     </div>

@@ -5,6 +5,7 @@ import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
 import { loadVineyards, saveVineyard } from '../database/database';
 import { updateBaseVineyardPrestigeEvent } from '../database/prestigeService';
+import { progressActivities } from './activityManager';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -43,6 +44,9 @@ export const processGameTick = async (): Promise<void> => {
   
   // Update game state with new time values
   await updateGameState({ week, season, currentYear });
+  
+  // Progress all activities by 50 work units
+  await progressActivities(50);
   
   // Process weekly effects
   await processWeeklyEffects();

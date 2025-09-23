@@ -25,3 +25,6 @@ export type { VineyardPurchaseOption } from './wine/landBuyingService';
 
 // Work services
 export * from './work';
+
+// Activity services
+export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activityManager';

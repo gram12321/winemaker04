@@ -1,5 +1,8 @@
 // Game Types and Interfaces
 
+// Import activity types first to avoid circular dependencies
+import { Activity } from './types/activity';
+
 // Time System
 export type Season = 'Spring' | 'Summer' | 'Fall' | 'Winter';
 
@@ -256,4 +259,8 @@ export interface GameState {
   foundedYear: number; // Year the company was founded
   money: number;
   prestige: number; // Company prestige for order generation scaling
+  activities?: Activity[]; // Active activities
 }
+
+// Re-export Activity types from activity.ts
+export type { Activity, ActivityCreationOptions, ActivityProgress } from './types/activity';

@@ -7,18 +7,18 @@ export const BASE_WORK_UNITS = 50;
 
 // WorkCategory enum - defines all activity types in the game
 export enum WorkCategory {
-  PLANTING = 'planting',
-  HARVESTING = 'harvesting',
-  CRUSHING = 'crushing',
-  FERMENTATION = 'fermentation',
-  CLEARING = 'clearing',
-  UPROOTING = 'uprooting',
-  BUILDING = 'building',
-  UPGRADING = 'upgrading',
-  UPGRADE = 'upgrading', // Alias for UPGRADING
-  MAINTENANCE = 'maintenance',
-  STAFF_SEARCH = 'staffSearch',
-  ADMINISTRATION = 'administration'
+  PLANTING = 'PLANTING',
+  HARVESTING = 'HARVESTING',
+  CRUSHING = 'CRUSHING',
+  FERMENTATION = 'FERMENTATION',
+  CLEARING = 'CLEARING',
+  UPROOTING = 'UPROOTING',
+  BUILDING = 'BUILDING',
+  UPGRADING = 'UPGRADING',
+  UPGRADE = 'UPGRADING', // Alias for UPGRADING
+  MAINTENANCE = 'MAINTENANCE',
+  STAFF_SEARCH = 'STAFF_SEARCH',
+  ADMINISTRATION = 'ADMINISTRATION'
 }
 
 // Default vine density used for density-based calculations
