@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType, GrapeVariety } from '../types';
+import { Vineyard, WineBatch, GameState, Season, WineOrder, CustomerType, GrapeVariety } from '../types/types';
 import { getCompanyQuery } from '../utils/companyUtils';
 import { getCurrentCompanyId } from '../utils/companyUtils';
 import { GRAPE_CONST } from '../constants/grapeConstants';
@@ -57,13 +57,13 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       region: row.region,
       hectares: row.hectares,
       grape: row.grape_variety,
-      vineAge: row.vine_age, // Allow null values
-      soil: row.soil || ['Clay'], // Default soil if not set
+      vineAge: row.vine_age,
+      soil: row.soil || ['Clay'],
       altitude: row.altitude || 200,
       aspect: row.aspect || 'South',
-      density: row.density ?? 0, // Use 0 for unplanted vineyards, don't default to 5000
-      landValue: row.land_value || 50000, // Default to 50k euros per hectare if not set
-      vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)), // Calculate if not set
+      density: row.density ?? 0,
+      landValue: row.land_value || 50000,
+      vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)),
       status: row.status,
       vineyardPrestige: row.vineyard_prestige || 0
     }));

@@ -1,11 +1,11 @@
 // Sales order orchestration service - coordinates sophisticated customer acquisition and multiple order generation
-import { WineOrder, Vineyard } from '../../types';
+import { WineOrder, Vineyard } from '../../types/types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { getAllCustomers } from './createCustomer';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { loadWineBatches, loadVineyards } from '../../database/database';
-import { getAvailableBottledWines } from '../../utils/UIWineFilters';
+import { getAvailableBottledWines } from '../../utils';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 

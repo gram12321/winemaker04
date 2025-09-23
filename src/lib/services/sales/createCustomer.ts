@@ -1,8 +1,8 @@
 // Customer generation service - creates sophisticated customers with regional characteristics
 import { v4 as uuidv4 } from 'uuid';
-import { Customer, CustomerCountry, CustomerType } from '../../types';
+import { Customer, CustomerCountry, CustomerType } from '../../types/types';
 import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS } from '../../constants/constants';
-import { NAMES } from '../../constants/names';
+import { NAMES } from '../../constants/namesConstants';
 import { getCountryCodeForFlag } from '../../utils/utils';
 import { calculateSkewedMultiplier } from '../../utils/calculator';
 import { 

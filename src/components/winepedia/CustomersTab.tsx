@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useGameStateWithData, useGameUpdates } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
 import { getAllCustomers, getCountryCode } from '@/lib/services';
-import { Customer } from '@/lib/types';
-import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
-import { calculateRelationshipBreakdown } from '@/lib/database/relationshipBreakdownService';
+import { Customer } from '@/lib/types/types';
+import { loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber, formatPercent, getColorClass } from '@/lib/utils/utils';
+import { calculateRelationshipBreakdown } from '@/lib/database/prestige/relationshipBreakdownService';
 
 export function CustomersTab() {
   const [countryFilter, setCountryFilter] = useState<string>('');

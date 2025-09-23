@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types/activity';
+import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/services/work';
 import { getGameState, updateGameState } from '@/lib/services/gameState';
 import { 
@@ -21,54 +21,44 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     }
   },
   
-  [WorkCategory.HARVESTING]: async (activity: Activity) => {
+  [WorkCategory.HARVESTING]: async (_activity: Activity) => {
     // TODO: Implement harvesting completion
-    console.log(`Harvesting completed for ${activity.targetId}`);
   },
   
-  [WorkCategory.CLEARING]: async (activity: Activity) => {
+  [WorkCategory.CLEARING]: async (_activity: Activity) => {
     // TODO: Implement clearing completion
-    console.log(`Clearing completed for ${activity.targetId}`);
   },
   
-  [WorkCategory.UPROOTING]: async (activity: Activity) => {
+  [WorkCategory.UPROOTING]: async (_activity: Activity) => {
     // TODO: Implement uprooting completion
-    console.log(`Uprooting completed for ${activity.targetId}`);
   },
   
-  [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
+  [WorkCategory.ADMINISTRATION]: async (_activity: Activity) => {
     // TODO: Implement administration completion (e.g., bookkeeping)
-    console.log(`Administration task completed: ${activity.title}`);
   },
   
-  [WorkCategory.BUILDING]: async (activity: Activity) => {
+  [WorkCategory.BUILDING]: async (_activity: Activity) => {
     // TODO: Implement building completion
-    console.log(`Building completed: ${activity.title}`);
   },
   
-  [WorkCategory.UPGRADING]: async (activity: Activity) => {
+  [WorkCategory.UPGRADING]: async (_activity: Activity) => {
     // TODO: Implement upgrading completion
-    console.log(`Upgrade completed: ${activity.title}`);
   },
   
-  [WorkCategory.MAINTENANCE]: async (activity: Activity) => {
+  [WorkCategory.MAINTENANCE]: async (_activity: Activity) => {
     // TODO: Implement maintenance completion
-    console.log(`Maintenance completed: ${activity.title}`);
   },
   
-  [WorkCategory.CRUSHING]: async (activity: Activity) => {
+  [WorkCategory.CRUSHING]: async (_activity: Activity) => {
     // TODO: Implement crushing completion
-    console.log(`Crushing completed: ${activity.title}`);
   },
   
-  [WorkCategory.FERMENTATION]: async (activity: Activity) => {
+  [WorkCategory.FERMENTATION]: async (_activity: Activity) => {
     // TODO: Implement fermentation completion
-    console.log(`Fermentation completed: ${activity.title}`);
   },
   
-  [WorkCategory.STAFF_SEARCH]: async (activity: Activity) => {
+  [WorkCategory.STAFF_SEARCH]: async (_activity: Activity) => {
     // TODO: Implement staff search completion
-    console.log(`Staff search completed: ${activity.title}`);
   }
 };
 

@@ -2,7 +2,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
 import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
-import { WineBatch } from '@/lib/types';
+import { WineBatch } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay } from '../ui';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatPercent } from '@/lib/utils/utils';
 

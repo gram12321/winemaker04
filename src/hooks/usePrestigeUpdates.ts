@@ -2,10 +2,12 @@
 import { useEffect, useRef } from 'react';
 import { getGameState, getCurrentCompany } from '../lib/services/gameState';
 import { 
-  updateBasePrestigeEvent, 
+  updateBasePrestigeEvent
+} from '../lib/database/prestige/prestigeEventsService';
+import {
   decayPrestigeEventsOneWeek,
   decayRelationshipBoostsOneWeek
-} from '../lib/database/prestigeService';
+} from '../lib/database/prestige/decayService';
 import { useGameUpdates } from './useGameUpdates';
 
 /**

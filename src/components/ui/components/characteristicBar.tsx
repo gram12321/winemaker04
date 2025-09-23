@@ -1,5 +1,5 @@
 import React from 'react';
-import { WineCharacteristics } from '@/lib/types';
+import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { getColorClass, formatPercent } from '@/lib/utils/utils';
 

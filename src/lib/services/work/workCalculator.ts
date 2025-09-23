@@ -1,65 +1,4 @@
-
-// Import constants that will be defined in constants file
-const BASELINE_VINE_DENSITY = 5000; // vines per hectare
-
-// Base work units per standard week
-export const BASE_WORK_UNITS = 50;
-
-// WorkCategory enum - defines all activity types in the game
-export enum WorkCategory {
-  PLANTING = 'PLANTING',
-  HARVESTING = 'HARVESTING',
-  CRUSHING = 'CRUSHING',
-  FERMENTATION = 'FERMENTATION',
-  CLEARING = 'CLEARING',
-  UPROOTING = 'UPROOTING',
-  BUILDING = 'BUILDING',
-  UPGRADING = 'UPGRADING',
-  UPGRADE = 'UPGRADING', // Alias for UPGRADING
-  MAINTENANCE = 'MAINTENANCE',
-  STAFF_SEARCH = 'STAFF_SEARCH',
-  ADMINISTRATION = 'ADMINISTRATION'
-}
-
-// Default vine density used for density-based calculations
-export const DEFAULT_VINE_DENSITY = 5000;
-
-// Define density-based tasks
-export const DENSITY_BASED_TASKS = [
-  WorkCategory.PLANTING,
-  WorkCategory.UPROOTING, 
-  WorkCategory.HARVESTING
-];
-
-// Base processing rates for different tasks (updated for hectares)
-export const TASK_RATES: Record<WorkCategory, number> = {
-  [WorkCategory.PLANTING]: 0.28,     // hectares/week (0.7 acres = ~0.28 hectares)
-  [WorkCategory.HARVESTING]: 1.78,   // hectares/week (4.4 acres = ~1.78 hectares)
-  [WorkCategory.CRUSHING]: 2.5,     // tons/week
-  [WorkCategory.FERMENTATION]: 5.0,  // kL/week
-  [WorkCategory.CLEARING]: 0.4,     // hectares/week (1.0 acres = ~0.4 hectares)
-  [WorkCategory.UPROOTING]: 0.23,   // hectares/week (0.56 acres = ~0.23 hectares)
-  [WorkCategory.BUILDING]: 100000,  // €/week
-  [WorkCategory.UPGRADING]: 100000, // €/week
-  [WorkCategory.MAINTENANCE]: 500000, // €/week
-  [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
-  [WorkCategory.ADMINISTRATION]: 1.0 // default administration rate
-};
-
-// Define initial work for each category
-export const INITIAL_WORK: Record<WorkCategory, number> = {
-  [WorkCategory.PLANTING]: 10,
-  [WorkCategory.HARVESTING]: 5,
-  [WorkCategory.CRUSHING]: 10,
-  [WorkCategory.FERMENTATION]: 25,
-  [WorkCategory.CLEARING]: 5, // Base initial work for clearing category
-  [WorkCategory.UPROOTING]: 10,
-  [WorkCategory.BUILDING]: 200,
-  [WorkCategory.UPGRADING]: 150,
-  [WorkCategory.MAINTENANCE]: 10,
-  [WorkCategory.STAFF_SEARCH]: 25,
-  [WorkCategory.ADMINISTRATION]: 5
-};
+import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY} from '@/lib/constants/activityConstants';
 
 // Work factor interface for UI display
 export interface WorkFactor {
@@ -96,7 +35,7 @@ export function calculateTotalWork(
   // Adjust rate for density if needed
   // Only apply density adjustment if density is provided and > 0
   const adjustedRate = (useDensityAdjustment && density && density > 0) 
-    ? rate / (density / BASELINE_VINE_DENSITY) 
+    ? rate / (density / DEFAULT_VINE_DENSITY) 
     : rate;
   
   // Calculate work units

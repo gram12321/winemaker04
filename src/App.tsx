@@ -26,22 +26,15 @@ function App() {
   const [isGameInitialized, setIsGameInitialized] = useState(false);
   
   const lastInitializedCompanyIdRef = useRef<string | null>(null);
-  // With StrictMode disabled in dev, we don't need redundant init guards
-  
-  // Monitor prestige changes and update customer relationships
   useCustomerRelationshipUpdates();
-  // Monitor all prestige changes (company and vineyard) and update prestige events
   usePrestigeUpdates();
-
   useEffect(() => {
-    // Check for existing company on app start
     const existingCompany = getCurrentCompany();
     if (existingCompany) {
       setCurrentCompany(existingCompany);
       setCurrentPage('company-overview');
       setIsGameInitialized(true);
       
-      // Initialize game systems for the existing company
       if (lastInitializedCompanyIdRef.current !== existingCompany.id) {
         lastInitializedCompanyIdRef.current = existingCompany.id;
         initializeGameForCompany();
@@ -49,7 +42,6 @@ function App() {
       return;
     }
 
-    // If no active company, navigate to login
     setCurrentPage('login');
   }, []);
 
@@ -60,7 +52,6 @@ function App() {
       setCurrentPage('company-overview');
       setIsGameInitialized(true);
       
-      // Initialize game systems for the selected company
       if (lastInitializedCompanyIdRef.current !== company.id) {
         lastInitializedCompanyIdRef.current = company.id;
         await initializeGameForCompany();
@@ -82,10 +73,9 @@ function App() {
       console.log('Game systems initialized for company');
     } catch (error) {
       console.error('Error initializing game for company:', error);
-      // Don't throw - allow game to continue even if initialization fails
+
     } finally {
-      // Keep initialized; avoid duplicate init/log under StrictMode
-      // Leave the ref as true to guard against re-entry in this session
+
     }
   };
 
@@ -105,11 +95,9 @@ function App() {
   };
 
   const handleTimeAdvance = () => {
-    // Time changes are now handled by the reactive state system
   };
 
   const renderCurrentPage = () => {
-    // If no company is selected, show login
     if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {
       return <Login onCompanySelected={handleCompanySelected} />;
     }

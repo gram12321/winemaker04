@@ -1,7 +1,21 @@
-// Game Types and Interfaces
 
-// Import activity types first to avoid circular dependencies
-import { Activity } from './types/activity';
+// ===== CORE TYPES =====
+
+// WorkCategory enum - defines all activity types in the game
+export enum WorkCategory {
+  PLANTING = 'PLANTING',
+  HARVESTING = 'HARVESTING',
+  CRUSHING = 'CRUSHING',
+  FERMENTATION = 'FERMENTATION',
+  CLEARING = 'CLEARING',
+  UPROOTING = 'UPROOTING',
+  BUILDING = 'BUILDING',
+  UPGRADING = 'UPGRADING',
+  UPGRADE = 'UPGRADING', // Alias for UPGRADING
+  MAINTENANCE = 'MAINTENANCE',
+  STAFF_SEARCH = 'STAFF_SEARCH',
+  ADMINISTRATION = 'ADMINISTRATION'
+}
 
 // Time System
 export type Season = 'Spring' | 'Summer' | 'Fall' | 'Winter';
@@ -13,24 +27,7 @@ export interface GameDate {
   year: number;
 }
 
-
-
-// Wine characteristics interface
-export interface WineCharacteristics {
-  acidity: number;      // 0-1 scale
-  aroma: number;        // 0-1 scale
-  body: number;         // 0-1 scale
-  spice: number;        // 0-1 scale
-  sweetness: number;    // 0-1 scale
-  tannins: number;      // 0-1 scale
-}
-
-// Balance calculation result interface
-export interface BalanceResult {
-  score: number;        // 0-1 balance score
-  qualifies: boolean;   // Whether wine qualifies for any archetype (placeholder)
-  dynamicRanges: Record<keyof WineCharacteristics, readonly [number, number]>; // Adjusted ranges (placeholder)
-}
+// ===== VINEYARD TYPES =====
 
 // Grape varieties - single source of truth
 export const GRAPE_VARIETIES = [
@@ -57,7 +54,6 @@ export const ASPECTS = [
   'Northwest'
 ] as const;
 export type Aspect = typeof ASPECTS[number];
-//export type FarmingMethod = 'Conventional' | 'Organic' | 'Biodynamic' | 'Sustainable';
 
 // Vineyard interface - expanded with v3 parameters
 export interface Vineyard {
@@ -91,6 +87,24 @@ export interface Vineyard {
   prestigeEvents?: PrestigeEvent[];
 }
 
+// ===== WINE TYPES =====
+
+// Wine characteristics interface
+export interface WineCharacteristics {
+  acidity: number;      // 0-1 scale
+  aroma: number;        // 0-1 scale
+  body: number;         // 0-1 scale
+  spice: number;        // 0-1 scale
+  sweetness: number;    // 0-1 scale
+  tannins: number;      // 0-1 scale
+}
+
+// Balance calculation result interface
+export interface BalanceResult {
+  score: number;        // 0-1 balance score
+  qualifies: boolean;   // Whether wine qualifies for any archetype (placeholder)
+  dynamicRanges: Record<keyof WineCharacteristics, readonly [number, number]>; // Adjusted ranges (placeholder)
+}
 
 // Wine batch stages and processes
 export type WineBatchStage = 'grapes' | 'must' | 'wine' | 'bottled';
@@ -142,6 +156,8 @@ export interface WineLogEntry {
   created_at: string; // Database timestamp
 }
 
+// ===== SALES TYPES =====
+
 // Customer types for sales system (matching importer types)
 export type CustomerType = 'Restaurant' | 'Wine Shop' | 'Private Collector' | 'Chain Store';
 
@@ -167,7 +183,6 @@ export interface Customer {
   relationship?: number; // 0-100 scale for relationship strength
   activeCustomer?: boolean; // True if customer has placed orders (actively interacting with company)
 }
-
 
 // Wine order interface for sales operations
 export interface WineOrder {
@@ -214,6 +229,8 @@ export interface WineOrder {
   };
 }
 
+// ===== PRESTIGE TYPES =====
+
 // Prestige system interfaces
 export interface PrestigeEvent {
   id: string;
@@ -238,6 +255,7 @@ export interface RelationshipBoost {
   updated_at?: string;
 }
 
+// ===== FINANCE TYPES =====
 
 // Financial transaction interface
 export interface Transaction {
@@ -250,6 +268,41 @@ export interface Transaction {
   money: number; // Money amount after transaction
 }
 
+// ===== ACTIVITY TYPES =====
+
+export interface Activity {
+  id: string;
+  category: WorkCategory;
+  title: string;
+  totalWork: number;
+  completedWork: number;
+  targetId?: string; // vineyard ID, building ID, etc.
+  params: Record<string, any>; // grape variety, density, etc.
+  status: 'active' | 'cancelled';
+  gameWeek: number;
+  gameSeason: string;
+  gameYear: number;
+  isCancellable: boolean;
+  createdAt: Date;
+}
+
+export interface ActivityCreationOptions {
+  category: WorkCategory;
+  title: string;
+  totalWork: number;
+  targetId?: string;
+  params?: Record<string, any>;
+  isCancellable?: boolean;
+}
+
+export interface ActivityProgress {
+  activityId: string;
+  progress: number; // 0-100
+  isComplete: boolean;
+  timeRemaining?: string; // estimated time remaining
+}
+
+// ===== GAME STATE =====
 
 export interface GameState {
   week: number;
@@ -261,6 +314,3 @@ export interface GameState {
   prestige: number; // Company prestige for order generation scaling
   activities?: Activity[]; // Active activities
 }
-
-// Re-export Activity types from activity.ts
-export type { Activity, ActivityCreationOptions, ActivityProgress } from './types/activity';

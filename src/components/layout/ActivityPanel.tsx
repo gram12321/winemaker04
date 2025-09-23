@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/shadCN/button';
 import { ChevronLeft, Minimize2, Maximize2 } from 'lucide-react';
 import { ActivityCard } from '@/components/ui/activities/ActivityCard';
-import { Activity } from '@/lib/types/activity';
+import { Activity } from '@/lib/types/types';
 import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activityManager';
 import { useGameStateWithData } from '@/hooks';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -24,7 +24,7 @@ export const ActivityPanel: React.FC = () => {
   const [panelState, setPanelState] = useState<PanelState>('full');
   const [minimizedCards, setMinimizedCards] = useState<Set<string>>(new Set());
   const [orderedActivityIds, setOrderedActivityIds] = useState<string[]>([]);
-  const [activityProgresses, setActivityProgresses] = useState<Record<string, any>>({});
+  const [activityProgresses, setActivityProgresses] = useState<Record<string, { progress: number; timeRemaining: string }>>({});
 
   // Drag & drop configuration
   const sensors = useSensors(
@@ -53,12 +53,12 @@ export const ActivityPanel: React.FC = () => {
   useEffect(() => {
     const loadProgresses = async () => {
       const progresses: Record<string, any> = {};
-      for (const activity of activities) {
+      await Promise.all(activities.map(async (activity) => {
         const progress = await getActivityProgress(activity.id);
         if (progress) {
           progresses[activity.id] = progress;
         }
-      }
+      }));
       setActivityProgresses(progresses);
     };
 

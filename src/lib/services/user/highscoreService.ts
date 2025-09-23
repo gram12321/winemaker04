@@ -1,6 +1,6 @@
 import { supabase } from '../../database/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { Season } from '../../types';
+import { Season } from '../../types/types';
 
 export type ScoreType = 
   | 'company_value' 

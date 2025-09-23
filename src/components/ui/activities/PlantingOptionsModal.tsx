@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GrapeVariety, Vineyard } from '@/lib/types';
+import { GrapeVariety, Vineyard } from '@/lib/types/types';
 import { GRAPE_VARIETIES, createActivity } from '@/lib/services';
 import { getAltitudeRating } from '@/lib/services/wine/vineyardValueCalc';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';

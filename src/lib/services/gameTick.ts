@@ -4,7 +4,7 @@ import { GAME_INITIALIZATION } from '../constants/constants';
 import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
 import { loadVineyards, saveVineyard } from '../database/database';
-import { updateBaseVineyardPrestigeEvent } from '../database/prestigeService';
+import { updateBaseVineyardPrestigeEvent } from '../database/prestige';
 import { progressActivities } from './activityManager';
 
 /**

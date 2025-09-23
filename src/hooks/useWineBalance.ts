@@ -1,6 +1,6 @@
 // React hook for wine balance calculations
 import { useMemo } from 'react';
-import { WineBatch, WineCharacteristics, BalanceResult } from '../lib/types';
+import { WineBatch, WineCharacteristics, BalanceResult } from '../lib/types/types';
 import { calculateWineBalance } from '../lib/services/wine/balanceCalculator';
 
 /**

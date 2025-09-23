@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
 import { getWineQualityInfo, getColorClass, getColorCategory, formatNumber } from '@/lib/utils/utils';
 

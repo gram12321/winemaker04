@@ -1,6 +1,6 @@
 // Wine production log service - tracks finished wine production history
 import { v4 as uuidv4 } from 'uuid';
-import { WineLogEntry, WineBatch } from '../../types';
+import { WineLogEntry, WineBatch } from '../../types/types';
 import { supabase } from '../../database/supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from '../user/highscoreService';

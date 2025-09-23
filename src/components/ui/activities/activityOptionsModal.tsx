@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { WorkFactor, WorkCategory } from '@/lib/services/work';
 import { WorkCalculationTable } from './workCalculationTable';
 
-export type ActivityOptionType = 'number' | 'select' | 'text' | 'checkbox' | 'range' | 'radio-group';
+export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group';
 
 export interface ActivityOptionField {
   id: string;
@@ -66,14 +66,14 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
     onOptionsChange({ ...options, [id]: value });
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     
     // Add the category as a field in the options for reference (like old implementation)
     const optionsWithCategory = { ...options, category };
     
     onSubmit(optionsWithCategory);
-  };
+  }, [options, category, onSubmit]);
   
   const isSubmitDisabled = canSubmit ? !canSubmit(options) : false;
   

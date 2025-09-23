@@ -1,5 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { WineBatch, Customer } from '../types/types';
+import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../database/prestige/relationshipBreakdownService';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -376,4 +378,110 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
   };
   return colorMap[level] || { text: 'text-gray-500', bg: 'bg-gray-100' };
 }
+
+// ===== WINE FILTERING UTILITIES =====
+
+/**
+ * Filter wine batches to only bottled wines with quantity > 0
+ * This is a common operation used across order generation and customer acquisition
+ * 
+ * @param batches - Array of wine batches to filter
+ * @returns Array of bottled wines with inventory
+ */
+export function getAvailableBottledWines(batches: WineBatch[]): WineBatch[] {
+  return batches.filter(batch => 
+    batch.stage === 'bottled' && 
+    batch.process === 'bottled' && 
+    batch.quantity > 0
+  );
+}
+
+/**
+ * Load and format relationship breakdown for UI display
+ * Handles the common pattern used in Sales.tsx and Winepedia.tsx
+ */
+export async function loadFormattedRelationshipBreakdown(customer: Customer): Promise<string> {
+  try {
+    const breakdown = await calculateRelationshipBreakdown(customer);
+    return formatRelationshipBreakdown(breakdown);
+  } catch (error) {
+    console.error('Error loading relationship breakdown:', error);
+    return 'Failed to load relationship breakdown';
+  }
+}
+
+// ===== FLAG UTILITIES =====
+
+/**
+ * Get flag icon CSS class for country flags using flag-icon-css
+ */
+export function getFlagIcon(countryName: string): string {
+  const countryToFlagCode: { [key: string]: string } = {
+    "Italy": "it",
+    "France": "fr", 
+    "Spain": "es",
+    "United States": "us",
+    "Germany": "de",
+  };
+  
+  const flagCode = countryToFlagCode[countryName] || "xx"; // Default to unknown flag
+  return `flag-icon flag-icon-${flagCode}`;
+}
+
+/**
+ * Get flag code for country flags
+ */
+export function getCountryFlag(countryName: string): string {
+  const countryToFlagCode: { [key: string]: string } = {
+    "Italy": "it",
+    "France": "fr", 
+    "Spain": "es",
+    "United States": "us",
+    "Germany": "de",
+  };
+  
+  const flagCode = countryToFlagCode[countryName] || "xx";
+  return flagCode;
+}
+
+// ===== EMOJI MAPPINGS =====
+
+export const NAVIGATION_EMOJIS = {
+  dashboard: '🏠',
+  vineyard: '🍇',
+  winery: '🏭',
+  sales: '🍷',
+  finance: '💰'
+} as const;
+
+export const STATUS_EMOJIS = {
+  time: '📅',
+  money: '💰',
+  prestige: '⭐',
+  wine: '🍷',
+  grape: '🍇',
+  building: '🏭',
+  field: '🌾',
+  season: {
+    Spring: '🌸',
+    Summer: '☀️',
+    Fall: '🍂',
+    Winter: '❄️'
+  }
+} as const;
+
+export const QUALITY_EMOJIS = {
+  poor: '😞',
+  fair: '😐',
+  good: '😊',
+  excellent: '🤩',
+  perfect: '👑'
+} as const;
+
+export const SEASON_EMOJIS = {
+  Spring: '🌸',
+  Summer: '☀️',
+  Fall: '🍂',
+  Winter: '❄️'
+} as const;
 

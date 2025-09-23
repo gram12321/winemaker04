@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { formatCurrency, formatGameDateFromObject, getColorClass } from '@/lib/utils/utils';
 import { loadTransactions } from '@/lib/services/user/financeService';
-import { Transaction } from '@/lib/types';
+import { Transaction } from '@/lib/types/types';
 import { useGameStateWithData } from '@/hooks';
 
 export function CashFlowView() {

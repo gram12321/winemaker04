@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui';
 import { generateDefaultCharacteristics } from '@/lib/services/wine/balanceCalculator';
 import { GRAPE_CONST } from '@/lib/constants';
 import { GrapeInfoView } from './GrapeInfoView';
-import { GrapeVariety } from '@/lib/types';
+import { GrapeVariety } from '@/lib/types/types';
 
 export function GrapeVarietiesTab() {
   const [selectedGrape, setSelectedGrape] = useState<GrapeVariety | null>(null);

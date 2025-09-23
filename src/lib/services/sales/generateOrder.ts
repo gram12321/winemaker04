@@ -1,6 +1,6 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
-import { WineOrder, Customer, WineBatch, Vineyard } from '../../types';
+import { WineOrder, Customer, WineBatch, Vineyard } from '../../types/types';
 import { saveWineOrder, loadVineyards } from '../../database/database';
 import { getGameState } from '../gameState';
 import { formatCompletedWineName } from '../wine/wineBatchService';
@@ -8,7 +8,7 @@ import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { calculateCustomerRelationship } from './createCustomer';
-import { calculateCustomerRelationshipBoosts } from '../../database/prestigeService';
+import { calculateCustomerRelationshipBoosts } from '../../database/prestige';
 import { getCurrentPrestige } from '../gameState';
 import { activateCustomer } from '../../database/customerDatabaseService';
 

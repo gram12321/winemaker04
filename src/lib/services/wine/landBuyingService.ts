@@ -2,7 +2,7 @@
 // Reimplements the old buyLandOverlay.js functionality with modern architecture
 
 import { v4 as uuidv4 } from 'uuid';
-import { Vineyard, Aspect } from '../../types';
+import { Vineyard, Aspect } from '../../types/types';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
@@ -12,8 +12,8 @@ import {
   REGION_ALTITUDE_RANGES,
   REGION_ASPECT_RATINGS
 } from '../../constants/vineyardConstants';
-import { NAMES } from '../../constants/names';
-import { ASPECTS } from '../../types';
+import { NAMES } from '../../constants/namesConstants';
+import { ASPECTS } from '../../types/types';
 
 // Constants for land buying
 export const LAND_BUYING_CONSTANTS = {

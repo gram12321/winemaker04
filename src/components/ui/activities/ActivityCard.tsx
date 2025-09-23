@@ -1,10 +1,10 @@
 import React from 'react';
-import { Activity } from '@/lib/types/activity';
-import { WorkCategory } from '@/lib/services/work';
+import { Activity } from '@/lib/types/types';
 import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { Badge } from '@/components/ui/shadCN/badge';
 import { formatNumber } from '@/lib/utils/utils';
+import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -16,60 +16,6 @@ interface ActivityCardProps {
   dragAttributes?: any; // @dnd-kit attributes
   dragListeners?: any; // @dnd-kit listeners
 }
-
-// Color mapping for different work categories
-const getCategoryColor = (category: WorkCategory): string => {
-  const colors: Record<WorkCategory, string> = {
-    [WorkCategory.PLANTING]: 'border-l-green-500',
-    [WorkCategory.HARVESTING]: 'border-l-yellow-500',
-    [WorkCategory.CLEARING]: 'border-l-orange-500',
-    [WorkCategory.UPROOTING]: 'border-l-red-500',
-    [WorkCategory.ADMINISTRATION]: 'border-l-blue-500',
-    [WorkCategory.BUILDING]: 'border-l-gray-500',
-    [WorkCategory.UPGRADING]: 'border-l-purple-500',
-    [WorkCategory.MAINTENANCE]: 'border-l-gray-600',
-    [WorkCategory.CRUSHING]: 'border-l-purple-600',
-    [WorkCategory.FERMENTATION]: 'border-l-wine',
-    [WorkCategory.STAFF_SEARCH]: 'border-l-indigo-500',
-  };
-  return colors[category] || 'border-l-gray-400';
-};
-
-// Get icon for work category
-const getCategoryIcon = (category: WorkCategory): string => {
-  const iconMap: Record<WorkCategory, string> = {
-    [WorkCategory.PLANTING]: 'icon_planting.webp',
-    [WorkCategory.HARVESTING]: 'icon_harvesting.webp',
-    [WorkCategory.CLEARING]: 'icon_clearing.webp',
-    [WorkCategory.UPROOTING]: 'icon_uprooting.webp',
-    [WorkCategory.ADMINISTRATION]: 'icon_administration.webp',
-    [WorkCategory.BUILDING]: 'icon_building.webp',
-    [WorkCategory.UPGRADING]: 'icon_upgrade.webp',
-    [WorkCategory.MAINTENANCE]: 'icon_maintenance.webp',
-    [WorkCategory.CRUSHING]: 'icon_crushing.webp',
-    [WorkCategory.FERMENTATION]: 'icon_fermentation.webp',
-    [WorkCategory.STAFF_SEARCH]: 'icon_hiring.webp',
-  };
-  return iconMap[category] || 'icon_administration.webp';
-};
-
-// Format category display name
-const getCategoryDisplayName = (category: WorkCategory): string => {
-  const displayNames: Record<WorkCategory, string> = {
-    [WorkCategory.PLANTING]: 'Planting',
-    [WorkCategory.HARVESTING]: 'Harvesting',
-    [WorkCategory.CLEARING]: 'Clearing',
-    [WorkCategory.UPROOTING]: 'Uprooting',
-    [WorkCategory.ADMINISTRATION]: 'Administration',
-    [WorkCategory.BUILDING]: 'Building',
-    [WorkCategory.UPGRADING]: 'Upgrading',
-    [WorkCategory.MAINTENANCE]: 'Maintenance',
-    [WorkCategory.CRUSHING]: 'Crushing',
-    [WorkCategory.FERMENTATION]: 'Fermentation',
-    [WorkCategory.STAFF_SEARCH]: 'Staff Search',
-  };
-  return displayNames[category] || category;
-};
 
 /**
  * ActivityCard - Individual activity display component
@@ -90,13 +36,16 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   dragAttributes,
   dragListeners
 }) => {
-  const categoryColor = getCategoryColor(activity.category);
-  const categoryIcon = getCategoryIcon(activity.category);
-  const categoryDisplayName = getCategoryDisplayName(activity.category);
+  const categoryInfo = WORK_CATEGORY_INFO[activity.category] || {
+    displayName: activity.category,
+    color: 'border-l-gray-400',
+    icon: 'icon_administration.webp',
+    isDensityBased: false
+  };
 
   return (
     <div 
-      className={`bg-gray-800 rounded-lg border-l-4 ${categoryColor} mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative`}
+      className={`bg-gray-800 rounded-lg border-l-4 ${categoryInfo.color} mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -151,8 +100,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <img 
-                src={`/assets/icons/${categoryIcon}`}
-                alt={categoryDisplayName}
+                src={`/assets/icons/${categoryInfo.icon}`}
+                alt={categoryInfo.displayName}
                 className="w-4 h-4 rounded-full"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -168,15 +117,15 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             {/* Header with icon and badge */}
             <div className="flex items-center space-x-2 mb-3">
               <img 
-                src={`/assets/icons/${categoryIcon}`}
-                alt={categoryDisplayName}
+                src={`/assets/icons/${categoryInfo.icon}`}
+                alt={categoryInfo.displayName}
                 className="w-6 h-6 rounded-full"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
               <Badge variant="secondary" className="text-xs">
-                {categoryDisplayName}
+                {categoryInfo.displayName}
               </Badge>
             </div>
 

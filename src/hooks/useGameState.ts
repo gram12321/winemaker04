@@ -44,7 +44,6 @@ export function useGameStateWithData<T>(
       // Check if we have an active company before loading data
       const currentCompany = getCurrentCompany();
       if (!currentCompany?.id) {
-        console.log('No active company found, skipping data load');
         return;
       }
 

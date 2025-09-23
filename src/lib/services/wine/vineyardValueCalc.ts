@@ -1,5 +1,5 @@
 import { REGION_PRESTIGE_RANKINGS, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
-import { Aspect, GrapeVariety } from '../../types';
+import { Aspect, GrapeVariety } from '../../types/types';
 import { VINEYARD_PRESTIGE_CONSTANTS } from '../../constants/constants';
 
 /**

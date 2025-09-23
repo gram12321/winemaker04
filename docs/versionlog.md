@@ -1,3 +1,155 @@
+## Version 0.006 - Activity System & Activity Panel Implementation
+**Date:** 2025-09-23
+**Commit:** ceb0aad6072f06cf0d458406c0f14201c9c632b3
+
+### Changes
+- **Activity System:**  
+  - `src/lib/services/activityManager.ts` - Centralized activity CRUD, progress, and completion logic  
+  - `src/lib/database/activityService.ts` - Supabase persistence with RLS  
+  - `src/lib/types/activity.ts` - Activity interface with work tracking  
+  - `src/lib/services/work/workCalculator.ts` - WorkCategory enum now UPPERCASE
+
+- **UI & Integration:**  
+  - `src/components/layout/ActivityPanel.tsx` - Sidebar with hidden/minimized/full states  
+  - `src/components/ui/activities/ActivityCard.tsx` - Activity card with drag, minimize, cancel  
+  - `src/components/ui/shadCN/progress.tsx` - v3-style progress bar  
+  - `src/components/ui/shadCN/sidebar.tsx` - Sidebar structure  
+  - Drag & drop via `@dnd-kit`, with event fixes  
+  - Planting now creates activities (`PlantingOptionsModal.tsx`, `Vineyard.tsx`)  
+  - `src/App.tsx` - ActivityPanel added to layout  
+  - `src/lib/services/gameTick.ts` - Activities progress 50 work units/tick, auto-complete, persist  
+  - New: `sheet.tsx`, `skeleton.tsx`, `use-mobile.tsx`, activity icons  
+  - Updated: `tailwind.config.js`, `src/index.css`, barrel exports
+
+### Features
+- Generic activity system (planting, admin, finance, etc)
+- Visual work progress, time estimates, and persistence
+- Activities resume after refresh, with notificationService integration
+- Responsive, collapsible activity panel with color-coded categories
+
+## Version 0.005X1 - Hotfix Active Company in LocalStorage
+**Date:** 2025-09-22
+**Commit:** 2dd7b1160adfb40384f9d574a9c67b6d956b4183
+
+### Changes
+- **LocalStorage Cleanup:**
+  - Removed `activeCompany` from localStorage cleanup
+  - Simplified company persistence to only store `lastCompanyId`
+  - Cleaner localStorage management in Header component
+
+- **Files Modified:**
+  - `src/components/layout/Header.tsx` - Updated localStorage cleanup
+  - `src/lib/services/gameState.ts` - Simplified persistence logic
+
+## Version 0.005X - Hotfix Notification in LocalStorage
+**Date:** 2025-09-22
+**Commit:** 281f061bf6c15f88f53a2018056ca64ec6fe329d
+
+### Changes
+- **Notification System Enhancement:**
+  - Migrated notifications from localStorage to Supabase database
+  - Added notification persistence with company-specific storage
+  - Enhanced notification loading and clearing functionality
+
+- **Database Integration:**
+  - `src/lib/database/database.ts` - Added notification CRUD operations
+  - `src/components/layout/NotificationCenter.tsx` - Updated to use database storage
+  - Added `DbNotificationType` and `DbNotificationRecord` interfaces
+
+- **Features:**
+  - Notifications now persist across sessions
+  - Company-specific notification storage
+  - Improved notification loading performance
+
+## Version 0.00523 - Reorganize UI Directory
+**Date:** 2025-09-22
+**Commit:** 7923136c8265a4fdcf769afdd9f71334369de382
+
+### Changes
+- **UI Directory Restructure:**
+  - Moved ShadCN components to `src/components/ui/shadCN/`
+  - Moved modals to `src/components/ui/modals/`
+  - Moved custom components to `src/components/ui/components/`
+  - Updated all import paths across the codebase
+
+- **Files Reorganized:**
+  - All ShadCN components moved to dedicated subdirectory
+  - Modal components centralized in `modals/` folder
+  - Updated barrel exports in `src/components/ui/index.ts`
+  - Fixed import paths in all affected components
+
+## Version 0.00522 - Fix Grape Fragility & Implement Grape Suitability
+**Date:** 2025-09-22
+**Commit:** 88316b95e24d24977a071b933c3b0e70da4419d5
+
+### Changes
+- **Grape System Improvements:**
+  - Fixed grape fragility affecting work calculations (replaced suitability)
+  - Implemented grape suitability and natural yield in harvest calculations
+  - Added comprehensive grape information in Winepedia
+
+- **New Components:**
+  - `src/components/winepedia/GrapeInfoView.tsx` - Detailed grape information modal
+  - `src/lib/constants/grapeConstants.ts` - Unified grape data structure
+  - `src/lib/constants/index.ts` - Centralized constants exports
+
+- **Enhanced Harvest System:**
+  - Yield now considers grape suitability and natural yield
+  - Work calculations use grape fragility instead of suitability
+  - Wine batches include grape metadata (color, fragility, oxidation)
+
+- **Winepedia Enhancements:**
+  - Interactive grape variety selection
+  - Regional suitability display
+  - Grape characteristics visualization
+
+## Version 0.00521 - Vineyard UI Update Fix
+**Date:** 2025-09-20
+**Commit:** 24e4db68901ec91e92e9317f2a3c8706f77c408e
+
+### Changes
+- **Category System Integration:**
+  - Added `category` prop to `ActivityOptionsModal`
+  - Category gets included in submitted options
+  - Updated `PlantingOptionsModal` to pass `WorkCategory.PLANTING`
+
+- **Database Fixes:**
+  - Fixed vineyard density defaulting to 5000 instead of 0 for unplanted vineyards
+  - Improved prestige calculation on vineyard creation
+  - Enhanced vineyard loading with refreshed prestige values
+
+- **Files Modified:**
+  - `src/components/ui/activities/PlantingOptionsModal.tsx` - Added category prop
+  - `src/components/ui/activities/activityOptionsModal.tsx` - Enhanced with category support
+  - `src/lib/database/database.ts` - Fixed density defaulting
+  - `src/lib/services/wine/vineyardService.ts` - Improved prestige handling
+
+## Version 0.0052 - Vineyard Planting Overlay
+**Date:** 2025-09-20
+**Commit:** 3056e92777d23e80a91225b237697f026fbd143b
+
+### Changes
+- **New Planting System:**
+  - `src/components/ui/activities/PlantingOptionsModal.tsx` - Advanced planting modal
+  - `src/components/ui/activities/activityOptionsModal.tsx` - Generic activity options modal
+  - `src/components/ui/activities/workCalculationTable.tsx` - Work calculation display
+
+- **Work Calculation System:**
+  - `src/lib/services/work/workCalculator.ts` - Core work calculation logic
+  - `src/lib/services/work/index.ts` - Work service exports
+  - Generic `calculateTotalWork()` function for all activities
+
+- **Vineyard Enhancements:**
+  - Reactivated `density` parameter in `Vineyard` interface
+  - Updated harvest calculations to use density
+  - Enhanced planting with grape variety and density selection
+
+- **UI Improvements:**
+  - Replaced simple grape input dialog with comprehensive planting modal
+  - Added work calculation display with factors and modifiers
+  - Integrated grape suitability and altitude factors in work calculations
+  - Updated vineyard table to display density information
+
 ## Version 0.0051 - 2025-09-19
 
 ### **Vineyard Land Buying System & Name Generation**

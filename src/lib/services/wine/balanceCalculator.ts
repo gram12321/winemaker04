@@ -1,5 +1,5 @@
 // Phase 1 Balance Calculator - Simple balance calculation with static ranges
-import { WineCharacteristics, BalanceResult, GrapeVariety } from '../../types';
+import { WineCharacteristics, BalanceResult, GrapeVariety } from '../../types/types';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../constants/grapeConstants';
 
 /**

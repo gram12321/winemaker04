@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
 import { Separator } from '../shadCN/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
-import { PrestigeEvent } from '../../../lib/types';
+import { PrestigeEvent } from '../../../lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils/utils';
-import { getVineyardPrestigeEventCalculation } from '@/lib/database/prestigeService';
+import { getVineyardPrestigeEventCalculation } from '@/lib/database/prestige';
 
 interface PrestigeEventDisplay extends PrestigeEvent {
   originalAmount: number;

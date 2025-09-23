@@ -1,5 +1,5 @@
 import { getGameState } from '../gameState';
-import { Transaction } from '../../types';
+import { Transaction } from '../../types/types';
 import { supabase } from '../../database/supabase';
 import { loadVineyards, loadWineBatches } from '../../database/database';
 import { GAME_INITIALIZATION } from '../../constants/constants';

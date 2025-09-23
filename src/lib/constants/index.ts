@@ -1,6 +1,6 @@
 export * from './constants';
 export * from './grapeConstants';
-export * from './names';
+export * from './namesConstants';
 export * from './vineyardConstants';
 
 

@@ -2,7 +2,7 @@
 import { loadWineBatches, loadWineOrders } from '../../database/database';
 import { getCurrentPrestige } from '../gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
-import { getAvailableBottledWines } from '../../utils/UIWineFilters';
+import { getAvailableBottledWines } from '../../utils';
 
 /**
  * Generate a customer based on company prestige

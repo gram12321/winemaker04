@@ -1,15 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types';
+import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types/types';
 import { fulfillWineOrder, rejectWineOrder, generateSophisticatedWineOrders, generateCustomer } from '@/lib/services';
 import { loadWineBatches, saveWineBatch, loadWineOrders } from '@/lib/database/database';
 import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
-import { getFlagIcon } from '@/lib/utils/flags';
-import { loadFormattedRelationshipBreakdown } from '@/lib/utils/UIWineFilters';
-import { calculateRelationshipBreakdown } from '@/lib/database/relationshipBreakdownService';
+import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
+import { calculateRelationshipBreakdown } from '@/lib/database/prestige/relationshipBreakdownService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { NavigationProps } from '../ui/UItypes';
 import { useGameUpdates } from '@/hooks';

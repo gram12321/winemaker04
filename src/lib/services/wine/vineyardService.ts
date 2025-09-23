@@ -1,18 +1,19 @@
 // Simplified vineyard management service with direct database operations
 import { v4 as uuidv4 } from 'uuid';
-import { Vineyard, GrapeVariety } from '../../types';
+import { Vineyard, GrapeVariety } from '../../types/types';
 import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateCurrentPrestige, calculateVineyardPrestigeFromEvents } from '../../database/prestigeService';
+import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents } from '../../database/prestige';
+import { calculateCurrentPrestige } from '../../database/prestige';
 import { createWineBatchFromHarvest } from './wineBatchService';
 import { calculateLandValue, calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
-import { NAMES } from '../../constants/names';
-import { Aspect, ASPECTS } from '../../types';
-import { DEFAULT_VINE_DENSITY } from '../work/workCalculator';
+import { NAMES } from '../../constants/namesConstants';
+import { Aspect, ASPECTS } from '../../types/types';
+import { DEFAULT_VINE_DENSITY } from '../work';
 import { addTransaction } from '../user/financeService';
 import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './landBuyingService';
 import { getGameState } from '../gameState';
@@ -121,7 +122,7 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     const updatedVineyard = { ...vineyard, vineyardPrestige };
     await saveVineyard(updatedVineyard);
   } catch (error) {
-    console.warn('Failed to initialize base vineyard prestige on creation:', error);
+    console.error('Failed to initialize base vineyard prestige on creation:', error);
   }
   
   triggerGameUpdate();
@@ -266,7 +267,7 @@ export async function getAllVineyards(): Promise<Vineyard[]> {
     // Then load the vineyards (which should now have updated prestige values)
     return await loadVineyards();
   } catch (error) {
-    console.warn('Failed to refresh vineyard prestige, loading from cache:', error);
+    console.error('Failed to refresh vineyard prestige, loading from cache:', error);
     // Fallback to cached values if prestige calculation fails
     return await loadVineyards();
   }
@@ -310,7 +311,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     try {
       await updateBaseVineyardPrestigeEvent(vineyard.id);
     } catch (error) {
-      console.warn('Failed to initialize base vineyard prestige on purchase:', error);
+      console.error('Failed to initialize base vineyard prestige on purchase:', error);
     }
 
     triggerGameUpdate();

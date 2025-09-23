@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { getCurrentPrestige } from '@/lib/services/gameState';
 import { processGameTick } from '@/lib/services/gameTick';
 import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils/utils';
-import { NAVIGATION_EMOJIS } from '@/lib/utils/emojis';
+import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/modals/prestigeModal';
-import { calculateCurrentPrestige } from '@/lib/database/prestigeService';
+import { calculateCurrentPrestige } from '@/lib/database/prestige';
 import { Company } from '@/lib/services/user/companyService';
 import { getCurrentCompany } from '@/lib/services/gameState';
 

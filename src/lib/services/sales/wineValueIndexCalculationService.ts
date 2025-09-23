@@ -1,5 +1,5 @@
 // Wine value calculation service - handles all vineyard and regional factors that contribute to wine value
-import { Vineyard } from '../../types';
+import { Vineyard } from '../../types/types';
 
 /**
  * Normalize land value from euros per hectare to 0-1 scale
