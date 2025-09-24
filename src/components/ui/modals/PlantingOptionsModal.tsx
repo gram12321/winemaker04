@@ -3,7 +3,7 @@ import { GrapeVariety, Vineyard } from '@/lib/types/types';
 import { GRAPE_VARIETIES, createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
-import { calculatePlantingWork } from '@/lib/services/activity/VineyardWorkCalculator';
+import { calculatePlantingWork } from '@/lib/services/activity/WorkCalculators/VineyardWorkCalculator';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 

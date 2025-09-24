@@ -3,7 +3,7 @@ import { WorkCategory } from '@/lib/types/types';
 // Import createActivity directly to avoid circular dependency
 import { createActivity } from '@/lib/services/activity/activityManager';
 import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activity/activityService';
-import { calculateTotalBookkeepingWork } from './BookkeepingWorkCalculator';
+import { calculateTotalBookkeepingWork } from './WorkCalculators/BookkeepingWorkCalculator';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { supabase } from '@/lib/database/supabase';
 import { v4 as uuidv4 } from 'uuid';

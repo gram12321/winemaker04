@@ -14,7 +14,7 @@ import { createWineBatchFromHarvest } from '../wine/wineBatchService';
 import { saveVineyard, loadVineyards } from '@/lib/database/database';
 import { calculateVineyardYield } from '../wine/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { completeBookkeeping } from './BookkeepingWorkCalculator';
+import { completeBookkeeping } from './WorkCalculators/BookkeepingWorkCalculator';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {

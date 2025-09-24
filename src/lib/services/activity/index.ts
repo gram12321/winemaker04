@@ -1,5 +1,5 @@
 export { WorkCategory } from '../../types/types';
-export { calculateTotalWork, type WorkFactor } from './workCalculator';
+export { calculateTotalWork, type WorkFactor } from './WorkCalculators/workCalculator';
 
 // Activity system APIs
 export {
@@ -18,7 +18,7 @@ export {
   getAltitudeModifier,
   calculatePlantingWork,
   calculateHarvestWork
-} from './VineyardWorkCalculator';
+} from './WorkCalculators/VineyardWorkCalculator';
 
 // Bookkeeping system
 export {
@@ -26,7 +26,7 @@ export {
   calculateBookkeepingSpillover,
   calculateTotalBookkeepingWork,
   completeBookkeeping
-} from './BookkeepingWorkCalculator';
+} from './WorkCalculators/BookkeepingWorkCalculator';
 
 export {
   checkAndTriggerBookkeeping
