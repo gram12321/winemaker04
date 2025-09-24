@@ -6,7 +6,7 @@ import { Customer } from '@/lib/types/types';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber, formatPercent, getColorClass } from '@/lib/utils/utils';
-import { calculateRelationshipBreakdown } from '@/lib/database/prestige/relationshipBreakdownService';
+import { calculateRelationshipBreakdown } from '@/lib/database/customers/relationshipBreakdownService';
 
 export function CustomersTab() {
   const [countryFilter, setCountryFilter] = useState<string>('');

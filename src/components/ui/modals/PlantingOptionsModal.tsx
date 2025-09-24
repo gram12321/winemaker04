@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { GrapeVariety, Vineyard } from '@/lib/types/types';
 import { GRAPE_VARIETIES, createActivity } from '@/lib/services';
-import { getAltitudeRating } from '@/lib/services/wine/vineyardValueCalc';
-import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
-import { DEFAULT_VINE_DENSITY, calculateTotalWork, WorkCategory, TASK_RATES, INITIAL_WORK, DENSITY_BASED_TASKS, WorkFactor } from '@/lib/services/work';
+import { WorkCategory, WorkFactor } from '@/lib/services/activity';
+import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
+import { calculatePlantingWork } from '@/lib/services/activity/VineyardWorkCalculator';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 
@@ -52,78 +52,8 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   const workCalculation = useMemo((): { workEstimate: ActivityWorkEstimate; workFactors: WorkFactor[] } | null => {
     if (!vineyard) return null;
     
-    // Calculate grape fragility and altitude modifiers
-    const grapeMetadata = GRAPE_CONST[options.grape];
-    const grapeFragility = grapeMetadata.fragile; // 0=robust, 1=fragile
-    const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
-    
-    // Convert to work modifiers (higher fragility/altitude = more work)
-    const grapeFragilityModifier = grapeFragility; // Direct modifier: fragile grapes need more work
-    const altitudeModifier = (1 - altitudeRating) * 0.3; // Max 30% increase
-    
-    // Use generic calculateTotalWork function
-    const category = WorkCategory.PLANTING;
-    const rate = TASK_RATES[category];
-    const initialWork = INITIAL_WORK[category];
-    const workModifiers = [grapeFragilityModifier, altitudeModifier];
-    
-    const totalWork = calculateTotalWork(vineyard.hectares, {
-      rate,
-      initialWork,
-      density: options.density > 0 ? options.density : undefined,
-      useDensityAdjustment: DENSITY_BASED_TASKS.includes(category),
-      workModifiers
-    });
-    
-    // Build factors array for UI display
-    const workFactors: WorkFactor[] = [
-      {
-        label: "Area to Plant",
-        value: vineyard.hectares,
-        unit: "hectares",
-        isPrimary: true
-      },
-      {
-        label: "Vine Density",
-        value: options.density > 0 ? options.density : "Not set",
-        unit: options.density > 0 ? "vines/ha" : "",
-        isPrimary: true
-      },
-      {
-        label: "Base Rate",
-        value: rate,
-        unit: "ha/week"
-      },
-      {
-        label: "Initial Setup Work",
-        value: initialWork,
-        unit: "work units"
-      }
-    ];
-
-    // Add modifiers if they exist
-    if (grapeFragilityModifier > 0) {
-      workFactors.push({
-        label: "Grape Fragility Impact",
-        value: `${(grapeFragility * 100).toFixed(0)}% fragile`,
-        modifier: grapeFragilityModifier,
-        modifierLabel: "grape fragility"
-      });
-    }
-
-    if (altitudeModifier > 0) {
-      workFactors.push({
-        label: "Altitude Impact",
-        value: "Difficult conditions",
-        modifier: altitudeModifier,
-        modifierLabel: "planting difficulty"
-      });
-    }
-    
-    return {
-      workEstimate: { totalWork },
-      workFactors
-    };
+    const { totalWork, factors } = calculatePlantingWork(vineyard, { grape: options.grape, density: options.density });
+    return { workEstimate: { totalWork }, workFactors: factors };
   }, [vineyard, options.grape, options.density]);
 
   const handleSubmit = async (submittedOptions: Record<string, any>) => {

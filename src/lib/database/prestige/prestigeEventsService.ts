@@ -1,7 +1,7 @@
 // Core prestige events management service
 import { supabase } from '../supabase';
 import { v4 as uuidv4 } from 'uuid';
-import { getGameState } from '../../services/gameState';
+import { getGameState } from '../../services/core/gameState';
 import { loadVineyards, saveVineyard } from '../database';
 import { calculateGrapeSuitabilityContribution } from '../../services/wine/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier } from '../../utils/calculator';

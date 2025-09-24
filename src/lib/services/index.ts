@@ -2,15 +2,15 @@ export { authService } from './user/authService';
 export { companyService } from './user/companyService';
 export { highscoreService } from './user/highscoreService';
 export { userSettingsService } from './user/userSettingsService';
-export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './gameState';
+export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './core/gameState';
 export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
 export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';
 export { generateSophisticatedWineOrders } from './sales/salesOrderService';
 export { initializeCustomers, getAllCustomers, getCountryCode } from './sales/createCustomer';
 export { generateCustomer } from './sales/generateCustomer';
 export { generateOrder } from './sales/generateOrder';
-export { processGameTick } from './gameTick';
-export { createVineyard, plantVineyard, harvestVineyard, getAllVineyards, purchaseVineyard } from './wine/vineyardService';
+export { processGameTick } from './core/gameTick';
+export { createVineyard, plantVineyard, getAllVineyards, purchaseVineyard } from './wine/vineyardService';
 export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './wine/vineyardManager';
 export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './wine/vineyardValueCalc';
@@ -25,7 +25,7 @@ export type { HighscoreEntry, ScoreType } from './user/highscoreService';
 export type { VineyardPurchaseOption } from './wine/landBuyingService';
 
 // Work services
-export * from './work';
+export * from './activity';
 
 // Activity services
-export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activityManager';
+export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activity/activityManager';

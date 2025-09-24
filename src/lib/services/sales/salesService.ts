@@ -4,7 +4,7 @@ import { loadWineOrders, updateWineOrderStatus, loadWineBatches, saveWineBatch, 
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../user/financeService';
 import { createRelationshipBoost, addSalePrestigeEvent, addVineyardSalePrestigeEvent, calculateVineyardPrestigeFromEvents } from '../../database/prestige';
-import { getCurrentPrestige } from '../gameState';
+import { getCurrentPrestige } from '../core/gameState';
 
 // ===== ORDER MANAGEMENT =====
 

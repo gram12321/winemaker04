@@ -1,23 +1,16 @@
-// Simplified vineyard management service with direct database operations
+
 import { v4 as uuidv4 } from 'uuid';
-import { Vineyard, GrapeVariety } from '../../types/types';
+import { Vineyard, GrapeVariety, Aspect, ASPECTS } from '../../types/types';
 import { saveVineyard, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents } from '../../database/prestige';
-import { calculateCurrentPrestige } from '../../database/prestige';
-import { createWineBatchFromHarvest } from './wineBatchService';
+import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../../database/prestige';
 import { calculateLandValue } from './vineyardValueCalc';
-import { calculateVineyardYield } from './vineyardManager';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
-import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
-import { NAMES } from '../../constants/namesConstants';
-import { Aspect, ASPECTS } from '../../types/types';
-import { DEFAULT_VINEYARD_HEALTH } from '../../constants/vineyardConstants';
-import { DEFAULT_VINE_DENSITY } from '../work';
+import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY } from '../../constants';
 import { addTransaction } from '../user/financeService';
 import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './landBuyingService';
-import { getGameState } from '../gameState';
+import { getGameState } from '../core/gameState';
 import { formatCurrency } from '../../utils/utils';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 
@@ -182,52 +175,8 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
 }
 
 
-// Harvest vineyard (with optional dry-run for expected yield calculation)
-export async function harvestVineyard(vineyardId: string, dryRun: boolean = false): Promise<{ success: boolean; quantity?: number }> {
-  const vineyards = await loadVineyards();
-  const vineyard = vineyards.find(v => v.id === vineyardId);
-  
-  // Check if vineyard exists and has grapes planted (no ripeness threshold)
-  if (!vineyard || !vineyard.grape) {
-    return { success: false };
-  }
-
-  // Calculate yield using centralized vineyard manager
-  const quantity = calculateVineyardYield(vineyard);
-
-  // If dry run, just return the calculated quantity without doing anything
-  if (dryRun) {
-    return { success: true, quantity };
-  }
-
-  // Create wine batch from harvest
-  await createWineBatchFromHarvest(vineyard.id, vineyard.name, vineyard.grape, quantity);
-
-  const updatedVineyard: Vineyard = {
-    ...vineyard,
-    status: 'Harvested',
-    ripeness: 0 // Reset ripeness after harvest (like V3)
-  };
-
-  await saveVineyard(updatedVineyard);
-  
-  // Add achievement prestige event for harvesting (uses base vineyard prestige as multiplier)
-  try {
-    const basePrestige = await getBaseVineyardPrestige(vineyardId);
-    await addVineyardAchievementPrestigeEvent(
-      'harvest',
-      vineyardId,
-      basePrestige,
-      `Harvested ${quantity}kg`
-    );
-  } catch (error) {
-    console.error('Failed to create harvest prestige event:', error);
-  }
-  
-  triggerGameUpdate();
-
-  return { success: true, quantity };
-}
+// Harvest vineyard - now creates an activity instead of instant harvest
+// REMOVED: harvestVineyard function is obsolete; harvest is started via UI modal activity
 
 
 // Get all vineyards with refreshed prestige values

@@ -1,6 +1,6 @@
 // Unified hook to handle all prestige updates (company and vineyard)
 import { useEffect, useRef } from 'react';
-import { getGameState, getCurrentCompany } from '../lib/services/gameState';
+import { getGameState, getCurrentCompany } from '../lib/services/core/gameState';
 import { 
   updateBasePrestigeEvent
 } from '../lib/database/prestige/prestigeEventsService';

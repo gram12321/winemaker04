@@ -1,10 +1,10 @@
 // Game tick service - handles time progression and automatic game events
 import { getGameState, updateGameState } from './gameState';
-import { GAME_INITIALIZATION } from '../constants/constants';
-import { generateSophisticatedWineOrders } from './sales/salesOrderService';
-import { notificationService } from '../../components/layout/NotificationCenter';
-import { progressActivities } from './activityManager';
-import { updateVineyardRipeness, updateVineyardAges } from './wine/vineyardManager';
+import { GAME_INITIALIZATION } from '../../constants/constants';
+import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
+import { notificationService } from '../../../components/layout/NotificationCenter';
+import { progressActivities } from '../activity/activityManager';
+import { updateVineyardRipeness, updateVineyardAges } from '../wine/vineyardManager';
 
 /**
  * Enhanced time advancement with automatic game events

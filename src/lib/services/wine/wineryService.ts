@@ -1,7 +1,7 @@
 // Winery operations service for wine production
 import { WineBatch } from '../../types/types';
 import { updateWineBatch, getAllWineBatches } from './wineBatchService';
-import { getGameState } from '../gameState';
+import { getGameState } from '../core/gameState';
 import { recordBottledWine } from './wineLogService';
 
 // ===== WINERY ACTIONS =====

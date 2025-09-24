@@ -1,12 +1,12 @@
 // Enhanced game state service that integrates with the new company system
-import { GameState } from '../types/types';
-import { GAME_INITIALIZATION } from '../constants/constants';
-import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../database/prestige';
-import { companyService, Company } from './user/companyService';
-import { highscoreService } from './user/highscoreService';
-import { calculateFinancialData, initializeStartingCapital } from './user/financeService';
+import { GameState } from '../../types/types';
+import { GAME_INITIALIZATION } from '../../constants/constants';
+import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../../database/prestige';
+import { companyService, Company } from '../user/companyService';
+import { highscoreService } from '../user/highscoreService';
+import { calculateFinancialData, initializeStartingCapital } from '../user/financeService';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { triggerGameUpdate } from '../../hooks/useGameUpdates';
+import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 
 // Current active company and game state
 let currentCompany: Company | null = null;

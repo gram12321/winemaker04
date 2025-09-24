@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { getCurrentPrestige } from '@/lib/services/gameState';
-import { processGameTick } from '@/lib/services/gameTick';
+import { getCurrentPrestige } from '@/lib/services/core/gameState';
+import { processGameTick } from '@/lib/services/core/gameTick';
 import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
@@ -10,7 +10,7 @@ import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/modals/prestigeModal';
 import { calculateCurrentPrestige } from '@/lib/database/prestige';
 import { Company } from '@/lib/services/user/companyService';
-import { getCurrentCompany } from '@/lib/services/gameState';
+import { getCurrentCompany } from '@/lib/services/core/gameState';
 
 interface HeaderProps {
   currentPage: string;

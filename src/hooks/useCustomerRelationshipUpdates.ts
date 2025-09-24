@@ -1,6 +1,6 @@
 // Hook to detect prestige changes and update customer relationships
 import { useEffect, useRef } from 'react';
-import { getCurrentPrestige, getCurrentCompany } from '../lib/services/gameState';
+import { getCurrentPrestige, getCurrentCompany } from '../lib/services/core/gameState';
 import { updateCustomerRelationshipsForPrestige } from '../lib/services/sales/createCustomer';
 import { useGameUpdates } from './useGameUpdates';
 

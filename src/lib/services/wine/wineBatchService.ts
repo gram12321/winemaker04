@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety } from '../../types/types';
 import { saveWineBatch, loadWineBatches, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { getGameState } from '../gameState';
+import { getGameState } from '../core/gameState';
 import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from '../sales/pricingService';
 import { generateDefaultCharacteristics, calculateWineBalance } from './balanceCalculator';

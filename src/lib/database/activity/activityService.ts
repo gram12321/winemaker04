@@ -1,5 +1,5 @@
 import { Activity } from '@/lib/types/types';
-import { supabase } from './supabase';
+import { supabase } from '../supabase';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
 // Supabase integration for activities

@@ -4,7 +4,7 @@ import { WineLogEntry, WineBatch } from '../../types/types';
 import { supabase } from '../../database/supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from '../user/highscoreService';
-import { getGameState, getCurrentCompany } from '../gameState';
+import { getGameState, getCurrentCompany } from '../core/gameState';
 
 const WINE_LOG_TABLE = 'wine_log';
 

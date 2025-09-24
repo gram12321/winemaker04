@@ -1,3 +1,3 @@
 export * from './prestigeEventsService';
-export * from './relationshipBoostsService';
+export * from '../customers/relationshipBoostsService';
 export * from './decayService';

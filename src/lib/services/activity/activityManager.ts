@@ -1,15 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types/types';
-import { WorkCategory } from '@/lib/services/work';
-import { getGameState, updateGameState } from '@/lib/services/gameState';
+import { WorkCategory } from '@/lib/services/activity';
+import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { 
   saveActivityToDb, 
   loadActivitiesFromDb, 
   updateActivityInDb, 
   removeActivityFromDb,
   hasActiveActivity 
-} from '@/lib/database/activityService';
+} from '@/lib/database/activity/activityService';
 import { plantVineyard } from '@/lib/services';
+import { createWineBatchFromHarvest } from '../wine/wineBatchService';
+import { saveVineyard, loadVineyards } from '@/lib/database/database';
 import { notificationService } from '@/components/layout/NotificationCenter';
 
 // Completion handlers for each activity type
@@ -21,8 +23,39 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     }
   },
   
-  [WorkCategory.HARVESTING]: async (_activity: Activity) => {
-    // TODO: Implement harvesting completion
+  [WorkCategory.HARVESTING]: async (activity: Activity) => {
+    if (activity.targetId && activity.params.grape) {
+      // Harvest any remaining yield and finalize the vineyard status
+      const vineyards = await loadVineyards();
+      const vineyard = vineyards.find(v => v.id === activity.targetId);
+      
+      if (vineyard) {
+        // Create final wine batch for any remaining unharvested yield
+        const totalYield = activity.params.totalYieldToHarvest || 0;
+        const harvestedSoFar = activity.params.harvestedSoFar || 0;
+        const remainingYield = totalYield - harvestedSoFar;
+        
+        if (remainingYield > 1) { // Only create batch if at least 1kg remaining
+          await createWineBatchFromHarvest(
+            vineyard.id, 
+            vineyard.name, 
+            activity.params.grape, 
+            remainingYield
+          );
+        }
+        
+        // Update vineyard status to harvested and reset ripeness
+        const updatedVineyard = {
+          ...vineyard,
+          status: 'Harvested',
+          ripeness: 0 // Reset ripeness after harvest
+        };
+        await saveVineyard(updatedVineyard);
+        
+        const totalHarvested = harvestedSoFar + remainingYield;
+        notificationService.success(`Harvest complete! Total: ${Math.round(totalHarvested)}kg of ${activity.params.grape} from ${activity.params.targetName || 'vineyard'}`);
+      }
+    }
   },
   
   [WorkCategory.CLEARING]: async (_activity: Activity) => {
@@ -168,10 +201,16 @@ export async function progressActivities(workPerTick: number = 50): Promise<void
     const completedActivities: Activity[] = [];
     
     for (const activity of activities) {
+      const oldCompletedWork = activity.completedWork;
       const newCompletedWork = Math.min(
         activity.totalWork, 
         activity.completedWork + workPerTick
       );
+      
+      // Handle partial harvesting for HARVESTING activities
+      if (activity.category === WorkCategory.HARVESTING && activity.targetId) {
+        await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
+      }
       
       // Update the activity
       await updateActivityInDb(activity.id, { completedWork: newCompletedWork });
@@ -206,6 +245,65 @@ export async function progressActivities(workPerTick: number = 50): Promise<void
     
   } catch (error) {
     console.error('Error progressing activities:', error);
+  }
+}
+
+/**
+ * Handle partial harvesting for harvesting activities
+ * Creates wine batches incrementally based on work progress
+ */
+async function handlePartialHarvesting(
+  activity: Activity, 
+  oldCompletedWork: number, 
+  newCompletedWork: number
+): Promise<void> {
+  try {
+    const workProgress = newCompletedWork / activity.totalWork;
+    const oldProgress = oldCompletedWork / activity.totalWork;
+    const progressThisTick = workProgress - oldProgress;
+    
+    if (progressThisTick <= 0) return; // No progress this tick
+    
+    const totalYield = activity.params.totalYieldToHarvest || 0;
+    const harvestedSoFar = activity.params.harvestedSoFar || 0;
+    
+    // Calculate how much to harvest this tick (percentage of total yield)
+    const yieldThisTick = totalYield * progressThisTick;
+    
+    // Only create wine batch if we're harvesting at least 5kg this tick
+    if (yieldThisTick >= 5) {
+      const vineyards = await loadVineyards();
+      const vineyard = vineyards.find(v => v.id === activity.targetId);
+      
+      if (vineyard && vineyard.grape) {
+        // Create wine batch for this tick's harvest
+        await createWineBatchFromHarvest(
+          vineyard.id,
+          vineyard.name,
+          vineyard.grape,
+          Math.round(yieldThisTick)
+        );
+        
+        // Update the harvested amount in activity params
+        const newHarvestedSoFar = harvestedSoFar + yieldThisTick;
+        await updateActivityInDb(activity.id, {
+          params: {
+            ...activity.params,
+            harvestedSoFar: newHarvestedSoFar
+          }
+        });
+        
+        // Update vineyard status to show progress
+        const progressPercent = Math.round(workProgress * 100);
+        const updatedVineyard = {
+          ...vineyard,
+          status: `Harvesting (${progressPercent}%)`
+        };
+        await saveVineyard(updatedVineyard);
+      }
+    }
+  } catch (error) {
+    console.error(`Error in partial harvesting for activity ${activity.id}:`, error);
   }
 }
 

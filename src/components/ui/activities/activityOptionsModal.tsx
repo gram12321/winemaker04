@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { WorkFactor, WorkCategory } from '@/lib/services/work';
+import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { WorkCalculationTable } from './workCalculationTable';
 
 export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group';

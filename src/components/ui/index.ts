@@ -18,7 +18,8 @@ export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 export { Avatar, AvatarFallback, AvatarImage } from './shadCN/avatar';
 export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './shadCN/dropdown-menu';
 export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend } from './components/characteristicBar';
-export { default as LandBuyingModal } from './modals/land-buying-modal';
+export { default as LandBuyingModal } from './modals/landBuyingModal';
 export { default as WorkCalculationTable } from './activities/workCalculationTable';
 export { default as ActivityOptionsModal, type ActivityOptionField, type ActivityWorkEstimate } from './activities/activityOptionsModal';
-export { default as PlantingOptionsModal } from './activities/PlantingOptionsModal';
+export { default as PlantingOptionsModal } from './modals/PlantingOptionsModal';
+export { default as HarvestOptionsModal } from './modals/HarvestOptionsModal';

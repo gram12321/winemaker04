@@ -1,7 +1,7 @@
 // Customer relationship boosts management service
 import { supabase } from '../supabase';
 import { v4 as uuidv4 } from 'uuid';
-import { getGameState } from '../../services/gameState';
+import { getGameState } from '../../services/core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks } from '../../utils/utils';

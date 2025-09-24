@@ -11,7 +11,7 @@ import {
   updateCustomerRelationships, 
   checkCustomersExist,
   loadActiveCustomers
-} from '../../database/customerDatabaseService';
+} from '../../database/customers/customerDatabaseService';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 

@@ -17,7 +17,7 @@ import { ActivityPanel } from './components/layout/ActivityPanel';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from './lib/services/user/companyService';
-import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/gameState';
+import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem } from './lib/services';
 
 function App() {

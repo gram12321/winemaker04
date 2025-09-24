@@ -8,7 +8,7 @@ import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject }
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
-import { calculateRelationshipBreakdown } from '@/lib/database/prestige/relationshipBreakdownService';
+import { calculateRelationshipBreakdown } from '@/lib/database/customers/relationshipBreakdownService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { NavigationProps } from '../ui/UItypes';
 import { useGameUpdates } from '@/hooks';

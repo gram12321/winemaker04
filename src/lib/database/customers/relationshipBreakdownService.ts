@@ -1,11 +1,11 @@
 // Relationship breakdown service - calculates and explains customer relationship factors
 import { Customer } from '../../types/types';
 import { calculateCustomerRelationshipBoosts } from './relationshipBoostsService';
-import { calculateCurrentPrestige } from './prestigeEventsService';
+import { calculateCurrentPrestige } from '../prestige/prestigeEventsService';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { calculateInvertedSkewedMultiplier } from '../../utils/calculator';
-import { getGameState } from '../../services/gameState';
+import { getGameState } from '../../services/core/gameState';
 import { supabase } from '../supabase';
 
 export interface RelationshipBreakdown {

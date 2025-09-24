@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { harvestVineyard, getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
+import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
 import { calculateVineyardYield } from '@/lib/services/wine/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandBuyingModal, PlantingOptionsModal } from '../ui';
+import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
 import { getCountryFlag } from '@/lib/utils';
@@ -14,6 +14,7 @@ import { getCountryFlag } from '@/lib/utils';
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
   const [showPlantDialog, setShowPlantDialog] = useState(false);
+  const [showHarvestDialog, setShowHarvestDialog] = useState(false);
   const [showBuyLandModal, setShowBuyLandModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const [landPurchaseOptions, setLandPurchaseOptions] = useState<VineyardPurchaseOption[]>([]);
@@ -22,21 +23,28 @@ const Vineyard: React.FC = () => {
   const activities = useGameStateWithData(getAllActivities, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0 });
 
-  // Get vineyards with active planting activities from game state
-  const vineyardsWithActivePlanting = useMemo(() => {
+  // Get vineyards with active activities from game state
+  const vineyardsWithActiveActivities = useMemo(() => {
     const activePlantingVineyards = new Set<string>();
+    const activeHarvestingVineyards = new Set<string>();
     
     activities
       .filter(activity => 
         activity.status === 'active' && 
-        activity.category === WorkCategory.PLANTING &&
         activity.targetId
       )
       .forEach(activity => {
-        activePlantingVineyards.add(activity.targetId!);
+        if (activity.category === WorkCategory.PLANTING) {
+          activePlantingVineyards.add(activity.targetId!);
+        } else if (activity.category === WorkCategory.HARVESTING) {
+          activeHarvestingVineyards.add(activity.targetId!);
+        }
       });
     
-    return activePlantingVineyards;
+    return { 
+      planting: activePlantingVineyards,
+      harvesting: activeHarvestingVineyards
+    };
   }, [activities]);
 
   // Calculate expected yields when vineyards change
@@ -54,16 +62,10 @@ const Vineyard: React.FC = () => {
     calculateYields();
   }, [vineyards]);
 
-  const handleHarvestVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
-    const result = await harvestVineyard(vineyard.id);
-    if (result.success && result.quantity && vineyard.grape) {
-      const ripenessPercent = Math.round((vineyard.ripeness || 0) * 100);
-      const message = ripenessPercent < 30 
-        ? `Harvested ${result.quantity} kg of ${vineyard.grape} grapes (${ripenessPercent}% ripeness - low yield). Wine batch created in winery.`
-        : `Harvested ${result.quantity} kg of ${vineyard.grape} grapes! Wine batch created in winery.`;
-      alert(message);
-    }
-  }), [withLoading]);
+  const handleShowHarvestDialog = useCallback((vineyard: VineyardType) => {
+    setSelectedVineyard(vineyard);
+    setShowHarvestDialog(true);
+  }, []);
 
 
 
@@ -79,7 +81,7 @@ const Vineyard: React.FC = () => {
 
   const getActionButtons = useCallback((vineyard: VineyardType) => {
     if (!vineyard.grape) {
-      const hasActivePlanting = vineyardsWithActivePlanting.has(vineyard.id);
+      const hasActivePlanting = vineyardsWithActiveActivities.planting.has(vineyard.id);
       return (
         <button 
           onClick={() => {
@@ -106,17 +108,27 @@ const Vineyard: React.FC = () => {
           </div>
         );
       case 'Growing':
+        const hasActiveHarvesting = vineyardsWithActiveActivities.harvesting.has(vineyard.id);
         return (
           <button 
-            onClick={() => handleHarvestVineyard(vineyard)}
+            onClick={() => handleShowHarvestDialog(vineyard)}
+            disabled={hasActiveHarvesting}
             className={`px-2 py-1 rounded text-xs font-medium ${
-              (vineyard.ripeness || 0) < 0.3 
-                ? 'bg-gray-400 hover:bg-gray-500 text-white' 
-                : 'bg-purple-600 hover:bg-purple-700 text-white'
+              hasActiveHarvesting 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : (vineyard.ripeness || 0) < 0.3 
+                  ? 'bg-gray-400 hover:bg-gray-500 text-white' 
+                  : 'bg-purple-600 hover:bg-purple-700 text-white'
             }`}
-            title={(vineyard.ripeness || 0) < 0.3 ? 'Low ripeness - will yield very little' : 'Ready to harvest'}
+            title={
+              hasActiveHarvesting 
+                ? 'Harvesting in progress...'
+                : (vineyard.ripeness || 0) < 0.3 
+                  ? 'Low ripeness - will yield very little' 
+                  : 'Ready to harvest'
+            }
           >
-            Harvest
+            {hasActiveHarvesting ? 'Harvesting...' : 'Harvest'}
           </button>
         );
       case 'Harvested':
@@ -132,9 +144,17 @@ const Vineyard: React.FC = () => {
           </div>
         );
       default:
+        // Handle "Harvesting (X%)" status
+        if (typeof vineyard.status === 'string' && vineyard.status.startsWith('Harvesting')) {
+          return (
+            <div className="text-xs text-purple-600 font-medium">
+              {vineyard.status}
+            </div>
+          );
+        }
         return null;
     }
-  }, [handleHarvestVineyard, vineyardsWithActivePlanting]);
+  }, [handleShowHarvestDialog, vineyardsWithActiveActivities]);
 
   // Memoize summary statistics
   const { totalHectares, totalValue, plantedVineyards, activeVineyards } = useMemo(() => {
@@ -363,6 +383,15 @@ const Vineyard: React.FC = () => {
         vineyard={selectedVineyard}
         onClose={() => {
           setShowPlantDialog(false);
+          setSelectedVineyard(null);
+        }}
+      />
+
+      <HarvestOptionsModal
+        isOpen={showHarvestDialog}
+        vineyard={selectedVineyard}
+        onClose={() => {
+          setShowHarvestDialog(false);
           setSelectedVineyard(null);
         }}
       />

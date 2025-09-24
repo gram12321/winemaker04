@@ -1,8 +1,8 @@
 // Customer database service - handles Supabase CRUD operations for customers
-import { supabase } from './supabase';
-import { Customer } from '../types/types';
-import { getCurrentCompanyId } from '../utils/companyUtils';
-import { getCompanyQuery } from '../utils/companyUtils';
+import { supabase } from '../supabase';
+import { Customer } from '../../types/types';
+import { getCurrentCompanyId } from '../../utils/companyUtils';
+import { getCompanyQuery } from '../../utils/companyUtils';
 
 /**
  * Save customers to database for a specific company
