@@ -76,13 +76,11 @@ export function usePrestigeUpdates() {
           lastSeasonRef.current = currentSeason;
           lastYearRef.current = currentYear;
         } else if (currentWeek !== lastWeekRef.current || currentSeason !== lastSeasonRef.current || currentYear !== lastYearRef.current) {
-          console.log(`[Weekly Decay] Time change detected: Week ${lastWeekRef.current} ${lastSeasonRef.current} ${lastYearRef.current} → Week ${currentWeek} ${currentSeason} ${currentYear}`);
           
           // Apply weekly decay to prestige events and relationship boosts
           try {
             await decayPrestigeEventsOneWeek();
             await decayRelationshipBoostsOneWeek();
-            console.log('[Weekly Decay] Applied weekly decay to prestige events and relationship boosts');
           } catch (error) {
             console.error('Failed to apply weekly decay:', error);
           }

@@ -14,6 +14,7 @@ import { createWineBatchFromHarvest } from '../wine/wineBatchService';
 import { saveVineyard, loadVineyards } from '@/lib/database/database';
 import { calculateVineyardYield } from '../wine/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { completeBookkeeping } from './BookkeepingWorkCalculator';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -79,8 +80,8 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     // TODO: Implement uprooting completion
   },
   
-  [WorkCategory.ADMINISTRATION]: async (_activity: Activity) => {
-    // TODO: Implement administration completion (e.g., bookkeeping)
+  [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
+    await completeBookkeeping(activity);
   },
   
   [WorkCategory.BUILDING]: async (_activity: Activity) => {

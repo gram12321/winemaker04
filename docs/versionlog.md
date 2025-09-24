@@ -2,6 +2,33 @@
 - Use your MCP GIT tools to see the latest X Git update (Do not ever use terminal commands for GIT operations). Each corresponce to a version and should have a seperate entry in the @versionlog.md . IE 0.0061, 0.007, 0.0071 and 0.0072
 5-15 lines for each version entry. Focus on new features/updates, not so much on refactor/reorg/bugfixes
 
+## Version 0.0073 - Vine Yield System & Yield Projection Tab
+**Date:** 2025-09-24
+**Commits:** 2d8a6b4 (0.0073) + c4f17d0 (0.0073a)
+
+### Changes
+- **Vine Yield System:**
+  - `src/lib/services/wine/vineyardManager.ts` - Added persistent `vineYield` property to vineyards with yearly progression
+  - `src/lib/database/database.ts` - Added `vine_yield` column to vineyards table with migration
+  - `src/lib/services/core/gameTick.ts` - Integrated `updateVineyardVineYields()` into yearly game tick
+  - `src/components/pages/Vineyard.tsx` - Added vine yield progress bar display in vineyard UI
+- **Yield Projection Tab:**
+  - `src/components/winepedia/YieldProjectionTab.tsx` - New interactive yield projection system with configurable sliders
+  - `src/components/winepedia/MathematicalModelsTab.tsx` - Enhanced with yield projection integration
+  - `src/components/winepedia/index.ts` - Added YieldProjectionTab to winepedia exports
+- **Vine Yield Progression:**
+  - Age-based progression: 0.02 → 0.10 → 0.30 → 0.60 → 0.85 → 1.00 (ages 0-5)
+  - Peak years (5-15): maintain at 1.00
+  - Linear decline (15-29): -0.0267 per year to 0.60
+  - Exponential decay (30+): 0.6 × 0.85^(age-30) with randomness
+- **Database Migration:**
+  - Added `vine_yield` column to vineyards table with DECIMAL(5,3) type
+  - Default value 0.02, no upper cap, minimum 0.01
+- **UI Enhancements:**
+  - Interactive yield projection with sliders for country, region, grape, hectares, density, ripeness, age, health
+  - Min/max bands visualization showing possible yield ranges from randomness
+  - Vine yield progress bars in vineyard management interface
+
 ## Version 0.0072 - Harvest: Combine Compatible Wine Batches
 **Date:** 2025-09-24
 **Commit:** f0918b076d2c014461ccc78dcdb66b624de86ef5

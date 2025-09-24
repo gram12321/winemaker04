@@ -5,6 +5,7 @@ import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { progressActivities } from '../activity/activityManager';
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../wine/vineyardManager';
+import { checkAndTriggerBookkeeping } from '../activity/bookkeepingManager';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -46,6 +47,9 @@ export const processGameTick = async (): Promise<void> => {
   
   // Progress all activities by 50 work units
   await progressActivities(50);
+  
+  // Check for bookkeeping activity creation (week 1 of any season)
+  await checkAndTriggerBookkeeping();
   
   // Process weekly effects
   await processWeeklyEffects();
