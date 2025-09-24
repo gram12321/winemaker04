@@ -74,6 +74,7 @@ export interface Vineyard {
   status: string;
   ripeness: number; // Grape ripeness (0-1 scale, affects harvest readiness)
   vineyardPrestige: number;
+  vineYield: number; // Persistent vine yield factor (0-1+ scale, can exceed 1.0)
   // completedClearingTasks: string[]; // Commented out as per request
   // annualYieldFactor: number; // Random value simulating vintage yield Commented out as per request
   // annualQualityFactor: number; // Random value simulating vintage quality Commented out as per request

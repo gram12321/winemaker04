@@ -7,8 +7,11 @@ import {
   calculateInvertedSkewedMultiplier, 
   calculateAsymmetricalMultiplier, 
   calculateSymmetricalMultiplier, 
-  vineyardAgePrestigeModifier 
+  vineyardAgePrestigeModifier
 } from '@/lib/utils/calculator';
+import { calculateVineyardYield } from '@/lib/services/wine/vineyardManager';
+import { Vineyard, GrapeVariety } from '@/lib/types/types';
+import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 
 export function MathematicalModelsTab() {
   // Memoize chart data generation to prevent continuous rerendering
@@ -103,7 +106,30 @@ export function MathematicalModelsTab() {
       return data;
     };
 
-    // Generate age data extending to 200 years
+    // Helper: construct a vineyard object for yield projection
+    const createVineyard = (overrides: Partial<Vineyard>): Vineyard => ({
+      id: 'test-vineyard',
+      name: 'Projection Vineyard',
+      country: 'France',
+      region: 'Bordeaux',
+      hectares: 1,
+      grape: 'Chardonnay' as GrapeVariety,
+      vineAge: 10,
+      soil: ['Gravel'],
+      altitude: 60,
+      aspect: 'South',
+      density: DEFAULT_VINE_DENSITY,
+      vineyardHealth: 1.0,
+      landValue: 0,
+      vineyardTotalValue: 0,
+      status: 'Growing',
+      ripeness: 1.0,
+      vineyardPrestige: 0,
+      vineYield: 0.02, // Default vine yield factor
+      ...overrides
+    });
+
+    // Generate prestige-by-age data extending to 200 years
     const generateAgeData = () => {
       const data = [];
       // More points in early years (0-25): 30 points
@@ -127,12 +153,37 @@ export function MathematicalModelsTab() {
       return data;
     };
 
+
+    // Yield projection by ripeness (0..1) for a fixed age/density
+    const generateYieldByRipeness = () => {
+      const data = [] as { ripeness: number; yieldKg: number }[];
+      for (let i = 0; i <= 40; i++) {
+        const r = i / 40; // 0..1
+        const vineyard = createVineyard({ ripeness: r, vineAge: 10, density: DEFAULT_VINE_DENSITY });
+        data.push({ ripeness: r, yieldKg: calculateVineyardYield(vineyard) });
+      }
+      return data;
+    };
+
+    // Yield projection by age (0..200) at fixed ripeness/density
+    const generateYieldByAge = () => {
+      const data = [] as { age: number; yieldKg: number }[];
+      for (let i = 0; i <= 40; i++) {
+        const age = (i / 40) * 200; // 0..200
+        const vineyard = createVineyard({ ripeness: 0.9, vineAge: age });
+        data.push({ age, yieldKg: calculateVineyardYield(vineyard) });
+      }
+      return data;
+    };
+
     return {
       skewedData: generateSkewedData(),
       invertedSkewedData: generateInvertedSkewedData(),
       asymmetricalData: generateAsymmetricalData(),
       symmetricalData: generateSymmetricalData(),
-      ageData: generateAgeData()
+      ageData: generateAgeData(),
+      yieldByRipeness: generateYieldByRipeness(),
+      yieldByAge: generateYieldByAge()
     };
   }, []); // Empty dependency array - only generate once
 
@@ -460,6 +511,52 @@ export function MathematicalModelsTab() {
                   <div>• 25-100 years: Arctangent curve</div>
                   <div>• 100+ years: Capped at 0.95</div>
                   <div>• Realistic aging simulation</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          {/* Yield Projection (Ripeness and Age) */}
+          <div className="border rounded-lg p-6">
+            <h3 className="text-xl font-semibold mb-4">Yield Projection</h3>
+            <p className="text-gray-600 mb-4">
+              Expected harvest yield (kg) under fixed assumptions (1 ha, density {DEFAULT_VINE_DENSITY}, Chardonnay, Bordeaux, health 1.0).
+              Charts show how yield scales with ripeness and age independently.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Yield vs Ripeness</h4>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData.yieldByRipeness}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="ripeness" domain={[0, 1]} tickFormatter={(v) => formatNumber(v, { decimals: 1, forceDecimals: true })} />
+                      <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
+                        labelFormatter={(value: number) => `Ripeness: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                      />
+                      <Line type="monotone" dataKey="yieldKg" stroke="#22c55e" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Yield vs Age</h4>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData.yieldByAge}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
+                      <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
+                        labelFormatter={(value: number) => `Age: ${formatNumber(value, { decimals: 0 })} years`}
+                      />
+                      <Line type="monotone" dataKey="yieldKg" stroke="#e11d48" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>

@@ -7,3 +7,4 @@ export { WineRegionsTab } from './WineRegionsTab';
 export { WinemakingTab } from './WinemakingTab';
 export { MathematicalModelsTab } from './MathematicalModelsTab';
 export { CustomersTab } from './CustomersTab';
+export { YieldProjectionTab } from './YieldProjectionTab';

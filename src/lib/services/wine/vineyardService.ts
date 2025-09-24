@@ -101,7 +101,8 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     vineyardTotalValue: landValue * hectares, // Total vineyard value
     status: 'Barren',
     ripeness: 0, // No ripeness until planted and growing
-    vineyardPrestige: 0 // Will be calculated after vineyard is created
+    vineyardPrestige: 0, // Will be calculated after vineyard is created
+    vineYield: 0.02 // Default vine yield factor
   };
 
 

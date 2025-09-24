@@ -35,15 +35,20 @@
 
 **⚠️ Mobile Responsiveness:** The codebase includes `useIsMobile()` hook for responsive design. Future components should consider mobile layouts and test across different screen sizes.
 
-**Constants Directory (`@/lib/constants`):** Centralized configuration and data:
-- `constants.ts` - Game initialization, sales constants, wine quality, customer regional data
-- `vineyardConstants.ts` - Country-region mapping, soil types, altitude ranges, market data
-- `names.ts` - Country-specific name databases for vineyards and customers
+**Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
+- Import from `@/lib/constants` (barrel). It re-exports:
+  - `constants.ts` - Game initialization, sales constants, wine quality, customer regional data
+  - `vineyardConstants.ts` - Country-region mapping, soil types, altitude ranges, market data
+  - `grapeConstants.ts` - Grape metadata and base wine characteristics
+  - `names.ts` - Country-specific name databases for vineyards and customers
 
 **MCP Integration:**
 - Supabase MCP configured in `.cursor/mcp.json`
 - Both anon and service role keys available
 - PAT required for database management
+
+**Local Storage Policy:**
+- Only `lastCompanyId` is persisted for autologin. No full company object is stored. All live data (prestige, money, etc.) is fetched from DB/services and updated via hooks.
 
 ### 🏗️ Database Schema
 **Core Tables:**
@@ -68,10 +73,14 @@
 - **Completed Wine Format**: "Grape Variety, Vineyard Name, Vintage" with bottle count
 - **Database Integration**: Full CRUD operations with reactive UI updates
 
-**Future Advanced Features (NOT YET IMPLEMENTED):**
-- Wine characteristics (Sweetness, Acidity, Tannins, Body, Spice, Aroma)
+**Implemented (Phase 1):**
+- Wine characteristics (Sweetness, Acidity, Tannins, Body, Spice, Aroma) with static balanced ranges
+- Balance calculation (simple distance-to-range scoring)
+- Grape-specific base characteristics (see `@/lib/constants/grapeConstants`)
+- Partial harvests combine into a single batch per vineyard + vintage with weighted averaging of quality, balance, and characteristics
+
+**Future Advanced Features:**
 - Quality tracking through production stages
-- Balance calculation system with archetypes
 - Processing influence on characteristics (crushing methods, fermentation)
 - Wine archetypes for style matching
 
@@ -84,6 +93,9 @@
 - **Vine Aging**: Annual vine aging system for realistic vineyard progression
 - **Vineyard Prestige**: Sophisticated prestige calculation based on environmental factors
 - **Database Integration**: Full CRUD operations with reactive UI updates
+
+**Recent additions:**
+- Ripeness progression by season with aspect and seasonal randomness modifiers
 
 **Future Advanced Features (NOT YET IMPLEMENTED):**
 - Dynamic health system (0-1 scale)
@@ -148,7 +160,7 @@
 
 ❌ **NOT IMPLEMENTED:**
 - Staff management system
-- Wine characteristics and quality tracking
+- Quality tracking through production stages (beyond Phase 1)
 - Contract system for stable income
 - Building upgrades and maintenance
 - Advanced customer preferences

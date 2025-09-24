@@ -4,7 +4,7 @@ import { GAME_INITIALIZATION } from '../../constants/constants';
 import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { progressActivities } from '../activity/activityManager';
-import { updateVineyardRipeness, updateVineyardAges } from '../wine/vineyardManager';
+import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../wine/vineyardManager';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -77,6 +77,9 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
   
   // Update vineyard ages
   await updateVineyardAges();
+  
+  // Update vineyard vine yields
+  await updateVineyardVineYields();
   
   // TODO: Add other yearly effects when ready
   // - Annual financial summaries

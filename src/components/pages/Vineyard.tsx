@@ -47,20 +47,30 @@ const Vineyard: React.FC = () => {
     };
   }, [activities]);
 
-  // Calculate expected yields when vineyards change
+  // Calculate expected/remaining yields when vineyards or activities change
   useEffect(() => {
     const calculateYields = () => {
       const yields: Record<string, number> = {};
       for (const vineyard of vineyards) {
-        if (vineyard.grape) {
-          yields[vineyard.id] = calculateVineyardYield(vineyard);
+        if (!vineyard.grape) continue;
+
+        const totalYield = calculateVineyardYield(vineyard);
+        // If harvesting is active for this vineyard, show remaining yield
+        const activeHarvest = activities.find(
+          (a) => a.category === WorkCategory.HARVESTING && a.status === 'active' && a.targetId === vineyard.id
+        );
+        if (activeHarvest) {
+          const harvestedSoFar = activeHarvest.params?.harvestedSoFar || 0;
+          yields[vineyard.id] = Math.max(0, Math.round(totalYield - harvestedSoFar));
+        } else {
+          yields[vineyard.id] = Math.round(totalYield);
         }
       }
       setExpectedYields(yields);
     };
-    
+
     calculateYields();
-  }, [vineyards]);
+  }, [vineyards, activities]);
 
   const handleShowHarvestDialog = useCallback((vineyard: VineyardType) => {
     setSelectedVineyard(vineyard);
@@ -347,10 +357,28 @@ const Vineyard: React.FC = () => {
                               style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
                             ></div>
                           </div>
-                          {/* Expected Yield */}
+                          
+                          {/* Vine Yield Progress Bar */}
+                          <div className="mt-2">
+                            <div className="text-xs text-gray-500 mb-1">
+                              Vine Yield: {Math.round((vineyard.vineYield || 0.02) * 100)}%
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  (vineyard.vineYield || 0.02) < 0.3 ? 'bg-red-400' :
+                                  (vineyard.vineYield || 0.02) < 0.7 ? 'bg-amber-500' : 
+                                  (vineyard.vineYield || 0.02) < 1.0 ? 'bg-green-500' : 'bg-purple-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          
+                          {/* Expected/Remaining Yield */}
                           <div className="mt-2 text-xs">
                             <div className="text-gray-500">
-                              Expected Yield: <span className="font-medium text-green-600">
+                              {(vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield')}: <span className="font-medium text-green-600">
                                 {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
                               </span>
                             </div>

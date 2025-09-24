@@ -1,3 +1,55 @@
+# Guideline for versionlog update for AI-Agents
+- Use your MCP GIT tools to see the latest X Git update (Do not ever use terminal commands for GIT operations). Each corresponce to a version and should have a seperate entry in the @versionlog.md . IE 0.0061, 0.007, 0.0071 and 0.0072
+5-15 lines for each version entry. Focus on new features/updates, not so much on refactor/reorg/bugfixes
+
+## Version 0.0072 - Harvest: Combine Compatible Wine Batches
+**Date:** 2025-09-24
+**Commit:** f0918b076d2c014461ccc78dcdb66b624de86ef5
+
+### Changes
+- **Batch Combination:**
+  - `src/lib/services/wine/wineBatchService.ts` - Combine compatible batches (same `vineyardId` and vintage) instead of creating new ones per tick
+  - Weighted averaging for `quality`, `balance`, and all `WineCharacteristics`; `quantity` is summed
+  - `finalPrice` recalculated after combination using existing pricing service
+- **Harvest Flow:**
+  - Partial harvest ticks now aggregate into a single ongoing batch for the vintage (grapes stage)
+  - Keeps DB storage clean and improves downstream sales/stock logic
+- No schema changes; `saveWineBatch()` upsert continues to persist combined batches
+
+## Version 0.0071 - Harvest Modal, Activity, and Work Calculation
+**Date:** 2025-09-24
+**Commit:** 73d08eb6de754efd362eebe0c587bdd605bbb682
+
+### Changes
+- **Harvest System:**
+  - `src/components/ui/modals/HarvestOptionsModal.tsx` - Interactive modal to start harvests with parameters
+  - `src/lib/services/activity/activityManager.ts` - Partial harvesting during activity progress and finalization
+  - `src/lib/services/activity/VineyardWorkCalculator.ts` - Added harvest work calculation with grape fragility and altitude modifiers
+  - `src/lib/services/wine/vineyardManager.ts` - Expected yield calculation used by harvest work and UI
+- **UX:** Progress/status updates on vineyard while harvesting and completion notifications
+
+## Version 0.007 - Planting Flow & Ripeness Progression
+**Date:** 2025-09-24
+**Commit:** be61d7ab7612b817f0ea0247671ee8ef95b5e6e6
+
+### Changes
+- **Planting System:**
+  - `src/components/ui/activities/PlantingOptionsModal.tsx` - Planting options integrated with activity system
+  - `src/lib/services/activity/VineyardWorkCalculator.ts` - Planting work calculation including density, fragility, altitude
+  - `src/lib/services/wine/vineyardService.ts` - Plant vineyard action wired to activities and prestige
+- **Ripeness Progression:**
+  - `src/lib/services/wine/vineyardManager.ts` - Weekly ripeness increase by season with aspect/randomness modifiers
+  - `src/lib/constants/vineyardConstants.ts` - Seasonal ripeness rates and randomness ranges
+
+## Version 0.0061 - Stabilization & Minor Improvements
+**Date:** 2025-09-23
+**Commit:** 9566db47dd9745925565eeea0e4426ce2bbd7e6d
+
+### Changes
+- General codebase stabilization and organization to support upcoming planting/harvest features
+- Polished activity/service boundaries and barrel exports for consistency
+- No schema changes; behavior preserved with minor fixes
+
 ## Version 0.006 - Activity System & Activity Panel Implementation
 **Date:** 2025-09-23
 **Commit:** ceb0aad6072f06cf0d458406c0f14201c9c632b3

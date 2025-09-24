@@ -61,7 +61,6 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       targetId: vineyard.id,
       params: {
         grape: vineyard.grape,
-        totalYieldToHarvest: harvestCalculation.expectedYield,
         harvestedSoFar: 0,
         targetName: vineyard.name,
         storageSelection: submittedOptions.storageSelection

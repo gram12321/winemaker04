@@ -170,9 +170,12 @@ export function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption):
     altitude: option.altitude,
     aspect: option.aspect,
     density: 0, // No density until planted
+    vineyardHealth: 1.0, // Default perfect health
     landValue: option.landValue,
     vineyardTotalValue: option.totalPrice,
     status: 'Barren',
-    vineyardPrestige: 0
+    vineyardPrestige: 0,
+    vineYield: 0.02, // Default vine yield factor
+    ripeness: 0 // No ripeness until planted and growing
   };
 }

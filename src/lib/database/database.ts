@@ -36,6 +36,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         status: vineyard.status,
         ripeness: vineyard.ripeness || 0,
         vineyard_prestige: vineyard.vineyardPrestige,
+        vine_yield: vineyard.vineYield || 0.02, // Default to 0.02 if not set
         updated_at: new Date().toISOString()
       });
 
@@ -70,7 +71,8 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)),
       status: row.status,
       ripeness: row.ripeness ?? 0, // Default to 0 ripeness
-      vineyardPrestige: row.vineyard_prestige || 0
+      vineyardPrestige: row.vineyard_prestige || 0,
+      vineYield: row.vine_yield ?? 0.02 // Default to 0.02 if not set (will be 0.02 for existing records)
     }));
   } catch (error) {
     return [];

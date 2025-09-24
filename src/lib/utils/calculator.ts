@@ -235,6 +235,7 @@ export function getRandomHectares(): number {
   return Number(hectares.toFixed(2));
 }
 
+
 // ===== PRESTIGE CALCULATIONS =====
 
 /**

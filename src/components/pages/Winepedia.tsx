@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageProps } from '../ui/UItypes';
-import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab } from '../winepedia';
+import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, YieldProjectionTab } from '../winepedia';
 
 interface WinepediaProps extends PageProps {
   view?: string;
@@ -24,6 +24,7 @@ export default function Winepedia({ view }: WinepediaProps) {
     { id: 'wineRegions', label: 'Wine Regions', component: WineRegionsTab },
     { id: 'winemaking', label: 'Winemaking', component: WinemakingTab },
     { id: 'mathematicalModels', label: 'Mathematical Models', component: MathematicalModelsTab },
+    { id: 'yieldProjection', label: 'Yield Projection', component: YieldProjectionTab },
     { id: 'customers', label: 'Customers', component: CustomersTab }
   ];
 
