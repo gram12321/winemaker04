@@ -30,16 +30,19 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         altitude: vineyard.altitude,
         aspect: vineyard.aspect,
         density: vineyard.density,
+        vineyard_health: vineyard.vineyardHealth || 1.0,
         land_value: vineyard.landValue,
         vineyard_total_value: vineyard.vineyardTotalValue,
         status: vineyard.status,
+        ripeness: vineyard.ripeness || 0,
         vineyard_prestige: vineyard.vineyardPrestige,
         updated_at: new Date().toISOString()
       });
 
     if (error) throw error;
   } catch (error) {
-    // Silently fail - allow game to continue
+    console.error('Database operation failed:', error);
+    throw error;
   }
 };
 
@@ -58,13 +61,15 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       hectares: row.hectares,
       grape: row.grape_variety,
       vineAge: row.vine_age,
-      soil: row.soil || ['Clay'],
-      altitude: row.altitude || 200,
-      aspect: row.aspect || 'South',
+      soil: row.soil,
+      altitude: row.altitude,
+      aspect: row.aspect,
       density: row.density ?? 0,
+      vineyardHealth: row.vineyard_health ?? 1.0, // Default to perfect health
       landValue: row.land_value || 50000,
       vineyardTotalValue: row.vineyard_total_value || (row.hectares * (row.land_value || 50000)),
       status: row.status,
+      ripeness: row.ripeness ?? 0, // Default to 0 ripeness
       vineyardPrestige: row.vineyard_prestige || 0
     }));
   } catch (error) {
@@ -161,7 +166,8 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
 
     if (error) throw error;
   } catch (error) {
-    // Silently fail - allow game to continue
+    console.error('Database operation failed:', error);
+    throw error;
   }
 };
 
@@ -254,7 +260,8 @@ export const saveWineOrder = async (order: WineOrder): Promise<void> => {
 
     if (error) throw error;
   } catch (error) {
-    // Silently fail - allow game to continue
+    console.error('Database operation failed:', error);
+    throw error;
   }
 };
 

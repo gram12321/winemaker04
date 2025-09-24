@@ -41,6 +41,7 @@ export const VINEYARD_PRESTIGE_CONSTANTS = {
   LAND_VALUE_NORMALIZATION: 200000,
 } as const;
 
+
 // Quality constants for wine generation
 export const WINE_QUALITY_CONSTANTS = {
   // Base placeholder values (will be replaced with proper calculations later)
@@ -51,14 +52,7 @@ export const WINE_QUALITY_CONSTANTS = {
   QUALITY_VARIATION: 2.0, // ±100% variation (0.0 to 1.0)
 } as const;
 
-// Placeholder values for pricing calculations (will be replaced with real calculations later)
-export const PRICING_PLACEHOLDER_CONSTANTS = {
-  // Land value placeholder (0-1 scale)
-  LAND_VALUE_PLACEHOLDER: 0.5,
-  
-  // Prestige placeholder (0-1 scale)
-  PRESTIGE_PLACEHOLDER: 0.5,
-} as const;
+
 
 // ===== SALES & CUSTOMER CONSTANTS =====
 

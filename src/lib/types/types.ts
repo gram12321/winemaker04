@@ -68,11 +68,11 @@ export interface Vineyard {
   altitude: number;
   aspect: Aspect;
   density: number; // Vine density (vines per hectare)
-  // vineyardHealth: number; // Commented out as per request
+  vineyardHealth: number; // Vineyard health (0-1 scale, affects yield quality)
   landValue: number;
   vineyardTotalValue: number; // Calculated as landValue * hectares
   status: string;
-  // ripeness: number; // Commented out as per request
+  ripeness: number; // Grape ripeness (0-1 scale, affects harvest readiness)
   vineyardPrestige: number;
   // completedClearingTasks: string[]; // Commented out as per request
   // annualYieldFactor: number; // Random value simulating vintage yield Commented out as per request

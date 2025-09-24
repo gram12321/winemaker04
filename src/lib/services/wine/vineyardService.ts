@@ -6,13 +6,14 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents } from '../../database/prestige';
 import { calculateCurrentPrestige } from '../../database/prestige';
 import { createWineBatchFromHarvest } from './wineBatchService';
-import { calculateLandValue, calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
-import { GRAPE_CONST } from '../../constants/grapeConstants';
+import { calculateLandValue } from './vineyardValueCalc';
+import { calculateVineyardYield } from './vineyardManager';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import {   COUNTRY_REGION_MAP,   REGION_SOIL_TYPES,   REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
 import { NAMES } from '../../constants/namesConstants';
 import { Aspect, ASPECTS } from '../../types/types';
+import { DEFAULT_VINEYARD_HEALTH } from '../../constants/vineyardConstants';
 import { DEFAULT_VINE_DENSITY } from '../work';
 import { addTransaction } from '../user/financeService';
 import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './landBuyingService';
@@ -102,9 +103,11 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     altitude,
     aspect,
     density: 0, // No density until planted
+    vineyardHealth: DEFAULT_VINEYARD_HEALTH, // Perfect health as placeholder
     landValue, // Calculated land value in euros per hectare
     vineyardTotalValue: landValue * hectares, // Total vineyard value
     status: 'Barren',
+    ripeness: 0, // No ripeness until planted and growing
     vineyardPrestige: 0 // Will be calculated after vineyard is created
   };
 
@@ -138,12 +141,21 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
     return false;
   }
 
+  // Determine initial status based on current season
+  // If planting completes during a growing season, allow ripening immediately
+  const currentSeason = getGameState().season;
+  const isGrowingSeason = currentSeason === 'Spring' || currentSeason === 'Summer' || currentSeason === 'Fall';
+  const initialStatus = isGrowingSeason ? 'Growing' : 'Planted';
+  const initialRipeness = 0;
+
   const updatedVineyard: Vineyard = {
     ...vineyard,
     grape,
     vineAge: 0, // Newly planted vines
     density: density || DEFAULT_VINE_DENSITY, // Use provided density or default
-    status: 'Planted'
+    vineyardHealth: vineyard.vineyardHealth || DEFAULT_VINEYARD_HEALTH, // Ensure health is set
+    status: initialStatus,
+    ripeness: initialRipeness
   };
 
 
@@ -169,54 +181,32 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
   return true;
 }
 
-// Grow vineyard (Planted -> Growing)
-export async function growVineyard(vineyardId: string): Promise<boolean> {
+
+// Harvest vineyard (with optional dry-run for expected yield calculation)
+export async function harvestVineyard(vineyardId: string, dryRun: boolean = false): Promise<{ success: boolean; quantity?: number }> {
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
-  if (!vineyard || vineyard.status !== 'Planted') {
-    return false;
-  }
-
-  const updatedVineyard: Vineyard = {
-    ...vineyard,
-    status: 'Growing'
-  };
-
-  await saveVineyard(updatedVineyard);
-  triggerGameUpdate();
-  return true;
-}
-
-// Harvest vineyard
-export async function harvestVineyard(vineyardId: string): Promise<{ success: boolean; quantity?: number }> {
-  const vineyards = await loadVineyards();
-  const vineyard = vineyards.find(v => v.id === vineyardId);
-  
-  if (!vineyard || vineyard.status !== 'Growing' || !vineyard.grape) {
+  // Check if vineyard exists and has grapes planted (no ripeness threshold)
+  if (!vineyard || !vineyard.grape) {
     return { success: false };
   }
 
-  // Calculate yield based on hectares, density, grape suitability, and natural yield
-  // Base yield: ~1.5 kg per vine (simplified calculation)
-  const baseYieldPerVine = 1.5; // kg per vine
-  const totalVines = vineyard.hectares * vineyard.density;
-  
-  // Get grape metadata for natural yield and suitability
-  const grapeMetadata = GRAPE_CONST[vineyard.grape];
-  const naturalYield = grapeMetadata.naturalYield; // 0-1 scale
-  const grapeSuitability = calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country);
-  
-  // Apply multipliers: suitability and natural yield both affect final yield
-  const yieldMultiplier = grapeSuitability * naturalYield; // Both factors combined
-  const quantity = Math.round(totalVines * baseYieldPerVine * yieldMultiplier);
+  // Calculate yield using centralized vineyard manager
+  const quantity = calculateVineyardYield(vineyard);
+
+  // If dry run, just return the calculated quantity without doing anything
+  if (dryRun) {
+    return { success: true, quantity };
+  }
 
   // Create wine batch from harvest
   await createWineBatchFromHarvest(vineyard.id, vineyard.name, vineyard.grape, quantity);
 
   const updatedVineyard: Vineyard = {
     ...vineyard,
-    status: 'Harvested'
+    status: 'Harvested',
+    ripeness: 0 // Reset ripeness after harvest (like V3)
   };
 
   await saveVineyard(updatedVineyard);
@@ -239,24 +229,6 @@ export async function harvestVineyard(vineyardId: string): Promise<{ success: bo
   return { success: true, quantity };
 }
 
-// Reset vineyard to dormant, then back to growing
-export async function resetVineyard(vineyardId: string): Promise<boolean> {
-  const vineyards = await loadVineyards();
-  const vineyard = vineyards.find(v => v.id === vineyardId);
-  
-  if (!vineyard || vineyard.status !== 'Harvested') {
-    return false;
-  }
-
-  const updatedVineyard: Vineyard = {
-    ...vineyard,
-    status: 'Growing'
-  };
-
-  await saveVineyard(updatedVineyard);
-  triggerGameUpdate();
-  return true;
-}
 
 // Get all vineyards with refreshed prestige values
 export async function getAllVineyards(): Promise<Vineyard[]> {

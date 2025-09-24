@@ -10,7 +10,8 @@ export { initializeCustomers, getAllCustomers, getCountryCode } from './sales/cr
 export { generateCustomer } from './sales/generateCustomer';
 export { generateOrder } from './sales/generateOrder';
 export { processGameTick } from './gameTick';
-export { createVineyard, plantVineyard, harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard } from './wine/vineyardService';
+export { createVineyard, plantVineyard, harvestVineyard, getAllVineyards, purchaseVineyard } from './wine/vineyardService';
+export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './wine/vineyardManager';
 export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './wine/vineyardValueCalc';
 export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from '../database/prestige';

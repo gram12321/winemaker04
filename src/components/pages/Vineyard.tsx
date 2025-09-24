@@ -1,8 +1,9 @@
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { harvestVineyard, growVineyard, resetVineyard, getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating } from '@/lib/services';
-import { Vineyard as VineyardType } from '@/lib/types/types';
+import { harvestVineyard, getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
+import { calculateVineyardYield } from '@/lib/services/wine/vineyardManager';
+import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandBuyingModal, PlantingOptionsModal } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
@@ -16,24 +17,55 @@ const Vineyard: React.FC = () => {
   const [showBuyLandModal, setShowBuyLandModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const [landPurchaseOptions, setLandPurchaseOptions] = useState<VineyardPurchaseOption[]>([]);
+  const [expectedYields, setExpectedYields] = useState<Record<string, number>>({});
   const vineyards = useGameStateWithData(getAllVineyards, []);
+  const activities = useGameStateWithData(getAllActivities, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0 });
 
+  // Get vineyards with active planting activities from game state
+  const vineyardsWithActivePlanting = useMemo(() => {
+    const activePlantingVineyards = new Set<string>();
+    
+    activities
+      .filter(activity => 
+        activity.status === 'active' && 
+        activity.category === WorkCategory.PLANTING &&
+        activity.targetId
+      )
+      .forEach(activity => {
+        activePlantingVineyards.add(activity.targetId!);
+      });
+    
+    return activePlantingVineyards;
+  }, [activities]);
+
+  // Calculate expected yields when vineyards change
+  useEffect(() => {
+    const calculateYields = () => {
+      const yields: Record<string, number> = {};
+      for (const vineyard of vineyards) {
+        if (vineyard.grape) {
+          yields[vineyard.id] = calculateVineyardYield(vineyard);
+        }
+      }
+      setExpectedYields(yields);
+    };
+    
+    calculateYields();
+  }, [vineyards]);
 
   const handleHarvestVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
     const result = await harvestVineyard(vineyard.id);
     if (result.success && result.quantity && vineyard.grape) {
-      alert(`Harvested ${result.quantity} kg of ${vineyard.grape} grapes! Wine batch created in winery.`);
+      const ripenessPercent = Math.round((vineyard.ripeness || 0) * 100);
+      const message = ripenessPercent < 30 
+        ? `Harvested ${result.quantity} kg of ${vineyard.grape} grapes (${ripenessPercent}% ripeness - low yield). Wine batch created in winery.`
+        : `Harvested ${result.quantity} kg of ${vineyard.grape} grapes! Wine batch created in winery.`;
+      alert(message);
     }
   }), [withLoading]);
 
-  const handleGrowVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
-    await growVineyard(vineyard.id);
-  }), [withLoading]);
 
-  const handleResetVineyard = useCallback((vineyard: VineyardType) => withLoading(async () => {
-    await resetVineyard(vineyard.id);
-  }), [withLoading]);
 
   const handleShowBuyLandModal = useCallback(() => {
     const options = generateVineyardPurchaseOptions(5, vineyards);
@@ -47,15 +79,21 @@ const Vineyard: React.FC = () => {
 
   const getActionButtons = useCallback((vineyard: VineyardType) => {
     if (!vineyard.grape) {
+      const hasActivePlanting = vineyardsWithActivePlanting.has(vineyard.id);
       return (
         <button 
           onClick={() => {
             setSelectedVineyard(vineyard);
             setShowPlantDialog(true);
           }}
-          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-medium"
+          disabled={hasActivePlanting}
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            hasActivePlanting 
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+              : 'bg-green-600 hover:bg-green-700 text-white'
+          }`}
         >
-          Plant
+          {hasActivePlanting ? 'Planting...' : 'Plant'}
         </button>
       );
     }
@@ -63,35 +101,40 @@ const Vineyard: React.FC = () => {
     switch (vineyard.status) {
       case 'Planted':
         return (
-          <button 
-            onClick={() => handleGrowVineyard(vineyard)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium"
-          >
-            Grow
-          </button>
+          <div className="text-xs text-gray-500">
+            Planted (will grow in Spring)
+          </div>
         );
       case 'Growing':
         return (
           <button 
             onClick={() => handleHarvestVineyard(vineyard)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs font-medium"
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              (vineyard.ripeness || 0) < 0.3 
+                ? 'bg-gray-400 hover:bg-gray-500 text-white' 
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
+            title={(vineyard.ripeness || 0) < 0.3 ? 'Low ripeness - will yield very little' : 'Ready to harvest'}
           >
             Harvest
           </button>
         );
       case 'Harvested':
         return (
-          <button 
-            onClick={() => handleResetVineyard(vineyard)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-2 py-1 rounded text-xs font-medium"
-          >
-            Reset
-          </button>
+          <div className="text-xs text-gray-500">
+            Harvested (will go dormant in Winter)
+          </div>
+        );
+      case 'Dormant':
+        return (
+          <div className="text-xs text-gray-500">
+            Dormant
+          </div>
         );
       default:
         return null;
     }
-  }, [handleGrowVineyard, handleHarvestVineyard, handleResetVineyard]);
+  }, [handleHarvestVineyard, vineyardsWithActivePlanting]);
 
   // Memoize summary statistics
   const { totalHectares, totalValue, plantedVineyards, activeVineyards } = useMemo(() => {
@@ -269,6 +312,31 @@ const Vineyard: React.FC = () => {
                       <div className="text-xs text-gray-500">
                         Density: {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
                       </div>
+                      {/* Ripeness Progress Bar */}
+                      {vineyard.grape && (
+                        <div className="mt-2">
+                          <div className="text-xs text-gray-500 mb-1">
+                            Ripeness: {Math.round((vineyard.ripeness || 0) * 100)}%
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
+                                (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
+                            ></div>
+                          </div>
+                          {/* Expected Yield */}
+                          <div className="mt-2 text-xs">
+                            <div className="text-gray-500">
+                              Expected Yield: <span className="font-medium text-green-600">
+                                {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </td>
 
                     {/* Status & Actions */}

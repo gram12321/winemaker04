@@ -259,3 +259,36 @@ export const REGION_GRAPE_SUITABILITY = {
   }
 } as const;
 
+// ===== RIPENESS SYSTEM =====
+
+// Ripeness progression per season (weekly increase)
+export const RIPENESS_INCREASE = {
+  Spring: 0.01,  // 1% per week
+  Summer: 0.02,  // 2% per week  
+  Fall: 0.05,    // 5% per week (main ripening season)
+  Winter: 0      // No ripening in winter
+} as const;
+
+// Vineyard health constants
+export const DEFAULT_VINEYARD_HEALTH = 1.0; // Perfect health as placeholder
+
+// Aspect modifiers for ripeness (0-1 scale)
+export const ASPECT_RIPENESS_MODIFIERS = {
+  'North': -0.1,
+  'Northeast': -0.05,
+  'Northwest': -0.05,
+  'East': 0,
+  'West': 0,
+  'Southeast': 0.05,
+  'Southwest': 0.05,
+  'South': 0.1
+} as const;
+
+// Seasonal randomness ranges for ripeness (as multipliers)
+export const SEASONAL_RIPENESS_RANDOMNESS = {
+  Spring: { min: 0.5, max: 1.75 },   // -50% to +75%
+  Summer: { min: 0.75, max: 2.0 },   // -25% to +100%
+  Fall: { min: 0.0, max: 1.5 },     // -100% to +50%
+  Winter: { min: 0, max: 0 }        // No ripening
+} as const;
+

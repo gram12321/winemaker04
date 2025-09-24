@@ -3,9 +3,8 @@ import { getGameState, updateGameState } from './gameState';
 import { GAME_INITIALIZATION } from '../constants/constants';
 import { generateSophisticatedWineOrders } from './sales/salesOrderService';
 import { notificationService } from '../../components/layout/NotificationCenter';
-import { loadVineyards, saveVineyard } from '../database/database';
-import { updateBaseVineyardPrestigeEvent } from '../database/prestige';
 import { progressActivities } from './activityManager';
+import { updateVineyardRipeness, updateVineyardAges } from './wine/vineyardManager';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -51,6 +50,9 @@ export const processGameTick = async (): Promise<void> => {
   // Process weekly effects
   await processWeeklyEffects();
   
+  // Update vineyard ripeness and status based on current season and week
+  await updateVineyardRipeness(season, week);
+  
   // Log the time advancement
   notificationService.info(`Time advanced to Week ${week}, ${season}, ${currentYear}`);
 };
@@ -81,33 +83,6 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
   // - Prestige adjustments
 };
 
-const updateVineyardAges = async (): Promise<void> => {
-  try {
-    const vineyards = await loadVineyards();
-    
-    for (const vineyard of vineyards) {
-      // Only age vines that are planted (have a grape variety) and have a vine age (not null)
-      if (vineyard.grape && vineyard.vineAge !== null) {
-        const updatedVineyard = {
-          ...vineyard,
-          vineAge: vineyard.vineAge + 1
-        };
-        // After aging, update the vineyard base prestige events (age affects base prestige)
-        try {
-          await updateBaseVineyardPrestigeEvent(updatedVineyard.id);
-        } catch (e) {
-          console.warn('Failed updating vineyard base prestige after aging:', e);
-        }
-
-        await saveVineyard(updatedVineyard);
-      }
-    }
-    
-    
-  } catch (error) {
-    console.error('Error updating vineyard ages:', error);
-  }
-};
 
 /**
  * Process effects that happen every week
@@ -138,7 +113,7 @@ const processWeeklyEffects = async (): Promise<void> => {
   }
   
   // TODO: Add other weekly effects when ready
-  // - Vineyard growth/ripening
   // - Wine aging effects
   // - Financial transactions
 };
+
