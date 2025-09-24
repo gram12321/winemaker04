@@ -1,6 +1,6 @@
 // Wine batch management service for winery operations
 import { v4 as uuidv4 } from 'uuid';
-import { WineBatch, GrapeVariety } from '../../types/types';
+import { WineBatch, GrapeVariety, WineCharacteristics } from '../../types/types';
 import { saveWineBatch, loadWineBatches, loadVineyards } from '../../database/database';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../core/gameState';
@@ -10,6 +10,77 @@ import { generateDefaultCharacteristics, calculateWineBalance } from './balanceC
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 
 // ===== WINE BATCH OPERATIONS =====
+
+/**
+ * Find existing compatible wine batch that can be combined with new harvest
+ * Compatible batches must have same vineyard ID and same vintage (harvest year)
+ * @param vineyardId - ID of the vineyard
+ * @param grape - Grape variety
+ * @param harvestYear - Year the grapes were harvested
+ * @returns Compatible wine batch or null if none found
+ */
+async function findCompatibleWineBatch(
+  vineyardId: string,
+  grape: GrapeVariety,
+  harvestYear: number
+): Promise<WineBatch | null> {
+  const existingBatches = await loadWineBatches();
+  
+  // Find existing batch with same vineyard, grape, and vintage that's still in 'grapes' stage
+  const compatibleBatch = existingBatches.find(batch => 
+    batch.vineyardId === vineyardId &&
+    batch.grape === grape &&
+    batch.harvestDate.year === harvestYear &&
+    batch.stage === 'grapes' // Only combine with batches still in grape stage
+  );
+  
+  return compatibleBatch || null;
+}
+
+/**
+ * Combine two wine batches using weighted averaging for quality properties
+ * @param existingBatch - The existing wine batch to combine with
+ * @param newQuantity - Quantity of new grapes to add
+ * @param newQuality - Quality of new grapes
+ * @param newBalance - Balance of new grapes
+ * @param newCharacteristics - Characteristics of new grapes
+ * @returns Updated wine batch with combined properties
+ */
+function combineWineBatches(
+  existingBatch: WineBatch,
+  newQuantity: number,
+  newQuality: number,
+  newBalance: number,
+  newCharacteristics: WineCharacteristics
+): WineBatch {
+  const totalQuantity = existingBatch.quantity + newQuantity;
+  const existingWeight = existingBatch.quantity / totalQuantity;
+  const newWeight = newQuantity / totalQuantity;
+  
+  // Calculate weighted averages for quality properties
+  const combinedQuality = (existingBatch.quality * existingWeight) + (newQuality * newWeight);
+  const combinedBalance = (existingBatch.balance * existingWeight) + (newBalance * newWeight);
+  
+  // Combine characteristics using weighted averages
+  const combinedCharacteristics: WineCharacteristics = {
+    acidity: (existingBatch.characteristics.acidity * existingWeight) + (newCharacteristics.acidity * newWeight),
+    aroma: (existingBatch.characteristics.aroma * existingWeight) + (newCharacteristics.aroma * newWeight),
+    body: (existingBatch.characteristics.body * existingWeight) + (newCharacteristics.body * newWeight),
+    spice: (existingBatch.characteristics.spice * existingWeight) + (newCharacteristics.spice * newWeight),
+    sweetness: (existingBatch.characteristics.sweetness * existingWeight) + (newCharacteristics.sweetness * newWeight),
+    tannins: (existingBatch.characteristics.tannins * existingWeight) + (newCharacteristics.tannins * newWeight)
+  };
+  
+  // Return updated batch with combined properties
+  return {
+    ...existingBatch,
+    quantity: totalQuantity,
+    quality: combinedQuality,
+    balance: combinedBalance,
+    characteristics: combinedCharacteristics
+    // Note: finalPrice will be recalculated after combination
+  };
+}
 
 // Create wine batch from harvest
 export async function createWineBatchFromHarvest(
@@ -40,43 +111,63 @@ export async function createWineBatchFromHarvest(
   // Calculate balance using the new balance calculator
   const balanceResult = calculateWineBalance(characteristics);
   
-  // Create initial wine batch without final price
-  const wineBatch: WineBatch = {
-    id: uuidv4(),
-    vineyardId,
-    vineyardName,
-    grape,
-    quantity,
-    stage: 'grapes',
-    process: 'none',
-    fermentationProgress: 0,
-    quality,
-    balance: balanceResult.score, // Use calculated balance
-    characteristics,
-    finalPrice: 0, // Will be calculated below
-    grapeColor: grapeMetadata.grapeColor,
-    naturalYield: grapeMetadata.naturalYield,
-    fragile: grapeMetadata.fragile,
-    proneToOxidation: grapeMetadata.proneToOxidation,
-    harvestDate: {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
-    },
-    createdAt: {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
-    }
+  const harvestDate = {
+    week: gameState.week || 1,
+    season: gameState.season || 'Spring',
+    year: gameState.currentYear || 2024
   };
+  
+  // Check for existing compatible wine batch
+  const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestDate.year);
+  
+  if (existingBatch) {
+    // Combine with existing batch
+    const combinedBatch = combineWineBatches(
+      existingBatch,
+      quantity,
+      quality,
+      balanceResult.score,
+      characteristics
+    );
+    
+    // Recalculate final price for the combined batch
+    const finalPrice = calculateFinalWinePrice(combinedBatch, vineyard);
+    combinedBatch.finalPrice = finalPrice;
+    
+    await saveWineBatch(combinedBatch);
+    triggerGameUpdate();
+    return combinedBatch;
+  } else {
+    // Create new wine batch
+    const wineBatch: WineBatch = {
+      id: uuidv4(),
+      vineyardId,
+      vineyardName,
+      grape,
+      quantity,
+      stage: 'grapes',
+      process: 'none',
+      fermentationProgress: 0,
+      quality,
+      balance: balanceResult.score, // Use calculated balance
+      characteristics,
+      finalPrice: 0, // Will be calculated below
+      grapeColor: grapeMetadata.grapeColor,
+      naturalYield: grapeMetadata.naturalYield,
+      fragile: grapeMetadata.fragile,
+      proneToOxidation: grapeMetadata.proneToOxidation,
+      harvestDate,
+      createdAt: harvestDate
+    };
 
-  // Calculate final price using the new pricing service
-  const finalPrice = calculateFinalWinePrice(wineBatch, vineyard);
-  wineBatch.finalPrice = finalPrice;
+    // Calculate final price using the new pricing service
+    const finalPrice = calculateFinalWinePrice(wineBatch, vineyard);
+    wineBatch.finalPrice = finalPrice;
 
-  await saveWineBatch(wineBatch);
-  triggerGameUpdate();
-  return wineBatch;
+    await saveWineBatch(wineBatch);
+    triggerGameUpdate();
+    return wineBatch;
+  }
 }
 
 
