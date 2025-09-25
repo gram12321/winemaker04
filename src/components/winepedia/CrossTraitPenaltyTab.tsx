@@ -442,6 +442,14 @@ Base penalty: ${baseTotalDistance.toFixed(3)} → Scaled penalty: ${(baseTotalDi
                               requirement = '(both 60-80%)';
                             } else if (idx === 2) { // Aroma + Body + Sweetness synergy
                               requirement = '(aroma>body, sweet 40-60%)';
+                            } else if (idx === 3) { // Acidity + Sweetness synergy
+                              requirement = '(both 40-60%)';
+                            } else if (idx === 4) { // Aroma + Sweetness + Body synergy
+                              requirement = '(aroma>60%, sweet>60%, body>70%)';
+                            } else if (idx === 5) { // Tannins + Body + Spice synergy
+                              requirement = '(tannins>70%, body>60%, spice>50%)';
+                            } else if (idx === 6) { // Aroma + Acidity synergy
+                              requirement = '(aroma>70%, acidity>60%)';
                             }
                             
                             return (
@@ -551,12 +559,123 @@ Base penalty: ${baseTotalDistance.toFixed(3)} → Scaled penalty: ${(baseTotalDi
 
 
       <section>
-        <h3 className="text-lg font-medium">How this affects balance</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          After computing each trait's TotalDistance, we multiply it by the relevant scaling factors and
-          apply synergy reductions before averaging. This makes certain combinations "extra harsh" while
-          good combinations get penalty reductions, creating a more nuanced balance system.
+        <h3 className="text-lg font-medium">Wine Style Penalties</h3>
+        <p className="text-sm text-gray-600 mt-1 mb-4">
+          These combinations make wines feel unbalanced or harsh, increasing penalty severity.
         </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="font-medium text-red-800">Harsh Acidity</span>
+            </div>
+            <p className="text-sm text-red-700">High spice clashes with high acidity, creating an unbalanced, harsh wine.</p>
+          </div>
+          
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="font-medium text-red-800">Overpowered Light Body</span>
+            </div>
+            <p className="text-sm text-red-700">High spice overwhelms light-bodied wines, making them feel thin and unbalanced.</p>
+          </div>
+
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="font-medium text-red-800">Flat Heavy Body</span>
+            </div>
+            <p className="text-sm text-red-700">Low spice makes high body wines feel flat and lifeless.</p>
+          </div>
+
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="font-medium text-red-800">Clashing Sweetness</span>
+            </div>
+            <p className="text-sm text-red-700">High acidity makes sweet wines taste overly tart and unbalanced.</p>
+          </div>
+
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="font-medium text-red-800">Astringent Tannins</span>
+            </div>
+            <p className="text-sm text-red-700">High tannins without sufficient body create harsh, astringent wines.</p>
+          </div>
+
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="font-medium text-red-800">Overpowered Aroma</span>
+            </div>
+            <p className="text-sm text-red-700">High body without matching aroma creates dull, heavy wines.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-medium">Wine Style Synergies</h3>
+        <p className="text-sm text-gray-600 mt-1 mb-4">
+          These classic wine combinations work harmoniously together, reducing penalties.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Bold Red Structure</span>
+            </div>
+            <p className="text-sm text-green-700">High acidity + high tannins create classic, structured red wines.</p>
+          </div>
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Balanced Body & Spice</span>
+            </div>
+            <p className="text-sm text-green-700">Matching body and spice create harmonious, well-rounded wines.</p>
+          </div>
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Classic Balance</span>
+            </div>
+            <p className="text-sm text-green-700">Acidity and sweetness in harmony - the foundation of great wine.</p>
+          </div>
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Dessert Wine Body</span>
+            </div>
+            <p className="text-sm text-green-700">Rich aroma, sweetness, and body create luxurious dessert wines.</p>
+          </div>
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Powerful Red Blend</span>
+            </div>
+            <p className="text-sm text-green-700">Tannins, body, and spice combine for complex, age-worthy reds.</p>
+          </div>
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Bright & Aromatic</span>
+            </div>
+            <p className="text-sm text-green-700">High aroma with good acidity creates fresh, lively wines.</p>
+          </div>
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">Elegant Complexity</span>
+            </div>
+            <p className="text-sm text-green-700">Aroma leads body with balanced sweetness for refined wines.</p>
+          </div>
+        </div>
       </section>
       </div>
     </TooltipProvider>

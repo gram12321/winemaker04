@@ -57,6 +57,42 @@ export const SYNERGY_RULES: SynergyRule[] = [
       const aromaBodyRatio = wine.aroma / wine.body;
       return aromaBodyRatio >= 1.1 && aromaBodyRatio <= 1.3 ? 0.6 : 0.3; // 60% or 30% reduction
     }
+  },
+  {
+    characteristics: ['acidity', 'sweetness'],
+    condition: (wine) => wine.acidity >= 0.4 && wine.acidity <= 0.6 && wine.sweetness >= 0.4 && wine.sweetness <= 0.6,
+    reduction: (wine) => {
+      const acidityDev = Math.abs(wine.acidity - 0.5);
+      const sweetnessDev = Math.abs(wine.sweetness - 0.5);
+      const avgDev = (acidityDev + sweetnessDev) / 2;
+      return Math.max(0.4, Math.min(0.6, 0.6 - avgDev * 2)); // 40-60% reduction based on balance
+    }
+  },
+  {
+    characteristics: ['aroma', 'sweetness', 'body'],
+    condition: (wine) => wine.aroma > 0.6 && wine.sweetness > 0.6 && wine.body > 0.7,
+    reduction: (wine) => {
+      const minVal = Math.min(wine.aroma, wine.sweetness, wine.body);
+      return Math.min(0.7, (minVal - 0.6) * 1.75); // Up to 70% reduction for dessert wine style
+    }
+  },
+  {
+    characteristics: ['tannins', 'body', 'spice'],
+    condition: (wine) => wine.tannins > 0.7 && wine.body > 0.6 && wine.spice > 0.5,
+    reduction: (wine) => {
+      const tanninBodyRatio = wine.tannins / wine.body;
+      const spiceFactor = Math.min(1, wine.spice - 0.5);
+      return tanninBodyRatio <= 1.2 ? Math.min(0.65, 0.4 + spiceFactor * 0.25) : 0.4; // 40-65% reduction
+    }
+  },
+  {
+    characteristics: ['aroma', 'acidity'],
+    condition: (wine) => wine.aroma > 0.7 && wine.acidity > 0.6,
+    reduction: (wine) => {
+      const aromaFactor = (wine.aroma - 0.7) * 2;
+      const acidityFactor = (wine.acidity - 0.6) * 2;
+      return Math.min(0.5, (aromaFactor + acidityFactor) * 0.25); // Up to 50% reduction
+    }
   }
 ];
 
@@ -159,6 +195,22 @@ export const DYNAMIC_ADJUSTMENTS: DynamicAdjustmentsConfig = {
       penaltyScales: [
         // Low aroma increases penalty on spice
         { target: 'spice', k: 0.12, p: 1.1 }
+      ]
+    }
+  },
+  spice: {
+    above: {
+      penaltyScales: [
+        // High spice increases penalty on acidity (can clash)
+        { target: 'acidity', k: 0.25, p: 1.3 },
+        // High spice increases penalty on light-bodied wines
+        { target: 'body', k: 0.20, p: 1.2 }
+      ]
+    },
+    below: {
+      penaltyScales: [
+        // Low spice increases penalty on high body wines (can feel flat)
+        { target: 'body', k: 0.15, p: 1.1 }
       ]
     }
   }
