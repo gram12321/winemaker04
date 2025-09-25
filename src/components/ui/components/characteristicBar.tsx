@@ -14,6 +14,8 @@ interface CharacteristicBarProps {
   deltaTooltip?: string;
   // Optional reference base value (e.g., grape base characteristic)
   baseValue?: number;
+  // Show characteristic icon
+  showIcon?: boolean;
 }
 
 export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({ 
@@ -24,8 +26,18 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   showValue = true,
   className = "",
   deltaTooltip,
-  baseValue
+  baseValue,
+  showIcon = true
 }) => {
+  const ICON_SRC: Record<keyof WineCharacteristics, string> = {
+    acidity: '/assets/icons/characteristics/acidity.png',
+    aroma: '/assets/icons/characteristics/aroma.png',
+    body: '/assets/icons/characteristics/body.png',
+    spice: '/assets/icons/characteristics/spice.png',
+    sweetness: '/assets/icons/characteristics/sweetness.png',
+    tannins: '/assets/icons/characteristics/tannins.png'
+  };
+
   // Clamp value to 0-1 range
   const displayValue = Math.max(0, Math.min(1, value));
   const baseDisplay = typeof baseValue === 'number' ? Math.max(0, Math.min(1, baseValue)) : undefined;
@@ -35,6 +47,30 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   
   // Format percentage for display
   const formatPercentage = (val: number) => formatPercent(val, 0, true);
+
+  // Build user-friendly tooltip with new terminology
+  const buildTooltip = () => {
+    const base = `Current Value: ${formatPercentage(displayValue)}`;
+    const [rMin, rMax] = adjustedRanges ?? [minBalance, maxBalance];
+    const rangeLine = `Range: ${formatPercentage(rMin)} - ${formatPercentage(rMax)}`;
+
+    // Distances per new naming
+    const midpoint = (rMin + rMax) / 2;
+    const distanceInside = Math.abs(displayValue - midpoint);
+    const distanceOutside = displayValue < rMin ? (rMin - displayValue) : (displayValue > rMax ? (displayValue - rMax) : 0);
+    const penalty = 2 * distanceOutside;
+    const totalDistance = distanceInside + penalty;
+
+    let status = 'Average';
+    if (displayValue >= rMin && displayValue <= rMax) status = 'In balanced range';
+    else if (displayValue < rMin - 0.2 || displayValue > rMax + 0.2) status = 'Far outside range';
+    else status = 'Slightly outside range';
+
+    const statusLine = `Status: ${status}`;
+    const details = `DistanceInside: ${formatPercentage(distanceInside)} | DistanceOutside: ${formatPercentage(distanceOutside)}\nPenalty: ${formatPercentage(penalty)} | TotalDistance: ${formatPercentage(totalDistance)}`;
+    const deltaLine = deltaTooltip ? `Deltas: ${deltaTooltip}` : '';
+    return [base, rangeLine, statusLine, details, deltaLine].filter(Boolean).join('\n');
+  };
   
   // Get color class based on whether value is in balanced range
   const getValueColor = () => {
@@ -53,18 +89,29 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   return (
     <div className={`flex items-center py-2 border-b last:border-b-0 border-gray-200 ${className}`}>
       {/* Label */}
-      <div className="w-1/4 pr-2 text-sm font-medium text-gray-700 capitalize">
-        {label}
+      <div className="w-1/4 pr-2 text-sm font-medium text-gray-700 capitalize flex items-center gap-2">
+        {showIcon && (
+          <img
+            src={ICON_SRC[characteristicName]}
+            alt={`${label} icon`}
+            className="w-4 h-4 object-contain opacity-80"
+            loading="lazy"
+          />
+        )}
+        <span>{label}</span>
       </div>
       
       {/* Bar Container */}
       <div className="w-3/4 flex items-center">
         <div 
           className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden"
-          title={deltaTooltip ? deltaTooltip : `Current Value: ${formatPercentage(displayValue)}`}
+          title={buildTooltip()}
         >
-          {/* Background bar */}
-          <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
+          {/* Background bar with informative title */}
+          <div 
+            className="absolute inset-0 bg-gray-200 rounded-full"
+            title={buildTooltip()}
+          ></div>
           
           {/* Base balanced range (green) */}
           <div 
@@ -73,7 +120,6 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
               left: `${minBalance * 100}%`,
               width: `${(maxBalance - minBalance) * 100}%`
             }}
-            title={`Balanced Range: ${formatPercentage(minBalance)} - ${formatPercentage(maxBalance)}`}
           ></div>
 
           {/* Adjusted ranges (for Phase 2) - darker green for optimal zone */}
@@ -85,7 +131,6 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
                   left: `${adjustedRanges[0] * 100}%`,
                   width: `${(adjustedRanges[1] - adjustedRanges[0]) * 100}%`
                 }}
-                title={`Adjusted Range: ${formatPercentage(adjustedRanges[0])} - ${formatPercentage(adjustedRanges[1])}`}
               ></div>
             </>
           )}
@@ -94,6 +139,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
           <div 
             className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
             style={{ left: `${displayValue * 100}%` }}
+            title={`Current Value: ${formatPercentage(displayValue)}`}
           ></div>
 
           {/* Base grape value marker (if provided) */}
@@ -101,7 +147,6 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
             <div 
               className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
               style={{ left: `${baseDisplay * 100}%` }}
-              title={`Base: ${formatPercentage(baseDisplay)}`}
             ></div>
           )}
         </div>

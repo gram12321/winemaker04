@@ -66,17 +66,21 @@ interface BalanceResult {
 - Grape-specific characteristics now differentiate wine varieties
 
 ### Formula (Current)
-Let midpoint `m = 0.5`. For each characteristic value `x`:
+Let the accepted range for a characteristic be `[min, max]` and midpoint `m = (min + max)/2`. For each characteristic value `x`:
 
-1) Distance to midpoint: `d = |x - m|`
+1) DistanceInside: `|x − m|`
 
-2) Per-characteristic penalty:
-- If `x` is within its accepted range: `penalty_i = d`
-- If `x` is outside its accepted range: `penalty_i = d + 2 × outsideDistance`
+2) DistanceOutside: `max(min − x, 0)` if `x < min`; `max(x − max, 0)` if `x > max`; otherwise `0`
 
-3) Aggregate and map to score:
-- `averagePenalty = mean(penalty_i)` over all 6 characteristics
-- `score = max(0, 1 − 2 × averagePenalty)`
+3) Penalty: `2 × DistanceOutside`
+
+4) TotalDistance: `DistanceInside + Penalty`
+
+5) Cross-trait scaling: multiply `TotalDistance` by any applicable cross-trait multipliers
+
+6) Aggregate and map to score:
+- `averageDeduction = mean(TotalDistance_i)` over all 6 characteristics
+- `score = max(0, 1 − 2 × averageDeduction)`
 
 Notes:
 - Characteristics are fixed per grape at creation in Phase 1; thus, all batches of the same grape currently yield the same balance score.

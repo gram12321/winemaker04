@@ -1,7 +1,7 @@
 // Phase 1 Balance Calculator - Simple balance calculation with static ranges
 import { WineCharacteristics, BalanceResult, GrapeVariety } from '../../types/types';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../constants/grapeConstants';
-import { DYNAMIC_ADJUSTMENTS, DynamicAdjustmentsConfig } from '../../constants/balanceAdjustments';
+import { DYNAMIC_ADJUSTMENTS, DynamicAdjustmentsConfig, CharacteristicKey, SYNERGY_RULES } from '../../constants/balanceAdjustments';
 
 /**
  * Calculate wine balance score using Phase 1 simple algorithm
@@ -9,43 +9,57 @@ import { DYNAMIC_ADJUSTMENTS, DynamicAdjustmentsConfig } from '../../constants/b
  * @returns BalanceResult with score and placeholder data
  */
 export function calculateWineBalance(characteristics: WineCharacteristics): BalanceResult {
-  let totalDeduction = 0;
-  const characteristicCount = Object.keys(characteristics).length;
-
-  // Derive adjusted ranges using config-driven shifts (no cross-trait penalties yet)
+  // 1) Derive adjusted ranges using config-driven shifts
   const adjustedRanges = applyDynamicRangeAdjustments(characteristics, BASE_BALANCED_RANGES, DYNAMIC_ADJUSTMENTS);
 
-  // Calculate deductions from ideal midpoint (using adjusted ranges)
+  // 2) Build cross-trait penalty scale multipliers from deviations
+  const penaltyScales = buildPenaltyScaleMap(characteristics, BASE_BALANCED_RANGES, DYNAMIC_ADJUSTMENTS);
+
+  // 3) Calculate synergy reductions for each characteristic
+  const synergyReductions = getSynergyReductions(characteristics);
+
+  // 4) Compute deductions per characteristic (plain average)
+  let totalDeduction = 0;
+  let count = 0;
+
   for (const [key, value] of Object.entries(characteristics)) {
     const charKey = key as keyof WineCharacteristics;
     const [min, max] = adjustedRanges[charKey];
-    const midpoint = (min + max) / 2; 
-    
-    // Calculate distance from midpoint
-    const distance = Math.abs(value - midpoint);
-    
-    // Apply penalty for being outside the balanced range
-    let penalty = 0;
-    if (value < min || value > max) {
-      // Out of range penalty
-      const outsideDistance = value < min ? min - value : value - max;
-      penalty = distance + (outsideDistance * 2); // Double penalty for being outside range
-    } else {
-      // In range penalty (distance from midpoint)
-      penalty = distance;
+    const midpoint = (min + max) / 2;
+
+    // New terminology:
+    // DistanceInside: always the absolute distance to midpoint
+    const distanceInside = Math.abs(value - midpoint);
+    // DistanceOutside: zero when within range; otherwise distance beyond nearest bound
+    const distanceOutside = (value < min) ? (min - value) : (value > max ? (value - max) : 0);
+    // Penalty: 2 × DistanceOutside
+    const penalty = 2 * distanceOutside;
+    // TotalDistance: DistanceInside + Penalty
+    let totalDistance = distanceInside + penalty;
+
+    // Apply cross-trait scaling to TotalDistance
+    const scale = penaltyScales[charKey as CharacteristicKey] ?? 1;
+    totalDistance *= scale;
+
+    // Apply synergy reduction to TotalDistance (only for involved characteristics)
+    const synergyReduction = synergyReductions[charKey];
+    if (synergyReduction > 0) {
+      totalDistance *= (1 - synergyReduction); // Reduce penalty by synergy factor
     }
-    
-    totalDeduction += penalty;
+
+    totalDeduction += totalDistance;
+    count += 1;
   }
 
-  // Calculate balance score (1 = perfect, 0 = terrible)
-  const averageDeduction = totalDeduction / characteristicCount;
-  const balanceScore = Math.max(0, 1 - (averageDeduction * 2)); // Scale deduction
+  const averageDeduction = count > 0 ? (totalDeduction / count) : 0;
+
+  // 5) Map to score
+  const balanceScore = Math.max(0, 1 - (averageDeduction * 2));
 
   return {
     score: balanceScore,
-    qualifies: false, // Phase 1: No archetype matching
-    dynamicRanges: adjustedRanges // Expose adjusted ranges for UI/analysis
+    qualifies: false,
+    dynamicRanges: adjustedRanges
   };
 }
 
@@ -84,6 +98,36 @@ export function getRegionalModifiers(_region: string): Record<string, number> {
   return {}; // Phase 1: No regional modifiers
 }
 
+/**
+ * Calculate synergy reductions for specific characteristics
+ * @param characteristics - Wine characteristics object
+ * @returns Object mapping characteristic keys to their synergy reduction factors
+ */
+export function getSynergyReductions(characteristics: WineCharacteristics): Record<CharacteristicKey, number> {
+  const reductions: Record<CharacteristicKey, number> = {
+    acidity: 0,
+    aroma: 0,
+    body: 0,
+    spice: 0,
+    sweetness: 0,
+    tannins: 0
+  };
+
+  // Apply each synergy rule
+  for (const rule of SYNERGY_RULES) {
+    if (rule.condition(characteristics)) {
+      const reduction = rule.reduction(characteristics);
+      
+      // Apply reduction to all characteristics involved in this synergy
+      for (const char of rule.characteristics) {
+        reductions[char] = Math.max(reductions[char], reduction); // Take the highest reduction
+      }
+    }
+  }
+
+  return reductions;
+}
+
 export function getSynergyBonuses(_characteristics: WineCharacteristics): number {
   return 0; // Phase 1: No synergy bonuses
 }
@@ -113,11 +157,11 @@ function applyDynamicRangeAdjustments(
 
     const [min, max] = baseRanges[source];
     const midpoint = (min + max) / 2;
-    const halfWidth = (max - min) / 2 || 0.0001; // avoid division by zero
-    const normDiff = (v - midpoint) / halfWidth;
-    if (Math.abs(normDiff) < 1e-6) continue;
+    const fullRange = Math.max(0.0001, max - min);
+    const deviationPct = (v - midpoint) / fullRange; // -0.5..+0.5 within range
+    if (Math.abs(deviationPct) < 1e-6) continue;
 
-    const direction = normDiff > 0 ? 'above' : 'below';
+    const direction = deviationPct > 0 ? 'above' : 'below';
     const rules = cfg[direction];
     if (!rules || !rules.rangeShifts) continue;
 
@@ -125,7 +169,7 @@ function applyDynamicRangeAdjustments(
       const target = rule.target;
       const [tmin, tmax] = adjusted[target];
       const targetWidth = Math.max(0.0001, tmax - tmin);
-      const delta = rule.shiftPerUnit * normDiff * targetWidth;
+      const delta = rule.shiftPerUnit * deviationPct * targetWidth;
       let newMin = tmin + delta;
       let newMax = tmax + delta;
 
@@ -148,3 +192,51 @@ function applyDynamicRangeAdjustments(
 
   return adjusted;
 }
+
+// Build per-target penalty scale multipliers from current deviations
+function buildPenaltyScaleMap(
+  characteristics: WineCharacteristics,
+  baseRanges: Record<keyof WineCharacteristics, readonly [number, number]>,
+  config: DynamicAdjustmentsConfig
+): Record<CharacteristicKey, number> {
+  const result: Record<CharacteristicKey, number> = {
+    acidity: 1,
+    aroma: 1,
+    body: 1,
+    spice: 1,
+    sweetness: 1,
+    tannins: 1
+  };
+
+  for (const [k, v] of Object.entries(characteristics)) {
+    const source = k as keyof WineCharacteristics;
+    const rulesByDir = config[source];
+    if (!rulesByDir) continue;
+
+    const [min, max] = baseRanges[source];
+    const midpoint = (min + max) / 2;
+    const halfWidth = (max - min) / 2 || 0.0001;
+    const normDiff = (v - midpoint) / halfWidth;
+    if (Math.abs(normDiff) < 1e-6) continue;
+
+    const direction = normDiff > 0 ? 'above' : 'below';
+    const set = rulesByDir[direction];
+    const penaltyRules = set?.penaltyScales;
+    if (!penaltyRules || penaltyRules.length === 0) continue;
+
+    for (const rule of penaltyRules) {
+      const p = rule.p ?? 1;
+      const raw = 1 + (rule.k * Math.pow(Math.abs(normDiff), p));
+      let scaled = raw;
+      if (rule.cap) {
+        scaled = Math.max(rule.cap[0], Math.min(rule.cap[1], scaled));
+      }
+      const target = rule.target as CharacteristicKey;
+      result[target] = (result[target] ?? 1) * scaled;
+    }
+  }
+
+  return result;
+}
+
+// (Synergy intentionally omitted per current design)

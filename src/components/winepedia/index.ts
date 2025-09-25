@@ -8,3 +8,5 @@ export { WinemakingTab } from './WinemakingTab';
 export { MathematicalModelsTab } from './MathematicalModelsTab';
 export { CustomersTab } from './CustomersTab';
 export { YieldProjectionTab } from './YieldProjectionTab';
+export { DynamicRangeTab } from './DynamicRangeTab';
+export { CrossTraitPenaltyTab } from './CrossTraitPenaltyTab';
