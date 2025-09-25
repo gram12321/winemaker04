@@ -318,10 +318,9 @@ async function handlePartialHarvesting(
       });
       
       // Update vineyard status to show progress
-      const progressPercent = Math.round(workProgress * 100);
       const updatedVineyard = {
         ...vineyard,
-        status: `Harvesting (${progressPercent}%)`
+        status: 'Growing'
       };
       await saveVineyard(updatedVineyard);
     }

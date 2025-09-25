@@ -1,14 +1,14 @@
 // Grape constants - fragility, natural yield, color, oxidation, base characteristics, and descriptions
 import { GrapeVariety, WineCharacteristics } from '@/lib/types/types';
 
-// Base balanced ranges for wine characteristics (Phase 1: Static values)
+// Base balanced ranges for wine characteristics (ported from v3 ranges)
 export const BASE_BALANCED_RANGES = {
   acidity: [0.4, 0.6],
-  aroma: [0.4, 0.6], 
-  body: [0.4, 0.6],
-  spice: [0.4, 0.6],
+  aroma: [0.3, 0.7],
+  body: [0.4, 0.8],
+  spice: [0.35, 0.65],
   sweetness: [0.4, 0.6],
-  tannins: [0.4, 0.6]
+  tannins: [0.35, 0.65]
 } as const;
 
 

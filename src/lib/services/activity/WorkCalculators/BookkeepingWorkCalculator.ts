@@ -60,17 +60,17 @@ export async function calculateBookkeepingWork(): Promise<{
   const rate = TASK_RATES[category];
   const initialWork = INITIAL_WORK[category];
   
-  // Calculate work using transaction count as amount
+  // Use generic calculator again
   const totalWork = calculateTotalWork(transactionCount, {
     rate,
     initialWork,
-    workModifiers: [] // No modifiers for basic bookkeeping
+    workModifiers: []
   });
   
   const factors: WorkFactor[] = [
     { label: 'Previous Season', value: `${prevSeason} ${prevYear}`, isPrimary: true },
     { label: 'Transactions to Process', value: transactionCount, unit: 'transactions', isPrimary: true },
-    { label: 'Processing Rate', value: rate, unit: 'transactions/week' },
+    { label: 'Processing Rate', value: rate, unit: 'tasks/week' },
     { label: 'Initial Setup Work', value: initialWork, unit: 'work units' }
   ];
   

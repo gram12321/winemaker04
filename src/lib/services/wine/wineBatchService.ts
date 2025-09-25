@@ -7,6 +7,8 @@ import { getGameState } from '../core/gameState';
 import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from '../sales/pricingService';
 import { generateDefaultCharacteristics, calculateWineBalance } from './balanceCalculator';
+import { deriveHarvestCharacteristics } from './harvestCharacteristics';
+import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 
 // ===== WINE BATCH OPERATIONS =====
@@ -105,8 +107,24 @@ export async function createWineBatchFromHarvest(
   // Generate wine quality characteristics using the new quality service
   const { quality } = generateWineCharacteristics(grape, vineyardId);
   
-  // Generate individual wine characteristics
-  const characteristics = generateDefaultCharacteristics(grape);
+  // Derive starting characteristics from grape base + vineyard conditions
+  const base = generateDefaultCharacteristics(grape);
+  const country = vineyard.country;
+  const region = vineyard.region;
+  const altitude = vineyard.altitude;
+  const countryAlt = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] || {} as any;
+  const [minAlt, maxAlt] = (countryAlt[region as keyof typeof countryAlt] as [number, number]) || [0, 100];
+  const suitCountry = REGION_GRAPE_SUITABILITY[country as keyof typeof REGION_GRAPE_SUITABILITY] || {} as any;
+  const suitability = (suitCountry[region as keyof typeof suitCountry]?.[grape as any] ?? 0.5) as number;
+  const { characteristics } = deriveHarvestCharacteristics(base, {
+    ripeness: vineyard.ripeness || 0.5,
+    qualityFactor: quality,
+    suitability,
+    altitude,
+    medianAltitude: (minAlt + maxAlt) / 2,
+    maxAltitude: maxAlt,
+    grapeColor: GRAPE_CONST[grape].grapeColor
+  });
   
   // Calculate balance using the new balance calculator
   const balanceResult = calculateWineBalance(characteristics);

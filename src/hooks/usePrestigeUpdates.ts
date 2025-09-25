@@ -55,7 +55,6 @@ export function usePrestigeUpdates() {
           // Initialize on first run
           lastCompanyMoneyRef.current = currentMoney;
         } else if (currentMoney !== lastCompanyMoneyRef.current) {
-          console.log(`[Company Prestige] Money change detected: €${lastCompanyMoneyRef.current?.toLocaleString()} → €${currentMoney.toLocaleString()}`);
           
           // Update company value prestige with logarithmic scaling
           const companyValuePrestige = Math.log(currentMoney / 1000000 + 1) * 2;

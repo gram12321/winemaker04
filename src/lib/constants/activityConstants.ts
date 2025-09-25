@@ -23,7 +23,7 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.UPGRADING]: 100000, // €/week
   [WorkCategory.MAINTENANCE]: 500000, // €/week
   [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
-  [WorkCategory.ADMINISTRATION]: 0.10 // default administration rate
+  [WorkCategory.ADMINISTRATION]: 500 // tasks/week; with BASE_WORK_UNITS 50 => 0.1 work/tx
 };
 
 // Define initial work for each category
@@ -38,7 +38,7 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.UPGRADING]: 150,
   [WorkCategory.MAINTENANCE]: 10,
   [WorkCategory.STAFF_SEARCH]: 25,
-  [WorkCategory.ADMINISTRATION]: 15
+  [WorkCategory.ADMINISTRATION]: 25
 };
 
 // ===== WORK CATEGORY INFO =====

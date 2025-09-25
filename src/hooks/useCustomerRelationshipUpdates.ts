@@ -43,7 +43,6 @@ export function useCustomerRelationshipUpdates() {
         if (prestigeDifference > 1 || prestigeChangePercent > 0.05) {
           isUpdatingRef.current = true;
           
-          console.log(`[Prestige] Significant change detected: ${lastPrestige.toFixed(2)} → ${currentPrestige.toFixed(2)}`);
           
           // Update customer relationships
           await updateCustomerRelationshipsForPrestige(currentPrestige);

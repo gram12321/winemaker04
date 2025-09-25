@@ -1,10 +1,13 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
-import { WineBatch } from '@/lib/types/types';
+import { getAllWineBatches, getAllVineyards, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
+import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay } from '../ui';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatPercent } from '@/lib/utils/utils';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
+import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '@/lib/constants/vineyardConstants';
+import { deriveHarvestCharacteristics } from '@/lib/services/wine/harvestCharacteristics';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -33,7 +36,51 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
 };
 
 // Component for detailed wine characteristics display
-const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: Vineyard[] }> = ({ batch, vineyards }) => {
+  // Build optional tooltips by recomputing harvest deltas from vineyard data
+  const tooltips = useMemo(() => {
+    const vineyard = vineyards.find(v => v.id === batch.vineyardId);
+    if (!vineyard) return undefined;
+    const base = GRAPE_CONST[batch.grape]?.baseCharacteristics as WineCharacteristics | undefined;
+    if (!base) return undefined;
+
+    const country = vineyard.country;
+    const region = vineyard.region;
+    const altitude = vineyard.altitude;
+    const countryAlt = (REGION_ALTITUDE_RANGES as any)[country] || {};
+    const [minAlt, maxAlt] = (countryAlt[region] as [number, number]) || [0, 100];
+    const suitCountry = (REGION_GRAPE_SUITABILITY as any)[country] || {};
+    const suitability = (suitCountry[region]?.[batch.grape] ?? 0.5) as number;
+
+    const { debug } = deriveHarvestCharacteristics(base, {
+      ripeness: vineyard.ripeness || 0.5,
+      qualityFactor: batch.quality,
+      suitability,
+      altitude,
+      medianAltitude: (minAlt + maxAlt) / 2,
+      maxAltitude: maxAlt,
+      grapeColor: GRAPE_CONST[batch.grape].grapeColor
+    });
+
+    const formatDelta = (n?: number) => (typeof n === 'number' && Math.abs(n) > 0.0001 ? `${(n * 100).toFixed(1)}%` : undefined);
+
+    const keys = Object.keys(base) as (keyof WineCharacteristics)[];
+    const map: Partial<Record<keyof WineCharacteristics, string>> = {};
+    for (const k of keys) {
+      const parts: string[] = [];
+      const r = formatDelta((debug.ripenessDelta as any)[k]);
+      if (r) parts.push(`Ripeness ${Number((debug.ripenessDelta as any)[k]) >= 0 ? '+' : ''}${r}`);
+      const q = formatDelta((debug.qualityDelta as any)[k]);
+      if (q) parts.push(`Quality ${Number((debug.qualityDelta as any)[k]) >= 0 ? '+' : ''}${q}`);
+      const a = formatDelta((debug.altitudeDelta as any)[k]);
+      if (a) parts.push(`Altitude ${Number((debug.altitudeDelta as any)[k]) >= 0 ? '+' : ''}${a}`);
+      const s = formatDelta((debug.suitabilityDelta as any)[k]);
+      if (s) parts.push(`Suitability ${Number((debug.suitabilityDelta as any)[k]) >= 0 ? '+' : ''}${s}`);
+      if (parts.length) map[k] = parts.join(' • ');
+    }
+    return map;
+  }, [batch, vineyards]);
+
   return (
     <div className="mt-3">
       <WineCharacteristicsDisplay 
@@ -41,6 +88,8 @@ const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch }> = ({ batch
         collapsible={true}
         defaultExpanded={false}
         title="Wine Characteristics"
+        tooltips={tooltips}
+        baseValues={GRAPE_CONST[batch.grape]?.baseCharacteristics}
       />
     </div>
   );
@@ -49,6 +98,7 @@ const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch }> = ({ batch
 const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
+  const vineyards = useGameStateWithData(getAllVineyards, [] as Vineyard[]);
 
   const handleAction = useCallback((batchId: string, action: 'crush' | 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
     switch (action) {
@@ -172,7 +222,7 @@ const Winery: React.FC = () => {
                       <WineQualityDisplay batch={batch} />
                       
                       {/* Wine Characteristics Display */}
-                      <WineBatchCharacteristicsDisplay batch={batch} />
+                      <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                       
                       {/* Fermentation Progress Bar */}
                       {batch.process === 'fermentation' && (

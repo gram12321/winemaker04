@@ -10,6 +10,10 @@ interface CharacteristicBarProps {
   adjustedRanges?: [number, number]; // For future Phase 2 dynamic ranges
   showValue?: boolean;
   className?: string;
+  // Optional tooltip text to explain deltas (e.g., from harvest debug)
+  deltaTooltip?: string;
+  // Optional reference base value (e.g., grape base characteristic)
+  baseValue?: number;
 }
 
 export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({ 
@@ -18,10 +22,13 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   value,
   adjustedRanges,
   showValue = true,
-  className = ""
+  className = "",
+  deltaTooltip,
+  baseValue
 }) => {
   // Clamp value to 0-1 range
   const displayValue = Math.max(0, Math.min(1, value));
+  const baseDisplay = typeof baseValue === 'number' ? Math.max(0, Math.min(1, baseValue)) : undefined;
   
   // Get base balanced ranges
   const [minBalance, maxBalance] = BASE_BALANCED_RANGES[characteristicName];
@@ -52,7 +59,10 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
       
       {/* Bar Container */}
       <div className="w-3/4 flex items-center">
-        <div className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div 
+          className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden"
+          title={deltaTooltip ? deltaTooltip : `Current Value: ${formatPercentage(displayValue)}`}
+        >
           {/* Background bar */}
           <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
           
@@ -84,8 +94,16 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
           <div 
             className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
             style={{ left: `${displayValue * 100}%` }}
-            title={`Current Value: ${formatPercentage(displayValue)}`}
           ></div>
+
+          {/* Base grape value marker (if provided) */}
+          {typeof baseDisplay === 'number' && (
+            <div 
+              className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
+              style={{ left: `${baseDisplay * 100}%` }}
+              title={`Base: ${formatPercentage(baseDisplay)}`}
+            ></div>
+          )}
         </div>
         
         {/* Value display */}
@@ -108,6 +126,10 @@ interface WineCharacteristicsDisplayProps {
   collapsible?: boolean;
   defaultExpanded?: boolean;
   title?: string;
+  // Optional map of tooltip texts for each characteristic
+  tooltips?: Partial<Record<keyof WineCharacteristics, string>>;
+  // Optional map of base reference values to show as markers
+  baseValues?: Partial<Record<keyof WineCharacteristics, number>>;
 }
 
 export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProps> = ({
@@ -117,7 +139,9 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
   className = "",
   collapsible = false,
   defaultExpanded = true,
-  title = "Wine Characteristics"
+  title = "Wine Characteristics",
+  tooltips,
+  baseValues
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
 
@@ -133,6 +157,8 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
             value={value}
             adjustedRanges={adjustedRanges?.[key as keyof WineCharacteristics]}
             showValue={showValues}
+            deltaTooltip={tooltips?.[key as keyof WineCharacteristics]}
+            baseValue={baseValues?.[key as keyof WineCharacteristics]}
           />
         ))}
       <CharacteristicBarLegend />
@@ -179,6 +205,10 @@ export const CharacteristicBarLegend: React.FC = () => {
       <div className="flex items-center gap-1">
         <div className="w-1 h-2 bg-black rounded"></div>
         <span>Current Value</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <div className="w-1 h-2 bg-blue-700 rounded"></div>
+        <span>Base (Grape)</span>
       </div>
     </div>
   );
