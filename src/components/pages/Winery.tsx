@@ -37,6 +37,8 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
 
 // Component for detailed wine characteristics display
 const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: Vineyard[] }> = ({ batch, vineyards }) => {
+  const balanceResult = useWineBatchBalance(batch);
+  
   // Build optional tooltips by recomputing harvest deltas from vineyard data
   const tooltips = useMemo(() => {
     const vineyard = vineyards.find(v => v.id === batch.vineyardId);
@@ -85,6 +87,7 @@ const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: V
     <div className="mt-3">
       <WineCharacteristicsDisplay 
         characteristics={batch.characteristics} 
+        adjustedRanges={balanceResult?.dynamicRanges}
         collapsible={true}
         defaultExpanded={false}
         title="Wine Characteristics"
@@ -325,7 +328,7 @@ const Winery: React.FC = () => {
                       {/* Balance and Characteristics for completed wines */}
                       <WineBatchBalanceDisplay batch={batch} />
                       <WineQualityDisplay batch={batch} />
-                      <WineBatchCharacteristicsDisplay batch={batch} />
+                      <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                     </div>
                     <div className="text-2xl">🍷</div>
                   </div>

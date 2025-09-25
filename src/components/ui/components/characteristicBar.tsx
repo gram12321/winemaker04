@@ -200,7 +200,7 @@ export const CharacteristicBarLegend: React.FC = () => {
       </div>
       <div className="flex items-center gap-1">
         <div className="w-3 h-2 bg-green-500/60 rounded"></div>
-        <span>Optimal Zone</span>
+        <span>Adjusted Range</span>
       </div>
       <div className="flex items-center gap-1">
         <div className="w-1 h-2 bg-black rounded"></div>
