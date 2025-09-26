@@ -94,10 +94,6 @@ export function getArchetypeMatches(_characteristics: WineCharacteristics): any[
   return []; // Phase 1: No archetype matching
 }
 
-export function getRegionalModifiers(_region: string): Record<string, number> {
-  return {}; // Phase 1: No regional modifiers
-}
-
 /**
  * Calculate synergy reductions for specific characteristics
  * @param characteristics - Wine characteristics object
@@ -128,9 +124,6 @@ export function getSynergyReductions(characteristics: WineCharacteristics): Reco
   return reductions;
 }
 
-export function getSynergyBonuses(_characteristics: WineCharacteristics): number {
-  return 0; // Phase 1: No synergy bonuses
-}
 
 // ===== Dynamic range adjustment helper (config-driven) =====
 // Applies only range shifts. Cross-trait penalty scaling is NOT applied yet.
