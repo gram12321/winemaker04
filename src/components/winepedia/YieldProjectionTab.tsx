@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { SimpleCard } from '../ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, ReferenceLine, Area, ComposedChart } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
 import { calculateVineyardYield, calculateVineYieldProgression } from '@/lib/services/wine/vineyardManager';
@@ -8,14 +8,8 @@ import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 
-const COUNTRIES = ['France', 'Germany', 'Italy', 'Spain', 'United States'] as const;
-const REGIONS_BY_COUNTRY: Record<string, string[]> = {
-  France: ['Bordeaux', 'Burgundy', 'Champagne'],
-  Germany: ['Mosel', 'Rheingau', 'Pfalz'],
-  Italy: ['Tuscany', 'Piedmont', 'Veneto'],
-  Spain: ['Rioja', 'Ribera del Duero', 'Priorat'],
-  'United States': ['Napa Valley', 'Sonoma', 'Willamette']
-};
+// Use existing constants from vineyardConstants
+import { COUNTRY_REGION_MAP } from '@/lib/constants/vineyardConstants';
 
 function createVineyard(overrides: Partial<Vineyard>): Vineyard {
   return {
@@ -44,6 +38,10 @@ function createVineyard(overrides: Partial<Vineyard>): Vineyard {
 export function YieldProjectionTab() {
   const [country, setCountry] = useState<string>('France');
   const [region, setRegion] = useState<string>('Bordeaux');
+  
+  // Get available countries and regions from constants
+  const availableCountries = Object.keys(COUNTRY_REGION_MAP);
+  const availableRegions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP] || [];
   const [grape, setGrape] = useState<GrapeVariety>('Chardonnay');
   const [hectares, setHectares] = useState<number>(1);
   const [density, setDensity] = useState<number>(DEFAULT_VINE_DENSITY);
@@ -170,27 +168,23 @@ export function YieldProjectionTab() {
   }, []); // Remove vineYield dependency since we always start from 0.02
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Interactive Yield Projection</CardTitle>
-        <CardDescription>
-          Configure parameters to simulate expected harvest yield (kg). Uses the same yield function as the game.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SimpleCard
+      title="Interactive Yield Projection"
+      description="Configure parameters to simulate expected harvest yield (kg). Uses the same yield function as the game."
+    >
         <div className="space-y-6">
           {/* Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <select className="w-full p-2 border rounded" value={country} onChange={e => { setCountry(e.target.value); setRegion(REGIONS_BY_COUNTRY[e.target.value][0]); }}>
-                {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <select className="w-full p-2 border rounded" value={country} onChange={e => { setCountry(e.target.value); setRegion(COUNTRY_REGION_MAP[e.target.value as keyof typeof COUNTRY_REGION_MAP][0]); }}>
+                {availableCountries.map((c: string) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
               <select className="w-full p-2 border rounded" value={region} onChange={e => setRegion(e.target.value)}>
-                {(REGIONS_BY_COUNTRY[country] || []).map(r => <option key={r} value={r}>{r}</option>)}
+                {(availableRegions || []).map((r: string) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
@@ -402,8 +396,7 @@ export function YieldProjectionTab() {
             }
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </SimpleCard>
   );
 }
 

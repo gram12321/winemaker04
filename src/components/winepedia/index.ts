@@ -1,4 +1,3 @@
-// Winepedia tab components - barrel exports
 export { GrapeVarietiesTab } from './GrapeVarietiesTab';
 export { WineQualityTab } from './WineQualityTab';
 export { CustomerTypesTab } from './CustomerTypesTab';

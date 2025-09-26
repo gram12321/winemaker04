@@ -1,5 +1,5 @@
 export { Button } from './shadCN/button';
-export { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './shadCN/card';
+export { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, SimpleCard, GridCard } from './shadCN/card';
 export { Badge } from './shadCN/badge';
 export { Separator } from './shadCN/separator';
 export { Input } from './shadCN/input';
@@ -23,3 +23,4 @@ export { default as WorkCalculationTable } from './activities/workCalculationTab
 export { default as ActivityOptionsModal, type ActivityOptionField, type ActivityWorkEstimate } from './activities/activityOptionsModal';
 export { default as PlantingOptionsModal } from './modals/PlantingOptionsModal';
 export { default as HarvestOptionsModal } from './modals/HarvestOptionsModal';
+export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';

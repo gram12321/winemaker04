@@ -1,9 +1,8 @@
-// Wine production log component - shows history of bottled wines by vineyard
 import React, { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { loadWineLog, getAllVineyards } from '@/lib/services';
 import { WineLogEntry } from '@/lib/types/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
+import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber } from '@/lib/utils/utils';
 
@@ -19,7 +18,6 @@ export function WineLog({ currentCompany }: WineLogProps) {
   const wineLog = useGameStateWithData(loadWineLog, []);
   const vineyards = useGameStateWithData(getAllVineyards, []);
 
-  // Memoize filtered wine log to prevent unnecessary recalculations
   const filteredWineLog = React.useMemo(() => 
     selectedVineyard === 'all' 
       ? wineLog 
@@ -27,20 +25,17 @@ export function WineLog({ currentCompany }: WineLogProps) {
     [wineLog, selectedVineyard]
   );
 
-  // Paginate filtered results
   const paginatedWineLog = React.useMemo(() => {
     const start = (page - 1) * pageSize;
     return filteredWineLog.slice(start, start + pageSize);
   }, [filteredWineLog, page, pageSize]);
 
-  // Reset to first page when filter changes
   React.useEffect(() => {
     setPage(1);
   }, [selectedVineyard]);
 
   const totalPages = Math.max(1, Math.ceil(filteredWineLog.length / pageSize));
 
-  // Memoize vineyard groups and statistics to prevent recalculation on every render
   const vineyardGroups = React.useMemo(() => 
     wineLog.reduce((groups, entry) => {
       if (!groups[entry.vineyardId]) {
@@ -182,16 +177,10 @@ export function WineLog({ currentCompany }: WineLogProps) {
           </Card>
 
           {/* Wine History Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {selectedVineyard === 'all' ? 'All Wine Production' : `${vineyards.find(v => v.id === selectedVineyard)?.name} Production`}
-              </CardTitle>
-              <CardDescription>
-                {filteredWineLog.length} wine{filteredWineLog.length !== 1 ? 's' : ''} bottled
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SimpleCard
+            title={selectedVineyard === 'all' ? 'All Wine Production' : `${vineyards.find(v => v.id === selectedVineyard)?.name} Production`}
+            description={`${filteredWineLog.length} wine${filteredWineLog.length !== 1 ? 's' : ''} bottled`}
+          >
               {paginatedWineLog.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Wine className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -278,8 +267,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </SimpleCard>
         </TabsContent>
 
         <TabsContent value="vineyard-stats" className="space-y-4">

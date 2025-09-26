@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { SimpleCard } from '../ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
 import { 
@@ -14,50 +14,41 @@ import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 
 export function MathematicalModelsTab() {
-  // Memoize chart data generation to prevent continuous rerendering
   const chartData = useMemo(() => {
-    // Generate skewed data with more points at extremes (0-0.1 and 0.9-1.0)
     const generateSkewedData = () => {
       const data = [];
-      // Dense points at low end (0-0.1): 20 points
       for (let i = 0; i <= 20; i++) {
-        const x = i / 200; // 0 to 0.1
+        const x = i / 200;
         const y = calculateSkewedMultiplier(x);
         data.push({ input: x, output: y });
       }
-      // Medium density in middle (0.1-0.9): 30 points
       for (let i = 1; i <= 30; i++) {
-        const x = 0.1 + (i / 30) * 0.8; // 0.1 to 0.9
+        const x = 0.1 + (i / 30) * 0.8;
         const y = calculateSkewedMultiplier(x);
         data.push({ input: x, output: y });
       }
-      // Dense points at high end (0.9-1.0): 20 points
       for (let i = 1; i <= 20; i++) {
-        const x = 0.9 + (i / 20) * 0.1; // 0.9 to 1.0
+        const x = 0.9 + (i / 20) * 0.1;
         const y = calculateSkewedMultiplier(x);
         data.push({ input: x, output: y });
       }
       return data;
     };
 
-    // Generate inverted skewed data (same distribution as skewed)
     const generateInvertedSkewedData = () => {
       const data = [];
-      // Dense points at low end (0-0.1): 20 points
       for (let i = 0; i <= 20; i++) {
-        const x = i / 200; // 0 to 0.1
+        const x = i / 200;
         const y = calculateInvertedSkewedMultiplier(x);
         data.push({ input: x, output: y });
       }
-      // Medium density in middle (0.1-0.9): 30 points
       for (let i = 1; i <= 30; i++) {
-        const x = 0.1 + (i / 30) * 0.8; // 0.1 to 0.9
+        const x = 0.1 + (i / 30) * 0.8;
         const y = calculateInvertedSkewedMultiplier(x);
         data.push({ input: x, output: y });
       }
-      // Dense points at high end (0.9-1.0): 20 points
       for (let i = 1; i <= 20; i++) {
-        const x = 0.9 + (i / 20) * 0.1; // 0.9 to 1.0
+        const x = 0.9 + (i / 20) * 0.1;
         const y = calculateInvertedSkewedMultiplier(x);
         data.push({ input: x, output: y });
       }
@@ -153,7 +144,6 @@ export function MathematicalModelsTab() {
       return data;
     };
 
-
     // Yield projection by ripeness (0..1) for a fixed age/density
     const generateYieldByRipeness = () => {
       const data = [] as { ripeness: number; yieldKg: number }[];
@@ -188,14 +178,10 @@ export function MathematicalModelsTab() {
   }, []); // Empty dependency array - only generate once
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Mathematical Models</CardTitle>
-        <CardDescription>
-          Advanced mathematical functions used throughout the game for realistic scaling and probability calculations
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SimpleCard
+      title="Mathematical Models"
+      description="Advanced mathematical functions used throughout the game for realistic scaling and probability calculations"
+    >
         <div className="space-y-8">
           
           {/* Skewed Multiplier */}
@@ -562,7 +548,6 @@ export function MathematicalModelsTab() {
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </SimpleCard>
   );
 }

@@ -9,7 +9,6 @@ interface WinepediaProps extends PageProps {
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
 
-  // Update active tab when view prop changes
   useEffect(() => {
     if (view === 'customers') {
       setActiveTab('customers');

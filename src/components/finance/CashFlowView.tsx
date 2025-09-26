@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/shadCN/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { SimpleCard } from "@/components/ui";
 import { formatCurrency, formatGameDateFromObject, getColorClass } from '@/lib/utils/utils';
 import { loadTransactions } from '@/lib/services/user/financeService';
 import { Transaction } from '@/lib/types/types';
@@ -19,12 +19,10 @@ export function CashFlowView() {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-gray-800">Cash Flow Statement</CardTitle>
-        <CardDescription>Detailed transaction history and cash flow tracking</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SimpleCard
+      title="Cash Flow Statement"
+      description="Detailed transaction history and cash flow tracking"
+    >
         {transactions.length > 0 ? (
           <div className="border border-gray-300 rounded-md overflow-hidden">
             <Table>
@@ -64,7 +62,6 @@ export function CashFlowView() {
             <p className="text-sm">Your financial transactions will appear here as you play.</p>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SimpleCard>
   );
 }

@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
+import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
 import { 
   Settings, 
-  Database, 
   Users, 
-  Building2, 
-  Trophy, 
   AlertTriangle,
-  DollarSign,
   Trash2,
 } from 'lucide-react';
 import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, getCurrentCompany, clearPrestigeCache } from '@/lib/services';
@@ -270,17 +266,10 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
               {/* Game Data Cleanup */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      Game Data
-                    </CardTitle>
-                    <CardDescription>
-                      Clear game-related data and progression
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <SimpleCard
+                  title="Game Data"
+                  description="Clear game-related data and progression"
+                >
                     <Button
                       variant="destructive"
                       onClick={handleClearAllCompanies}
@@ -310,20 +299,12 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                       <Trash2 className="h-4 w-4 mr-2" />
                       Clear All Companies & Users
                     </Button>
-                  </CardContent>
-                </Card>
+                </SimpleCard>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5" />
-                      Highscores Management
-                    </CardTitle>
-                    <CardDescription>
-                      Manage global leaderboards and highscore data
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <SimpleCard
+                  title="Highscores Management"
+                  description="Manage global leaderboards and highscore data"
+                >
                     <Button
                       variant="destructive"
                       onClick={handleClearAllHighscores}
@@ -351,23 +332,15 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                     >
                       Clear Company Value Per Week Highscores
                     </Button>
-                  </CardContent>
-                </Card>
+                </SimpleCard>
               </div>
 
               {/* System Data Cleanup */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Database className="h-5 w-5" />
-                      System Data
-                    </CardTitle>
-                    <CardDescription>
-                      Clear system and progression data
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <SimpleCard
+                  title="System Data"
+                  description="Clear system and progression data"
+                >
                     <Button
                       variant="destructive"
                       onClick={handleRecreateCustomers}
@@ -385,8 +358,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                     >
                       🏆 Clear All Achievements
                     </Button>
-                  </CardContent>
-                </Card>
+                </SimpleCard>
               </div>
 
               {/* Full Database Reset */}
@@ -423,17 +395,10 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
           {/* Cheat Tools */}
           <TabsContent value="cheats">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Financial Cheats
-                  </CardTitle>
-                  <CardDescription>
-                    Add money and resources to the active company
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <SimpleCard
+                title="Financial Cheats"
+                description="Add money and resources to the active company"
+              >
                   <div className="space-y-2">
                     <Label htmlFor="goldAmount">Gold Amount</Label>
                     <Input
@@ -469,8 +434,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                       Add Prestige to Active Company
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+              </SimpleCard>
 
             </div>
           </TabsContent>
@@ -479,19 +443,14 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
           {/* Development Tools */}
           <TabsContent value="tools">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notification Testing</CardTitle>
-                  <CardDescription>
-                    Test the notification system
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={handleTestNotifications} className="w-full">
-                    Test All Notification Types
-                  </Button>
-                </CardContent>
-              </Card>
+              <SimpleCard
+                title="Notification Testing"
+                description="Test the notification system"
+              >
+                <Button onClick={handleTestNotifications} className="w-full">
+                  Test All Notification Types
+                </Button>
+              </SimpleCard>
 
             </div>
           </TabsContent>

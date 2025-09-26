@@ -1,17 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { SimpleCard } from '../ui';
 import { getWineQualityInfo, getColorClass, getColorCategory, formatNumber } from '@/lib/utils/utils';
 
 export function WineQualityTab() {
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Wine Quality Categories</CardTitle>
-          <CardDescription>
-            Understanding wine quality ratings and what they mean for your winery
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <SimpleCard
+        title="Wine Quality Categories"
+        description="Understanding wine quality ratings and what they mean for your winery"
+      >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               { min: 0.9, max: 1.0 },
@@ -46,17 +42,12 @@ export function WineQualityTab() {
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+      </SimpleCard>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Quality Factors</CardTitle>
-          <CardDescription>
-            What influences wine quality in your winery
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <SimpleCard
+        title="Quality Factors"
+        description="What influences wine quality in your winery"
+      >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold text-gray-800 mb-3">Grape Quality</h4>
@@ -77,8 +68,7 @@ export function WineQualityTab() {
               </ul>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </SimpleCard>
     </div>
   );
 }

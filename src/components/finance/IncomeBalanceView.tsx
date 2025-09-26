@@ -1,6 +1,6 @@
 import { formatCurrency, getColorClass } from '@/lib/utils/utils';
 import { calculateFinancialData } from '@/lib/services/user/financeService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS } from '@/lib/constants';
 
@@ -33,12 +33,10 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-800 text-center">Income Statement</CardTitle>
-          <CardDescription className="text-center">Your revenue and expense breakdown</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SimpleCard
+        title="Income Statement"
+        description="Your revenue and expense breakdown"
+      >
           <FinancialSection title={FINANCE_PERIOD_LABELS[period].income}>
             {financialData.incomeDetails.length > 0 ? (
               financialData.incomeDetails.map((item, index) => (
@@ -65,15 +63,12 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
              <hr className="my-1 border-gray-300" />
              <DataRow label="Net Income" value={financialData.netIncome} valueClass={getColorClass(financialData.netIncome >= 0 ? 0.8 : 0.2)} />
           </FinancialSection>
-        </CardContent>
-      </Card>
+      </SimpleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-800 text-center">Balance Sheet</CardTitle>
-          <CardDescription className="text-center">Your assets and financial position</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SimpleCard
+        title="Balance Sheet"
+        description="Your assets and financial position"
+      >
           <FinancialSection title="TOTAL ASSETS">
             <DataRow label="Cash" value={financialData.cashMoney} />
             <DataRow label="Fixed Assets" value={financialData.fixedAssets} />
@@ -99,8 +94,7 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
              <hr className="my-1 border-gray-300" />
              <DataRow label="Total Current Assets" value={financialData.currentAssets} />
           </FinancialSection>
-        </CardContent>
-      </Card>
+      </SimpleCard>
     </div>
   );
 }

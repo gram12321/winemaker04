@@ -5,3 +5,4 @@ export { useLoadingState } from './useLoadingState';
 export { useTableSortWithAccessors } from './useTableSort';
 export type { SortableColumn } from './useTableSort';
 export * from './useWineBalance';
+export { useCustomerData } from './useCustomerData';

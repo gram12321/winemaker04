@@ -5,33 +5,15 @@ import { WineCharacteristicsDisplay } from '@/components/ui/components/character
 import { WineCharacteristics } from '@/lib/types/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
 import { calculateWineBalance } from '@/lib/services/wine/balanceCalculator';
+import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
+import { CharacteristicSliderGrid } from '../ui';
 
 export const DynamicRangeTab: React.FC = () => {
   const baseRanges = BASE_BALANCED_RANGES;
   
-  // Interactive sliders state
-  const [sliderValues, setSliderValues] = useState<WineCharacteristics>({
-    acidity: (baseRanges.acidity[0] + baseRanges.acidity[1]) / 2,
-    aroma: (baseRanges.aroma[0] + baseRanges.aroma[1]) / 2,
-    body: (baseRanges.body[0] + baseRanges.body[1]) / 2,
-    spice: (baseRanges.spice[0] + baseRanges.spice[1]) / 2,
-    sweetness: (baseRanges.sweetness[0] + baseRanges.sweetness[1]) / 2,
-    tannins: (baseRanges.tannins[0] + baseRanges.tannins[1]) / 2
-  });
-
-
-  // Calculate adjusted ranges based on current slider values
+  const [sliderValues, setSliderValues] = useState<WineCharacteristics>(calculateMidpointCharacteristics());
   const adjustedRanges = useMemo(() => {
-    const adjusted: Record<keyof WineCharacteristics, [number, number]> = {
-      acidity: [...baseRanges.acidity] as [number, number],
-      aroma: [...baseRanges.aroma] as [number, number],
-      body: [...baseRanges.body] as [number, number],
-      spice: [...baseRanges.spice] as [number, number],
-      sweetness: [...baseRanges.sweetness] as [number, number],
-      tannins: [...baseRanges.tannins] as [number, number]
-    };
-
-    const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+    const adjusted = createAdjustedRangesRecord();
 
     for (const [k, v] of Object.entries(sliderValues)) {
       const source = k as keyof WineCharacteristics;
@@ -77,7 +59,6 @@ export const DynamicRangeTab: React.FC = () => {
     return adjusted;
   }, [sliderValues]);
 
-  // Calculate balance score
   const balanceResult = calculateWineBalance(sliderValues);
 
   return (
@@ -86,9 +67,7 @@ export const DynamicRangeTab: React.FC = () => {
       <section>
         <h2 className="text-xl font-semibold">Dynamic Range</h2>
         <p className="text-sm text-gray-600 mt-1">
-          The accepted range for each characteristic starts from a base interval and can shift dynamically
-          based on other characteristics. Higher or lower values in one trait may nudge the target trait’s
-          accepted window slightly left or right.
+          Characteristic ranges shift based on other traits' values.
         </p>
       </section>
 
@@ -96,63 +75,21 @@ export const DynamicRangeTab: React.FC = () => {
         <h3 className="text-lg font-medium">Interactive Range Adjustments</h3>
         <div className="flex justify-between items-center mb-4">
           <p className="text-sm text-gray-600">
-            Adjust the sliders below to see how one characteristic affects the accepted ranges of others.
+            Adjust sliders to see how characteristics affect each other's ranges.
           </p>
           <button
-            onClick={() => setSliderValues({
-              acidity: (baseRanges.acidity[0] + baseRanges.acidity[1]) / 2,
-              aroma: (baseRanges.aroma[0] + baseRanges.aroma[1]) / 2,
-              body: (baseRanges.body[0] + baseRanges.body[1]) / 2,
-              spice: (baseRanges.spice[0] + baseRanges.spice[1]) / 2,
-              sweetness: (baseRanges.sweetness[0] + baseRanges.sweetness[1]) / 2,
-              tannins: (baseRanges.tannins[0] + baseRanges.tannins[1]) / 2
-            })}
-            className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+            onClick={() => setSliderValues(calculateMidpointCharacteristics())}
+            className={RESET_BUTTON_CLASSES}
           >
             Reset to Midpoints
           </button>
         </div>
         
-        <div className="mt-3 space-y-2">
-          {Object.entries(sliderValues).map(([key, value]) => (
-            <div key={key} className="flex items-center gap-3 py-1">
-              <div className="w-24 flex items-center gap-2 text-xs">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <img 
-                      src={`/assets/icons/characteristics/${key}.png`} 
-                      alt={`${key} icon`} 
-                      className="w-4 h-4 opacity-80 cursor-help"
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{key}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <span className="font-medium capitalize">{key}</span>
-              </div>
-              <div className="flex-1">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={value}
-                  onChange={(e) => setSliderValues(prev => ({
-                    ...prev,
-                    [key]: parseFloat(e.target.value)
-                  }))}
-                  className="w-full h-1.5 bg-gray-200 rounded appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
-                  <span>0%</span>
-                  <span className="font-medium">{Math.round(value * 100)}%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <CharacteristicSliderGrid
+          characteristics={sliderValues}
+          onChange={(key, value) => setSliderValues(prev => ({ ...prev, [key]: value }))}
+          className="mt-3"
+        />
       </section>
 
       <section>
@@ -177,8 +114,7 @@ export const DynamicRangeTab: React.FC = () => {
       <section>
         <h3 className="text-lg font-medium">Rule Summary (Visual)</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Arrows indicate how moving a source trait changes the target’s accepted range. Strength is a small
-          factor applied proportionally to how far the source is from its midpoint.
+          Shows how traits affect each other's ranges.
         </p>
         <div className="mt-2 divide-y rounded border">
           {Object.entries(DYNAMIC_ADJUSTMENTS).map(([source, dirs]) => (
@@ -230,9 +166,7 @@ export const DynamicRangeTab: React.FC = () => {
       <section>
         <h3 className="text-lg font-medium">How this affects balance</h3>
         <p className="text-sm text-gray-600 mt-1">
-          The balance calculation measures distance from the (possibly shifted) midpoint of the target’s
-          accepted range. Shifts are subtle and ensure traits influence each other without dominating the
-          score.
+          Balance calculation uses shifted ranges for more realistic scoring.
         </p>
       </section>
       </div>

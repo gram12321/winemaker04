@@ -1,52 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useGameStateWithData, useGameUpdates } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
-import { getAllCustomers, getCountryCode } from '@/lib/services';
+import React, { useState, useEffect } from 'react';
+import { useCustomerData } from '@/hooks';
+import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
+import { getCountryCode } from '@/lib/services';
 import { Customer } from '@/lib/types/types';
-import { loadFormattedRelationshipBreakdown } from '@/lib/utils';
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { formatNumber, formatPercent, getColorClass } from '@/lib/utils/utils';
-import { calculateRelationshipBreakdown } from '@/lib/database/customers/relationshipBreakdownService';
 
 export function CustomersTab() {
   const [countryFilter, setCountryFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{key: keyof Customer; direction: 'asc' | 'desc'} | null>(null);
-  const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
-  const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
-  // Simple pagination
   const [page, setPage] = useState<number>(1);
   const pageSize = 25;
 
-  // Helper function to create company-scoped customer key
-  const getCustomerKey = (customerId: string): string => {
-    try {
-      const companyId = getCurrentCompanyId();
-      return `${companyId}:${customerId}`;
-    } catch (error) {
-      // Fallback to just customerId if no company context
-      return customerId;
-    }
-  };
-
-  // Use consolidated hook for reactive customer loading
-  const loadCustomersData = useCallback(async () => {
-    return await getAllCustomers();
-  }, []);
-
-  const customers = useGameStateWithData(loadCustomersData, []);
-
-  // Remove eager precompute that caused N+1 queries; compute on hover or per-page when needed
-  // Refresh relationship breakdown caches on game updates (e.g., after sales)
-  const { subscribe } = useGameUpdates();
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      setRelationshipBreakdowns({});
-      setComputedRelationships({});
-    });
-    return () => { unsubscribe(); };
-  }, [subscribe]);
-
-  // Filter and sort customers (computed value instead of useEffect)
+  const { customers, relationshipBreakdowns, computedRelationships, getCustomerKey, loadRelationshipBreakdown } = useCustomerData();
   const filteredCustomers = React.useMemo(() => {
     let filtered = customers;
     
@@ -79,16 +44,12 @@ export function CustomersTab() {
     return filtered;
   }, [customers, countryFilter, sortConfig]);
 
-  // Reset to first page when filter or list changes
   useEffect(() => { setPage(1); }, [countryFilter, sortConfig, customers.length]);
-
-  // Current page slice (lazy display)
   const pagedCustomers = React.useMemo(() => {
     const start = (page - 1) * pageSize;
     return filteredCustomers.slice(start, start + pageSize);
   }, [filteredCustomers, page]);
 
-  // Handle sorting
   const handleSort = (key: keyof Customer) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -97,9 +58,7 @@ export function CustomersTab() {
     setSortConfig({ key, direction });
   };
 
-  // Helper function to format relationship display
   const formatRelationship = (value: number) => {
-    // Normalize relationship to 0-1 range for color coding
     const normalizedValue = Math.min(value / 100, 1);
     const colorClass = getColorClass(normalizedValue);
     
@@ -110,33 +69,10 @@ export function CustomersTab() {
     );
   };
 
-  // Load relationship breakdown for a customer on-demand (memoized)
-  const loadRelationshipBreakdown = useCallback(async (customer: Customer) => {
-    try {
-      const breakdown = await calculateRelationshipBreakdown(customer);
-      const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
-      const customerKey = getCustomerKey(customer.id);
-      
-      setRelationshipBreakdowns(prev => ({
-        ...prev,
-        [customerKey]: formattedBreakdown
-      }));
-      
-      setComputedRelationships(prev => ({
-        ...prev,
-        [customerKey]: breakdown.totalRelationship
-      }));
-    } catch (error) {
-      console.error('Error loading relationship breakdown:', error);
-    }
-  }, []);
 
-  // Get unique countries from customers for filter dropdown
   const availableCountries = React.useMemo(() => (
     [...new Set(customers.map(customer => customer.country))]
   ), [customers]);
-
-  // Get sort indicator
   const getSortIndicator = (key: keyof Customer) => {
     if (!sortConfig || sortConfig.key !== key) return ' ↕️';
     return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
@@ -145,14 +81,10 @@ export function CustomersTab() {
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Wine Customers Directory</CardTitle>
-        <CardDescription>
-          Global wine customers and their market relationships. Showing {pagedCustomers.length} of {filteredCustomers.length} (Total: {customers.length})
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SimpleCard
+      title="Wine Customers Directory"
+      description={`Global wine customers and their market relationships. Showing ${pagedCustomers.length} of ${filteredCustomers.length} (Total: ${customers.length})`}
+    >
         {/* Filter controls */}
         <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex items-center gap-2">
@@ -305,7 +237,6 @@ export function CustomersTab() {
             {customers.length === 0 ? 'Loading customers...' : 'No customers match the current filter.'}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SimpleCard>
   );
 }

@@ -2,7 +2,7 @@
 // Based on the original names.js with all available names
 
 // ===== ITALIAN NAMES =====
-export const ITALIAN_MALE_NAMES = [
+const ITALIAN_MALE_NAMES = [
   "Alessandro", "Alessio", "Andrea", "Angelo", "Antonio", "Carlo", "Claudio", "Cristian",
   "Davide", "Diego", "Edoardo", "Elia", "Emanuele", "Enrico", "Fabrizio", "Federico",
   "Filippo", "Francesco", "Gabriele", "Giacomo", "Gianluca", "Giovanni", "Giuseppe",
@@ -11,7 +11,7 @@ export const ITALIAN_MALE_NAMES = [
   "Umberto", "Valentino", "Valerio", "Vincenzo", "Vittorio"
 ] as const;
 
-export const ITALIAN_FEMALE_NAMES = [
+const ITALIAN_FEMALE_NAMES = [
   "Alessandra", "Alice", "Anita", "Anna", "Arianna", "Beatrice", "Benedetta", "Bianca",
   "Camilla", "Carla", "Carolina", "Caterina", "Chiara", "Claudia", "Cristina", "Daniela",
   "Eleonora", "Elisa", "Elisabetta", "Emma", "Federica", "Fiorella", "Francesca", "Gaia",
@@ -22,7 +22,7 @@ export const ITALIAN_FEMALE_NAMES = [
 ] as const;
 
 // ===== FRENCH NAMES =====
-export const FRENCH_MALE_NAMES = [
+const FRENCH_MALE_NAMES = [
   "Thomas", "Hugo", "Arthur", "Lucas", "Jules", "Gabriel", "Théo", "Léon", "Valentin",
   "Pierre", "Quentin", "Clément", "Maxime", "Alexandre", "Antoine", "Enzo", "Nathan",
   "Paul", "Adrien", "Victor", "Benjamin", "Simon", "Raphaël", "Mathis", "Nicolas",
@@ -32,7 +32,7 @@ export const FRENCH_MALE_NAMES = [
   "François", "Pascal"
 ] as const;
 
-export const FRENCH_FEMALE_NAMES = [
+const FRENCH_FEMALE_NAMES = [
   "Camille", "Léa", "Manon", "Inès", "Chloé", "Emma", "Jade", "Louise", "Alice",
   "Clara", "Julie", "Margaux", "Anaïs", "Mathilde", "Pauline", "Marion", "Adèle",
   "Jeanne", "Maëlys", "Emilie", "Océane", "Zoé", "Louna", "Lucie", "Elsa",
@@ -43,7 +43,7 @@ export const FRENCH_FEMALE_NAMES = [
 ] as const;
 
 // ===== SPANISH NAMES =====
-export const SPANISH_MALE_NAMES = [
+const SPANISH_MALE_NAMES = [
   "José", "Antonio", "Juan", "Francisco", "Javier", "Carlos", "Daniel", "Miguel",
   "Jesús", "Alejandro", "Manuel", "Rafael", "Luis", "Fernando", "Sergio", "Pablo",
   "Andrés", "José Luis", "Alberto", "Ramón", "Jorge", "Enrique", "Vicente", "Pedro",
@@ -53,7 +53,7 @@ export const SPANISH_MALE_NAMES = [
   "Fidel", "Matías"
 ] as const;
 
-export const SPANISH_FEMALE_NAMES = [
+const SPANISH_FEMALE_NAMES = [
   "María", "Carmen", "Ana", "Laura", "Marta", "Sara", "Paula", "Isabel", "Cristina",
   "Patricia", "Sandra", "Raquel", "Pilar", "Rosa", "Elena", "Silvia", "Sonia",
   "Beatriz", "Alicia", "Carolina", "Noelia", "Nuria", "Alba", "Julia", "Teresa",
@@ -64,7 +64,7 @@ export const SPANISH_FEMALE_NAMES = [
 ] as const;
 
 // ===== US NAMES =====
-export const US_MALE_NAMES = [
+const US_MALE_NAMES = [
   "Liam", "Noah", "Oliver", "Elijah", "James", "William", "Benjamin", "Lucas",
   "Henry", "Alexander", "Mason", "Michael", "Ethan", "Jacob", "Logan", "Jackson",
   "Levi", "Wyatt", "Sebastian", "Caleb", "Dylan", "Matthew", "Luke", "Ryan",
@@ -74,7 +74,7 @@ export const US_MALE_NAMES = [
   "Tyler", "Weston"
 ] as const;
 
-export const US_FEMALE_NAMES = [
+const US_FEMALE_NAMES = [
   "Olivia", "Ava", "Isabella", "Mia", "Harper", "Evelyn", "Abigail", "Ella",
   "Scarlett", "Grace", "Penelope", "Riley", "Layla", "Nora", "Hazel", "Violet",
   "Aurora", "Savannah", "Audrey", "Addison", "Lucy", "Stella", "Natalie", "Samantha",
@@ -85,7 +85,7 @@ export const US_FEMALE_NAMES = [
 ] as const;
 
 // ===== GERMAN NAMES =====
-export const GERMAN_MALE_NAMES = [
+const GERMAN_MALE_NAMES = [
   "Maximilian", "Elias", "Paul", "Leon", "Jonas", "Tim", "Lukas", "Erik", "Julian",
   "Alexander", "Jan", "Fabian", "Florian", "Benjamin", "Niklas", "Moritz", "David",
   "Philipp", "Jakob", "Marco", "Timo", "Tobias", "Simon", "Marcel", "Andreas",
@@ -94,7 +94,7 @@ export const GERMAN_MALE_NAMES = [
   "Ulf", "Gerd", "Manfred", "Dirk", "Rainer", "Matthias", "Kurt", "Axel", "Werner"
 ] as const;
 
-export const GERMAN_FEMALE_NAMES = [
+const GERMAN_FEMALE_NAMES = [
   "Anna", "Lena", "Marie", "Laura", "Katharina", "Johanna", "Lisa", "Sophie", "Julia",
   "Alina", "Lea", "Clara", "Amelie", "Mia", "Emma", "Lara", "Leonie", "Sarah", "Hanna",
   "Luisa", "Emilia", "Mila", "Charlotte", "Paula", "Isabel", "Melina", "Theresa",
@@ -104,7 +104,7 @@ export const GERMAN_FEMALE_NAMES = [
 ] as const;
 
 // ===== LAST NAMES BY COUNTRY =====
-export const LAST_NAMES_BY_COUNTRY = {
+const LAST_NAMES_BY_COUNTRY = {
   "Italy": [
     "Rossi", "Bianchi", "Romano", "Colombo", "Ricci", "Conti", "Greco", "Gallo",
     "Ferrara", "Rizzo", "Caruso", "Moretti", "Lombardi", "Esposito", "Marchetti",
@@ -153,7 +153,7 @@ export const LAST_NAMES_BY_COUNTRY = {
 } as const;
 
 // ===== BUSINESS SUFFIXES =====
-export const BUSINESS_SUFFIXES = {
+const BUSINESS_SUFFIXES = {
   'Restaurant': {
     'France': ["Restaurant", "Bistro", "Brasserie"],
     'Germany': ["Restaurant", "Gasthaus", "Weinhaus"],

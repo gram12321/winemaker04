@@ -5,32 +5,22 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateWineBalance, getSynergyReductions } from '@/lib/services/wine/balanceCalculator';
 import { WineCharacteristicsDisplay } from '@/components/ui/components/characteristicBar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
+import { calculateMidpointCharacteristics, RESET_BUTTON_CLASSES } from '@/lib/utils';
+import { CharacteristicSliderGrid } from '../ui';
 
 export const CrossTraitPenaltyTab: React.FC = () => {
-  // Start each characteristic at its balanced range midpoint
-  const [characteristics, setCharacteristics] = useState<WineCharacteristics>({
-    acidity: (BASE_BALANCED_RANGES.acidity[0] + BASE_BALANCED_RANGES.acidity[1]) / 2, // 0.5
-    aroma: (BASE_BALANCED_RANGES.aroma[0] + BASE_BALANCED_RANGES.aroma[1]) / 2, // 0.5
-    body: (BASE_BALANCED_RANGES.body[0] + BASE_BALANCED_RANGES.body[1]) / 2, // 0.6
-    spice: (BASE_BALANCED_RANGES.spice[0] + BASE_BALANCED_RANGES.spice[1]) / 2, // 0.5
-    sweetness: (BASE_BALANCED_RANGES.sweetness[0] + BASE_BALANCED_RANGES.sweetness[1]) / 2, // 0.5
-    tannins: (BASE_BALANCED_RANGES.tannins[0] + BASE_BALANCED_RANGES.tannins[1]) / 2 // 0.5
-  });
-
-  // Track hover state for visual connections
+  const [characteristics, setCharacteristics] = useState<WineCharacteristics>(calculateMidpointCharacteristics());
   const [hoveredSource, setHoveredSource] = useState<string | null>(null);
 
   const updateCharacteristic = (key: keyof WineCharacteristics, value: number) => {
     setCharacteristics(prev => ({ ...prev, [key]: value }));
   };
 
-  // Calculate penalty scaling for each characteristic
   const calculatePenaltyScaling = () => {
     const scaling: Record<string, Record<string, number>> = {};
     
     for (const [source, dirs] of Object.entries(DYNAMIC_ADJUSTMENTS)) {
       const sourceValue = characteristics[source as keyof WineCharacteristics];
-      // Use the true base balanced range for this characteristic
       const [min, max] = BASE_BALANCED_RANGES[source as keyof WineCharacteristics];
       const midpoint = (min + max) / 2;
       const halfWidth = Math.max(0.0001, (max - min) / 2);
@@ -71,7 +61,6 @@ export const CrossTraitPenaltyTab: React.FC = () => {
   const balanceResult = calculateWineBalance(characteristics);
   const synergyReductions = getSynergyReductions(characteristics);
 
-  // Get active synergies for a given characteristic
   const getActiveSynergies = (char: string) => {
     const synergies: string[] = [];
     
@@ -85,7 +74,6 @@ export const CrossTraitPenaltyTab: React.FC = () => {
     return synergies;
   };
 
-  // Get active targets for a given source (for hover visualization)
   const getActiveTargets = (source: string) => {
     const targets: string[] = [];
     const sourceValue = characteristics[source as keyof WineCharacteristics];
@@ -118,11 +106,7 @@ export const CrossTraitPenaltyTab: React.FC = () => {
       <section>
         <h2 className="text-xl font-semibold">Cross-Trait Scaling (applied to TotalDistance)</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Some characteristics make the TotalDistance of other characteristics harsher when they deviate
-          from their midpoints. Additionally, good characteristic combinations provide synergy reductions
-          that make penalties less harsh. TotalDistance = DistanceInside + Penalty, where Penalty = 2 × DistanceOutside.
-          This reflects how traits interact in real wines (e.g., high acidity with high tannins is more acceptable
-          than either alone).
+          Characteristics affect each other's penalty severity. Good combinations provide synergy reductions.
         </p>
       </section>
 
@@ -130,53 +114,21 @@ export const CrossTraitPenaltyTab: React.FC = () => {
         <h3 className="text-lg font-medium">Interactive Penalty Scaling</h3>
         <div className="flex justify-between items-center mb-4">
           <p className="text-sm text-gray-600">
-            Adjust characteristics below to see how they affect penalty scaling on other traits.
+            Adjust characteristics to see penalty scaling effects.
           </p>
           <button
-            onClick={() => setCharacteristics({
-              acidity: (BASE_BALANCED_RANGES.acidity[0] + BASE_BALANCED_RANGES.acidity[1]) / 2,
-              aroma: (BASE_BALANCED_RANGES.aroma[0] + BASE_BALANCED_RANGES.aroma[1]) / 2,
-              body: (BASE_BALANCED_RANGES.body[0] + BASE_BALANCED_RANGES.body[1]) / 2,
-              spice: (BASE_BALANCED_RANGES.spice[0] + BASE_BALANCED_RANGES.spice[1]) / 2,
-              sweetness: (BASE_BALANCED_RANGES.sweetness[0] + BASE_BALANCED_RANGES.sweetness[1]) / 2,
-              tannins: (BASE_BALANCED_RANGES.tannins[0] + BASE_BALANCED_RANGES.tannins[1]) / 2
-            })}
-            className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+            onClick={() => setCharacteristics(calculateMidpointCharacteristics())}
+            className={RESET_BUTTON_CLASSES}
           >
             Reset to Midpoints
           </button>
         </div>
         
-        <div className="space-y-3">
-          {Object.entries(characteristics).map(([key, value]) => (
-            <div key={key} className="flex items-center gap-4">
-              <div className="w-20 flex items-center gap-2">
-                <img 
-                  src={`/assets/icons/characteristics/${key}.png`} 
-                  alt={`${key} icon`} 
-                  className="w-4 h-4 opacity-80" 
-                />
-                <span className="text-sm font-medium capitalize">{key}</span>
-              </div>
-              <div className="flex-1">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={value}
-                  onChange={(e) => updateCharacteristic(key as keyof WineCharacteristics, parseFloat(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>0%</span>
-                  <span className="font-medium">{Math.round(value * 100)}%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <CharacteristicSliderGrid
+          characteristics={characteristics}
+          onChange={(key, value) => updateCharacteristic(key as keyof WineCharacteristics, value)}
+          className="space-y-3"
+        />
       </section>
 
       <section>
