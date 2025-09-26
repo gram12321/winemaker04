@@ -1,6 +1,115 @@
 # Guideline for versionlog update for AI-Agents
-- Use your MCP GIT tools to see the latest X Git update (Do not ever use terminal commands for GIT operations). Each corresponce to a version and should have a seperate entry in the @versionlog.md . IE 0.0061, 0.007, 0.0071 and 0.0072
-5-15 lines for each version entry. Focus on new features/updates, not so much on refactor/reorg/bugfixes
+- Use your MCP GIT tools to see the latest X Git update (Do not ever use terminal commands for GIT operations). Each corresponds to a version and should have a separate entry in the @versionlog.md . IE 0.0061, 0.007, 0.0071 and 0.0072
+- 5-15 lines for each version entry. Focus on new features/updates, not so much on refactor/reorg/bugfixes
+- Include database schema changes, dead table removal, and significant architectural updates
+- Use consistent formatting: **Date:** YYYY-MM-DD, **Commit:** [commit hash]
+
+## Version 0.0091b - Documentation & Code Cleanup
+**Date:** 2025-09-26
+**Commit:** 64c02dba08576429c42d7ff13fa35a7195e1a286
+
+### Changes
+- **Documentation Updates:**
+  - `docs/winecharacteristicsBalancesystem.md` - Significantly reduced and focused documentation for versionlog compatibility
+  - Updated terminology: "Synergy System" → "Cross-Trait System", "Vineyard Starting Deltas" → "Harvest Specific Characteristics"
+  - Added new balance calculation terminology: Inside Distance, Outside Distance, Penalty, Total Distance
+  - `readme.md` - Updated database schema section with current 15 active tables, removed dead table references
+- **Code Cleanup:**
+  - `src/lib/services/wine/balanceCalculator.ts` - Removed redundant placeholder functions `getSynergyBonuses()` and `getRegionalModifiers()`
+  - Enhanced Services & Components documentation with Winepedia and Winery integration details
+- **Database Cleanup:**
+  - Removed dead `game_state` table from database (replaced by `companies` table for multi-company support)
+  - Updated database schema documentation to reflect current 15-table structure
+
+## Version 0.0091a - Enhanced Penalty System & TypeScript Improvements
+**Date:** 2025-09-25
+**Commit:** f570af857eccad193729bf83e9f911eefb38ebfc
+
+### Changes
+- **Penalty System Enhancements:**
+  - Enhanced cross-trait penalty multipliers with more sophisticated scaling
+  - Improved penalty calculation algorithms for better balance scoring
+- **TypeScript Improvements:**
+  - Enhanced type definitions for balance calculations
+  - Improved type safety across wine characteristics system
+- **Code Quality:**
+  - Better error handling and validation
+  - Improved code organization and maintainability
+
+## Version 0.0091 - Cross-Trait Balance System & Enhanced Winepedia
+**Date:** 2025-09-25
+**Commit:** f45b2b86998aa5de9ef9bc21a56d3b0fe599c1ea
+
+### Changes
+- **Cross-Trait Balance System:**
+  - `src/lib/services/wine/balanceCalculator.ts` - Implemented sophisticated cross-trait penalty scaling and synergy reductions
+  - `src/lib/constants/balanceAdjustments.ts` - Configuration-driven dynamic range adjustments and penalty multipliers
+  - 7 synergy rules: acidity+tannins, body+spice, aroma+body+sweetness combinations
+- **Enhanced Winepedia:**
+  - `src/components/winepedia/CrossTraitPenaltyTab.tsx` - Interactive visualization of cross-trait penalties and synergies
+  - `src/components/winepedia/DynamicRangeTab.tsx` - Interactive calibration panel for range adjustments
+  - Enhanced `CharacteristicBar` component with dynamic range visualization
+- **UI Integration:**
+  - Updated `Winery.tsx` to use new characteristic display system
+  - Real-time balance calculations with live preview
+
+## Version 0.009a - Dynamic Range Adjustments
+**Date:** 2025-09-25
+**Commit:** a6fbfb9e2b4d9ded29ba870d6bcc5a7d050e10a9
+
+### Changes
+- **Dynamic Range System:**
+  - `src/lib/services/wine/balanceCalculator.ts` - Implemented config-driven range adjustments
+  - High acidity shifts sweetness range down, high body shifts spice/tannins up
+  - Cross-trait effects with penalty multipliers based on characteristic deviations
+- **Interactive UI:**
+  - `src/components/winepedia/DynamicRangeTab.tsx` - Interactive sliders with live preview
+  - Real-time range adjustment visualization
+  - Smooth, continuous math (no stepwise penalties)
+
+## Version 0.009 - Harvest Characteristics & Differentiated Balance Ranges
+**Date:** 2025-09-25
+**Commit:** 3e3a06b6b2b72e2a674ead122948483f28dfce8d
+
+### Changes
+- **Harvest Characteristics System:**
+  - `src/lib/services/wine/harvestCharacteristics.ts` - Vineyard condition modifiers at batch creation
+  - Ripeness effects: late harvest → sweetness↑, acidity↓, tannins↑, body↑, aroma↑
+  - Quality factor effects: influences body, aroma, tannins (color-aware for reds vs whites)
+  - Altitude effects: higher → acidity↑, aroma↑, body↓
+  - Regional suitability effects: better regions → body↑, aroma↑
+- **Differentiated Balance Ranges:**
+  - `src/lib/constants/grapeConstants.ts` - Per-characteristic ranges: acidity [0.4,0.6], aroma [0.3,0.7], body [0.4,0.8], spice [0.35,0.65], sweetness [0.4,0.6], tannins [0.35,0.65]
+  - Replaced flat 0.4-0.6 ranges with characteristic-specific balanced ranges
+  - Deterministic grape base characteristics + vineyard modifiers = starting characteristics
+
+## Version 0.008b - Code Reorganization & Activity System Updates
+**Date:** 2025-09-24
+**Commit:** 9fd468362528c0a6603b587d92fc3c6ee9c17901
+
+### Changes
+- **Code Reorganization:**
+  - Improved code structure and organization
+  - Better separation of concerns across services
+  - Enhanced maintainability and readability
+- **Activity System Updates:**
+  - Removed genetic updates for activity system
+  - Streamlined activity management
+  - Improved activity workflow efficiency
+
+## Version 0.008 - Bookkeeping Activity System
+**Date:** 2025-09-24
+**Commit:** 97dd8f9af4094204433bc962de08ab0d131e429e
+
+### Changes
+- **Bookkeeping Activity:**
+  - New bookkeeping activity system for financial management
+  - Enhanced financial tracking and reporting
+  - Improved accounting workflow integration
+- **Activity System:**
+  - Better activity categorization and management
+  - Enhanced work calculation for bookkeeping tasks
+  - Improved activity progress tracking
 
 ## Version 0.0073 - Vine Yield System & Yield Projection Tab
 **Date:** 2025-09-24
