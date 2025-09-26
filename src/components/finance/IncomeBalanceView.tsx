@@ -2,12 +2,12 @@ import { formatCurrency, getColorClass } from '@/lib/utils/utils';
 import { calculateFinancialData } from '@/lib/services/user/financeService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
 import { useGameStateWithData } from '@/hooks';
+import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS } from '@/lib/constants';
 
 interface IncomeBalanceViewProps {
   period: 'weekly' | 'season' | 'year';
 }
 
-// Helper component for a single financial section
 const FinancialSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="border border-gray-300 rounded-md p-4 mb-4">
     <h3 className="font-semibold text-gray-800 mb-2 uppercase text-sm tracking-wider">{title}</h3>
@@ -17,7 +17,6 @@ const FinancialSection: React.FC<{ title: string; children: React.ReactNode }> =
   </div>
 );
 
-// Helper component for a key-value pair
 const DataRow: React.FC<{ label: string; value: string | number; valueClass?: string }> = ({ label, value, valueClass = '' }) => (
   <div className="flex justify-between text-sm">
     <span>{label}</span>
@@ -25,39 +24,22 @@ const DataRow: React.FC<{ label: string; value: string | number; valueClass?: st
   </div>
 );
 
-const defaultFinancialData = {
-  income: 0,
-  expenses: 0,
-  netIncome: 0,
-  incomeDetails: [] as { description: string; amount: number }[],
-  expenseDetails: [] as { description: string; amount: number }[],
-  cashMoney: 0,
-  totalAssets: 0,
-  fixedAssets: 0,
-  currentAssets: 0,
-  buildingsValue: 0,
-  allVineyardsValue: 0,
-  wineValue: 0,
-  grapesValue: 0
-};
 
 export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
-  // Use consolidated hook for reactive financial data loading
   const financialData = useGameStateWithData(
     () => calculateFinancialData(period),
-    defaultFinancialData
+    DEFAULT_FINANCIAL_DATA
   );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Column 1: Income Statement */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-gray-800 text-center">Income Statement</CardTitle>
           <CardDescription className="text-center">Your revenue and expense breakdown</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FinancialSection title={`${period.toUpperCase()} INCOME`}>
+          <FinancialSection title={FINANCE_PERIOD_LABELS[period].income}>
             {financialData.incomeDetails.length > 0 ? (
               financialData.incomeDetails.map((item, index) => (
                 <DataRow key={index} label={item.description} value={item.amount} valueClass="text-emerald-600" />
@@ -67,7 +49,7 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
             )}
           </FinancialSection>
 
-          <FinancialSection title={`${period.toUpperCase()} EXPENSES`}>
+          <FinancialSection title={FINANCE_PERIOD_LABELS[period].expenses}>
             {financialData.expenseDetails.length > 0 ? (
               financialData.expenseDetails.map((item, index) => (
                 <DataRow key={index} label={item.description} value={item.amount} valueClass={getColorClass(0.2)} />
@@ -86,7 +68,6 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
         </CardContent>
       </Card>
 
-      {/* Column 2: Balance Sheet */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-gray-800 text-center">Balance Sheet</CardTitle>

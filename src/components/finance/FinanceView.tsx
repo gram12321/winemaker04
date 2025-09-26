@@ -3,24 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger, Button, Separator } from "@/c
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { UpgradesPlaceholder } from './UpgradesPlaceholder';
+import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES } from '@/lib/constants';
 
 export default function FinanceView() {
-  // Tab state
   const [activeTab, setActiveTab] = useState('income');
   const [activePeriod, setActivePeriod] = useState<'weekly' | 'season' | 'year'>('weekly');
-  
-  // Custom styles to match the original look more closely
-  const tabTriggerStyle = "px-4 py-2 rounded-md border border-gray-400 text-sm font-medium";
-  const activeTabTriggerStyle = "bg-blue-600 text-white border-blue-600";
-  const inactiveTabTriggerStyle = "bg-blue-50 text-blue-600 hover:bg-blue-100";
-
-  const periodButtonStyle = "px-4 py-1 rounded-md border border-gray-400 text-sm font-medium";
-  const activePeriodButtonStyle = "bg-blue-600 text-white border-blue-600";
-  const inactivePeriodButtonStyle = "bg-blue-50 text-blue-600 hover:bg-blue-100";
 
   return (
     <div className="space-y-6">
-      {/* Finance Banner */}
       <div 
         className="h-48 bg-cover bg-center rounded-lg relative"
         style={{
@@ -47,37 +37,36 @@ export default function FinanceView() {
         <TabsList className="bg-transparent p-0 mb-4 space-x-2">
           <TabsTrigger 
             value="income" 
-            className={`${tabTriggerStyle} ${activeTab === 'income' ? activeTabTriggerStyle : inactiveTabTriggerStyle}`}>
+            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'income' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Income/Balance
           </TabsTrigger>
           <TabsTrigger 
             value="cashflow" 
-            className={`${tabTriggerStyle} ${activeTab === 'cashflow' ? activeTabTriggerStyle : inactiveTabTriggerStyle}`}>
+            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'cashflow' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Cash Flow
           </TabsTrigger>
           <TabsTrigger 
             value="upgrades" 
-            className={`${tabTriggerStyle} ${activeTab === 'upgrades' ? activeTabTriggerStyle : inactiveTabTriggerStyle}`}>
+            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'upgrades' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Research and Upgrades
           </TabsTrigger>
         </TabsList>
 
-        {/* Period Selection - Only show for Income/Balance */}
         {activeTab === 'income' && (
           <div className="mb-4 flex space-x-2">
             <Button 
               onClick={() => setActivePeriod('weekly')} 
-              className={`${periodButtonStyle} ${activePeriod === 'weekly' ? activePeriodButtonStyle : inactivePeriodButtonStyle}`}>
+              className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'weekly' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
               Weekly
             </Button>
             <Button 
               onClick={() => setActivePeriod('season')} 
-              className={`${periodButtonStyle} ${activePeriod === 'season' ? activePeriodButtonStyle : inactivePeriodButtonStyle}`}>
+              className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'season' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
               Season
             </Button>
             <Button 
               onClick={() => setActivePeriod('year')} 
-              className={`${periodButtonStyle} ${activePeriod === 'year' ? activePeriodButtonStyle : inactivePeriodButtonStyle}`}>
+              className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'year' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
               Year
             </Button>
           </div>

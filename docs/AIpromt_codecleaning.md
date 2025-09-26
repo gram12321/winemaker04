@@ -9,6 +9,7 @@ We have implemented comprehensive systems across multiple files and may need cle
 - **Unnecessary Code**: Dead code, unused imports, placeholder functions
 - **Redundant Code**: Multiple implementations of the same functionality
 - **Inefficient Code**: Performance bottlenecks, unnecessary database calls, poor algorithms
+- **Excessive Comments**: Overly descriptive comments that state the obvious, Remove obvious comments that restate what the code does, keep only business logic explanations and non-obvious technical details. Or comments written to/from Humans
 
 ### **Specific Areas to Review**
 - **Services**: `src/lib/services/` - Check for duplicate functionality across user/, sales/, wine/, core/

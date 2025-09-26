@@ -3,5 +3,6 @@ export * from './grapeConstants';
 export * from './namesConstants';
 export * from './vineyardConstants';
 export * from './activityConstants';
+export * from './financeConstants';
 
 

@@ -19,25 +19,17 @@ interface FinancialData {
   fixedAssets: number;
   currentAssets: number;
   buildingsValue: number;
-  allVineyardsValue: number; // Sum of all vineyard total values (vineyard.landValue * vineyard.hectares
+  allVineyardsValue: number;
   wineValue: number;
   grapesValue: number;
 }
 
-// Table name
 const TRANSACTIONS_TABLE = 'transactions';
-
-// In-memory cache of transactions for performance
 let transactionsCache: Transaction[] = [];
 
-/**
- * Initialize starting capital as a transaction for new games
- * This should be called when starting a new game to ensure the starting money
- * is properly recorded in the finance system
- */
+// Initialize starting capital for new games
 export const initializeStartingCapital = async (companyId?: string): Promise<void> => {
   try {
-    // Get the current company ID if not provided
     if (!companyId) {
       const currentCompany = getCurrentCompany();
       if (!currentCompany) {
@@ -46,7 +38,6 @@ export const initializeStartingCapital = async (companyId?: string): Promise<voi
       companyId = currentCompany.id;
     }
     
-    // Check if starting capital transaction already exists for this company
     const existingTransactions = await loadTransactions();
     const hasStartingCapital = existingTransactions.some(t => 
       t.description === 'Starting Capital' && t.category === 'Initial Investment'
@@ -56,7 +47,6 @@ export const initializeStartingCapital = async (companyId?: string): Promise<voi
       return; // Already initialized
     }
     
-    // Create starting capital transaction
     await addTransaction(
       GAME_INITIALIZATION.STARTING_MONEY,
       'Starting Capital',
@@ -65,21 +55,12 @@ export const initializeStartingCapital = async (companyId?: string): Promise<voi
       companyId
     );
     
-    // Note: triggerGameUpdate() is already called by addTransaction()
   } catch (error) {
     console.error('Error initializing starting capital:', error);
-    // Don't throw - allow game to continue even if finance system fails
   }
 };
 
-/**
- * Add a new transaction to the system
- * @param amount Transaction amount (positive for income, negative for expense)
- * @param description Transaction description
- * @param category Transaction category
- * @param recurring Whether this is a recurring transaction
- * @returns Promise resolving to the transaction ID
- */
+// Add a new transaction to the system
 export const addTransaction = async (
   amount: number,
   description: string,
@@ -88,12 +69,10 @@ export const addTransaction = async (
   companyId?: string
 ): Promise<string> => {
   try {
-    // Get current company ID if not provided
     if (!companyId) {
       companyId = getCurrentCompanyId();
     }
     
-    // Get current company money directly from database
     let currentMoney = 0;
     if (companyId) {
       const company = await companyService.getCompany(companyId);
@@ -105,13 +84,10 @@ export const addTransaction = async (
       currentMoney = gameState.money || 0;
     }
     
-    // Calculate new money amount
     const newMoney = currentMoney + amount;
     
-    // Get game state for date information
     const gameState = getGameState();
     
-    // Create transaction object
     const transaction = {
       company_id: companyId,
       amount,
@@ -125,13 +101,10 @@ export const addTransaction = async (
       created_at: new Date().toISOString()
     };
     
-    // Update company money in the system
     await updateGameState({ money: newMoney });
     
-    // Trigger game update to notify components
     triggerGameUpdate();
     
-    // Add to Supabase
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .insert(transaction)
@@ -140,7 +113,6 @@ export const addTransaction = async (
     
     if (error) throw error;
     
-    // Update cache with the new transaction
     const newTransaction: Transaction = {
       id: data.id,
       date: {
@@ -157,7 +129,6 @@ export const addTransaction = async (
     
     transactionsCache.push(newTransaction);
     
-    // Sort the cache by date (newest first)
     transactionsCache.sort((a, b) => {
       if (a.date.year !== b.date.year) return b.date.year - a.date.year;
       if (a.date.season !== b.date.season) {
@@ -167,7 +138,6 @@ export const addTransaction = async (
       return b.date.week - a.date.week;
     });
     
-    // Transaction added successfully
     return data.id;
   } catch (error) {
     console.error('Error adding transaction:', error);
@@ -175,10 +145,7 @@ export const addTransaction = async (
   }
 };
 
-/**
- * Load transactions from Supabase
- * @returns Promise resolving to array of transactions
- */
+// Load transactions from Supabase
 export const loadTransactions = async (): Promise<Transaction[]> => {
   try {
     const { data, error } = await supabase
@@ -205,7 +172,6 @@ export const loadTransactions = async (): Promise<Transaction[]> => {
       money: row.money
     }));
     
-    // Update the cache
     transactionsCache = transactions;
     
     return transactions;
@@ -215,12 +181,8 @@ export const loadTransactions = async (): Promise<Transaction[]> => {
   }
 };
 
-/**
- * Get transactions from cache or load from Supabase if cache is empty
- * @returns Array of transactions
- */
+// Get transactions from cache or load from Supabase if cache is empty
 export const getTransactions = (): Transaction[] => {
-  // If cache is empty, load transactions from Supabase (but return empty array for now)
   if (transactionsCache.length === 0) {
     loadTransactions().catch(console.error);
     return [];
@@ -229,48 +191,31 @@ export const getTransactions = (): Transaction[] => {
   return transactionsCache;
 };
 
-/**
- * Calculate financial data for income statement and balance sheet
- * @param period The time period to calculate for ('weekly', 'season', 'year')
- * @returns Financial data object
- */
+// Calculate financial data for income statement and balance sheet
 export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year'): Promise<FinancialData> => {
   const gameState = getGameState();
   
-  // Load fresh data
   const [transactions, vineyards, wineBatches] = await Promise.all([
     loadTransactions(),
     loadVineyards(),
     loadWineBatches()
   ]);
   
-  // Filter transactions by period
-  const filteredTransactions = transactions.filter(transaction => {
-    const currentDate = {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
-    };
-    
-    if (period === 'weekly') {
-      return transaction.date.week === currentDate.week &&
-             transaction.date.season === currentDate.season &&
-             transaction.date.year === currentDate.year;
-    } else if (period === 'season') {
-      return transaction.date.season === currentDate.season &&
-             transaction.date.year === currentDate.year;
-    } else { // year
-      return transaction.date.year === currentDate.year;
-    }
-  });
+  const currentDate = {
+    week: gameState.week || 1,
+    season: gameState.season || 'Spring',
+    year: gameState.currentYear || 2024
+  };
   
-  // Calculate income and expenses
+  const filteredTransactions = transactions.filter(transaction => 
+    filterTransactionByPeriod(transaction, currentDate, period)
+  );
+  
   let income = 0;
   let expenses = 0;
   const incomeDetails: { description: string; amount: number }[] = [];
   const expenseDetails: { description: string; amount: number }[] = [];
   
-  // Group by category
   const categorizedTransactions: Record<string, { total: number; transactions: Transaction[] }> = {};
   
   filteredTransactions.forEach(transaction => {
@@ -288,7 +233,6 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     }
   });
   
-  // Create income and expense details
   Object.entries(categorizedTransactions).forEach(([category, data]) => {
     if (data.total >= 0) {
       incomeDetails.push({
@@ -303,20 +247,16 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     }
   });
   
-  // Sort details by amount (highest first)
   incomeDetails.sort((a, b) => b.amount - a.amount);
   expenseDetails.sort((a, b) => b.amount - a.amount);
   
-  // Calculate asset values
-  const buildingsValue = 0; // Placeholder for buildings - not implemented yet
+  const buildingsValue = 0;
   
   const allVineyardsValue = vineyards.reduce((sum, vineyard) => {
-    // Use the calculated vineyardTotalValue from the vineyard data
     return sum + vineyard.vineyardTotalValue;
   }, 0);
   
   const wineValue = wineBatches.reduce((sum, batch) => {
-    // Estimate wine value based on stage, quality, and quantity
     const stageMultiplier = batch.stage === 'bottled' ? 1 :
                             batch.stage === 'wine' ? 0.8 :
                             batch.stage === 'must' ? 0.5 : 0.3;
@@ -326,14 +266,12 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   }, 0);
   
   const grapesValue = wineBatches.reduce((sum, batch) => {
-    // Only count batches in grape stage
     if (batch.stage !== 'grapes') return sum;
     
     const qualityMultiplier = batch.quality || 0.5;
     return sum + (batch.quantity * qualityMultiplier * 5);
   }, 0);
   
-  // Calculate totals
   const cashMoney = gameState.money || 0;
   const fixedAssets = buildingsValue + allVineyardsValue;
   const currentAssets = wineValue + grapesValue;
@@ -355,3 +293,24 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     grapesValue
   };
 };
+
+// Helper function to filter transactions by time period
+function filterTransactionByPeriod(
+  transaction: Transaction,
+  currentDate: { week: number; season: string; year: number },
+  period: 'weekly' | 'season' | 'year'
+): boolean {
+  switch (period) {
+    case 'weekly':
+      return transaction.date.week === currentDate.week &&
+             transaction.date.season === currentDate.season &&
+             transaction.date.year === currentDate.year;
+    case 'season':
+      return transaction.date.season === currentDate.season &&
+             transaction.date.year === currentDate.year;
+    case 'year':
+      return transaction.date.year === currentDate.year;
+    default:
+      return false;
+  }
+}
