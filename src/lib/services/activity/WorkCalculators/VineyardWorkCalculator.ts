@@ -1,13 +1,14 @@
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
-import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
-import { getAltitudeRating } from '@/lib/services/wine/vineyardValueCalc';
-import { calculateVineyardYield } from '@/lib/services/wine/vineyardManager';
 import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/WorkCalculators/workCalculator';
 import { TASK_RATES, INITIAL_WORK, DENSITY_BASED_TASKS } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
+import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
+import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
+import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 
 /**
- * Shared helpers for vineyard-related activity work calculations
+ * Vineyard Work Calculator
+ * Calculates work required for vineyard activities (planting, harvesting)
  */
 
 export function getFragilityModifier(grape: GrapeVariety): number {

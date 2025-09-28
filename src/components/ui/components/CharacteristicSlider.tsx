@@ -7,15 +7,14 @@ interface CharacteristicSliderComponentProps extends CharacteristicSliderProps {
 }
 
 export function CharacteristicSlider({ 
-  key, 
   value, 
   onChange, 
   label, 
   icon, 
   className = "" 
-}: CharacteristicSliderComponentProps) {
+}: Omit<CharacteristicSliderComponentProps, 'key'>) {
   return (
-    <div key={key} className={`flex items-center gap-3 py-1 ${className}`}>
+    <div className={`flex items-center gap-3 py-1 ${className}`}>
       <div className="w-24 flex items-center gap-2 text-xs">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -42,9 +41,9 @@ export function CharacteristicSlider({
           className="w-full h-1.5 bg-gray-200 rounded appearance-none cursor-pointer"
         />
         <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
-          <span>0%</span>
-          <span className="font-medium">{Math.round(value * 100)}%</span>
-          <span>100%</span>
+          <span>0.00</span>
+          <span className="font-medium">{value.toFixed(2)}</span>
+          <span>1.00</span>
         </div>
       </div>
     </div>

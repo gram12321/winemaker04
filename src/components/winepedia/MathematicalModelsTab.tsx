@@ -9,7 +9,7 @@ import {
   calculateSymmetricalMultiplier, 
   vineyardAgePrestigeModifier
 } from '@/lib/utils/calculator';
-import { calculateVineyardYield } from '@/lib/services/wine/vineyardManager';
+import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 

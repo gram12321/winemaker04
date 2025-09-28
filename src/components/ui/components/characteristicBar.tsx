@@ -1,7 +1,8 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
-import { getColorClass, formatPercent } from '@/lib/utils/utils';
+import { getColorClass, formatNumber } from '@/lib/utils/utils';
+import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
@@ -45,14 +46,12 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   // Get base balanced ranges
   const [minBalance, maxBalance] = BASE_BALANCED_RANGES[characteristicName];
   
-  // Format percentage for display
-  const formatPercentage = (val: number) => formatPercent(val, 0, true);
 
   // Build user-friendly tooltip with new terminology
   const buildTooltip = () => {
-    const base = `Current Value: ${formatPercentage(displayValue)}`;
+    const base = `Current Value: ${formatNumber(displayValue, { decimals: 2, forceDecimals: true })}`;
     const [rMin, rMax] = adjustedRanges ?? [minBalance, maxBalance];
-    const rangeLine = `Range: ${formatPercentage(rMin)} - ${formatPercentage(rMax)}`;
+    const rangeLine = `Range: ${formatNumber(rMin, { decimals: 2, forceDecimals: true })} - ${formatNumber(rMax, { decimals: 2, forceDecimals: true })}`;
 
     // Distances per new naming
     const midpoint = (rMin + rMax) / 2;
@@ -67,7 +66,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
     else status = 'Slightly outside range';
 
     const statusLine = `Status: ${status}`;
-    const details = `DistanceInside: ${formatPercentage(distanceInside)} | DistanceOutside: ${formatPercentage(distanceOutside)}\nPenalty: ${formatPercentage(penalty)} | TotalDistance: ${formatPercentage(totalDistance)}`;
+    const details = `DistanceInside: ${formatNumber(distanceInside, { decimals: 2, forceDecimals: true })} | DistanceOutside: ${formatNumber(distanceOutside, { decimals: 2, forceDecimals: true })}\nPenalty: ${formatNumber(penalty, { decimals: 2, forceDecimals: true })} | TotalDistance: ${formatNumber(totalDistance, { decimals: 2, forceDecimals: true })}`;
     const deltaLine = deltaTooltip ? `Deltas: ${deltaTooltip}` : '';
     return [base, rangeLine, statusLine, details, deltaLine].filter(Boolean).join('\n');
   };
@@ -139,7 +138,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
           <div 
             className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
             style={{ left: `${displayValue * 100}%` }}
-            title={`Current Value: ${formatPercentage(displayValue)}`}
+            title={`Current Value: ${formatNumber(displayValue, { decimals: 2, forceDecimals: true })}`}
           ></div>
 
           {/* Base grape value marker (if provided) */}
@@ -154,7 +153,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
         {/* Value display */}
         {showValue && (
           <span className={`ml-3 text-sm font-medium w-12 text-right ${getValueColor()}`}>
-            {formatPercentage(displayValue)}
+            {formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
           </span>
         )}
       </div>
@@ -175,6 +174,8 @@ interface WineCharacteristicsDisplayProps {
   tooltips?: Partial<Record<keyof WineCharacteristics, string>>;
   // Optional map of base reference values to show as markers
   baseValues?: Partial<Record<keyof WineCharacteristics, number>>;
+  // Show balance score at the top
+  showBalanceScore?: boolean;
 }
 
 export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProps> = ({
@@ -186,12 +187,26 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
   defaultExpanded = true,
   title = "Wine Characteristics",
   tooltips,
-  baseValues
+  baseValues,
+  showBalanceScore = false
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+  
+  // Calculate balance score if requested
+  const balanceResult = showBalanceScore ? calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES) : null;
 
   const content = (
     <div className="space-y-1">
+      {/* Balance Score Display */}
+      {showBalanceScore && balanceResult && (
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium">Current Balance Score:</span>
+          <span className={`text-2xl font-bold ${getColorClass(balanceResult.score)}`}>
+            {formatNumber(balanceResult.score, { decimals: 2, forceDecimals: true })}
+          </span>
+        </div>
+      )}
+      
       {Object.entries(characteristics)
         .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically by characteristic name
         .map(([key, value]) => (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label } from '../ui';
 import { Settings as SettingsIcon, Bell } from 'lucide-react';
-import { PageProps, CompanyProps } from '../ui/UItypes';
+import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 interface SettingsProps extends PageProps, CompanyProps {
   onSignOut?: () => void;

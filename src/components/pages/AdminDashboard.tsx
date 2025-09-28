@@ -11,7 +11,7 @@ import { highscoreService, initializeCustomers, addTransaction, getCurrentPresti
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/supabase';
-import { PageProps, NavigationProps } from '../ui/UItypes';
+import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces
@@ -186,48 +186,76 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     withLoading(async () => {
       try {
         // Clear all tables in the correct order to respect foreign key constraints
+        // Delete child tables first, then parent tables
         const tables = [
           'relationship_boosts',
           'wine_orders', 
           'wine_batches',
           'vineyards',
+          'activities',
           'achievements',
           'user_settings',
           'highscores',
           'prestige_events',
           'transactions',
+          'company_customers',
+          'notifications',  // Clear notifications before companies (it references companies)
           'companies',
           'users',
           'customers',
-          'game_state'
+          'wine_log'
         ];
 
-        // Clear all tables (RLS is now disabled)
+        const errors: string[] = [];
+        
+        // Clear all tables - use DELETE with proper ordering for foreign keys
         for (const table of tables) {
           try {
-            const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (error) {
-              console.error(`Error clearing table ${table}:`, error);
+            let deleteQuery;
+            
+            // Handle different table structures
+            if (table === 'company_customers') {
+              // company_customers has composite primary key, no single id column
+              deleteQuery = supabase.from(table).delete().neq('company_id', '00000000-0000-0000-0000-000000000000');
             } else {
-              // Table cleared successfully
+              // All other tables have id columns - delete all records
+              deleteQuery = supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            }
+            
+            const { error } = await deleteQuery;
+            if (error) {
+              const errorMsg = `Error clearing table ${table}: ${error.message}`;
+              console.error(errorMsg, error);
+              errors.push(errorMsg);
             }
           } catch (err) {
-            console.error(`Exception clearing table ${table}:`, err);
+            const errorMsg = `Exception clearing table ${table}: ${err}`;
+            console.error(errorMsg, err);
+            errors.push(errorMsg);
           }
+        }
+
+        // Check if there were any errors
+        if (errors.length > 0) {
+          const errorMessage = `Database reset completed with ${errors.length} errors:\n${errors.join('\n')}`;
+          notificationService.error(errorMessage);
+          console.error('Full database reset errors:', errors);
+          return; // Don't refresh if there were errors
         }
 
         notificationService.success('Full database reset completed successfully');
         
-        // Navigate to login and refresh browser
+        // Only navigate and refresh if no errors occurred
         if (onNavigateToLogin) {
           onNavigateToLogin();
         }
         setTimeout(() => {
           window.location.reload();
-        }, 1000);
+        }, 2000); // Increased delay to give time to see success message
       } catch (error) {
-        console.error('Error during full database reset:', error);
-        notificationService.error('Failed to complete full database reset');
+        const errorMessage = `Critical error during full database reset: ${error}`;
+        console.error(errorMessage, error);
+        notificationService.error(errorMessage);
       }
     });
   };

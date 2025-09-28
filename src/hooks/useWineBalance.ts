@@ -1,7 +1,7 @@
 // React hook for wine balance calculations
 import { useMemo } from 'react';
 import { WineBatch, WineCharacteristics, BalanceResult } from '../lib/types/types';
-import { calculateWineBalance } from '../lib/services/wine/balanceCalculator';
+import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../lib/balance';
 
 /**
  * Hook to calculate balance for a wine batch
@@ -11,7 +11,7 @@ import { calculateWineBalance } from '../lib/services/wine/balanceCalculator';
 export function useWineBatchBalance(wineBatch: WineBatch | null): BalanceResult | null {
   return useMemo(() => {
     if (!wineBatch) return null;
-    return calculateWineBalance(wineBatch.characteristics);
+    return calculateWineBalance(wineBatch.characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   }, [wineBatch]);
 }
 
@@ -23,7 +23,7 @@ export function useWineBatchBalance(wineBatch: WineBatch | null): BalanceResult 
 export function useWineBalance(characteristics: WineCharacteristics | null): BalanceResult | null {
   return useMemo(() => {
     if (!characteristics) return null;
-    return calculateWineBalance(characteristics);
+    return calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   }, [characteristics]);
 }
 

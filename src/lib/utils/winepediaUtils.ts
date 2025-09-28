@@ -39,7 +39,6 @@ export function clamp01(v: number): number {
  * Common slider component props for characteristic sliders
  */
 export interface CharacteristicSliderProps {
-  key: string;
   value: number;
   onChange: (value: number) => void;
   label: string;
@@ -54,7 +53,6 @@ export function generateCharacteristicSliders(
   onChange: (key: keyof WineCharacteristics, value: number) => void
 ): CharacteristicSliderProps[] {
   return Object.entries(characteristics).map(([key, value]) => ({
-    key,
     value,
     onChange: (newValue: number) => onChange(key as keyof WineCharacteristics, newValue),
     label: key.charAt(0).toUpperCase() + key.slice(1),

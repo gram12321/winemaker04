@@ -10,7 +10,7 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip,
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown } from '@/lib/database/customers/relationshipBreakdownService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { NavigationProps } from '../ui/UItypes';
+import { NavigationProps } from '../../lib/types/UItypes';
 import { useGameUpdates } from '@/hooks';
 
 interface SalesProps extends NavigationProps {

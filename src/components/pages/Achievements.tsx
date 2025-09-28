@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Butto
 import { Trophy, Award, Medal, Lock, Calendar, TrendingUp, Wine } from 'lucide-react';
 // import { Company } from '@/lib/services'; // Not needed with shared interfaces
 import { formatNumber, formatCompact, formatPercent } from '@/lib/utils/utils';
-import { PageProps, CompanyProps } from '../ui/UItypes';
+import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 import { WineLog } from './WineLog';
 
 interface AchievementsProps extends PageProps, CompanyProps {

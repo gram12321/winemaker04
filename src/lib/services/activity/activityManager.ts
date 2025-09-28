@@ -12,9 +12,10 @@ import {
 import { plantVineyard } from '@/lib/services';
 import { createWineBatchFromHarvest } from '../wine/wineBatchService';
 import { saveVineyard, loadVineyards } from '@/lib/database/database';
-import { calculateVineyardYield } from '../wine/vineyardManager';
+import { calculateVineyardYield } from '../vineyard/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { completeBookkeeping } from './WorkCalculators/BookkeepingWorkCalculator';
+import { completeCrushing } from './WorkCalculators/CrushingWorkCalculator';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -96,8 +97,11 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     // TODO: Implement maintenance completion
   },
   
-  [WorkCategory.CRUSHING]: async (_activity: Activity) => {
-    // TODO: Implement crushing completion
+  [WorkCategory.CRUSHING]: async (activity: Activity) => {
+    if (activity.params.batchId && activity.params.crushingOptions) {
+      await completeCrushing(activity);
+      notificationService.success(`Crushing completed for ${activity.params.vineyardName} ${activity.params.grape}!`);
+    }
   },
   
   [WorkCategory.FERMENTATION]: async (_activity: Activity) => {

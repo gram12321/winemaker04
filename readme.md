@@ -79,6 +79,8 @@
 - Harvest characteristics system with vineyard condition modifiers (ripeness, quality, altitude, suitability)
 - Dynamic range adjustments and penalty multipliers with interactive UI visualization
 - Grape-specific base characteristics with harvest-specific modifications
+- Crushing activity system with method-specific characteristic modifications (Hand Press, Mechanical Press, Pneumatic Press)
+- **Note**: Special features like "Green Flavors" were removed for this iteration as they were not fully implemented in v1
 
 **Future Advanced Features:**
 - Quality tracking through production stages

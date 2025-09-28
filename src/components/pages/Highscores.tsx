@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, Table
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { highscoreService, HighscoreEntry, ScoreType } from '@/lib/services';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
-import { PageProps, CompanyProps } from '../ui/UItypes';
+import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 interface HighscoresProps extends PageProps, CompanyProps {
   // Inherits currentCompanyId and onBack from shared interfaces

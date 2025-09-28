@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
-import { DYNAMIC_ADJUSTMENTS } from '@/lib/constants/balanceAdjustments';
 import { WineCharacteristicsDisplay } from '@/components/ui/components/characteristicBar';
 import { WineCharacteristics } from '@/lib/types/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
-import { calculateWineBalance } from '@/lib/services/wine/balanceCalculator';
+import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
 import { CharacteristicSliderGrid } from '../ui';
 
@@ -17,7 +16,7 @@ export const DynamicRangeTab: React.FC = () => {
 
     for (const [k, v] of Object.entries(sliderValues)) {
       const source = k as keyof WineCharacteristics;
-      const rulesByDir = DYNAMIC_ADJUSTMENTS[source];
+      const rulesByDir = RANGE_ADJUSTMENTS[source];
       if (!rulesByDir) continue;
 
       const [min, max] = baseRanges[source];
@@ -59,7 +58,8 @@ export const DynamicRangeTab: React.FC = () => {
     return adjusted;
   }, [sliderValues]);
 
-  const balanceResult = calculateWineBalance(sliderValues);
+  // Calculate balance for demonstration (currently unused in this tab)
+  // const balanceResult = calculateWineBalance(sliderValues, baseRanges, RANGE_ADJUSTMENTS, RULES);
 
   return (
     <TooltipProvider>
@@ -95,18 +95,13 @@ export const DynamicRangeTab: React.FC = () => {
       <section>
         <h3 className="text-lg font-medium">Adjusted Ranges (Live Preview)</h3>
         <div className="p-4 rounded-lg">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">Current Balance Score:</span>
-            <span className={`text-2xl font-bold ${balanceResult.score > 0.8 ? 'text-green-600' : balanceResult.score > 0.6 ? 'text-yellow-600' : 'text-red-600'}`}>
-              {Math.round(balanceResult.score * 100)}%
-            </span>
-          </div>
           <WineCharacteristicsDisplay
             characteristics={sliderValues}
             adjustedRanges={adjustedRanges as any}
             showValues={true}
             title="Wine Characteristics"
             collapsible={false}
+            showBalanceScore={true}
           />
         </div>
       </section>
@@ -117,7 +112,7 @@ export const DynamicRangeTab: React.FC = () => {
           Shows how traits affect each other's ranges.
         </p>
         <div className="mt-2 divide-y rounded border">
-          {Object.entries(DYNAMIC_ADJUSTMENTS).map(([source, dirs]) => (
+          {Object.entries(RANGE_ADJUSTMENTS).map(([source, dirs]) => (
             <div key={source} className="p-2">
               <div className="font-medium capitalize flex items-center gap-2 text-sm">
                 <Tooltip>

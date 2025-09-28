@@ -129,6 +129,15 @@ export interface WineBatch {
   finalPrice: number; // Calculated base price per bottle in euros
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to finalPrice)
   
+  // Breakdown data for UI tooltips (tracks all characteristic modifications)
+  breakdown?: {
+    effects: Array<{
+      characteristic: keyof WineCharacteristics;
+      modifier: number;
+      description: string; // Shows effect name (e.g., "Ripeness", "Altitude") not source
+    }>;
+  };
+  
   // Grape metadata (0-1 scale unless specified)
   grapeColor: 'red' | 'white';
   naturalYield: number; // 0-1 scale, affects harvest yield

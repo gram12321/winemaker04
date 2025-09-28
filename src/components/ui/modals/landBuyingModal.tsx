@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '../shadCN/button';
 import { Badge } from '../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
-import { DialogProps } from '../UItypes';
-import { VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
+import { DialogProps } from '../../../lib/types/UItypes';
+import { VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { getCountryFlag } from '@/lib/utils';
 

@@ -9,7 +9,7 @@ import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY } from '../../constants';
 import { addTransaction } from '../user/financeService';
-import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './landBuyingService';
+import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './vinyardBuyingService';
 import { getGameState } from '../core/gameState';
 import { formatCurrency } from '../../utils/utils';
 import { notificationService } from '../../../components/layout/NotificationCenter';

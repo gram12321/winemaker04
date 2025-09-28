@@ -6,8 +6,10 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../core/gameState';
 import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from '../sales/pricingService';
-import { generateDefaultCharacteristics, calculateWineBalance } from './balanceCalculator';
-import { deriveHarvestCharacteristics } from './harvestCharacteristics';
+import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../balance';
+import { BASE_BALANCED_RANGES } from '../../constants/grapeConstants';
+import { generateDefaultCharacteristics } from './characteristics/defaultCharacteristics';
+import { modifyHarvestCharacteristics } from './characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 
@@ -73,13 +75,21 @@ function combineWineBatches(
     tannins: (existingBatch.characteristics.tannins * existingWeight) + (newCharacteristics.tannins * newWeight)
   };
   
+  // Combine breakdown effects (append new effects to existing ones)
+  const combinedBreakdown = {
+    effects: [
+      ...(existingBatch.breakdown?.effects || [])
+    ]
+  };
+
   // Return updated batch with combined properties
   return {
     ...existingBatch,
     quantity: totalQuantity,
     quality: combinedQuality,
     balance: combinedBalance,
-    characteristics: combinedCharacteristics
+    characteristics: combinedCharacteristics,
+    breakdown: combinedBreakdown
     // Note: finalPrice will be recalculated after combination
   };
 }
@@ -116,7 +126,8 @@ export async function createWineBatchFromHarvest(
   const [minAlt, maxAlt] = (countryAlt[region as keyof typeof countryAlt] as [number, number]) || [0, 100];
   const suitCountry = REGION_GRAPE_SUITABILITY[country as keyof typeof REGION_GRAPE_SUITABILITY] || {} as any;
   const suitability = (suitCountry[region as keyof typeof suitCountry]?.[grape as any] ?? 0.5) as number;
-  const { characteristics } = deriveHarvestCharacteristics(base, {
+  const { characteristics, breakdown } = modifyHarvestCharacteristics({
+    baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,
     qualityFactor: quality,
     suitability,
@@ -127,7 +138,7 @@ export async function createWineBatchFromHarvest(
   });
   
   // Calculate balance using the new balance calculator
-  const balanceResult = calculateWineBalance(characteristics);
+  const balanceResult = calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   
   const harvestDate = {
     week: gameState.week || 1,
@@ -169,6 +180,7 @@ export async function createWineBatchFromHarvest(
       quality,
       balance: balanceResult.score, // Use calculated balance
       characteristics,
+      breakdown, // Store breakdown data
       finalPrice: 0, // Will be calculated below
       grapeColor: grapeMetadata.grapeColor,
       naturalYield: grapeMetadata.naturalYield,

@@ -10,10 +10,10 @@ export { initializeCustomers, getAllCustomers, getCountryCode } from './sales/cr
 export { generateCustomer } from './sales/generateCustomer';
 export { generateOrder } from './sales/generateOrder';
 export { processGameTick } from './core/gameTick';
-export { createVineyard, plantVineyard, getAllVineyards, purchaseVineyard } from './wine/vineyardService';
-export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './wine/vineyardManager';
+export { createVineyard, plantVineyard, getAllVineyards, purchaseVineyard } from './vineyard/vineyardService';
+export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './vineyard/vineyardManager';
 export { GRAPE_VARIETIES } from '../types/types';
-export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './wine/vineyardValueCalc';
+export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './vineyard/vineyardValueCalc';
 export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from '../database/prestige';
 export { getAllWineBatches, formatCompletedWineName } from './wine/wineBatchService';
 export { crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from './wine/wineryService';
@@ -22,7 +22,7 @@ export type { VineyardStats } from './wine/wineLogService';
 export type { AuthUser } from './user/authService';
 export type { Company, CompanyStats } from './user/companyService';
 export type { HighscoreEntry, ScoreType } from './user/highscoreService';
-export type { VineyardPurchaseOption } from './wine/landBuyingService';
+export type { VineyardPurchaseOption } from './vineyard/vinyardBuyingService';
 
 // Work services
 export * from './activity';

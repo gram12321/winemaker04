@@ -1,13 +1,13 @@
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, getAllVineyards, formatCompletedWineName, crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
+import { getAllWineBatches, getAllVineyards, formatCompletedWineName, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
-import { Button, WineCharacteristicsDisplay } from '../ui';
+import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal } from '../ui';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatPercent } from '@/lib/utils/utils';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '@/lib/constants/vineyardConstants';
-import { deriveHarvestCharacteristics } from '@/lib/services/wine/harvestCharacteristics';
+import { modifyHarvestCharacteristics } from '@/lib/services/wine/characteristics/harvestCharacteristics';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -54,15 +54,23 @@ const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: V
     const suitCountry = (REGION_GRAPE_SUITABILITY as any)[country] || {};
     const suitability = (suitCountry[region]?.[batch.grape] ?? 0.5) as number;
 
-    const { debug } = deriveHarvestCharacteristics(base, {
-      ripeness: vineyard.ripeness || 0.5,
-      qualityFactor: batch.quality,
-      suitability,
-      altitude,
-      medianAltitude: (minAlt + maxAlt) / 2,
-      maxAltitude: maxAlt,
-      grapeColor: GRAPE_CONST[batch.grape].grapeColor
-    });
+    // Use stored breakdown data if available, otherwise fall back to recalculating harvest breakdown
+    let breakdown = batch.breakdown;
+    
+    // If no breakdown data exists (legacy batches), recalculate harvest breakdown
+    if (!breakdown) {
+      const harvestBreakdown = modifyHarvestCharacteristics({
+        baseCharacteristics: base,
+        ripeness: vineyard.ripeness || 0.5,
+        qualityFactor: batch.quality,
+        suitability,
+        altitude,
+        medianAltitude: (minAlt + maxAlt) / 2,
+        maxAltitude: maxAlt,
+        grapeColor: GRAPE_CONST[batch.grape].grapeColor
+      });
+      breakdown = harvestBreakdown.breakdown;
+    }
 
     const formatDelta = (n?: number) => (typeof n === 'number' && Math.abs(n) > 0.0001 ? `${(n * 100).toFixed(1)}%` : undefined);
 
@@ -70,14 +78,20 @@ const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: V
     const map: Partial<Record<keyof WineCharacteristics, string>> = {};
     for (const k of keys) {
       const parts: string[] = [];
-      const r = formatDelta((debug.ripenessDelta as any)[k]);
-      if (r) parts.push(`Ripeness ${Number((debug.ripenessDelta as any)[k]) >= 0 ? '+' : ''}${r}`);
-      const q = formatDelta((debug.qualityDelta as any)[k]);
-      if (q) parts.push(`Quality ${Number((debug.qualityDelta as any)[k]) >= 0 ? '+' : ''}${q}`);
-      const a = formatDelta((debug.altitudeDelta as any)[k]);
-      if (a) parts.push(`Altitude ${Number((debug.altitudeDelta as any)[k]) >= 0 ? '+' : ''}${a}`);
-      const s = formatDelta((debug.suitabilityDelta as any)[k]);
-      if (s) parts.push(`Suitability ${Number((debug.suitabilityDelta as any)[k]) >= 0 ? '+' : ''}${s}`);
+      
+      // Find all effects for this characteristic
+      const characteristicEffects = breakdown?.effects?.filter(e => e.characteristic === k) || [];
+      
+      // Add each effect to the tooltip
+      for (const effect of characteristicEffects) {
+        const delta = formatDelta(effect.modifier);
+        if (delta) {
+          // Use the full description as the effect name (e.g., "Grape Ripeness", "Hand Pressing")
+          const effectName = effect.description;
+          parts.push(`${effectName} ${effect.modifier >= 0 ? '+' : ''}${delta}`);
+        }
+      }
+      
       if (parts.length) map[k] = parts.join(' • ');
     }
     return map;
@@ -93,6 +107,7 @@ const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: V
         title="Wine Characteristics"
         tooltips={tooltips}
         baseValues={GRAPE_CONST[batch.grape]?.baseCharacteristics}
+        showBalanceScore={true}
       />
     </div>
   );
@@ -102,12 +117,47 @@ const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
   const vineyards = useGameStateWithData(getAllVineyards, [] as Vineyard[]);
+  
+  // Crushing modal state
+  const [crushingModalOpen, setCrushingModalOpen] = useState(false);
+  const [selectedBatchForCrushing, setSelectedBatchForCrushing] = useState<WineBatch | null>(null);
+  
+  // Balance breakdown modal state
+  const [balanceModalOpen, setBalanceModalOpen] = useState(false);
+  const [selectedBatchForBalance, setSelectedBatchForBalance] = useState<WineBatch | null>(null);
 
-  const handleAction = useCallback((batchId: string, action: 'crush' | 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
+  // Handle opening crushing modal
+  const handleCrushingClick = useCallback((batchId: string) => {
+    const batch = wineBatches.find(b => b.id === batchId);
+    if (batch) {
+      setSelectedBatchForCrushing(batch);
+      setCrushingModalOpen(true);
+    }
+  }, [wineBatches]);
+
+  // Handle closing crushing modal
+  const handleCrushingModalClose = useCallback(() => {
+    setCrushingModalOpen(false);
+    setSelectedBatchForCrushing(null);
+  }, []);
+
+  // Handle opening balance breakdown modal
+  const handleBalanceBreakdownClick = useCallback((batchId: string) => {
+    const batch = wineBatches.find(b => b.id === batchId);
+    if (batch) {
+      setSelectedBatchForBalance(batch);
+      setBalanceModalOpen(true);
+    }
+  }, [wineBatches]);
+
+  // Handle closing balance breakdown modal
+  const handleBalanceModalClose = useCallback(() => {
+    setBalanceModalOpen(false);
+    setSelectedBatchForBalance(null);
+  }, []);
+
+  const handleAction = useCallback((batchId: string, action: 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
     switch (action) {
-      case 'crush':
-        await crushGrapes(batchId);
-        break;
       case 'ferment':
         await startFermentation(batchId);
         break;
@@ -245,9 +295,18 @@ const Winery: React.FC = () => {
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2 ml-4">
+                      <Button 
+                        onClick={() => handleBalanceBreakdownClick(batch.id)}
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      >
+                        Balance Analysis
+                      </Button>
+                      
                       {isActionAvailable(batch, 'crush') && (
                         <Button 
-                          onClick={() => handleAction(batch.id, 'crush')}
+                          onClick={() => handleCrushingClick(batch.id)}
                           size="sm"
                           className="bg-orange-600 hover:bg-orange-700"
                         >
@@ -330,7 +389,17 @@ const Winery: React.FC = () => {
                       <WineQualityDisplay batch={batch} />
                       <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                     </div>
-                    <div className="text-2xl">🍷</div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-2xl">🍷</div>
+                      <Button 
+                        onClick={() => handleBalanceBreakdownClick(batch.id)}
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      >
+                        Balance Analysis
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -338,6 +407,21 @@ const Winery: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Crushing Options Modal */}
+      <CrushingOptionsModal
+        isOpen={crushingModalOpen}
+        onClose={handleCrushingModalClose}
+        batch={selectedBatchForCrushing}
+      />
+
+      {/* Balance Breakdown Modal */}
+      <BalanceBreakdownModal
+        isOpen={balanceModalOpen}
+        onClose={handleBalanceModalClose}
+        characteristics={selectedBatchForBalance?.characteristics || {} as WineCharacteristics}
+        wineName={selectedBatchForBalance ? `${selectedBatchForBalance.grape} - ${selectedBatchForBalance.vineyardName}` : "Wine"}
+      />
     </div>
   );
 };

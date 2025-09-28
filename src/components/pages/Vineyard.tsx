@@ -2,11 +2,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
-import { calculateVineyardYield } from '@/lib/services/wine/vineyardManager';
+import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
-import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/wine/landBuyingService';
+import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { getCountryFlag } from '@/lib/utils';
 
 

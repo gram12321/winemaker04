@@ -3,7 +3,7 @@ import { supabase } from '../supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { getGameState } from '../../services/core/gameState';
 import { loadVineyards, saveVineyard } from '../database';
-import { calculateGrapeSuitabilityContribution } from '../../services/wine/vineyardValueCalc';
+import { calculateGrapeSuitabilityContribution } from '../../services/vineyard/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier } from '../../utils/calculator';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';

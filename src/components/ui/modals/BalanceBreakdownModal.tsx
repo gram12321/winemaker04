@@ -1,0 +1,44 @@
+import React from 'react';
+import { WineCharacteristics } from '@/lib/types/types';
+import { BalanceScoreBreakdown } from '../components/BalanceScoreBreakdown';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../shadCN/dialog';
+import { Button } from '../shadCN/button';
+
+interface BalanceBreakdownModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  characteristics: WineCharacteristics;
+  wineName?: string;
+}
+
+export const BalanceBreakdownModal: React.FC<BalanceBreakdownModalProps> = ({
+  isOpen,
+  onClose,
+  characteristics,
+  wineName = "Wine"
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            Balance Score Breakdown - {wineName}
+          </DialogTitle>
+        </DialogHeader>
+        
+                <div className="mt-4">
+                  <BalanceScoreBreakdown 
+                    characteristics={characteristics} 
+                    showWineStyleRules={true}
+                  />
+                </div>
+        
+        <div className="flex justify-end mt-6">
+          <Button onClick={onClose} variant="outline">
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

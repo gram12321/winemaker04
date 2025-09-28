@@ -1,6 +1,3 @@
-// Land buying service - generates vineyard options for purchase
-// Reimplements the old buyLandOverlay.js functionality with modern architecture
-
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, Aspect } from '../../types/types';
 import { calculateLandValue } from './vineyardValueCalc';

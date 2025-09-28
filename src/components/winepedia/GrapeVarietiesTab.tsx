@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { GridCard } from '../ui';
-import { generateDefaultCharacteristics } from '@/lib/services/wine/balanceCalculator';
+import { generateDefaultCharacteristics } from '@/lib/services/wine/characteristics/defaultCharacteristics';
 import { GRAPE_CONST } from '@/lib/constants';
 import { GrapeInfoView } from './GrapeInfoView';
 import { GrapeVariety } from '@/lib/types/types';
