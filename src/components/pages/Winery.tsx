@@ -174,8 +174,8 @@ const Winery: React.FC = () => {
   }), [withLoading]);
 
   // Separate batches by completion status (memoized)
-  const activeBatches = useMemo(() => wineBatches.filter(batch => batch.process !== 'bottled'), [wineBatches]);
-  const completedWines = useMemo(() => wineBatches.filter(batch => batch.process === 'bottled'), [wineBatches]);
+  const activeBatches = useMemo(() => wineBatches.filter(batch => batch.state !== 'bottled'), [wineBatches]);
+  const completedWines = useMemo(() => wineBatches.filter(batch => batch.state === 'bottled'), [wineBatches]);
 
   return (
     <div className="space-y-6">
@@ -266,7 +266,7 @@ const Winery: React.FC = () => {
                         {batch.grape} - {batch.vineyardName}
                       </h5>
                       <p className="text-sm text-gray-600">
-                        {batch.quantity} {batch.stage === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestDate.year}
+                        {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestDate.year}
                       </p>
                       <p className="text-sm font-medium text-gray-800 mt-1">
                         {getBatchStatus(batch)}
@@ -278,7 +278,7 @@ const Winery: React.FC = () => {
                       <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                       
                       {/* Fermentation Progress Bar */}
-                      {batch.process === 'fermentation' && (
+                      {batch.state === 'must_fermenting' && (
                         <div className="mt-2">
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
@@ -324,7 +324,7 @@ const Winery: React.FC = () => {
                         </Button>
                       )}
                       
-                      {batch.process === 'fermentation' && (batch.fermentationProgress || 0) < 100 && (
+                      {batch.state === 'must_fermenting' && (batch.fermentationProgress || 0) < 100 && (
                         <Button 
                           onClick={() => handleAction(batch.id, 'progress')}
                           size="sm"

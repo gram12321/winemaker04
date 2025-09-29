@@ -43,23 +43,7 @@ We have a comprehensive winery management game built with React/Vite/TypeScript 
 - **Vineyard Prestige**: Vineyard-specific prestige events and calculations
 - **Customer Relationships**: Prestige-based relationships with logarithmic scaling
 
-## 🎯 **NEXT DEVELOPMENT PRIORITIES**
-
-### **Potential Enhancements**
-- **Seasonal Effects**: Automatic seasonal changes affecting vineyards/wine
-- **Storage Management**: Detailed vessel tracking (fermentation tanks, aging tanks, grape containers)
-- **Contract System**: Long-term sales contracts with multi-requirement specifications
-- **Advanced Farming**: Organic/biodynamic farming methods
-- **Market Mechanics**: Dynamic pricing/demand variation over time
-- **Market Saturation**: Diminishing returns based on available wine inventory
-
-### **System Optimization**
-- **Code Cleanup**: Remove redundant code, improve efficiency, enhance readability
-- **Performance**: Optimize database queries and real-time updates
-- **UI/UX**: Enhance user experience and interface consistency
-- **Testing**: Implement comprehensive testing for critical game systems
 
 ### **Legacy Reference Documentation**
 - **v1 Implementation**: `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
 - **v3 Implementation**: `@docs/old_iterations/v3/` - Previous React/TypeScript iteration with different architecture
-- **Use Cases**: Reference when implementing new features, understanding legacy systems, or comparing implementation approaches 

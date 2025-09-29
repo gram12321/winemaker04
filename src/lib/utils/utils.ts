@@ -390,8 +390,7 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
  */
 export function getAvailableBottledWines(batches: WineBatch[]): WineBatch[] {
   return batches.filter(batch => 
-    batch.stage === 'bottled' && 
-    batch.process === 'bottled' && 
+    batch.state === 'bottled' && 
     batch.quantity > 0
   );
 }

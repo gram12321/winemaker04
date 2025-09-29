@@ -41,7 +41,7 @@ async function findCompatibleWineBatch(
     batch.vineyardId === vineyardId &&
     batch.grape === grape &&
     batch.harvestDate.year === harvestYear &&
-    batch.stage === 'grapes' // Only combine with batches still in grape stage
+    batch.state === 'grapes' // Only combine with batches still in grape stage
   );
   
   return compatibleBatch || null;
@@ -180,8 +180,7 @@ export async function createWineBatchFromHarvest(
       vineyardName,
       grape,
       quantity,
-      stage: 'grapes',
-      process: 'none',
+      state: 'grapes',
       fermentationProgress: 0,
       quality,
       balance: balanceResult.score, // Use calculated balance
@@ -222,8 +221,8 @@ export async function updateInventoryBatch(batchId: string, updates: Partial<Win
 
 // Format completed wine name
 export function formatCompletedWineName(batch: WineBatch): string {
-  if (batch.process === 'bottled') {
+  if (batch.state === 'bottled') {
     return `${batch.grape}, ${batch.vineyardName}, ${batch.harvestDate.year}`;
   }
-  return `${batch.grape} (${batch.stage})`;
+  return `${batch.grape} (${batch.state})`;
 }

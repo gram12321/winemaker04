@@ -108,14 +108,14 @@ export function calculateCrushingWork(
  * Validate if crushing is possible for a batch
  */
 export function validateCrushingBatch(batch: WineBatch): { valid: boolean; reason?: string } {
-  if (batch.stage !== 'grapes') {
+  if (batch.state !== 'grapes') {
     return { valid: false, reason: 'Batch must be in grapes stage for crushing' };
   }
   
   if (batch.quantity <= 0) {
     return { valid: false, reason: 'Batch must have grapes to crush' };
   }
-  
+
   return { valid: true };
 }
 
@@ -155,9 +155,9 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       ]
     };
 
-    // Update the batch: change stage to 'must' and apply new characteristics and breakdown
+    // Update the batch: change state to 'must_ready' and apply new characteristics and breakdown
     await updateWineBatch(batchId, {
-      stage: 'must',
+      state: 'must_ready',
       characteristics: modifiedCharacteristics,
       breakdown: combinedBreakdown
     });

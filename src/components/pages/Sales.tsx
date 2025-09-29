@@ -95,7 +95,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   // Memoize filtered bottled wines
   const bottledWines = React.useMemo(() => 
     allBatches.filter(batch => 
-      batch.stage === 'bottled' && batch.process === 'bottled'
+      batch.state === 'bottled'
     ),
     [allBatches]
   );

@@ -258,16 +258,16 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   }, 0);
   
   const wineValue = wineBatches.reduce((sum, batch) => {
-    const stageMultiplier = batch.stage === 'bottled' ? 1 :
-                            batch.stage === 'wine' ? 0.8 :
-                            batch.stage === 'must' ? 0.5 : 0.3;
+    const stageMultiplier = batch.state === 'bottled' ? 1 :
+                            batch.state === 'wine_aging' ? 0.8 :
+                            batch.state === 'must_ready' || batch.state === 'must_fermenting' ? 0.5 : 0.3;
     const qualityMultiplier = batch.quality || 0.5;
     
     return sum + (batch.quantity * stageMultiplier * qualityMultiplier * (batch.finalPrice || 10));
   }, 0);
   
   const grapesValue = wineBatches.reduce((sum, batch) => {
-    if (batch.stage !== 'grapes') return sum;
+    if (batch.state !== 'grapes') return sum;
     
     const qualityMultiplier = batch.quality || 0.5;
     return sum + (batch.quantity * qualityMultiplier * 5);

@@ -106,9 +106,13 @@ export interface BalanceResult {
   dynamicRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges (placeholder)
 }
 
-// Wine batch stages and processes
-export type WineBatchStage = 'grapes' | 'must' | 'wine' | 'bottled';
-export type WineBatchProcess = 'none' | 'fermentation' | 'aging' | 'bottled';
+// Wine batch state - unified system replacing separate stage/process
+export type WineBatchState = 
+  | 'grapes'           // Ready for crushing
+  | 'must_ready'       // Ready for fermentation  
+  | 'must_fermenting'  // Currently fermenting
+  | 'wine_aging'       // Aging, ready for bottling
+  | 'bottled';         // Completed
 
 // Wine batch interface for winery operations
 export interface WineBatch {
@@ -117,8 +121,7 @@ export interface WineBatch {
   vineyardName: string;
   grape: GrapeVariety;
   quantity: number; // in kg or bottles
-  stage: WineBatchStage;
-  process: WineBatchProcess;
+  state: WineBatchState;
   fermentationProgress?: number; // 0-100% for fermentation tracking
   
   // Wine quality properties (0-1 scale)

@@ -1,5 +1,5 @@
 import { WineBatch } from '../../../types/types';
-import { updateWineBatch } from '../../../database/activities/inventoryDB';
+import { updateInventoryBatch } from '../inventoryService';
 import { loadWineBatches } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
@@ -16,12 +16,12 @@ export async function startFermentation(batchId: string): Promise<boolean> {
   const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
-  if (!batch || batch.stage !== 'must' || batch.process !== 'none') {
+  if (!batch || batch.state !== 'must_ready') {
     return false;
   }
 
-  return await updateWineBatch(batchId, {
-    process: 'fermentation',
+  return await updateInventoryBatch(batchId, {
+    state: 'must_fermenting',
     fermentationProgress: 0
   });
 }
@@ -33,13 +33,12 @@ export async function stopFermentation(batchId: string): Promise<boolean> {
   const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
-  if (!batch || batch.process !== 'fermentation') {
+  if (!batch || batch.state !== 'must_fermenting') {
     return false;
   }
 
-  return await updateWineBatch(batchId, {
-    stage: 'wine',
-    process: 'aging',
+  return await updateInventoryBatch(batchId, {
+    state: 'wine_aging',
     fermentationProgress: 100
   });
 }
@@ -51,15 +50,14 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
-  if (!batch || batch.process !== 'aging') {
+  if (!batch || batch.state !== 'wine_aging') {
     return false;
   }
 
   const gameState = getGameState();
   
-  const success = await updateWineBatch(batchId, {
-    stage: 'bottled',
-    process: 'bottled',
+  const success = await updateInventoryBatch(batchId, {
+    state: 'bottled',
     quantity: Math.floor(batch.quantity / 1.5), // Convert kg to bottles (1.5kg per bottle)
     completedAt: {
       week: gameState.week || 1,
@@ -75,7 +73,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       const updatedBatches = await loadWineBatches();
       const bottledBatch = updatedBatches.find(b => b.id === batchId);
       
-      if (bottledBatch && bottledBatch.stage === 'bottled') {
+      if (bottledBatch && bottledBatch.state === 'bottled') {
         await recordBottledWine(bottledBatch);
       }
     } catch (error) {
@@ -94,7 +92,7 @@ export async function progressFermentation(batchId: string, progressIncrement: n
   const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
-  if (!batch || batch.process !== 'fermentation') {
+  if (!batch || batch.state !== 'must_fermenting') {
     return false;
   }
 
@@ -105,7 +103,7 @@ export async function progressFermentation(batchId: string, progressIncrement: n
     return await stopFermentation(batchId);
   }
 
-  return await updateWineBatch(batchId, {
+  return await updateInventoryBatch(batchId, {
     fermentationProgress: newProgress
   });
 }
@@ -116,11 +114,11 @@ export async function progressFermentation(batchId: string, progressIncrement: n
 export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment' | 'stop' | 'bottle'): boolean {
   switch (action) {
     case 'ferment':
-      return batch.stage === 'must' && batch.process === 'none';
+      return batch.state === 'must_ready';
     case 'stop':
-      return batch.process === 'fermentation' && (batch.fermentationProgress || 0) > 0;
+      return batch.state === 'must_fermenting' && (batch.fermentationProgress || 0) > 0;
     case 'bottle':
-      return batch.process === 'aging';
+      return batch.state === 'wine_aging';
     default:
       return false;
   }

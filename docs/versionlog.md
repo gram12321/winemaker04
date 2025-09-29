@@ -4,6 +4,75 @@
 - Include database schema changes, dead table removal, and significant architectural updates
 - Use consistent formatting: **Date:** YYYY-MM-DD, **Commit:** [commit hash]
 
+## Version 0.00951a - Remove duplicate prestige service (cleanup)
+**Date:** 2025-09-29
+**Commit:** d5f6d86a7a92aa1f734b484bf22420459b3ddb5f
+
+### Changes
+- **Removal:** Deleted legacy `src/lib/services/core/prestigeService.ts` duplicate to avoid conflicts with new `services/prestige/*` API
+
+## Version 0.00951 - Standardization: Database layer and service imports
+**Date:** 2025-09-29
+**Commit:** c072a464a1fb8b1a4772b772c14d2ade222db767
+
+### Changes
+- **DB Core:** Introduced `src/lib/database/core/` (`supabase.ts`, `gamestateDB.ts`, `notificationsDB.ts`) and migrated imports
+- **Activities/Inventory:** Added focused DB modules: `activities/activityDB.ts`, `activities/inventoryDB.ts`, `activities/vineyardDB.ts`
+- **Customers/Prestige:** New `customers/prestigeEventsDB.ts`; routed prestige queries via DB layer
+- **Prestige:** Standardized UI imports to `@/lib/services/prestige/prestigeService` (Header, PrestigeModal, hooks)
+- **Sales/Vineyard:** Split DB access from services; `Sales.tsx` now uses `customers/salesDB` and service `relationshipService`
+- **Winery UX:** Reworked `CrushingOptionsModal` to call `winery/crushingManager`; Winery page adds "Balance Analysis" modal
+- **Winepedia:** Unified UI cards (`GridCard`, `SimpleCard`); added `BalanceScoreBreakdown` and slider components; cleanup across tabs
+
+## Version 0.0095 - Standardization: Modal components and UX polish
+**Date:** 2025-09-29
+**Commit:** 920c57bacb4ba635786467ca19fa0eee42369d42
+
+### Changes
+- **Modals:** Added doc headers and structure for `BalanceBreakdownModal`, `CrushingOptionsModal`, `HarvestOptionsModal`, `PlantingOptionsModal`
+- **Winery:** Integrated balance analysis and crushing flow via modals; removed inline crush action
+- **UI Kit:** Enhanced `ActivityOptionsModal` (tooltips, max sizes, layout), exported new modal/components from `ui/index.ts`
+- **Winepedia:** Light refactors for consistent `@/components/ui` imports and layout wrappers
+
+## Version 0.0094 - Major correction to balance system
+**Date:** 2025-09-28
+**Commit:** e89d22f737e70391a0011d4b45ae0e548094980f
+
+### Changes
+- **Balance Engine:** Introduced new modular balance engine under `src/lib/balance/`:
+  - `calculations/`: `balanceCalculator.ts`, `rangeCalculator.ts`, `ruleCalculator.ts`
+  - `config/`: `rangeAdjustments.ts`; `RULES` integration
+- **UI:** Added `BalanceScoreBreakdown` component with detailed penalty/synergy breakdown; integrated into Winery and Winepedia
+- **Characteristic UI:** `WineCharacteristicsDisplay` now can show balance score; numeric tooltips use fixed decimals
+- **Hooks:** `useWineBalance` updated to use new engine and configs
+- **Winery:** Balance analysis modal + crushing modal; harvest breakdown uses stored `breakdown` or recomputes via new services
+
+## Version 0.0093a - Winepedia cleanup & shared UI wrappers
+**Date:** 2025-09-26
+**Commit:** 0734849d058754bb354e2f4be22d0c7e58436955
+
+### Changes
+- **UI Wrappers:** Added `SimpleCard` and `GridCard` in `ui/shadCN/card.tsx`; replaced ad-hoc Card uses across Winepedia and Finance
+- **Winepedia:** Centralized sliders (`CharacteristicSlider`, `CharacteristicSliderGrid`); simplified tabs and copy
+- **Hooks:** New `useCustomerData` hook consolidating customer loading and relationship breakdowns
+- **Finance:** `CashFlowView`, `IncomeBalanceView` migrated to `SimpleCard`
+
+## Version 0.0093 - Finance system cleanup
+**Date:** 2025-09-26
+**Commit:** df1b76c97215d48b50c966c80d8ef0f3b7c04962
+
+### Changes
+- **Admin Tools:** Improved full DB reset ordering and error handling; added notifications cleanup; safer composite key deletes
+- **Pages:** Import path fixes for shared UI types and components; tightened sales/admin page structures
+
+## Version 0.0092 - Docs: App-wide update
+**Date:** 2025-09-26
+**Commit:** f4e3974806caa617bba2673704d212895d8fec76
+
+### Changes
+- **README:** Expanded implemented systems; noted crushing activity methods and removed legacy “Green Flavors” note
+- **Docs:** Synchronized terminology and current feature set across app-wide documentation
+
 ## Version 0.0091b - Documentation & Code Cleanup
 **Date:** 2025-09-26
 **Commit:** 64c02dba08576429c42d7ff13fa35a7195e1a286
