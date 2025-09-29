@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { DialogProps } from '@/lib/types/UItypes';
+import { VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
+import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils';
+import { getCountryFlag } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
 import { Button } from '../shadCN/button';
 import { Badge } from '../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
-import { DialogProps } from '../../../lib/types/UItypes';
-import { VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
-import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
-import { getCountryFlag } from '@/lib/utils';
+
+/**
+ * Land Buying Modal
+ * Modal for selecting and purchasing vineyard properties
+ */
 
 interface LandBuyingModalProps extends DialogProps {
   options: VineyardPurchaseOption[];
@@ -21,15 +26,17 @@ const LandBuyingModal: React.FC<LandBuyingModalProps> = ({
   onPurchase, 
   currentMoney 
 }) => {
+  // State initialization
   const [selectedOption, setSelectedOption] = useState<VineyardPurchaseOption | null>(null);
 
-  // Reset selection when modal opens/closes
+  // Effects
   useEffect(() => {
     if (!isOpen) {
       setSelectedOption(null);
     }
   }, [isOpen]);
 
+  // Event handlers
   const handlePurchase = () => {
     if (selectedOption) {
       onPurchase(selectedOption);
@@ -37,9 +44,10 @@ const LandBuyingModal: React.FC<LandBuyingModalProps> = ({
     }
   };
 
+  // Utility functions
   const canAfford = (option: VineyardPurchaseOption) => currentMoney >= option.totalPrice;
 
-
+  // Render
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">

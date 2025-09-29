@@ -1,12 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { GrapeVariety, Vineyard } from '@/lib/types/types';
-import { GRAPE_VARIETIES, createActivity } from '@/lib/services';
+import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 import { calculatePlantingWork } from '@/lib/services/activity/WorkCalculators/VineyardWorkCalculator';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { GRAPE_VARIETIES } from '@/lib/types/types';
+import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 
+
+/**
+ * Planting Options Modal
+ * Modal for configuring planting options and starting planting activities
+ */
 
 interface PlantingOptionsModalProps {
   isOpen: boolean;
@@ -19,19 +25,20 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   vineyard, 
   onClose
 }) => {
+  // State initialization
   const [options, setOptions] = useState({
     grape: 'Chardonnay' as GrapeVariety,
     density: DEFAULT_VINE_DENSITY
   });
 
-  // Define the fields for the modal
+  // Field definitions
   const fields: ActivityOptionField[] = [
     {
       id: 'grape',
       label: 'Grape Variety',
       type: 'select',
       defaultValue: options.grape,
-      options: GRAPE_VARIETIES.map(grape => ({ value: grape, label: grape })),
+      options: GRAPE_VARIETIES.map((grape: GrapeVariety) => ({ value: grape, label: grape })),
       required: true,
       tooltip: 'Select the type of grape to plant in this vineyard.'
     },
@@ -48,7 +55,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     }
   ];
 
-  // Calculate work requirements whenever options change
+  // Work calculation
   const workCalculation = useMemo((): { workEstimate: ActivityWorkEstimate; workFactors: WorkFactor[] } | null => {
     if (!vineyard) return null;
     
@@ -56,6 +63,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     return { workEstimate: { totalWork }, workFactors: factors };
   }, [vineyard, options.grape, options.density]);
 
+  // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
     if (!vineyard || !workCalculation) return;
     
@@ -89,10 +97,11 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     setOptions(prev => ({ ...prev, ...newOptions }));
   };
 
+  // Early returns
   if (!vineyard) return null;
-
   if (!isOpen) return null;
 
+  // Render
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <ActivityOptionsModal

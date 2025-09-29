@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
+import { PrestigeEvent } from '@/lib/types/types';
+import { formatNumber, formatPercent } from '@/lib/utils';
+import { getVineyardPrestigeEventCalculation } from '@/lib/database/prestige';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
 import { Badge } from '../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
 import { Separator } from '../shadCN/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
-import { PrestigeEvent } from '../../../lib/types/types';
-import { formatNumber, formatPercent } from '@/lib/utils/utils';
-import { getVineyardPrestigeEventCalculation } from '@/lib/database/prestige';
+
+/**
+ * Prestige Modal
+ * Modal for displaying detailed prestige breakdown and sources
+ */
 
 interface PrestigeEventDisplay extends PrestigeEvent {
   originalAmount: number;
@@ -45,7 +50,10 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   vineyardPrestige = 0,
   vineyards = []
 }) => {
+  // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
+
+  // Helper functions
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'company_value':
@@ -125,6 +133,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     }
   };
 
+  // Utility functions
   const formatDecayRate = (decayRate: number) => {
     if (decayRate === 0) return 'No decay';
     const weeklyDecay = (1 - decayRate) * 100;
@@ -135,7 +144,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     return formatNumber(amount, { decimals: 2, forceDecimals: true });
   };
 
-  // Get filtered vineyard data based on selection
+  // Data processing
   const getFilteredVineyards = () => {
     if (selectedVineyard === 'all') {
       return vineyards;
@@ -157,6 +166,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     return acc;
   }, {} as Record<string, PrestigeEventDisplay[]>);
 
+  // Render
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">

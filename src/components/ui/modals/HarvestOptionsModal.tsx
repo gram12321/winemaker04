@@ -5,7 +5,12 @@ import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculateHarvestWork } from '@/lib/services/activity/WorkCalculators/VineyardWorkCalculator';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { formatNumber } from '@/lib/utils/utils';
+import { formatNumber } from '@/lib/utils';
+
+/**
+ * Harvest Options Modal
+ * Modal for configuring harvest options and starting harvest activities
+ */
 
 interface HarvestOptionsModalProps {
   isOpen: boolean;
@@ -18,11 +23,12 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
   vineyard, 
   onClose
 }) => {
+  // State initialization
   const [options, setOptions] = useState({
     storageSelection: 'auto' // Placeholder for future storage management
   });
 
-  // Define the fields for the modal (minimal for now)
+  // Field definitions
   const fields: ActivityOptionField[] = [
     {
       id: 'storageSelection',
@@ -38,7 +44,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     }
   ];
 
-  // Calculate expected yield and work requirements
+  // Work calculation
   const harvestCalculation = useMemo((): { 
     workEstimate: ActivityWorkEstimate; 
     workFactors: WorkFactor[];
@@ -50,6 +56,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     return { workEstimate: { totalWork }, workFactors: factors, expectedYield };
   }, [vineyard]);
 
+  // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
     if (!vineyard || !harvestCalculation) return;
     
@@ -81,14 +88,14 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     setOptions(prev => ({ ...prev, ...newOptions }));
   };
 
-  // Validate that harvest can proceed
+  // Validation
   const canSubmit = () => {
     if (!vineyard || !vineyard.grape) return false;
     if (vineyard.status !== 'Growing') return false;
     return true;
   };
 
-  // Warning message for low ripeness
+  // Data preparation
   const warningMessage = useMemo(() => {
     if (!vineyard) return undefined;
     
@@ -99,9 +106,11 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     return undefined;
   }, [vineyard]);
 
+  // Early returns
   if (!vineyard) return null;
   if (!isOpen) return null;
 
+  // Render
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <ActivityOptionsModal

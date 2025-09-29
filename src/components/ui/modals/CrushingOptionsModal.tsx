@@ -8,6 +8,11 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils';
 
+/**
+ * Crushing Options Modal
+ * Modal for configuring crushing options and starting crushing activities
+ */
+
 interface CrushingOptionsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,16 +24,17 @@ export const CrushingOptionsModal: React.FC<CrushingOptionsModalProps> = ({
   batch, 
   onClose
 }) => {
+  // State initialization
   const [options, setOptions] = useState<CrushingOptions>({
     method: 'Mechanical Press',
     destemming: true,
     coldSoak: false
   });
 
-  // Get crushing method information for the UI
+  // Helper data and functions
   const methodInfo = getCrushingMethodInfo();
 
-  // Define the fields for the modal
+  // Field definitions
   const fields: ActivityOptionField[] = [
     {
       id: 'method',
@@ -81,7 +87,7 @@ Processing Effects:
     }
   ];
 
-  // Calculate work requirements whenever options change
+  // Work calculation
   const workCalculation = useMemo((): { workEstimate: ActivityWorkEstimate; workFactors: WorkFactor[]; cost: number } | null => {
     if (!batch) return null;
     
@@ -92,6 +98,7 @@ Processing Effects:
     return { workEstimate: { totalWork }, workFactors: factors, cost };
   }, [batch, options]);
 
+  // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
     if (!batch || !workCalculation) return;
     
@@ -139,7 +146,7 @@ Processing Effects:
     setOptions((prev: CrushingOptions) => ({ ...prev, ...convertedOptions }));
   };
 
-  // Validation function
+  // Validation
   const canSubmit = (currentOptions: Record<string, any>) => {
     if (!batch) return false;
     const validation = validateCrushingBatch(batch);
@@ -155,10 +162,11 @@ Processing Effects:
     return validation.valid && currentOptions.method && hasValidDestemming && hasValidColdSoak;
   };
 
+  // Early returns
   if (!batch) return null;
   if (!isOpen) return null;
 
-  // Convert boolean options to strings for the form
+  // Data preparation
   const formOptions = {
     ...options,
     destemming: options.destemming ? 'true' : 'false',
@@ -195,6 +203,7 @@ Processing Effects:
     );
   }
 
+  // Render
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <ActivityOptionsModal

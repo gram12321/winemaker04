@@ -4,6 +4,11 @@ import { BalanceScoreBreakdown } from '../components/BalanceScoreBreakdown';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../shadCN/dialog';
 import { Button } from '../shadCN/button';
 
+/**
+ * Balance Breakdown Modal
+ * Modal for displaying detailed wine balance score breakdown
+ */
+
 interface BalanceBreakdownModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +22,7 @@ export const BalanceBreakdownModal: React.FC<BalanceBreakdownModalProps> = ({
   characteristics,
   wineName = "Wine"
 }) => {
+  // Render
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
