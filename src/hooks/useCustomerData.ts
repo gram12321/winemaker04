@@ -4,7 +4,7 @@ import { useGameStateWithData, useGameUpdates } from '@/hooks';
 import { getAllCustomers } from '@/lib/services';
 import { Customer } from '@/lib/types/types';
 import { loadFormattedRelationshipBreakdown } from '@/lib/utils';
-import { calculateRelationshipBreakdown } from '@/lib/database/customers/relationshipBreakdownService';
+import { calculateRelationshipBreakdown } from '@/lib/services/sales/relationshipService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
 /**

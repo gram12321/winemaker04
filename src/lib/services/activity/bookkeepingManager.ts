@@ -1,10 +1,10 @@
 import { getGameState } from '@/lib/services/core/gameState';
 import { WorkCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activityManager';
-import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activity/activityService';
+import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { calculateTotalBookkeepingWork } from './WorkCalculators/BookkeepingWorkCalculator';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { supabase } from '@/lib/database/supabase';
+import { supabase } from '@/lib/database/core/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';

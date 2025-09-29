@@ -3,7 +3,7 @@ import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/WorkCalc
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState';
 import { getTransactions } from '@/lib/services/user/financeService';
-import { loadActivitiesFromDb } from '@/lib/database/activity/activityService';
+import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { notificationService } from '@/components/layout/NotificationCenter';
 
 /**

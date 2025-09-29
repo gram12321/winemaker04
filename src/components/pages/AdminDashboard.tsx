@@ -10,7 +10,7 @@ import {
 import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, getCurrentCompany, clearPrestigeCache } from '@/lib/services';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils/utils';
-import { supabase } from '@/lib/database/supabase';
+import { supabase } from '@/lib/database/core/supabase';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {

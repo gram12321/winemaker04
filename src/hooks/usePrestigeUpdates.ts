@@ -1,13 +1,8 @@
 // Unified hook to handle all prestige updates (company and vineyard)
 import { useEffect, useRef } from 'react';
 import { getGameState, getCurrentCompany } from '../lib/services/core/gameState';
-import { 
-  updateBasePrestigeEvent
-} from '../lib/database/prestige/prestigeEventsService';
-import {
-  decayPrestigeEventsOneWeek,
-  decayRelationshipBoostsOneWeek
-} from '../lib/database/prestige/decayService';
+import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
+import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
 
 /**

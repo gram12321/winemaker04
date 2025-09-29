@@ -3,7 +3,7 @@ import { Vineyard } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
-import { loadVineyards, saveVineyard } from '../../database/database';
+import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 
 /**
  * Calculate yield for a vineyard based on all factors

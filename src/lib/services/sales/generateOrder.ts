@@ -1,16 +1,17 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
 import { WineOrder, Customer, WineBatch, Vineyard } from '../../types/types';
-import { saveWineOrder, loadVineyards } from '../../database/database';
+import { loadVineyards } from '../../database/activities/vineyardDB';
+import { saveWineOrder } from '../../database/customers/salesDB';
 import { getGameState } from '../core/gameState';
-import { formatCompletedWineName } from '../wine/wineBatchService';
+import { formatCompletedWineName } from '../wine/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { calculateCustomerRelationship } from './createCustomer';
-import { calculateCustomerRelationshipBoosts } from '../../database/prestige';
+import { calculateCustomerRelationshipBoosts } from './relationshipService';
 import { getCurrentPrestige } from '../core/gameState';
-import { activateCustomer } from '../../database/customers/customerDatabaseService';
+import { activateCustomer } from '../../database/customers/customerDB';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;

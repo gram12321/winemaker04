@@ -1,13 +1,12 @@
-// Core prestige events management service
-import { supabase } from '../supabase';
-import { v4 as uuidv4 } from 'uuid';
-import { getGameState } from '../../services/core/gameState';
-import { loadVineyards, saveVineyard } from '../database';
-import { calculateGrapeSuitabilityContribution } from '../../services/vineyard/vineyardValueCalc';
+// Prestige service - handles prestige business logic
+import { getGameState } from './gameState';
+import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
+import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier } from '../../utils/calculator';
-import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
+import { v4 as uuidv4 } from 'uuid';
+import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents } from '../../database/customers/prestigeEventsDB';
 
 /**
  * Generate tooltip calculation text for vineyard prestige events
@@ -93,21 +92,10 @@ export async function calculateCurrentPrestige(): Promise<{
     }>;
   }>;
 }> {
-  const { data, error } = await getCompanyQuery('prestige_events')
-    .order('created_game_week', { ascending: false });
-
-  if (error) {
-    console.error('Failed to load prestige events:', error);
-    return { 
-      totalPrestige: 1, 
-      companyPrestige: 1, 
-      vineyardPrestige: 0, 
-      eventBreakdown: [],
-      vineyards: []
-    }; // Fallback to starting prestige
+  const events = await listPrestigeEvents();
+  if (!events) {
+    return { totalPrestige: 1, companyPrestige: 1, vineyardPrestige: 0, eventBreakdown: [], vineyards: [] };
   }
-
-  const events = data || [];
   
   // No real-time decay here. Amounts are assumed to have been decayed on weekly ticks.
   const eventBreakdown = events.map(row => {
@@ -195,57 +183,14 @@ export async function updateBasePrestigeEvent(
   description: string
 ): Promise<void> {
   // Try to find existing event for this source
-  const { data: existingEvents, error: fetchError } = await supabase
-    .from('prestige_events')
-    .select('id, amount')
-    .eq('company_id', getCurrentCompanyId())
-    .eq('type', type)
-    .eq('source_id', sourceId)
-    .limit(1);
-
-  if (fetchError) {
-    console.error('Failed to fetch existing prestige event:', fetchError);
-    return;
-  }
-
-  if (existingEvents && existingEvents.length > 0) {
-    // Update existing event
-    const { error } = await supabase
-      .from('prestige_events')
-      .update({ 
-        amount: newAmount,
-        description: description,
-        timestamp: Date.now() // Update timestamp for base prestige changes
-      })
-      .eq('id', existingEvents[0].id)
-      .eq('company_id', getCurrentCompanyId());
-
-    if (error) {
-      console.error('Failed to update prestige event:', error);
-    } else {
-      triggerGameUpdate(); // Notify UI of prestige changes
-    }
-  } else {
-    // Create new base prestige event
-    const { error } = await supabase
-      .from('prestige_events')
-      .insert([{
-        id: uuidv4(),
-        type,
-        amount: newAmount,
-        created_game_week: (() => { const gs = getGameState(); return calculateAbsoluteWeeks(gs.week!, gs.season!, gs.currentYear!); })(),
-        decay_rate: 0, // Base prestige doesn't decay
-        description,
-        source_id: sourceId,
-        company_id: getCurrentCompanyId()
-      }]);
-
-    if (error) {
-      console.error('Failed to create prestige event:', error);
-    } else {
-      triggerGameUpdate(); // Notify UI of prestige changes
-    }
-  }
+  await upsertPrestigeEventBySource(type, sourceId, {
+    amount: newAmount,
+    description,
+    timestamp: Date.now(),
+    created_game_week: (() => { const gs = getGameState(); return calculateAbsoluteWeeks(gs.week!, gs.season!, gs.currentYear!); })(),
+    decay_rate: 0,
+  });
+  triggerGameUpdate();
 }
 
 /**
@@ -259,24 +204,17 @@ export async function addSalePrestigeEvent(
   const prestigeAmount = saleValue / 10000; // Reverted to original scaling
   const description = `Sale to ${customerName}: ${wineName}`;
   
-  const { error } = await supabase
-    .from('prestige_events')
-    .insert([{
-      id: uuidv4(),
-      type: 'sale',
-      amount: prestigeAmount,
-      created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
-      decay_rate: 0.95, // 5% weekly decay
-      description,
-      source_id: null,
-      company_id: getCurrentCompanyId()
-    }]);
+  await insertPrestigeEvent({
+    id: uuidv4(),
+    type: 'sale',
+    amount: prestigeAmount,
+    created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
+    decay_rate: 0.95,
+    description,
+    source_id: null,
+  });
 
-  if (error) {
-    console.error('Failed to create sale prestige event:', error);
-  } else {
-    triggerGameUpdate(); // Notify UI of prestige changes
-  }
+  triggerGameUpdate();
 }
 
 /**
@@ -295,24 +233,17 @@ export async function addVineyardSalePrestigeEvent(
   const prestigeAmount = basePrestigeAmount * vineyardPrestigeFactor;
   const description = `Vineyard sale to ${customerName}: ${wineName} (${vineyardPrestigeFactor.toFixed(2)}x factor)`;
   
-  const { error } = await supabase
-    .from('prestige_events')
-    .insert([{
-      id: uuidv4(),
-      type: 'vineyard_sale',
-      amount: prestigeAmount,
-      created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
-      decay_rate: 0.95, // 5% weekly decay
-      description,
-      source_id: vineyardId,
-      company_id: getCurrentCompanyId()
-    }]);
+  await insertPrestigeEvent({
+    id: uuidv4(),
+    type: 'vineyard_sale',
+    amount: prestigeAmount,
+    created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
+    decay_rate: 0.95,
+    description,
+    source_id: vineyardId,
+  });
 
-  if (error) {
-    console.error('Failed to create vineyard sale prestige event:', error);
-  } else {
-    triggerGameUpdate(); // Notify UI of prestige changes
-  }
+  triggerGameUpdate();
 }
 
 /**
@@ -330,24 +261,16 @@ export async function addVineyardAchievementPrestigeEvent(
   // Use base vineyard prestige as multiplier (no circular dependency)
   const prestigeAmount = baseVineyardPrestige * 0.1; // 10% of base prestige
   
-  const { error } = await supabase
-    .from('prestige_events')
-    .insert([{
-      id: uuidv4(),
-      type: 'vineyard_achievement',
-      amount: prestigeAmount,
-      created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
-      decay_rate: 0.90, // 10% weekly decay (slower than sales)
-      description: description || defaultDescription,
-      source_id: vineyardId,
-      company_id: getCurrentCompanyId()
-    }]);
-
-  if (error) {
-    console.error('Failed to create vineyard achievement prestige event:', error);
-  } else {
-    triggerGameUpdate(); // Notify UI of prestige changes
-  }
+  await insertPrestigeEvent({
+    id: uuidv4(),
+    type: 'vineyard_achievement',
+    amount: prestigeAmount,
+    created_game_week: calculateAbsoluteWeeks(getGameState().week!, getGameState().season!, getGameState().currentYear!),
+    decay_rate: 0.90,
+    description: description || defaultDescription,
+    source_id: vineyardId,
+  });
+  triggerGameUpdate();
 }
 
 /**
@@ -373,25 +296,22 @@ export async function initializeBasePrestigeEvents(): Promise<void> {
  * Calculate vineyard prestige from events (replaces the old calculation-based system)
  */
 export async function calculateVineyardPrestigeFromEvents(vineyardId: string): Promise<number> {
-  const { data, error } = await supabase
-    .from('prestige_events')
-    .select('amount, type')
-    .eq('company_id', getCurrentCompanyId())
-    .eq('source_id', vineyardId)
-    .in('type', ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region']);
-
-  if (error) {
+  try {
+    const events = await listPrestigeEvents();
+    const vineyardEvents = events.filter(event => 
+      event.source_id === vineyardId &&
+      ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'].includes(event.type)
+    );
+    
+    // Sum all vineyard-specific prestige events
+    const totalVineyardPrestige = vineyardEvents.reduce((sum: number, event: any) => sum + (event.amount || 0), 0);
+    
+    // Convert to prestige factor (0.1 minimum, no upper limit)
+    return Math.max(0.1, totalVineyardPrestige);
+  } catch (error) {
     console.error('Failed to load vineyard prestige events:', error);
     return 0.1; // Fallback minimal prestige
   }
-
-  const events = data || [];
-  
-  // Sum all vineyard-specific prestige events
-  const totalVineyardPrestige = events.reduce((sum, event) => sum + event.amount, 0);
-  
-  // Convert to prestige factor (0.1 minimum, no upper limit)
-  return Math.max(0.1, totalVineyardPrestige);
 }
 
 /**
@@ -407,39 +327,38 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
     }>;
   };
 }> {
-  const { data, error } = await supabase
-    .from('prestige_events')
-    .select('source_id, amount, type, description')
-    .eq('company_id', getCurrentCompanyId())
-    .in('type', ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'])
-    .not('source_id', 'is', null);
+  try {
+    const events = await listPrestigeEvents();
+    const vineyardEvents = events.filter(event => 
+      event.source_id !== null &&
+      ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'].includes(event.type)
+    );
 
-  if (error) {
+    const breakdown: { [vineyardId: string]: any } = {};
+    
+    for (const event of vineyardEvents) {
+      const vineyardId = event.source_id!;
+      
+      if (!breakdown[vineyardId]) {
+        breakdown[vineyardId] = {
+          totalPrestige: 0,
+          events: []
+        };
+      }
+      
+      breakdown[vineyardId].totalPrestige += event.amount;
+      breakdown[vineyardId].events.push({
+        type: event.type,
+        amount: event.amount,
+        description: event.description
+      });
+    }
+    
+    return breakdown;
+  } catch (error) {
     console.error('Failed to load vineyard prestige breakdown:', error);
     return {};
   }
-
-  const breakdown: { [vineyardId: string]: any } = {};
-  
-  for (const event of data || []) {
-    const vineyardId = event.source_id!;
-    
-    if (!breakdown[vineyardId]) {
-      breakdown[vineyardId] = {
-        totalPrestige: 0,
-        events: []
-      };
-    }
-    
-    breakdown[vineyardId].totalPrestige += event.amount;
-    breakdown[vineyardId].events.push({
-      type: event.type,
-      amount: event.amount,
-      description: event.description
-    });
-  }
-  
-  return breakdown;
 }
 
 /**
@@ -541,20 +460,22 @@ export async function updateBaseVineyardPrestigeEvent(vineyardId: string): Promi
  */
 export async function getBaseVineyardPrestige(vineyardId: string): Promise<number> {
   try {
-    const { data, error } = await supabase
-      .from('prestige_events')
-      .select('amount, type')
-      .eq('company_id', getCurrentCompanyId())
-      .in('type', ['vineyard_age', 'vineyard_land', 'vineyard_region'])
-      .or(`source_id.eq.${vineyardId}_age,source_id.eq.${vineyardId}_land,source_id.eq.${vineyardId}_region`);
+    const events = await listPrestigeEvents();
+    const baseEvents = events.filter(event => 
+      event.type === 'vineyard_age' || event.type === 'vineyard_land' || event.type === 'vineyard_region'
+    ).filter(event => 
+      event.source_id === `${vineyardId}_age` || 
+      event.source_id === `${vineyardId}_land` || 
+      event.source_id === `${vineyardId}_region`
+    );
 
-    if (error || !data || data.length === 0) {
+    if (baseEvents.length === 0) {
       console.warn(`No base vineyard prestige found for vineyard ${vineyardId}`);
       return 1.0; // Fallback to minimum base prestige
     }
 
     // Sum all 4 factor prestige amounts
-    const totalPrestige = data.reduce((sum, event) => sum + (event.amount || 0), 0);
+    const totalPrestige = baseEvents.reduce((sum: number, event: any) => sum + (event.amount || 0), 0);
     return Math.max(1.0, totalPrestige); // Ensure minimum of 1.0
   } catch (error) {
     console.error('Failed to get base vineyard prestige:', error);

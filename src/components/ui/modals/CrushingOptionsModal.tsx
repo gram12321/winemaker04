@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { createActivity } from '@/lib/services';
-import { WorkCategory, WorkFactor } from '@/lib/services/activity';
+import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity/WorkCalculators/CrushingWorkCalculator';
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
+import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils';
@@ -100,7 +100,7 @@ Processing Effects:
 
   // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
-    if (!batch || !workCalculation) return;
+    if (!batch) return;
     
     const crushingOptions: CrushingOptions = {
       method: submittedOptions.method as CrushingOptions['method'],
@@ -108,27 +108,11 @@ Processing Effects:
       coldSoak: submittedOptions.coldSoak === 'true'
     };
     
-    // Create activity for crushing
-    const activityId = await createActivity({
-      category: WorkCategory.CRUSHING,
-      title: `Crushing ${batch.vineyardName} ${batch.grape}`,
-      totalWork: workCalculation.workEstimate.totalWork,
-      targetId: batch.id,
-      params: {
-        batchId: batch.id,
-        vineyardName: batch.vineyardName,
-        grape: batch.grape,
-        quantity: batch.quantity,
-        crushingOptions,
-        cost: workCalculation.cost
-      },
-      isCancellable: true
-    });
+    // Use crushing manager to start the activity
+    const result = await startCrushingActivity(batch, crushingOptions);
     
-    if (activityId) {
-      // Success notification handled by activityManager
-    } else {
-      notificationService.error('Failed to create crushing activity.');
+    if (!result.success) {
+      notificationService.error(result.error || 'Failed to start crushing activity');
     }
     
     onClose();

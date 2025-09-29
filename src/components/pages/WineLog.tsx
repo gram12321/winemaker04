@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { loadWineLog, getAllVineyards } from '@/lib/services';
 import { WineLogEntry } from '@/lib/types/types';
-import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
+import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber } from '@/lib/utils/utils';
 

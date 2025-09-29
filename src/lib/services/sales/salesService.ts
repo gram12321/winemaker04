@@ -1,9 +1,11 @@
 // Sales service for wine order management (fulfillment and rejection)
 import { WineOrder, WineBatch } from '../../types/types';
-import { loadWineOrders, updateWineOrderStatus, loadWineBatches, saveWineBatch, saveWineOrder } from '../../database/database';
+import { loadWineOrders, updateWineOrderStatus, saveWineOrder } from '../../database/customers/salesDB';
+import { loadWineBatches, saveWineBatch } from '../../database/activities/inventoryDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../user/financeService';
-import { createRelationshipBoost, addSalePrestigeEvent, addVineyardSalePrestigeEvent, calculateVineyardPrestigeFromEvents } from '../../database/prestige';
+import { createRelationshipBoost } from '../sales/relationshipService';
+import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, calculateVineyardPrestigeFromEvents } from '../prestige/prestigeService';
 import { getCurrentPrestige } from '../core/gameState';
 
 // ===== ORDER MANAGEMENT =====

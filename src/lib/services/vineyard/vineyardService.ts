@@ -1,9 +1,8 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety, Aspect, ASPECTS } from '../../types/types';
-import { saveVineyard, loadVineyards } from '../../database/database';
+import { saveVineyard, loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../../database/prestige';
+import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';

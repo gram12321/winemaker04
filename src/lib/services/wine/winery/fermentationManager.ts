@@ -1,29 +1,19 @@
-// Winery operations service for wine production
-import { WineBatch } from '../../types/types';
-import { updateWineBatch, getAllWineBatches } from './wineBatchService';
-import { getGameState } from '../core/gameState';
-import { recordBottledWine } from './wineLogService';
+import { WineBatch } from '../../../types/types';
+import { updateWineBatch } from '../../../database/activities/inventoryDB';
+import { loadWineBatches } from '../../../database/activities/inventoryDB';
+import { getGameState } from '../../core/gameState';
+import { recordBottledWine } from '../../user/wineLogService';
 
-// ===== WINERY ACTIONS =====
+/**
+ * Fermentation Manager
+ * Handles fermentation workflow and wine production processes
+ */
 
-// Crushing: Convert grapes to must
-export async function crushGrapes(batchId: string): Promise<boolean> {
-  const batches = await getAllWineBatches();
-  const batch = batches.find(b => b.id === batchId);
-  
-  if (!batch || batch.stage !== 'grapes') {
-    return false;
-  }
-
-  return await updateWineBatch(batchId, {
-    stage: 'must'
-    // process stays 'none'
-  });
-}
-
-// Start Fermentation: Begin fermentation process
+/**
+ * Start Fermentation: Begin fermentation process
+ */
 export async function startFermentation(batchId: string): Promise<boolean> {
-  const batches = await getAllWineBatches();
+  const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
   if (!batch || batch.stage !== 'must' || batch.process !== 'none') {
@@ -36,9 +26,11 @@ export async function startFermentation(batchId: string): Promise<boolean> {
   });
 }
 
-// Stop Fermentation: Complete fermentation and move to aging
+/**
+ * Stop Fermentation: Complete fermentation and move to aging
+ */
 export async function stopFermentation(batchId: string): Promise<boolean> {
-  const batches = await getAllWineBatches();
+  const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
   if (!batch || batch.process !== 'fermentation') {
@@ -52,9 +44,11 @@ export async function stopFermentation(batchId: string): Promise<boolean> {
   });
 }
 
-// Bottling: Complete wine production
+/**
+ * Bottling: Complete wine production
+ */
 export async function bottleWine(batchId: string): Promise<boolean> {
-  const batches = await getAllWineBatches();
+  const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
   if (!batch || batch.process !== 'aging') {
@@ -78,7 +72,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   if (success) {
     try {
       // Get the updated batch to record in the log
-      const updatedBatches = await getAllWineBatches();
+      const updatedBatches = await loadWineBatches();
       const bottledBatch = updatedBatches.find(b => b.id === batchId);
       
       if (bottledBatch && bottledBatch.stage === 'bottled') {
@@ -93,9 +87,11 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   return success;
 }
 
-// Progress Fermentation: Simulate fermentation progress over time
+/**
+ * Progress Fermentation: Simulate fermentation progress over time
+ */
 export async function progressFermentation(batchId: string, progressIncrement: number = 10): Promise<boolean> {
-  const batches = await getAllWineBatches();
+  const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
   if (!batch || batch.process !== 'fermentation') {
@@ -114,13 +110,11 @@ export async function progressFermentation(batchId: string, progressIncrement: n
   });
 }
 
-// ===== HELPER FUNCTIONS =====
-
-// Check if action is available for a batch
-export function isActionAvailable(batch: WineBatch, action: 'crush' | 'ferment' | 'stop' | 'bottle'): boolean {
+/**
+ * Check if fermentation action is available for a batch
+ */
+export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment' | 'stop' | 'bottle'): boolean {
   switch (action) {
-    case 'crush':
-      return batch.stage === 'grapes';
     case 'ferment':
       return batch.stage === 'must' && batch.process === 'none';
     case 'stop':
@@ -130,33 +124,4 @@ export function isActionAvailable(batch: WineBatch, action: 'crush' | 'ferment' 
     default:
       return false;
   }
-}
-
-// Get display status for batch
-export function getBatchStatus(batch: WineBatch): string {
-  if (batch.process === 'fermentation') {
-    return `Fermenting (${batch.fermentationProgress || 0}%)`;
-  }
-  
-  if (batch.process === 'bottled') {
-    return `Completed - ${batch.quantity} bottles`;
-  }
-  
-  const stageMap = {
-    grapes: 'Grapes ready for crushing',
-    must: batch.process === 'none' ? 'Must ready for fermentation' : 'Must processing',
-    wine: batch.process === 'aging' ? 'Wine aging, ready for bottling' : 'Wine processing',
-    bottled: `Bottled - ${batch.quantity} bottles`
-  };
-  
-  return stageMap[batch.stage] || 'Processing';
-}
-
-// Get next available action for batch
-export function getNextAction(batch: WineBatch): string | null {
-  if (isActionAvailable(batch, 'crush')) return 'crush';
-  if (isActionAvailable(batch, 'ferment')) return 'ferment';
-  if (isActionAvailable(batch, 'stop')) return 'stop';
-  if (isActionAvailable(batch, 'bottle')) return 'bottle';
-  return null;
 }

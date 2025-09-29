@@ -1,5 +1,6 @@
 // Customer acquisition service - handles company prestige-based customer generation
-import { loadWineBatches, loadWineOrders } from '../../database/database';
+import { loadWineBatches } from '../../database/activities/inventoryDB';
+import { loadWineOrders } from '../../database/customers/salesDB';
 import { getCurrentPrestige } from '../core/gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
 import { getAvailableBottledWines } from '../../utils';

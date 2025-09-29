@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SimpleCard } from '../ui';
+import { SimpleCard } from '@/components/ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, ReferenceLine, Area, ComposedChart } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
 import { calculateVineyardYield, calculateVineYieldProgression } from '@/lib/services/vineyard/vineyardManager';
@@ -172,7 +172,7 @@ export function YieldProjectionTab() {
       title="Interactive Yield Projection"
       description="Configure parameters to simulate expected harvest yield (kg). Uses the same yield function as the game."
     >
-        <div className="space-y-6">
+      <div className="space-y-6">
           {/* Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -395,7 +395,7 @@ export function YieldProjectionTab() {
               })()
             }
           </div>
-        </div>
+      </div>
     </SimpleCard>
   );
 }

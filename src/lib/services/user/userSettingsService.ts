@@ -1,4 +1,4 @@
-import { supabase } from '../../database/supabase';
+import { supabase } from '../../database/core/supabase';
 
 export interface NotificationSettings {
   categories: Record<string, boolean>;  // e.g., { "Production": false }

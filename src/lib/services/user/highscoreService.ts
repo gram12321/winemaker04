@@ -1,4 +1,4 @@
-import { supabase } from '../../database/supabase';
+import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { Season } from '../../types/types';
 

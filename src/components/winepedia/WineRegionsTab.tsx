@@ -1,4 +1,4 @@
-import { SimpleCard } from '../ui';
+import { SimpleCard } from '@/components/ui';
 
 export function WineRegionsTab() {
   return (
@@ -6,7 +6,11 @@ export function WineRegionsTab() {
       title="Wine Regions"
       description="Learn about different wine regions around the world"
     >
-      <p className="text-gray-600">Content coming soon...</p>
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <p className="text-gray-600">Content coming soon...</p>
+        </div>
+      </div>
     </SimpleCard>
   );
 }

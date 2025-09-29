@@ -8,7 +8,7 @@ import { NotificationCenter, useNotifications } from '@/components/layout/Notifi
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut } from 'lucide-react';
 import PrestigeModal from '@/components/ui/modals/prestigeModal';
-import { calculateCurrentPrestige } from '@/lib/database/prestige';
+import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeService';
 import { Company } from '@/lib/services/user/companyService';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 

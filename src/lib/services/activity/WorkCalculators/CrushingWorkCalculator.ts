@@ -3,8 +3,8 @@ import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/WorkCalc
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';
-import { updateWineBatch } from '@/lib/services/wine/wineBatchService';
-import { loadWineBatches } from '@/lib/database/database';
+import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
+import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services/user/financeService';
 
 /**

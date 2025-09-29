@@ -2,20 +2,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/services/activity';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
-import { 
-  saveActivityToDb, 
-  loadActivitiesFromDb, 
-  updateActivityInDb, 
-  removeActivityFromDb,
-  hasActiveActivity 
-} from '@/lib/database/activity/activityService';
+import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { plantVineyard } from '@/lib/services';
-import { createWineBatchFromHarvest } from '../wine/wineBatchService';
-import { saveVineyard, loadVineyards } from '@/lib/database/database';
+import { createWineBatchFromHarvest } from '../wine/inventoryService';
+import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { calculateVineyardYield } from '../vineyard/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { completeBookkeeping } from './WorkCalculators/BookkeepingWorkCalculator';
 import { completeCrushing } from './WorkCalculators/CrushingWorkCalculator';
+import { completeBookkeeping } from './WorkCalculators/BookkeepingWorkCalculator';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -25,36 +19,36 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
       notificationService.success(`Successfully planted ${activity.params.grape} in ${activity.params.targetName || 'vineyard'}!`);
     }
   },
-  
+
   [WorkCategory.HARVESTING]: async (activity: Activity) => {
     if (activity.targetId && activity.params.grape) {
       // Harvest any remaining yield and finalize the vineyard status
       const vineyards = await loadVineyards();
       const vineyard = vineyards.find(v => v.id === activity.targetId);
-      
+
       if (vineyard) {
         // Calculate final total yield based on current ripeness
         const currentTotalYield = calculateVineyardYield(vineyard);
         const harvestedSoFar = activity.params.harvestedSoFar || 0;
         const remainingYield = Math.max(0, currentTotalYield - harvestedSoFar);
-        
+
         if (remainingYield > 1) { // Only create batch if at least 1kg remaining
           await createWineBatchFromHarvest(
-            vineyard.id, 
-            vineyard.name, 
-            activity.params.grape, 
+            vineyard.id,
+            vineyard.name,
+            activity.params.grape,
             remainingYield
           );
         }
-        
+
         // Check current season to determine final status
         const gameState = getGameState();
         const currentSeason = gameState.season;
-        
+
         // If harvest completes in Winter, go directly to Dormant
         // Otherwise, set to Harvested (will transition to Dormant at Winter week 1)
         const finalStatus = currentSeason === 'Winter' ? 'Dormant' : 'Harvested';
-        
+
         // Update vineyard status and reset ripeness
         const updatedVineyard = {
           ...vineyard,
@@ -62,54 +56,55 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
           ripeness: 0 // Reset ripeness after harvest
         };
         await saveVineyard(updatedVineyard);
-        
+
         const totalHarvested = harvestedSoFar + remainingYield;
-        const statusMessage = finalStatus === 'Dormant' 
+        const statusMessage = finalStatus === 'Dormant'
           ? 'Harvest complete! Vineyard is now dormant for winter.'
           : 'Harvest complete! Vineyard will go dormant in winter.';
-        
+
         notificationService.success(`${statusMessage} Total: ${Math.round(totalHarvested)}kg of ${activity.params.grape} from ${activity.params.targetName || 'vineyard'}`);
       }
     }
   },
-  
-  [WorkCategory.CLEARING]: async (_activity: Activity) => {
-    // TODO: Implement clearing completion
-  },
-  
-  [WorkCategory.UPROOTING]: async (_activity: Activity) => {
-    // TODO: Implement uprooting completion
-  },
-  
-  [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
-    await completeBookkeeping(activity);
-  },
-  
-  [WorkCategory.BUILDING]: async (_activity: Activity) => {
-    // TODO: Implement building completion
-  },
-  
-  [WorkCategory.UPGRADING]: async (_activity: Activity) => {
-    // TODO: Implement upgrading completion
-  },
-  
-  [WorkCategory.MAINTENANCE]: async (_activity: Activity) => {
-    // TODO: Implement maintenance completion
-  },
-  
+
   [WorkCategory.CRUSHING]: async (activity: Activity) => {
     if (activity.params.batchId && activity.params.crushingOptions) {
       await completeCrushing(activity);
       notificationService.success(`Crushing completed for ${activity.params.vineyardName} ${activity.params.grape}!`);
     }
   },
-  
+
   [WorkCategory.FERMENTATION]: async (_activity: Activity) => {
-    // TODO: Implement fermentation completion
+    // Fermentation activities are handled by the fermentation manager
+    // No specific completion action needed here
   },
-  
+
+  [WorkCategory.CLEARING]: async (_activity: Activity) => {
+    // TODO: Implement clearing completion
+  },
+
+  [WorkCategory.UPROOTING]: async (_activity: Activity) => {
+    // TODO: Implement uprooting completion
+  },
+
+  [WorkCategory.BUILDING]: async (_activity: Activity) => {
+    // TODO: Implement building completion
+  },
+
+  [WorkCategory.UPGRADING]: async (_activity: Activity) => {
+    // TODO: Implement upgrading completion
+  },
+
+  [WorkCategory.MAINTENANCE]: async (_activity: Activity) => {
+    // TODO: Implement maintenance completion
+  },
+
   [WorkCategory.STAFF_SEARCH]: async (_activity: Activity) => {
     // TODO: Implement staff search completion
+  },
+
+  [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
+    await completeBookkeeping(activity);
   }
 };
 

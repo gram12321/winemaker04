@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils';
-import { getVineyardPrestigeEventCalculation } from '@/lib/database/prestige';
+import { getVineyardPrestigeEventCalculation } from '@/lib/services/prestige/prestigeService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
 import { Badge } from '../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';

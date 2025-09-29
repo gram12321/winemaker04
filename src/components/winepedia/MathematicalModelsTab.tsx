@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { SimpleCard } from '../ui';
+import { SimpleCard } from '@/components/ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
 import { 
@@ -182,7 +182,7 @@ export function MathematicalModelsTab() {
       title="Mathematical Models"
       description="Advanced mathematical functions used throughout the game for realistic scaling and probability calculations"
     >
-        <div className="space-y-8">
+      <div className="space-y-8">
           
           {/* Skewed Multiplier */}
           <div className="border rounded-lg p-6">
@@ -547,7 +547,7 @@ export function MathematicalModelsTab() {
               </div>
             </div>
           </div>
-        </div>
+      </div>
     </SimpleCard>
   );
 }

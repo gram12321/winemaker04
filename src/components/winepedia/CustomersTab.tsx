@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomerData } from '@/hooks';
-import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
+import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
 import { getCountryCode } from '@/lib/services';
 import { Customer } from '@/lib/types/types';
 import { formatNumber, formatPercent, getColorClass } from '@/lib/utils/utils';
@@ -85,6 +85,7 @@ export function CustomersTab() {
       title="Wine Customers Directory"
       description={`Global wine customers and their market relationships. Showing ${pagedCustomers.length} of ${filteredCustomers.length} (Total: ${customers.length})`}
     >
+      <div className="space-y-6">
         {/* Filter controls */}
         <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex items-center gap-2">
@@ -237,6 +238,7 @@ export function CustomersTab() {
             {customers.length === 0 ? 'Loading customers...' : 'No customers match the current filter.'}
           </div>
         )}
+      </div>
     </SimpleCard>
   );
 }

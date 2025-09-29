@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { WineBatch, Customer } from '../types/types';
-import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../database/customers/relationshipBreakdownService';
+import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

@@ -1,7 +1,8 @@
 import { getGameState } from '../core/gameState';
 import { Transaction } from '../../types/types';
-import { supabase } from '../../database/supabase';
-import { loadVineyards, loadWineBatches } from '../../database/database';
+import { supabase } from '../../database/core/supabase';
+import { loadVineyards } from '../../database/activities/vineyardDB';
+import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { getCurrentCompany, updateGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';

@@ -1,6 +1,6 @@
 // Company and database utility functions to reduce code duplication
 import { getCurrentCompany } from '../services/core/gameState';
-import { supabase } from '../database/supabase';
+import { supabase } from '../database/core/supabase';
 
 // ===== COMPANY UTILITIES =====
 

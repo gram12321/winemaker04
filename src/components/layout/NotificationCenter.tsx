@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, 
 import { InfoIcon, AlertTriangleIcon, XCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { toast } from "@/lib/utils/toast";
 import { formatTime } from "@/lib/utils/utils";
-import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, DbNotificationType } from "@/lib/database/database";
+import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, DbNotificationType } from "@/lib/database/core/notificationsDB";
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 

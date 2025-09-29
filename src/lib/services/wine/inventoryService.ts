@@ -1,7 +1,8 @@
-// Wine batch management service for winery operations
+// Wine inventory management service for winery operations
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics } from '../../types/types';
-import { saveWineBatch, loadWineBatches, loadVineyards } from '../../database/database';
+import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../database/activities/inventoryDB';
+import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../core/gameState';
 import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
@@ -12,6 +13,11 @@ import { generateDefaultCharacteristics } from './characteristics/defaultCharact
 import { modifyHarvestCharacteristics } from './characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
+
+/**
+ * Inventory Service
+ * Manages wine batch inventory lifecycle and business logic
+ */
 
 // ===== WINE BATCH OPERATIONS =====
 
@@ -200,29 +206,18 @@ export async function createWineBatchFromHarvest(
   }
 }
 
-
 // Get all wine batches
 export async function getAllWineBatches(): Promise<WineBatch[]> {
   return await loadWineBatches();
 }
 
 // Update wine batch
-export async function updateWineBatch(batchId: string, updates: Partial<WineBatch>): Promise<boolean> {
-  const batches = await loadWineBatches();
-  const batch = batches.find(b => b.id === batchId);
-  
-  if (!batch) {
-    return false;
+export async function updateInventoryBatch(batchId: string, updates: Partial<WineBatch>): Promise<boolean> {
+  const success = await updateWineBatch(batchId, updates);
+  if (success) {
+    triggerGameUpdate();
   }
-
-  const updatedBatch: WineBatch = {
-    ...batch,
-    ...updates
-  };
-
-  await saveWineBatch(updatedBatch);
-  triggerGameUpdate();
-  return true;
+  return success;
 }
 
 // Format completed wine name

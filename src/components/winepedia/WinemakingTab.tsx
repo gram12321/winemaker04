@@ -1,4 +1,4 @@
-import { SimpleCard } from '../ui';
+import { SimpleCard } from '@/components/ui';
 
 export function WinemakingTab() {
   return (
@@ -6,7 +6,11 @@ export function WinemakingTab() {
       title="Winemaking Process"
       description="Understand the steps involved in creating fine wines"
     >
-      <p className="text-gray-600">Content coming soon...</p>
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <p className="text-gray-600">Content coming soon...</p>
+        </div>
+      </div>
     </SimpleCard>
   );
 }

@@ -1,6 +1,6 @@
 // Weekly decay system for prestige events and relationship boosts
-import { supabase } from '../supabase';
-import { getCurrentCompanyId } from '../../utils/companyUtils';
+import { listPrestigeEventsForDecay, updatePrestigeEventAmount, deletePrestigeEvents } from '../../database/customers/prestigeEventsDB';
+import { listRelationshipBoostsForDecay, updateRelationshipBoostAmount, deleteRelationshipBoosts } from '../../database/customers/relationshipBoostsDB';
 
 /**
  * Apply one week of decay to prestige events only.
@@ -11,36 +11,19 @@ export async function decayPrestigeEventsOneWeek(): Promise<void> {
   const PRESTIGE_EVENT_MIN_AMOUNT = 0.001;
 
   try {
-    // Decay prestige events
-    const { data: prestigeRows, error: prestigeLoadError } = await supabase
-      .from('prestige_events')
-      .select('id, amount, decay_rate')
-      .eq('company_id', getCurrentCompanyId())
-      .gt('decay_rate', 0)
-      .lt('decay_rate', 1);
-
-    if (!prestigeLoadError && prestigeRows && prestigeRows.length > 0) {
+    const prestigeRows = await listPrestigeEventsForDecay();
+    if (prestigeRows && prestigeRows.length > 0) {
       const toDelete: string[] = [];
-
       for (const row of prestigeRows) {
         const newAmount = (row.amount || 0) * (row.decay_rate || 1);
         if (newAmount < PRESTIGE_EVENT_MIN_AMOUNT) {
           toDelete.push(row.id);
         } else {
-          await supabase
-            .from('prestige_events')
-            .update({ amount: newAmount })
-            .eq('id', row.id)
-            .eq('company_id', getCurrentCompanyId());
+          await updatePrestigeEventAmount(row.id, newAmount);
         }
       }
-
       if (toDelete.length > 0) {
-        await supabase
-          .from('prestige_events')
-          .delete()
-          .in('id', toDelete)
-          .eq('company_id', getCurrentCompanyId());
+        await deletePrestigeEvents(toDelete);
       }
     }
   } catch (error) {
@@ -56,35 +39,19 @@ export async function decayPrestigeEventsOneWeek(): Promise<void> {
 export async function decayRelationshipBoostsOneWeek(): Promise<void> {
   const RELATIONSHIP_MIN_AMOUNT = 0.001;
   try {
-    const { data: boostRows, error: boostLoadError } = await supabase
-      .from('relationship_boosts')
-      .select('id, amount, decay_rate')
-      .eq('company_id', getCurrentCompanyId())
-      .gt('decay_rate', 0)
-      .lt('decay_rate', 1);
-
-    if (!boostLoadError && boostRows && boostRows.length > 0) {
+    const boostRows = await listRelationshipBoostsForDecay();
+    if (boostRows && boostRows.length > 0) {
       const toDeleteBoosts: string[] = [];
-
       for (const row of boostRows) {
         const newAmount = (row.amount || 0) * (row.decay_rate || 1);
         if (newAmount < RELATIONSHIP_MIN_AMOUNT) {
           toDeleteBoosts.push(row.id);
         } else {
-          await supabase
-            .from('relationship_boosts')
-            .update({ amount: newAmount })
-            .eq('id', row.id)
-            .eq('company_id', getCurrentCompanyId());
+          await updateRelationshipBoostAmount(row.id, newAmount);
         }
       }
-
       if (toDeleteBoosts.length > 0) {
-        await supabase
-          .from('relationship_boosts')
-          .delete()
-          .in('id', toDeleteBoosts)
-          .eq('company_id', getCurrentCompanyId());
+        await deleteRelationshipBoosts(toDeleteBoosts);
       }
     }
   } catch (error) {

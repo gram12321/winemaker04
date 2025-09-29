@@ -14,18 +14,17 @@ export { createVineyard, plantVineyard, getAllVineyards, purchaseVineyard } from
 export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './vineyard/vineyardManager';
 export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './vineyard/vineyardValueCalc';
-export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from '../database/prestige';
-export { getAllWineBatches, formatCompletedWineName } from './wine/wineBatchService';
-export { crushGrapes, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from './wine/wineryService';
-export { recordBottledWine, loadWineLog, getVineyardWineHistory, calculateVineyardStats } from './wine/wineLogService';
-export type { VineyardStats } from './wine/wineLogService';
+export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from './prestige/prestigeService';
+export { getAllWineBatches, formatCompletedWineName, createWineBatchFromHarvest } from './wine/inventoryService';
+export { startFermentation, stopFermentation, bottleWine, progressFermentation } from './wine/winery/fermentationManager';
+export { isActionAvailable } from './wine/winery/wineryService';
+export { getBatchStatus } from './wine/winery/wineryService';
+export { startCrushingActivity, validateCrushingActivity } from './wine/winery/crushingManager';
+export { recordBottledWine, loadWineLog, getVineyardWineHistory, calculateVineyardStats } from './user/wineLogService';
+export type { VineyardStats } from './user/wineLogService';
 export type { AuthUser } from './user/authService';
 export type { Company, CompanyStats } from './user/companyService';
 export type { HighscoreEntry, ScoreType } from './user/highscoreService';
 export type { VineyardPurchaseOption } from './vineyard/vinyardBuyingService';
-
-// Work services
 export * from './activity';
-
-// Activity services
 export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activity/activityManager';

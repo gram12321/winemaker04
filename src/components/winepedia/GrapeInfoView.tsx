@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { GrapeVariety } from '@/lib/types/types';
 import { GRAPE_CONST, COUNTRY_REGION_MAP, REGION_GRAPE_SUITABILITY } from '@/lib/constants';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadCN/card';
-import { Button } from '@/components/ui/shadCN/button';
-import { WineCharacteristicsDisplay } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, Button, WineCharacteristicsDisplay } from '@/components/ui';
 
 // Utility functions for formatting
 const formatPercentage = (value: number): string => `${(value * 100).toFixed(0)}%`;
