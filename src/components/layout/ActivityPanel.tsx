@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/shadCN/button';
-import { ChevronLeft, Minimize2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
 import { ActivityCard } from '@/components/ui/activities/ActivityCard';
 import { Activity } from '@/lib/types/types';
 import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activity/activityManager';
@@ -10,6 +10,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 
 type PanelState = 'hidden' | 'minimized' | 'full';
+type MobileState = 'closed' | 'open';
 
 /**
  * ActivityPanel - Centralized sidebar for managing game activities
@@ -22,6 +23,7 @@ type PanelState = 'hidden' | 'minimized' | 'full';
 export const ActivityPanel: React.FC = () => {
   // Panel state management
   const [panelState, setPanelState] = useState<PanelState>('full');
+  const [mobileState, setMobileState] = useState<MobileState>('closed');
   const [minimizedCards, setMinimizedCards] = useState<Set<string>>(new Set());
   const [orderedActivityIds, setOrderedActivityIds] = useState<string[]>([]);
   const [activityProgresses, setActivityProgresses] = useState<Record<string, { progress: number; timeRemaining: string }>>({});
@@ -84,6 +86,10 @@ export const ActivityPanel: React.FC = () => {
     setPanelState(states[nextIndex]);
   };
 
+  const handleToggleMobile = () => {
+    setMobileState(prev => prev === 'open' ? 'closed' : 'open');
+  };
+
   const handleToggleCardMinimize = (activityId: string) => {
     setMinimizedCards(prev => {
       const newSet = new Set(prev);
@@ -131,24 +137,42 @@ export const ActivityPanel: React.FC = () => {
       .filter(Boolean) as Activity[];
   };
 
-  if (panelState === 'hidden') {
-    return (
-      <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleTogglePanel}
-          title={getToggleTooltip()}
-          className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-        >
-          {getToggleIcon()}
-        </Button>
-      </div>
-    );
-  }
+  // Mobile floating button (always visible on mobile)
+  const MobileFloatingButton = () => (
+    <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50 lg:hidden">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleToggleMobile}
+        title="Open Activities"
+        className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+      >
+        <span className="mr-1">📋</span>
+        {activities.length}
+      </Button>
+    </div>
+  );
 
-  return (
-    <div className={`fixed right-0 top-0 h-screen z-40 transition-all duration-300 ${
+  // Desktop panel (hidden on mobile)
+  const DesktopPanel = () => {
+    if (panelState === 'hidden') {
+      return (
+        <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50 hidden lg:block">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTogglePanel}
+            title={getToggleTooltip()}
+            className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+          >
+            {getToggleIcon()}
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`fixed right-0 top-0 h-screen z-40 transition-all duration-300 hidden lg:block ${
       panelState === 'minimized' ? 'w-8' : 'w-56'
     }`}>
       <div className="bg-gray-900 h-screen border-l border-gray-700 shadow-xl text-sm">
@@ -169,7 +193,7 @@ export const ActivityPanel: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="p-2 overflow-y-auto h-[calc(100vh-44px)] pb-2 md:h-[calc(100vh-44px)]">
+        <div className="p-2 overflow-y-auto h-[calc(100vh-44px)] pb-2">
           {panelState === 'full' ? (
             <>
               {activities.length === 0 ? (
@@ -247,6 +271,60 @@ export const ActivityPanel: React.FC = () => {
         </div>
       </div>
     </div>
+    );
+  };
+
+  // Mobile sliding panel
+  const MobilePanel = () => {
+    if (mobileState === 'closed') return null;
+
+    return (
+      <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 bg-black/50" onClick={() => setMobileState('closed')} />
+        <div className="fixed top-0 right-0 bottom-0 w-3/4 max-w-sm bg-gray-900 p-6 shadow-xl flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white">Activities</h2>
+            <Button variant="ghost" size="icon" onClick={() => setMobileState('closed')}>
+              <X className="h-6 w-6 text-white" />
+            </Button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {activities.length === 0 ? (
+              <div className="text-center text-gray-500 mt-8">
+                <p>No active activities</p>
+                <p className="text-sm mt-2">Start planting or other activities to see progress here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {getOrderedActivities().map((activity) => {
+                  const progress = activityProgresses[activity.id];
+                  return (
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      progress={progress?.progress || 0}
+                      timeRemaining={progress?.timeRemaining || 'Calculating...'}
+                      onCancel={() => handleCancelActivity(activity.id)}
+                      isMinimized={false}
+                      onToggleMinimize={() => {}}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <MobileFloatingButton />
+      <DesktopPanel />
+      <MobilePanel />
+    </>
   );
 };
 
