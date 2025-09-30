@@ -135,26 +135,44 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
               <CalendarDays className="h-4 w-4" />
             </Button>
             
-            {/* Money display */}
-            <Badge variant="outline" className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center">
+            {/* Money display - responsive */}
+            <Badge 
+              variant="outline" 
+              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center hidden sm:flex"
+            >
               <span className="font-medium">{formatCurrency(gameState.money || 0)}</span>
             </Badge>
             
-            {/* Prestige display */}
             <Badge 
               variant="outline" 
-              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors"
+              className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center sm:hidden"
+            >
+              <span className="font-medium text-xs">{formatCompact(gameState.money || 0, 1)}</span>
+            </Badge>
+            
+            {/* Prestige display - responsive */}
+            <Badge 
+              variant="outline" 
+              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
               onClick={handlePrestigeClick}
             >
               <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatCompact(currentPrestige, 1) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}</span>
             </Badge>
             
-            {/* Console button */}
+            <Badge 
+              variant="outline" 
+              className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors sm:hidden"
+              onClick={handlePrestigeClick}
+            >
+              <span className="font-medium text-xs">⭐ {formatCompact(currentPrestige, 1)}</span>
+            </Badge>
+            
+            {/* Console button - responsive */}
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => consoleHook.openHistory()}
-              className="rounded-full h-8 w-8 flex items-center justify-center text-white hover:bg-red-700 relative"
+              className="rounded-full h-8 w-8 flex items-center justify-center text-white hover:bg-red-700 relative hidden sm:flex"
             >
               <MessageSquareText className="h-4 w-4" />
               {consoleHook.messages.length > 0 && (
