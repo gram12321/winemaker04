@@ -188,7 +188,7 @@ function App() {
         onBackToLogin={handleBackToLogin}
       />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 mx-auto w-full max-w-7xl">
         {renderCurrentPage()}
       </main>
       

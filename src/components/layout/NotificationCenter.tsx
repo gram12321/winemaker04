@@ -154,13 +154,13 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
       {isHistoryOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24">
           <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
-          <Card className="z-50 w-full max-w-lg max-h-[80vh] overflow-hidden">
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
+          <Card className="z-50 w-[95%] max-w-lg max-h-[90vh] sm:max-h-[80vh] overflow-hidden">
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl">Notifications</CardTitle>
               <CardDescription>Recent game updates and messages</CardDescription>
             </CardHeader>
-            <ScrollArea className="h-[50vh]">
-              <CardContent>
+            <ScrollArea className="h-[40vh] md:h-[50vh]">
+              <CardContent className="p-3 md:p-4">
                 {messages.length === 0 ? (
                   <p className="text-center text-gray-500 py-8">No notifications</p>
                 ) : (
@@ -168,7 +168,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                     {messages.slice().reverse().map((message) => (
                       <div
                         key={message.id}
-                        className={`p-3 rounded-md border flex items-start gap-2 ${
+                        className={`p-2 md:p-3 rounded-md border flex items-start gap-2 text-sm md:text-base ${
                           message.type === 'error'
                             ? 'bg-red-50 border-red-200'
                             : message.type === 'warning'
@@ -181,11 +181,11 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                         <div className="mt-0.5">{getIconForType(message.type)}</div>
                         <div className="flex-1">
                           <div className="flex justify-between">
-                            <Badge variant="outline" className="mb-1">
+                            <Badge variant="outline" className="mb-1 text-xs md:text-sm">
                               {formatTime(message.timestamp)}
                             </Badge>
                           </div>
-                          <p>{message.text}</p>
+                          <p className="break-words">{message.text}</p>
                         </div>
                       </div>
                     ))}
@@ -193,10 +193,12 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                 )}
               </CardContent>
             </ScrollArea>
-            <CardFooter className="border-t px-6 py-4">
-              <Button variant="outline" onClick={handleClose} className="w-full">
-                Close
-              </Button>
+            <CardFooter className="border-t p-3 md:px-6 md:py-4">
+              <div className="w-full flex justify-end">
+                <Button variant="outline" onClick={handleClose}>
+                  Close
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </div>

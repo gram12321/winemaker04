@@ -193,38 +193,38 @@ const Vineyard: React.FC = () => {
       <h2 className="text-3xl font-bold text-gray-800">Vineyard Management</h2>
       
       {/* Summary Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-gray-900">{vineyards.length}</div>
-          <div className="text-sm text-gray-500">Total Vineyards</div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-gray-900">{vineyards.length}</div>
+          <div className="text-xs text-gray-500">Total Vineyards</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-green-600">{totalHectares} ha</div>
-          <div className="text-sm text-gray-500">Total Area</div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-green-600">{totalHectares} ha</div>
+          <div className="text-xs text-gray-500">Total Area</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalValue)}</div>
-          <div className="text-sm text-gray-500">Total Value</div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-blue-600">{formatCurrency(totalValue)}</div>
+          <div className="text-xs text-gray-500">Total Value</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-2xl font-bold text-purple-600">{activeVineyards}/{plantedVineyards}</div>
-          <div className="text-sm text-gray-500">Active/Planted</div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-purple-600">{activeVineyards}/{plantedVineyards}</div>
+          <div className="text-xs text-gray-500">Active/Planted</div>
         </div>
       </div>
       
       {/* Vineyard Image */}
       <div 
-        className="h-48 bg-cover bg-center rounded-lg relative"
+        className="h-36 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1200&h=400&fit=crop')"
         }}
       >
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-4">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-3">
           <div className="flex justify-between items-end">
-            <h3 className="text-white text-xl font-semibold">Vineyard Portfolio</h3>
+            <h3 className="text-white text-base font-semibold">Vineyard Portfolio</h3>
             <button 
               onClick={handleShowBuyLandModal}
-              className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded"
+              className="bg-green-700 hover:bg-green-800 text-white px-3 py-1.5 rounded"
             >
               Buy Land
             </button>
@@ -235,15 +235,15 @@ const Vineyard: React.FC = () => {
       {/* Vineyards Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1200px]">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vineyard</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size & Value</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Characteristics</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vine Info</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status & Actions</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vineyard</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Location</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Size & Value</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Characteristics</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vine Info</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Status & Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">

@@ -148,12 +148,12 @@ export const ActivityPanel: React.FC = () => {
   }
 
   return (
-    <div className={`fixed right-0 top-0 h-full z-40 transition-all duration-300 ${
-      panelState === 'minimized' ? 'w-16' : 'w-80'
+    <div className={`fixed right-0 top-0 h-screen z-40 transition-all duration-300 ${
+      panelState === 'minimized' ? 'w-8' : 'w-56'
     }`}>
-      <div className="bg-gray-900 h-full border-l border-gray-700 shadow-xl">
+      <div className="bg-gray-900 h-screen border-l border-gray-700 shadow-xl text-sm">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between p-2.5 border-b border-gray-700">
           {panelState === 'full' && (
             <h2 className="text-white font-semibold">Activity Panel</h2>
           )}
@@ -169,7 +169,7 @@ export const ActivityPanel: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto h-full pb-20">
+        <div className="p-2 overflow-y-auto h-[calc(100vh-44px)] pb-2 md:h-[calc(100vh-44px)]">
           {panelState === 'full' ? (
             <>
               {activities.length === 0 ? (

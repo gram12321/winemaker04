@@ -387,14 +387,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   });
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-800">Sales</h2>
+    <div className="space-y-3 text-sm">
+      <h2 className="text-xl font-semibold text-gray-800">Sales</h2>
       
       {/* Navigation Tabs */}
-      <div className="flex space-x-1">
+      <div className="flex space-x-1 text-xs">
         <button 
           onClick={() => setActiveTab('cellar')}
-          className={`px-4 py-2 rounded ${
+          className={`px-3 py-1.5 rounded ${
             activeTab === 'cellar' 
               ? 'bg-amber-600 text-white' 
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -404,7 +404,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         </button>
         <button 
           onClick={() => setActiveTab('orders')}
-          className={`px-4 py-2 rounded ${
+          className={`px-3 py-1.5 rounded ${
             activeTab === 'orders' 
               ? 'bg-amber-600 text-white' 
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -416,13 +416,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
       {/* Wine Cellar Image */}
       <div 
-        className="h-48 bg-cover bg-center rounded-lg relative"
+        className="h-28 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1510076857177-7470076d4098?w=1200&h=400&fit=crop')"
         }}
       >
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-4">
-          <h3 className="text-white text-xl font-semibold">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2.5">
+          <h3 className="text-white text-sm font-semibold">
             {activeTab === 'cellar' ? 'Wine Cellar Inventory' : 'Pending Orders'}
           </h3>
         </div>
@@ -430,13 +430,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
       {/* Content based on active tab */}
       {activeTab === 'cellar' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Wine Cellar Filter */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow p-3">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-semibold">Wine Cellar Filter</h3>
-                <p className="text-gray-500 text-sm">Filter wines by availability</p>
+                <h3 className="text-sm font-semibold">Wine Cellar Filter</h3>
+                <p className="text-gray-500 text-xs">Filter wines by availability</p>
               </div>
               <div className="flex space-x-2">
                 <label className="flex items-center space-x-2">
@@ -446,18 +446,18 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                     onChange={(e) => setShowSoldOut(e.target.checked)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm font-medium">Show Sold Out Wines</span>
+                  <span className="text-xs font-medium">Show Sold Out Wines</span>
                 </label>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">Bottled Wines Available for Sale</h3>
+            <div className="p-3 border-b border-gray-200">
+              <h3 className="text-sm font-semibold">Bottled Wines Available for Sale</h3>
             </div>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="text-xs">
               <TableHeader>
                 <TableRow>
                   <TableHead 
@@ -538,7 +538,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
               <TableBody>
                 {sortedBottledWines.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={9} className="text-center text-gray-500 py-6">
                       No bottled wines available for sale
                     </TableCell>
                   </TableRow>
@@ -566,7 +566,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         {formatHarvestPeriod(wine.harvestDate)}
                       </TableCell>
                       <TableCell className="text-gray-500">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
                           wine.quality >= 0.8 ? 'bg-green-100 text-green-800' :
                           wine.quality >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
@@ -575,7 +575,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         </span>
                       </TableCell>
                       <TableCell className="text-gray-500">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
                           wine.balance >= 0.8 ? 'bg-green-100 text-green-800' :
                           wine.balance >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
@@ -595,17 +595,17 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               min="0"
                               value={editingPrices[wine.id]}
                               onChange={(e) => handlePriceChange(wine.id, e.target.value)}
-                              className="w-20 px-2 py-1 border rounded text-sm"
+                              className="w-16 px-1.5 py-1 border rounded text-xs"
                             />
                             <button
                               onClick={() => handlePriceSave(wine)}
-                              className="text-green-600 hover:text-green-800 text-sm"
+                              className="text-green-600 hover:text-green-800 text-xs"
                             >
                               ✓
                             </button>
                             <button
                               onClick={() => handlePriceCancel(wine.id)}
-                              className="text-red-600 hover:text-red-800 text-sm"
+                              className="text-red-600 hover:text-red-800 text-xs"
                             >
                               ✕
                             </button>
@@ -624,13 +624,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               {formatCurrency(wine.askingPrice ?? wine.finalPrice, 2)}
                             </span>
                             {wine.askingPrice !== undefined && wine.askingPrice !== wine.finalPrice && (
-                              <span className="text-xs text-gray-500">
+                              <span className="text-[10px] text-gray-500">
                                 {wine.askingPrice < wine.finalPrice ? '📉' : '📈'}
                               </span>
                             )}
                             <button
                               onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.finalPrice)}
-                              className="text-blue-600 hover:text-blue-800 text-sm"
+                              className="text-blue-600 hover:text-blue-800 text-xs"
                             >
                               ✏️
                             </button>
@@ -641,7 +641,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         {wine.quantity}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
                           wine.quantity > 0 
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
@@ -653,7 +653,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                       {expandedBatches[wine.id] && (
                         <TableRow>
                           <TableCell colSpan={9} className="bg-gray-50">
-                            <div className="p-3">
+                            <div className="p-2.5">
                               <WineCharacteristicsDisplay 
                                 characteristics={wine.characteristics}
                                 collapsible={false}
@@ -675,20 +675,20 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
       )}
 
       {activeTab === 'orders' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Order Status Filter */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow p-3">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-semibold">Order Filter</h3>
-                <p className="text-gray-500 text-sm">Filter orders by status</p>
+                <h3 className="text-sm font-semibold">Order Filter</h3>
+                <p className="text-gray-500 text-xs">Filter orders by status</p>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 text-xs">
                 {(['all', 'pending', 'fulfilled', 'rejected'] as const).map((status) => (
                   <button
                     key={status}
                     onClick={() => setOrderStatusFilter(status)}
-                    className={`px-3 py-1 rounded text-sm font-medium ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium ${
                       orderStatusFilter === status
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -696,7 +696,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                   >
                     {status === 'all' ? 'All Orders' : status.charAt(0).toUpperCase() + status.slice(1)}
                     {status !== 'all' && (
-                      <span className="ml-1 text-xs">
+                      <span className="ml-1 text-[10px]">
                         ({allOrders.filter(o => o.status === status).length})
                       </span>
                     )}
@@ -707,29 +707,29 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
           </div>
 
           {/* Customer Acquisition Chance Display */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow p-3">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-semibold">Customer Acquisition</h3>
-                <p className="text-gray-500 text-sm">Current chance to attract new customers</p>
+                <h3 className="text-sm font-semibold">Customer Acquisition</h3>
+                <p className="text-gray-500 text-xs">Current chance to attract new customers</p>
               </div>
               <div className="flex items-center space-x-4">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200 cursor-help">
-                        <div className="text-sm text-blue-700">
+                      <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-help">
+                        <div className="text-xs text-blue-700">
                           <span className="font-medium">Customer Chance:</span>
-                          <span className="ml-2 text-lg font-bold text-blue-800">
+                          <span className="ml-2 text-sm font-bold text-blue-800">
                             {orderChanceInfo ? formatPercent(orderChanceInfo.finalChance, 1, true) : '--'}
                           </span>
                         </div>
                         <div className="text-blue-500">ℹ️</div>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-sm">
+                    <TooltipContent className="max-w-xs">
                       {orderChanceInfo ? (
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-xs">
                           <div className="font-semibold">Customer Acquisition Details</div>
                           <div className="space-y-1">
                             <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, { decimals: 1, forceDecimals: true })}</span></div>
@@ -742,13 +742,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               {orderChanceInfo.randomRoll > 0 ? (
                                 <div>Last Roll: <span className="font-medium">{orderChanceInfo.randomRoll < orderChanceInfo.finalChance ? '✅ Customer Acquired' : '❌ No Customer'}</span></div>
                               ) : (
-                                <div className="text-xs text-gray-400">Click "Generate Order" to see roll result</div>
+                                <div className="text-[10px] text-gray-400">Click "Generate Order" to see roll result</div>
                               )}
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm">
+                        <div className="text-xs">
                           <div className="font-semibold">Customer Acquisition</div>
                           <div>Click "Generate Order" to see your customer acquisition chance</div>
                         </div>
@@ -761,11 +761,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
           </div>
 
           {/* Order Management */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg shadow p-3">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-semibold">Order Management</h3>
-                <p className="text-gray-500 text-sm">Generate test orders or manage pending orders</p>
+                <h3 className="text-sm font-semibold">Order Management</h3>
+                <p className="text-gray-500 text-xs">Generate test orders or manage pending orders</p>
               </div>
               <div className="flex space-x-2">
                 {pendingOrders.length > 0 && (
@@ -773,26 +773,26 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                     <button
                       onClick={handleAcceptAll}
                       disabled={isLoading}
-                      className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm"
+                      className="bg-green-600 text-white px-2.5 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-400 text-xs"
                     >
                       Accept All ({pendingOrders.length})
                     </button>
                     <button
                       onClick={handleRejectAll}
                       disabled={isLoading}
-                      className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 disabled:bg-gray-400 text-sm"
+                      className="bg-red-600 text-white px-2.5 py-1.5 rounded hover:bg-red-700 disabled:bg-gray-400 text-xs"
                     >
                       Reject All
                     </button>
                   </>
                 )}
-              <button
-                onClick={handleGenerateOrder}
-                disabled={isLoading || bottledWines.length === 0}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
-              >
-                {isLoading ? 'Generating...' : 'Generate Order'}
-              </button>
+                <button
+                  onClick={handleGenerateOrder}
+                  disabled={isLoading || bottledWines.length === 0}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 disabled:bg-gray-400 text-xs"
+                >
+                  {isLoading ? 'Generating...' : 'Generate Order'}
+                </button>
               </div>
             </div>
           </div>
@@ -800,7 +800,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
           {/* Orders Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="text-xs">
                 <TableHeader>
                   <TableRow>
                     <TableHead 
@@ -906,7 +906,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                 <TableBody>
                   {paginatedOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={14} className="text-center text-gray-500 py-6">
                         {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                       </TableCell>
                     </TableRow>
@@ -919,26 +919,26 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               <TooltipTrigger asChild>
                                   <button 
                                     onClick={() => onNavigateToWinepedia?.()}
-                                    className="cursor-pointer hover:text-blue-600 hover:underline decoration-dotted flex items-center space-x-2 text-left"
+                                    className="cursor-pointer hover:text-blue-600 hover:underline decoration-dotted flex items-center space-x-1.5 text-left"
                                     title="Click to view customer details in Winepedia"
                                   >
                                     <span className={getFlagIcon(order.customerCountry || '')}></span>
                                     <span>{order.customerName || 'Unknown Customer'}</span>
                                   </button>
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-sm">
-                                <div className="space-y-2 text-sm">
+                              <TooltipContent className="max-w-xs">
+                                <div className="space-y-2 text-xs">
                                   {order.calculationData ? (
                                     <>
                                       <div className="font-semibold">Price Multiplier Calculation</div>
-                                      <div className="space-y-1 text-xs">
+                                      <div className="space-y-1 text-[10px]">
                                         <div>Formula: {formatNumber(order.calculationData.estimatedBaseMultiplier, { decimals: 3, forceDecimals: true })} (B) × {formatNumber(order.calculationData.purchasingPowerMultiplier, { decimals: 3, forceDecimals: true })} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, { decimals: 3, forceDecimals: true })} (WT) × {formatNumber(order.calculationData.marketShareMultiplier, { decimals: 3, forceDecimals: true })} (MS) = {formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x (Mtp)</div>
                                       </div>
                                       <div className="font-semibold">Quantity Calculation</div>
-                                      <div className="space-y-1 text-xs">
+                                      <div className="space-y-1 text-[10px]">
                                         <div>{order.calculationData.baseQuantity} (B) × {formatNumber(order.calculationData.priceSensitivity, { decimals: 3, forceDecimals: true })} (SENS) × {formatNumber(order.calculationData.purchasingPowerMultiplier, { decimals: 3, forceDecimals: true })} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, { decimals: 3, forceDecimals: true })} (WT) × {formatNumber(order.calculationData.quantityMarketShareMultiplier, { decimals: 3, forceDecimals: true })} (MS) = {order.calculationData.finalQuantity} bottles</div>
                                       </div>
-                                      <div className="text-xs text-gray-500 pt-2 border-t border-gray-600">
+                                      <div className="text-xs text-gray-500 pt-2 border-top border-gray-600">
                                         B=Base, PP=Purchasing Power, WT=Wine Tradition, MS=Market Share, SENS=Sensitivity
                                       </div>
                                     </>
@@ -969,7 +969,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                       loadRelationshipBreakdown(order.customerId, customer);
                                     }
                                   }}
-                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full cursor-help ${
+                                  className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${
                                     (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
                                     (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
                                     (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
@@ -978,11 +978,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                   {formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)}
                                 </span>
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-md">
-                                <div className="text-sm">
+                              <TooltipContent className="max-w-xs">
+                                <div className="text-xs">
                                   <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
                                   {relationshipBreakdowns[getCustomerKey(order.customerId)] ? (
-                                    <div className="space-y-1 text-xs">
+                                    <div className="space-y-1 text-[10px]">
                                       {relationshipBreakdowns[getCustomerKey(order.customerId)].split('\n').map((line, index) => (
                                         <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
                                           {line}
@@ -990,7 +990,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                       ))}
                                     </div>
                                   ) : (
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-[10px] text-gray-500">
                                       Loading relationship breakdown...
                                       <div className="mt-2 text-blue-500">
                                         Hover to load detailed breakdown...
@@ -1006,14 +1006,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 cursor-help">
+                                <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-full bg-blue-100 text-blue-800 cursor-help">
                                   {order.customerType}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <div className="text-sm">
+                                <div className="text-xs">
                                   <div className="font-semibold">Type Range</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-[10px] text-gray-500">
                                     {order.customerType === 'Restaurant' && '12-80 bottles (2-13 cases)'}
                                     {order.customerType === 'Wine Shop' && '18-120 bottles (3-20 cases)'}
                                     {order.customerType === 'Private Collector' && '3-36 bottles (0.5-6 cases)'}
@@ -1031,7 +1031,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           <div className="flex flex-col">
                             <span>{order.requestedQuantity} bottles</span>
                             {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
-                              <span className="text-xs text-orange-600">
+                              <span className="text-[10px] text-orange-600">
                                 (Can fulfill: {order.fulfillableQuantity})
                               </span>
                             )}
@@ -1072,9 +1072,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <div className="text-sm space-y-1">
+                                <div className="text-xs space-y-1">
                                   <div className="font-semibold">Order Analysis</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-[10px] text-gray-500">
                                     {order.calculationData ? (
                                       <>
                                         <div>Multiple Order Penalty: {formatNumber(order.calculationData.multipleOrderModifier, { decimals: 3, forceDecimals: true })}x</div>
@@ -1094,7 +1094,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                           <div className="flex flex-col">
                             <span>{formatCurrency(order.totalValue, 2)}</span>
                             {order.fulfillableValue !== undefined && order.fulfillableValue !== null && order.fulfillableValue < order.totalValue && (
-                              <span className="text-xs text-orange-600">
+                              <span className="text-[10px] text-orange-600">
                                 (Can earn: {formatCurrency(order.fulfillableValue, 2)})
                               </span>
                             )}
@@ -1103,11 +1103,11 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         <TableCell className="text-gray-500">
                           {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null ? order.fulfillableQuantity : order.requestedQuantity} bottles
                         </TableCell>
-                        <TableCell className="text-gray-500 text-sm">
+                        <TableCell className="text-gray-500">
                           {formatGameDateFromObject(order.orderedAt)}
                         </TableCell>
                         <TableCell>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
                             order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             order.status === 'fulfilled' ? 'bg-green-100 text-green-800' :
                             'bg-red-100 text-red-800'
@@ -1115,7 +1115,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-sm font-medium space-x-2">
+                        <TableCell className="text-xs font-medium space-x-2">
                           {order.status === 'pending' ? (
                             <>
                               <button
@@ -1134,7 +1134,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               </button>
                             </>
                           ) : (
-                            <span className="text-gray-400 text-xs">
+                            <span className="text-gray-400 text-[10px]">
                               {order.status === 'fulfilled' ? 'Completed' : 'Declined'}
                             </span>
                           )}
@@ -1148,23 +1148,23 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
             
             {/* Pagination Controls */}
             {sortedOrders.length > ordersPageSize && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-                <div className="text-sm text-gray-500">
+              <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 text-xs">
+                <div className="text-gray-500">
                   Showing {((ordersPage - 1) * ordersPageSize) + 1} to {Math.min(ordersPage * ordersPageSize, sortedOrders.length)} of {sortedOrders.length} orders
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={ordersPage <= 1}
                     onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
                   >
                     Previous
                   </button>
-                  <span className="text-sm">
+                  <span>
                     Page {ordersPage} of {totalOrdersPages}
                   </span>
                   <button
-                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={ordersPage >= totalOrdersPages}
                     onClick={() => setOrdersPage(p => Math.min(totalOrdersPages, p + 1))}
                   >

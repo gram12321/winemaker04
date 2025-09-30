@@ -254,24 +254,24 @@ const Winery: React.FC = () => {
   const completedWines = useMemo(() => wineBatches.filter(batch => batch.state === 'bottled'), [wineBatches]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 text-sm">
       {/* Winery Banner */}
       <div 
-        className="h-48 bg-cover bg-center rounded-lg relative"
+        className="h-28 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=1200&h=400&fit=crop')"
         }}
       >
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-900 to-transparent p-4">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-900 to-transparent p-2.5">
           <div className="flex justify-between items-end">
             <div>
-              <h2 className="text-white text-2xl font-semibold flex items-center gap-3">
-                <span className="text-2xl">🍷</span>
+              <h2 className="text-white text-base font-semibold flex items-center gap-2">
+                <span className="text-base">🍷</span>
                 Winery Operations
               </h2>
-              <p className="text-white/90 text-sm mt-1">Transform grapes into fine wines</p>
+              <p className="text-white/90 text-xs mt-0.5">Transform grapes into fine wines</p>
             </div>
-            <div className="text-white/80 text-sm">
+            <div className="text-white/80 text-xs">
               {activeBatches.length} Active • {completedWines.length} Completed
             </div>
           </div>
@@ -279,44 +279,44 @@ const Winery: React.FC = () => {
       </div>
       
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-white rounded-lg shadow p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Active Batches</h3>
-              <p className="text-3xl font-bold text-gray-900">{activeBatches.length}</p>
-              <p className="text-sm text-gray-500">In production</p>
+              <h3 className="text-sm font-semibold text-gray-800">Active Batches</h3>
+              <p className="text-xl font-bold text-gray-900">{activeBatches.length}</p>
+              <p className="text-xs text-gray-500">In production</p>
             </div>
-            <div className="p-3 rounded-lg bg-orange-100 text-orange-800">
-              <span className="text-2xl">⚗️</span>
+            <div className="p-2 rounded-lg bg-orange-100 text-orange-800">
+              <span className="text-base">⚗️</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Completed Wines</h3>
-              <p className="text-3xl font-bold text-gray-900">{completedWines.length}</p>
-              <p className="text-sm text-gray-500">Ready for sale</p>
+              <h3 className="text-sm font-semibold text-gray-800">Completed Wines</h3>
+              <p className="text-xl font-bold text-gray-900">{completedWines.length}</p>
+              <p className="text-xs text-gray-500">Ready for sale</p>
             </div>
-            <div className="p-3 rounded-lg bg-purple-100 text-purple-800">
-              <span className="text-2xl">🍷</span>
+            <div className="p-2 rounded-lg bg-purple-100 text-purple-800">
+              <span className="text-base">🍷</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Total Bottles</h3>
-              <p className="text-3xl font-bold text-gray-900">
+              <h3 className="text-sm font-semibold text-gray-800">Total Bottles</h3>
+              <p className="text-xl font-bold text-gray-900">
                 {completedWines.reduce((total, batch) => total + batch.quantity, 0)}
               </p>
-              <p className="text-sm text-gray-500">Available</p>
+              <p className="text-xs text-gray-500">Available</p>
             </div>
-            <div className="p-3 rounded-lg bg-green-100 text-green-800">
-              <span className="text-2xl">🍾</span>
+            <div className="p-2 rounded-lg bg-green-100 text-green-800">
+              <span className="text-base">🍾</span>
             </div>
           </div>
         </div>
@@ -324,27 +324,27 @@ const Winery: React.FC = () => {
 
       {/* Active Production */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 bg-gray-50 border-b">
-          <h4 className="text-lg font-semibold text-gray-800">Wine Production</h4>
+        <div className="px-4 py-2.5 bg-gray-50 border-b">
+          <h4 className="text-sm font-semibold text-gray-800">Wine Production</h4>
         </div>
-        <div className="p-6">
+        <div className="p-3">
           {activeBatches.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-6 text-gray-500 text-xs">
               No wine batches in production. Harvest some grapes to get started!
             </div>
           ) : (
             <div className="space-y-4">
               {activeBatches.map((batch) => (
-                <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                <div key={batch.id} className="border rounded-lg p-3 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900">
                         {batch.grape} - {batch.vineyardName}
                       </h5>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs text-gray-600">
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestDate.year}
                       </p>
-                      <p className="text-sm font-medium text-gray-800 mt-1">
+                      <p className="text-xs font-medium text-gray-800 mt-1">
                         {getBatchStatus(batch)}
                       </p>
                       <WineBatchBalanceDisplay batch={batch} />
@@ -413,22 +413,22 @@ const Winery: React.FC = () => {
       {/* Completed Wines */}
       {completedWines.length > 0 && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b">
-            <h4 className="text-lg font-semibold text-gray-800">Completed Wines</h4>
+            <div className="px-4 py-2.5 bg-gray-50 border-b">
+            <h4 className="text-sm font-semibold text-gray-800">Completed Wines</h4>
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {completedWines.map((batch) => (
-                <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                <div key={batch.id} className="border rounded-lg p-3 hover:bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900">
                         {formatCompletedWineName(batch)}
                       </h5>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs text-gray-600">
                         {batch.quantity} bottles
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-[10px] text-gray-500 mt-1">
                         Completed Week {batch.completedAt?.week}, {batch.completedAt?.season} {batch.completedAt?.year}
                       </p>
                       
@@ -438,7 +438,7 @@ const Winery: React.FC = () => {
                       <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="text-2xl">🍷</div>
+                      <div className="text-base">🍷</div>
                       <Button 
                         onClick={() => handleBalanceBreakdownClick(batch.id)}
                         size="sm"

@@ -167,7 +167,7 @@ export function Login({ onCompanySelected }: LoginProps) {
 
   return (
     <div 
-      className="min-h-screen flex flex-col justify-center items-center p-4"
+      className="min-h-screen flex flex-col justify-center items-center p-3 text-sm"
       style={{
         backgroundImage: 'url("/assets/pic/loginbg.webp")',
         backgroundSize: 'cover',
@@ -175,60 +175,60 @@ export function Login({ onCompanySelected }: LoginProps) {
       }}
     >
       {/* Main Container */}
-      <div className="w-full max-w-4xl bg-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/20">
+      <div className="w-full max-w-2xl bg-white/10 backdrop-blur-sm rounded-xl p-4 shadow-xl border border-white/20">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 text-wine drop-shadow-lg">Welcome to Winemaker</h1>
-          <p className="text-muted-foreground drop-shadow-md">
+        <div className="text-center mb-4">
+          <h1 className="text-xl font-bold mb-1 text-wine drop-shadow-lg">Welcome to Winemaker</h1>
+          <p className="text-muted-foreground text-xs drop-shadow-md">
             Manage your wine empire and compete with other vintners
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-wine">
-                  <Building2 className="h-5 w-5" />
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl text-sm">
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="flex items-center gap-2 text-wine text-base">
+                  <Building2 className="h-4 w-4" />
                   Company Selection
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs">
                   Select an existing company or create a new one
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 py-3">
                 {/* Recent Companies */}
                 {allCompanies.length > 0 && !showCreateCompany && (
-                  <div className="mb-6">
-                    <h3 className="font-medium mb-3">Recent Companies</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="mb-4">
+                    <h3 className="font-medium mb-2">Recent Companies</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {allCompanies.map((company) => (
                         <Card 
                           key={company.id}
                           className="hover:bg-accent/50 transition-colors"
                         >
-                          <CardContent className="p-4">
+                          <CardContent className="p-3">
                             <div className="flex justify-between items-start">
                               <div 
                                 className="flex-1 cursor-pointer"
                                 onClick={() => handleSelectCompany(company)}
                               >
                                 <h4 className="font-medium">{company.name}</h4>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs text-muted-foreground">
                                   Week {company.currentWeek}, {company.currentSeason} {company.currentYear}
                                 </p>
-                                <p className="text-sm">
+                                <p className="text-xs">
                                   {formatCurrency(company.money, 0)}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="text-right text-xs text-muted-foreground">
+                                <div className="text-right text-[10px] text-muted-foreground">
                                   {formatLastPlayed(company.lastPlayed)}
                                 </div>
                                 <button
                                   onClick={(e) => handleDeleteCompany(company.id, e)}
-                                  className={`p-1 rounded hover:bg-destructive/10 transition-colors ${
+                                  className={`p-1 rounded hover:bg-destructive/10 transition-colors text-xs ${
                                     deletingCompany === company.id ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground'
                                   }`}
                                   title={deletingCompany === company.id ? 'Click again to confirm deletion' : 'Delete company'}
@@ -245,17 +245,17 @@ export function Login({ onCompanySelected }: LoginProps) {
                 )}
 
                 {/* Create Company */}
-                <div className="pt-4 border-t">
+                <div className="pt-3 border-t">
                   {!showCreateCompany ? (
                     <Button 
                       onClick={() => setShowCreateCompany(true)}
-                      className="w-full border-wine text-wine hover:bg-wine hover:text-white"
+                      className="w-full border-wine text-wine hover:bg-wine hover:text-white text-sm"
                       variant="outline"
                     >
                       Create New Company
                     </Button>
                   ) : (
-                    <form onSubmit={handleCreateCompany} className="space-y-4">
+                    <form onSubmit={handleCreateCompany} className="space-y-3">
                       <div>
                         <Label htmlFor="companyName">Company Name</Label>
                         <Input
@@ -268,29 +268,29 @@ export function Login({ onCompanySelected }: LoginProps) {
                       </div>
 
                       {/* User Creation Toggle */}
-                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex items-center space-x-3 p-2.5 bg-gray-50 rounded-lg border">
                         <Switch
                           id="createUser"
                           checked={createUserProfile}
                           onCheckedChange={setCreateUserProfile}
                         />
-                        <Label htmlFor="createUser" className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
-                          {createUserProfile ? <User className="h-4 w-4 text-wine" /> : <UserPlus className="h-4 w-4 text-gray-500" />}
+                        <Label htmlFor="createUser" className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                          {createUserProfile ? <User className="h-3.5 w-3.5 text-wine" /> : <UserPlus className="h-3.5 w-3.5 text-gray-500" />}
                           Create a user profile?
                         </Label>
                       </div>
 
                       {/* User Name Input - Only show when toggle is on */}
                       {createUserProfile && (
-                        <div className="p-3 bg-wine/5 rounded-lg border border-wine/20">
-                          <Label htmlFor="userName" className="text-sm font-medium text-wine">User Name</Label>
+                        <div className="p-2.5 bg-wine/5 rounded-lg border border-wine/20">
+                          <Label htmlFor="userName" className="text-xs font-medium text-wine">User Name</Label>
                           <Input
                             id="userName"
                             value={userName}
                             onChange={(e) => setUserName(e.target.value)}
                             placeholder="Enter your username"
                             required={createUserProfile}
-                            className="mt-1 border-wine/30 focus:border-wine focus:ring-wine/20"
+                            className="mt-1 border-wine/30 focus:border-wine focus:ring-wine/20 text-sm"
                           />
                         </div>
                       )}
@@ -299,7 +299,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                         <Button 
                           type="submit" 
                           disabled={isLoading}
-                          className="bg-wine hover:bg-wine-dark text-white"
+                          className="bg-wine hover:bg-wine-dark text-white text-sm"
                         >
                           {isLoading ? 'Creating...' : 'Start'}
                         </Button>
@@ -308,7 +308,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                             type="button" 
                             variant="outline"
                             onClick={() => setShowCreateCompany(false)}
-                            className="border-wine text-wine hover:bg-wine hover:text-white"
+                            className="border-wine text-wine hover:bg-wine hover:text-white text-sm"
                           >
                             Cancel
                           </Button>
@@ -319,7 +319,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                 </div>
 
                 {error && (
-                  <div className="mt-4 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                  <div className="mt-3 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md">
                     {error}
                   </div>
                 )}
@@ -328,18 +328,18 @@ export function Login({ onCompanySelected }: LoginProps) {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Highscores */}
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-2.5">
               {renderHighscoreTable(highscores.company_value, 'Top Companies')}
               {renderHighscoreTable(highscores.company_value_per_week, 'Fastest Growing')}
             </div>
 
             {/* Info */}
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-              <CardContent className="p-4">
-                <h3 className="font-medium mb-2 text-wine">Getting Started</h3>
-                <div className="text-sm text-muted-foreground space-y-2">
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl text-sm">
+              <CardContent className="p-3">
+                <h3 className="font-medium mb-1.5 text-wine">Getting Started</h3>
+                <div className="text-xs text-muted-foreground space-y-1.5">
                   <p>• Create a company to start your wine empire</p>
                   <p>• Plant vineyards and craft premium wines</p>
                   <p>• Build relationships with customers</p>
@@ -351,7 +351,7 @@ export function Login({ onCompanySelected }: LoginProps) {
         </div>
 
         {/* Links Container */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-sm">
+        <div className="mt-4 flex items-center justify-center gap-3 text-xs">
           <a 
             href="#" 
             onClick={(e) => {
@@ -361,7 +361,7 @@ export function Login({ onCompanySelected }: LoginProps) {
             className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
             title="View Development Roadmap"
           >
-            <span className="text-lg">📋</span>
+            <span className="text-base">📋</span>
             <span>Trello Board</span>
           </a>
           
@@ -370,7 +370,7 @@ export function Login({ onCompanySelected }: LoginProps) {
             className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
             title="View technical README"
           >
-            <span className="text-lg">📖</span>
+            <span className="text-base">📖</span>
             <span>README</span>
           </button>
 
@@ -379,7 +379,7 @@ export function Login({ onCompanySelected }: LoginProps) {
             className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
             title="View Version Log"
           >
-            <span className="text-lg">📝</span>
+            <span className="text-base">📝</span>
             <span>Version Log</span>
           </button>
         </div>
@@ -387,16 +387,16 @@ export function Login({ onCompanySelected }: LoginProps) {
 
       {/* README Modal */}
       <Dialog open={isReadmeOpen} onOpenChange={setIsReadmeOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogContent className="max-w-2xl h-[70vh] flex flex-col text-sm">
           <DialogHeader>
-            <DialogTitle>Winemaker - Project README</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base">Winemaker - Project README</DialogTitle>
+            <DialogDescription className="text-xs">
               Comprehensive overview of the Winemaker game project
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4">
-            <div className="prose dark:prose-invert max-w-none">
+          <ScrollArea className="flex-1 pr-3">
+            <div className="prose dark:prose-invert max-w-none text-sm">
               <ReactMarkdown>{readmeContent}</ReactMarkdown>
             </div>
           </ScrollArea>
@@ -405,16 +405,16 @@ export function Login({ onCompanySelected }: LoginProps) {
 
       {/* Version Log Modal */}
       <Dialog open={isVersionLogOpen} onOpenChange={setIsVersionLogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogContent className="max-w-2xl h-[70vh] flex flex-col text-sm">
           <DialogHeader>
-            <DialogTitle>Winemaker - Version Log</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base">Winemaker - Version Log</DialogTitle>
+            <DialogDescription className="text-xs">
               Project development history and roadmap
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4">
-            <div className="prose dark:prose-invert max-w-none">
+          <ScrollArea className="flex-1 pr-3">
+            <div className="prose dark:prose-invert max-w-none text-sm">
               <ReactMarkdown>{versionLogContent}</ReactMarkdown>
             </div>
           </ScrollArea>

@@ -5,29 +5,40 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --background: 210 33% 96%;
+    --foreground: 215 28% 17%;
+    
+    --primary: 215 28% 17%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 0 0% 85%;
+    --secondary-foreground: 215 28% 17%;
+    
+    --accent: 210 54% 36%;
+    --accent-foreground: 0 0% 100%;
+    
+    --border: 0 0% 80%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    
     --wine: 352 42% 32%;
     --wine-dark: 352 42% 22%;
     --wine-light: 352 42% 42%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 222.2 84% 4.9%;
+    
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --ring: 215 20.2% 65.1%;
+    
     --radius: 0.5rem;
+    
+    /* Shadcn UI required variables */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -39,25 +50,34 @@
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 215 28% 17%;
+    --foreground: 210 33% 96%;
+    
+    --primary: 210 33% 96%;
+    --primary-foreground: 215 28% 17%;
+    
+    --secondary: 215 25% 30%;
+    --secondary-foreground: 210 33% 96%;
+    
+    --accent: 210 54% 46%;
+    --accent-foreground: 0 0% 100%;
+    
+    --border: 215 25% 40%;
+    --card: 215 28% 17%;
+    --card-foreground: 210 33% 96%;
+    
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --ring: 217.2 32.6% 17.5%;
+    
+    /* Shadcn UI dark mode variables */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -71,7 +91,8 @@
 
 @layer base {
   html {
-    font-size: 16px;
+    /* Ultra compact fluid type: 9px–12px across desktops */
+    font-size: clamp(9px, 0.45vw + 7px, 12px);
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }

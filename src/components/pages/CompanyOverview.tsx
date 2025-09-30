@@ -64,29 +64,29 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   }, [company, gameState.money]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Company Banner */}
       <div 
-        className="h-48 bg-cover bg-center rounded-lg relative"
+        className="h-28 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200&h=400&fit=crop')"
         }}
       >
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-4">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2">
           <div className="flex justify-between items-end">
             <div>
-              <h2 className="text-white text-2xl font-semibold flex items-center gap-3">
-                <Building2 className="h-6 w-6" />
+              <h2 className="text-white text-base font-semibold flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
                 {company?.name || gameState.companyName || 'My Winery'}
               </h2>
-              <p className="text-white/90 text-sm mt-1">{formatCompanyGameDate()}</p>
+              <p className="text-white/90 text-[10px] mt-0.5">{formatCompanyGameDate()}</p>
             </div>
             {onNavigate && (
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-2 py-1"
                   onClick={() => onNavigate('profile')}
                 >
                   Profile
@@ -94,7 +94,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-2 py-1"
                   onClick={() => onNavigate('highscores')}
                 >
                   Leaderboards
@@ -106,15 +106,15 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
       </div>
 
         {/* Main Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-2.5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Money</p>
-                  <p className="text-2xl font-bold">{formatCurrency(gameState.money || 0, 0, (gameState.money || 0) >= 1000)}</p>
+                  <p className="text-[10px] text-muted-foreground">Current Money</p>
+                  <p className="text-lg font-bold">{formatCurrency(gameState.money || 0, 0, (gameState.money || 0) >= 1000)}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                   💰
                 </div>
               </div>
@@ -122,65 +122,65 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-2.5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Prestige</p>
-                  <p className="text-2xl font-bold">{formatCurrency(gameState.prestige || 1, 1, (gameState.prestige || 1) >= 1000).replace('€', '')}</p>
+                  <p className="text-[10px] text-muted-foreground">Prestige</p>
+                  <p className="text-lg font-bold">{formatCurrency(gameState.prestige || 1, 1, (gameState.prestige || 1) >= 1000).replace('€', '')}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-purple-600" />
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Trophy className="h-3.5 w-3.5 text-purple-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-2.5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Avg/Week</p>
-                  <p className="text-2xl font-bold">{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</p>
+                  <p className="text-[10px] text-muted-foreground">Avg/Week</p>
+                  <p className="text-lg font-bold">{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-blue-600" />
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-2.5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Company Age</p>
-                  <p className="text-lg font-bold">{companyAge}</p>
+                  <p className="text-[10px] text-muted-foreground">Company Age</p>
+                  <p className="text-sm font-bold">{companyAge}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-amber-600" />
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Calendar className="h-3.5 w-3.5 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Financial Overview */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
+            <CardHeader className="py-2 px-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <BarChart3 className="h-3.5 w-3.5" />
                 Financial Overview
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs">
                 Your company's financial performance and breakdown
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
+            <CardContent className="space-y-3 px-3 pb-3">
+              <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Cash Money:</span>
-                  <span className="text-lg font-semibold">{formatCurrency(gameState.money || 0, 2, (gameState.money || 0) >= 1000)}</span>
+                  <span className="text-sm font-semibold">{formatCurrency(gameState.money || 0, 2, (gameState.money || 0) >= 1000)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Founded:</span>
@@ -204,36 +204,37 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
 
           {/* Rankings */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Trophy className="h-3.5 w-3.5" />
                   Rankings
                 </CardTitle>
-                <CardDescription>Your position on the leaderboards</CardDescription>
+                <CardDescription className="text-xs">Your position on the leaderboards</CardDescription>
               </div>
               {onNavigate && (
                 <Button
                   variant="outline"
                   size="sm"
+                  className="px-2 py-1"
                   onClick={() => onNavigate('highscores')}
                 >
                   View All
                 </Button>
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 pb-3">
               {isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading rankings...</p>
+                <p className="text-xs text-muted-foreground">Loading rankings...</p>
               ) : (
-                <div className="space-y-4">
-                  <div className="border rounded-md p-3">
-                    <div className="text-sm text-muted-foreground">Company Value</div>
-                    <div className="font-medium">{formatRanking(rankings.company_value)}</div>
+                <div className="space-y-2.5">
+                  <div className="border rounded-md p-2">
+                    <div className="text-xs text-muted-foreground">Company Value</div>
+                    <div className="text-sm font-medium">{formatRanking(rankings.company_value)}</div>
                   </div>
-                  <div className="border rounded-md p-3">
-                    <div className="text-sm text-muted-foreground">Value Growth</div>
-                    <div className="font-medium">{formatRanking(rankings.company_value_per_week)}</div>
+                  <div className="border rounded-md p-2">
+                    <div className="text-xs text-muted-foreground">Value Growth</div>
+                    <div className="text-sm font-medium">{formatRanking(rankings.company_value_per_week)}</div>
                   </div>
                 </div>
               )}
