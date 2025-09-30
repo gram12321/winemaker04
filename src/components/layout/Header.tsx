@@ -77,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
       <div className="max-w-7xl mx-auto flex justify-between items-center p-4">
         <div className="flex items-center space-x-6">
           <button onClick={() => onPageChange('dashboard')} className="text-xl font-bold">
-            🍷 Winery Management
+            🍷 Winery Management v0.012a
           </button>
           
           <nav className="hidden md:flex space-x-1">
