@@ -6,7 +6,7 @@ import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal } from '../ui';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/FermentationOptionsModal';
-import { getWineQualityCategory, getColorCategory, getColorClass, formatPercent } from '@/lib/utils/utils';
+import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '@/lib/constants/vineyardConstants';
