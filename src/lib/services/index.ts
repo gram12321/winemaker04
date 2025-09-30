@@ -16,7 +16,7 @@ export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './vineyard/vineyardValueCalc';
 export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from './prestige/prestigeService';
 export { getAllWineBatches, formatCompletedWineName, createWineBatchFromHarvest } from './wine/inventoryService';
-export { startFermentation, stopFermentation, bottleWine, progressFermentation } from './wine/winery/fermentationManager';
+export { startFermentationActivity, bottleWine, isFermentationActionAvailable, processWeeklyFermentation } from './wine/winery/fermentationManager';
 export { isActionAvailable } from './wine/winery/wineryService';
 export { getBatchStatus } from './wine/winery/wineryService';
 export { startCrushingActivity, validateCrushingActivity } from './wine/winery/crushingManager';

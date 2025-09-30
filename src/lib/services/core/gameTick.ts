@@ -6,6 +6,7 @@ import { notificationService } from '../../../components/layout/NotificationCent
 import { progressActivities } from '../activity/activityManager';
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../vineyard/vineyardManager';
 import { checkAndTriggerBookkeeping } from '../activity/bookkeepingManager';
+import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -119,8 +120,15 @@ const processWeeklyEffects = async (): Promise<void> => {
     // No fallback - sophisticated system is the only system now
   }
   
+  // Process weekly fermentation effects for all fermenting batches
+  try {
+    await processWeeklyFermentation();
+  } catch (error) {
+    console.warn('Error during weekly fermentation processing:', error);
+  }
+  
   // TODO: Add other weekly effects when ready
-  // - Wine aging effects
+  // - Bottle Wine aging effects. Oxidation risk. Maybe some small risk of oxidation everygametick, higher in different stages (HIgher doing must_fermenting, than doing bottle_aging. ) We could do something like the v1, with a 0-1 value that increment doing wineprogression.
   // - Financial transactions
 };
 

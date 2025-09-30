@@ -1,13 +1,18 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, getAllVineyards, formatCompletedWineName, startFermentation, stopFermentation, bottleWine, progressFermentation, isActionAvailable, getBatchStatus } from '@/lib/services';
+import { getAllWineBatches, getAllVineyards, formatCompletedWineName, bottleWine, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal } from '../ui';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
+import { FermentationOptionsModal } from '../ui/modals/FermentationOptionsModal';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatPercent } from '@/lib/utils/utils';
+import { getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '@/lib/constants/vineyardConstants';
 import { modifyHarvestCharacteristics } from '@/lib/services/wine/characteristics/harvestCharacteristics';
+import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
+import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -31,6 +36,67 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   return (
     <div className="text-xs text-gray-600 mt-1">
       Quality: <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
+    </div>
+  );
+};
+
+// Component for fermentation status badge
+const FermentationStatusBadge: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  if (batch.state !== 'must_fermenting') return null;
+  
+  const method = batch.fermentationOptions?.method || 'Basic';
+  const temperature = batch.fermentationOptions?.temperature || 'Ambient';
+  
+  return (
+    <div className="mt-2">
+      <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+        <span className="w-2 h-2 bg-purple-600 rounded-full mr-2 animate-pulse"></span>
+        Fermenting ({method}, {temperature})
+      </div>
+    </div>
+  );
+};
+
+// Component for displaying expected fermentation effects
+const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  if (batch.state !== 'must_fermenting' || !batch.fermentationOptions) return null;
+  
+  const method = batch.fermentationOptions.method;
+  const temperature = batch.fermentationOptions.temperature;
+  
+  // Get combined effects for this fermentation setup
+  const effects = getCombinedFermentationEffects(method, temperature);
+  
+  if (effects.length === 0) return null;
+  
+  return (
+    <div className="mt-2">
+      <div className="text-xs text-gray-600 mb-1">Weekly Effects:</div>
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-1">
+          {effects.map((effect, index) => (
+            <Tooltip key={index}>
+              <TooltipTrigger asChild>
+                <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
+                  <img 
+                    src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
+                    alt={effect.characteristic}
+                    className="w-3 h-3 mr-1"
+                  />
+                  <span className={`font-medium ${effect.modifier >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {effect.modifier > 0 ? '+' : ''}{(effect.modifier * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <div className="text-xs">
+                  {getCharacteristicDisplayName(effect.characteristic)}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 };
@@ -122,6 +188,10 @@ const Winery: React.FC = () => {
   const [crushingModalOpen, setCrushingModalOpen] = useState(false);
   const [selectedBatchForCrushing, setSelectedBatchForCrushing] = useState<WineBatch | null>(null);
   
+  // Fermentation modal state
+  const [fermentationModalOpen, setFermentationModalOpen] = useState(false);
+  const [selectedBatchForFermentation, setSelectedBatchForFermentation] = useState<WineBatch | null>(null);
+  
   // Balance breakdown modal state
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [selectedBatchForBalance, setSelectedBatchForBalance] = useState<WineBatch | null>(null);
@@ -141,6 +211,21 @@ const Winery: React.FC = () => {
     setSelectedBatchForCrushing(null);
   }, []);
 
+  // Handle opening fermentation modal
+  const handleFermentationClick = useCallback((batchId: string) => {
+    const batch = wineBatches.find(b => b.id === batchId);
+    if (batch) {
+      setSelectedBatchForFermentation(batch);
+      setFermentationModalOpen(true);
+    }
+  }, [wineBatches]);
+
+  // Handle closing fermentation modal
+  const handleFermentationModalClose = useCallback(() => {
+    setFermentationModalOpen(false);
+    setSelectedBatchForFermentation(null);
+  }, []);
+
   // Handle opening balance breakdown modal
   const handleBalanceBreakdownClick = useCallback((batchId: string) => {
     const batch = wineBatches.find(b => b.id === batchId);
@@ -156,19 +241,10 @@ const Winery: React.FC = () => {
     setSelectedBatchForBalance(null);
   }, []);
 
-  const handleAction = useCallback((batchId: string, action: 'ferment' | 'stop' | 'bottle' | 'progress') => withLoading(async () => {
+  const handleAction = useCallback((batchId: string, action: 'bottle') => withLoading(async () => {
     switch (action) {
-      case 'ferment':
-        await startFermentation(batchId);
-        break;
-      case 'stop':
-        await stopFermentation(batchId);
-        break;
       case 'bottle':
         await bottleWine(batchId);
-        break;
-      case 'progress':
-        await progressFermentation(batchId, 25); // Progress by 25%
         break;
     }
   }), [withLoading]);
@@ -274,23 +350,15 @@ const Winery: React.FC = () => {
                       <WineBatchBalanceDisplay batch={batch} />
                       <WineQualityDisplay batch={batch} />
                       
+                      {/* Fermentation Status Badge */}
+                      <FermentationStatusBadge batch={batch} />
+                      
+                      {/* Fermentation Effects Display */}
+                      <FermentationEffectsDisplay batch={batch} />
+                      
                       {/* Wine Characteristics Display */}
                       <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                       
-                      {/* Fermentation Progress Bar */}
-                      {batch.state === 'must_fermenting' && (
-                        <div className="mt-2">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${batch.fermentationProgress || 0}%` }}
-                            ></div>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Fermentation Progress: {formatPercent((batch.fermentationProgress || 0) / 100, 0, true)}
-                          </p>
-                        </div>
-                      )}
                     </div>
                     
                     {/* Action Buttons */}
@@ -314,9 +382,9 @@ const Winery: React.FC = () => {
                         </Button>
                       )}
                       
-                      {isActionAvailable(batch, 'ferment') && (
+                      {isFermentationActionAvailable(batch, 'ferment') && (
                         <Button 
-                          onClick={() => handleAction(batch.id, 'ferment')}
+                          onClick={() => handleFermentationClick(batch.id)}
                           size="sm"
                           className="bg-purple-600 hover:bg-purple-700"
                         >
@@ -324,27 +392,7 @@ const Winery: React.FC = () => {
                         </Button>
                       )}
                       
-                      {batch.state === 'must_fermenting' && (batch.fermentationProgress || 0) < 100 && (
-                        <Button 
-                          onClick={() => handleAction(batch.id, 'progress')}
-                          size="sm"
-                          variant="outline"
-                        >
-                          Progress (+{formatPercent(0.25, 0, true)})
-                        </Button>
-                      )}
-                      
-                      {isActionAvailable(batch, 'stop') && (
-                        <Button 
-                          onClick={() => handleAction(batch.id, 'stop')}
-                          size="sm"
-                          className="bg-amber-600 hover:bg-amber-700"
-                        >
-                          Stop Fermentation
-                        </Button>
-                      )}
-                      
-                      {isActionAvailable(batch, 'bottle') && (
+                      {isFermentationActionAvailable(batch, 'bottle') && (
                         <Button 
                           onClick={() => handleAction(batch.id, 'bottle')}
                           size="sm"
@@ -413,6 +461,13 @@ const Winery: React.FC = () => {
         isOpen={crushingModalOpen}
         onClose={handleCrushingModalClose}
         batch={selectedBatchForCrushing}
+      />
+
+      {/* Fermentation Options Modal */}
+      <FermentationOptionsModal
+        isOpen={fermentationModalOpen}
+        onClose={handleFermentationModalClose}
+        batch={selectedBatchForFermentation}
       />
 
       {/* Balance Breakdown Modal */}

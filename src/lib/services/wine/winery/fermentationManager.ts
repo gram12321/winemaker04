@@ -1,8 +1,15 @@
 import { WineBatch } from '../../../types/types';
 import { updateInventoryBatch } from '../inventoryService';
-import { loadWineBatches } from '../../../database/activities/inventoryDB';
+import { loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
+import { createActivity } from '../../activity/activityManager';
+import { WorkCategory } from '../../activity';
+import { calculateFermentationWork } from '../../activity/WorkCalculators/FermentationWorkCalculator';
+import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
+import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
+import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
+import { calculateWineQuality } from '../../sales/wineQualityIndexCalculationService';
 
 /**
  * Fermentation Manager
@@ -10,52 +17,58 @@ import { recordBottledWine } from '../../user/wineLogService';
  */
 
 /**
- * Start Fermentation: Begin fermentation process
+ * Start Fermentation Activity: Create activity to begin fermentation process
  */
-export async function startFermentation(batchId: string): Promise<boolean> {
-  const batches = await loadWineBatches();
-  const batch = batches.find(b => b.id === batchId);
-  
-  if (!batch || batch.state !== 'must_ready') {
-    return false;
-  }
+export async function startFermentationActivity(
+  batch: WineBatch, 
+  options: FermentationOptions
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Validate batch state
+    if (batch.state !== 'must_ready') {
+      return { success: false, error: 'Batch must be in must_ready stage for fermentation' };
+    }
 
-  return await updateInventoryBatch(batchId, {
-    state: 'must_fermenting',
-    fermentationProgress: 0
-  });
+    // Calculate work and cost
+    const { totalWork, cost } = calculateFermentationWork(batch, options);
+
+    // Create the fermentation activity
+    await createActivity({
+      category: WorkCategory.FERMENTATION,
+      title: `Fermentation Setup - ${batch.grape} from ${batch.vineyardName}`,
+      totalWork,
+      targetId: batch.id,
+      params: {
+        batchId: batch.id,
+        fermentationOptions: options,
+        cost,
+        targetName: `${batch.grape} from ${batch.vineyardName}`
+      },
+      isCancellable: false // Fermentation setup should not be cancellable once started
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error starting fermentation activity:', error);
+    return { success: false, error: 'Failed to start fermentation activity' };
+  }
 }
 
 /**
- * Stop Fermentation: Complete fermentation and move to aging
- */
-export async function stopFermentation(batchId: string): Promise<boolean> {
-  const batches = await loadWineBatches();
-  const batch = batches.find(b => b.id === batchId);
-  
-  if (!batch || batch.state !== 'must_fermenting') {
-    return false;
-  }
-
-  return await updateInventoryBatch(batchId, {
-    state: 'wine_aging',
-    fermentationProgress: 100
-  });
-}
-
-/**
- * Bottling: Complete wine production
+ * Bottling: Complete wine production (updated for new fermentation system)
  */
 export async function bottleWine(batchId: string): Promise<boolean> {
   const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
   
-  if (!batch || batch.state !== 'wine_aging') {
+  // Updated to accept must_fermenting state (no wine_aging state)
+  if (!batch || batch.state !== 'must_fermenting') {
     return false;
   }
 
   const gameState = getGameState();
   
+  // Preserve all wine batch values and only update necessary fields
   const success = await updateInventoryBatch(batchId, {
     state: 'bottled',
     quantity: Math.floor(batch.quantity / 1.5), // Convert kg to bottles (1.5kg per bottle)
@@ -86,40 +99,85 @@ export async function bottleWine(batchId: string): Promise<boolean> {
 }
 
 /**
- * Progress Fermentation: Simulate fermentation progress over time
+ * Check if fermentation action is available for a batch (updated for new system)
  */
-export async function progressFermentation(batchId: string, progressIncrement: number = 10): Promise<boolean> {
-  const batches = await loadWineBatches();
-  const batch = batches.find(b => b.id === batchId);
-  
-  if (!batch || batch.state !== 'must_fermenting') {
-    return false;
+export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment' | 'bottle'): boolean {
+  switch (action) {
+    case 'ferment':
+      // Check if batch is in correct state
+      if (batch.state !== 'must_ready') {
+        return false;
+      }
+      
+      // Check if there's already an active fermentation activity for this batch
+      const gameState = getGameState();
+      const activeActivities = gameState.activities || [];
+      const hasActiveFermentation = activeActivities.some(activity => 
+        activity.category === WorkCategory.FERMENTATION &&
+        activity.targetId === batch.id &&
+        activity.status === 'active'
+      );
+      
+      return !hasActiveFermentation;
+      
+    case 'bottle':
+      return batch.state === 'must_fermenting'; // Updated: no wine_aging state
+    default:
+      return false;
   }
-
-  const newProgress = Math.min(100, (batch.fermentationProgress || 0) + progressIncrement);
-  
-  // Auto-complete fermentation at 100%
-  if (newProgress >= 100) {
-    return await stopFermentation(batchId);
-  }
-
-  return await updateInventoryBatch(batchId, {
-    fermentationProgress: newProgress
-  });
 }
 
 /**
- * Check if fermentation action is available for a batch
+ * Process weekly fermentation effects for all fermenting batches
+ * Called by game tick system
  */
-export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment' | 'stop' | 'bottle'): boolean {
-  switch (action) {
-    case 'ferment':
-      return batch.state === 'must_ready';
-    case 'stop':
-      return batch.state === 'must_fermenting' && (batch.fermentationProgress || 0) > 0;
-    case 'bottle':
-      return batch.state === 'wine_aging';
-    default:
-      return false;
+export async function processWeeklyFermentation(): Promise<void> {
+  try {
+    const batches = await loadWineBatches();
+    const fermentingBatches = batches.filter(batch => 
+      batch.state === 'must_fermenting' && batch.fermentationOptions
+    );
+
+    for (const batch of fermentingBatches) {
+      if (!batch.fermentationOptions) continue;
+
+      // Apply weekly fermentation effects
+      const { characteristics: newCharacteristics, breakdown } = applyWeeklyFermentationEffects({
+        baseCharacteristics: batch.characteristics,
+        method: batch.fermentationOptions.method,
+        temperature: batch.fermentationOptions.temperature
+      });
+
+      // Recalculate balance based on new characteristics
+      const balanceResult = calculateWineBalance(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+      
+      // Create updated batch for quality calculation
+      const updatedBatch: WineBatch = {
+        ...batch,
+        characteristics: newCharacteristics,
+        balance: balanceResult.score
+      };
+      
+      // Recalculate quality based on updated characteristics and balance
+      const newQuality = calculateWineQuality(updatedBatch);
+
+      // Combine existing breakdown with new fermentation breakdown
+      const combinedBreakdown = {
+        effects: [
+          ...(batch.breakdown?.effects || []),
+          ...breakdown.effects
+        ]
+      };
+
+      // Update the batch with new characteristics, quality, and balance
+      await updateWineBatch(batch.id, {
+        characteristics: newCharacteristics,
+        quality: newQuality,
+        balance: balanceResult.score,
+        breakdown: combinedBreakdown
+      });
+    }
+  } catch (error) {
+    console.error('Error processing weekly fermentation:', error);
   }
 }

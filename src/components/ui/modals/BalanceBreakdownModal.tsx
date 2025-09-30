@@ -1,7 +1,7 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BalanceScoreBreakdown } from '../components/BalanceScoreBreakdown';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../shadCN/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../shadCN/dialog';
 import { Button } from '../shadCN/button';
 
 /**
@@ -30,6 +30,9 @@ export const BalanceBreakdownModal: React.FC<BalanceBreakdownModalProps> = ({
           <DialogTitle className="text-xl font-semibold">
             Balance Score Breakdown - {wineName}
           </DialogTitle>
+          <DialogDescription>
+            Detailed breakdown of wine balance score calculations and characteristics
+          </DialogDescription>
         </DialogHeader>
         
                 <div className="mt-4">

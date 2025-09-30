@@ -1,16 +1,25 @@
 // WineryService. Holds Validations and helpers for @winery.tsx
-import { WineBatch } from '../../../types/types';
+import { WineBatch, WorkCategory } from '../../../types/types';
 import { isFermentationActionAvailable } from './fermentationManager';
+import { getGameState } from '../../core/gameState';
 
 // ===== Helper Functions =====
 
 // Check if action is available for a batch
-export function isActionAvailable(batch: WineBatch, action: 'crush' | 'ferment' | 'stop' | 'bottle'): boolean {
+export function isActionAvailable(batch: WineBatch, action: 'crush' | 'ferment' | 'bottle'): boolean {
   switch (action) {
     case 'crush':
-      return batch.state === 'grapes';
+      if (batch.state !== 'grapes') return false;
+      // Block if there's an active crushing activity targeting this vineyard
+      const state = getGameState();
+      const activities = state.activities || [];
+      const hasActiveCrushingForVineyard = activities.some(a => 
+        a.category === WorkCategory.CRUSHING && 
+        a.status === 'active' && 
+        a.targetId === batch.vineyardId
+      );
+      return !hasActiveCrushingForVineyard;
     case 'ferment':
-    case 'stop':
     case 'bottle':
       return isFermentationActionAvailable(batch, action);
     default:
@@ -26,9 +35,7 @@ export function getBatchStatus(batch: WineBatch): string {
     case 'must_ready':
       return 'Must ready for fermentation';
     case 'must_fermenting':
-      return `Fermenting (${batch.fermentationProgress || 0}%)`;
-    case 'wine_aging':
-      return 'Wine aging, ready for bottling';
+      return 'Currently fermenting';
     case 'bottled':
       return `Completed - ${batch.quantity} bottles`;
     default:
@@ -40,7 +47,6 @@ export function getBatchStatus(batch: WineBatch): string {
 export function getNextAction(batch: WineBatch): string | null {
   if (isActionAvailable(batch, 'crush')) return 'crush';
   if (isActionAvailable(batch, 'ferment')) return 'ferment';
-  if (isActionAvailable(batch, 'stop')) return 'stop';
   if (isActionAvailable(batch, 'bottle')) return 'bottle';
   return null;
 }

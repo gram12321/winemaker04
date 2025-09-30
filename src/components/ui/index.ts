@@ -25,5 +25,6 @@ export { default as ActivityOptionsModal, type ActivityOptionField, type Activit
 export { default as PlantingOptionsModal } from './modals/PlantingOptionsModal';
 export { default as HarvestOptionsModal } from './modals/HarvestOptionsModal';
 export { default as CrushingOptionsModal } from './modals/CrushingOptionsModal';
+export { default as FermentationOptionsModal } from './modals/FermentationOptionsModal';
 export { BalanceBreakdownModal } from './modals/BalanceBreakdownModal';
 export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';

@@ -51,6 +51,7 @@ export async function startCrushingActivity(batch: WineBatch, options: CrushingO
     const activityId = await createActivity({
       category: WorkCategory.CRUSHING,
       title: `Crushing ${batch.grape} from ${batch.vineyardName}`,
+      targetId: batch.vineyardId,
       totalWork,
       params: {
         batchId: batch.id,

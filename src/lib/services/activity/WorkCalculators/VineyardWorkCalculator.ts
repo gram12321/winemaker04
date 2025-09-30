@@ -1,6 +1,6 @@
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/WorkCalculators/workCalculator';
-import { TASK_RATES, INITIAL_WORK, DENSITY_BASED_TASKS } from '@/lib/constants/activityConstants';
+import { TASK_RATES, HARVEST_YIELD_RATE, INITIAL_WORK, DENSITY_BASED_TASKS, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
@@ -68,24 +68,26 @@ export function calculateHarvestWork(
   const altitudeModifier = getAltitudeModifier(vineyard);
 
   const category = WorkCategory.HARVESTING;
-  const rate = TASK_RATES[category];
+  const yieldRate = HARVEST_YIELD_RATE;
   const initialWork = INITIAL_WORK[category];
 
-  const totalWork = calculateTotalWork(vineyard.hectares, {
-    rate,
-    initialWork,
-    density: vineyard.density > 0 ? vineyard.density : undefined,
-    useDensityAdjustment: DENSITY_BASED_TASKS.includes(category),
-    workModifiers: [fragilityModifier, altitudeModifier]
-  });
+  // Calculate work units based on yield
+  const workWeeks = expectedYield / yieldRate;
+  const workUnits = workWeeks * BASE_WORK_UNITS;
+  const baseWork = Math.ceil(workUnits);
+  
+  // Add initial work and apply modifiers
+  const workWithInitial = baseWork + initialWork;
+  const totalWork = [fragilityModifier, altitudeModifier].reduce((work, modifier) => 
+    work * (1 + modifier), workWithInitial);
 
   const factors: WorkFactor[] = [
+    { label: 'Expected Yield', value: expectedYield, unit: 'kg', isPrimary: true },
     { label: 'Vineyard Area', value: vineyard.hectares, unit: 'hectares', isPrimary: true },
     { label: 'Vine Density', value: vineyard.density > 0 ? vineyard.density : 'Not set', unit: vineyard.density > 0 ? 'vines/ha' : '', isPrimary: true },
-    { label: 'Expected Yield', value: expectedYield, unit: 'kg', isPrimary: true },
-    { label: 'Grape Ripeness', value: `${Math.round((vineyard.ripeness || 0) * 100)}%`, unit: '', isPrimary: true },
-    { label: 'Base Harvest Rate', value: rate, unit: 'ha/week' },
-    { label: 'Initial Setup Work', value: initialWork, unit: 'work units' }
+    { label: 'Harvest Rate', value: yieldRate, unit: 'kg/week' },
+    { label: 'Base Harvest Work', value: baseWork, unit: 'work units' },
+    { label: 'Initial Setup Work', value: initialWork, unit: 'work units' },
   ];
 
   if (fragilityModifier > 0) {

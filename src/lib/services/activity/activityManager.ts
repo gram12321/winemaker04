@@ -9,6 +9,7 @@ import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardD
 import { calculateVineyardYield } from '../vineyard/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { completeCrushing } from './WorkCalculators/CrushingWorkCalculator';
+import { completeFermentationSetup } from './WorkCalculators/FermentationWorkCalculator';
 import { completeBookkeeping } from './WorkCalculators/BookkeepingWorkCalculator';
 
 // Completion handlers for each activity type
@@ -74,9 +75,9 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     }
   },
 
-  [WorkCategory.FERMENTATION]: async (_activity: Activity) => {
-    // Fermentation activities are handled by the fermentation manager
-    // No specific completion action needed here
+  [WorkCategory.FERMENTATION]: async (activity: Activity) => {
+    await completeFermentationSetup(activity);
+    notificationService.success(`Successfully started fermentation for ${activity.params.targetName}!`);
   },
 
   [WorkCategory.CLEARING]: async (_activity: Activity) => {

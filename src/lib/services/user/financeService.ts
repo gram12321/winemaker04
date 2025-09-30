@@ -259,7 +259,6 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
   
   const wineValue = wineBatches.reduce((sum, batch) => {
     const stageMultiplier = batch.state === 'bottled' ? 1 :
-                            batch.state === 'wine_aging' ? 0.8 :
                             batch.state === 'must_ready' || batch.state === 'must_fermenting' ? 0.5 : 0.3;
     const qualityMultiplier = batch.quality || 0.5;
     

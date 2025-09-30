@@ -14,7 +14,7 @@ const WINE_LOG_TABLE = 'wine_log';
  */
 export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
   try {
-    if (wineBatch.stage !== 'bottled') {
+    if (wineBatch.state !== 'bottled') {
       throw new Error('Can only record bottled wines in the production log');
     }
 

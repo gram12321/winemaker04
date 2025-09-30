@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types/types';
+import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType, GameDate } from '@/lib/types/types';
 import { fulfillWineOrder, rejectWineOrder, generateSophisticatedWineOrders, generateCustomer } from '@/lib/services';
 import { loadWineBatches, saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineOrders } from '@/lib/database/customers/salesDB';
 import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, WineCharacteristicsDisplay } from '../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown } from '@/lib/services/sales/relationshipService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -57,7 +57,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   };
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('all');
+  const [showSoldOut, setShowSoldOut] = useState<boolean>(false);
   const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
+  const [expandedBatches, setExpandedBatches] = useState<Record<string, boolean>>({});
   const [orderChanceInfo, setOrderChanceInfo] = useState<{
     companyPrestige: number;
     availableWines: number;
@@ -92,12 +94,18 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     [allOrders, orderStatusFilter]
   );
 
+  // Always-available list of pending orders for bulk actions
+  const pendingOrders = React.useMemo(() => 
+    allOrders.filter(order => order.status === 'pending'),
+    [allOrders]
+  );
+
   // Memoize filtered bottled wines
   const bottledWines = React.useMemo(() => 
     allBatches.filter(batch => 
-      batch.state === 'bottled'
+      batch.state === 'bottled' && (showSoldOut || batch.quantity > 0)
     ),
-    [allBatches]
+    [allBatches, showSoldOut]
   );
 
   // Helper function to get asking price for an order
@@ -124,6 +132,15 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     { key: 'customerType', label: 'Customer Type', sortable: true },
     { key: 'wineName', label: 'Wine', sortable: true },
     { key: 'requestedQuantity', label: 'Quantity', sortable: true },
+    {
+      key: 'wineBatchId',
+      label: 'Inventory',
+      sortable: true,
+      accessor: (order) => {
+        const batch = allBatches.find(b => b.id === order.wineBatchId);
+        return batch ? batch.quantity : 0;
+      }
+    },
     { 
       key: 'wineBatchId', 
       label: 'Asking Price', 
@@ -152,15 +169,24 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     }
   ];
 
+  // Helper function to format harvest period (start and end dates)
+  const formatHarvestPeriod = (harvestDate: GameDate): string => {
+    // For now, we'll show the harvest date as both start and end
+    // In the future, this could be enhanced to show actual harvest period range
+    const startDate = formatGameDateFromObject(harvestDate);
+    return `${startDate} - ${startDate}`;
+  };
+
   // Define sortable columns for wine cellar
   const cellarColumns: SortableColumn<WineBatch>[] = [
     { key: 'grape', label: 'Wine', sortable: true },
+    { key: 'harvestDate', label: 'Vintage', sortable: true, accessor: (wine) => wine.harvestDate.year },
     { key: 'vineyardName', label: 'Vineyard', sortable: true },
     { 
       key: 'harvestDate', 
-      label: 'Harvest', 
+      label: 'Harvest Period', 
       sortable: true,
-      accessor: (wine) => `${wine.harvestDate.year}-${wine.harvestDate.season}-${wine.harvestDate.week}`
+      accessor: (wine) => formatHarvestPeriod(wine.harvestDate)
     },
     { key: 'quality', label: 'Quality', sortable: true },
     { key: 'balance', label: 'Balance', sortable: true },
@@ -181,6 +207,12 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     getSortIndicator: getOrderSortIndicator,
     isColumnSorted: isOrderColumnSorted
   } = useTableSortWithAccessors(orders, orderColumns);
+
+  // Helper to fetch current inventory for an order's batch
+  const getInventoryForOrder = React.useCallback((order: WineOrder): number => {
+    const batch = allBatches.find(b => b.id === order.wineBatchId);
+    return batch ? batch.quantity : 0;
+  }, [allBatches]);
 
   // Paginate sorted orders
   const paginatedOrders = React.useMemo(() => {
@@ -338,19 +370,19 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
   // Bulk actions for orders
   const handleAcceptAll = () => withLoading(async () => {
-    if (orders.length === 0) return;
+    if (pendingOrders.length === 0) return;
 
     await Promise.allSettled(
-      orders.map(order => fulfillWineOrder(order.id))
+      pendingOrders.map(order => fulfillWineOrder(order.id))
     );
     
     // Data will be automatically refreshed by the reactive hooks
   });
 
   const handleRejectAll = () => withLoading(async () => {
-    if (orders.length === 0) return;
+    if (pendingOrders.length === 0) return;
 
-    await Promise.all(orders.map(order => rejectWineOrder(order.id)));
+    await Promise.all(pendingOrders.map(order => rejectWineOrder(order.id)));
     // Data will be automatically refreshed by the reactive hooks
   });
 
@@ -398,10 +430,32 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
       {/* Content based on active tab */}
       {activeTab === 'cellar' && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold">Bottled Wines Available for Sale</h3>
+        <div className="space-y-4">
+          {/* Wine Cellar Filter */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold">Wine Cellar Filter</h3>
+                <p className="text-gray-500 text-sm">Filter wines by availability</p>
+              </div>
+              <div className="flex space-x-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={showSoldOut}
+                    onChange={(e) => setShowSoldOut(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium">Show Sold Out Wines</span>
+                </label>
+              </div>
+            </div>
           </div>
+
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">Bottled Wines Available for Sale</h3>
+            </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -428,7 +482,15 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                     sortIndicator={getCellarSortIndicator('harvestDate')}
                     isSorted={isCellarColumnSorted('harvestDate')}
                   >
-                    Harvest
+                    Vintage
+                  </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleCellarSort('harvestDate')}
+                    sortIndicator={getCellarSortIndicator('harvestDate')}
+                    isSorted={isCellarColumnSorted('harvestDate')}
+                  >
+                    Harvest Period
                   </TableHead>
                   <TableHead 
                     sortable 
@@ -482,15 +544,26 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                   </TableRow>
                 ) : (
                   sortedBottledWines.map((wine) => (
-                    <TableRow key={wine.id}>
-                      <TableCell className="font-medium text-gray-900">
-                        {wine.grape}
-                      </TableCell>
+                    <React.Fragment key={wine.id}>
+                      <TableRow>
+                        <TableCell className="font-medium text-gray-900">
+                          <button
+                            onClick={() => setExpandedBatches(prev => ({ ...prev, [wine.id]: !prev[wine.id] }))}
+                            className="mr-2 text-gray-600 hover:text-gray-900"
+                            title={expandedBatches[wine.id] ? 'Hide details' : 'Show details'}
+                          >
+                            {expandedBatches[wine.id] ? '▼' : '▶'}
+                          </button>
+                          {wine.grape}
+                        </TableCell>
                       <TableCell className="text-gray-500">
                         {wine.vineyardName}
                       </TableCell>
                       <TableCell className="text-gray-500">
-                        {formatGameDateFromObject(wine.harvestDate)}
+                        {wine.harvestDate.year}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {formatHarvestPeriod(wine.harvestDate)}
                       </TableCell>
                       <TableCell className="text-gray-500">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -568,15 +641,35 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                         {wine.quantity}
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                          Ready for Sale
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          wine.quantity > 0 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {wine.quantity > 0 ? 'Ready for Sale' : 'Sold Out'}
                         </span>
                       </TableCell>
-                    </TableRow>
+                      </TableRow>
+                      {expandedBatches[wine.id] && (
+                        <TableRow>
+                          <TableCell colSpan={9} className="bg-gray-50">
+                            <div className="p-3">
+                              <WineCharacteristicsDisplay 
+                                characteristics={wine.characteristics}
+                                collapsible={false}
+                                showBalanceScore={true}
+                                title="Wine Characteristics"
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))
                 )}
               </TableBody>
             </Table>
+          </div>
           </div>
         </div>
       )}
@@ -675,14 +768,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                 <p className="text-gray-500 text-sm">Generate test orders or manage pending orders</p>
               </div>
               <div className="flex space-x-2">
-                {orders.length > 0 && orderStatusFilter === 'pending' && (
+                {pendingOrders.length > 0 && (
                   <>
                     <button
                       onClick={handleAcceptAll}
                       disabled={isLoading}
                       className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm"
                     >
-                      Accept All ({orders.length})
+                      Accept All ({pendingOrders.length})
                     </button>
                     <button
                       onClick={handleRejectAll}
@@ -750,6 +843,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                     >
                       Quantity
                     </TableHead>
+                  <TableHead 
+                    sortable 
+                    onSort={() => handleOrderSort('wineBatchId')}
+                    sortIndicator={getOrderSortIndicator('wineBatchId')}
+                    isSorted={isOrderColumnSorted('wineBatchId')}
+                  >
+                    Inventory
+                  </TableHead>
                     <TableHead 
                       sortable 
                       onSort={() => handleOrderSort('wineBatchId')}
@@ -805,7 +906,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                 <TableBody>
                   {paginatedOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={14} className="text-center text-gray-500 py-8">
                         {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                       </TableCell>
                     </TableRow>
@@ -935,6 +1036,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                               </span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-gray-500">
+                          {getInventoryForOrder(order)}
                         </TableCell>
                         <TableCell className="text-gray-500 font-medium">
                           {formatCurrency(getAskingPriceForOrder(order), 2)}

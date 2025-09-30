@@ -111,7 +111,6 @@ export type WineBatchState =
   | 'grapes'           // Ready for crushing
   | 'must_ready'       // Ready for fermentation  
   | 'must_fermenting'  // Currently fermenting
-  | 'wine_aging'       // Aging, ready for bottling
   | 'bottled';         // Completed
 
 // Wine batch interface for winery operations
@@ -138,6 +137,12 @@ export interface WineBatch {
       modifier: number;
       description: string; // Shows effect name (e.g., "Ripeness", "Altitude") not source
     }>;
+  };
+  
+  // Fermentation options (stored when fermentation starts)
+  fermentationOptions?: {
+    method: 'Basic' | 'Temperature Controlled' | 'Extended Maceration';
+    temperature: 'Ambient' | 'Cool' | 'Warm';
   };
   
   // Grape metadata (0-1 scale unless specified)

@@ -16,6 +16,8 @@ export {
   calculateCompanyWeeks, 
   getRandomFromArray, 
   getBadgeColorClasses,
+  // Wine characteristic utilities
+  getCharacteristicDisplayName,
   // Wine filtering utilities
   getAvailableBottledWines,
   loadFormattedRelationshipBreakdown,

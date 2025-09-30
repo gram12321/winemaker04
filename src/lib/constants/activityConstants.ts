@@ -26,12 +26,15 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.ADMINISTRATION]: 500 // tasks/week; with BASE_WORK_UNITS 50 => 0.1 work/tx
 };
 
+// Harvest yield rate - how much grapes can be harvested per week
+export const HARVEST_YIELD_RATE = 500; // kg/week
+
 // Define initial work for each category
 export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.PLANTING]: 10,
   [WorkCategory.HARVESTING]: 5,
   [WorkCategory.CRUSHING]: 10,
-  [WorkCategory.FERMENTATION]: 25,
+  [WorkCategory.FERMENTATION]: 100,
   [WorkCategory.CLEARING]: 5, // Base initial work for clearing category
   [WorkCategory.UPROOTING]: 10,
   [WorkCategory.BUILDING]: 200,

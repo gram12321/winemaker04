@@ -51,5 +51,3 @@ export function calculateTotalWork(
   
   return Math.ceil(totalWork);
 }
-
-

@@ -23,12 +23,17 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         quantity: Math.round(batch.quantity),
         state: batch.state,
         fermentation_progress: Math.round(batch.fermentationProgress || 0),
+        fermentation_options: batch.fermentationOptions, // Store fermentation options as JSON
         quality: batch.quality,
         balance: batch.balance,
         characteristics: batch.characteristics, // Store as JSON
         breakdown: batch.breakdown, // Store breakdown as JSON
         final_price: batch.finalPrice,
         asking_price: batch.askingPrice,
+        grape_color: batch.grapeColor,
+        natural_yield: batch.naturalYield,
+        fragile: batch.fragile,
+        prone_to_oxidation: batch.proneToOxidation,
         harvest_week: Math.round(batch.harvestDate.week),
         harvest_season: batch.harvestDate.season,
         harvest_year: Math.round(batch.harvestDate.year),
@@ -67,6 +72,7 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         quantity: row.quantity,
         state: row.state,
         fermentationProgress: row.fermentation_progress || 0,
+        fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
         quality: row.quality || 0.7,
         balance: row.balance || 0.6,
         characteristics: row.characteristics || {
@@ -80,10 +86,10 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         breakdown: row.breakdown || undefined, // Load breakdown data
         finalPrice: row.final_price || 10.50,
         askingPrice: row.asking_price, // Will default to undefined if not set
-        grapeColor: grapeData.grapeColor,
-        naturalYield: grapeData.naturalYield,
-        fragile: grapeData.fragile,
-        proneToOxidation: grapeData.proneToOxidation,
+        grapeColor: row.grape_color || grapeData.grapeColor,
+        naturalYield: row.natural_yield || grapeData.naturalYield,
+        fragile: row.fragile || grapeData.fragile,
+        proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
         harvestDate: {
           week: row.harvest_week || 1,
           season: (row.harvest_season || 'Spring') as Season,

@@ -443,6 +443,25 @@ export function getCountryFlag(countryName: string): string {
   return flagCode;
 }
 
+// ===== WINE CHARACTERISTIC UTILITIES =====
+
+/**
+ * Get display name for wine characteristic keys
+ * @param characteristic The characteristic key (e.g., 'aroma', 'body')
+ * @returns Display name (e.g., 'Aroma', 'Body')
+ */
+export function getCharacteristicDisplayName(characteristic: string): string {
+  const names: Record<string, string> = {
+    'acidity': 'Acidity',
+    'aroma': 'Aroma', 
+    'body': 'Body',
+    'spice': 'Spice',
+    'sweetness': 'Sweetness',
+    'tannins': 'Tannins'
+  };
+  return names[characteristic] || characteristic;
+}
+
 // ===== EMOJI MAPPINGS =====
 
 export const NAVIGATION_EMOJIS = {

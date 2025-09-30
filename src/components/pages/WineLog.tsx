@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { loadWineLog, getAllVineyards } from '@/lib/services';
 import { WineLogEntry } from '@/lib/types/types';
-import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
+import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineCharacteristicsDisplay } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
-import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber } from '@/lib/utils/utils';
+import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber, formatGameDateFromObject } from '@/lib/utils/utils';
 
 interface WineLogProps {
   currentCompany?: any;
@@ -14,6 +14,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
   const [page, setPage] = useState<number>(1);
   const pageSize = 20;
+  const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({});
   
   const wineLog = useGameStateWithData(loadWineLog, []);
   const vineyards = useGameStateWithData(getAllVineyards, []);
@@ -35,6 +36,12 @@ export function WineLog({ currentCompany }: WineLogProps) {
   }, [selectedVineyard]);
 
   const totalPages = Math.max(1, Math.ceil(filteredWineLog.length / pageSize));
+
+  // Helper to format harvest period (start and end). Currently shows same date for both.
+  const formatHarvestPeriod = (harvestDate: WineLogEntry['harvestDate']): string => {
+    const start = formatGameDateFromObject(harvestDate);
+    return `${start} - ${start}`;
+  };
 
   const vineyardGroups = React.useMemo(() => 
     wineLog.reduce((groups, entry) => {
@@ -195,7 +202,8 @@ export function WineLog({ currentCompany }: WineLogProps) {
                         <th className="pb-3">Wine</th>
                         <th className="pb-3">Vineyard</th>
                         <th className="pb-3">Vintage</th>
-                        <th className="pb-3">Quantity</th>
+                        <th className="pb-3">Harvest Period</th>
+                        <th className="pb-3">Bottles</th>
                         <th className="pb-3">Quality</th>
                         <th className="pb-3">Price</th>
                         <th className="pb-3">Bottled</th>
@@ -203,37 +211,65 @@ export function WineLog({ currentCompany }: WineLogProps) {
                     </thead>
                     <tbody className="divide-y">
                       {paginatedWineLog.map((entry) => (
-                        <tr key={entry.id} className="text-sm">
-                          <td className="py-3">
-                            <div className="font-medium">{entry.grape}</div>
-                          </td>
-                          <td className="py-3">
-                            <div className="text-gray-600">{entry.vineyardName}</div>
-                          </td>
-                          <td className="py-3">
-                            <Badge variant="outline">{entry.vintage}</Badge>
-                          </td>
-                          <td className="py-3">
-                            <div className="font-medium">{entry.quantity} bottles</div>
-                          </td>
-                          <td className="py-3">
-                            <div className={`font-medium ${getColorClass(entry.quality)}`}>
-                              {getWineQualityCategory(entry.quality)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {getColorCategory(entry.quality)}
-                            </div>
-                          </td>
-                          <td className="py-3">
-                            <div className="font-medium">{formatCurrency(entry.finalPrice)}</div>
-                            <div className="text-xs text-gray-500">per bottle</div>
-                          </td>
-                          <td className="py-3">
-                            <div className="text-gray-600">
-                              {formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}
-                            </div>
-                          </td>
-                        </tr>
+                        <React.Fragment key={entry.id}>
+                          <tr className="text-sm">
+                            <td className="py-3">
+                              <div className="font-medium flex items-center gap-2">
+                                <button
+                                  onClick={() => setExpandedEntries(prev => ({ ...prev, [entry.id]: !prev[entry.id] }))}
+                                  className="text-gray-600 hover:text-gray-900"
+                                  title={expandedEntries[entry.id] ? 'Hide details' : 'Show details'}
+                                >
+                                  {expandedEntries[entry.id] ? '▼' : '▶'}
+                                </button>
+                                {entry.grape}
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <div className="text-gray-600">{entry.vineyardName}</div>
+                            </td>
+                            <td className="py-3">
+                              <Badge variant="outline">{entry.vintage}</Badge>
+                            </td>
+                            <td className="py-3">
+                              <div className="text-gray-600">{formatHarvestPeriod(entry.harvestDate)}</div>
+                            </td>
+                            <td className="py-3">
+                              <div className="font-medium">{entry.quantity} bottles</div>
+                            </td>
+                            <td className="py-3">
+                              <div className={`font-medium ${getColorClass(entry.quality)}`}>
+                                {getWineQualityCategory(entry.quality)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {getColorCategory(entry.quality)}
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <div className="font-medium">{formatCurrency(entry.finalPrice)}</div>
+                              <div className="text-xs text-gray-500">per bottle</div>
+                            </td>
+                            <td className="py-3">
+                              <div className="text-gray-600">
+                                {formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedEntries[entry.id] && (
+                            <tr>
+                              <td className="py-2 bg-gray-50" colSpan={8}>
+                                <div className="p-3">
+                                  <WineCharacteristicsDisplay 
+                                    characteristics={entry.characteristics}
+                                    collapsible={false}
+                                    showBalanceScore={true}
+                                    title="Wine Characteristics"
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
