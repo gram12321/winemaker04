@@ -232,8 +232,8 @@ const Vineyard: React.FC = () => {
         </div>
       </div>
 
-      {/* Vineyards Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Vineyards Table - Desktop */}
+      <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50">
@@ -404,6 +404,185 @@ const Vineyard: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Vineyards Cards - Mobile */}
+      <div className="lg:hidden space-y-4">
+        {vineyards.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+            No vineyards yet. Create your first vineyard to get started!
+          </div>
+        ) : (
+          vineyards.map((vineyard) => (
+            <div key={vineyard.id} className="bg-white rounded-lg shadow overflow-hidden">
+              {/* Card Header */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 border-b">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{vineyard.name}</h3>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {vineyard.grape ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {vineyard.grape}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">No grape planted</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`text-sm font-medium ${getStatusColor(vineyard.status)}`}>
+                    {vineyard.status}
+                  </div>
+                </div>
+                
+                {/* Location */}
+                <div className="flex items-center text-sm text-gray-600 mt-2">
+                  <span className={`flag-icon flag-icon-${getCountryFlag(vineyard.country)} mr-2`}></span>
+                  {vineyard.region}, {vineyard.country}
+                </div>
+              </div>
+              
+              {/* Card Body */}
+              <div className="p-4 space-y-4">
+                {/* Size & Value Section */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Size</div>
+                    <div className="text-lg font-bold text-gray-900">{vineyard.hectares} ha</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Total Value</div>
+                    <div className="text-lg font-bold text-blue-600">{formatCurrency(vineyard.vineyardTotalValue)}</div>
+                  </div>
+                </div>
+                
+                {/* Characteristics Section */}
+                <div className="border-t pt-3">
+                  <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Characteristics</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Soil:</span>
+                      <span className="text-gray-900">{vineyard.soil.join(', ')}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Altitude:</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-900 mr-2">{vineyard.altitude}m</span>
+                        {(() => {
+                          const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
+                          const colors = getBadgeColorClasses(rating);
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                              {formatNumber(rating, { decimals: 2, forceDecimals: true })}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Aspect:</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-900 mr-2">{vineyard.aspect}</span>
+                        {(() => {
+                          const rating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
+                          const colors = getBadgeColorClasses(rating);
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                              {formatNumber(rating, { decimals: 2, forceDecimals: true })}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Vine Info Section */}
+                {vineyard.grape && (
+                  <div className="border-t pt-3">
+                    <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Information</div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Age:</span>
+                        <span className="text-gray-900">
+                          {vineyard.vineAge === null ? (
+                            <span className="text-gray-400">Not planted</span>
+                          ) : vineyard.vineAge === 0 ? (
+                            <span className="text-green-600">Newly planted</span>
+                          ) : (
+                            <span>{vineyard.vineAge} years</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Density:</span>
+                        <span className="text-gray-900">
+                          {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Prestige:</span>
+                        <span className="text-gray-900">
+                          {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
+                        </span>
+                      </div>
+                      
+                      {/* Ripeness Progress */}
+                      <div>
+                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                          <span>Ripeness</span>
+                          <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className={`h-3 rounded-full transition-all duration-300 ${
+                              (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
+                              (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      {/* Vine Yield Progress */}
+                      <div>
+                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                          <span>Vine Yield</span>
+                          <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className={`h-3 rounded-full transition-all duration-300 ${
+                              (vineyard.vineYield || 0.02) < 0.3 ? 'bg-red-400' :
+                              (vineyard.vineYield || 0.02) < 0.7 ? 'bg-amber-500' : 
+                              (vineyard.vineYield || 0.02) < 1.0 ? 'bg-green-500' : 'bg-purple-500'
+                            }`}
+                            style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      {/* Expected/Remaining Yield */}
+                      <div className="bg-green-50 rounded-lg p-3 text-center">
+                        <div className="text-xs text-gray-600 mb-1">
+                          {vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield'}
+                        </div>
+                        <div className="text-lg font-bold text-green-600">
+                          {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Card Footer - Actions */}
+              <div className="bg-gray-50 px-4 py-3 border-t">
+                {getActionButtons(vineyard)}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <PlantingOptionsModal
