@@ -86,22 +86,22 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   };
 
   return (
-    <div className={`flex items-center py-2 border-b last:border-b-0 border-gray-200 ${className}`}>
+    <div className={`flex flex-col sm:flex-row sm:items-center py-2 border-b last:border-b-0 border-gray-200 gap-2 sm:gap-0 ${className}`}>
       {/* Label */}
-      <div className="w-1/4 pr-2 text-sm font-medium text-gray-700 capitalize flex items-center gap-2">
+      <div className="sm:w-1/4 sm:pr-2 text-sm font-medium text-gray-700 capitalize flex items-center gap-2">
         {showIcon && (
           <img
             src={ICON_SRC[characteristicName]}
             alt={`${label} icon`}
-            className="w-4 h-4 object-contain opacity-80"
+            className="w-3 h-3 sm:w-4 sm:h-4 object-contain opacity-80"
             loading="lazy"
           />
         )}
-        <span>{label}</span>
+        <span className="text-xs sm:text-sm">{label}</span>
       </div>
       
       {/* Bar Container */}
-      <div className="w-3/4 flex items-center">
+      <div className="sm:w-3/4 flex items-center flex-1">
         <div 
           className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden"
           title={buildTooltip()}
@@ -152,7 +152,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
         
         {/* Value display */}
         {showValue && (
-          <span className={`ml-3 text-sm font-medium w-12 text-right ${getValueColor()}`}>
+          <span className={`ml-2 sm:ml-3 text-xs sm:text-sm font-medium w-10 sm:w-12 text-right ${getValueColor()}`}>
             {formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
           </span>
         )}

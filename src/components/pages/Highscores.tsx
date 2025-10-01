@@ -184,67 +184,137 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     }
 
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[60px]">Rank</TableHead>
-            <TableHead>Company Name</TableHead>
-            {scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard') ? (
-              <>
-                <TableHead>Vineyard</TableHead>
-                <TableHead>Vintage</TableHead>
-              </>
-            ) : null}
-            <TableHead className="text-right">{getColumnTitle(scoreType)}</TableHead>
-            <TableHead className="text-right">Game Date</TableHead>
-            <TableHead className="text-right">Achieved</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      <>
+        {/* Desktop Table */}
+        <div className="hidden lg:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px]">Rank</TableHead>
+                <TableHead>Company Name</TableHead>
+                {scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard') ? (
+                  <>
+                    <TableHead>Vineyard</TableHead>
+                    <TableHead>Vintage</TableHead>
+                  </>
+                ) : null}
+                <TableHead className="text-right">{getColumnTitle(scoreType)}</TableHead>
+                <TableHead className="text-right">Game Date</TableHead>
+                <TableHead className="text-right">Achieved</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {scores.map((score, index) => (
+                <TableRow 
+                  key={`${score.companyId}-${index}`}
+                  className={currentCompanyId === score.companyId ? 'bg-primary/5 border-primary/20' : ''}
+                >
+                  <TableCell className="flex items-center justify-center">
+                    {getRankIcon(index)}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {score.companyName}
+                      {currentCompanyId === score.companyId && (
+                        <Badge variant="outline" className="text-xs">Your Company</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  {scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard') ? (
+                    <>
+                      <TableCell className="text-sm">
+                        {score.vineyardName || 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {score.wineVintage ? `${score.wineVintage} ${score.grapeVariety || ''}` : 'N/A'}
+                      </TableCell>
+                    </>
+                  ) : null}
+                  <TableCell className="text-right font-mono">
+                    {scoreType.includes('price') ? 
+                      formatCurrency(score.scoreValue, 2) :
+                      scoreType.includes('quality') || scoreType.includes('balance') ?
+                        formatPercent(score.scoreValue, 1, true) :
+                        formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                    }
+                  </TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">
+                    {formatGameDate(score)}
+                  </TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">
+                    {score.achievedAt.toLocaleDateString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden space-y-3">
           {scores.map((score, index) => (
-            <TableRow 
+            <Card 
               key={`${score.companyId}-${index}`}
-              className={currentCompanyId === score.companyId ? 'bg-primary/5 border-primary/20' : ''}
+              className={currentCompanyId === score.companyId ? 'border-primary border-2 bg-primary/5' : ''}
             >
-              <TableCell className="flex items-center justify-center">
-                {getRankIcon(index)}
-              </TableCell>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  {score.companyName}
-                  {currentCompanyId === score.companyId && (
-                    <Badge variant="outline" className="text-xs">Your Company</Badge>
-                  )}
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-12 h-12">
+                      {getRankIcon(index)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-base">{score.companyName}</div>
+                      {currentCompanyId === score.companyId && (
+                        <Badge variant="outline" className="text-xs mt-1">Your Company</Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </TableCell>
-              {scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard') ? (
-                <>
-                  <TableCell className="text-sm">
-                    {score.vineyardName || 'N/A'}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {score.wineVintage ? `${score.wineVintage} ${score.grapeVariety || ''}` : 'N/A'}
-                  </TableCell>
-                </>
-              ) : null}
-              <TableCell className="text-right font-mono">
-                {scoreType.includes('price') ? 
-                  formatCurrency(score.scoreValue, 2) :
-                  scoreType.includes('quality') || scoreType.includes('balance') ?
-                    formatPercent(score.scoreValue, 1, true) :
-                    formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
-                }
-              </TableCell>
-              <TableCell className="text-right text-sm text-muted-foreground">
-                {formatGameDate(score)}
-              </TableCell>
-              <TableCell className="text-right text-sm text-muted-foreground">
-                {score.achievedAt.toLocaleDateString()}
-              </TableCell>
-            </TableRow>
+
+                {(scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard')) && (
+                  <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b">
+                    {score.vineyardName && (
+                      <div>
+                        <div className="text-xs text-gray-500">Vineyard</div>
+                        <div className="text-sm font-medium">{score.vineyardName}</div>
+                      </div>
+                    )}
+                    {score.wineVintage && (
+                      <div>
+                        <div className="text-xs text-gray-500">Vintage</div>
+                        <div className="text-sm font-medium">{score.wineVintage} {score.grapeVariety || ''}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
+                    <span className="text-lg font-bold text-primary">
+                      {scoreType.includes('price') ? 
+                        formatCurrency(score.scoreValue, 2) :
+                        scoreType.includes('quality') || scoreType.includes('balance') ?
+                          formatPercent(score.scoreValue, 1, true) :
+                          formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Game Date:</span>
+                    <span className="text-gray-900">{formatGameDate(score)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Achieved:</span>
+                    <span className="text-gray-900">{score.achievedAt.toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </TableBody>
-      </Table>
+        </div>
+      </>
     );
   }, [error, highscores, isLoading, currentCompanyId, getColumnTitle, getRankIcon]);
 

@@ -452,7 +452,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Wine Cellar Table - Desktop */}
+          <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
             <div className="p-3 border-b border-gray-200">
               <h3 className="text-sm font-semibold">Bottled Wines Available for Sale</h3>
             </div>
@@ -671,6 +672,142 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
             </Table>
           </div>
           </div>
+
+          {/* Wine Cellar Cards - Mobile */}
+          <div className="lg:hidden space-y-4">
+            {sortedBottledWines.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+                No bottled wines available for sale
+              </div>
+            ) : (
+              sortedBottledWines.map((wine) => (
+                <div key={wine.id} className="bg-white rounded-lg shadow overflow-hidden">
+                  {/* Card Header */}
+                  <div className="bg-gradient-to-r from-purple-50 to-amber-50 p-4 border-b">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{wine.grape}</h3>
+                        <div className="text-sm text-gray-600 mt-1">{wine.vineyardName}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Vintage {wine.harvestDate.year} • {formatHarvestPeriod(wine.harvestDate)}
+                        </div>
+                      </div>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        wine.quantity > 0 
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {wine.quantity > 0 ? 'Available' : 'Sold Out'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          wine.quality >= 0.8 ? 'bg-green-100 text-green-800' :
+                          wine.quality >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {formatPercent(wine.quality, 0, true)}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase mb-1">Balance</div>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          wine.balance >= 0.8 ? 'bg-green-100 text-green-800' :
+                          wine.balance >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {formatPercent(wine.balance, 0, true)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Base Price:</span>
+                        <span className="text-sm font-medium">{formatCurrency(wine.finalPrice, 2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Asking Price:</span>
+                        {editingPrices[wine.id] !== undefined ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editingPrices[wine.id]}
+                              onChange={(e) => handlePriceChange(wine.id, e.target.value)}
+                              className="w-24 px-2 py-1 border rounded text-sm"
+                            />
+                            <button
+                              onClick={() => handlePriceSave(wine)}
+                              className="text-green-600 hover:text-green-800"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => handlePriceCancel(wine.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-medium ${
+                              wine.askingPrice !== undefined 
+                                ? wine.askingPrice < wine.finalPrice
+                                  ? 'text-red-600' 
+                                  : wine.askingPrice > wine.finalPrice
+                                  ? 'text-orange-600'
+                                  : 'text-gray-900'
+                                : 'text-gray-900'
+                            }`}>
+                              {formatCurrency(wine.askingPrice ?? wine.finalPrice, 2)}
+                            </span>
+                            <button
+                              onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.finalPrice)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Bottles:</span>
+                        <span className="text-lg font-bold text-gray-900">{wine.quantity}</span>
+                      </div>
+                    </div>
+
+                    {/* Expandable characteristics */}
+                    <button
+                      onClick={() => setExpandedBatches(prev => ({ ...prev, [wine.id]: !prev[wine.id] }))}
+                      className="w-full text-center text-xs text-blue-600 hover:text-blue-800 py-2 border-t"
+                    >
+                      {expandedBatches[wine.id] ? '▼ Hide Details' : '▶ Show Wine Characteristics'}
+                    </button>
+                    
+                    {expandedBatches[wine.id] && (
+                      <div className="border-t pt-3">
+                        <WineCharacteristicsDisplay 
+                          characteristics={wine.characteristics}
+                          collapsible={false}
+                          showBalanceScore={true}
+                          title="Wine Characteristics"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -797,8 +934,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
             </div>
           </div>
 
-          {/* Orders Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Orders Table - Desktop */}
+          <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <Table className="text-xs">
                 <TableHeader>
@@ -1172,6 +1309,189 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Orders Cards - Mobile */}
+          <div className="lg:hidden space-y-4">
+            {paginatedOrders.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+                {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
+              </div>
+            ) : (
+              <>
+                {paginatedOrders.map((order) => {
+                  const askingPrice = getAskingPriceForOrder(order);
+                  const inventory = getInventoryForOrder(order);
+                  const customerKey = getCustomerKey(order.customerId);
+                  
+                  return (
+                    <div key={order.id} className="bg-white rounded-lg shadow overflow-hidden">
+                      {/* Card Header */}
+                      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 border-b">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={getFlagIcon(order.customerCountry || '')}></span>
+                              <h3 className="text-base font-bold text-gray-900">{order.customerName}</h3>
+                            </div>
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                              {order.customerType}
+                            </span>
+                          </div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'fulfilled' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </span>
+                        </div>
+                        
+                        <div className="text-sm font-medium text-gray-900 mt-2">{order.wineName}</div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase mb-1">Relationship</div>
+                            <span 
+                              onTouchStart={() => {
+                                if (!relationshipBreakdowns[customerKey]) {
+                                  const customer = createCustomerFromOrderData(
+                                    order.customerId,
+                                    order.customerName,
+                                    order.customerCountry,
+                                    order.customerType,
+                                    order.customerRelationship
+                                  );
+                                  loadRelationshipBreakdown(order.customerId, customer);
+                                }
+                              }}
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                (computedRelationships[customerKey] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
+                                (computedRelationships[customerKey] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                (computedRelationships[customerKey] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                              {formatPercent((computedRelationships[customerKey] ?? 0) / 100, 0, true)}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase mb-1">Quantity</div>
+                            <div className="text-sm font-bold text-gray-900">{order.requestedQuantity} bottles</div>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-3 space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Inventory:</span>
+                            <span className="font-medium">{inventory} bottles</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Asking Price:</span>
+                            <span className="font-medium">{formatCurrency(askingPrice, 2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Bid Price:</span>
+                            <span className={`font-medium ${
+                              order.offeredPrice > askingPrice
+                                ? 'text-green-600'
+                                : order.offeredPrice < askingPrice
+                                ? 'text-red-600'
+                                : 'text-gray-900'
+                            }`}>
+                              {formatCurrency(order.offeredPrice, 2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Premium/Discount:</span>
+                            <span className={`font-medium ${
+                              order.offeredPrice > askingPrice ? 'text-green-600' : 
+                              order.offeredPrice < askingPrice ? 'text-red-600' : 'text-gray-600'
+                            }`}>
+                              {order.offeredPrice > askingPrice ? '+' : ''}
+                              {formatPercent((order.offeredPrice - askingPrice) / askingPrice, 1, true)}
+                            </span>
+                          </div>
+                          <div className="bg-green-50 rounded-lg p-3 text-center mt-2">
+                            <div className="text-xs text-gray-600 mb-1">Total Value</div>
+                            <div className="text-lg font-bold text-green-600">
+                              {formatCurrency(order.totalValue, 2)}
+                            </div>
+                            {order.fulfillableValue !== undefined && order.fulfillableValue !== null && order.fulfillableValue < order.totalValue && (
+                              <div className="text-xs text-orange-600 mt-1">
+                                Can earn: {formatCurrency(order.fulfillableValue, 2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-3 text-xs text-gray-500">
+                          <div className="flex justify-between mb-1">
+                            <span>Ordered:</span>
+                            <span>{formatGameDateFromObject(order.orderedAt)}</span>
+                          </div>
+                          {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
+                            <div className="text-orange-600">
+                              Can fulfill: {order.fulfillableQuantity} bottles
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Footer - Actions */}
+                      {order.status === 'pending' && (
+                        <div className="bg-gray-50 px-4 py-3 border-t flex gap-2">
+                          <button
+                            onClick={() => handleFulfillOrder(order.id)}
+                            disabled={isLoading}
+                            className="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRejectOrder(order.id)}
+                            disabled={isLoading}
+                            className="flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-gray-400 text-sm font-medium"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                
+                {/* Mobile Pagination */}
+                {sortedOrders.length > ordersPageSize && (
+                  <div className="bg-white rounded-lg shadow p-4">
+                    <div className="text-xs text-gray-500 mb-3 text-center">
+                      Showing {((ordersPage - 1) * ordersPageSize) + 1} to {Math.min(ordersPage * ordersPageSize, sortedOrders.length)} of {sortedOrders.length} orders
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        disabled={ordersPage <= 1}
+                        onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
+                      >
+                        Previous
+                      </button>
+                      <div className="flex items-center px-3 text-sm">
+                        {ordersPage} / {totalOrdersPages}
+                      </div>
+                      <button
+                        className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        disabled={ordersPage >= totalOrdersPages}
+                        onClick={() => setOrdersPage(p => Math.min(totalOrdersPages, p + 1))}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -94,7 +94,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
   return (
     <TooltipProvider>
       <div className={`space-y-4 ${className}`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Object.entries(characteristics).map(([key, value]) => {
             const charKey = key as keyof WineCharacteristics;
             const calc = breakdown[charKey];
@@ -110,7 +110,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
             return (
               <div 
                 key={key} 
-                className={`p-3 bg-white rounded border transition-all duration-200 cursor-pointer ${
+                className={`p-2 md:p-3 bg-white rounded border transition-all duration-200 cursor-pointer ${
                   filteredSource === key ? 'border-blue-500 shadow-blue-200 shadow-lg bg-blue-50' :
                   isTargetOfHover ? 'border-red-400 shadow-red-200 shadow-lg' : 
                   hasSynergyWithHover ? 'border-yellow-400 shadow-yellow-200 shadow-lg' : 
@@ -121,12 +121,12 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                 onClick={() => handleCharacteristicClick(key)}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-4 h-4 opacity-80" />
-                  <span className="font-medium capitalize">{key}</span>
-                  <span className="text-sm text-gray-600">({formatNumber(value, { decimals: 2, forceDecimals: true })})</span>
+                  <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-3 h-3 md:w-4 md:h-4 opacity-80" />
+                  <span className="font-medium capitalize text-xs md:text-sm">{key}</span>
+                  <span className="text-xs md:text-sm text-gray-600">({formatNumber(value, { decimals: 2, forceDecimals: true })})</span>
                 </div>
                 
-                <div className="space-y-1 text-sm">
+                <div className="space-y-1 text-xs md:text-sm">
                   <div className="flex justify-between">
                     <span>DistanceInside:</span>
                     <span className="font-mono">{calc.distanceInside.toFixed(3)}</span>
@@ -631,7 +631,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                     </span>
                   )}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {getFilteredPenalties().map((rule, index) => (
                     <Card key={index} className="border-red-200 bg-red-50">
                       <CardHeader className="pb-2">
@@ -712,7 +712,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                     </span>
                   )}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {getFilteredSynergies().map((rule, index) => (
                     <Card key={index} className="border-green-200 bg-green-50">
                       <CardHeader className="pb-2">

@@ -68,7 +68,7 @@ const LandBuyingModal: React.FC<LandBuyingModalProps> = ({
           </div>
 
           {/* Vineyard Options Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {options.map((option) => {
               const affordable = canAfford(option);
               const isSelected = selectedOption?.id === option.id;
@@ -85,11 +85,11 @@ const LandBuyingModal: React.FC<LandBuyingModalProps> = ({
                   }`}
                   onClick={() => affordable && setSelectedOption(option)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg leading-tight">{option.name}</CardTitle>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500 flex items-center justify-end">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                      <CardTitle className="text-base sm:text-lg leading-tight">{option.name}</CardTitle>
+                      <div className="text-left sm:text-right">
+                        <div className="text-xs sm:text-sm text-gray-500 flex items-center sm:justify-end">
                           <span className={`flag-icon flag-icon-${getCountryFlag(option.country)} mr-1`}></span>
                           {option.country}
                         </div>

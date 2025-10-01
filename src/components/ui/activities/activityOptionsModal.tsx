@@ -95,22 +95,22 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
   return (
     <TooltipProvider>
       <div 
-        className={`bg-white rounded-lg shadow-lg max-h-[${maxHeight}] overflow-y-auto ${maxWidthClasses[maxWidth]}`}
+        className={`bg-white rounded-lg shadow-lg overflow-y-auto ${maxWidthClasses[maxWidth]} w-full`}
         style={{ maxHeight }}
       >
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">{title}</h2>
+      <div className="p-4 md:p-6">
+        <div className="flex justify-between items-start mb-4 md:mb-6 gap-2">
+          <h2 className="text-lg md:text-xl font-bold">{title}</h2>
           <button
             type="button"
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
             onClick={onClose}
           >
             ✕
           </button>
         </div>
         
-        {subtitle && <p className="text-gray-600 mb-6">{subtitle}</p>}
+        {subtitle && <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">{subtitle}</p>}
         
         <form onSubmit={handleSubmit}>
           {/* Form Fields */}

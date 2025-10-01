@@ -25,12 +25,12 @@ export const BalanceBreakdownModal: React.FC<BalanceBreakdownModalProps> = ({
   // Render
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
+          <DialogTitle className="text-lg sm:text-xl font-semibold">
             Balance Score Breakdown - {wineName}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Detailed breakdown of wine balance score calculations and characteristics
           </DialogDescription>
         </DialogHeader>

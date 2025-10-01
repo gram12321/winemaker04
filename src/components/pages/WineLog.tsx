@@ -195,8 +195,10 @@ export function WineLog({ currentCompany }: WineLogProps) {
                   <p className="text-sm mt-1">Complete wine production in the winery to see entries here.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full">
                     <thead className="border-b">
                       <tr className="text-left text-sm text-gray-500">
                         <th className="pb-3">Wine</th>
@@ -270,11 +272,11 @@ export function WineLog({ currentCompany }: WineLogProps) {
                             </tr>
                           )}
                         </React.Fragment>
-                      ))}
+                      )                      )}
                     </tbody>
                   </table>
                   
-                  {/* Pagination Controls */}
+                  {/* Desktop Pagination Controls */}
                   {filteredWineLog.length > pageSize && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
                       <div className="text-sm text-gray-500">
@@ -301,7 +303,110 @@ export function WineLog({ currentCompany }: WineLogProps) {
                       </div>
                     </div>
                   )}
-                </div>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="lg:hidden space-y-4">
+                    {paginatedWineLog.map((entry) => (
+                      <div key={entry.id} className="bg-white rounded-lg shadow overflow-hidden border">
+                        {/* Card Header */}
+                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-b">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h3 className="text-lg font-bold text-gray-900">{entry.grape}</h3>
+                              <div className="text-sm text-gray-600 mt-1">{entry.vineyardName}</div>
+                            </div>
+                            <Badge variant="outline" className="text-sm">{entry.vintage}</Badge>
+                          </div>
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
+                              <div className={`text-base font-bold ${getColorClass(entry.quality)}`}>
+                                {getWineQualityCategory(entry.quality)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {getColorCategory(entry.quality)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase mb-1">Price</div>
+                              <div className="text-base font-bold text-green-600">
+                                {formatCurrency(entry.finalPrice)}
+                              </div>
+                              <div className="text-xs text-gray-500">per bottle</div>
+                            </div>
+                          </div>
+
+                          <div className="border-t pt-3 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Bottles:</span>
+                              <span className="font-medium">{entry.quantity} bottles</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Harvest Period:</span>
+                              <span className="font-medium">{formatHarvestPeriod(entry.harvestDate)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Bottled:</span>
+                              <span className="font-medium">{formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}</span>
+                            </div>
+                          </div>
+
+                          {/* Expandable characteristics */}
+                          <button
+                            onClick={() => setExpandedEntries(prev => ({ ...prev, [entry.id]: !prev[entry.id] }))}
+                            className="w-full text-center text-xs text-blue-600 hover:text-blue-800 py-2 border-t"
+                          >
+                            {expandedEntries[entry.id] ? '▼ Hide Characteristics' : '▶ Show Wine Characteristics'}
+                          </button>
+                          
+                          {expandedEntries[entry.id] && (
+                            <div className="border-t pt-3">
+                              <WineCharacteristicsDisplay 
+                                characteristics={entry.characteristics}
+                                collapsible={false}
+                                showBalanceScore={true}
+                                title="Wine Characteristics"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Mobile Pagination */}
+                    {filteredWineLog.length > pageSize && (
+                      <div className="bg-white rounded-lg shadow p-4">
+                        <div className="text-xs text-gray-500 mb-3 text-center">
+                          Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredWineLog.length)} of {filteredWineLog.length} wines
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            disabled={page <= 1}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                          >
+                            Previous
+                          </button>
+                          <div className="flex items-center px-3 text-sm">
+                            {page} / {totalPages}
+                          </div>
+                          <button
+                            className="flex-1 px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
           </SimpleCard>
         </TabsContent>

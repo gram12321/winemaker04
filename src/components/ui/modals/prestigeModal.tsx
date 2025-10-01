@@ -200,7 +200,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 </p>
                 
                 {/* Company vs Vineyard Breakdown */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="bg-blue-50 p-3 rounded-lg">
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-blue-600" />
@@ -304,10 +304,10 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               
               {/* Vineyard Filter */}
               {vineyards.length > 0 && (
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setSelectedVineyard('all')}
-                    className={`px-3 py-1 rounded text-sm font-medium ${
+                    className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
                       selectedVineyard === 'all'
                         ? 'bg-green-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -319,7 +319,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                     <button
                       key={vineyard.id}
                       onClick={() => setSelectedVineyard(vineyard.id)}
-                      className={`px-3 py-1 rounded text-sm font-medium ${
+                      className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
                         selectedVineyard === vineyard.id
                           ? 'bg-green-600 text-white'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
