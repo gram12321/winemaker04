@@ -138,14 +138,18 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
             {/* Money display - responsive */}
             <Badge 
               variant="outline" 
-              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center hidden sm:flex"
+              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
+              onClick={() => handleNavigation('finance')}
+              title="View Finance"
             >
               <span className="font-medium">{formatCurrency(gameState.money || 0)}</span>
             </Badge>
             
             <Badge 
               variant="outline" 
-              className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center sm:hidden"
+              className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors sm:hidden"
+              onClick={() => handleNavigation('finance')}
+              title="View Finance"
             >
               <span className="font-medium text-xs">{formatCompact(gameState.money || 0, 1)}</span>
             </Badge>
