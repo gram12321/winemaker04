@@ -503,3 +503,12 @@ export const SEASON_EMOJIS = {
   Winter: '❄️'
 } as const;
 
+export const QUALITY_FACTOR_EMOJIS = {
+  landValue: '💰',
+  vineyardPrestige: '🌟',
+  regionalPrestige: '🏛️',
+  altitudeRating: '⛰️',
+  aspectRating: '🧭',
+  grapeSuitability: '🍇'
+} as const;
+

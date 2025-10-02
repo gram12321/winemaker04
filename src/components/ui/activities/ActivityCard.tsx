@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Activity } from '@/lib/types/types';
 import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
@@ -26,7 +26,7 @@ interface ActivityCardProps {
  * - Real-time progress tracking
  * - Category-specific styling and icons
  */
-export const ActivityCard: React.FC<ActivityCardProps> = ({
+export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   activity,
   progress,
   timeRemaining,
@@ -160,4 +160,4 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       </div>
     </div>
   );
-};
+});

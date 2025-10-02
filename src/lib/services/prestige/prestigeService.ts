@@ -324,6 +324,9 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
       type: string;
       amount: number;
       description: string;
+      decayRate: number;
+      originalAmount: number;
+      currentAmount: number;
     }>;
   };
 }> {
@@ -337,7 +340,11 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
     const breakdown: { [vineyardId: string]: any } = {};
     
     for (const event of vineyardEvents) {
-      const vineyardId = event.source_id!;
+      // Extract vineyard ID from source_id (handles both direct vineyard IDs and suffixed ones like "vineyardId_age")
+      let vineyardId = event.source_id!;
+      if (vineyardId.includes('_')) {
+        vineyardId = vineyardId.split('_')[0];
+      }
       
       if (!breakdown[vineyardId]) {
         breakdown[vineyardId] = {
@@ -350,7 +357,10 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
       breakdown[vineyardId].events.push({
         type: event.type,
         amount: event.amount,
-        description: event.description
+        description: event.description,
+        decayRate: event.decay_rate,
+        originalAmount: event.amount,
+        currentAmount: event.amount
       });
     }
     

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/shadCN/button';
 import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
 import { ActivityCard } from '@/components/ui/activities/ActivityCard';
 import { Activity } from '@/lib/types/types';
-import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activity/activityManager';
+import { getAllActivities, cancelActivity } from '@/lib/services/activity/activityManager';
 import { useGameStateWithData } from '@/hooks';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -26,7 +26,6 @@ export const ActivityPanel: React.FC = () => {
   const [mobileState, setMobileState] = useState<MobileState>('closed');
   const [minimizedCards, setMinimizedCards] = useState<Set<string>>(new Set());
   const [orderedActivityIds, setOrderedActivityIds] = useState<string[]>([]);
-  const [activityProgresses, setActivityProgresses] = useState<Record<string, { progress: number; timeRemaining: string }>>({});
 
   // Drag & drop configuration
   const sensors = useSensors(
@@ -51,23 +50,31 @@ export const ActivityPanel: React.FC = () => {
     });
   }, [activities]);
 
-  // Load progress for all activities
-  useEffect(() => {
-    const loadProgresses = async () => {
-      const progresses: Record<string, any> = {};
-      await Promise.all(activities.map(async (activity) => {
-        const progress = await getActivityProgress(activity.id);
-        if (progress) {
-          progresses[activity.id] = progress;
-        }
-      }));
-      setActivityProgresses(progresses);
+  
+  // Calculate progress directly from activity data to avoid database calls
+  const calculateProgress = useCallback((activity: Activity) => {
+    const progress = (activity.completedWork / activity.totalWork) * 100;
+    const isComplete = progress >= 100;
+    
+    // Estimate time remaining (assuming 50 work units per tick)
+    const remainingWork = activity.totalWork - activity.completedWork;
+    const ticksRemaining = Math.ceil(remainingWork / 50);
+    const timeRemaining = ticksRemaining === 1 ? '1 week' : `${ticksRemaining} weeks`;
+    
+    return {
+      progress: Math.min(100, progress),
+      timeRemaining: isComplete ? 'Complete' : timeRemaining
     };
+  }, []);
 
-    if (activities.length > 0) {
-      loadProgresses();
-    }
-  }, [activities]);
+  // Calculate progress for all activities without database calls
+  const activityProgresses = useMemo(() => {
+    const progresses: Record<string, { progress: number; timeRemaining: string }> = {};
+    activities.forEach(activity => {
+      progresses[activity.id] = calculateProgress(activity);
+    });
+    return progresses;
+  }, [activities, calculateProgress]);
 
   // Event handlers
   const handleCancelActivity = async (activityId: string) => {
@@ -342,14 +349,14 @@ interface SortableActivityCardProps {
  * SortableActivityCard - Wrapper component that adds drag-and-drop functionality to ActivityCard
  * Uses @dnd-kit/sortable to enable reordering of activity cards
  */
-const SortableActivityCard: React.FC<SortableActivityCardProps> = ({
+const SortableActivityCard: React.FC<SortableActivityCardProps> = memo(({
   activity,
   progress,
   timeRemaining,
   onCancel,
   isMinimized,
   onToggleMinimize
-}) => {
+}: SortableActivityCardProps) => {
   const {
     attributes,
     listeners,
@@ -383,4 +390,4 @@ const SortableActivityCard: React.FC<SortableActivityCardProps> = ({
       />
     </div>
   );
-};
+});

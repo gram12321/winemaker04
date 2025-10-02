@@ -3,7 +3,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
 import { getAllWineBatches, getAllVineyards, formatCompletedWineName, bottleWine, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
-import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal } from '../ui';
+import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/FermentationOptionsModal';
 import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
@@ -32,13 +32,14 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const qualityCategory = getWineQualityCategory(batch.quality);
   const qualityLabel = getColorCategory(batch.quality);
   const colorClass = getColorClass(batch.quality);
-  
+
   return (
     <div className="text-xs text-gray-600 mt-1">
       Quality: <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
     </div>
   );
 };
+
 
 // Component for fermentation status badge
 const FermentationStatusBadge: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -196,6 +197,10 @@ const Winery: React.FC = () => {
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [selectedBatchForBalance, setSelectedBatchForBalance] = useState<WineBatch | null>(null);
 
+  // Quality breakdown modal state
+  const [qualityModalOpen, setQualityModalOpen] = useState(false);
+  const [selectedBatchForQuality, setSelectedBatchForQuality] = useState<WineBatch | null>(null);
+
   // Handle opening crushing modal
   const handleCrushingClick = useCallback((batchId: string) => {
     const batch = wineBatches.find(b => b.id === batchId);
@@ -234,6 +239,21 @@ const Winery: React.FC = () => {
       setBalanceModalOpen(true);
     }
   }, [wineBatches]);
+
+  // Handle opening quality breakdown modal
+  const handleQualityBreakdownClick = useCallback((batchId: string) => {
+    const batch = wineBatches.find(b => b.id === batchId);
+    if (batch) {
+      setSelectedBatchForQuality(batch);
+      setQualityModalOpen(true);
+    }
+  }, [wineBatches]);
+
+  // Handle closing quality breakdown modal
+  const handleQualityModalClose = useCallback(() => {
+    setQualityModalOpen(false);
+    setSelectedBatchForQuality(null);
+  }, []);
 
   // Handle closing balance breakdown modal
   const handleBalanceModalClose = useCallback(() => {
@@ -358,12 +378,12 @@ const Winery: React.FC = () => {
                       
                       {/* Wine Characteristics Display */}
                       <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
-                      
+
                     </div>
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2 ml-4">
-                      <Button 
+                      <Button
                         onClick={() => handleBalanceBreakdownClick(batch.id)}
                         size="sm"
                         variant="outline"
@@ -371,7 +391,15 @@ const Winery: React.FC = () => {
                       >
                         Balance Analysis
                       </Button>
-                      
+                      <Button
+                        onClick={() => handleQualityBreakdownClick(batch.id)}
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                      >
+                        Quality Analysis
+                      </Button>
+
                       {isActionAvailable(batch, 'crush') && (
                         <Button 
                           onClick={() => handleCrushingClick(batch.id)}
@@ -436,16 +464,25 @@ const Winery: React.FC = () => {
                       <WineBatchBalanceDisplay batch={batch} />
                       <WineQualityDisplay batch={batch} />
                       <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
+
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-base">🍷</div>
-                      <Button 
+                      <Button
                         onClick={() => handleBalanceBreakdownClick(batch.id)}
                         size="sm"
                         variant="outline"
                         className="text-blue-600 border-blue-600 hover:bg-blue-50"
                       >
                         Balance Analysis
+                      </Button>
+                      <Button
+                        onClick={() => handleQualityBreakdownClick(batch.id)}
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                      >
+                        Quality Analysis
                       </Button>
                     </div>
                   </div>
@@ -476,6 +513,15 @@ const Winery: React.FC = () => {
         onClose={handleBalanceModalClose}
         characteristics={selectedBatchForBalance?.characteristics || {} as WineCharacteristics}
         wineName={selectedBatchForBalance ? `${selectedBatchForBalance.grape} - ${selectedBatchForBalance.vineyardName}` : "Wine"}
+      />
+
+      {/* Quality Breakdown Modal */}
+      <QualityBreakdownModal
+        isOpen={qualityModalOpen}
+        onClose={handleQualityModalClose}
+        batch={selectedBatchForQuality || undefined}
+        vineyard={selectedBatchForQuality ? vineyards.find(v => v.id === selectedBatchForQuality.vineyardId) : undefined}
+        wineName={selectedBatchForQuality ? `${selectedBatchForQuality.grape} - ${selectedBatchForQuality.vineyardName}` : "Wine"}
       />
     </div>
   );

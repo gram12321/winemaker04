@@ -3,6 +3,9 @@
 - 5-15 lines for each version entry. Focus on new features/updates, not so much on refactor/reorg/bugfixes
 - Include database schema changes, dead table removal, and significant architectural updates
 - Use consistent formatting: **Date:** YYYY-MM-DD, **Commit:** [commit hash]
+Owner: gram12321
+Repository: winemaker04
+Full URL: https://github.com/gram12321/winemaker04.git
 
 ## Version 0.012a - Mobile UI Implementation & Dual UI System
 **Date:** 2025-10-01

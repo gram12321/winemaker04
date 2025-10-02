@@ -4,7 +4,7 @@ import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal } from '../ui';
+import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { getCountryFlag } from '@/lib/utils';
@@ -495,6 +495,15 @@ const Vineyard: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Quality Factors Section */}
+                <div className="border-t pt-3">
+                  <QualityFactorsBreakdown
+                    vineyard={vineyard}
+                    showFactorDetails={false}
+                    className="bg-gray-50 p-3 rounded-lg"
+                  />
                 </div>
                 
                 {/* Vine Info Section */}
