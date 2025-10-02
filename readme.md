@@ -7,6 +7,45 @@
 - **Styling**: Tailwind CSS + ShadCN UI (no custom CSS)
 - **Data Flow**: Services → Database → Global Updates → Reactive UI
 
+### 📱 Dual UI System (Mobile/Desktop)
+The application implements a **Dual UI System** that provides optimized experiences for both mobile and desktop devices:
+
+**Mobile Detection:**
+- `useIsMobile()` hook detects screen width < 768px
+- Automatic UI switching based on breakpoint
+- Responsive design patterns throughout the application
+
+**Mobile-First Components:**
+- **Sidebar**: Desktop fixed sidebar → Mobile offcanvas Sheet component
+- **Activity Panel**: Desktop fixed panel → Mobile sliding panel with floating trigger button
+- **Data Tables**: Desktop tables → Mobile card-based layouts (Sales, Highscores, WineLog)
+- **Navigation**: Touch-friendly mobile navigation with proper gesture support
+
+**Implementation Pattern:**
+```typescript
+// Example dual UI pattern
+const isMobile = useIsMobile();
+
+return (
+  <>
+    {/* Desktop version */}
+    <div className="hidden lg:block">
+      <DesktopComponent />
+    </div>
+    
+    {/* Mobile version */}
+    <div className="lg:hidden">
+      <MobileComponent />
+    </div>
+  </>
+);
+```
+
+**Key Mobile Components:**
+- `src/hooks/use-mobile.tsx` - Mobile detection hook
+- `src/components/ui/shadCN/sidebar.tsx` - Responsive sidebar with Sheet integration
+- `src/components/layout/ActivityPanel.tsx` - Dual activity panel system
+
 ### 🧠 Development Patterns
 
 **CRITICAL RULES FOR AI AGENTS:**
@@ -18,7 +57,6 @@
 - **Business logic in services**: Never put calculations in components
 - **Reactive updates**: Services trigger global updates, components auto-refresh
 
-**⚠️ Mobile Responsiveness:** The codebase includes `useIsMobile()` hook for responsive design. Future components should consider mobile layouts and test across different screen sizes.
 
 **Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
 - Import from `@/lib/constants` (barrel). It re-exports:

@@ -4,6 +4,19 @@
 - Include database schema changes, dead table removal, and significant architectural updates
 - Use consistent formatting: **Date:** YYYY-MM-DD, **Commit:** [commit hash]
 
+## Version 0.012a - Mobile UI Implementation & Dual UI System
+**Date:** 2025-10-01
+**Commit:** b8f68c047f291cbd82579ce436c0e676df363986 (latest of 8 commits)
+
+### Changes
+- **Mobile Detection:** Added `useIsMobile()` hook with 768px breakpoint detection for responsive UI switching
+- **Responsive Sidebar:** Implemented dual sidebar system using ShadCN Sheet component for mobile offcanvas navigation
+- **Activity Panel:** Created mobile-friendly sliding panel with floating button trigger; desktop maintains fixed sidebar
+- **Table to Cards:** Converted data tables to card-based layouts for mobile views across Sales, Highscores, and WineLog pages
+- **Responsive Components:** Enhanced existing components with mobile-specific rendering using Tailwind responsive classes
+- **UI Architecture:** Established "Dual UI System" pattern where components render differently based on screen size
+- **Mobile Navigation:** Implemented touch-friendly navigation with proper mobile breakpoints and gestures
+
 ## Version 0.00951a - Remove duplicate prestige service (cleanup)
 **Date:** 2025-09-29
 **Commit:** d5f6d86a7a92aa1f734b484bf22420459b3ddb5f
