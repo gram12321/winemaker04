@@ -182,7 +182,7 @@ export const REGION_PRICE_RANGES = {
   "France": {
     "Bourgogne": [1000000, 10000000],
     "Champagne": [500000, 2000000],
-    "Bordeaux": [100000, 2000000],
+    "Bordeaux": [100000, 1000000],
     "Loire Valley": [20000, 80000],
     "Rhone Valley": [30000, 120000],
     "Jura": [25000, 45000]

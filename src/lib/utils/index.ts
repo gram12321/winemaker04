@@ -30,7 +30,7 @@ export {
   QUALITY_EMOJIS,
   SEASON_EMOJIS
 } from './utils';
-export { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, getRandomHectares, vineyardAgePrestigeModifier, calculateBaseWinePrice, calculateSymmetricalMultiplier, calculateOrderAmount } from './calculator';
+export { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateAsymmetricalScaler01, getRandomHectares, vineyardAgePrestigeModifier, calculateBaseWinePrice, calculateSymmetricalMultiplier, calculateOrderAmount } from './calculator';
 export { getCurrentCompanyId, getCompanyQuery, getCompanyDeleteQuery, getCompanyUpdateQuery, insertCompanyRecord, upsertCompanyRecord, getAllCompanyRecords, getCompanyRecord } from './companyUtils';
 export { calculateMidpointCharacteristics, createAdjustedRangesRecord, RESET_BUTTON_CLASSES, clamp01, generateCharacteristicSliders } from './winepediaUtils';
 export type { CharacteristicSliderProps } from './winepediaUtils';

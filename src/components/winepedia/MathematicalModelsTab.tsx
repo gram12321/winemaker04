@@ -7,7 +7,8 @@ import {
   calculateInvertedSkewedMultiplier, 
   calculateAsymmetricalMultiplier, 
   calculateSymmetricalMultiplier, 
-  vineyardAgePrestigeModifier
+  vineyardAgePrestigeModifier,
+  calculateAsymmetricalScaler01
 } from '@/lib/utils/calculator';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
@@ -69,6 +70,18 @@ export function MathematicalModelsTab() {
         const x = 0.8 + (i / 40) * 0.2; // 0.8 to 1.0
         const y = calculateAsymmetricalMultiplier(x);
         data.push({ input: x, multiplier: y });
+      }
+      return data;
+    };
+
+    // NEW: Generate 0-1 asymmetrical scaler data
+    const generateAsymmetricalScalerData = () => {
+      const data = [] as { input: number; output: number }[];
+      // Emphasize 0-0.4 and 0.6-0.85 ranges
+      for (let i = 0; i <= 50; i++) {
+        const x = i / 50; // 0..1
+        const y = calculateAsymmetricalScaler01(x);
+        data.push({ input: x, output: y });
       }
       return data;
     };
@@ -170,6 +183,7 @@ export function MathematicalModelsTab() {
       skewedData: generateSkewedData(),
       invertedSkewedData: generateInvertedSkewedData(),
       asymmetricalData: generateAsymmetricalData(),
+      asymmetricalScalerData: generateAsymmetricalScalerData(),
       symmetricalData: generateSymmetricalData(),
       ageData: generateAgeData(),
       yieldByRipeness: generateYieldByRipeness(),
@@ -379,6 +393,63 @@ export function MathematicalModelsTab() {
                   <div>• 0.9-0.95: Strong exponential</div>
                   <div>• 0.95-0.98: Very strong exponential</div>
                   <div>• 0.98-1.0: Unlimited exponential</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* NEW: Asymmetrical 0-1 Scaler */}
+          <div className="border rounded-lg p-6">
+            <h3 className="text-xl font-semibold mb-4">Asymmetrical 0-1 Scaler</h3>
+            <p className="text-gray-600 mb-4">
+              Maps 0-1 → 0-1 with fast rise around 0.3-0.4 and early saturation by ~0.75.
+              Used for land value normalization (landValue / maxGlobalValue).
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Input → Output (approx):</h4>
+                <div className="space-y-1 text-sm font-mono">
+                  <div>0.0 → 0.00</div>
+                  <div>0.1 → 0.02</div>
+                  <div>0.2 → 0.10</div>
+                  <div>0.35 → 0.50</div>
+                  <div>0.6 → 0.80</div>
+                  <div>0.75 → 0.98</div>
+                  <div>0.85 → 0.995</div>
+                  <div>1.0 → 1.00</div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Usage in Game:</h4>
+                <div className="space-y-1 text-sm">
+                  <div>• <strong>Land Value Normalization</strong> - Quality index land factor</div>
+                  <div>• <strong>Formula:</strong> normalized = calculateAsymmetricalScaler01(landValue / maxGlobalValue)</div>
+                </div>
+                <div className="mt-3">
+                  <h5 className="font-semibold mb-2">Curve Shape:</h5>
+                  <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData.asymmetricalScalerData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
+                        <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
+                        <RechartsTooltip 
+                          formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Output']}
+                          labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                        />
+                        <Line type="monotone" dataKey="output" stroke="#dc2626" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Properties:</h4>
+                <div className="space-y-1 text-sm">
+                  <div>• 0-1 input → 0-1 output</div>
+                  <div>• Monotonic increasing</div>
+                  <div>• Adjustable breakpoints for tuning</div>
+                  <div>• Early saturation for premium tiers</div>
                 </div>
               </div>
             </div>

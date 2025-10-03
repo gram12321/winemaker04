@@ -85,16 +85,17 @@ export function calculateLandValue(
   const rawAspect = regionAspects ? (regionAspects[aspect as keyof typeof regionAspects] ?? 0.5) : 0.5;
   const aspectNormalized = normalizeAspect(rawAspect);
 
-  // Calculate raw price factor by averaging normalized values
+  // Calculate raw price factor by averaging normalized values (0-1)
   const rawPriceFactor = (prestigeNormalized + aspectNormalized + altitudeNormalized) / 3;
 
-  // Get real price range (use lower bound as base price per hectare)
+  // Get real price range for the region
   const priceCountryData = REGION_PRICE_RANGES[country as keyof typeof REGION_PRICE_RANGES];
   const realPriceRange = priceCountryData ? (priceCountryData[region as keyof typeof priceCountryData] ?? [5000, 30000]) : [5000, 30000] as [number, number];
   const basePricePerHectare = realPriceRange[0];
+  const maxPricePerHectare = realPriceRange[1];
 
-  // Apply the combined factor to the base price (add 1 to factor to ensure positive scaling)
-  const finalValue = (rawPriceFactor + 1) * basePricePerHectare;
+  // Regional scaling: ensure rawPriceFactor=1 maps to the region's max price
+  const finalValue = basePricePerHectare + rawPriceFactor * (maxPricePerHectare - basePricePerHectare);
 
   return Math.round(finalValue);
 }

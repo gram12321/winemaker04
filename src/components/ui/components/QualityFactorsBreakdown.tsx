@@ -2,10 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { Vineyard, WineBatch } from '@/lib/types/types';
 import { QualityFactorsDisplay } from './qualityFactorBar';
 import { getVineyardQualityFactors } from '@/lib/services/sales/wineValueIndexCalculationService';
+import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
 import { formatNumber } from '@/lib/utils';
 import { getWineQualityCategory, getColorCategory } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown } from '@/lib/services/prestige/prestigeService';
+import { REGION_PRICE_RANGES } from '@/lib/constants/vineyardConstants';
+
+// Helper function to get regional price range
+const getRegionalPriceRange = (country: string, region: string): [number, number] => {
+  const countryData = REGION_PRICE_RANGES[country as keyof typeof REGION_PRICE_RANGES];
+  if (!countryData) return [5000, 30000]; // Default fallback
+  const regionData = countryData[region as keyof typeof countryData];
+  return regionData || [5000, 30000]; // Default fallback
+};
+
+// Helper function to get the maximum land value across all regions
+const getMaxLandValue = (): number => {
+  let maxValue = 0;
+  
+  // Iterate through all countries and regions to find the highest max price
+  // Skip Bourgogne and Champagne to allow them to break the scale
+  for (const [countryName, country] of Object.entries(REGION_PRICE_RANGES)) {
+    for (const [regionName, priceRange] of Object.entries(country)) {
+      // Skip Bourgogne and Champagne to allow them to break the scale
+      if (countryName === "France" && (regionName === "Bourgogne" || regionName === "Champagne")) {
+        continue;
+      }
+      const [, maxPrice] = priceRange as [number, number];
+      maxValue = Math.max(maxValue, maxPrice);
+    }
+  }
+  
+  return maxValue;
+};
 
 // Simple chevron icons as SVG components
 const ChevronDownIcon = ({ className }: { className?: string }) => (
@@ -35,71 +66,75 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
 }) => {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [prestigeBreakdown, setPrestigeBreakdown] = useState<any>(null);
+  const [wineBatchVineyard, setWineBatchVineyard] = useState<Vineyard | null>(null);
 
   // Load prestige breakdown data
   useEffect(() => {
-    if (vineyard && showFactorDetails) {
+    const targetVineyard = vineyard || wineBatchVineyard;
+    if (targetVineyard && showFactorDetails) {
       getVineyardPrestigeBreakdown().then((breakdown) => {
         setPrestigeBreakdown(breakdown);
       }).catch((error) => {
         console.error('Failed to load prestige breakdown:', error);
       });
     }
-  }, [vineyard, showFactorDetails]);
+  }, [vineyard, wineBatchVineyard, showFactorDetails]);
+
+  // Load vineyard data for wine batches
+  useEffect(() => {
+    if (wineBatch && !vineyard) {
+      loadVineyards().then((vineyards) => {
+        const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
+        setWineBatchVineyard(foundVineyard || null);
+      }).catch((error) => {
+        console.error('Failed to load vineyard for wine batch:', error);
+      });
+    }
+  }, [wineBatch, vineyard]);
 
   // Get quality factors from centralized calculation
   const getQualityFactors = () => {
     if (vineyard) {
       return getVineyardQualityFactors(vineyard);
+    } else if (wineBatch && wineBatchVineyard) {
+      // For wine batches, use the looked-up vineyard data
+      return getVineyardQualityFactors(wineBatchVineyard);
     } else if (wineBatch) {
-      // For wine batches, use placeholder values (would need vineyard lookup in real implementation)
-      return {
-        factors: {
-          landValue: 0.5,
-          vineyardPrestige: 0.5,
-          regionalPrestige: 0.5,
-          altitudeRating: 0.5,
-          aspectRating: 0.5,
-          grapeSuitability: 0.5
-        },
-        rawValues: {
-          landValue: 0,
-          vineyardPrestige: 0.5,
-          regionalPrestige: 0.5,
-          altitudeRating: '0m',
-          aspectRating: 'North',
-          grapeSuitability: ''
-        },
-        qualityScore: wineBatch.quality || 0.5
-      };
+      // Wine batch without vineyard data - fail hard
+      throw new Error(`Vineyard data not found for wine batch ${wineBatch.id}. Cannot calculate quality factors.`);
     }
     
-    // Default fallback
-    return {
-      factors: {
-        landValue: 0,
-        vineyardPrestige: 0,
-        regionalPrestige: 0,
-        altitudeRating: 0,
-        aspectRating: 0,
-        grapeSuitability: 0
-      },
-      rawValues: {
-        landValue: 0,
-        vineyardPrestige: 0,
-        regionalPrestige: 0,
-        altitudeRating: '0m',
-        aspectRating: 'North',
-        grapeSuitability: ''
-      },
-      qualityScore: 0
-    };
+    // No vineyard or wine batch provided - fail hard
+    throw new Error('No vineyard or wine batch provided. Cannot calculate quality factors.');
   };
 
-  const { factors, rawValues, qualityScore } = getQualityFactors();
-
-  // Get quality category for display
-  const qualityCategory = getWineQualityCategory(qualityScore);
+  // Get quality factors with error handling
+  let factors, rawValues, qualityScore, qualityCategory;
+  
+  try {
+    const qualityData = getQualityFactors();
+    factors = qualityData.factors;
+    rawValues = qualityData.rawValues;
+    qualityScore = qualityData.qualityScore;
+    qualityCategory = getWineQualityCategory(qualityScore);
+  } catch (error) {
+    // Display error state
+    return (
+      <div className={`space-y-4 ${className}`}>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-800">
+            <span className="text-red-600">⚠️</span>
+            <div>
+              <h3 className="font-medium">Quality Analysis Unavailable</h3>
+              <p className="text-sm text-red-600 mt-1">
+                {error instanceof Error ? error.message : 'Unable to calculate quality factors.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -165,26 +200,122 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                         </CardTitle>
                         <CardDescription className="text-blue-700">
                           €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare
+                          <br />
+                          <span className="text-xs text-blue-600">
+                            Calculated from: Regional prestige, altitude ({vineyard.altitude}m), aspect ({vineyard.aspect})
+                          </span>
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        <div className="text-sm">
-                          <div className="flex justify-between">
-                            <span>Normalized Value:</span>
-                            <span className="font-mono">{formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Weight in Index:</span>
-                            <span className="font-mono">60%</span>
-                          </div>
-                          <div className="flex justify-between font-medium">
-                            <span>Contribution:</span>
-                            <span className="font-mono">{formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}</span>
+                        <div className="text-sm space-y-3">
+                          {/* Your Calculation Section */}
+                          <div className="bg-blue-100 p-3 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-semibold text-blue-800">Your Calculation:</span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-blue-600 cursor-help">ℹ️</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="max-w-sm">
+                                      <p className="font-medium mb-1">Land Value Calculation:</p>
+                                      <p className="text-xs mb-2">Your vineyard's land value is calculated dynamically based on multiple factors:</p>
+                                      
+                                      <p className="font-medium mb-1">Calculation Formula:</p>
+                                      <p className="text-xs font-mono mb-2">landValue = basePrice + rawPriceFactor × (maxPrice - basePrice)</p>
+                                      
+                                      <p className="font-medium mb-1">Raw Price Factor:</p>
+                                      <p className="text-xs mb-1">rawPriceFactor = (prestige + altitude + aspect) ÷ 3</p>
+                                      <ul className="text-xs space-y-1 ml-2">
+                                        <li>• <strong>Prestige:</strong> {vineyard.region} regional standing</li>
+                                        <li>• <strong>Altitude:</strong> {vineyard.altitude}m vs. optimal range</li>
+                                        <li>• <strong>Aspect:</strong> {vineyard.aspect} sun exposure rating</li>
+                                      </ul>
+                                      
+                                      <p className="font-medium mt-2 mb-1">Regional Scaling:</p>
+                                      <p className="text-xs">Perfect factors (rawPriceFactor=1) reach the region's maximum price</p>
+                                      
+                                      <p className="font-medium mt-2 mb-1">Global Normalization:</p>
+                                      <p className="text-xs">Final value is normalized using asymmetrical scaling for the quality index calculation.</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-blue-700">€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare</span>
+                                <span className="font-mono text-blue-800">→ {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-blue-700">Weight in Index:</span>
+                                <span className="font-mono text-blue-800">60%</span>
+                              </div>
+                              <div className="flex justify-between font-medium border-t border-blue-300 pt-2">
+                                <span className="text-blue-800">Contribution:</span>
+                                <span className="font-mono text-blue-900">{formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Land Value Calculation Breakdown */}
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                              <div className="text-xs space-y-2">
+                                <div className="font-medium text-blue-800 mb-2">Land Value Calculation:</div>
+                                
+                                {/* Formula with actual values */}
+                                <div className="bg-blue-50 p-2 rounded text-xs">
+                                  <div className="font-medium text-blue-700 mb-1">Formula: landValue = basePrice + rawPriceFactor × (maxPrice - basePrice)</div>
+                                  <div className="font-medium text-blue-700 mb-1">Raw Price Factor: (prestige + altitude + aspect) ÷ 3</div>
+                                  
+                                  <div className="mt-2 space-y-1">
+                                    <div className="font-mono text-blue-600">
+                                      Prestige: {formatNumber(factors.regionalPrestige, { decimals: 2, forceDecimals: true })}
+                                    </div>
+                                    <div className="font-mono text-blue-600">
+                                      Altitude: {formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} ({vineyard.altitude}m)
+                                    </div>
+                                    <div className="font-mono text-blue-600">
+                                      Aspect: {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} ({vineyard.aspect})
+                                    </div>
+                                    <div className="font-mono text-blue-800 font-medium border-t border-blue-300 pt-1">
+                                      Raw Factor: ({formatNumber(factors.regionalPrestige, { decimals: 2, forceDecimals: true })} + {formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} + {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}) ÷ 3 = {formatNumber((factors.regionalPrestige + factors.altitudeRating + factors.aspectRating) / 3, { decimals: 2, forceDecimals: true })}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Regional Price Range */}
+                                <div className="bg-blue-50 p-2 rounded text-xs">
+                                  <div className="font-medium text-blue-700 mb-1">Regional Price Range ({vineyard.region}):</div>
+                                  <div className="font-mono text-blue-600">
+                                    €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare
+                                  </div>
+                                </div>
+                                
+                                {/* Final Calculation */}
+                                <div className="bg-blue-100 p-2 rounded text-xs">
+                                  <div className="font-medium text-blue-800 mb-1">Final Calculation:</div>
+                                  <div className="font-mono text-blue-700">
+                                    €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + {formatNumber((factors.regionalPrestige + factors.altitudeRating + factors.aspectRating) / 3, { decimals: 2, forceDecimals: true })} × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Normalization Calculation */}
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                              <div className="text-xs space-y-1">
+                                <div className="font-medium text-blue-800 mb-2">Normalization for Quality Index:</div>
+                                <div className="font-mono text-blue-700">
+                                  asymmetricalScale(€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} / €{formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}) = {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                </div>
+                                <div className="font-mono text-blue-600">
+                                  Global Max: €{formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-xs text-blue-600">
-                          Land value is normalized using logarithmic scaling to handle the wide range of prices across regions.
-                        </p>
                       </CardContent>
                     </Card>
 
@@ -200,23 +331,50 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        <div className="text-sm">
-                          <div className="flex justify-between">
-                            <span>Prestige Score:</span>
-                            <span className="font-mono">{formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Weight in Index:</span>
-                            <span className="font-mono">40%</span>
-                          </div>
-                          <div className="flex justify-between font-medium">
-                            <span>Contribution:</span>
-                            <span className="font-mono">{formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}</span>
+                        <div className="text-sm space-y-3">
+                          {/* Your Calculation Section */}
+                          <div className="bg-purple-100 p-3 rounded-lg border border-purple-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-semibold text-purple-800">Your Calculation:</span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-purple-600 cursor-help">ℹ️</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="max-w-xs">
+                                      <p className="font-medium mb-1">Vineyard Prestige Sources:</p>
+                                      <p className="text-xs mb-2">Prestige accumulates from multiple sources with different decay rates.</p>
+                                      <p className="font-medium mb-1">Prestige Components:</p>
+                                      <ul className="text-xs space-y-1">
+                                        <li>• <strong>Base Prestige:</strong> Permanent foundation (no decay)</li>
+                                        <li>• <strong>Vine Age:</strong> Increases over time, permanent</li>
+                                        <li>• <strong>Land Value:</strong> Based on property value, permanent</li>
+                                        <li>• <strong>Regional Prestige:</strong> Location-based, permanent</li>
+                                        <li>• <strong>Sales Events:</strong> Temporary boosts (95% weekly decay)</li>
+                                        <li>• <strong>Achievements:</strong> Special accomplishments, permanent</li>
+                                      </ul>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-purple-700">Prestige Score:</span>
+                                <span className="font-mono text-purple-800">{formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-purple-700">Weight in Index:</span>
+                                <span className="font-mono text-purple-800">40%</span>
+                              </div>
+                              <div className="flex justify-between font-medium border-t border-purple-300 pt-2">
+                                <span className="text-purple-800">Contribution:</span>
+                                <span className="font-mono text-purple-900">{formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-xs text-purple-600">
-                          Vineyard prestige accumulates from multiple sources including vine age, land value, grape suitability, and achievements.
-                        </p>
                       </CardContent>
                     </Card>
 
@@ -246,9 +404,30 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                             <span className="font-mono">{formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} ({vineyard.aspect})</span>
                           </div>
                         </div>
-                        <p className="text-xs text-green-600">
-                          These factors represent the inherent quality potential of your vineyard's location and environment.
-                        </p>
+                        <div className="text-xs text-green-600 space-y-2">
+                          <p>
+                            <strong>Regional Quality Factors:</strong> These represent the inherent quality potential of your vineyard's location and environment.
+                          </p>
+                          <div className="bg-green-100 p-2 rounded text-xs">
+                            <p className="font-medium mb-1">Factor Calculations:</p>
+                            <ul className="space-y-1 text-xs">
+                              <li>• <strong>Regional Prestige:</strong> Based on {vineyard.country} wine reputation and {vineyard.region} regional standing</li>
+                              <li>• <strong>Altitude Rating:</strong> {vineyard.altitude}m elevation vs. optimal range for {vineyard.region}</li>
+                              <li>• <strong>Aspect Rating:</strong> {vineyard.aspect} orientation vs. optimal sun exposure for {vineyard.region}</li>
+                            </ul>
+                          </div>
+                          <div className="bg-green-100 p-2 rounded text-xs">
+                            <p className="font-medium mb-1">Your Location Analysis:</p>
+                            <p className="text-xs">
+                              <strong>{vineyard.region}, {vineyard.country}</strong> - Regional prestige: {formatNumber(factors.regionalPrestige, { decimals: 2, forceDecimals: true })}<br/>
+                              <strong>Altitude:</strong> {vineyard.altitude}m (Rating: {formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })})<br/>
+                              <strong>Aspect:</strong> {vineyard.aspect} (Rating: {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })})
+                            </p>
+                          </div>
+                          <p>
+                            <strong>Impact:</strong> These factors are permanent and represent the natural advantages of your vineyard's location. Premium regions like Bordeaux, Tuscany, or Napa Valley have higher regional prestige.
+                          </p>
+                        </div>
                       </CardContent>
                     </Card>
 
@@ -287,9 +466,31 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                               </span>
                             </div>
                           </div>
-                          <p className="text-xs text-orange-600">
-                            How well {vineyard.grape} grapes are suited to the climate and soil conditions of {vineyard.region}.
-                          </p>
+                          <div className="text-xs text-orange-600 space-y-2">
+                            <p>
+                              <strong>Grape Suitability Analysis:</strong> How well {vineyard.grape} grapes are suited to the climate and soil conditions of {vineyard.region}.
+                            </p>
+                            <div className="bg-orange-100 p-2 rounded text-xs">
+                              <p className="font-medium mb-1">Suitability Calculation:</p>
+                              <p className="text-xs">
+                                Based on {vineyard.grape}'s natural preferences vs. {vineyard.region}'s climate, soil, and growing conditions.
+                              </p>
+                              <p className="text-xs mt-1">
+                                <strong>Current Score:</strong> {formatNumber(factors.grapeSuitability, { decimals: 2, forceDecimals: true })} ({getColorCategory(factors.grapeSuitability)})
+                              </p>
+                            </div>
+                            <div className="bg-orange-100 p-2 rounded text-xs">
+                              <p className="font-medium mb-1">Quality Impact:</p>
+                              <p className="text-xs">
+                                Higher suitability means {vineyard.grape} grapes will develop better characteristics in {vineyard.region}'s environment, 
+                                leading to superior wine quality and balance.
+                              </p>
+                            </div>
+                            <p>
+                              <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). 
+                              Your {formatNumber(factors.grapeSuitability * 100, { decimals: 0, forceDecimals: true })}% suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
+                            </p>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
@@ -297,7 +498,7 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                 )}
 
                 {/* Prestige Breakdown */}
-                {vineyard && prestigeBreakdown && (
+                {(vineyard || wineBatchVineyard) && prestigeBreakdown && (
                   <Card className="border-purple-200 bg-purple-50">
                     <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-2 text-purple-800 text-base">
@@ -305,12 +506,13 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                         Vineyard Prestige Breakdown
                       </CardTitle>
                       <CardDescription className="text-purple-700">
-                        Detailed sources contributing to {vineyard.name}'s prestige
+                        Detailed sources contributing to {(vineyard || wineBatchVineyard)?.name}'s prestige
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       {(() => {
-                        const vineyardData = prestigeBreakdown[vineyard.id];
+                        const targetVineyard = vineyard || wineBatchVineyard;
+                        const vineyardData = targetVineyard ? prestigeBreakdown[targetVineyard.id] : null;
                         if (!vineyardData || !vineyardData.events || vineyardData.events.length === 0) {
                           return (
                             <div className="text-sm text-purple-600">

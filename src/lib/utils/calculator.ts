@@ -70,6 +70,44 @@ export function calculateInvertedSkewedMultiplier(score: number): number {
 }
 
 /**
+ * Asymmetrical 0-1 scaler for land value normalization
+ * Maps 0-1 → 0-1 with a fast rise around ~0.3-0.4 and early saturation ~0.75-0.8.
+ * Shape inspired by the provided curve image. Monotonic and smooth-ish.
+ *
+ * Rough mapping:
+ * 0.0→0.00, 0.1→~0.02, 0.2→~0.10, 0.35→~0.50, 0.6→~0.80, 0.75→~0.98, 0.85+→~0.995-1.0
+ */
+export function calculateAsymmetricalScaler01(value: number): number {
+  const x = Math.max(0, Math.min(1, value || 0));
+
+  if (x < 0.4) {
+    // Fast start for low values: BOOST heavily
+    // 0.0→0.00, 0.1→0.15, 0.2→0.30, 0.3→0.45, 0.4→0.60
+    return x * 1.5;
+  } else if (x < 0.7) {
+    // Moderate growth for middle range: Still boosting but less
+    // 0.4→0.60, 0.5→0.70, 0.6→0.80, 0.7→0.90
+    return 0.60 + (x - 0.4) * 1.0;
+  } else if (x < 0.9) {
+    // Linear growth for good scores: Flattening out
+    // 0.7→0.90, 0.8→0.95, 0.9→0.98
+    return 0.90 + (x - 0.7) * 0.4;
+  } else if (x < 0.95) {
+    // Slower growth for very good scores: Start compressing
+    // 0.9→0.98, 0.95→0.99
+    return 0.98 + (x - 0.9) * 0.2;
+  } else if (x < 0.99) {
+    // Very slow growth for excellent scores: Heavy compression
+    // 0.95→0.99, 0.99→0.995
+    return 0.99 + (x - 0.95) * 0.125;
+  } else {
+    // Minimal growth for near-perfect scores: Cap near 1.0
+    // 0.99→0.995, 1.0→1.000
+    return 0.995 + (x - 0.99) * 0.5;
+  }
+}
+
+/**
  * Asymmetrical multiplier using multi-segment scaling with smooth curves
  * Maps 0-1 input values to multipliers using polynomial → logarithmic → linear → exponential → strong exponential → sigmoid progression
  * 

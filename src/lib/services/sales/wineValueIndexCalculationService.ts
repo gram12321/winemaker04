@@ -1,29 +1,45 @@
 // Wine value calculation service - handles all vineyard and regional factors that contribute to wine value
 import { Vineyard } from '../../types/types';
 import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
-import { REGION_PRESTIGE_RANKINGS } from '../../constants/vineyardConstants';
+import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../constants/vineyardConstants';
+import { calculateAsymmetricalScaler01 } from '../../utils';
+
+/**
+ * Get the maximum land value across all regions for normalization
+ * Excludes the top 2 premium regions (Bourgogne and Champagne) to allow them to "break" the 0-1 scale
+ * This makes expensive land (€100K+) get proper quality scores instead of being compressed to low values
+ * @returns Maximum land value in euros per hectare (excluding Bourgogne and Champagne)
+ */
+function getMaxLandValue(): number {
+  let maxValue = 0;
+  
+  // Iterate through all countries and regions to find the highest max price
+  // Skip Bourgogne and Champagne to allow them to break the scale
+  for (const [countryName, country] of Object.entries(REGION_PRICE_RANGES)) {
+    for (const [regionName, priceRange] of Object.entries(country)) {
+      // Skip Bourgogne and Champagne to allow them to break the scale
+      if (countryName === "France" && (regionName === "Bourgogne" || regionName === "Champagne")) {
+        continue;
+      }
+      const [, maxPrice] = priceRange as [number, number];
+      maxValue = Math.max(maxValue, maxPrice);
+    }
+  }
+  
+  return maxValue;
+}
 
 /**
  * Normalize land value from euros per hectare to 0-1 scale
- * Based on typical vineyard land value ranges across regions
+ * Uses an asymmetrical 0-1 scaler for better mid-range distribution and early saturation
  * @param landValue - Land value in euros per hectare
  * @returns Normalized land value (0-1 scale)
  */
 function normalizeLandValue(landValue: number): number {
-  // Land values typically range from 5,000 to 10,000,000 euros per hectare
-  // Use logarithmic scaling to handle the wide range
-  const minValue = 5000;
-  const maxValue = 10000000;
-  
-  // Clamp the input value
-  const clampedValue = Math.max(minValue, Math.min(maxValue, landValue));
-  
-  // Apply logarithmic scaling
-  const logMin = Math.log(minValue);
-  const logMax = Math.log(maxValue);
-  const logValue = Math.log(clampedValue);
-  
-  return (logValue - logMin) / (logMax - logMin);
+  const maxValue = getMaxLandValue();
+  if (!landValue || landValue <= 0 || !maxValue) return 0;
+  const ratio = Math.min(landValue / maxValue, 1);
+  return calculateAsymmetricalScaler01(ratio);
 }
 
 /**
