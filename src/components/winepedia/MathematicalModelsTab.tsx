@@ -331,27 +331,42 @@ export function MathematicalModelsTab() {
           <div className="border rounded-lg p-6">
             <h3 className="text-xl font-semibold mb-4">Asymmetrical Multiplier</h3>
             <p className="text-gray-600 mb-4">
-              Creates asymmetrical distribution with modest multipliers for low values and astronomical multipliers for extreme values.
-              Used for quality multipliers and rejection probabilities.
+              Asymmetrical multiplier using multi-segment scaling with smooth transitions.
+              Maps 0–1 input values to multipliers using polynomial → logarithmic → linear → exponential → strong exponential → super-exponential progression.
+              
+              This creates a continuously rising, asymmetrical distribution where:
+              • Low values (0–0.3) get modest multipliers  
+              • Medium values (0.3–0.6) achieve steady improvement  
+              • High values (0.6–0.8) gain strong multipliers  
+              • Very high values (0.8–0.9) reach powerful boosts  
+              • Excellent values (0.9–0.95) show steep exponential escalation  
+              • Exceptional values (0.95–0.98) surge through strong super-exponential growth  
+              • Legendary values (0.98–1.0) enter astronomical scaling — capped for safety
+              
+              Generic function for any asymmetrical scaling need (quality multipliers, bonus rewards, prestige scoring, etc.)
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <h4 className="font-semibold mb-2">Input → Output Mappings:</h4>
+                <h4 className="font-semibold mb-2">Input → Output Mappings (approximate):</h4>
                 <div className="space-y-1 text-sm font-mono">
-                  <div>0.0 → 1.0x</div>
-                  <div>0.1 → 1.02x</div>
-                  <div>0.2 → 1.08x</div>
-                  <div>0.3 → 1.18x</div>
-                  <div>0.4 → 1.35x</div>
-                  <div>0.5 → 1.55x</div>
-                  <div>0.6 → 1.78x</div>
-                  <div>0.7 → 2.28x</div>
-                  <div>0.8 → 2.78x</div>
-                  <div>0.9 → 5.28x</div>
-                  <div>0.95 → 15.28x</div>
-                  <div>0.98 → 55.28x</div>
-                  <div>0.99 → 5,000x</div>
-                  <div>1.0 → 50,000,000x</div>
+                  <div>0.0 → 1.00×</div>
+                  <div>0.1 → 1.02×</div>
+                  <div>0.2 → 1.08×</div>
+                  <div>0.3 → 1.18×</div>
+                  <div>0.4 → 1.35×</div>
+                  <div>0.5 → 1.55×</div>
+                  <div>0.6 → 1.78×</div>
+                  <div>0.7 → 2.28×</div>
+                  <div>0.8 → 2.78×</div>
+                  <div>0.85 → 3.78×</div>
+                  <div>0.9 → 5.28×</div>
+                  <div>0.92 → 8.28×</div>
+                  <div>0.95 → 15.28×</div>
+                  <div>0.96 → 25.28×</div>
+                  <div>0.98 → 55.28×</div>
+                  <div>0.99 → ≈ 5,000×</div>
+                  <div>0.999 → ≈ 500,000×</div>
+                  <div>1.0 → 50,000,000× (capped)</div>
                 </div>
               </div>
               <div>
@@ -384,15 +399,15 @@ export function MathematicalModelsTab() {
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold mb-2">Mathematical Progression:</h4>
+                <h4 className="font-semibold mb-2">Mathematical progression by segment:</h4>
                 <div className="space-y-1 text-sm">
-                  <div>• 0.0-0.3: Polynomial (x² × 2 + 1.0)</div>
-                  <div>• 0.3-0.6: Logarithmic scaling</div>
-                  <div>• 0.6-0.8: Linear scaling</div>
-                  <div>• 0.8-0.9: Exponential</div>
-                  <div>• 0.9-0.95: Strong exponential</div>
-                  <div>• 0.95-0.98: Very strong exponential</div>
-                  <div>• 0.98-1.0: Unlimited exponential</div>
+                  <div>• 0.0–0.3: Polynomial (x² × 2 + 1.0)</div>
+                  <div>• 0.3–0.6: Logarithmic scaling</div>
+                  <div>• 0.6–0.8: Linear scaling</div>
+                  <div>• 0.8–0.9: Exponential growth</div>
+                  <div>• 0.9–0.95: Strong exponential</div>
+                  <div>• 0.95–0.98: Very strong exponential</div>
+                  <div>• 0.98–1.0: Calibrated dual-segment super-exponential growth (safely capped at 50 M×)</div>
                 </div>
               </div>
             </div>

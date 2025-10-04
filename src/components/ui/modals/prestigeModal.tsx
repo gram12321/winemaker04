@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils';
+import { getEventDisplayData } from '@/lib/services/prestige/prestigeService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
 import { Badge } from '../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
@@ -13,30 +14,20 @@ import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
  * Modal for displaying detailed prestige breakdown and sources
  */
 
-interface PrestigeEventDisplay extends PrestigeEvent {
-  originalAmount: number;
-  currentAmount: number;
-}
+
 
 interface PrestigeModalProps {
   isOpen: boolean;
   onClose: () => void;
   totalPrestige: number;
-  eventBreakdown: PrestigeEventDisplay[];
+  eventBreakdown: PrestigeEvent[];
   companyPrestige?: number;
   vineyardPrestige?: number;
   vineyards?: Array<{
     id: string;
     name: string;
     prestige: number;
-    events: Array<{
-      id: string;
-      type: string;
-      description: string;
-      originalAmount: number;
-      currentAmount: number;
-      decayRate: number;
-    }>;
+    events: PrestigeEvent[];
   }>;
 }
 
@@ -132,41 +123,13 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     }
   };
 
-  // Utility functions
-  const parseEventDescription = (
-    description: string
-  ): { title: string; titleBase: string; amountText?: string; calc?: string; displayInfo?: string } => {
-    // Expected formats (from prestigeService descriptions):
-    // 1) Vine Age: <name> (<years> years) — base=<..> × suitability → scaled=(asym(..)−1)=<..>
-    // 2) Land Value: <name> (€<total>) — base=log(€<total>/<max>+1)=<..> → scaled=(asym(..)−1)=<..> | display: €<perHa>/ha × <hectares>ha
-    const [left, right] = description.split(' — ');
-    let title = description;
-    let titleBase = description;
-    let amountText: string | undefined;
-    let calc: string | undefined;
-    let displayInfo: string | undefined;
-    if (left && right) {
-      title = left;
-      titleBase = left;
-      // Try extract amount in parentheses e.g., "(€1,101,029.16)"
-      const match = left.match(/^(.*?)(\(€[^)]+\))\s*$/);
-      if (match) {
-        titleBase = match[1].trim();
-        amountText = match[2];
-      }
-      const displaySplit = right.split('| display:');
-      calc = displaySplit[0]?.trim();
-      if (displaySplit[1]) {
-        displayInfo = displaySplit[1].trim();
-      }
-    }
-    return { title, titleBase, amountText, calc, displayInfo };
-  };
+  // Utility functions - now using structured data instead of parsing
   const formatDecayRate = (decayRate: number) => {
     if (decayRate === 0) return 'No decay';
     const weeklyDecay = (1 - decayRate) * 100;
     return `${formatPercent(weeklyDecay / 100, 1, true)} weekly decay`;
   };
+
 
   const formatAmount = (amount: number) => {
     return formatNumber(amount, { decimals: 2, forceDecimals: true });
@@ -192,7 +155,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     }
     acc[event.type].push(event);
     return acc;
-  }, {} as Record<string, PrestigeEventDisplay[]>);
+  }, {} as Record<string, PrestigeEvent[]>);
 
   // Render
   return (
@@ -284,29 +247,29 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             {(() => {
-                              const parsed = parseEventDescription(event.description);
+                              const displayData = getEventDisplayData(event);
                               return (
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <p className="text-sm font-medium cursor-help">{parsed.title}</p>
+                                        <p className="text-sm font-medium cursor-help">{displayData.title}</p>
                                       </TooltipTrigger>
-                                      {parsed.calc && (
+                                      {displayData.calc && (
                                         <TooltipContent>
-                                          <p className="text-xs whitespace-pre-wrap">{parsed.calc}</p>
+                                          <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
                                         </TooltipContent>
                                       )}
                                     </Tooltip>
                                   </TooltipProvider>
-                                  {parsed.displayInfo && (
+                                  {displayData.displayInfo && (
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <span className="text-xs text-muted-foreground cursor-help">(details)</span>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          <p className="text-xs whitespace-pre-wrap">{parsed.displayInfo}</p>
+                                          <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
@@ -318,11 +281,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-medium">
-                              {formatAmount(event.currentAmount)}
+                              {formatAmount(event.currentAmount ?? event.amount)}
                             </p>
                             {event.originalAmount !== event.currentAmount && (
                               <p className="text-xs text-muted-foreground">
-                                (was {formatAmount(event.originalAmount)})
+                                (was {formatAmount(event.originalAmount ?? event.amount)})
                               </p>
                             )}
                           </div>
@@ -436,22 +399,22 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               {(() => {
-                                const parsed = parseEventDescription(event.description);
+                                const displayData = getEventDisplayData(event);
                                 return (
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <p className="text-sm font-medium cursor-help">{parsed.titleBase}{parsed.amountText ? ' ' : ''}
-                                            {parsed.amountText && (
+                                          <p className="text-sm font-medium cursor-help">{displayData.titleBase}{displayData.amountText ? ' ' : ''}
+                                            {displayData.amountText && (
                                               <TooltipProvider>
                                                 <Tooltip>
                                                   <TooltipTrigger asChild>
-                                                    <span className="text-muted-foreground cursor-help">{parsed.amountText}</span>
+                                                    <span className="text-muted-foreground cursor-help">{displayData.amountText}</span>
                                                   </TooltipTrigger>
-                                                  {parsed.displayInfo && (
+                                                  {displayData.displayInfo && (
                                                     <TooltipContent>
-                                                      <p className="text-xs whitespace-pre-wrap">{parsed.displayInfo}</p>
+                                                      <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
                                                     </TooltipContent>
                                                   )}
                                                 </Tooltip>
@@ -459,9 +422,9 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                                             )}
                                           </p>
                                         </TooltipTrigger>
-                                        {parsed.calc && (
+                                        {displayData.calc && (
                                           <TooltipContent>
-                                            <p className="text-xs whitespace-pre-wrap">{parsed.calc}</p>
+                                            <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
                                           </TooltipContent>
                                         )}
                                       </Tooltip>
@@ -475,11 +438,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-medium">
-                                {formatAmount(event.currentAmount)}
+                                {formatAmount(event.currentAmount ?? event.amount)}
                               </p>
                               {event.originalAmount !== event.currentAmount && (
                                 <p className="text-xs text-muted-foreground">
-                                  (was {formatAmount(event.originalAmount)})
+                                  (was {formatAmount(event.originalAmount ?? event.amount)})
                                 </p>
                               )}
                             </div>

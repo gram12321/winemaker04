@@ -276,6 +276,32 @@ export interface PrestigeEvent {
   sourceId?: string; // vineyard ID, etc.
   created_at?: string;
   updated_at?: string;
+  
+  // UI-required fields (calculated by service layer)
+  originalAmount?: number; // Original amount when created
+  currentAmount?: number;  // Current amount after decay
+  category?: 'company' | 'vineyard'; // Computed category for UI grouping
+  
+  // Structured metadata for UI display (optional, computed at event creation)
+  metadata?: {
+    vineyardName?: string;
+    vineyardId?: string;
+    // For vineyard_age events
+    vineAge?: number;
+    ageBase01?: number;
+    ageWithSuitability01?: number;
+    // For vineyard_land events  
+    totalValue?: number;
+    landValuePerHectare?: number;
+    hectares?: number;
+    maxLandValue?: number;
+    landBase01?: number;
+    landWithSuitability01?: number;
+    // For sales
+    customerName?: string;
+    wineName?: string;
+    saleValue?: number;
+  };
 }
 
 export interface RelationshipBoost {

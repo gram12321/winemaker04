@@ -108,60 +108,103 @@ export function calculateAsymmetricalScaler01(value: number): number {
 }
 
 /**
- * Asymmetrical multiplier using multi-segment scaling with smooth curves
- * Maps 0-1 input values to multipliers using polynomial → logarithmic → linear → exponential → strong exponential → sigmoid progression
+ * Asymmetrical multiplier using multi-segment scaling with smooth transitions
+ * Maps 0–1 input values to multipliers using polynomial → logarithmic → linear → exponential → strong exponential → super-exponential progression
  * 
- * This creates an asymmetrical distribution where:
- * - Low values (0-0.3) get modest multipliers
- * - Medium values (0.3-0.6) get moderate multipliers  
- * - High values (0.6-0.8) get good multipliers
- * - Very high values (0.8-0.9) get strong multipliers
- * - Excellent values (0.9-0.95) get excellent multipliers
- * - Exceptional values (0.95-0.98) get exceptional multipliers
- * - Only extreme values (0.98+) get unlimited astronomical multipliers
+ * This creates a continuously rising, asymmetrical distribution where:
+ * - Low values (0–0.3) get modest multipliers  
+ * - Medium values (0.3–0.6) achieve steady improvement  
+ * - High values (0.6–0.8) gain strong multipliers  
+ * - Very high values (0.8–0.9) reach powerful boosts  
+ * - Excellent values (0.9–0.95) show steep exponential escalation  
+ * - Exceptional values (0.95–0.98) surge through strong super-exponential growth  
+ * - Legendary values (0.98–1.0) enter astronomical scaling — capped for safety
  * 
- * Generic function for any asymmetrical scaling needs (quality multipliers, rejection probabilities, etc.)
+ * Generic function for any asymmetrical scaling need (quality multipliers, bonus rewards, prestige scoring, etc.)
+ * 
+ * **Input → Output Mappings (approximate):**
+ * ```
+ * 0.0   → 1.00×
+ * 0.1   → 1.02×
+ * 0.2   → 1.08×
+ * 0.3   → 1.18×
+ * 0.4   → 1.35×
+ * 0.5   → 1.55×
+ * 0.6   → 1.78×
+ * 0.7   → 2.28×
+ * 0.8   → 2.78×
+ * 0.85  → 3.78×
+ * 0.9   → 5.28×
+ * 0.92  → 8.28×
+ * 0.95  → 15.28×
+ * 0.96  → 25.28×
+ * 0.98  → 55.28×
+ * 0.99  → ≈ 5,000×
+ * 0.999 → ≈ 500,000×
+ * 1.0   → 50,000,000× (capped)
+ * ```
+ * 
+ * **Mathematical progression by segment:**
+ * - 0.0–0.3: Polynomial (x² × 2 + 1.0)
+ * - 0.3–0.6: Logarithmic scaling
+ * - 0.6–0.8: Linear scaling
+ * - 0.8–0.9: Exponential growth
+ * - 0.9–0.95: Strong exponential
+ * - 0.95–0.98: Very strong exponential
+ * - 0.98–1.0: Calibrated dual-segment super-exponential growth (safely capped at 50 M×)
  * 
  * @param value - Input value between 0 and 1
- * @returns Multiplier value
+ * @returns Multiplier value (1×–50,000,000×)
  */
 export function calculateAsymmetricalMultiplier(value: number): number {
-  const safeValue = Math.min(0.99999, Math.max(0, value || 0));
-  
-  if (safeValue < 0.3) {
-    // Polynomial curve for low quality: x² * 2 + 1.0
-    // 0.0 → 1.0x, 0.1 → 1.02x, 0.2 → 1.08x, 0.3 → 1.18x
-    return 1.0 + (safeValue * safeValue * 2);
-  } else if (safeValue < 0.6) {
-    // Logarithmic scaling for average quality
-    // 0.3 → 1.18x, 0.4 → 1.35x, 0.5 → 1.55x, 0.6 → 1.78x
-    return 1.18 + (Math.log(1 + (safeValue - 0.3) * 2) * 0.6);
-  } else if (safeValue < 0.8) {
-    // Linear scaling for good quality
-    // 0.6 → 1.78x, 0.7 → 2.28x, 0.8 → 2.78x
-    return 1.78 + (safeValue - 0.6) * 5;
-  } else if (safeValue < 0.9) {
-    // Exponential for very good quality
-    // 0.8 → 2.78x, 0.85 → 3.78x, 0.9 → 5.28x
-    return 2.78 + Math.pow((safeValue - 0.8) * 10, 1.5) * 2.5;
-  } else if (safeValue < 0.95) {
-    // Strong exponential for excellent quality
-    // 0.9 → 5.28x, 0.92 → 8.28x, 0.95 → 15.28x
-    return 5.28 + Math.pow((safeValue - 0.9) * 20, 2) * 10;
-  } else if (safeValue < 0.98) {
-    // Very strong exponential for exceptional quality
-    // 0.95 → 15.28x, 0.96 → 25.28x, 0.98 → 55.28x
-    return 15.28 + Math.pow((safeValue - 0.95) * 33.33, 2.5) * 40;
+  // Clamp only to [0, 1] and cap the *result*, not the input
+  const v = Math.max(0, Math.min(1, value ?? 0));
+
+  if (v < 0.3) {
+    return 1.0 + (v * v * 2);
+  } else if (v < 0.6) {
+    return 1.18 + (Math.log(1 + (v - 0.3) * 2) * 0.6);
+  } else if (v < 0.8) {
+    return 1.78 + (v - 0.6) * 5;
+  } else if (v < 0.9) {
+    return 2.78 + Math.pow((v - 0.8) * 10, 1.5) * 2.5;
+  } else if (v < 0.95) {
+    return 5.28 + Math.pow((v - 0.9) * 20, 2) * 10;
+  } else if (v < 0.98) {
+    return 15.28 + Math.pow((v - 0.95) * 33.33, 2.5) * 40;
+  }
+
+  // ----- Reworked legendary tail -----
+  // Targets:
+  // v=0.98 -> 55.28x
+  // v=0.99 -> ~5,000x
+  // v=0.999 -> ~500,000x
+  // v=1.00 -> ~50,000,000x (cap)
+
+  const CAP = 50_000_000;
+
+  if (v < 0.999) {
+    // Segment A: 0.98 .. 0.999  (length 0.019)
+    const base = 55.28;                     // value at 0.98
+    const targetAt999 = 500_000;            // value at 0.999
+    const A1 = targetAt999 / base;          // growth base across the segment
+    const t = (v - 0.98) / 0.019;           // normalized [0,1)
+    // Choose p so v=0.99 (~t=0.5263) hits ~5,000
+    // p ≈ 1.09718 (solved to pass through 0.99 -> 5,000)
+    const p = 1.097178;
+    const mult = base * Math.pow(A1, Math.pow(t, p));
+    return Math.min(mult, CAP);
   } else {
-    // Unlimited exponential for legendary quality (top 2% only: 0.98-1.0)
-    // 0.98 → 55.28x, 0.99 → 5,000x, 0.999 → 500,000x, 1.0 → 50,000,000x
-    const ultraQualityFactor = safeValue - 0.98;
-    const baseMultiplier = 55.28;
-    const exponentialGrowth = Math.pow(10000, ultraQualityFactor * 5); // 0-2 range becomes 1-10000
-    
-    return baseMultiplier * exponentialGrowth;
+    // Segment B: 0.999 .. 1.000 (length 0.001)
+    const base2 = 500_000;                  // exact continuity at 0.999
+    const A2 = 100;                         // 500k * 100 = 50,000,000 at 1.0
+    const s = (v - 0.999) / 0.001;          // normalized [0,1]
+    const mult = base2 * Math.pow(A2, s);
+    return Math.min(mult, CAP);             // explicit cap at 50,000,000
   }
 }
+
+
 
 // ===== SYMMETRICAL MULTIPLIER CALCULATIONS =====
 
