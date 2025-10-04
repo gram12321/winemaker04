@@ -87,6 +87,23 @@ export interface Vineyard {
   prestigeEvents?: PrestigeEvent[];
 }
 
+// Derived, ephemeral prestige factor outputs for UI/tooltips and event creation
+export interface VineyardPrestigeFactors {
+  // Context values for tooltips/UI
+  maxLandValue: number; // € per ha max (excl. premium regions)
+  landValuePerHectare: number; // € per ha
+
+  // Base 0..1 stages (derived)
+  ageBase01: number; // vineyardAgePrestigeModifier(age)
+  landBase01: number; // log(totalValue/maxLandValue + 1)
+  ageWithSuitability01: number; // clamp01(ageBase01 * suitability)
+  landWithSuitability01: number; // clamp01(landBase01 * suitability)
+
+  // Scaled (event amounts; >= 0)
+  ageScaled: number; // calculateAsymmetricalMultiplier(ageWithSuitability01) - 1
+  landScaled: number; // calculateAsymmetricalMultiplier(landWithSuitability01) - 1
+}
+
 // ===== WINE TYPES =====
 
 // Wine characteristics interface

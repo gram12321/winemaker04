@@ -10,7 +10,7 @@ import { calculateAsymmetricalScaler01 } from '../../utils';
  * This makes expensive land (€100K+) get proper quality scores instead of being compressed to low values
  * @returns Maximum land value in euros per hectare (excluding Bourgogne and Champagne)
  */
-function getMaxLandValue(): number {
+export function getMaxLandValue(): number {
   let maxValue = 0;
   
   // Iterate through all countries and regions to find the highest max price
