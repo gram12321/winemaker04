@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils';
-import { getVineyardPrestigeEventCalculation } from '@/lib/services/prestige/prestigeService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
 import { Badge } from '../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
@@ -134,6 +133,35 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   };
 
   // Utility functions
+  const parseEventDescription = (
+    description: string
+  ): { title: string; titleBase: string; amountText?: string; calc?: string; displayInfo?: string } => {
+    // Expected formats (from prestigeService descriptions):
+    // 1) Vine Age: <name> (<years> years) — base=<..> × suitability → scaled=(asym(..)−1)=<..>
+    // 2) Land Value: <name> (€<total>) — base=log(€<total>/<max>+1)=<..> → scaled=(asym(..)−1)=<..> | display: €<perHa>/ha × <hectares>ha
+    const [left, right] = description.split(' — ');
+    let title = description;
+    let titleBase = description;
+    let amountText: string | undefined;
+    let calc: string | undefined;
+    let displayInfo: string | undefined;
+    if (left && right) {
+      title = left;
+      titleBase = left;
+      // Try extract amount in parentheses e.g., "(€1,101,029.16)"
+      const match = left.match(/^(.*?)(\(€[^)]+\))\s*$/);
+      if (match) {
+        titleBase = match[1].trim();
+        amountText = match[2];
+      }
+      const displaySplit = right.split('| display:');
+      calc = displaySplit[0]?.trim();
+      if (displaySplit[1]) {
+        displayInfo = displaySplit[1].trim();
+      }
+    }
+    return { title, titleBase, amountText, calc, displayInfo };
+  };
   const formatDecayRate = (decayRate: number) => {
     if (decayRate === 0) return 'No decay';
     const weeklyDecay = (1 - decayRate) * 100;
@@ -255,24 +283,38 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                       <div key={event.id}>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <p className="text-sm font-medium cursor-help">{event.description}</p>
-                                </TooltipTrigger>
-                                {(() => {
-                                  const tooltipText = getVineyardPrestigeEventCalculation(event);
-                                  return tooltipText ? (
-                                    <TooltipContent>
-                                      <p className="text-xs">{tooltipText}</p>
-                                    </TooltipContent>
-                                  ) : null;
-                                })()}
-                              </Tooltip>
-                            </TooltipProvider>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDecayRate(event.decayRate)}
-                            </p>
+                            {(() => {
+                              const parsed = parseEventDescription(event.description);
+                              return (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <p className="text-sm font-medium cursor-help">{parsed.title}</p>
+                                      </TooltipTrigger>
+                                      {parsed.calc && (
+                                        <TooltipContent>
+                                          <p className="text-xs whitespace-pre-wrap">{parsed.calc}</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  {parsed.displayInfo && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="text-xs text-muted-foreground cursor-help">(details)</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-xs whitespace-pre-wrap">{parsed.displayInfo}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            <p className="text-xs text-muted-foreground">{formatDecayRate(event.decayRate)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-medium">
@@ -393,21 +435,40 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                         <div key={event.id}>
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <p className="text-sm font-medium cursor-help">{event.description}</p>
-                                  </TooltipTrigger>
-                                {(() => {
-                                  const tooltipText = getVineyardPrestigeEventCalculation(event);
-                                  return tooltipText ? (
-                                    <TooltipContent>
-                                      <p className="text-xs">{tooltipText}</p>
-                                    </TooltipContent>
-                                  ) : null;
-                                })()}
-                                </Tooltip>
-                              </TooltipProvider>
+                              {(() => {
+                                const parsed = parseEventDescription(event.description);
+                                return (
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <p className="text-sm font-medium cursor-help">{parsed.titleBase}{parsed.amountText ? ' ' : ''}
+                                            {parsed.amountText && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <span className="text-muted-foreground cursor-help">{parsed.amountText}</span>
+                                                  </TooltipTrigger>
+                                                  {parsed.displayInfo && (
+                                                    <TooltipContent>
+                                                      <p className="text-xs whitespace-pre-wrap">{parsed.displayInfo}</p>
+                                                    </TooltipContent>
+                                                  )}
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                          </p>
+                                        </TooltipTrigger>
+                                        {parsed.calc && (
+                                          <TooltipContent>
+                                            <p className="text-xs whitespace-pre-wrap">{parsed.calc}</p>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </div>
+                                );
+                              })()}
                               <p className="text-xs text-muted-foreground">
                                 {formatDecayRate(event.decayRate)}
                               </p>
@@ -441,19 +502,23 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             <CardContent className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-blue-500" />
-                <span><strong>Company Value:</strong> Based on your total money (€10M = 1 prestige)</span>
+                <span><strong>Company Value:</strong> Log-normalized by max land value; adds a steady, non-decaying base.</span>
               </div>
               <div className="flex items-center gap-2">
                 <Grape className="h-4 w-4 text-green-500" />
-                <span><strong>Vineyards:</strong> Each vineyard contributes prestige (currently 1 per vineyard)</span>
+                <span><strong>Vineyard (Base):</strong> Two permanent sources per vineyard — Land Value and Vine Age.</span>
+              </div>
+              <div className="ml-6 text-xs text-muted-foreground space-y-1">
+                <div>• Land Value: log(totalValue/max + 1) → × suitability → asym(0–1) − 1</div>
+                <div>• Vine Age: ageModifier(0–1) → × suitability → asym(0–1) − 1</div>
               </div>
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span><strong>Sales:</strong> Wine sales add prestige (€10K = 1 prestige, decays 5% weekly)</span>
+                <span><strong>Sales:</strong> Add temporary prestige that decays weekly (e.g., 5%).</span>
               </div>
               <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-purple-500" />
-                <span><strong>Contracts:</strong> Future feature for contract-based prestige</span>
+                <Star className="h-4 w-4 text-yellow-500" />
+                <span><strong>Achievements:</strong> Special events; amounts and decay may vary.</span>
               </div>
             </CardContent>
           </Card>
