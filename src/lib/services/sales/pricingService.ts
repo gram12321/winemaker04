@@ -2,8 +2,6 @@
 import { WineBatch, Vineyard } from '../../types/types';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateAsymmetricalMultiplier } from '../../utils/calculator';
-import { calculateWineValueIndex } from './wineValueIndexCalculationService';
-import { calculateWineQuality } from './wineQualityIndexCalculationService';
 
 /**
  * Calculate the final wine price combining vineyard value and wine quality
@@ -13,20 +11,21 @@ import { calculateWineQuality } from './wineQualityIndexCalculationService';
  * @param vineyard - The vineyard where the wine was produced
  * @returns Final price per bottle in euros
  */
-export function calculateFinalWinePrice(wineBatch: WineBatch, vineyard: Vineyard): number {
-  // Calculate Wine Value Index (0-1 scale) - vineyard prestige/land value
-  const wineValueIndex = calculateWineValueIndex(vineyard);
+export function calculateFinalWinePrice(wineBatch: WineBatch, _vineyard: Vineyard): number {
+  // Use wine batch quality (vineyard factors) for pricing
+  const qualityIndex = wineBatch.quality;
   
-  // Calculate Quality Index (0-1 scale) - wine quality/balance
-  const qualityIndex = calculateWineQuality(wineBatch);
-  
-  // Calculate Base Price from Wine Value Index
-  const basePrice = wineValueIndex * SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
+  // Calculate Base Price from Wine Quality
+  const basePrice = qualityIndex * SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
   
   // Calculate Quality Multiplier from Quality Index
   const qualityMultiplier = calculateAsymmetricalMultiplier(qualityIndex);
   
   // Calculate Final Price and round to 2 decimal places
-  const finalPrice = basePrice * qualityMultiplier;
+  let finalPrice = basePrice * qualityMultiplier;
+  
+  // Cap the price to prevent database overflow
+  finalPrice = Math.min(finalPrice, SALES_CONSTANTS.MAX_PRICE);
+  
   return Math.round(finalPrice * 100) / 100;
 }

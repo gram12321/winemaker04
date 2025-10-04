@@ -13,9 +13,6 @@ import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
  * Prestige Modal
  * Modal for displaying detailed prestige breakdown and sources
  */
-
-
-
 interface PrestigeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,116 +40,80 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
 
-  // Helper functions
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'company_value':
-        return <DollarSign className="h-4 w-4" />;
-      case 'vineyard':
-        return <Grape className="h-4 w-4" />;
-      case 'sale':
-        return <TrendingUp className="h-4 w-4" />;
-      case 'vineyard_sale':
-        return <Grape className="h-4 w-4" />;
-      case 'vineyard_base':
-        return <Grape className="h-4 w-4" />;
-      case 'vineyard_achievement':
-        return <Star className="h-4 w-4" />;
-      case 'vineyard_age':
-        return <Star className="h-4 w-4" />;
-      case 'vineyard_land':
-        return <DollarSign className="h-4 w-4" />;
-      case 'contract':
-        return <DollarSign className="h-4 w-4" />;
-      default:
-        return <Star className="h-4 w-4" />;
-    }
+  const eventConfig = {
+    company_value: { icon: DollarSign, label: 'Company Value', color: 'bg-blue-100 text-blue-800' },
+    vineyard: { icon: Grape, label: 'Vineyard (Legacy)', color: 'bg-green-100 text-green-800' },
+    sale: { icon: TrendingUp, label: 'Company Sales', color: 'bg-emerald-100 text-emerald-800' },
+    vineyard_sale: { icon: Grape, label: 'Vineyard Sales', color: 'bg-green-100 text-green-800' },
+    vineyard_base: { icon: Grape, label: 'Vineyard Base', color: 'bg-blue-100 text-blue-800' },
+    vineyard_achievement: { icon: Star, label: 'Vineyard Achievements', color: 'bg-yellow-100 text-yellow-800' },
+    vineyard_age: { icon: Star, label: 'Vine Age', color: 'bg-orange-100 text-orange-800' },
+    vineyard_land: { icon: DollarSign, label: 'Land Value', color: 'bg-green-100 text-green-800' },
+    contract: { icon: DollarSign, label: 'Contracts', color: 'bg-purple-100 text-purple-800' },
+    penalty: { icon: Star, label: 'Penalties', color: 'bg-red-100 text-red-800' },
   };
 
-  const getEventTypeLabel = (type: string) => {
-    switch (type) {
-      case 'company_value':
-        return 'Company Value';
-      case 'vineyard':
-        return 'Vineyard (Legacy)';
-      case 'sale':
-        return 'Company Sales';
-      case 'vineyard_sale':
-        return 'Vineyard Sales';
-      case 'vineyard_base':
-        return 'Vineyard Base';
-      case 'vineyard_achievement':
-        return 'Vineyard Achievements';
-      case 'vineyard_age':
-        return 'Vine Age';
-      case 'vineyard_land':
-        return 'Land Value';
-      case 'contract':
-        return 'Contracts';
-      case 'penalty':
-        return 'Penalties';
-      default:
-        return type;
-    }
+  const getEventConfig = (type: string) => eventConfig[type as keyof typeof eventConfig] || { icon: Star, label: type, color: 'bg-gray-100 text-gray-800' };
+
+  const formatDecayRate = (decayRate: number) => 
+    decayRate === 0 ? 'No decay' : `${formatPercent((1 - decayRate), 1, true)} weekly decay`;
+
+  const formatAmount = (amount: number) => formatNumber(amount, { decimals: 2, forceDecimals: true });
+
+  const EventDisplay = ({ event }: { event: PrestigeEvent }) => {
+    const displayData = getEventDisplayData(event);
+
+    return (
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="text-sm font-medium cursor-help">{displayData.title}</p>
+                </TooltipTrigger>
+                {displayData.calc && (
+                  <TooltipContent>
+                    <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+            {displayData.displayInfo && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground cursor-help">(details)</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{formatDecayRate(event.decayRate)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium">{formatAmount(event.currentAmount ?? event.amount)}</p>
+          {event.originalAmount !== event.currentAmount && (
+            <p className="text-xs text-muted-foreground">
+              (was {formatAmount(event.originalAmount ?? event.amount)})
+            </p>
+          )}
+        </div>
+      </div>
+    );
   };
 
-  const getEventTypeColor = (type: string) => {
-    switch (type) {
-      case 'company_value':
-        return 'bg-blue-100 text-blue-800';
-      case 'vineyard':
-        return 'bg-green-100 text-green-800';
-      case 'sale':
-        return 'bg-emerald-100 text-emerald-800';
-      case 'vineyard_sale':
-        return 'bg-green-100 text-green-800';
-      case 'vineyard_base':
-        return 'bg-blue-100 text-blue-800';
-      case 'vineyard_achievement':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'vineyard_age':
-        return 'bg-orange-100 text-orange-800';
-      case 'vineyard_land':
-        return 'bg-green-100 text-green-800';
-      case 'contract':
-        return 'bg-purple-100 text-purple-800';
-      case 'penalty':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const getFilteredVineyards = () => 
+    selectedVineyard === 'all' ? vineyards : vineyards.filter(vineyard => vineyard.id === selectedVineyard);
 
-  // Utility functions - now using structured data instead of parsing
-  const formatDecayRate = (decayRate: number) => {
-    if (decayRate === 0) return 'No decay';
-    const weeklyDecay = (1 - decayRate) * 100;
-    return `${formatPercent(weeklyDecay / 100, 1, true)} weekly decay`;
-  };
+  const companyEventTypes = ['company_value', 'sale', 'contract', 'penalty'];
+  const companyEvents = eventBreakdown.filter(event => companyEventTypes.includes(event.type));
 
-
-  const formatAmount = (amount: number) => {
-    return formatNumber(amount, { decimals: 2, forceDecimals: true });
-  };
-
-  // Data processing
-  const getFilteredVineyards = () => {
-    if (selectedVineyard === 'all') {
-      return vineyards;
-    }
-    return vineyards.filter(vineyard => vineyard.id === selectedVineyard);
-  };
-
-  // Separate company events (vineyard events are now handled via vineyards prop)
-  const companyEvents = eventBreakdown.filter(event => 
-    ['company_value', 'sale', 'contract', 'penalty'].includes(event.type)
-  );
-
-  // Group company events by type
   const groupedCompanyEvents = companyEvents.reduce((acc, event) => {
-    if (!acc[event.type]) {
-      acc[event.type] = [];
-    }
+    if (!acc[event.type]) acc[event.type] = [];
     acc[event.type].push(event);
     return acc;
   }, {} as Record<string, PrestigeEvent[]>);
@@ -234,9 +195,13 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 <Card key={type}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      {getEventIcon(type)}
-                      {getEventTypeLabel(type)}
-                      <Badge className={getEventTypeColor(type)}>
+                      {(() => {
+                        const config = getEventConfig(type);
+                        const IconComponent = config.icon;
+                        return <IconComponent className="h-4 w-4" />;
+                      })()}
+                      {getEventConfig(type).label}
+                      <Badge className={getEventConfig(type).color}>
                         {events.length} {events.length === 1 ? 'source' : 'sources'}
                       </Badge>
                     </CardTitle>
@@ -244,52 +209,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                   <CardContent className="space-y-3">
                     {events.map((event, index) => (
                       <div key={event.id}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            {(() => {
-                              const displayData = getEventDisplayData(event);
-                              return (
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <p className="text-sm font-medium cursor-help">{displayData.title}</p>
-                                      </TooltipTrigger>
-                                      {displayData.calc && (
-                                        <TooltipContent>
-                                          <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
-                                        </TooltipContent>
-                                      )}
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {displayData.displayInfo && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span className="text-xs text-muted-foreground cursor-help">(details)</span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                            <p className="text-xs text-muted-foreground">{formatDecayRate(event.decayRate)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">
-                              {formatAmount(event.currentAmount ?? event.amount)}
-                            </p>
-                            {event.originalAmount !== event.currentAmount && (
-                              <p className="text-xs text-muted-foreground">
-                                (was {formatAmount(event.originalAmount ?? event.amount)})
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                        <EventDisplay event={event} />
                         {index < events.length - 1 && <Separator className="mt-3" />}
                       </div>
                     ))}
@@ -396,57 +316,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                     <CardContent className="space-y-3">
                       {vineyard.events.map((event, index) => (
                         <div key={event.id}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              {(() => {
-                                const displayData = getEventDisplayData(event);
-                                return (
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <p className="text-sm font-medium cursor-help">{displayData.titleBase}{displayData.amountText ? ' ' : ''}
-                                            {displayData.amountText && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <span className="text-muted-foreground cursor-help">{displayData.amountText}</span>
-                                                  </TooltipTrigger>
-                                                  {displayData.displayInfo && (
-                                                    <TooltipContent>
-                                                      <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
-                                                    </TooltipContent>
-                                                  )}
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                          </p>
-                                        </TooltipTrigger>
-                                        {displayData.calc && (
-                                          <TooltipContent>
-                                            <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
-                                          </TooltipContent>
-                                        )}
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </div>
-                                );
-                              })()}
-                              <p className="text-xs text-muted-foreground">
-                                {formatDecayRate(event.decayRate)}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium">
-                                {formatAmount(event.currentAmount ?? event.amount)}
-                              </p>
-                              {event.originalAmount !== event.currentAmount && (
-                                <p className="text-xs text-muted-foreground">
-                                  (was {formatAmount(event.originalAmount ?? event.amount)})
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                          <EventDisplay event={event} />
                           {index < vineyard.events.length - 1 && <Separator className="mt-3" />}
                         </div>
                       ))}

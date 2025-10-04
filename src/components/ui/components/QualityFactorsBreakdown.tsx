@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Vineyard, WineBatch } from '@/lib/types/types';
 import { QualityFactorsDisplay } from './qualityFactorBar';
-import { getVineyardQualityFactors } from '@/lib/services/sales/wineValueIndexCalculationService';
+import { getVineyardQualityFactors, getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
@@ -10,35 +10,12 @@ import { getWineQualityCategory, getColorCategory } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown } from '@/lib/services/prestige/prestigeService';
 import { REGION_PRICE_RANGES } from '@/lib/constants/vineyardConstants';
 
-// Helper function to get regional price range
 const getRegionalPriceRange = (country: string, region: string): [number, number] => {
   const countryData = REGION_PRICE_RANGES[country as keyof typeof REGION_PRICE_RANGES];
-  if (!countryData) return [5000, 30000]; // Default fallback
-  const regionData = countryData[region as keyof typeof countryData];
-  return regionData || [5000, 30000]; // Default fallback
+  return countryData?.[region as keyof typeof countryData] || [5000, 30000];
 };
 
-// Helper function to get the maximum land value across all regions
-const getMaxLandValue = (): number => {
-  let maxValue = 0;
-  
-  // Iterate through all countries and regions to find the highest max price
-  // Skip Bourgogne and Champagne to allow them to break the scale
-  for (const [countryName, country] of Object.entries(REGION_PRICE_RANGES)) {
-    for (const [regionName, priceRange] of Object.entries(country)) {
-      // Skip Bourgogne and Champagne to allow them to break the scale
-      if (countryName === "France" && (regionName === "Bourgogne" || regionName === "Champagne")) {
-        continue;
-      }
-      const [, maxPrice] = priceRange as [number, number];
-      maxValue = Math.max(maxValue, maxPrice);
-    }
-  }
-  
-  return maxValue;
-};
 
-// Simple chevron icons as SVG components
 const ChevronDownIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -49,6 +26,33 @@ const ChevronRightIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
   </svg>
+);
+
+const FactorCard = ({ 
+  title, 
+  description, 
+  color, 
+  children 
+}: { 
+  title: string; 
+  description: string; 
+  color: string; 
+  children: React.ReactNode; 
+}) => (
+  <Card className={`border-${color}-200 bg-${color}-50`}>
+    <CardHeader className="pb-2">
+      <CardTitle className={`flex items-center gap-2 text-${color}-800 text-base`}>
+        <div className={`w-2 h-2 bg-${color}-500 rounded-full`}></div>
+        {title}
+      </CardTitle>
+      <CardDescription className={`text-${color}-700`}>
+        {description}
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-2">
+      {children}
+    </CardContent>
+  </Card>
 );
 
 interface QualityFactorsBreakdownProps {
@@ -191,23 +195,12 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                 {/* Individual Factor Cards */}
                 {vineyard && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    {/* Land Value Card */}
-                    <Card className="border-blue-200 bg-blue-50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-blue-800 text-base">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          Land Value Factor
-                        </CardTitle>
-                        <CardDescription className="text-blue-700">
-                          €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare
-                          <br />
-                          <span className="text-xs text-blue-600">
-                            Calculated from: Regional prestige, altitude ({vineyard.altitude}m), aspect ({vineyard.aspect})
-                          </span>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="text-sm space-y-3">
+                    <FactorCard
+                      title="Land Value Factor"
+                      description={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare - Calculated from: Regional prestige, altitude (${vineyard.altitude}m), aspect (${vineyard.aspect})`}
+                      color="blue"
+                    >
+                      <div className="text-sm space-y-3">
                           {/* Your Calculation Section */}
                           <div className="bg-blue-100 p-3 rounded-lg border border-blue-200">
                             <div className="flex items-center gap-2 mb-2">
@@ -316,21 +309,13 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                             </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                    </FactorCard>
 
-                    {/* Vineyard Prestige Card */}
-                    <Card className="border-purple-200 bg-purple-50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-purple-800 text-base">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          Vineyard Prestige
-                        </CardTitle>
-                        <CardDescription className="text-purple-700">
-                          Combined prestige from vine age, environmental factors, and achievements
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
+                    <FactorCard
+                      title="Vineyard Prestige"
+                      description="Combined prestige from vine age, environmental factors, and achievements"
+                      color="purple"
+                    >
                         <div className="text-sm space-y-3">
                           {/* Your Calculation Section */}
                           <div className="bg-purple-100 p-3 rounded-lg border border-purple-200">
@@ -375,21 +360,13 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                             </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                    </FactorCard>
 
-                    {/* Regional Factors Card */}
-                    <Card className="border-green-200 bg-green-50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-green-800 text-base">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          Regional Factors
-                        </CardTitle>
-                        <CardDescription className="text-green-700">
-                          {vineyard.region}, {vineyard.country}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
+                    <FactorCard
+                      title="Regional Factors"
+                      description={`${vineyard.region}, ${vineyard.country}`}
+                      color="green"
+                    >
                         <div className="text-sm space-y-2">
                           <div className="flex justify-between">
                             <span>Regional Prestige:</span>
@@ -428,22 +405,14 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                             <strong>Impact:</strong> These factors are permanent and represent the natural advantages of your vineyard's location. Premium regions like Bordeaux, Tuscany, or Napa Valley have higher regional prestige.
                           </p>
                         </div>
-                      </CardContent>
-                    </Card>
+                    </FactorCard>
 
-                    {/* Grape Suitability Card */}
                     {vineyard.grape && (
-                      <Card className="border-orange-200 bg-orange-50">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="flex items-center gap-2 text-orange-800 text-base">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                            Grape Suitability
-                          </CardTitle>
-                          <CardDescription className="text-orange-700">
-                            {vineyard.grape} in {vineyard.region}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
+                      <FactorCard
+                        title="Grape Suitability"
+                        description={`${vineyard.grape} in ${vineyard.region}`}
+                        color="orange"
+                      >
                           <div className="text-sm">
                             <div className="flex justify-between">
                               <span>Suitability Score:</span>
@@ -491,8 +460,7 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                               Your {formatNumber(factors.grapeSuitability * 100, { decimals: 0, forceDecimals: true })}% suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
                             </p>
                           </div>
-                        </CardContent>
-                      </Card>
+                    </FactorCard>
                     )}
                   </div>
                 )}

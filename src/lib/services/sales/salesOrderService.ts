@@ -108,8 +108,11 @@ export async function generateSophisticatedWineOrders(): Promise<{
     
     // Step 5: Log results and send notifications
     if (orders.length > 0) {
-      const totalValue = orders.reduce((sum, order) => sum + (order.offeredPrice * order.requestedQuantity), 0);
-      // Customer completed browsing (no logging needed)
+      const totalValue = orders.reduce((sum, order) => {
+        const orderValue = order.offeredPrice * order.requestedQuantity;
+        return sum + Math.min(orderValue, SALES_CONSTANTS.MAX_PRICE); // Cap individual order values to prevent overflow
+      }, 0);
+
       
       // Send notification about successful customer
       if (orders.length === 1) {

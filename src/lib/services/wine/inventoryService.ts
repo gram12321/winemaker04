@@ -5,10 +5,10 @@ import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../database/
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../core/gameState';
-import { generateWineCharacteristics } from '../sales/wineQualityIndexCalculationService';
 import { calculateFinalWinePrice } from '../sales/pricingService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../balance';
 import { BASE_BALANCED_RANGES } from '../../constants/grapeConstants';
+import { calculateWineQuality } from './wineQualityCalculationService';
 import { generateDefaultCharacteristics } from './characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from './characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
@@ -120,9 +120,6 @@ export async function createWineBatchFromHarvest(
   // Get grape metadata
   const grapeMetadata = GRAPE_CONST[grape];
   
-  // Generate wine quality characteristics using the new quality service
-  const { quality } = generateWineCharacteristics(grape, vineyardId);
-  
   // Derive starting characteristics from grape base + vineyard conditions
   const base = generateDefaultCharacteristics(grape);
   const country = vineyard.country;
@@ -135,7 +132,7 @@ export async function createWineBatchFromHarvest(
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,
-    qualityFactor: quality,
+    qualityFactor: 0.5, // Use default quality factor since we'll use balance score
     suitability,
     altitude,
     medianAltitude: (minAlt + maxAlt) / 2,
@@ -143,8 +140,11 @@ export async function createWineBatchFromHarvest(
     grapeColor: GRAPE_CONST[grape].grapeColor
   });
   
-  // Calculate balance using the new balance calculator
+  // Calculate balance using the sophisticated balance system
   const balanceResult = calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+  
+  // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
+  const quality = calculateWineQuality(vineyard);
   
   const harvestDate = {
     week: gameState.week || 1,
@@ -160,8 +160,8 @@ export async function createWineBatchFromHarvest(
     const combinedBatch = combineWineBatches(
       existingBatch,
       quantity,
-      quality,
-      balanceResult.score,
+      quality, // Use vineyard quality
+      balanceResult.score, // Use balance score
       characteristics
     );
     
@@ -182,8 +182,8 @@ export async function createWineBatchFromHarvest(
       quantity,
       state: 'grapes',
       fermentationProgress: 0,
-      quality,
-      balance: balanceResult.score, // Use calculated balance
+      quality, // Use vineyard quality (land value, prestige, altitude, etc.)
+      balance: balanceResult.score, // Use calculated balance from wine characteristics
       characteristics,
       breakdown, // Store breakdown data
       finalPrice: 0, // Will be calculated below

@@ -32,34 +32,15 @@ export const PRESTIGE_ORDER_GENERATION = {
   PENDING_ORDER_PENALTY: 0.8, // Penalty multiplier per pending order (diminishing returns)
 } as const;
 
-// ===== WINE PRODUCTION CONSTANTS =====
-
-// Vineyard prestige calculation constants
-export const VINEYARD_PRESTIGE_CONSTANTS = {
-  // Land value normalization constant for prestige calculation
-  // Set to 200000 to match the max price of non-top3 regions like "Bordeaux, France"
-  LAND_VALUE_NORMALIZATION: 200000,
-} as const;
-
-
-// Quality constants for wine generation
-export const WINE_QUALITY_CONSTANTS = {
-  // Base placeholder values (will be replaced with proper calculations later)
-  BASE_QUALITY: 0.5, // Placeholder quality value (middle of 0-1 range)
-  BASE_BALANCE: 0.5, // Placeholder balance value (middle of 0-1 range)
-  
-  // Random variation applied to base values (full 0-1 range)
-  QUALITY_VARIATION: 2.0, // ±100% variation (0.0 to 1.0)
-} as const;
-
-
-
 // ===== SALES & CUSTOMER CONSTANTS =====
 
 // Base pricing and sales constants
 export const SALES_CONSTANTS = {
   // Base rate per bottle for wine pricing calculations
   BASE_RATE_PER_BOTTLE: 25, // €25 base rate
+  
+  // Maximum price to prevent database overflow (numeric(10,2) field limit)
+  MAX_PRICE: 99999999.99, // €99,999,999.99 maximum price per bottle
   
   // Customer type configurations (using 6-bottle cases)
   CUSTOMER_TYPES: {

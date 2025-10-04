@@ -19,27 +19,31 @@ export interface PrestigeEventRow {
 }
 
 export async function upsertPrestigeEventBySource(type: string, sourceId: string, fields: Partial<PrestigeEventRow>): Promise<void> {
+  const companyId = getCurrentCompanyId();
+  
   const { data, error } = await supabase
     .from('prestige_events')
     .select('id')
-    .eq('company_id', getCurrentCompanyId())
+    .eq('company_id', companyId)
     .eq('type', type)
     .eq('source_id', sourceId)
     .limit(1);
 
   if (error) throw error;
 
+  const eventData = { ...fields, type, source_id: sourceId, company_id: companyId };
+
   if (data && data.length > 0) {
     const { error: updateError } = await supabase
       .from('prestige_events')
       .update(fields)
       .eq('id', data[0].id)
-      .eq('company_id', getCurrentCompanyId());
+      .eq('company_id', companyId);
     if (updateError) throw updateError;
   } else {
     const { error: insertError } = await supabase
       .from('prestige_events')
-      .insert([{ ...fields, type, source_id: sourceId, company_id: getCurrentCompanyId() }]);
+      .insert([eventData]);
     if (insertError) throw insertError;
   }
 }
@@ -61,24 +65,21 @@ export async function listPrestigeEvents(): Promise<PrestigeEventRow[]> {
   return (data as PrestigeEventRow[]) || [];
 }
 
-// New function to return unified PrestigeEvent objects with UI fields
 export async function listPrestigeEventsForUI(): Promise<PrestigeEvent[]> {
   const rows = await listPrestigeEvents();
   return rows.map(row => ({
     id: row.id,
-    type: row.type as any,
+    type: row.type as PrestigeEvent['type'],
     amount: row.amount,
     timestamp: row.timestamp || Date.now(),
     decayRate: row.decay_rate,
     description: row.description,
     sourceId: row.source_id || undefined,
-    created_at: undefined, // Not available in PrestigeEventRow
-    updated_at: undefined, // Not available in PrestigeEventRow
-    // UI fields from database or fallback to amount
+    created_at: undefined,
+    updated_at: undefined,
     originalAmount: row.original_amount ?? row.amount,
     currentAmount: row.current_amount ?? row.amount,
     category: row.category,
-    // Metadata from database
     metadata: row.metadata,
   }));
 }
@@ -91,7 +92,7 @@ export async function listPrestigeEventsForDecay(): Promise<Array<{ id: string; 
     .gt('decay_rate', 0)
     .lt('decay_rate', 1);
   if (error) throw error;
-  return (data as any[]) || [];
+  return (data as Array<{ id: string; amount: number; decay_rate: number }>) || [];
 }
 
 export async function updatePrestigeEventAmount(id: string, amount: number): Promise<void> {

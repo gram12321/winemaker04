@@ -3,12 +3,7 @@ import { Vineyard, Aspect } from '../../types/types';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
-import { 
-  COUNTRY_REGION_MAP, 
-  REGION_SOIL_TYPES, 
-  REGION_ALTITUDE_RANGES,
-  REGION_ASPECT_RATINGS
-} from '../../constants/vineyardConstants';
+import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '../../constants/vineyardConstants';
 import { NAMES } from '../../constants/namesConstants';
 import { ASPECTS } from '../../types/types';
 

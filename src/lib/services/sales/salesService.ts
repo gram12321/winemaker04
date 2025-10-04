@@ -7,6 +7,7 @@ import { addTransaction } from '../user/financeService';
 import { createRelationshipBoost } from '../sales/relationshipService';
 import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, calculateVineyardPrestigeFromEvents } from '../prestige/prestigeService';
 import { getCurrentPrestige } from '../core/gameState';
+import { SALES_CONSTANTS } from '../../constants/constants';
 
 // ===== ORDER MANAGEMENT =====
 
@@ -34,7 +35,10 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   
   // Calculate how many bottles we can actually fulfill
   const fulfillableQuantity = Math.min(order.requestedQuantity, wineBatch.quantity);
-  const fulfillableValue = Math.round(fulfillableQuantity * order.offeredPrice * 100) / 100; // order.offeredPrice is the bidPrice
+  let fulfillableValue = Math.round(fulfillableQuantity * order.offeredPrice * 100) / 100; // order.offeredPrice is the bidPrice
+  
+  // Cap the fulfillable value to prevent database overflow
+  fulfillableValue = Math.min(fulfillableValue, SALES_CONSTANTS.MAX_PRICE);
   
   if (fulfillableQuantity === 0) {
     return false; // No inventory available

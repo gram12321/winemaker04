@@ -94,7 +94,10 @@ export async function generateOrder(
   const relationshipAdjustedMultiplier = customer.priceMultiplier * relationshipPriceBonus;
   
   // Use customer's individual price multiplier with relationship bonus
-  const bidPrice = Math.round(askingPrice * relationshipAdjustedMultiplier * 100) / 100;
+  let bidPrice = Math.round(askingPrice * relationshipAdjustedMultiplier * 100) / 100;
+  
+  // Cap the bid price to prevent database overflow
+  bidPrice = Math.min(bidPrice, SALES_CONSTANTS.MAX_PRICE);
   
   // Check for outright rejection based on price ratio
   let rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
@@ -181,7 +184,10 @@ export async function generateOrder(
 
   // Calculate fulfillable quantity based on current inventory  
   const fulfillableQuantity = Math.min(desiredQuantity, specificWineBatch.quantity);
-  const fulfillableValue = Math.round(fulfillableQuantity * bidPrice * 100) / 100;
+  let fulfillableValue = Math.round(fulfillableQuantity * bidPrice * 100) / 100;
+  
+  // Cap the fulfillable value to prevent database overflow
+  fulfillableValue = Math.min(fulfillableValue, SALES_CONSTANTS.MAX_PRICE);
   
   const gameState = getGameState();
   const order: WineOrder = {
@@ -196,7 +202,7 @@ export async function generateOrder(
     wineName: formatCompletedWineName(specificWineBatch),
     requestedQuantity: desiredQuantity,
     offeredPrice: bidPrice, // Store as offeredPrice in the order object for compatibility
-    totalValue: Math.round(desiredQuantity * bidPrice * 100) / 100,
+    totalValue: Math.min(Math.round(desiredQuantity * bidPrice * 100) / 100, SALES_CONSTANTS.MAX_PRICE),
     fulfillableQuantity,
     fulfillableValue,
     askingPriceAtOrderTime: askingPrice, // Store the asking price at order time

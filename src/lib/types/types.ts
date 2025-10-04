@@ -301,6 +301,9 @@ export interface PrestigeEvent {
     customerName?: string;
     wineName?: string;
     saleValue?: number;
+    // For company_value events
+    companyMoney?: number;
+    prestigeBase01?: number;
   };
 }
 

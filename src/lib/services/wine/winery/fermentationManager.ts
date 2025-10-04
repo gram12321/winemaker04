@@ -9,7 +9,8 @@ import { calculateFermentationWork } from '../../activity/WorkCalculators/Fermen
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
-import { calculateWineQuality } from '../../sales/wineQualityIndexCalculationService';
+import { calculateWineQuality } from '../wineQualityCalculationService';
+import { loadVineyards } from '../../../database/activities/vineyardDB';
 
 /**
  * Fermentation Manager
@@ -151,15 +152,10 @@ export async function processWeeklyFermentation(): Promise<void> {
       // Recalculate balance based on new characteristics
       const balanceResult = calculateWineBalance(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
       
-      // Create updated batch for quality calculation
-      const updatedBatch: WineBatch = {
-        ...batch,
-        characteristics: newCharacteristics,
-        balance: balanceResult.score
-      };
-      
-      // Recalculate quality based on updated characteristics and balance
-      const newQuality = calculateWineQuality(updatedBatch);
+      // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
+      const vineyards = await loadVineyards();
+      const vineyard = vineyards.find(v => v.id === batch.vineyardId);
+      const newQuality = vineyard ? calculateWineQuality(vineyard) : batch.quality;
 
       // Combine existing breakdown with new fermentation breakdown
       const combinedBreakdown = {
