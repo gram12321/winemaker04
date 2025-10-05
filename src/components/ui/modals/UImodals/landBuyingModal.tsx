@@ -3,10 +3,10 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils';
 import { getCountryFlag } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
-import { Button } from '../shadCN/button';
-import { Badge } from '../shadCN/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
+import { Button } from '../../shadCN/button';
+import { Badge } from '../../shadCN/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 
 /**
  * Land Buying Modal

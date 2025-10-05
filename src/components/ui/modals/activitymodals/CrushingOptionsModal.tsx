@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
-import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity/WorkCalculators/CrushingWorkCalculator';
+import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity/workcalculators/crushingWorkCalculator';
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';

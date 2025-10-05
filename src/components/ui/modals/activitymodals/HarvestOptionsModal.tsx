@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
-import { calculateHarvestWork } from '@/lib/services/activity/WorkCalculators/VineyardWorkCalculator';
+import { calculateHarvestWork } from '@/lib/services/activity/workcalculators/vineyardWorkCalculator';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatNumber } from '@/lib/utils';

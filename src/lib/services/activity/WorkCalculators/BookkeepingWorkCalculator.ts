@@ -1,5 +1,5 @@
 import { Transaction, Season, WorkCategory } from '@/lib/types/types';
-import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/WorkCalculators/workCalculator';
+import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState';
 import { getTransactions } from '@/lib/services/user/financeService';

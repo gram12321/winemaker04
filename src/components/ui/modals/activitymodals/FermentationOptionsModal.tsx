@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/shadCN/tooltip';
 import { WineBatch } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
-import { calculateFermentationWork, validateFermentationBatch } from '@/lib/services/activity/WorkCalculators/FermentationWorkCalculator';
+import { calculateFermentationWork, validateFermentationBatch } from '@/lib/services/activity/workcalculators/fermentationWorkCalculator';
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';

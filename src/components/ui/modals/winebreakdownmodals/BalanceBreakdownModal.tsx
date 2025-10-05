@@ -1,8 +1,8 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { BalanceScoreBreakdown } from '../components/BalanceScoreBreakdown';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../shadCN/dialog';
-import { Button } from '../shadCN/button';
+import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
+import { Button } from '../../shadCN/button';
 
 /**
  * Balance Breakdown Modal

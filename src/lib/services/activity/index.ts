@@ -1,5 +1,5 @@
 export { WorkCategory } from '../../types/types';
-export { calculateTotalWork, type WorkFactor } from './WorkCalculators/workCalculator';
+export { calculateTotalWork, type WorkFactor } from './workcalculators/workCalculator';
 
 // Activity system APIs
 export {
@@ -10,7 +10,7 @@ export {
   cancelActivity,
   progressActivities,
   getActivityProgress
-} from './activityManager';
+} from './activitymanagers/activityManager';
 
 // Vineyard-specific work calculators
 export {
@@ -18,7 +18,7 @@ export {
   getAltitudeModifier,
   calculatePlantingWork,
   calculateHarvestWork
-} from './WorkCalculators/VineyardWorkCalculator';
+} from './workcalculators/vineyardWorkCalculator';
 
 // Bookkeeping system
 export {
@@ -26,8 +26,8 @@ export {
   calculateBookkeepingSpillover,
   calculateTotalBookkeepingWork,
   completeBookkeeping
-} from './WorkCalculators/BookkeepingWorkCalculator';
+} from './workcalculators/bookkeepingWorkCalculator';
 
 export {
   checkAndTriggerBookkeeping
-} from './bookkeepingManager';
+} from './activitymanagers/bookkeepingManager';

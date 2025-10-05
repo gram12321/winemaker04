@@ -1,5 +1,5 @@
 import { WineBatch, Activity } from '@/lib/types/types';
-import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/WorkCalculators/workCalculator';
+import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';

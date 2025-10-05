@@ -1,11 +1,11 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, getAllVineyards, formatCompletedWineName, bottleWine, isActionAvailable, getBatchStatus } from '@/lib/services';
+import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable, getBatchStatus } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
-import { FermentationOptionsModal } from '../ui/modals/FermentationOptionsModal';
+import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
@@ -269,9 +269,8 @@ const Winery: React.FC = () => {
     }
   }), [withLoading]);
 
-  // Separate batches by completion status (memoized)
+  // Filter active batches (memoized)
   const activeBatches = useMemo(() => wineBatches.filter(batch => batch.state !== 'bottled'), [wineBatches]);
-  const completedWines = useMemo(() => wineBatches.filter(batch => batch.state === 'bottled'), [wineBatches]);
 
   return (
     <div className="space-y-3 text-sm">
@@ -292,14 +291,14 @@ const Winery: React.FC = () => {
               <p className="text-white/90 text-xs mt-0.5">Transform grapes into fine wines</p>
             </div>
             <div className="text-white/80 text-xs">
-              {activeBatches.length} Active • {completedWines.length} Completed
+              {activeBatches.length} Active Batches
             </div>
           </div>
         </div>
       </div>
       
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="bg-white rounded-lg shadow p-3">
           <div className="flex items-center justify-between">
             <div>
@@ -316,27 +315,14 @@ const Winery: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-gray-800">Completed Wines</h3>
-              <p className="text-xl font-bold text-gray-900">{completedWines.length}</p>
-              <p className="text-xs text-gray-500">Ready for sale</p>
+              <h3 className="text-sm font-semibold text-gray-800">Production Status</h3>
+              <p className="text-xl font-bold text-gray-900">
+                {activeBatches.filter(batch => batch.state === 'must_fermenting').length} Fermenting
+              </p>
+              <p className="text-xs text-gray-500">Wine in progress</p>
             </div>
             <div className="p-2 rounded-lg bg-purple-100 text-purple-800">
               <span className="text-base">🍷</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-800">Total Bottles</h3>
-              <p className="text-xl font-bold text-gray-900">
-                {completedWines.reduce((total, batch) => total + batch.quantity, 0)}
-              </p>
-              <p className="text-xs text-gray-500">Available</p>
-            </div>
-            <div className="p-2 rounded-lg bg-green-100 text-green-800">
-              <span className="text-base">🍾</span>
             </div>
           </div>
         </div>
@@ -438,60 +424,6 @@ const Winery: React.FC = () => {
         </div>
       </div>
 
-      {/* Completed Wines */}
-      {completedWines.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-2.5 bg-gray-50 border-b">
-            <h4 className="text-sm font-semibold text-gray-800">Completed Wines</h4>
-          </div>
-          <div className="p-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {completedWines.map((batch) => (
-                <div key={batch.id} className="border rounded-lg p-3 hover:bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h5 className="font-semibold text-gray-900">
-                        {formatCompletedWineName(batch)}
-                      </h5>
-                      <p className="text-xs text-gray-600">
-                        {batch.quantity} bottles
-                      </p>
-                      <p className="text-[10px] text-gray-500 mt-1">
-                        Completed Week {batch.completedAt?.week}, {batch.completedAt?.season} {batch.completedAt?.year}
-                      </p>
-                      
-                      {/* Balance and Characteristics for completed wines */}
-                      <WineBatchBalanceDisplay batch={batch} />
-                      <WineQualityDisplay batch={batch} />
-                      <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
-
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="text-base">🍷</div>
-                      <Button
-                        onClick={() => handleBalanceBreakdownClick(batch.id)}
-                        size="sm"
-                        variant="outline"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                      >
-                        Balance Analysis
-                      </Button>
-                      <Button
-                        onClick={() => handleQualityBreakdownClick(batch.id)}
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                      >
-                        Quality Analysis
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Crushing Options Modal */}
       <CrushingOptionsModal

@@ -1,7 +1,7 @@
 import { WineBatch } from '../../../types/types';
 import { WorkCategory } from '../../../types/types';
-import { createActivity } from '../../activity/activityManager';
-import { calculateCrushingWork, validateCrushingBatch } from '../../activity/WorkCalculators/CrushingWorkCalculator';
+import { createActivity } from '../../activity/activitymanagers/activityManager';
+import { calculateCrushingWork, validateCrushingBatch } from '../../activity/workcalculators/crushingWorkCalculator';
 import { CrushingOptions } from '../characteristics/crushingCharacteristics';
 import { notificationService } from '../../../../components/layout/NotificationCenter';
 

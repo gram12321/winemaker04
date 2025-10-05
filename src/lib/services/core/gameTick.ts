@@ -3,9 +3,9 @@ import { getGameState, updateGameState } from './gameState';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
-import { progressActivities } from '../activity/activityManager';
+import { progressActivities } from '../activity/activitymanagers/activityManager';
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../vineyard/vineyardManager';
-import { checkAndTriggerBookkeeping } from '../activity/bookkeepingManager';
+import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
 
 /**

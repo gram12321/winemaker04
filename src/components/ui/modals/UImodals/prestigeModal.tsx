@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils';
 import { getEventDisplayData } from '@/lib/services/prestige/prestigeService';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadCN/dialog';
-import { Badge } from '../shadCN/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../shadCN/card';
-import { Separator } from '../shadCN/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../shadCN/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
+import { Badge } from '../../shadCN/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
+import { Separator } from '../../shadCN/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
 
 /**

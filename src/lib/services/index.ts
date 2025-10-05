@@ -27,4 +27,4 @@ export type { Company, CompanyStats } from './user/companyService';
 export type { HighscoreEntry, ScoreType } from './user/highscoreService';
 export type { VineyardPurchaseOption } from './vineyard/vinyardBuyingService';
 export * from './activity';
-export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activity/activityManager';
+export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activity/activitymanagers/activityManager';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { QualityFactorsBreakdown } from '../components/QualityFactorsBreakdown';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../shadCN/dialog';
+import { QualityFactorsBreakdown } from '../../components/QualityFactorsBreakdown';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
 
 interface QualityBreakdownModalProps {
   isOpen: boolean;

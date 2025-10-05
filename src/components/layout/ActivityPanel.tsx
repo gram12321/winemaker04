@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/shadCN/button';
 import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
 import { ActivityCard } from '@/components/ui/activities/ActivityCard';
 import { Activity } from '@/lib/types/types';
-import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activity/activityManager';
+import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { useGameStateWithData } from '@/hooks';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
