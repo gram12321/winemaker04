@@ -3,57 +3,15 @@ import { Vineyard, WineBatch } from '@/lib/types/types';
 import { QualityFactorsDisplay } from './qualityFactorBar';
 import { getVineyardQualityFactors, getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, FactorCard } from '@/components/ui/shadCN/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineQualityCategory, getColorCategory } from '@/lib/utils/utils';
-import { getVineyardPrestigeBreakdown } from '@/lib/services/prestige/prestigeService';
-import { REGION_PRICE_RANGES } from '@/lib/constants/vineyardConstants';
-
-const getRegionalPriceRange = (country: string, region: string): [number, number] => {
-  const countryData = REGION_PRICE_RANGES[country as keyof typeof REGION_PRICE_RANGES];
-  return countryData?.[region as keyof typeof countryData] || [5000, 30000];
-};
+import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 
 
-const ChevronDownIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-);
 
-const ChevronRightIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-  </svg>
-);
 
-const FactorCard = ({ 
-  title, 
-  description, 
-  color, 
-  children 
-}: { 
-  title: string; 
-  description: string; 
-  color: string; 
-  children: React.ReactNode; 
-}) => (
-  <Card className={`border-${color}-200 bg-${color}-50`}>
-    <CardHeader className="pb-2">
-      <CardTitle className={`flex items-center gap-2 text-${color}-800 text-base`}>
-        <div className={`w-2 h-2 bg-${color}-500 rounded-full`}></div>
-        {title}
-      </CardTitle>
-      <CardDescription className={`text-${color}-700`}>
-        {description}
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-2">
-      {children}
-    </CardContent>
-  </Card>
-);
 
 interface QualityFactorsBreakdownProps {
   vineyard?: Vineyard;

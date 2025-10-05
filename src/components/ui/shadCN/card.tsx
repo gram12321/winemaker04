@@ -107,6 +107,14 @@ interface GridCardProps {
   className?: string;
 }
 
+interface FactorCardProps {
+  title: string;
+  description: string;
+  color: 'blue' | 'purple' | 'green' | 'orange' | 'gray' | 'red';
+  children: ReactNode;
+  className?: string;
+}
+
 const GridCard = React.forwardRef<HTMLDivElement, GridCardProps>(
   ({ 
     icon, 
@@ -144,6 +152,26 @@ const GridCard = React.forwardRef<HTMLDivElement, GridCardProps>(
 )
 GridCard.displayName = "GridCard"
 
+const FactorCard = React.forwardRef<HTMLDivElement, FactorCardProps>(
+  ({ title, description, color, children, className = "" }, ref) => (
+    <Card ref={ref} className={`border-${color}-200 bg-${color}-50 ${className}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className={`flex items-center gap-2 text-${color}-800 text-base`}>
+          <div className={`w-2 h-2 bg-${color}-500 rounded-full`}></div>
+          {title}
+        </CardTitle>
+        <CardDescription className={`text-${color}-700`}>
+          {description}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {children}
+      </CardContent>
+    </Card>
+  )
+)
+FactorCard.displayName = "FactorCard"
+
 export { 
   Card, 
   CardHeader, 
@@ -152,5 +180,6 @@ export {
   CardDescription, 
   CardContent,
   SimpleCard,
-  GridCard
+  GridCard,
+  FactorCard
 }

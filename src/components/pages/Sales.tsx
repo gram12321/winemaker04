@@ -6,6 +6,7 @@ import { fulfillWineOrder, rejectWineOrder, generateSophisticatedWineOrders, gen
 import { loadWineBatches, saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineOrders } from '@/lib/database/customers/salesDB';
 import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
+import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, WineCharacteristicsDisplay } from '../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
@@ -553,7 +554,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
                             className="mr-2 text-gray-600 hover:text-gray-900"
                             title={expandedBatches[wine.id] ? 'Hide details' : 'Show details'}
                           >
-                            {expandedBatches[wine.id] ? '▼' : '▶'}
+                            {expandedBatches[wine.id] ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
                           </button>
                           {wine.grape}
                         </TableCell>

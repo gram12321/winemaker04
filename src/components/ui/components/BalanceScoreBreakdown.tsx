@@ -1,29 +1,11 @@
 import React, { useState } from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
-import {
-  calculateWineBalance,
-  calculateCharacteristicBreakdown,
-  calculateRules,
-  RANGE_ADJUSTMENTS,
-  RULES
-} from '@/lib/balance';
+import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 
-// Simple chevron icons as SVG components
-const ChevronDownIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
-const ChevronRightIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-  </svg>
-);
 
 interface BalanceScoreBreakdownProps {
   characteristics: WineCharacteristics;

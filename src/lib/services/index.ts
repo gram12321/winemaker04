@@ -13,7 +13,7 @@ export { processGameTick } from './core/gameTick';
 export { createVineyard, plantVineyard, getAllVineyards, purchaseVineyard } from './vineyard/vineyardService';
 export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './vineyard/vineyardManager';
 export { GRAPE_VARIETIES } from '../types/types';
-export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating } from './vineyard/vineyardValueCalc';
+export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating, getRegionalPriceRange } from './vineyard/vineyardValueCalc';
 export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from './prestige/prestigeService';
 export { getAllWineBatches, formatCompletedWineName, createWineBatchFromHarvest } from './wine/inventoryService';
 export { startFermentationActivity, bottleWine, isFermentationActionAvailable, processWeeklyFermentation } from './wine/winery/fermentationManager';

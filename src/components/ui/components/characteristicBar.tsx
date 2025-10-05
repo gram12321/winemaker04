@@ -2,6 +2,7 @@ import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { getColorClass, formatNumber } from '@/lib/utils/utils';
+import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 
 interface CharacteristicBarProps {
@@ -237,7 +238,7 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
       >
         <span>{title}</span>
         <span className="text-xs">
-          {isExpanded ? '▼' : '▶'}
+          {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
         </span>
       </button>
       

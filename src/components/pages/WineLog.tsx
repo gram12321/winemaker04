@@ -5,6 +5,7 @@ import { WineLogEntry } from '@/lib/types/types';
 import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineCharacteristicsDisplay } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber, formatGameDateFromObject } from '@/lib/utils/utils';
+import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 
 interface WineLogProps {
   currentCompany?: any;
@@ -222,7 +223,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                                   className="text-gray-600 hover:text-gray-900"
                                   title={expandedEntries[entry.id] ? 'Hide details' : 'Show details'}
                                 >
-                                  {expandedEntries[entry.id] ? '▼' : '▶'}
+                                  {expandedEntries[entry.id] ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
                                 </button>
                                 {entry.grape}
                               </div>

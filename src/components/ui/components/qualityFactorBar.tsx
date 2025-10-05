@@ -1,6 +1,7 @@
 import React from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { getColorClass, formatNumber, QUALITY_FACTOR_EMOJIS } from '@/lib/utils/utils';
+import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 
 // Quality factor types for wine value calculation
 export type QualityFactorType =
@@ -213,7 +214,7 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
       >
         <span>{title}</span>
         <span className="text-xs">
-          {isExpanded ? '▼' : '▶'}
+          {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
         </span>
       </button>
 

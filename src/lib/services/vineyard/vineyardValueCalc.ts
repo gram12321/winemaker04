@@ -21,6 +21,17 @@ export function normalizeAspect(aspect: number): number {
 }
 
 /**
+ * Get regional price range for a specific country and region
+ * @param country - Country name
+ * @param region - Region name
+ * @returns Price range as [basePrice, maxPrice] in euros per hectare
+ */
+export function getRegionalPriceRange(country: string, region: string): [number, number] {
+  const countryData = REGION_PRICE_RANGES[country as keyof typeof REGION_PRICE_RANGES];
+  return countryData?.[region as keyof typeof countryData] || [5000, 30000];
+}
+
+/**
  * Calculate land value based on country, region, altitude, and aspect
  * Incorporates real price ranges and improved normalization
  * @param country - Country name
@@ -52,8 +63,7 @@ export function calculateLandValue(
 
   const rawPriceFactor = (prestigeNormalized + aspectNormalized + altitudeNormalized) / 3;
 
-  const priceRange = getRegionData(REGION_PRICE_RANGES, [5000, 30000]) as [number, number];
-  const [basePrice, maxPrice] = priceRange;
+  const [basePrice, maxPrice] = getRegionalPriceRange(country, region);
 
   return Math.round(basePrice + rawPriceFactor * (maxPrice - basePrice));
 }
