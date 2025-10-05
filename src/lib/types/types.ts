@@ -167,10 +167,9 @@ export interface WineBatch {
   naturalYield: number; // 0-1 scale, affects harvest yield
   fragile: number; // 0-1 scale, affects work requirements (0=robust, 1=fragile)
   proneToOxidation: number; // 0-1 scale, affects wine stability
-  
-  harvestDate: GameDate;
-  createdAt: GameDate;
-  completedAt?: GameDate; // When bottling is completed
+  harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
+  harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch
+  bottledDate?: GameDate; // When bottling is completed
 }
 
 // Wine production log entry - recorded when wine is bottled
@@ -187,7 +186,7 @@ export interface WineLogEntry {
   estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
   bottledDate: GameDate;
-  created_at: string; // Database timestamp
+  // created_at removed; use bottledDate for ordering
 }
 
 // ===== SALES TYPES =====

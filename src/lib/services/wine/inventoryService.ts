@@ -40,7 +40,7 @@ async function findCompatibleWineBatch(
   const compatibleBatch = existingBatches.find(batch => 
     batch.vineyardId === vineyardId &&
     batch.grape === grape &&
-    batch.harvestDate.year === harvestYear &&
+    batch.harvestStartDate.year === harvestYear &&
     batch.state === 'grapes' // Only combine with batches still in grape stage
   );
   
@@ -169,6 +169,21 @@ export async function createWineBatchFromHarvest(
     const estimatedPrice = calculateEstimatedPrice(combinedBatch, vineyard);
     combinedBatch.estimatedPrice = estimatedPrice;
     
+    // Update harvest period bounds
+    const startCandidate = existingBatch.harvestStartDate;
+    const endCandidate = existingBatch.harvestEndDate;
+    
+    // Helper to compare dates as absolute weeks
+    const toAbs = (d: { week: number; season: string; year: number }): number => {
+      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+      const idx = seasons.indexOf(d.season);
+      return (d.year - 2024) * 52 + idx * 13 + (d.week - 1);
+    };
+    const newStart = toAbs(harvestDate) < toAbs(startCandidate) ? harvestDate : startCandidate;
+    const newEnd = toAbs(harvestDate) > toAbs(endCandidate) ? harvestDate : endCandidate;
+    combinedBatch.harvestStartDate = newStart as any;
+    combinedBatch.harvestEndDate = newEnd as any;
+    
     await saveWineBatch(combinedBatch);
     triggerGameUpdate();
     return combinedBatch;
@@ -191,8 +206,8 @@ export async function createWineBatchFromHarvest(
       naturalYield: grapeMetadata.naturalYield,
       fragile: grapeMetadata.fragile,
       proneToOxidation: grapeMetadata.proneToOxidation,
-      harvestDate,
-      createdAt: harvestDate
+      harvestStartDate: harvestDate,
+      harvestEndDate: harvestDate
     };
 
     // Calculate estimated price using the pricing service
@@ -222,7 +237,7 @@ export async function updateInventoryBatch(batchId: string, updates: Partial<Win
 // Format completed wine name
 export function formatCompletedWineName(batch: WineBatch): string {
   if (batch.state === 'bottled') {
-    return `${batch.grape}, ${batch.vineyardName}, ${batch.harvestDate.year}`;
+    return `${batch.grape}, ${batch.vineyardName}, ${batch.harvestStartDate.year}`;
   }
   return `${batch.grape} (${batch.state})`;
 }

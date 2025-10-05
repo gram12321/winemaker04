@@ -103,11 +103,10 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 };
 
 // Helper function to format harvest period (start and end dates)
-const formatHarvestPeriod = (harvestDate: any): string => {
-  // For now, we'll show the harvest date as both start and end
-  // In the future, this could be enhanced to show actual harvest period range
-  const startDate = formatGameDateFromObject(harvestDate);
-  return `${startDate} - ${startDate}`;
+const formatHarvestPeriod = (wine: WineBatch): string => {
+  const startDate = formatGameDateFromObject(wine.harvestStartDate);
+  const endDate = formatGameDateFromObject(wine.harvestEndDate);
+  return `${startDate} - ${endDate}`;
 };
 
 interface WineCellarTabProps {
@@ -131,13 +130,13 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
   // Define sortable columns for wine cellar
   const cellarColumns: SortableColumn<WineBatch>[] = [
     { key: 'grape', label: 'Wine', sortable: true },
-    { key: 'harvestDate', label: 'Vintage', sortable: true, accessor: (wine) => wine.harvestDate.year },
+    { key: 'harvestStartDate', label: 'Vintage', sortable: true, accessor: (wine) => wine.harvestStartDate.year },
     { key: 'vineyardName', label: 'Vineyard', sortable: true },
     { 
-      key: 'harvestDate', 
+      key: 'harvestStartDate', 
       label: 'Harvest Period', 
       sortable: true,
-      accessor: (wine) => formatHarvestPeriod(wine.harvestDate)
+      accessor: (wine) => formatHarvestPeriod(wine)
     },
     { key: 'quality', label: 'Quality', sortable: true },
     { key: 'balance', label: 'Balance', sortable: true },
@@ -276,9 +275,9 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 </TableHead>
                 <TableHead 
                   sortable 
-                  onSort={() => handleCellarSort('harvestDate')}
-                  sortIndicator={getCellarSortIndicator('harvestDate')}
-                  isSorted={isCellarColumnSorted('harvestDate')}
+                  onSort={() => handleCellarSort('harvestStartDate')}
+                  sortIndicator={getCellarSortIndicator('harvestStartDate')}
+                  isSorted={isCellarColumnSorted('harvestStartDate')}
                 >
                   Vintage
                 </TableHead>
@@ -342,7 +341,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                         {wine.vineyardName}
                       </TableCell>
                       <TableCell className="text-gray-500">
-                        {wine.harvestDate.year}
+                        {wine.harvestStartDate.year}
                       </TableCell>
                       <TableCell className="text-gray-500">
                         <WineScoreDisplay wine={wine} />
@@ -422,7 +421,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b pb-3">
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Harvest Period</div>
-                                <div className="text-sm font-medium text-gray-900">{formatHarvestPeriod(wine.harvestDate)}</div>
+                                <div className="text-sm font-medium text-gray-900">{formatHarvestPeriod(wine)}</div>
                               </div>
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
@@ -456,9 +455,9 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                             </div>
 
                             {/* Completion Date */}
-                            {wine.completedAt && (
+                            {wine.bottledDate && (
                               <div className="text-xs text-gray-600 border-b pb-2">
-                                <span className="font-medium">Completed:</span> Week {wine.completedAt.week}, {wine.completedAt.season} {wine.completedAt.year}
+                                <span className="font-medium">Completed:</span> Week {wine.bottledDate.week}, {wine.bottledDate.season} {wine.bottledDate.year}
                               </div>
                             )}
                             
@@ -496,10 +495,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                     <h3 className="text-lg font-bold text-gray-900">{wine.grape}</h3>
                     <div className="text-sm text-gray-600 mt-1">{wine.vineyardName}</div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Vintage {wine.harvestDate.year} • {formatHarvestPeriod(wine.harvestDate)}
-                      {wine.completedAt && (
+                      Vintage {wine.harvestStartDate.year} • {formatHarvestPeriod(wine)}
+                      {wine.bottledDate && (
                         <div className="text-xs text-gray-500 mt-1">
-                          Completed: Week {wine.completedAt.week}, {wine.completedAt.season} {wine.completedAt.year}
+                          Completed: Week {wine.bottledDate.week}, {wine.bottledDate.season} {wine.bottledDate.year}
                         </div>
                       )}
                     </div>

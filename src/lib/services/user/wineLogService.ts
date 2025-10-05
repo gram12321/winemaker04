@@ -18,7 +18,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       throw new Error('Can only record bottled wines in the production log');
     }
 
-    if (!wineBatch.completedAt) {
+    if (!wineBatch.bottledDate) {
       throw new Error('Bottled wine must have a completed date');
     }
 
@@ -28,19 +28,18 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       vineyard_id: wineBatch.vineyardId,
       vineyard_name: wineBatch.vineyardName,
       grape_variety: wineBatch.grape,
-      vintage: wineBatch.harvestDate.year,
+      vintage: wineBatch.harvestStartDate.year,
       quantity: wineBatch.quantity,
       quality: wineBatch.quality,
       balance: wineBatch.balance,
       characteristics: wineBatch.characteristics,
-      final_price: wineBatch.estimatedPrice,
-      harvest_week: wineBatch.harvestDate.week,
-      harvest_season: wineBatch.harvestDate.season,
-      harvest_year: wineBatch.harvestDate.year,
-      bottled_week: wineBatch.completedAt.week,
-      bottled_season: wineBatch.completedAt.season,
-      bottled_year: wineBatch.completedAt.year,
-      created_at: new Date().toISOString()
+      estimated_price: wineBatch.estimatedPrice,
+      harvest_week: wineBatch.harvestStartDate.week,
+      harvest_season: wineBatch.harvestStartDate.season,
+      harvest_year: wineBatch.harvestStartDate.year,
+      bottled_week: wineBatch.bottledDate.week,
+      bottled_season: wineBatch.bottledDate.season,
+      bottled_year: wineBatch.bottledDate.year
     };
 
     const { error } = await supabase
@@ -64,12 +63,12 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
           {
             vineyardId: wineBatch.vineyardId,
             vineyardName: wineBatch.vineyardName,
-            vintage: wineBatch.harvestDate.year,
+            vintage: wineBatch.harvestStartDate.year,
             grape: wineBatch.grape,
             quantity: wineBatch.quantity,
             quality: wineBatch.quality,
             balance: wineBatch.balance,
-            price: wineBatch.finalPrice
+      price: wineBatch.estimatedPrice
           }
         );
 
@@ -111,7 +110,7 @@ export async function loadWineLog(): Promise<WineLogEntry[]> {
       quality: row.quality,
       balance: row.balance,
       characteristics: row.characteristics,
-      estimatedPrice: row.final_price,
+      estimatedPrice: row.estimated_price,
       harvestDate: {
         week: row.harvest_week,
         season: row.harvest_season,
@@ -121,8 +120,7 @@ export async function loadWineLog(): Promise<WineLogEntry[]> {
         week: row.bottled_week,
         season: row.bottled_season,
         year: row.bottled_year
-      },
-      created_at: row.created_at
+      }
     }));
   } catch (error) {
     console.error('Error loading wine log:', error);

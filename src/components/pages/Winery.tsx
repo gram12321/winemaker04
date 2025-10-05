@@ -348,7 +348,7 @@ const Winery: React.FC = () => {
                         {batch.grape} - {batch.vineyardName}
                       </h5>
                       <p className="text-xs text-gray-600">
-                        {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestDate.year}
+                        {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </p>
                       <p className="text-xs font-medium text-gray-800 mt-1">
                         {getBatchStatus(batch)}

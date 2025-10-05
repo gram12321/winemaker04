@@ -73,7 +73,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   const success = await updateInventoryBatch(batchId, {
     state: 'bottled',
     quantity: Math.floor(batch.quantity / 1.5), // Convert kg to bottles (1.5kg per bottle)
-    completedAt: {
+    bottledDate: {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024

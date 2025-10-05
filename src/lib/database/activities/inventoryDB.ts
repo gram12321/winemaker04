@@ -28,22 +28,21 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         balance: batch.balance,
         characteristics: batch.characteristics, // Store as JSON
         breakdown: batch.breakdown, // Store breakdown as JSON
-        final_price: batch.estimatedPrice,
+        estimated_price: batch.estimatedPrice,
         asking_price: batch.askingPrice,
         grape_color: batch.grapeColor,
         natural_yield: batch.naturalYield,
         fragile: batch.fragile,
         prone_to_oxidation: batch.proneToOxidation,
-        harvest_week: Math.round(batch.harvestDate.week),
-        harvest_season: batch.harvestDate.season,
-        harvest_year: Math.round(batch.harvestDate.year),
-        created_week: Math.round(batch.createdAt.week),
-        created_season: batch.createdAt.season,
-        created_year: Math.round(batch.createdAt.year),
-        completed_week: batch.completedAt ? Math.round(batch.completedAt.week) : null,
-        completed_season: batch.completedAt?.season,
-        completed_year: batch.completedAt ? Math.round(batch.completedAt.year) : null,
-        updated_at: new Date().toISOString()
+        harvest_start_week: Math.round(batch.harvestStartDate.week),
+        harvest_start_season: batch.harvestStartDate.season,
+        harvest_start_year: Math.round(batch.harvestStartDate.year),
+        harvest_end_week: Math.round(batch.harvestEndDate.week),
+        harvest_end_season: batch.harvestEndDate.season,
+        harvest_end_year: Math.round(batch.harvestEndDate.year),
+        bottled_week: batch.bottledDate ? Math.round(batch.bottledDate.week) : null,
+        bottled_season: batch.bottledDate?.season,
+        bottled_year: batch.bottledDate ? Math.round(batch.bottledDate.year) : null
       });
 
     if (error) throw error;
@@ -56,7 +55,9 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
 export const loadWineBatches = async (): Promise<WineBatch[]> => {
   try {
     const { data, error } = await getCompanyQuery(WINE_BATCHES_TABLE)
-      .order('created_at', { ascending: true });
+      .order('harvest_start_year', { ascending: true })
+      .order('harvest_start_season', { ascending: true })
+      .order('harvest_start_week', { ascending: true });
 
     if (error) throw error;
 
@@ -84,26 +85,27 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
           tannins: 0.5
         }, // Default characteristics if not set
         breakdown: row.breakdown || undefined, // Load breakdown data
-        estimatedPrice: row.final_price || 10.50,
+        estimatedPrice: row.estimated_price || 10.50,
         askingPrice: row.asking_price, // Will default to undefined if not set
         grapeColor: row.grape_color || grapeData.grapeColor,
         naturalYield: row.natural_yield || grapeData.naturalYield,
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
-        harvestDate: {
-          week: row.harvest_week || 1,
-          season: (row.harvest_season || 'Spring') as Season,
-          year: row.harvest_year || 2024
+        harvestStartDate: {
+          week: row.harvest_start_week,
+          season: row.harvest_start_season as Season,
+          year: row.harvest_start_year
         },
-        createdAt: {
-          week: row.created_week || 1,
-          season: (row.created_season || 'Spring') as Season,
-          year: row.created_year || 2024
+        harvestEndDate: {
+          week: row.harvest_end_week,
+          season: row.harvest_end_season as Season,
+          year: row.harvest_end_year
         },
-        completedAt: row.completed_week ? {
-          week: row.completed_week,
-          season: row.completed_season as Season,
-          year: row.completed_year
+
+        bottledDate: row.bottled_week ? {
+          week: row.bottled_week,
+          season: row.bottled_season as Season,
+          year: row.bottled_year
         } : undefined
       };
     });
