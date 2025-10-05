@@ -82,27 +82,8 @@ export interface Vineyard {
   // remainingYield: number | null; // Used in old iterations, for tracking yield doing harvest. Commented out as per request
   // upgrades?: string[]; // Commented out as per request
   // generateFarmlandPreview not implemented yet (Creates a specific Farmland instance based on country/region for starting conditions)
-  
-  // Prestige events for this vineyard
-  prestigeEvents?: PrestigeEvent[];
 }
 
-// Derived, ephemeral prestige factor outputs for UI/tooltips and event creation
-export interface VineyardPrestigeFactors {
-  // Context values for tooltips/UI
-  maxLandValue: number; // € per ha max (excl. premium regions)
-  landValuePerHectare: number; // € per ha
-
-  // Base 0..1 stages (derived)
-  ageBase01: number; // vineyardAgePrestigeModifier(age)
-  landBase01: number; // log(totalValue/maxLandValue + 1)
-  ageWithSuitability01: number; // clamp01(ageBase01 * suitability)
-  landWithSuitability01: number; // clamp01(landBase01 * suitability)
-
-  // Scaled (event amounts; >= 0)
-  ageScaled: number; // calculateAsymmetricalMultiplier(ageWithSuitability01) - 1
-  landScaled: number; // calculateAsymmetricalMultiplier(landWithSuitability01) - 1
-}
 
 // ===== WINE TYPES =====
 
@@ -264,14 +245,78 @@ export interface WineOrder {
 
 // ===== PRESTIGE TYPES =====
 
+// Discriminated union payloads for prestige events
+export type PrestigeEventType =
+  | 'company_value'
+  | 'sale'
+  | 'contract'
+  | 'penalty'
+  | 'vineyard_sale'
+  | 'vineyard_base'
+  | 'vineyard_achievement'
+  | 'vineyard_age'
+  | 'vineyard_land';
+
+export interface PrestigePayloadBase { }
+
+export interface PrestigePayloadCompanyValue extends PrestigePayloadBase {
+  label: string;
+  companyMoney: number;
+  maxLandValue: number;
+  prestigeBase01: number;
+}
+
+export interface PrestigePayloadVineyardCommon extends PrestigePayloadBase {
+  label: string;
+  vineyardId: string;
+  vineyardName: string;
+}
+
+export interface PrestigePayloadVineyardAge extends PrestigePayloadVineyardCommon {
+  vineAge: number;
+  ageBase01: number;
+  ageWithSuitability01: number;
+}
+
+export interface PrestigePayloadVineyardLand extends PrestigePayloadVineyardCommon {
+  totalValue: number;
+  landValuePerHectare: number;
+  hectares: number;
+  maxLandValue: number;
+  landBase01: number;
+  landWithSuitability01: number;
+}
+
+export interface PrestigePayloadVineyardSale extends PrestigePayloadVineyardCommon {
+  customerName: string;
+  wineName: string;
+  saleValue: number;
+  vineyardPrestigeFactor: number;
+}
+
+export interface PrestigePayloadVineyardAchievement extends PrestigePayloadVineyardCommon {
+  event: 'planting' | 'aging' | 'improvement' | 'harvest';
+}
+
+export type PrestigeEventPayload =
+  | { type: 'company_value'; payload: PrestigePayloadCompanyValue }
+  | { type: 'sale'; payload: { label: string; customerName: string; wineName: string; saleValue: number } }
+  | { type: 'contract'; payload: { label: string } & Record<string, unknown> }
+  | { type: 'penalty'; payload: { label: string } & Record<string, unknown> }
+  | { type: 'vineyard_sale'; payload: PrestigePayloadVineyardSale }
+  | { type: 'vineyard_base'; payload: PrestigePayloadVineyardCommon }
+  | { type: 'vineyard_achievement'; payload: PrestigePayloadVineyardAchievement }
+  | { type: 'vineyard_age'; payload: PrestigePayloadVineyardAge }
+  | { type: 'vineyard_land'; payload: PrestigePayloadVineyardLand };
+
 // Prestige system interfaces
 export interface PrestigeEvent {
   id: string;
-  type: 'vineyard' | 'company_value' | 'sale' | 'contract' | 'penalty' | 'vineyard_sale' | 'vineyard_base' | 'vineyard_achievement' | 'vineyard_age' | 'vineyard_land';
-  amount: number;
+  type: PrestigeEventType;
+  amount: number; // current or base amount depending on context
   timestamp: number;
   decayRate: number; // 0 for base, 0.95 for sales, etc.
-  description: string;
+  description?: string; // optional; UI should derive from metadata
   sourceId?: string; // vineyard ID, etc.
   created_at?: string;
   updated_at?: string;
@@ -279,31 +324,13 @@ export interface PrestigeEvent {
   // UI-required fields (calculated by service layer)
   originalAmount?: number; // Original amount when created
   currentAmount?: number;  // Current amount after decay
-  category?: 'company' | 'vineyard'; // Computed category for UI grouping
   
-  // Structured metadata for UI display (optional, computed at event creation)
-  metadata?: {
-    vineyardName?: string;
-    vineyardId?: string;
-    // For vineyard_age events
-    vineAge?: number;
-    ageBase01?: number;
-    ageWithSuitability01?: number;
-    // For vineyard_land events  
-    totalValue?: number;
-    landValuePerHectare?: number;
-    hectares?: number;
-    maxLandValue?: number;
-    landBase01?: number;
-    landWithSuitability01?: number;
-    // For sales
-    customerName?: string;
-    wineName?: string;
-    saleValue?: number;
-    // For company_value events
-    companyMoney?: number;
-    prestigeBase01?: number;
-  };
+  // Structured metadata for UI display (computed at event creation)
+  metadata?: PrestigeEventPayload extends { type: infer T; payload: infer P }
+    ? T extends PrestigeEventType
+      ? P
+      : never
+    : never;
 }
 
 export interface RelationshipBoost {

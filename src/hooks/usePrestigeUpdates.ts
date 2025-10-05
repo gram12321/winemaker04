@@ -4,6 +4,7 @@ import { getGameState, getCurrentCompany } from '../lib/services/core/gameState'
 import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
 import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
+import { getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
 
 /**
  * Unified hook that monitors all prestige-affecting changes and updates prestige events accordingly
@@ -52,12 +53,16 @@ export function usePrestigeUpdates() {
         } else if (currentMoney !== lastCompanyMoneyRef.current) {
           
           // Update company value prestige with logarithmic scaling
-          const companyValuePrestige = Math.log(currentMoney / 1000000 + 1) * 2;
+          const companyValuePrestige = Math.log(currentMoney / getMaxLandValue() + 1) * 2;
           await updateBasePrestigeEvent(
             'company_value',
             'company_money',
             companyValuePrestige,
-            `Company value: €${currentMoney.toLocaleString()}`
+            {
+              companyMoney: currentMoney,
+              maxLandValue: getMaxLandValue(),
+              prestigeBase01: companyValuePrestige,
+            }
           );
           
           lastCompanyMoneyRef.current = currentMoney;

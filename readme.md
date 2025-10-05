@@ -49,6 +49,7 @@ return (
 ### 🧠 Development Patterns
 
 **CRITICAL RULES FOR AI AGENTS:**
+- **NEVER make any effort for backwards compability, database save, data migration or anything like that. We are in dev phase. Database will simply be deleted if any compability issue arrice**:
 - **ALWAYS use barrel exports**: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`
 - **ALWAYS use custom hooks**: `useLoadingState()`, `useGameStateWithData()`, `useGameState()`, `useGameUpdates()`, `usePrestigeUpdates()`, `useWineBalance()`, `useWineBatchBalance()`, `useFormattedBalance()`, `useBalanceQuality()`, `useTableSortWithAccessors()`
 - **ALWAYS use shared interfaces**: `PageProps`, `NavigationProps`, `CompanyProps`, `DialogProps`, `FormProps`, `TableProps`, `LoadingProps`, `CardProps`, `BaseComponentProps` from `@/components/UItypes`

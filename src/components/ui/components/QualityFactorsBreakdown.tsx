@@ -3,15 +3,11 @@ import { Vineyard, WineBatch } from '@/lib/types/types';
 import { QualityFactorsDisplay } from './qualityFactorBar';
 import { getVineyardQualityFactors, getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, FactorCard } from '@/components/ui/shadCN/card';
+import { Card, CardHeader, CardTitle, CardContent, FactorCard } from '@/components/ui/shadCN/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineQualityCategory, getColorCategory } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
-
-
-
-
 
 interface QualityFactorsBreakdownProps {
   vineyard?: Vineyard;
@@ -317,6 +313,31 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                               </div>
                             </div>
                           </div>
+
+                          {/* Minimal Vineyard Prestige Events */}
+                          {(prestigeBreakdown && (vineyard || wineBatchVineyard)) && (() => {
+                            const targetVineyard = vineyard || wineBatchVineyard;
+                            const vineyardData = targetVineyard ? prestigeBreakdown[targetVineyard.id] : null;
+                            if (!vineyardData || !Array.isArray(vineyardData.events) || vineyardData.events.length === 0) {
+                              return null;
+                            }
+                            return (
+                              <div className="mt-2 space-y-1">
+                                <div className="text-xs text-purple-700 font-medium">Vineyard Prestige</div>
+                                <div className="rounded border border-purple-200 bg-purple-50/50">
+                                  {vineyardData.events.map((event: any, idx: number) => {
+                                    const label = event.metadata?.label || event.type;
+                                    return (
+                                      <div key={idx} className={`px-2 py-0.5 text-xs text-purple-800 flex items-center justify-between ${idx !== vineyardData.events.length - 1 ? 'border-b border-purple-200' : ''}`}>
+                                        <span className="truncate mr-2" title={event.description}>{label}</span>
+                                        <span className="font-mono">{formatNumber(event.currentAmount ?? event.amount, { decimals: 2, forceDecimals: true })}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                     </FactorCard>
 
@@ -423,69 +444,6 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                   </div>
                 )}
 
-                {/* Prestige Breakdown */}
-                {(vineyard || wineBatchVineyard) && prestigeBreakdown && (
-                  <Card className="border-purple-200 bg-purple-50">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-purple-800 text-base">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        Vineyard Prestige Breakdown
-                      </CardTitle>
-                      <CardDescription className="text-purple-700">
-                        Detailed sources contributing to {(vineyard || wineBatchVineyard)?.name}'s prestige
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {(() => {
-                        const targetVineyard = vineyard || wineBatchVineyard;
-                        const vineyardData = targetVineyard ? prestigeBreakdown[targetVineyard.id] : null;
-                        if (!vineyardData || !vineyardData.events || vineyardData.events.length === 0) {
-                          return (
-                            <div className="text-sm text-purple-600">
-                              No prestige events found for this vineyard.
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between mb-4 pb-3 border-b border-purple-300">
-                              <span className="text-sm font-semibold text-purple-800">Total Vineyard Prestige:</span>
-                              <span className="text-lg font-bold text-purple-900">
-                                {formatNumber(vineyardData.totalPrestige, { decimals: 2, forceDecimals: true })}
-                              </span>
-                            </div>
-                            {vineyardData.events.map((event: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between py-3 px-4 bg-purple-100 rounded-lg border border-purple-200">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-purple-800 mb-1">{event.description}</p>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-purple-600 bg-purple-200 px-2 py-1 rounded">
-                                      {event.type.replace('vineyard_', '').replace('_', ' ')}
-                                    </span>
-                                    <span className="text-xs text-purple-600">
-                                      {event.decayRate === 0 ? 'No decay' : `${formatNumber((1 - event.decayRate) * 100, { decimals: 1, forceDecimals: true })}% weekly decay`}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="text-right ml-4">
-                                  <p className="text-sm font-bold text-purple-900">
-                                    {formatNumber(event.currentAmount, { decimals: 2, forceDecimals: true })}
-                                  </p>
-                                  {event.originalAmount !== event.currentAmount && (
-                                    <p className="text-xs text-purple-600">
-                                      (was {formatNumber(event.originalAmount, { decimals: 2, forceDecimals: true })})
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* Improvement Suggestions */}
                 {vineyard && (
