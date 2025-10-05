@@ -165,9 +165,9 @@ export async function createWineBatchFromHarvest(
       characteristics
     );
     
-    // Recalculate final price for the combined batch
-    const finalPrice = calculateFinalWinePrice(combinedBatch, vineyard);
-    combinedBatch.finalPrice = finalPrice;
+    // Recalculate estimated price for the combined batch
+    const estimatedPrice = calculateFinalWinePrice(combinedBatch, vineyard);
+    combinedBatch.estimatedPrice = estimatedPrice;
     
     await saveWineBatch(combinedBatch);
     triggerGameUpdate();
@@ -186,7 +186,7 @@ export async function createWineBatchFromHarvest(
       balance: balanceResult.score, // Use calculated balance from wine characteristics
       characteristics,
       breakdown, // Store breakdown data
-      finalPrice: 0, // Will be calculated below
+      estimatedPrice: 0, // Will be calculated below
       grapeColor: grapeMetadata.grapeColor,
       naturalYield: grapeMetadata.naturalYield,
       fragile: grapeMetadata.fragile,
@@ -195,9 +195,9 @@ export async function createWineBatchFromHarvest(
       createdAt: harvestDate
     };
 
-    // Calculate final price using the new pricing service
-    const finalPrice = calculateFinalWinePrice(wineBatch, vineyard);
-    wineBatch.finalPrice = finalPrice;
+    // Calculate estimated price using the pricing service
+    const estimatedPrice = calculateFinalWinePrice(wineBatch, vineyard);
+    wineBatch.estimatedPrice = estimatedPrice;
 
     await saveWineBatch(wineBatch);
     triggerGameUpdate();

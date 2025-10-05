@@ -33,7 +33,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       quality: wineBatch.quality,
       balance: wineBatch.balance,
       characteristics: wineBatch.characteristics,
-      final_price: wineBatch.finalPrice,
+      final_price: wineBatch.estimatedPrice,
       harvest_week: wineBatch.harvestDate.week,
       harvest_season: wineBatch.harvestDate.season,
       harvest_year: wineBatch.harvestDate.year,
@@ -111,7 +111,7 @@ export async function loadWineLog(): Promise<WineLogEntry[]> {
       quality: row.quality,
       balance: row.balance,
       characteristics: row.characteristics,
-      finalPrice: row.final_price,
+      estimatedPrice: row.final_price,
       harvestDate: {
         week: row.harvest_week,
         season: row.harvest_season,
@@ -203,7 +203,7 @@ export async function calculateVineyardStats(vineyardId: string): Promise<Vineya
   const totalBottles = history.reduce((sum, entry) => sum + entry.quantity, 0);
   const averageQuality = history.reduce((sum, entry) => sum + entry.quality, 0) / history.length;
   const averageBalance = history.reduce((sum, entry) => sum + entry.balance, 0) / history.length;
-  const averagePrice = history.reduce((sum, entry) => sum + entry.finalPrice, 0) / history.length;
+  const averagePrice = history.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / history.length;
   
   const bestVintage = history.reduce((best, entry) => 
     !best || entry.quality > best.quality ? { year: entry.vintage, quality: entry.quality } : best

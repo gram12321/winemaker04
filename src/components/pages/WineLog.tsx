@@ -249,7 +249,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                               </div>
                             </td>
                             <td className="py-3">
-                              <div className="font-medium">{formatCurrency(entry.finalPrice)}</div>
+                              <div className="font-medium">{formatCurrency(entry.estimatedPrice)}</div>
                               <div className="text-xs text-gray-500">per bottle</div>
                             </td>
                             <td className="py-3">
@@ -423,7 +423,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
 
               const totalBottles = vineyardEntries.reduce((sum, entry) => sum + entry.quantity, 0);
               const avgQuality = vineyardEntries.reduce((sum, entry) => sum + entry.quality, 0) / vineyardEntries.length;
-              const avgPrice = vineyardEntries.reduce((sum, entry) => sum + entry.finalPrice, 0) / vineyardEntries.length;
+              const avgPrice = vineyardEntries.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / vineyardEntries.length;
               const bestWine = vineyardEntries.reduce((best, entry) => 
                 !best || entry.quality > best.quality ? entry : best
               );

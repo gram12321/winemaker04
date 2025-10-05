@@ -28,7 +28,7 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         balance: batch.balance,
         characteristics: batch.characteristics, // Store as JSON
         breakdown: batch.breakdown, // Store breakdown as JSON
-        final_price: batch.finalPrice,
+        final_price: batch.estimatedPrice,
         asking_price: batch.askingPrice,
         grape_color: batch.grapeColor,
         natural_yield: batch.naturalYield,
@@ -84,7 +84,7 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
           tannins: 0.5
         }, // Default characteristics if not set
         breakdown: row.breakdown || undefined, // Load breakdown data
-        finalPrice: row.final_price || 10.50,
+        estimatedPrice: row.final_price || 10.50,
         askingPrice: row.asking_price, // Will default to undefined if not set
         grapeColor: row.grape_color || grapeData.grapeColor,
         naturalYield: row.natural_yield || grapeData.naturalYield,

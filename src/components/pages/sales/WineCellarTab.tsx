@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { formatCurrency, formatNumber, formatPercent, formatGameDateFromObject, getWineQualityCategory, getColorCategory, getColorClass, getBadgeColorClasses } from '@/lib/utils/utils';
+import { SALES_CONSTANTS } from '@/lib/constants';
+import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
@@ -13,8 +15,6 @@ const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const balanceResult = useWineBatchBalance(batch);
   const formattedBalance = useFormattedBalance(balanceResult);
   const balanceQuality = useBalanceQuality(balanceResult);
-  
-  // Add color coding similar to quality display
   const colorClass = getColorClass(batch.balance);
   
   return (
@@ -82,12 +82,12 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       sortable: true,
       accessor: (wine) => calculateWineCombinedScore(wine)
     },
-    { key: 'finalPrice', label: 'Base Price', sortable: true },
+    { key: 'estimatedPrice' as any, label: 'Estimated Price', sortable: true },
     { 
       key: 'askingPrice', 
       label: 'Asking Price', 
       sortable: true,
-      accessor: (wine) => wine.askingPrice ?? wine.finalPrice
+      accessor: (wine) => wine.askingPrice ?? wine.estimatedPrice
     },
     { key: 'quantity', label: 'Bottles', sortable: true }
   ];
@@ -227,11 +227,11 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 </TableHead>
                 <TableHead 
                   sortable 
-                  onSort={() => handleCellarSort('finalPrice')}
-                  sortIndicator={getCellarSortIndicator('finalPrice')}
-                  isSorted={isCellarColumnSorted('finalPrice')}
+                  onSort={() => handleCellarSort('estimatedPrice' as any)}
+                  sortIndicator={getCellarSortIndicator('estimatedPrice' as any)}
+                  isSorted={isCellarColumnSorted('estimatedPrice' as any)}
                 >
-                  Base Price
+                  Estimated Price
                 </TableHead>
                 <TableHead 
                   sortable 
@@ -301,7 +301,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                                     <div>Raw Average: <span className="font-medium">{formatPercent(rawCombinedScore, 1, true)}</span></div>
                                     <div>Final Score: <span className="font-medium">{formatPercent(combinedScore, 1, true)}</span></div>
                                     <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-                                      Formula: (Quality + Balance) ÷ 2, then skewed
+                                      Formula: (Quality + Balance) ÷ 2
                                     </div>
                                   </div>
                                 </TooltipContent>
@@ -311,7 +311,33 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                         })()}
                       </TableCell>
                       <TableCell className="text-gray-500 font-medium">
-                        {formatCurrency(wine.finalPrice, 2)}
+                        {(() => {
+                          const combinedScore = calculateWineCombinedScore(wine);
+                          const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
+                          const basePrice = combinedScore * baseRate;
+                          const multiplier = calculateAsymmetricalMultiplier(combinedScore);
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">{formatCurrency(wine.estimatedPrice, 2)}</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="space-y-1 text-xs">
+                                    <div className="font-semibold">Estimated Price Calculation</div>
+                                    <div>Combined Score: <span className="font-medium">{formatPercent(combinedScore, 1, true)}</span></div>
+                                    <div>Base Rate: <span className="font-medium">{formatCurrency(baseRate, 2)}/bottle</span></div>
+                                    <div>Base Price: <span className="font-medium">{formatCurrency(basePrice, 2)}</span></div>
+                                    <div>Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
+                                    <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+                                      Formula: (Combined × Base Rate) × Multiplier
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-gray-500 font-medium">
                         {editingPrices[wine.id] !== undefined ? (
@@ -341,22 +367,22 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                           <div className="flex items-center space-x-2">
                             <span className={`${
                               wine.askingPrice !== undefined 
-                                ? wine.askingPrice < wine.finalPrice
+                                ? wine.askingPrice < wine.estimatedPrice
                                   ? 'text-red-600 font-medium' // Discounted
-                                  : wine.askingPrice > wine.finalPrice
+                                  : wine.askingPrice > wine.estimatedPrice
                                   ? 'text-orange-600 font-medium' // Premium
                                   : 'text-gray-900' // Same as base
                                 : 'text-gray-900' // Default
                             }`}>
-                              {formatCurrency(wine.askingPrice ?? wine.finalPrice, 2)}
+                              {formatCurrency(wine.askingPrice ?? wine.estimatedPrice, 2)}
                             </span>
-                            {wine.askingPrice !== undefined && wine.askingPrice !== wine.finalPrice && (
+                            {wine.askingPrice !== undefined && wine.askingPrice !== wine.estimatedPrice && (
                               <span className="text-[10px] text-gray-500">
-                                {wine.askingPrice < wine.finalPrice ? '📉' : '📈'}
+                                {wine.askingPrice < wine.estimatedPrice ? '📉' : '📈'}
                               </span>
                             )}
                             <button
-                              onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.finalPrice)}
+                              onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.estimatedPrice)}
                               className="text-blue-600 hover:text-blue-800 text-xs"
                             >
                               ✏️
@@ -523,7 +549,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                                 <div>Raw Average: <span className="font-medium">{formatPercent(rawCombinedScore, 1, true)}</span></div>
                                 <div>Final Score: <span className="font-medium">{formatPercent(combinedScore, 1, true)}</span></div>
                                 <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-                                  Formula: (Quality + Balance) ÷ 2, then skewed
+                                  Formula: (Quality + Balance) ÷ 2
                                 </div>
                               </div>
                             </TooltipContent>
@@ -536,8 +562,34 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Base Price:</span>
-                    <span className="text-sm font-medium">{formatCurrency(wine.finalPrice, 2)}</span>
+                    <span className="text-sm text-gray-600">Estimated Price:</span>
+                    {(() => {
+                      const combinedScore = calculateWineCombinedScore(wine);
+                      const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
+                      const basePrice = combinedScore * baseRate;
+                      const multiplier = calculateAsymmetricalMultiplier(combinedScore);
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm font-medium cursor-help">{formatCurrency(wine.estimatedPrice, 2)}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <div className="space-y-1 text-xs">
+                                <div className="font-semibold">Estimated Price Calculation</div>
+                                <div>Combined Score: <span className="font-medium">{formatPercent(combinedScore, 1, true)}</span></div>
+                                <div>Base Rate: <span className="font-medium">{formatCurrency(baseRate, 2)}/bottle</span></div>
+                                <div>Base Price: <span className="font-medium">{formatCurrency(basePrice, 2)}</span></div>
+                                <div>Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
+                                <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+                                  Formula: (Combined × Base Rate) × Multiplier
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()}
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Asking Price:</span>
@@ -568,17 +620,17 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                       <div className="flex items-center gap-2">
                         <span className={`text-sm font-medium ${
                           wine.askingPrice !== undefined 
-                            ? wine.askingPrice < wine.finalPrice
+                            ? wine.askingPrice < wine.estimatedPrice
                               ? 'text-red-600' 
-                              : wine.askingPrice > wine.finalPrice
+                              : wine.askingPrice > wine.estimatedPrice
                               ? 'text-orange-600'
                               : 'text-gray-900'
                             : 'text-gray-900'
                         }`}>
-                          {formatCurrency(wine.askingPrice ?? wine.finalPrice, 2)}
+                          {formatCurrency(wine.askingPrice ?? wine.estimatedPrice, 2)}
                         </span>
                         <button
-                          onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.finalPrice)}
+                          onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.estimatedPrice)}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           ✏️

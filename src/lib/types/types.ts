@@ -144,8 +144,8 @@ export interface WineBatch {
   quality: number; // Overall wine quality (0-1)
   balance: number; // Wine balance/body (0-1)
   characteristics: WineCharacteristics; // Individual wine characteristics
-  finalPrice: number; // Calculated base price per bottle in euros
-  askingPrice?: number; // User-set asking price per bottle in euros (defaults to finalPrice)
+  estimatedPrice: number; // Estimated price per bottle in euros (calculated)
+  askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
   
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {
@@ -184,7 +184,7 @@ export interface WineLogEntry {
   quality: number; // Overall wine quality (0-1)
   balance: number; // Wine balance/body (0-1)
   characteristics: WineCharacteristics; // Individual wine characteristics
-  finalPrice: number; // Price per bottle when bottled
+  estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
   bottledDate: GameDate;
   created_at: string; // Database timestamp

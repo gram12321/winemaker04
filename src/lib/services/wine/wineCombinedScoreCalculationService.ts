@@ -1,6 +1,6 @@
 // Wine combined score calculation service - combines vineyard quality and wine balance into a single score
 import { WineBatch } from '../../types/types';
-import { calculateSkewedMultiplier } from '../../utils/calculator';
+// No multiplier here; pricing will handle asymmetrical scaling
 
 /**
  * Calculate the combined wine score for a wine batch
@@ -12,8 +12,7 @@ import { calculateSkewedMultiplier } from '../../utils/calculator';
  */
 export function calculateWineCombinedScore(wineBatch: WineBatch): number {
   const combinedScore = (wineBatch.quality + wineBatch.balance) / 2;
-
-  return calculateSkewedMultiplier(combinedScore);
+  return combinedScore;
 }
 
 

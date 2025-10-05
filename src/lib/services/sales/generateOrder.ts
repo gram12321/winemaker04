@@ -80,8 +80,8 @@ export async function generateOrder(
   const config = CUSTOMER_TYPE_CONFIG[customer.customerType];
   
   // Get asking price (user-set or default) and base calculated price
-  const askingPrice = specificWineBatch.askingPrice ?? specificWineBatch.finalPrice;
-  const basePrice = specificWineBatch.finalPrice; // This is now calculated by the new pricing service
+  const askingPrice = specificWineBatch.askingPrice ?? specificWineBatch.estimatedPrice;
+  const basePrice = specificWineBatch.estimatedPrice; // Calculated by the pricing service
   
   // Calculate current relationship using provided prestige or fresh lookup
   const prestigeValue = currentPrestige ?? await getCurrentPrestige();

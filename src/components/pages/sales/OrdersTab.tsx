@@ -98,7 +98,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     
     // Fallback to current asking price for old orders without stored asking price
     const wineBatch = bottledWines.find(batch => batch.id === order.wineBatchId);
-    return wineBatch ? (wineBatch.askingPrice ?? wineBatch.finalPrice) : 0;
+    return wineBatch ? (wineBatch.askingPrice ?? wineBatch.estimatedPrice) : 0;
   };
 
   // Define sortable columns for orders

@@ -5,13 +5,7 @@ import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS } from '../../constants/constan
 import { NAMES } from '../../constants/namesConstants';
 import { getCountryCodeForFlag } from '../../utils/utils';
 import { calculateSkewedMultiplier } from '../../utils/calculator';
-import { 
-  saveCustomers, 
-  loadCustomers, 
-  updateCustomerRelationships, 
-  checkCustomersExist,
-  loadActiveCustomers
-} from '../../database/customers/customerDB';
+import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '../../database/customers/customerDB';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -47,10 +41,6 @@ export function calculateCustomerRelationship(marketShare: number, companyPresti
   // Ensure relationship is at least the base value
   return Math.max(baseRelationship, relationship);
 }
-
-// Note: calculateCustomerRelationshipWithBoosts function removed as it's now redundant
-// Fresh relationships are calculated directly in generateOrder.ts using current prestige
-
 
 /**
  * Generate realistic customer names based on country and order type
