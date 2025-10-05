@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GrapeVariety } from '@/lib/types/types';
 import { GRAPE_CONST, COUNTRY_REGION_MAP, REGION_GRAPE_SUITABILITY } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, Button, WineCharacteristicsDisplay } from '@/components/ui';
+import { DialogProps } from '@/lib/types/UItypes';
 
 // Utility functions for formatting
 const formatPercentage = (value: number): string => `${(value * 100).toFixed(0)}%`;
@@ -13,9 +14,8 @@ const getColorClass = (value: number): string => {
   return 'text-red-600';
 };
 
-interface GrapeInfoViewProps {
+interface GrapeInfoViewProps extends DialogProps {
   grapeName: GrapeVariety;
-  onClose: () => void;
 }
 
 export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose }) => {

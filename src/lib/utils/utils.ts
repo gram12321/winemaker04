@@ -379,6 +379,7 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
   return colorMap[level] || { text: 'text-gray-500', bg: 'bg-gray-100' };
 }
 
+
 // ===== WINE FILTERING UTILITIES =====
 
 /**

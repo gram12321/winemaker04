@@ -6,15 +6,14 @@ import { calculateHarvestWork } from '@/lib/services/activity/workcalculators/vi
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatNumber } from '@/lib/utils';
+import { DialogProps } from '@/lib/types/UItypes';
 
 /**
  * Harvest Options Modal
  * Modal for configuring harvest options and starting harvest activities
  */
 
-interface HarvestOptionsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface HarvestOptionsModalProps extends DialogProps {
   vineyard: Vineyard | null;
 }
 

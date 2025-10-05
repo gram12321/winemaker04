@@ -2,10 +2,9 @@ import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { QualityFactorsBreakdown } from '../../components/QualityFactorsBreakdown';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
+import { DialogProps } from '@/lib/types/UItypes';
 
-interface QualityBreakdownModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface QualityBreakdownModalProps extends DialogProps {
   batch?: WineBatch;
   vineyard?: Vineyard;
   wineName?: string;

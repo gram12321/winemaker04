@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { formatCurrency, formatNumber, formatPercent, formatGameDateFromObject, getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
+import { formatCurrency, formatNumber, formatPercent, formatGameDateFromObject, getWineQualityCategory, getColorCategory, getColorClass, getBadgeColorClasses } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay } from '../../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
+import { calculateWineCombinedScore } from '@/lib/services/wine/wineCombinedScoreCalculationService';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 
 // Component for wine batch balance display (needed to use hooks properly)
@@ -75,6 +76,12 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
     },
     { key: 'quality', label: 'Quality', sortable: true },
     { key: 'balance', label: 'Balance', sortable: true },
+    { 
+      key: 'combinedScore' as any, 
+      label: 'Combined Score', 
+      sortable: true,
+      accessor: (wine) => calculateWineCombinedScore(wine)
+    },
     { key: 'finalPrice', label: 'Base Price', sortable: true },
     { 
       key: 'askingPrice', 
@@ -212,6 +219,14 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 </TableHead>
                 <TableHead 
                   sortable 
+                  onSort={() => handleCellarSort('combinedScore' as any)}
+                  sortIndicator={getCellarSortIndicator('combinedScore' as any)}
+                  isSorted={isCellarColumnSorted('combinedScore' as any)}
+                >
+                  Combined Score
+                </TableHead>
+                <TableHead 
+                  sortable 
                   onSort={() => handleCellarSort('finalPrice')}
                   sortIndicator={getCellarSortIndicator('finalPrice')}
                   isSorted={isCellarColumnSorted('finalPrice')}
@@ -240,7 +255,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
             <TableBody>
               {sortedBottledWines.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 py-6">
+                  <TableCell colSpan={7} className="text-center text-gray-500 py-6">
                     No bottled wines available for sale
                   </TableCell>
                 </TableRow>
@@ -263,6 +278,37 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                       </TableCell>
                       <TableCell className="text-gray-500">
                         {wine.harvestDate.year}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {(() => {
+                          const combinedScore = calculateWineCombinedScore(wine);
+                          const badgeClasses = getBadgeColorClasses(combinedScore);
+                          const rawCombinedScore = (wine.quality + wine.balance) / 2;
+                          
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${badgeClasses.bg} ${badgeClasses.text}`}>
+                                    {formatPercent(combinedScore, 1, true)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="space-y-1 text-xs">
+                                    <div className="font-semibold">Combined Score Calculation</div>
+                                    <div>Quality: <span className="font-medium">{formatPercent(wine.quality, 1, true)}</span></div>
+                                    <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
+                                    <div>Raw Average: <span className="font-medium">{formatPercent(rawCombinedScore, 1, true)}</span></div>
+                                    <div>Final Score: <span className="font-medium">{formatPercent(combinedScore, 1, true)}</span></div>
+                                    <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+                                      Formula: (Quality + Balance) ÷ 2, then skewed
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-gray-500 font-medium">
                         {formatCurrency(wine.finalPrice, 2)}
@@ -333,7 +379,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                     </TableRow>
                     {expandedBatches[wine.id] && (
                       <TableRow>
-                        <TableCell colSpan={6} className="bg-gray-50">
+                        <TableCell colSpan={7} className="bg-gray-50">
                           <div className="p-2.5 space-y-3">
                             {/* Wine Details */}
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b pb-3">
@@ -433,7 +479,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
               {/* Card Body */}
               <div className="p-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -453,6 +499,38 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                     }`}>
                       {formatPercent(wine.balance, 0, true)}
                     </span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Combined</div>
+                    {(() => {
+                      const combinedScore = calculateWineCombinedScore(wine);
+                      const badgeClasses = getBadgeColorClasses(combinedScore);
+                      const rawCombinedScore = (wine.quality + wine.balance) / 2;
+                      
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full cursor-help ${badgeClasses.bg} ${badgeClasses.text}`}>
+                                {formatPercent(combinedScore, 1, true)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <div className="space-y-1 text-xs">
+                                <div className="font-semibold">Combined Score Calculation</div>
+                                <div>Quality: <span className="font-medium">{formatPercent(wine.quality, 1, true)}</span></div>
+                                <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
+                                <div>Raw Average: <span className="font-medium">{formatPercent(rawCombinedScore, 1, true)}</span></div>
+                                <div>Final Score: <span className="font-medium">{formatPercent(combinedScore, 1, true)}</span></div>
+                                <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+                                  Formula: (Quality + Balance) ÷ 2, then skewed
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()}
                   </div>
                 </div>
 

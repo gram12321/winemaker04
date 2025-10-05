@@ -8,14 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Separator } from '../../shadCN/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
+import { DialogProps } from '@/lib/types/UItypes';
 
 /**
  * Prestige Modal
  * Modal for displaying detailed prestige breakdown and sources
  */
-interface PrestigeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface PrestigeModalProps extends DialogProps {
   totalPrestige: number;
   eventBreakdown: PrestigeEvent[];
   companyPrestige?: number;

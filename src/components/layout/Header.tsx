@@ -12,11 +12,9 @@ import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeServic
 import { Company } from '@/lib/services/user/companyService';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 
-interface HeaderProps {
+interface HeaderProps extends NavigationProps, CompanyProps {
   currentPage: string;
-  onPageChange: (page: string) => void;
   onTimeAdvance: () => void;
-  currentCompany?: Company | null;
   onBackToLogin?: () => void;
 }
 

@@ -8,6 +8,7 @@ import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown } from '@/lib/services/sales/relationshipService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates } from '@/hooks';
+import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
 
 /**
  * Create minimal customer object for relationship breakdown from order data
@@ -33,13 +34,11 @@ function createCustomerFromOrderData(
   };
 }
 
-interface OrdersTabProps {
+interface OrdersTabProps extends NavigationProps, LoadingProps {
   allOrders: WineOrder[];
   allBatches: WineBatch[];
   bottledWines: WineBatch[];
-  isLoading: boolean;
   withLoading: (fn: () => Promise<void>) => Promise<void>;
-  onNavigateToWinepedia?: () => void;
 }
 
 const OrdersTab: React.FC<OrdersTabProps> = ({

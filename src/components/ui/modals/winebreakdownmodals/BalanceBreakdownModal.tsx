@@ -3,15 +3,14 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
 import { Button } from '../../shadCN/button';
+import { DialogProps } from '@/lib/types/UItypes';
 
 /**
  * Balance Breakdown Modal
  * Modal for displaying detailed wine balance score breakdown
  */
 
-interface BalanceBreakdownModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface BalanceBreakdownModalProps extends DialogProps {
   characteristics: WineCharacteristics;
   wineName?: string;
 }

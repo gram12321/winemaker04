@@ -75,5 +75,3 @@ export interface BaseComponentProps {
   loading?: boolean;
 }
 
-// Export all interfaces for easy importing
-export * from './UItypes';

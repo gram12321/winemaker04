@@ -7,8 +7,8 @@ import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber, formatGameDateFromObject } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 
-interface WineLogProps {
-  currentCompany?: any;
+interface WineLogProps extends CompanyProps {
+  // Inherits currentCompany from CompanyProps
 }
 
 export function WineLog({ currentCompany }: WineLogProps) {

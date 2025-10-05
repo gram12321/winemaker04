@@ -74,11 +74,8 @@ const CardFooter = React.forwardRef<
 CardFooter.displayName = "CardFooter"
 
 // Simplified card components for common use cases
-interface SimpleCardProps {
-  title: string;
-  description?: string;
-  children: ReactNode;
-  className?: string;
+interface SimpleCardProps extends CardProps {
+  // Inherits title, description, children, className from CardProps
 }
 
 const SimpleCard = React.forwardRef<HTMLDivElement, SimpleCardProps>(

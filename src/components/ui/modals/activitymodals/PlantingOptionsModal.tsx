@@ -7,6 +7,7 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
+import { DialogProps } from '@/lib/types/UItypes';
 
 
 /**
@@ -14,9 +15,7 @@ import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
  * Modal for configuring planting options and starting planting activities
  */
 
-interface PlantingOptionsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface PlantingOptionsModalProps extends DialogProps {
   vineyard: Vineyard | null;
 }
 

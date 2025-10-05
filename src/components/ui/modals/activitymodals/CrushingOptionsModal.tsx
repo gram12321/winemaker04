@@ -7,15 +7,14 @@ import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManage
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils';
+import { DialogProps } from '@/lib/types/UItypes';
 
 /**
  * Crushing Options Modal
  * Modal for configuring crushing options and starting crushing activities
  */
 
-interface CrushingOptionsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface CrushingOptionsModalProps extends DialogProps {
   batch: WineBatch | null;
 }
 

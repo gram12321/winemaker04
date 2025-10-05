@@ -8,15 +8,14 @@ import { startFermentationActivity } from '@/lib/services/wine/winery/fermentati
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency, getCharacteristicDisplayName } from '@/lib/utils/utils';
+import { DialogProps } from '@/lib/types/UItypes';
 
 /**
  * Fermentation Options Modal
  * Modal for configuring fermentation options and starting fermentation activities
  */
 
-interface FermentationOptionsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface FermentationOptionsModalProps extends DialogProps {
   batch: WineBatch | null;
 }
 
