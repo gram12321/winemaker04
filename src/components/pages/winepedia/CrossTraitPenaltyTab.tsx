@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BalanceScoreBreakdown, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
-import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
+import { useWineBalance } from '@/hooks';
 import { WineCharacteristicsDisplay } from '@/components/ui/components/characteristicBar';
 import { calculateMidpointCharacteristics, RESET_BUTTON_CLASSES } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/shadCN/tooltip';
@@ -13,7 +13,7 @@ export function CrossTraitPenaltyTab() {
     setCharacteristics(prev => ({ ...prev, [key]: value }));
   };
 
-  const balanceResult = calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+  const balanceResult = useWineBalance(characteristics);
 
   return (
     <TooltipProvider>

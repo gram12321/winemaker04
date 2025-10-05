@@ -3,7 +3,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { getColorClass, formatNumber } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
-import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
+import { useWineBalance } from '@/hooks';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
@@ -194,7 +194,7 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   
   // Calculate balance score if requested
-  const balanceResult = showBalanceScore ? calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES) : null;
+  const balanceResult = showBalanceScore ? useWineBalance(characteristics) : null;
 
   const content = (
     <div className="space-y-1">

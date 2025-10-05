@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { calculateWineCombinedScore } from '@/lib/services/wine/wineCombinedScoreCalculationService';
+import { calculateWineScore } from '@/lib/services/wine/wineScoreCalculation';
 import { getWineQualityCategory, getWineQualityDescription, getColorClass, getBadgeColorClasses, formatPercent } from '@/lib/utils/utils';
 
 /**
- * Hook to calculate and format wine combined score
- * @param wineBatch - The wine batch to calculate combined score for
- * @returns Combined score result with formatted display values
+ * Hook to calculate and format wine score
+ * @param wineBatch - The wine batch to calculate wine score for
+ * @returns Wine score result with formatted display values
  */
 export function useWineCombinedScore(wineBatch: WineBatch | null): {
   score: number;
@@ -19,7 +19,7 @@ export function useWineCombinedScore(wineBatch: WineBatch | null): {
   return useMemo(() => {
     if (!wineBatch) return null;
 
-    const score = calculateWineCombinedScore(wineBatch);
+    const score = calculateWineScore(wineBatch);
     const formattedScore = formatPercent(score, 1, true);
     const category = getWineQualityCategory(score);
     const colorClass = getColorClass(score);
@@ -38,9 +38,9 @@ export function useWineCombinedScore(wineBatch: WineBatch | null): {
 }
 
 /**
- * Hook to get combined score for multiple wine batches
+ * Hook to get wine score for multiple wine batches
  * @param wineBatches - Array of wine batches
- * @returns Array of combined score results
+ * @returns Array of wine score results
  */
 export function useWineBatchesCombinedScore(wineBatches: WineBatch[]): Array<{
   batchId: string;

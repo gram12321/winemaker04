@@ -5,7 +5,7 @@ import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../database/
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../core/gameState';
-import { calculateFinalWinePrice } from '../sales/pricingService';
+import { calculateEstimatedPrice } from './wineScoreCalculation';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../balance';
 import { BASE_BALANCED_RANGES } from '../../constants/grapeConstants';
 import { calculateWineQuality } from './wineQualityCalculationService';
@@ -166,7 +166,7 @@ export async function createWineBatchFromHarvest(
     );
     
     // Recalculate estimated price for the combined batch
-    const estimatedPrice = calculateFinalWinePrice(combinedBatch, vineyard);
+    const estimatedPrice = calculateEstimatedPrice(combinedBatch, vineyard);
     combinedBatch.estimatedPrice = estimatedPrice;
     
     await saveWineBatch(combinedBatch);
@@ -196,7 +196,7 @@ export async function createWineBatchFromHarvest(
     };
 
     // Calculate estimated price using the pricing service
-    const estimatedPrice = calculateFinalWinePrice(wineBatch, vineyard);
+    const estimatedPrice = calculateEstimatedPrice(wineBatch, vineyard);
     wineBatch.estimatedPrice = estimatedPrice;
 
     await saveWineBatch(wineBatch);
