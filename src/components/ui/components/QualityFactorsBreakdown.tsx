@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineQualityCategory, getColorCategory } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
+import { getEventDisplayData } from '@/lib/services/prestige/prestigeService';
 
 interface QualityFactorsBreakdownProps {
   vineyard?: Vineyard;
@@ -326,13 +327,34 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                                 <div className="text-xs text-purple-700 font-medium">Vineyard Prestige</div>
                                 <div className="rounded border border-purple-200 bg-purple-50/50">
                                   {vineyardData.events.map((event: any, idx: number) => {
-                                    const label = event.metadata?.label || event.type;
-                                    return (
-                                      <div key={idx} className={`px-2 py-0.5 text-xs text-purple-800 flex items-center justify-between ${idx !== vineyardData.events.length - 1 ? 'border-b border-purple-200' : ''}`}>
-                                        <span className="truncate mr-2" title={event.description}>{label}</span>
-                                        <span className="font-mono">{formatNumber(event.currentAmount ?? event.amount, { decimals: 2, forceDecimals: true })}</span>
-                                      </div>
-                                    );
+                                    try {
+                                      const titleBase = getEventDisplayData({
+                                        id: event.id ?? `${idx}`,
+                                        type: event.type,
+                                        amount: event.amount,
+                                        timestamp: Date.now(),
+                                        decayRate: event.decayRate,
+                                        description: event.description,
+                                        sourceId: event.sourceId,
+                                        originalAmount: event.originalAmount,
+                                        currentAmount: event.currentAmount,
+                                        metadata: event.metadata
+                                      } as any).titleBase;
+                                      return (
+                                        <div key={idx} className={`px-2 py-0.5 text-xs text-purple-800 flex items-center justify-between ${idx !== vineyardData.events.length - 1 ? 'border-b border-purple-200' : ''}`}>
+                                          <span className="truncate mr-2" title={event.description}>{titleBase}</span>
+                                          <span className="font-mono">{formatNumber(event.currentAmount ?? event.amount, { decimals: 2, forceDecimals: true })}</span>
+                                        </div>
+                                      );
+                                    } catch {
+                                      const full = String(event.description ?? '');
+                                      return (
+                                        <div key={idx} className={`px-2 py-0.5 text-xs text-purple-800 flex items-center justify-between ${idx !== vineyardData.events.length - 1 ? 'border-b border-purple-200' : ''}`}>
+                                          <span className="truncate mr-2" title={full}>{full}</span>
+                                          <span className="font-mono">{formatNumber(event.currentAmount ?? event.amount, { decimals: 2, forceDecimals: true })}</span>
+                                        </div>
+                                      );
+                                    }
                                   })}
                                 </div>
                               </div>

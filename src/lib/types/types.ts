@@ -260,14 +260,12 @@ export type PrestigeEventType =
 export interface PrestigePayloadBase { }
 
 export interface PrestigePayloadCompanyValue extends PrestigePayloadBase {
-  label: string;
   companyMoney: number;
   maxLandValue: number;
   prestigeBase01: number;
 }
 
 export interface PrestigePayloadVineyardCommon extends PrestigePayloadBase {
-  label: string;
   vineyardId: string;
   vineyardName: string;
 }
@@ -300,9 +298,9 @@ export interface PrestigePayloadVineyardAchievement extends PrestigePayloadViney
 
 export type PrestigeEventPayload =
   | { type: 'company_value'; payload: PrestigePayloadCompanyValue }
-  | { type: 'sale'; payload: { label: string; customerName: string; wineName: string; saleValue: number } }
-  | { type: 'contract'; payload: { label: string } & Record<string, unknown> }
-  | { type: 'penalty'; payload: { label: string } & Record<string, unknown> }
+  | { type: 'sale'; payload: { customerName: string; wineName: string; saleValue: number } }
+  | { type: 'contract'; payload: Record<string, unknown> }
+  | { type: 'penalty'; payload: Record<string, unknown> }
   | { type: 'vineyard_sale'; payload: PrestigePayloadVineyardSale }
   | { type: 'vineyard_base'; payload: PrestigePayloadVineyardCommon }
   | { type: 'vineyard_achievement'; payload: PrestigePayloadVineyardAchievement }

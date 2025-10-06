@@ -32,7 +32,6 @@ export async function initializeBasePrestigeEvents(): Promise<void> {
     'company_money',
     companyValuePrestige,
     {
-      label: 'Company Value',
       companyMoney: gameState.money || 0,
       maxLandValue: maxLandValue,
       prestigeBase01: companyValuePrestige,
@@ -208,7 +207,6 @@ export async function updateCompanyValuePrestige(money: number): Promise<void> {
       'company_money',
       companyValuePrestige,
       {
-        label: 'Company Value',
         companyMoney: money,
         maxLandValue: maxLandValue,
         prestigeBase01: companyValuePrestige,
@@ -228,13 +226,15 @@ export async function createVineyardFactorPrestigeEvents(vineyard: any): Promise
       `${vineyard.id}_age`,
       factors.ageScaled,
       {
-        label: 'Vine Age',
-        vineyardName: vineyard.name,
-        vineyardId: vineyard.id,
-        vineAge: vineyard.vineAge || 0,
-        ageBase01: factors.ageBase01,
-        ageWithSuitability01: factors.ageWithSuitability01,
-      }
+        type: 'vineyard_age',
+        payload: {
+          vineyardName: vineyard.name,
+          vineyardId: vineyard.id,
+          vineAge: vineyard.vineAge || 0,
+          ageBase01: factors.ageBase01,
+          ageWithSuitability01: factors.ageWithSuitability01,
+        }
+      } as any
     );
 
     await updateBasePrestigeEvent(
@@ -242,16 +242,18 @@ export async function createVineyardFactorPrestigeEvents(vineyard: any): Promise
       `${vineyard.id}_land`,
       factors.landScaled,
       {
-        label: 'Land Value',
-        vineyardName: vineyard.name,
-        vineyardId: vineyard.id,
-        totalValue: vineyard.vineyardTotalValue,
-        landValuePerHectare: factors.landValuePerHectare,
-        hectares: vineyard.hectares,
-        maxLandValue: factors.maxLandValue,
-        landBase01: factors.landBase01,
-        landWithSuitability01: factors.landWithSuitability01,
-      }
+        type: 'vineyard_land',
+        payload: {
+          vineyardName: vineyard.name,
+          vineyardId: vineyard.id,
+          totalValue: vineyard.vineyardTotalValue,
+          landValuePerHectare: factors.landValuePerHectare,
+          hectares: vineyard.hectares,
+          maxLandValue: factors.maxLandValue,
+          landBase01: factors.landBase01,
+          landWithSuitability01: factors.landWithSuitability01,
+        }
+      } as any
     );
 
   } catch (error) {
@@ -289,7 +291,6 @@ export async function addSalePrestigeEvent(
     decay_rate: 0.95,
     source_id: null,
     payload: {
-      label: 'Sale',
       customerName,
       wineName,
       saleValue,
@@ -316,9 +317,6 @@ export async function addVineyardSalePrestigeEvent(
     decay_rate: 0.95,
     source_id: vineyardId,
     payload: {
-      label: 'Vineyard Sale',
-      vineyardId,
-      vineyardName: '', // Will be filled by the service
       customerName,
       wineName,
       saleValue,
@@ -344,10 +342,9 @@ export async function addVineyardAchievementPrestigeEvent(
     decay_rate: 0.90,
     source_id: vineyardId,
     payload: {
-      label: 'Vineyard Achievement',
-      vineyardId,
-      vineyardName: '', // Will be filled by the service
       event: eventType,
+      vineyardId,
+      vineyardName: '',
     },
   });
   triggerGameUpdate();
@@ -408,3 +405,61 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
   }
 }
 
+export function getEventDisplayData(event: PrestigeEvent): {
+  title: string;
+  titleBase: string;
+  amountText?: string;
+  calc?: string;
+  displayInfo?: string;
+} {
+  if (event.metadata) {
+    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    
+    if (event.type === 'vineyard_age' && metadata.vineyardName && metadata.vineAge !== undefined) {
+      return {
+        title: `Vine Age: ${metadata.vineyardName} (${metadata.vineAge} years)`,
+        titleBase: 'Vine Age',
+        amountText: `(${metadata.vineAge} years)`,
+        calc: `base=${metadata.ageBase01?.toFixed(2)} × suitability → scaled=(asym(${metadata.ageWithSuitability01?.toFixed(2)})−1)=${event.amount.toFixed(2)}`,
+      };
+    }
+    
+    if (event.type === 'vineyard_land' && metadata.vineyardName && metadata.totalValue !== undefined) {
+      return {
+        title: `Land Value: ${metadata.vineyardName} (€${metadata.totalValue.toLocaleString()})`,
+        titleBase: 'Land Value',
+        amountText: `(€${metadata.totalValue.toLocaleString()})`,
+        calc: `base=log(€${metadata.totalValue.toLocaleString()}/${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.landBase01?.toFixed(2)} → scaled=(asym(${metadata.landWithSuitability01?.toFixed(2)})−1)=${event.amount.toFixed(2)}`,
+        displayInfo: `€${metadata.landValuePerHectare?.toLocaleString()}/ha × ${metadata.hectares?.toFixed(2)}ha`,
+      };
+    }
+    
+    if (event.type === 'sale' && metadata.customerName && metadata.wineName) {
+      return {
+        title: `Sale to ${metadata.customerName}: ${metadata.wineName}`,
+        titleBase: `Sale to ${metadata.customerName}`,
+        amountText: metadata.wineName,
+      };
+    }
+
+    if (event.type === 'company_value' && metadata.companyMoney !== undefined) {
+      return {
+        title: `Company Value: €${metadata.companyMoney.toLocaleString()}`,
+        titleBase: 'Company Value',
+        amountText: `€${metadata.companyMoney.toLocaleString()}`,
+        calc: `base=log(€${metadata.companyMoney.toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.prestigeBase01?.toFixed(2)} → scaled=${event.amount.toFixed(2)}`,
+      };
+    }
+  }
+
+  // Handle other event types with fallback display
+  if (['contract', 'penalty', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement'].includes(event.type)) {
+    return {
+      title: event.description || event.type,
+      titleBase: event.type,
+      amountText: `+${event.amount.toFixed(2)} prestige`,
+    };
+  }
+
+  throw new Error(`Event ${event.id} (${event.type}) missing required metadata`);
+}

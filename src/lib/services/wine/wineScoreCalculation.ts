@@ -8,8 +8,8 @@ export function calculateWineScore(wineBatch: WineBatch): number {
 }
 
 /**
- * Calculate the estimated price for a wine batch using the combined score.
- * Formula: (Combined Score × Base Rate) × Asymmetrical Multiplier
+ * Calculate the estimated price for a wine batch using the wine score.
+ * Formula: (WineScore × Base Rate) × Asymmetrical Multiplier
  */
 export function calculateEstimatedPrice(wineBatch: WineBatch, _vineyard: Vineyard): number {
   const wineScore = calculateWineScore(wineBatch);

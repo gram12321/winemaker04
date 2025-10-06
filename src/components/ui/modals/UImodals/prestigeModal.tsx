@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils';
+import { getEventDisplayData } from '@/lib/services/prestige/prestigeService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
@@ -59,8 +60,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const formatAmount = (amount: number) => formatNumber(amount, { decimals: 2, forceDecimals: true });
 
   const EventDisplay = ({ event }: { event: PrestigeEvent }) => {
-    const label = (event.metadata as any)?.label || event.type;
-    const title = event.description || label;
+    const displayData = getEventDisplayData(event);
 
     return (
       <div className="flex items-center justify-between">
@@ -69,13 +69,27 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="text-sm font-medium cursor-help">{title}</p>
+                  <p className="text-sm font-medium cursor-help">{displayData.title}</p>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs whitespace-pre-wrap">Event Type: {event.type}</p>
-                </TooltipContent>
+                {displayData.calc && (
+                  <TooltipContent>
+                    <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
+                  </TooltipContent>
+                )}
               </Tooltip>
             </TooltipProvider>
+            {displayData.displayInfo && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs text-muted-foreground cursor-help">(details)</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{formatDecayRate(event.decayRate)}</p>
         </div>
