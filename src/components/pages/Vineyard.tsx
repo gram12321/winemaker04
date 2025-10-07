@@ -4,7 +4,7 @@ import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown } from '../ui';
+import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { getCountryFlag } from '@/lib/utils';
@@ -16,6 +16,7 @@ const Vineyard: React.FC = () => {
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [showHarvestDialog, setShowHarvestDialog] = useState(false);
   const [showBuyLandModal, setShowBuyLandModal] = useState(false);
+  const [showVineyardModal, setShowVineyardModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const [landPurchaseOptions, setLandPurchaseOptions] = useState<VineyardPurchaseOption[]>([]);
   const [expectedYields, setExpectedYields] = useState<Record<string, number>>({});
@@ -89,12 +90,18 @@ const Vineyard: React.FC = () => {
     await purchaseVineyard(option);
   }), [withLoading]);
 
+  const handleRowClick = useCallback((vineyard: VineyardType) => {
+    setSelectedVineyard(vineyard);
+    setShowVineyardModal(true);
+  }, []);
+
   const getActionButtons = useCallback((vineyard: VineyardType) => {
     if (!vineyard.grape) {
       const hasActivePlanting = vineyardsWithActiveActivities.planting.has(vineyard.id);
       return (
         <button 
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setSelectedVineyard(vineyard);
             setShowPlantDialog(true);
           }}
@@ -121,7 +128,7 @@ const Vineyard: React.FC = () => {
         const hasActiveHarvesting = vineyardsWithActiveActivities.harvesting.has(vineyard.id);
         return (
           <button 
-            onClick={() => handleShowHarvestDialog(vineyard)}
+            onClick={(e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }}
             disabled={hasActiveHarvesting}
             className={`px-2 py-1 rounded text-xs font-medium ${
               hasActiveHarvesting 
@@ -255,7 +262,7 @@ const Vineyard: React.FC = () => {
                 </tr>
               ) : (
                 vineyards.map((vineyard) => (
-                  <tr key={vineyard.id} className="hover:bg-gray-50">
+                  <tr key={vineyard.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(vineyard)}>
                     {/* Vineyard Name and Grape */}
                     <td className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-900">{vineyard.name}</div>
@@ -618,6 +625,12 @@ const Vineyard: React.FC = () => {
         options={landPurchaseOptions}
         onPurchase={handlePurchaseVineyard}
         currentMoney={gameState.money || 0}
+      />
+
+      <VineyardModal
+        isOpen={showVineyardModal}
+        onClose={() => setShowVineyardModal(false)}
+        vineyard={selectedVineyard}
       />
     </div>
   );

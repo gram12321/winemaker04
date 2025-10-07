@@ -230,7 +230,7 @@ export const REGION_GRAPE_SUITABILITY = {
   },
   "France": {
     "Bordeaux": { "Barbera": 0.7, "Chardonnay": 0.8, "Pinot Noir": 0.6, "Primitivo": 0.6, "Sauvignon Blanc": 0.9 },
-    "Bourgogne": { "Barbera": 0.4, "Chardonnay": 1.0, "Pinot Noir": 0.9, "Primitivo": 0.3, "Sauvignon Blanc": 0.7 },
+    "Bourgogne": { "Barbera": 0.4, "Chardonnay": 0.9, "Pinot Noir": 0.9, "Primitivo": 0.3, "Sauvignon Blanc": 0.7 },
     "Champagne": { "Barbera": 0.2, "Chardonnay": 0.9, "Pinot Noir": 0.8, "Primitivo": 0.2, "Sauvignon Blanc": 0.6 },
     "Loire Valley": { "Barbera": 0.35, "Chardonnay": 0.85, "Pinot Noir": 0.7, "Primitivo": 0.3, "Sauvignon Blanc": 1.0 },
     "Rhone Valley": { "Barbera": 0.85, "Chardonnay": 0.75, "Pinot Noir": 0.5, "Primitivo": 0.7, "Sauvignon Blanc": 0.7 },

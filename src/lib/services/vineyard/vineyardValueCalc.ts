@@ -1,4 +1,4 @@
-import { REGION_PRESTIGE_RANKINGS, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
+import { REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { Aspect, GrapeVariety } from '../../types/types';
 
 
@@ -51,21 +51,18 @@ export function calculateLandValue(
     return countryData?.[region] ?? fallback;
   };
 
-  const rawPrestige = getRegionData(REGION_PRESTIGE_RANKINGS, 0.5);
-  const prestigeNormalized = normalizePrestige(rawPrestige);
-  
   const altitudeRange = getRegionData(REGION_ALTITUDE_RANGES, [0, 100]) as [number, number];
   const altitudeNormalized = normalizeAltitude(altitude, altitudeRange);
 
   const regionAspects = getRegionData(REGION_ASPECT_RATINGS, {}) as any;
   const rawAspect = regionAspects[aspect] ?? 0.5;
   const aspectNormalized = normalizeAspect(rawAspect);
-
-  const rawPriceFactor = (prestigeNormalized + aspectNormalized + altitudeNormalized) / 3;
+  // Use only altitude and aspect to span the region's full price band.
+  const altitudeAspectRate = (aspectNormalized + altitudeNormalized) / 2;
 
   const [basePrice, maxPrice] = getRegionalPriceRange(country, region);
 
-  return Math.round(basePrice + rawPriceFactor * (maxPrice - basePrice));
+  return Math.round(basePrice + altitudeAspectRate * (maxPrice - basePrice));
 }
 
 

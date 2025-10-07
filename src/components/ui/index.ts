@@ -22,6 +22,7 @@ export { QualityFactorBar, QualityFactorsDisplay, QualityFactorLegend } from './
 export { BalanceScoreBreakdown } from './components/BalanceScoreBreakdown';
 export { QualityFactorsBreakdown } from './components/QualityFactorsBreakdown';
 export { default as LandBuyingModal } from './modals/UImodals/landBuyingModal';
+export { default as VineyardModal } from './modals/UImodals/vineyardModal';
 export { default as WorkCalculationTable } from './activities/workCalculationTable';
 export { default as ActivityOptionsModal, type ActivityOptionField, type ActivityWorkEstimate } from './activities/activityOptionsModal';
 export { default as PlantingOptionsModal } from './modals/activitymodals/PlantingOptionsModal';

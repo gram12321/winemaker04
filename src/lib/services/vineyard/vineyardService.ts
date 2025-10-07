@@ -163,8 +163,7 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
     await addVineyardAchievementPrestigeEvent(
       'planting',
       vineyardId,
-      basePrestige,
-      `Planted ${grape} vines`
+      basePrestige
     );
   } catch (error) {
     console.error('Failed to create planting prestige event:', error);
@@ -173,11 +172,6 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
   triggerGameUpdate();
   return true;
 }
-
-
-// Harvest vineyard - now creates an activity instead of instant harvest
-// REMOVED: harvestVineyard function is obsolete; harvest is started via UI modal activity
-
 
 // Get all vineyards with refreshed prestige values
 export async function getAllVineyards(): Promise<Vineyard[]> {

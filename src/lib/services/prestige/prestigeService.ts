@@ -19,6 +19,11 @@ type VineyardPrestigeFactors = {
   ageWithSuitability01: number;
   landWithSuitability01: number;
   ageScaled: number;
+  // Prestige from land per hectare before size multiplier
+  landScaledPerHa: number;
+  // Size multiplier applied to land prestige (hectares squared as requested)
+  landSizeFactor: number;
+  // Final land prestige after applying size multiplier
   landScaled: number;
 };
 
@@ -58,22 +63,27 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
   );
 
   const ageBase01 = vineyardAgePrestigeModifier(vineyard.vineAge || 0);
-  const ageWithSuitability01 = Math.max(0, Math.min(1, ageBase01 * grapeSuitability));
-  const ageScaled = Math.max(0, calculateAsymmetricalMultiplier(Math.min(0.99, ageWithSuitability01)) - 1);
+  const ageWithSuitability01 = ageBase01 * grapeSuitability;
+  const ageScaled = Math.max(0, calculateAsymmetricalMultiplier(ageWithSuitability01) - 1);
 
   const maxLandValue = getMaxLandValue();
-  const landValuePerHectare = (vineyard.landValue || 0) * 1000;
-  const landBase01 = Math.log((vineyard.vineyardTotalValue) / Math.max(1, maxLandValue) + 1);
-  const landWithSuitability01 = Math.max(0, Math.min(1, landBase01 * grapeSuitability));
-  const landScaled = Math.max(0, calculateAsymmetricalMultiplier(Math.min(0.99, landWithSuitability01)) - 1);
+  // Normalize per-hectare value against max per-hectare benchmark using vineyard.landValue directly (€/ha)
+  const landBase01 = Math.log((vineyard.landValue) / Math.max(1, maxLandValue) + 1);
+  const landWithSuitability01 = landBase01 * grapeSuitability;
+  // Apply asym multiplier on per-hectare signal, then multiply by size factor (hectares squared)
+  const landScaledPerHa = Math.max(0, calculateAsymmetricalMultiplier(landWithSuitability01) - 1);
+  const landSizeFactor = Math.sqrt(vineyard.hectares || 0);
+  const landScaled = landScaledPerHa * landSizeFactor;
 
   return {
     maxLandValue,
-    landValuePerHectare,
+    landValuePerHectare: vineyard.landValue || 0,
     ageBase01,
     landBase01,
     ageWithSuitability01,
     landWithSuitability01,
+    landScaledPerHa,
+    landSizeFactor,
     ageScaled,
     landScaled,
   };
@@ -252,6 +262,8 @@ export async function createVineyardFactorPrestigeEvents(vineyard: any): Promise
           maxLandValue: factors.maxLandValue,
           landBase01: factors.landBase01,
           landWithSuitability01: factors.landWithSuitability01,
+          landScaledPerHa: factors.landScaledPerHa,
+          landSizeFactor: factors.landSizeFactor,
         }
       } as any
     );
@@ -424,13 +436,13 @@ export function getEventDisplayData(event: PrestigeEvent): {
       };
     }
     
-    if (event.type === 'vineyard_land' && metadata.vineyardName && metadata.totalValue !== undefined) {
+    if (event.type === 'vineyard_land' && metadata.vineyardName && (metadata.totalValue !== undefined || metadata.landValuePerHectare !== undefined)) {
       return {
-        title: `Land Value: ${metadata.vineyardName} (€${metadata.totalValue.toLocaleString()})`,
+        title: `Land Value: ${metadata.vineyardName} (€${(metadata.totalValue ?? 0).toLocaleString()})`,
         titleBase: 'Land Value',
-        amountText: `(€${metadata.totalValue.toLocaleString()})`,
-        calc: `base=log(€${metadata.totalValue.toLocaleString()}/${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.landBase01?.toFixed(2)} → scaled=(asym(${metadata.landWithSuitability01?.toFixed(2)})−1)=${event.amount.toFixed(2)}`,
-        displayInfo: `€${metadata.landValuePerHectare?.toLocaleString()}/ha × ${metadata.hectares?.toFixed(2)}ha`,
+        amountText: `(€${(metadata.totalValue ?? (metadata.landValuePerHectare ?? 0) * (metadata.hectares ?? 0)).toLocaleString()})`,
+        calc: `base_per_ha=log(€${(metadata.landValuePerHectare ?? 0).toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.landBase01?.toFixed(2)} → per_ha=(asym(${metadata.landWithSuitability01?.toFixed(2)})−1)=${metadata.landScaledPerHa?.toFixed(2)} → size=sqrt(hectares)=${metadata.landSizeFactor?.toFixed?.(2) ?? String(metadata.landSizeFactor)} → scaled=per_ha×size=${event.amount.toFixed(2)}`,
+        displayInfo: `€${metadata.landValuePerHectare?.toLocaleString()}/ha × ${metadata.hectares?.toFixed(2)}ha (size factor: √ha = ${(metadata.landSizeFactor ?? 0).toLocaleString()})`,
       };
     }
     

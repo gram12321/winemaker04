@@ -1,0 +1,372 @@
+import React from 'react';
+import { Vineyard as VineyardType } from '@/lib/types/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
+import { Badge } from '../../shadCN/badge';
+import { Separator } from '../../shadCN/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
+import { Grape, MapPin, Ruler, Mountain, Compass } from 'lucide-react';
+import { DialogProps } from '@/lib/types/UItypes';
+import { formatCurrency, formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory } from '@/lib/utils';
+import { getAltitudeRating, getAspectRating } from '@/lib/services';
+import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
+import { getRegionalPriceRange } from '@/lib/services';
+import { getVineyardQualityFactors, getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
+
+interface VineyardModalProps extends DialogProps {
+  vineyard: VineyardType | null;
+}
+
+const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard }) => {
+  if (!vineyard) return null;
+
+  const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
+  const aspectRating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
+  const altitudeColors = getBadgeColorClasses(altitudeRating);
+  const aspectColors = getBadgeColorClasses(aspectRating);
+
+  const altitudeRange = (REGION_ALTITUDE_RANGES as unknown as Record<string, Record<string, readonly [number, number]>>)[
+    vineyard.country
+  ]?.[vineyard.region];
+
+  const aspectRegionMap = (REGION_ASPECT_RATINGS as Record<string, Record<string, Record<string, number>>>)[
+    vineyard.country
+  ]?.[vineyard.region];
+  const aspectValues = aspectRegionMap ? Object.values(aspectRegionMap) : undefined;
+  const aspectMin = aspectValues ? Math.min(...aspectValues) : undefined;
+  const aspectMax = aspectValues ? Math.max(...aspectValues) : undefined;
+  const bestAspect = aspectRegionMap
+    ? Object.entries(aspectRegionMap).reduce(
+        (best, [dir, val]) => (val > best.value ? { dir, value: val } : best),
+        { dir: Object.keys(aspectRegionMap)[0], value: aspectRegionMap[Object.keys(aspectRegionMap)[0]] }
+      )
+    : undefined;
+
+  const prestigeRanking = (REGION_PRESTIGE_RANKINGS as unknown as Record<string, Record<string, number>>)[
+    vineyard.country
+  ]?.[vineyard.region];
+  const regionalPriceRange = (REGION_PRICE_RANGES as unknown as Record<string, Record<string, readonly [number, number]>>)[
+    vineyard.country
+  ]?.[vineyard.region];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl p-0 overflow-hidden">
+        {/* Top image bar */}
+        <div
+          className="h-36 bg-cover bg-center relative"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1200&h=300&fit=crop')",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+            <div>
+              <div className="text-white text-lg font-semibold flex items-center gap-2">
+                <Grape className="h-5 w-5" />
+                {vineyard.name}
+              </div>
+              <div className="text-white/80 text-xs flex items-center gap-2">
+                <span className={getFlagIcon(vineyard.country)} />
+                {vineyard.region}, {vineyard.country}
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-white/90 text-gray-900">
+              {vineyard.grape ?? 'Unplanted'}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base">Vineyard Details</DialogTitle>
+            <DialogDescription className="text-xs">
+              Overview of land characteristics, vine information, and current status.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Quick stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-xs font-medium flex items-center gap-2">
+                  <Ruler className="h-4 w-4" /> Size & Value
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-3 text-sm">
+                <div className="font-semibold">{vineyard.hectares} ha</div>
+                <div className="text-muted-foreground text-xs">
+                  {formatCurrency(vineyard.landValue)}/ha
+                </div>
+                <Separator className="my-2" />
+                <div className="text-xs font-medium">Total {formatCurrency(vineyard.vineyardTotalValue)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-xs font-medium flex items-center gap-2">
+                  <Mountain className="h-4 w-4" /> Altitude
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span>{vineyard.altitude}m</span>
+                  <span className={`px-1.5 py-0.5 rounded text-xs ${altitudeColors.text} ${altitudeColors.bg}`}>
+                    {formatNumber(altitudeRating, { decimals: 2, forceDecimals: true })}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">Regional suitability</div>
+                {altitudeRange && (
+                  <div className="text-xs text-muted-foreground mt-1">Region range: {altitudeRange[0]}–{altitudeRange[1]} m</div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-xs font-medium flex items-center gap-2">
+                  <Compass className="h-4 w-4" /> Aspect
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-3 text-sm">
+                <div className="flex items-center gap-2 capitalize">
+                  <span>{vineyard.aspect}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-xs ${aspectColors.text} ${aspectColors.bg}`}>
+                    {formatNumber(aspectRating, { decimals: 2, forceDecimals: true })}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">Orientation suitability</div>
+                {aspectMin !== undefined && aspectMax !== undefined && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Region range: {formatNumber(aspectMin, { decimals: 2, forceDecimals: true })}–{formatNumber(aspectMax, { decimals: 2, forceDecimals: true })}
+                  </div>
+                )}
+                {bestAspect && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Best: <span className="font-medium capitalize">{bestAspect.dir}</span> ({formatNumber(bestAspect.value, { decimals: 2, forceDecimals: true })})
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-xs font-medium flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Location & Terrain
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-3 text-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Country</span>
+                  <div className="flex items-center gap-2">
+                    <span className={getFlagIcon(vineyard.country)} />
+                    <span>{vineyard.country}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Region</span>
+                  <span>{vineyard.region}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Soil</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="font-medium cursor-help">{vineyard.soil.join(', ')}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span className="text-xs">Primary soil composition</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {prestigeRanking !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Prestige rating</span>
+                    <span className="font-medium">{formatPercent(prestigeRanking, 0, true)}</span>
+                  </div>
+                )}
+                {regionalPriceRange && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Regional land value</span>
+                    <span className="font-medium">
+                      {formatCurrency(regionalPriceRange[0])} – {formatCurrency(regionalPriceRange[1])}/ha
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-xs font-medium">Vine Information</CardTitle>
+              </CardHeader>
+              <CardContent className="py-3 text-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Grape</span>
+                  <span className="font-medium">{vineyard.grape ?? 'Not planted'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Age</span>
+                  <span className="font-medium">
+                    {vineyard.vineAge === null ? 'Not planted' : vineyard.vineAge === 0 ? 'Newly planted' : `${vineyard.vineAge} years`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Density</span>
+                  <span className="font-medium">{vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}</span>
+                </div>
+                {vineyard.grape && (
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Ripeness</span>
+                        <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            (vineyard.ripeness || 0) < 0.3
+                              ? 'bg-red-400'
+                              : (vineyard.ripeness || 0) < 0.7
+                              ? 'bg-amber-500'
+                              : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Vine Yield</span>
+                        <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            (vineyard.vineYield || 0.02) < 0.3
+                              ? 'bg-red-400'
+                              : (vineyard.vineYield || 0.02) < 0.7
+                              ? 'bg-amber-500'
+                              : (vineyard.vineYield || 0.02) < 1.0
+                              ? 'bg-green-500'
+                              : 'bg-purple-500'
+                          }`}
+                          style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Land Value Factor (detailed) */}
+          {(() => {
+            try {
+              const qualityData = getVineyardQualityFactors(vineyard);
+              const factors = qualityData.factors;
+              return (
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium flex items-center gap-2">
+                      Land Value Calculation
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-blue-600 cursor-help">ℹ️</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="max-w-sm">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-medium text-sm">💰 Land Value Calculation</p>
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${getBadgeColorClasses(factors.landValue).bg} ${getBadgeColorClasses(factors.landValue).text}`}>
+                                  {getColorCategory(factors.landValue)}
+                                </span>
+                              </div>
+                              <p className="text-xs mb-2 text-gray-300">Your vineyard's land value is calculated dynamically based on multiple factors:</p>
+                              <p className="font-medium mb-1 text-blue-300">Calculation Formula:</p>
+                              <p className="text-xs font-mono mb-2 text-gray-300">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice</p>
+                              <p className="font-medium mb-1 text-blue-300">Raw Price Factor:</p>
+                              <p className="text-xs mb-1 text-gray-300">Regional Modifier = (Altitude + Aspect) ÷ 2</p>
+                              <ul className="text-xs space-y-1 ml-2 text-gray-300">
+                                <li>• <strong>Altitude:</strong> {vineyard.altitude}m vs. optimal range</li>
+                                <li>• <strong>Aspect:</strong> {vineyard.aspect} sun exposure rating</li>
+                              </ul>
+                              <p className="font-medium mt-2 mb-1 text-green-300">Regional Scaling:</p>
+                              <p className="text-xs text-gray-300">Perfect factors (altitudeAspectRate=1) reach the region's maximum price</p>
+                              <p className="font-medium mt-2 mb-1 text-green-300">Regional Price Range:</p>
+                              <p className="text-xs text-gray-300">€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in {vineyard.region}</p>
+                              <p className="font-medium mt-2 mb-1 text-purple-300">Global Normalization:</p>
+                              <p className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the quality index calculation.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3 text-sm space-y-3">
+                    <div className="text-xs space-y-2">
+                      <div className="space-y-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="font-mono text-gray-700 cursor-help">
+                                €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })} × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice)</div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="font-medium text-gray-700 mb-1">Regional Price Range ({vineyard.region}):</div>
+                        <div className="font-mono text-gray-600">
+                          €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="font-mono text-gray-800 font-medium cursor-help">
+                                Regional Modifier: ({formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} + {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}) ÷ 2 = {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs space-y-1">
+                                <div>Regional Modifier: (altitude + aspect) ÷ 2</div>
+                                <div>Altitude: {formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} ({vineyard.altitude}m)</div>
+                                <div>Aspect: {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} ({vineyard.aspect})</div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+
+                  </CardContent>
+                </Card>
+              );
+            } catch {
+              return null;
+            }
+          })()}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default VineyardModal;
+
+
+
