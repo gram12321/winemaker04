@@ -25,6 +25,31 @@
 
 ---
 
+## Version 0.0161 - Notification System Polish & Service Cleanup
+**Date:** 2025-10-09 | **Commit:** b1a9501a | **Stats:** 158 additions, 157 deletions
+- `src/lib/services/user/staffSearchService.ts` - Major refactor and cleanup (31 additions, 17 deletions)
+- `src/lib/services/user/teamService.ts` - Code consistency improvements (22 additions, 22 deletions)
+- `src/components/pages/AdminDashboard.tsx` - Simplified admin tools (21 additions, 37 deletions)
+- Notification consistency updates across 24 files (services, modals, managers)
+- Minor refinements to activity managers, work calculators, and database operations
+- Toast system integration improvements across UI components
+
+---
+
+## Version 0.016 - Notification System Overhaul (commit named 0.0016)
+**Date:** 2025-10-09 | **Commit:** b6563b1b | **Stats:** 1253 additions, 1645 deletions
+- **NEW FILE:** `docs/oxidation_and_health_analysis.md` (342 lines) - Oxidation system analysis
+- **NEW FILE:** `docs/oxidation_system_detailed_summary.md` (452 lines) - Detailed oxidation mechanics
+- **REMOVED:** 5 documentation files (1514 lines) - staff_search_*, wage_system_integration.md
+- `src/components/layout/NotificationCenter.tsx` - Complete redesign (247 additions, 71 deletions)
+- `src/lib/database/core/notificationsDB.ts` - Major database operations overhaul (111 additions, 9 deletions)
+- `src/components/ui/shadCN/toaster.tsx` - Enhanced toast notifications (56 additions, 4 deletions)
+- `src/lib/utils/toast.ts` - Improved notification utilities (14 additions, 3 deletions)
+- Minor database query optimizations across activityDB, vineyardDB, staffDB, teamDB, customerDB, salesDB
+- Service layer notification integration updates (activityManager, gameTick, staffService, teamService)
+
+---
+
 ## Version 0.0153 - Staff System UI Fixes & Team Service Refinements
 **Date:** 2025-10-09 | **Commit:** 1003d00f | **Stats:** 176 additions, 64 deletions
 - `src/components/pages/Staff.tsx` - Fixed duplicate team creation section, improved emoji picker (81 additions, 34 deletions)
