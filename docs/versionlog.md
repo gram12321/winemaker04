@@ -25,81 +25,57 @@
 
 ---
 
-## Version 0.0147 - Staff System Implementation
-**Date:** 2025-10-09
-**Commits:** TBD (to be committed by user)
+## Version 0.0153 - Staff System UI Fixes & Team Service Refinements
+**Date:** 2025-10-09 | **Commit:** 1003d00f | **Stats:** 176 additions, 64 deletions
+- `src/components/pages/Staff.tsx` - Fixed duplicate team creation section, improved emoji picker (81 additions, 34 deletions)
+- `src/lib/services/user/teamService.ts` - Fixed UUID generation for default teams, changed hardcoded IDs to `uuidv4()` (67 additions, 20 deletions)
+- Fixed game initialization error: "invalid input syntax for type uuid: 'winery-team'"
+- Enhanced staff modal and assignment modal UI (19 changes across modals)
+- Minor database and service cleanup across staffDB, staffService, and service exports
 
-### 🎉 Major New Feature: Staff Management System
-Implemented comprehensive staff system with skill-based work calculation, replacing hardcoded activity progression.
+---
 
-### New Files & Components
-- **Database Layer:**
-  - **NEW FILE:** `src/lib/database/core/staffDB.ts` (182 lines) - CRUD operations for staff data
-  - **NEW FILE:** Database migration `create_staff_table` - Staff table with skills, wages, and hire tracking
+## Version 0.0152 - Team Management Integration & Wage System
+**Date:** 2025-10-09 | **Commit:** 0eb3f62a | **Stats:** 1229 additions, 859 deletions
+- **NEW FILE:** `src/lib/database/core/teamDB.ts` (183 lines) - Complete team CRUD operations
+- **NEW FILE:** `src/lib/services/user/wageService.ts` (242 lines) - Comprehensive wage calculation system
+- **REMOVED:** `src/components/ui/components/TeamManagement.tsx` (598 lines) - Integrated into Staff page
+- `src/components/pages/Staff.tsx` - Complete team management UI integration (614 additions, 66 deletions)
+- Team creation, editing, deletion, member assignment, default task types, emoji picker
+- `src/lib/services/user/staffService.ts` - Major refactor removing business logic to wageService/teamService (37 additions, 102 deletions)
+- `src/lib/services/core/gameTick.ts` - Weekly wage deductions (4 additions, 2 deletions)
+- Finance integration with team-based wage breakdowns in StaffWageSummary
 
-- **Service Layer:**
-  - **NEW FILE:** `src/lib/services/user/staffService.ts` (224 lines) - Staff creation, hiring, wage calculation, skill generation
-  - **NEW FILE:** `src/lib/services/activity/workcalculators/staffWorkCalculator.ts` (91 lines) - Work contribution calculation based on staff skills
+---
 
-- **Constants:**
-  - **NEW FILE:** `src/lib/constants/staffConstants.ts` (217 lines) - Staff nationalities, names, skill levels, specializations
+## Version 0.0151 - Staff Search System & Teams Alpha
+**Date:** 2025-10-09 | **Commit:** 096ccaf6 | **Stats:** 3916 additions, 135 deletions
+- **NEW FILE:** `src/lib/services/user/staffSearchService.ts` (441 lines) - Activity-based staff search with skill targeting, specializations, cost calculation
+- **NEW FILE:** `src/components/ui/modals/activitymodals/StaffSearchOptionsModal.tsx` (294 lines) - Interactive search with live preview
+- **NEW FILE:** `src/components/ui/modals/activitymodals/StaffSearchResultsModal.tsx` (281 lines) - Candidate display and hiring
+- **NEW FILE:** `src/lib/services/user/teamService.ts` (267 lines) - Team CRUD, default teams (Admin, Maintenance, Vineyard, Winery, Sales)
+- **NEW FILE:** `src/components/ui/components/TeamManagement.tsx` (598 lines) - Team management UI
+- **NEW FILE:** `src/components/ui/modals/UImodals/StaffModal.tsx` (182 lines) - Detailed staff info display
+- **NEW FILES:** 4 comprehensive documentation files (1339 lines total)
+- `src/lib/constants/activityConstants.ts` - Unified `WORK_CATEGORY_INFO` structure (55 additions, 43 deletions)
+- `src/hooks/useGameState.ts` - Reduced cache to 100ms for better UI responsiveness
 
-- **UI Components:**
-  - **NEW FILE:** `src/components/pages/Staff.tsx` (237 lines) - Main staff management page with hiring, firing, skill visualization
-  - **NEW FILE:** `src/components/ui/modals/UImodals/HireStaffModal.tsx` (267 lines) - Modal for hiring new staff with skill preview
-  - **NEW FILE:** `src/components/ui/modals/activitymodals/StaffAssignmentModal.tsx` (253 lines) - Modal for assigning staff to activities with work preview
+---
 
-### Core System Changes
-- **Type Definitions:**
-  - `src/lib/types/types.ts` - Added `Nationality`, `StaffSkills`, `Staff` types; added `staff?` to `GameState`
-  
-- **Activity System:**
-  - `src/lib/services/activity/activitymanagers/activityManager.ts` - Replaced hardcoded 50 work/tick with dynamic staff-based calculation
-  - `src/lib/services/core/gameTick.ts` - Updated to use staff-based work progression
-  - `src/components/ui/activities/ActivityCard.tsx` - Added staff count display and "Assign Staff" button
-
-- **Game Initialization:**
-  - `src/lib/services/core/gameState.ts` - Initialize staff system on company load, create starting staff for new companies
-
-- **Navigation:**
-  - `src/App.tsx` - Added Staff page route
-  - `src/components/layout/Header.tsx` - Added Staff navigation item (👥)
-
-- **Constants & Exports:**
-  - `src/lib/constants/activityConstants.ts` - Added `CATEGORY_SKILL_MAPPING` for skill-to-activity mapping
-  - `src/lib/constants/index.ts` - Exported staff constants
-  - `src/lib/database/index.ts` - Exported staffDB
-  - `src/lib/services/index.ts` - Exported staff service functions
-
-### Features Implemented
-- ✅ **Skill-Based Work System:** Activities progress based on assigned staff skills (Field, Winery, Administration, Sales, Maintenance)
-- ✅ **Multi-Tasking Penalty:** Staff assigned to multiple activities divide their work capacity
-- ✅ **Specialization Bonus:** 20% boost for specialized staff on relevant tasks
-- ✅ **Wage Calculation:** Automatic monthly wage based on average skill level
-- ✅ **Staff Management:** Hire/fire staff with nationality, name generation, and skill randomization
-- ✅ **Starting Staff:** New companies begin with 2 random staff members
-- ✅ **Activity Assignment:** Visual staff assignment modal with live work preview
-- ✅ **Skill Visualization:** Color-coded skill bars with relevant skill highlighting
-
-### Database Schema
-```sql
-CREATE TABLE staff (
-  id UUID PRIMARY KEY,
-  company_id UUID REFERENCES companies(id),
-  name TEXT, nationality TEXT,
-  skill_level DECIMAL(3,2),
-  specializations TEXT[],
-  wage INTEGER,
-  skill_field/winery/administration/sales/maintenance DECIMAL(3,2),
-  workforce INTEGER DEFAULT 50,
-  hire_date_week/season/year INTEGER/TEXT,
-  created_at, updated_at TIMESTAMPTZ
-)
-```
-
-### Updated Documentation
-- `readme.md` - Updated Staff System section from "NOT YET IMPLEMENTED" to "✅ IMPLEMENTED"
-- Added staff system to completed systems list
+## Version 0.015 - Staff System Foundation & Wage Integration
+**Date:** 2025-10-09 | **Commit:** 137b0397 | **Stats:** 2155 additions, 26 deletions
+- **NEW FILE:** `src/lib/database/core/staffDB.ts` (184 lines) - Complete staff CRUD operations with Supabase
+- **NEW FILE:** `src/components/pages/Staff.tsx` (195 lines) - Main staff management interface
+- **NEW FILE:** `src/components/ui/modals/UImodals/HireStaffModal.tsx` (265 lines) - Interactive hiring with skill slider
+- **NEW FILE:** `src/components/ui/modals/activitymodals/StaffAssignmentModal.tsx` (234 lines) - Assign staff to activities with work preview
+- **NEW FILE:** `src/components/ui/components/StaffSkillBar.tsx` (99 lines) - Visual skill bars with color-coding
+- **NEW FILE:** `src/components/finance/StaffWageSummary.tsx` (89 lines) - Wage breakdown display
+- **NEW FILE:** `src/lib/constants/staffConstants.ts` (99 lines) - Nationalities, skill levels, specializations, wages
+- **NEW FILE:** `src/components/ui/shadCN/slider.tsx` (26 lines) - ShadCN slider component, added `@radix-ui/react-slider`
+- **NEW FILE:** `docs/wage_system_integration.md` (175 lines) - Wage system documentation
+- `src/lib/services/activity/WorkCalculators/workCalculator.ts` - Staff-based work calculation with multi-tasking penalty, specialization bonus (94 additions, 1 deletion)
+- Replaced hardcoded 50 work/tick with dynamic staff contribution based on assigned staff skills
+- Added Staff navigation (👥 icon) to header, integrated into app routing
 
 ---
 
