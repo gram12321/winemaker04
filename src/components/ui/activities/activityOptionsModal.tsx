@@ -3,7 +3,7 @@ import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { WorkCalculationTable } from './workCalculationTable';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../shadCN/tooltip';
 
-export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group';
+export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group' | 'checkbox-group';
 
 export interface ActivityOptionField {
   id: string;
@@ -14,13 +14,13 @@ export interface ActivityOptionField {
   max?: number;
   step?: number;
   options?: { value: string | number; label: string; description?: string }[];
+  checkboxOptions?: { value: string; label: string; description?: string }[];
   tooltip?: string;
   required?: boolean;
 }
 
 export interface ActivityWorkEstimate {
   totalWork: number;
-  timeEstimate?: string;
 }
 
 interface ActivityOptionsModalProps {
@@ -220,6 +220,34 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                           {option.description && <span className="text-xs text-gray-500 ml-1">({option.description})</span>}
                         </label>
                       </div>
+                    ))}
+                  </div>
+                )}
+                
+                {field.type === 'checkbox-group' && field.checkboxOptions && (
+                  <div className="space-y-2 mt-1">
+                    {field.checkboxOptions.map(option => (
+                      <label key={option.value} className="flex items-start cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id={`${field.id}-${option.value}`}
+                          checked={(options[field.id] as string[] || []).includes(option.value)}
+                          onChange={e => {
+                            const currentValues = (options[field.id] as string[]) || [];
+                            const newValues = e.target.checked
+                              ? [...currentValues, option.value]
+                              : currentValues.filter(v => v !== option.value);
+                            handleChange(field.id, newValues);
+                          }}
+                          className="mr-2 mt-1 h-4 w-4 rounded border-gray-300 text-wine focus:ring-wine"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-700">{option.label}</div>
+                          {option.description && (
+                            <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+                          )}
+                        </div>
+                      </label>
                     ))}
                   </div>
                 )}

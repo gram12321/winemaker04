@@ -20,11 +20,48 @@ export {
   getTotalSeasonalWages,
   getTotalYearlyWages
 } from './user/staffService';
+
+// Staff search services
+export {
+  calculateSearchCost,
+  calculateSearchWork,
+  calculateHiringWorkRange,
+  generateStaffCandidates,
+  startStaffSearch,
+  completeStaffSearch,
+  startHiringProcess,
+  completeHiringProcess,
+  clearPendingCandidates
+} from './user/staffSearchService';
+
+export type {
+  StaffSearchOptions,
+  SearchWorkEstimate,
+  HiringWorkEstimate
+} from './user/staffSearchService';
+
+// Team management services
+export {
+  getDefaultTeams,
+  getTeamForCategory,
+  createTeam,
+  addTeam,
+  removeTeam,
+  updateTeam,
+  getAllTeams,
+  assignStaffToTeam,
+  initializeTeamsSystem,
+  resetTeamsToDefault
+} from './user/teamService';
 export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './core/gameState';
 export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
 export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';
 export { generateSophisticatedWineOrders } from './sales/salesOrderService';
 export { initializeCustomers, getAllCustomers, getCountryCode } from './sales/createCustomer';
+
+// Re-export utility functions from constants
+export { getTaskTypeDisplayName, getWorkCategoryDisplayName, isDensityBased } from '@/lib/constants/activityConstants';
+export { getStaffRoleDisplayName } from '@/lib/constants/staffConstants';
 export { generateCustomer } from './sales/generateCustomer';
 export { generateOrder } from './sales/generateOrder';
 export { processGameTick } from './core/gameTick';

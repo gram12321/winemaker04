@@ -1,4 +1,4 @@
-import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, CATEGORY_SKILL_MAPPING} from '@/lib/constants/activityConstants';
+import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO} from '@/lib/constants/activityConstants';
 import { Staff, WorkCategory } from '@/lib/types/types';
 
 // Work factor interface for UI display
@@ -78,7 +78,7 @@ export function calculateStaffWorkContribution(
 ): number {
   if (assignedStaff.length === 0) return 0;
   
-  const relevantSkill = CATEGORY_SKILL_MAPPING[category];
+  const relevantSkill = WORK_CATEGORY_INFO[category].skill;
   let totalWork = 0;
   
   for (const staff of assignedStaff) {
@@ -132,7 +132,7 @@ export function calculateEstimatedWeeks(
  * @returns The skill name (e.g., 'Field', 'Winery')
  */
 export function getRelevantSkillName(category: WorkCategory): string {
-  const skillKey = CATEGORY_SKILL_MAPPING[category];
+  const skillKey = WORK_CATEGORY_INFO[category].skill;
   
   const skillNames: Record<string, string> = {
     field: 'Field',

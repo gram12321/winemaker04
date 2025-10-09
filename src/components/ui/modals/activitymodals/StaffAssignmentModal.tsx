@@ -3,14 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
-import { getAllStaff } from '@/lib/services';
 import { updateActivityInDb } from '@/lib/database/activities/activityDB';
 import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity/workcalculators/workCalculator';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { formatNumber } from '@/lib/utils';
-import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
+import { formatNumber, getFlagIcon, getSpecializationIcon } from '@/lib/utils';
+import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button } from '@/components/ui/shadCN/button';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
+import { useGameState } from '@/hooks';
 
 interface StaffAssignmentModalProps {
   isOpen: boolean;
@@ -27,7 +27,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   onClose,
   activity
 }) => {
-  const allStaff = getAllStaff();
+  const gameState = useGameState();
+  const allStaff = gameState.staff || [];
   const currentAssignedIds = activity.params.assignedStaffIds || [];
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(currentAssignedIds);
   const [selectAll, setSelectAll] = useState(false);
@@ -138,13 +139,58 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
             </div>
           </div>
           
-          {/* Progress bar */}
+          {/* Progress bar with completed work + week segments overlay */}
           <div className="h-4 bg-gray-700 rounded-full relative overflow-hidden">
+            {/* Completed work - solid fill */}
             <div
-              className="h-full bg-green-600 rounded-full transition-all duration-300"
+              className="h-full bg-green-600 absolute left-0 top-0 transition-all duration-300"
               style={{ width: `${(activity.completedWork / activity.totalWork) * 100}%` }}
             />
+            
+            {/* Week segments overlay for remaining work */}
+            {weeksToComplete > 0 && weeksToComplete <= 20 && (
+              <div className="h-full flex absolute left-0 top-0 w-full">
+                {Array.from({ length: weeksToComplete }, (_, index) => {
+                  const weekStart = (index * workPerWeek) / activity.totalWork * 100;
+                  const weekEnd = ((index + 1) * workPerWeek) / activity.totalWork * 100;
+                  const completedPercent = (activity.completedWork / activity.totalWork) * 100;
+                  
+                  // Only show segments that extend beyond completed work
+                  const segmentStart = Math.max(weekStart, completedPercent);
+                  const segmentEnd = weekEnd;
+                  const segmentWidth = Math.max(0, segmentEnd - segmentStart);
+                  
+                  if (segmentWidth <= 0) return null; // Don't render if fully completed
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="h-full transition-all duration-300 bg-gray-500 opacity-60 m-0.5 rounded-sm"
+                      title={`Week ${index + 1} (Planned)`}
+                      style={{
+                        width: `${segmentWidth}%`,
+                        marginLeft: `${segmentStart - weekStart}%`
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Fallback for long activities - just show completed work */}
+            {weeksToComplete > 20 && (
+              <div
+                className="h-full bg-green-600 absolute left-0 top-0 transition-all duration-300"
+                style={{ width: `${(activity.completedWork / activity.totalWork) * 100}%` }}
+              />
+            )}
           </div>
+          
+          {weeksToComplete > 20 && (
+            <div className="text-xs text-gray-400 text-center mt-1">
+              Progress bar shows one segment for each week of estimated work.
+            </div>
+          )}
           
           <p className="text-xs text-gray-400 mt-2">
             Primary skill for this activity: <span className="font-medium text-yellow-400">{relevantSkill}</span>
@@ -170,6 +216,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Name</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Nationality</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Skills</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Specializations</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300">Wage</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-300">
                       <input
@@ -188,11 +235,30 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                     return (
                       <tr key={staff.id} className="hover:bg-gray-750 transition-colors">
                         <td className="px-4 py-3 text-sm text-white">
-                          {staff.name}
-                          <div className="text-xs text-gray-400">{skillInfo.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className={`${getFlagIcon(staff.nationality)} text-base`}></span>
+                            <div>
+                              <div>{staff.name}</div>
+                              <div className="text-xs text-gray-400">{skillInfo.name}</div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-300">{staff.nationality}</td>
                         <td className="px-4 py-3">{renderSkillBars(staff)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-300">
+                          {staff.specializations.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {staff.specializations.map(spec => (
+                                <span key={spec} className="text-xs bg-blue-600 text-white px-2 py-1 rounded flex items-center gap-1">
+                                  <span>{getSpecializationIcon(spec)}</span>
+                                  <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 text-xs">None</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-300 text-right">€{formatNumber(staff.wage)}/mo</td>
                         <td className="px-4 py-3 text-center">
                           <input

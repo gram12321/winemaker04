@@ -3,7 +3,7 @@ import { Activity } from '@/lib/types/types';
 import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { Badge } from '@/components/ui/shadCN/badge';
-import { formatNumber } from '@/lib/utils/utils';
+import { formatNumber, getSkillColor } from '@/lib/utils/utils';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { StaffAssignmentModal } from '@/components/ui/modals/activitymodals/StaffAssignmentModal';
 
@@ -39,12 +39,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
 }) => {
   const [showStaffModal, setShowStaffModal] = useState(false);
   
-  const categoryInfo = WORK_CATEGORY_INFO[activity.category] || {
-    displayName: activity.category,
-    color: 'border-l-gray-400',
-    icon: 'icon_administration.webp',
-    isDensityBased: false
-  };
+  const categoryInfo = WORK_CATEGORY_INFO[activity.category];
+
+  // Resolve unified color from SKILL_COLORS via category → relevant skill mapping
+  const relevantSkillForCategory = categoryInfo.skill;
+  const categoryBorderHex = getSkillColor(relevantSkillForCategory);
   
   // Get assigned staff count
   const assignedStaffIds = activity.params.assignedStaffIds || [];
@@ -53,7 +52,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   return (
     <>
     <div 
-      className={`bg-gray-800 rounded-lg border-l-4 ${categoryInfo.color} mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative`}
+      className={`bg-gray-800 rounded-lg border-l-4 mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative`}
+      style={{ borderLeftColor: categoryBorderHex }}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

@@ -1,6 +1,6 @@
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
-import { TASK_RATES, HARVEST_YIELD_RATE, INITIAL_WORK, DENSITY_BASED_TASKS, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
+import { TASK_RATES, HARVEST_YIELD_RATE, INITIAL_WORK, isDensityBased, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
@@ -37,7 +37,7 @@ export function calculatePlantingWork(
     rate,
     initialWork,
     density: params.density > 0 ? params.density : undefined,
-    useDensityAdjustment: DENSITY_BASED_TASKS.includes(category),
+    useDensityAdjustment: isDensityBased(category),
     workModifiers: [fragilityModifier, altitudeModifier]
   });
 

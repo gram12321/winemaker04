@@ -97,3 +97,18 @@ export const SPECIALIZED_ROLES: Record<string, {
   }
 };
 
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Get display name for staff role based on specializations
+ */
+export function getStaffRoleDisplayName(specializations: string[]): string {
+  if (specializations.length === 0) {
+    return 'General Worker';
+  }
+  
+  // Get the first specialization and use its display name
+  const firstSpecialization = specializations[0];
+  return SPECIALIZED_ROLES[firstSpecialization]?.title || firstSpecialization;
+}
+

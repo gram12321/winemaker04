@@ -1,17 +1,21 @@
 // Staff Management Page
 // Main page for viewing and managing staff members
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
-import { getAllStaff, removeStaff } from '@/lib/services';
+import { getAllStaff, removeStaff, getAllTeams } from '@/lib/services';
+import { getGameState } from '@/lib/services/core/gameState';
 import type { Staff } from '@/lib/types/types';
-import { formatCurrency } from '@/lib/utils';
-import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
+import { formatCurrency, getSpecializationIcon } from '@/lib/utils';
+import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button } from '@/components/ui/shadCN/button';
 import { Badge } from '@/components/ui/shadCN/badge';
-import { HireStaffModal } from '@/components/ui/modals/UImodals/HireStaffModal';
+import { StaffSearchOptionsModal } from '@/components/ui/modals/activitymodals/StaffSearchOptionsModal';
+import { StaffSearchResultsModal } from '@/components/ui/modals/activitymodals/StaffSearchResultsModal';
+import StaffModal from '@/components/ui/modals/UImodals/StaffModal';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
-import { Users } from 'lucide-react';
+import { TeamManagement } from '@/components/ui/components/TeamManagement';
+import { Users, Search, Users2 } from 'lucide-react';
 
 interface StaffPageProps {
   title: string;
@@ -23,18 +27,49 @@ interface StaffPageProps {
  */
 export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   useGameState(); // Subscribe to game state updates for reactivity
-  const [showHireModal, setShowHireModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [searchCandidates, setSearchCandidates] = useState<Staff[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [activeTab, setActiveTab] = useState<'staff' | 'teams'>('staff');
   
   const allStaff = getAllStaff();
+  const allTeams = getAllTeams();
   const totalWages = allStaff.reduce((sum, staff) => sum + staff.wage, 0);
   
-  const handleFireStaff = async (staffId: string) => {
-    const staff = allStaff.find(s => s.id === staffId);
-    if (!staff) return;
-    
-    if (confirm(`Are you sure you want to fire ${staff.name}?`)) {
-      await removeStaff(staffId);
+  // Get the Administration Team ID (first team by default)
+  const defaultTeamId = allTeams.length > 0 ? allTeams[0].id : undefined;
+
+  // Check for pending staff candidates and auto-open results modal
+  useEffect(() => {
+    const gameState = getGameState();
+    if (gameState.pendingStaffCandidates?.candidates) {
+      setSearchCandidates(gameState.pendingStaffCandidates.candidates);
+      setShowResultsModal(true);
     }
+  }, []);
+
+  // Listen for new search results
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const gameState = getGameState();
+      if (gameState.pendingStaffCandidates?.candidates && !showResultsModal) {
+        setSearchCandidates(gameState.pendingStaffCandidates.candidates);
+        setShowResultsModal(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showResultsModal]);
+  
+  const handleFireStaff = async (staffId: string) => {
+    await removeStaff(staffId);
+  };
+
+  const handleStaffCardClick = (staff: Staff) => {
+    setSelectedStaff(staff);
+    setShowStaffModal(true);
   };
   
   // Render skill bars for a staff member
@@ -68,48 +103,74 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-base font-semibold text-gray-900">{title}</h1>
-          <p className="text-xs text-gray-600 mt-0.5">Manage your winery staff</p>
+          <p className="text-xs text-gray-600 mt-0.5">Manage your winery staff and teams</p>
         </div>
-        <Button
-          onClick={() => setShowHireModal(true)}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Users className="mr-2 h-4 w-4" />
-          Hire Staff
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant={activeTab === 'staff' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('staff')}
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Staff
+          </Button>
+          <Button
+            variant={activeTab === 'teams' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('teams')}
+            className="flex items-center gap-2"
+          >
+            <Users2 className="h-4 w-4" />
+            Teams
+          </Button>
+          {activeTab === 'staff' && (
+            <Button
+              onClick={() => setShowSearchModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Search for Staff
+            </Button>
+          )}
+        </div>
       </div>
       
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white rounded-lg shadow p-3">
-          <div className="text-xs text-gray-600 mb-1">Total Staff</div>
-          <div className="text-xl font-bold text-gray-900">{allStaff.length}</div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-3">
-          <div className="text-xs text-gray-600 mb-1">Total Monthly Wages</div>
-          <div className="text-xl font-bold text-gray-900">{formatCurrency(totalWages)}</div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-3">
-          <div className="text-xs text-gray-600 mb-1">Average Wage</div>
-          <div className="text-xl font-bold text-gray-900">
-            {allStaff.length > 0 ? formatCurrency(totalWages / allStaff.length) : '€0'}
+      {/* Content based on active tab */}
+      {activeTab === 'staff' ? (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="text-xs text-gray-600 mb-1">Total Staff</div>
+              <div className="text-xl font-bold text-gray-900">{allStaff.length}</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="text-xs text-gray-600 mb-1">Total Monthly Wages</div>
+              <div className="text-xl font-bold text-gray-900">{formatCurrency(totalWages)}</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="text-xs text-gray-600 mb-1">Average Wage</div>
+              <div className="text-xl font-bold text-gray-900">
+                {allStaff.length > 0 ? formatCurrency(totalWages / allStaff.length) : '€0'}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
       
       {/* Staff List */}
       {allStaff.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-base font-semibold text-gray-900 mb-1">No Staff Members</h3>
-          <p className="text-xs text-gray-600 mb-4">You haven't hired any staff yet.</p>
+          <p className="text-xs text-gray-600 mb-4">Start a staff search to find candidates to hire.</p>
           <Button
-            onClick={() => setShowHireModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => setShowSearchModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Hire Your First Employee
+            <Search className="mr-2 h-4 w-4" />
+            Search for Your First Employee
           </Button>
         </div>
       ) : (
@@ -121,7 +182,8 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
               return (
                 <div
                   key={staff.id}
-                  className="bg-white rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors"
+                  className="bg-white rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleStaffCardClick(staff)}
                 >
                   {/* Header */}
                   <div className="flex justify-between items-start mb-2">
@@ -137,7 +199,10 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleFireStaff(staff.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFireStaff(staff.id);
+                      }}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       Fire
@@ -163,8 +228,9 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                     {staff.specializations.length > 0 && (
                       <div className="flex gap-1">
                         {staff.specializations.map(spec => (
-                          <Badge key={spec} variant="secondary" className="text-2xs">
-                            {spec}
+                          <Badge key={spec} variant="secondary" className="text-2xs flex items-center gap-1">
+                            <span>{getSpecializationIcon(spec)}</span>
+                            <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
                           </Badge>
                         ))}
                       </div>
@@ -181,14 +247,40 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           </div>
         </div>
       )}
-      
-      {/* Hire Staff Modal */}
-      {showHireModal && (
-        <HireStaffModal
-          isOpen={showHireModal}
-          onClose={() => setShowHireModal(false)}
-        />
+        </>
+      ) : (
+        <TeamManagement defaultSelectedTeamId={defaultTeamId} />
       )}
+      
+      {/* Staff Search Options Modal */}
+      <StaffSearchOptionsModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onSearchStarted={() => {
+          // Modal auto-closes, results will show when search completes
+        }}
+      />
+
+      {/* Staff Search Results Modal */}
+      <StaffSearchResultsModal
+        isOpen={showResultsModal}
+        onClose={() => {
+          setShowResultsModal(false);
+          setSearchCandidates([]);
+        }}
+        candidates={searchCandidates}
+      />
+
+      {/* Staff Detail Modal */}
+      <StaffModal
+        isOpen={showStaffModal}
+        onClose={() => {
+          setShowStaffModal(false);
+          setSelectedStaff(null);
+        }}
+        staff={selectedStaff}
+        onFire={handleFireStaff}
+      />
     </div>
   );
 };

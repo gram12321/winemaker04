@@ -424,6 +424,7 @@ export async function loadFormattedRelationshipBreakdown(customer: Customer): Pr
 
 /**
  * Get flag icon CSS class for country flags using flag-icon-css
+ * Note: This requires flag-icon-css library to be loaded
  */
 export function getFlagIcon(countryName: string): string {
   const countryToFlagCode: { [key: string]: string } = {
@@ -431,6 +432,7 @@ export function getFlagIcon(countryName: string): string {
     "France": "fr", 
     "Spain": "es",
     "United States": "us",
+    "US": "us", // Alternative US format
     "Germany": "de",
   };
   
@@ -447,11 +449,27 @@ export function getCountryFlag(countryName: string): string {
     "France": "fr", 
     "Spain": "es",
     "United States": "us",
+    "US": "us", // Alternative US format
     "Germany": "de",
   };
   
   const flagCode = countryToFlagCode[countryName] || "xx";
   return flagCode;
+}
+
+/**
+ * Get flag emoji for nationality
+ */
+export function getNationalityFlag(nationality: string): string {
+  const flagMap: Record<string, string> = {
+    'Italy': '🇮🇹',
+    'Germany': '🇩🇪',
+    'France': '🇫🇷',
+    'Spain': '🇪🇸',
+    'United States': '🇺🇸',
+    'US': '🇺🇸' // Alternative US format
+  };
+  return flagMap[nationality] || '🌍';
 }
 
 // ===== WINE CHARACTERISTIC UTILITIES =====

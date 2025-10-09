@@ -26,6 +26,7 @@ export const TRANSACTION_CATEGORIES = {
   
   // Expense categories
   STAFF_WAGES: 'Staff Wages',
+  STAFF_SEARCH: 'Staff Search',
   EQUIPMENT_PURCHASE: 'Equipment Purchase',
   BUILDING_CONSTRUCTION: 'Building Construction',
   VINEYARD_PLANTING: 'Vineyard Planting',

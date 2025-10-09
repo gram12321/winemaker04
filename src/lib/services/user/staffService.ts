@@ -23,20 +23,25 @@ import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
  */
 export function generateRandomSkills(skillModifier: number = 0.5, specializations: string[] = []): StaffSkills {
   const getSkillValue = (isSpecialized: boolean): number => {
-    // Calculate base skill value - exactly like old system
+    // Base skill draws from range influenced by overall desired skill level
     const baseValue = (Math.random() * 0.6) + (skillModifier * 0.4);
-    
-    // For specialized roles, add a percentage-based bonus that scales with skill
+
     if (isSpecialized) {
+      // v3-like behaviour: specialized roles gain a multiplicative bump
       const remainingPotential = 1.0 - baseValue;
       const bonusPercentage = 0.2 + (skillModifier * 0.2); // 20-40%
-      const bonus = remainingPotential * bonusPercentage;
-      return Math.min(1.0, baseValue + bonus);
+      const bumped = Math.min(1.0, baseValue + remainingPotential * bonusPercentage);
+
+      // Ensure a minimum floor for specialized skills so they don't roll too low
+      // Floor scales with overall skill level: base 35% + 15% of slider
+      // Example: Apprentice (0.3) → ~0.45 min, Expert (0.9) → ~0.65 min
+      const specializationFloor = Math.min(1, 0.35 + (skillModifier * 0.15) + (skillModifier * 0.15));
+      return Math.max(bumped, specializationFloor);
     }
-    
+
     return baseValue;
   };
-  
+
   return {
     field: getSkillValue(specializations.includes('field')),
     winery: getSkillValue(specializations.includes('winery')),

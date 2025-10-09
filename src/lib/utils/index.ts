@@ -24,6 +24,7 @@ export {
   // Flag utilities
   getFlagIcon,
   getCountryFlag,
+  getNationalityFlag,
   // Skill color utilities
   SKILL_COLORS,
   getSkillColor,
@@ -45,7 +46,8 @@ export {
   getChevronIcon,
   getChevronIconComponent,
   ICON_SIZES,
-  type IconSize
+  type IconSize,
+  getSpecializationIcon
 } from './icons';
 export { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateAsymmetricalScaler01, getRandomHectares, vineyardAgePrestigeModifier, calculateBaseWinePrice, calculateSymmetricalMultiplier, calculateOrderAmount } from './calculator';
 export { getCurrentCompanyId, getCompanyQuery, getCompanyDeleteQuery, getCompanyUpdateQuery, insertCompanyRecord, upsertCompanyRecord, getAllCompanyRecords, getCompanyRecord } from './companyUtils';

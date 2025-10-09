@@ -12,6 +12,9 @@ import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
 import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
 import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
 import { calculateStaffWorkContribution } from '../workcalculators/workCalculator';
+import { completeStaffSearch, completeHiringProcess } from '../../user/staffSearchService';
+import { getTeamForCategory } from '../../user/teamService';
+import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -101,17 +104,23 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     // TODO: Implement maintenance completion
   },
 
-  [WorkCategory.STAFF_SEARCH]: async (_activity: Activity) => {
-    // TODO: Implement staff search completion
+  [WorkCategory.STAFF_SEARCH]: async (activity: Activity) => {
+    await completeStaffSearch(activity);
   },
 
   [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
-    await completeBookkeeping(activity);
+    // Check if this is a hiring activity (distinguished by isHiringActivity param)
+    // Otherwise it's a bookkeeping/administration activity
+    if (activity.params.isHiringActivity) {
+      await completeHiringProcess(activity);
+    } else {
+      await completeBookkeeping(activity);
+    }
   }
 };
 
 /**
- * Create a new activity
+ * Create a new activity with optional auto-assignment
  */
 export async function createActivity(options: ActivityCreationOptions): Promise<string | null> {
   try {
@@ -142,13 +151,30 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
       createdAt: new Date()
     };
     
+    // Auto-assign staff from matching team if no staff already assigned
+    if (!activity.params.assignedStaffIds || activity.params.assignedStaffIds.length === 0) {
+      const matchingTeam = getTeamForCategory(options.category);
+      if (matchingTeam && matchingTeam.memberIds.length > 0) {
+        activity.params.assignedStaffIds = matchingTeam.memberIds;
+        console.log(`[Auto-Assignment] Assigned ${matchingTeam.memberIds.length} staff from ${matchingTeam.name} to ${options.category} activity`);
+      }
+    }
+    
     const success = await saveActivityToDb(activity);
     if (success) {
       // Update local game state
       const currentActivities = await loadActivitiesFromDb();
       updateGameState({ activities: currentActivities });
       
-      notificationService.info(`Started ${activity.title} - ${activity.totalWork} work units required`);
+      // Trigger immediate UI update for critical activity creation
+      triggerGameUpdateImmediate();
+      
+      const assignedCount = activity.params.assignedStaffIds?.length || 0;
+      const assignmentMessage = assignedCount > 0 
+        ? `Started ${activity.title} - ${activity.totalWork} work units required (${assignedCount} staff auto-assigned)`
+        : `Started ${activity.title} - ${activity.totalWork} work units required`;
+      
+      notificationService.info(assignmentMessage);
       return activity.id;
     }
     
@@ -196,6 +222,9 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
       // Update local game state
       const currentActivities = await loadActivitiesFromDb();
       updateGameState({ activities: currentActivities.filter(a => a.status === 'active') });
+      
+      // Trigger immediate UI update for critical activity cancellation
+      triggerGameUpdateImmediate();
       
       notificationService.warning(`Cancelled activity: ${activity.title}`);
     }
@@ -278,6 +307,11 @@ export async function progressActivities(): Promise<void> {
     // Update local game state
     const currentActivities = await getAllActivities();
     updateGameState({ activities: currentActivities });
+    
+    // Trigger immediate UI update if any activities were completed
+    if (completedActivities.length > 0) {
+      triggerGameUpdateImmediate();
+    }
     
   } catch (error) {
     console.error('Error progressing activities:', error);

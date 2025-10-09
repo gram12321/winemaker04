@@ -52,3 +52,17 @@ export const ICON_SIZES = {
 } as const;
 
 export type IconSize = keyof typeof ICON_SIZES;
+
+// Specialization Icons - Emoji-based icons for staff specializations
+export const SPECIALIZATION_ICONS = {
+  field: '🌱',        // Vineyard Manager - Growing/planting
+  winery: '🍷',       // Master Winemaker - Wine production
+  administration: '📊', // Estate Administrator - Business/management
+  sales: '💼',        // Sales Director - Business/sales
+  maintenance: '🔧'   // Technical Director - Technical/maintenance
+} as const;
+
+// Helper function to get specialization icon
+export const getSpecializationIcon = (specialization: string): string => {
+  return SPECIALIZATION_ICONS[specialization as keyof typeof SPECIALIZATION_ICONS] || '⭐';
+};

@@ -129,6 +129,14 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     console.error('Failed to initialize staff system:', error);
   }
   
+  // Initialize teams system for this company
+  try {
+    const { initializeTeamsSystem } = await import('../user/teamService');
+    initializeTeamsSystem();
+  } catch (error) {
+    console.error('Failed to initialize teams system:', error);
+  }
+  
   // Initialize starting capital in finance system for this company
   try {
     await initializeStartingCapital(company.id);
@@ -168,6 +176,14 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
         await createStartingStaff();
       } catch (error) {
         console.error('Error creating starting staff:', error);
+      }
+      
+      // Initialize teams system for new companies
+      try {
+        const { initializeTeamsSystem } = await import('../user/teamService');
+        initializeTeamsSystem();
+      } catch (error) {
+        console.error('Error initializing teams system:', error);
       }
       
       notificationService.success(`Company "${companyName}" created successfully!`);

@@ -411,10 +411,39 @@ export interface Staff {
   skillLevel: number;  // 0-1 scale, overall skill level
   specializations: string[]; // Array of specialization keys (e.g., 'field', 'winery')
   wage: number;        // Monthly wage in euros
-  teamId: string | null; // Reserved for future team system
+  teamId: string | null; // Team assignment
   skills: StaffSkills;
   workforce: number;   // Base work capacity (default 50)
   hireDate: GameDate;
+}
+
+// ===== TEAM MANAGEMENT TYPES =====
+
+// Staff team interface - for organizing staff into teams
+export interface StaffTeam {
+  id: string;
+  name: string;
+  description: string;
+  memberIds: string[]; // Array of staff member IDs
+  icon?: string; // Optional icon for the team
+  defaultTaskTypes: string[]; // Task types that this team handles
+}
+
+// ===== STAFF SEARCH TYPES =====
+
+/**
+ * Pending staff search results
+ * Temporary storage for candidates generated from completed search activity
+ */
+export interface PendingStaffCandidates {
+  activityId: string;
+  candidates: Staff[];
+  searchOptions: {
+    numberOfCandidates: number;
+    skillLevel: number;
+    specializations: string[];
+  };
+  timestamp: number;
 }
 
 // ===== GAME STATE =====
@@ -429,4 +458,6 @@ export interface GameState {
   prestige: number; // Company prestige for order generation scaling
   activities?: Activity[]; // Active activities
   staff?: Staff[]; // Active staff members
+  teams?: StaffTeam[]; // Staff teams
+  pendingStaffCandidates?: PendingStaffCandidates;
 }

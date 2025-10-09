@@ -52,98 +52,110 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
  */
 export const WORK_CATEGORY_INFO: Record<WorkCategory, {
   displayName: string;
-  color: string;
   icon: string;
   isDensityBased: boolean;
+  // Primary staff skill driving visuals and calculations
+  skill: keyof StaffSkills;
 }> = {
   [WorkCategory.PLANTING]: {
     displayName: 'Planting',
-    color: 'border-l-green-500',
     icon: 'icon_planting.webp',
-    isDensityBased: true
+    isDensityBased: true,
+    skill: 'field'
   },
   [WorkCategory.HARVESTING]: {
     displayName: 'Harvesting',
-    color: 'border-l-yellow-500',
     icon: 'icon_harvesting.webp',
-    isDensityBased: true
+    isDensityBased: true,
+    skill: 'field'
   },
   [WorkCategory.CLEARING]: {
     displayName: 'Clearing',
-    color: 'border-l-orange-500',
     icon: 'icon_clearing.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'field'
   },
   [WorkCategory.UPROOTING]: {
     displayName: 'Uprooting',
-    color: 'border-l-red-500',
     icon: 'icon_uprooting.webp',
-    isDensityBased: true
+    isDensityBased: true,
+    skill: 'field'
   },
   [WorkCategory.ADMINISTRATION]: {
     displayName: 'Administration',
-    color: 'border-l-blue-500',
     icon: 'icon_administration.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'administration'
   },
   [WorkCategory.BUILDING]: {
     displayName: 'Building',
-    color: 'border-l-gray-500',
     icon: 'icon_building.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'maintenance'
   },
   [WorkCategory.UPGRADING]: {
     displayName: 'Upgrading',
-    color: 'border-l-purple-500',
     icon: 'icon_upgrade.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'maintenance'
   },
   [WorkCategory.MAINTENANCE]: {
     displayName: 'Maintenance',
-    color: 'border-l-gray-600',
     icon: 'icon_maintenance.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'maintenance'
   },
   [WorkCategory.CRUSHING]: {
     displayName: 'Crushing',
-    color: 'border-l-purple-600',
     icon: 'icon_crushing.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'winery'
   },
   [WorkCategory.FERMENTATION]: {
     displayName: 'Fermentation',
-    color: 'border-l-wine',
     icon: 'icon_fermentation.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'winery'
   },
   [WorkCategory.STAFF_SEARCH]: {
     displayName: 'Staff Search',
-    color: 'border-l-indigo-500',
     icon: 'icon_hiring.webp',
-    isDensityBased: false
+    isDensityBased: false,
+    skill: 'administration'
   }
 };
 
-// ===== DERIVED CONSTANTS =====
+// ===== DERIVED HELPERS =====
 
-// Derived: Get density-based tasks from WORK_CATEGORY_INFO
-export const DENSITY_BASED_TASKS: WorkCategory[] = Object.keys(WORK_CATEGORY_INFO).filter(
-  category => WORK_CATEGORY_INFO[category as WorkCategory].isDensityBased
-) as WorkCategory[];
+/**
+ * Check whether a category uses density adjustments
+ */
+export function isDensityBased(category: WorkCategory): boolean {
+  return WORK_CATEGORY_INFO[category].isDensityBased;
+}
 
-// ===== STAFF SKILL MAPPING =====
+/**
+ * Get display name for a work category
+ */
+export function getWorkCategoryDisplayName(category: WorkCategory): string {
+  return WORK_CATEGORY_INFO[category].displayName;
+}
 
-// Map activity categories to relevant staff skills
-export const CATEGORY_SKILL_MAPPING: Record<WorkCategory, keyof StaffSkills> = {
-  [WorkCategory.PLANTING]: 'field',
-  [WorkCategory.HARVESTING]: 'field',
-  [WorkCategory.CLEARING]: 'field',
-  [WorkCategory.UPROOTING]: 'field',
-  [WorkCategory.CRUSHING]: 'winery',
-  [WorkCategory.FERMENTATION]: 'winery',
-  [WorkCategory.ADMINISTRATION]: 'administration',
-  [WorkCategory.STAFF_SEARCH]: 'administration',
-  [WorkCategory.BUILDING]: 'maintenance',
-  [WorkCategory.UPGRADING]: 'maintenance',
-  [WorkCategory.MAINTENANCE]: 'maintenance'
-};
+/**
+ * Get display name for a task type string (lowercase WorkCategory)
+ */
+export function getTaskTypeDisplayName(taskType: string): string {
+  // Find the matching WorkCategory enum value
+  const matchingCategory = Object.values(WorkCategory).find(
+    category => category.toLowerCase() === taskType.toLowerCase()
+  );
+  
+  if (matchingCategory) {
+    return WORK_CATEGORY_INFO[matchingCategory].displayName;
+  }
+  
+  // Fallback: capitalize first letter
+  return taskType.charAt(0).toUpperCase() + taskType.slice(1);
+}
+
+
