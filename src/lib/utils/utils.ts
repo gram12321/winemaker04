@@ -600,3 +600,4 @@ export function getSkillDisplayName(skillKey: 'field' | 'winery' | 'administrati
   return names[skillKey];
 }
 
+

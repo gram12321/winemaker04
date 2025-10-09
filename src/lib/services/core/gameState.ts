@@ -132,7 +132,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   // Initialize teams system for this company
   try {
     const { initializeTeamsSystem } = await import('../user/teamService');
-    initializeTeamsSystem();
+    await initializeTeamsSystem();
   } catch (error) {
     console.error('Failed to initialize teams system:', error);
   }
@@ -170,20 +170,20 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
     if (result.success && result.company) {
       await setActiveCompany(result.company);
       
-      // Create starting staff for new companies
+      // Initialize teams system for new companies first
+      try {
+        const { initializeTeamsSystem } = await import('../user/teamService');
+        await initializeTeamsSystem();
+      } catch (error) {
+        console.error('Error initializing teams system:', error);
+      }
+      
+      // Create starting staff for new companies (after teams are initialized)
       try {
         const { createStartingStaff } = await import('../user/staffService');
         await createStartingStaff();
       } catch (error) {
         console.error('Error creating starting staff:', error);
-      }
-      
-      // Initialize teams system for new companies
-      try {
-        const { initializeTeamsSystem } = await import('../user/teamService');
-        initializeTeamsSystem();
-      } catch (error) {
-        console.error('Error initializing teams system:', error);
       }
       
       notificationService.success(`Company "${companyName}" created successfully!`);

@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types/types';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import { formatCurrency, getFlagIcon, getSpecializationIcon } from '@/lib/utils';
+import { formatCurrency, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
+import { getWageColorClass } from '@/lib/services';
 import { Button } from '@/components/ui/shadCN/button';
 import { Badge } from '@/components/ui/shadCN/badge';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
@@ -154,7 +155,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium text-white">{formatCurrency(candidate.wage)}</div>
-                          <div className="text-xs text-gray-400">per month</div>
+                          <div className="text-xs text-gray-400">per week</div>
                         </div>
                       </div>
                     </div>
@@ -188,13 +189,9 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Skill Level:</span>
-                        <Badge variant="outline" className="text-xs bg-gray-600 text-white border-gray-500">
+                        <Badge variant="outline" className={`text-xs bg-gray-600 text-white border-gray-500 ${getColorClass(selectedCandidate.skillLevel)}`}>
                           {getSkillLevelInfo(selectedCandidate.skillLevel).name} ({Math.round(selectedCandidate.skillLevel * 100)}%)
                         </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Workforce:</span>
-                        <span className="text-white">{selectedCandidate.workforce} units</span>
                       </div>
                       {selectedCandidate.specializations.length > 0 && (
                         <div className="flex justify-between">
@@ -226,15 +223,15 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                     </p>
                   </div>
 
-                  {/* Monthly Wage */}
+                  {/* Weekly Wage */}
                   <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                    <h4 className="text-sm font-medium text-white mb-4">Monthly Wage</h4>
+                    <h4 className="text-sm font-medium text-white mb-4">Weekly Wage</h4>
                     <div className="bg-green-600 rounded-lg p-4 text-center">
-                      <div className="text-3xl font-bold text-white">
+                      <div className={`text-3xl font-bold ${getWageColorClass(selectedCandidate.wage, 'weekly')}`}>
                         {formatCurrency(selectedCandidate.wage)}
                       </div>
                       <div className="text-sm text-green-100 mt-2">
-                        Wage is calculated based on average skill level
+                        Wage is calculated based on average skill level. Paid seasonally (12 weeks).
                       </div>
                     </div>
                   </div>

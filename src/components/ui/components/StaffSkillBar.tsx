@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Staff } from '@/lib/types/types';
-import { getSkillColor, formatNumber } from '@/lib/utils';
+import { getSkillColor, formatNumber, getColorClass } from '@/lib/utils';
 
 interface StaffSkillBarProps {
   label: string;
@@ -51,7 +51,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
         </div>
       </div>
       {showValue && (
-        <div className="w-10 text-right text-xs text-gray-600">{Math.round(value * 100)}%</div>
+        <div className={`w-10 text-right text-xs ${getColorClass(value)}`}>{Math.round(value * 100)}%</div>
       )}
     </div>
   );

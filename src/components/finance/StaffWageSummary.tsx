@@ -1,15 +1,15 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui';
 import { formatCurrency } from '@/lib/utils/utils';
-import { getTotalWeeklyWages, getTotalSeasonalWages, getTotalYearlyWages, getAllStaff } from '@/lib/services';
+import { getAllStaff, calculateTotalWeeklyWages, calculateTotalSeasonalWages, calculateTotalYearlyWages } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
 import { Users } from 'lucide-react';
 
 export function StaffWageSummary() {
   const staff = useGameStateWithData(() => Promise.resolve(getAllStaff()), []);
   
-  const weeklyWages = getTotalWeeklyWages();
-  const seasonalWages = getTotalSeasonalWages();
-  const yearlyWages = getTotalYearlyWages();
+  const weeklyWages = calculateTotalWeeklyWages(staff);
+  const seasonalWages = calculateTotalSeasonalWages(staff);
+  const yearlyWages = calculateTotalYearlyWages(staff);
   
   if (staff.length === 0) {
     return null; // Don't show if no staff

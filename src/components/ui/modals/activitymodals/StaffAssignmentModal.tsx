@@ -6,7 +6,7 @@ import { Activity, Staff } from '@/lib/types/types';
 import { updateActivityInDb } from '@/lib/database/activities/activityDB';
 import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity/workcalculators/workCalculator';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { formatNumber, getFlagIcon, getSpecializationIcon } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button } from '@/components/ui/shadCN/button';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
@@ -193,7 +193,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           )}
           
           <p className="text-xs text-gray-400 mt-2">
-            Primary skill for this activity: <span className="font-medium text-yellow-400">{relevantSkill}</span>
+            Primary skill for this activity: <span className="font-medium" style={{ color: getSkillColor(relevantSkill.toLowerCase() as any) }}>{relevantSkill}</span>
           </p>
         </div>
         
@@ -259,7 +259,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                             <span className="text-gray-500 text-xs">None</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-300 text-right">€{formatNumber(staff.wage)}/mo</td>
+                        <td className="px-4 py-3 text-sm text-gray-300 text-right">€{formatNumber(staff.wage)}/wk</td>
                         <td className="px-4 py-3 text-center">
                           <input
                             type="checkbox"

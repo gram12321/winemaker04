@@ -5,13 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { StaffTeam, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { saveTeamToDb, loadTeamsFromDb, deleteTeamFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
 
 // ===== DEFAULT TEAMS =====
 
 export function getDefaultTeams(): StaffTeam[] {
   return [
     {
-      id: 'admin-team',
+      id: uuidv4(),
       name: 'Administration Team',
       description: 'Handle company administration and paperwork',
       memberIds: [],
@@ -19,7 +20,7 @@ export function getDefaultTeams(): StaffTeam[] {
       defaultTaskTypes: ['administration']
     },
     {
-      id: 'maintenance-team',
+      id: uuidv4(),
       name: 'Building & Maintenance Team',
       description: 'Maintain and upgrade facilities',
       memberIds: [],
@@ -27,7 +28,7 @@ export function getDefaultTeams(): StaffTeam[] {
       defaultTaskTypes: ['maintenance', 'building', 'upgrading']
     },
     {
-      id: 'vineyard-team',
+      id: uuidv4(),
       name: 'Vineyard Team',
       description: 'Coordinate vineyard operations',
       memberIds: [],
@@ -35,7 +36,7 @@ export function getDefaultTeams(): StaffTeam[] {
       defaultTaskTypes: ['planting', 'harvesting', 'clearing', 'uprooting']
     },
     {
-      id: 'winery-team',
+      id: uuidv4(),
       name: 'Winery Team',
       description: 'Oversee winery processes',
       memberIds: [],
@@ -43,7 +44,7 @@ export function getDefaultTeams(): StaffTeam[] {
       defaultTaskTypes: ['crushing', 'fermentation']
     },
     {
-      id: 'sales-team',
+      id: uuidv4(),
       name: 'Sales Team',
       description: 'Manage your sales force',
       memberIds: [],
@@ -94,9 +95,9 @@ export function createTeam(
 }
 
 /**
- * Add a team to the game state
+ * Add a team to the game state and database
  */
-export function addTeam(team: StaffTeam): StaffTeam {
+export async function addTeam(team: StaffTeam): Promise<StaffTeam> {
   const gameState = getGameState();
   const currentTeams = gameState.teams || [];
   
@@ -107,6 +108,13 @@ export function addTeam(team: StaffTeam): StaffTeam {
     throw new Error('Team name already exists');
   }
   
+  // Save to database
+  const success = await saveTeamToDb(team);
+  if (!success) {
+    notificationService.error('Failed to save team to database');
+    throw new Error('Failed to save team to database');
+  }
+  
   const updatedTeams = [...currentTeams, team];
   updateGameState({ teams: updatedTeams });
   
@@ -115,15 +123,22 @@ export function addTeam(team: StaffTeam): StaffTeam {
 }
 
 /**
- * Remove a team from the game state
+ * Remove a team from the game state and database
  */
-export function removeTeam(teamId: string): boolean {
+export async function removeTeam(teamId: string): Promise<boolean> {
   const gameState = getGameState();
   const currentTeams = gameState.teams || [];
   const team = currentTeams.find(t => t.id === teamId);
   
   if (!team) {
     notificationService.error('Team not found');
+    return false;
+  }
+  
+  // Delete from database
+  const success = await deleteTeamFromDb(teamId);
+  if (!success) {
+    notificationService.error('Failed to delete team from database');
     return false;
   }
   
@@ -143,7 +158,7 @@ export function removeTeam(teamId: string): boolean {
 /**
  * Update an existing team
  */
-export function updateTeam(updatedTeam: StaffTeam): StaffTeam {
+export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
   const gameState = getGameState();
   const currentTeams = gameState.teams || [];
   
@@ -160,6 +175,13 @@ export function updateTeam(updatedTeam: StaffTeam): StaffTeam {
     throw new Error('Team name already exists');
   }
   
+  // Save to database
+  const success = await saveTeamToDb(updatedTeam);
+  if (!success) {
+    notificationService.error('Failed to update team in database');
+    throw new Error('Failed to update team in database');
+  }
+  
   const updatedTeams = [...currentTeams];
   updatedTeams[teamIndex] = updatedTeam;
   updateGameState({ teams: updatedTeams });
@@ -172,8 +194,7 @@ export function updateTeam(updatedTeam: StaffTeam): StaffTeam {
  * Get all teams
  */
 export function getAllTeams(): StaffTeam[] {
-  const gameState = getGameState();
-  return gameState.teams || [];
+  return getGameState().teams || [];
 }
 
 /**
@@ -230,20 +251,35 @@ export function assignStaffToTeam(staffId: string, teamId: string | null): boole
 // ===== INITIALIZATION FUNCTIONS =====
 
 /**
- * Initialize teams system with default teams
+ * Initialize teams system with default teams or load from database
  */
-export function initializeTeamsSystem(): void {
-  const gameState = getGameState();
-  
-  // Only initialize if no teams exist
-  if (!gameState.teams || gameState.teams.length === 0) {
+export async function initializeTeamsSystem(): Promise<void> {
+  try {
+    // Try to load teams from database first
+    const dbTeams = await loadTeamsFromDb();
+    
+    if (dbTeams.length > 0) {
+      // Load teams from database
+      updateGameState({ teams: dbTeams });
+    } else {
+      // No teams in database, create default teams
+      const defaultTeams = getDefaultTeams();
+      
+      // Save default teams to database
+      const success = await saveTeamsToDb(defaultTeams);
+      if (success) {
+        updateGameState({ teams: defaultTeams });
+      } else {
+        console.error('[Teams] Failed to save default teams to database');
+        // Still set in game state even if database save failed
+        updateGameState({ teams: defaultTeams });
+      }
+    }
+  } catch (error) {
+    console.error('[Teams] Error initializing teams system:', error);
+    // Fallback to default teams if database fails
     const defaultTeams = getDefaultTeams();
-    
-    updateGameState({ 
-      teams: defaultTeams
-    });
-    
-    console.log('[Team Service] Initialized with default teams');
+    updateGameState({ teams: defaultTeams });
   }
 }
 

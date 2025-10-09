@@ -11,15 +11,25 @@ export {
   initializeStaffSystem,
   createStartingStaff,
   generateRandomSkills,
-  calculateWage,
   getRandomFirstName,
   getRandomLastName,
-  getRandomNationality,
-  processSeasonalWages,
-  getTotalWeeklyWages,
-  getTotalSeasonalWages,
-  getTotalYearlyWages
+  getRandomNationality
 } from './user/staffService';
+
+// Wage services
+export {
+  calculateWage,
+  getMaxWage,
+  normalizeWage,
+  getWageColorClass,
+  getWageBadgeColorClasses,
+  calculateTotalWeeklyWages,
+  calculateTotalSeasonalWages,
+  calculateTotalYearlyWages,
+  formatWageWithColor,
+  getWageStatistics,
+  processSeasonalWages
+} from './user/wageService';
 
 // Staff search services
 export {

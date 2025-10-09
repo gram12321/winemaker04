@@ -7,7 +7,8 @@ import { progressActivities } from '../activity/activitymanagers/activityManager
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../vineyard/vineyardManager';
 import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
-import { processSeasonalWages } from '../user/staffService';
+import { processSeasonalWages } from '../user/wageService';
+import { getAllStaff } from '../user/staffService';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -134,7 +135,8 @@ const processWeeklyEffects = async (): Promise<void> => {
   // Process seasonal wage payments (at the start of each season - week 1)
   if (currentWeek === 1) {
     try {
-      await processSeasonalWages();
+      const staff = getAllStaff();
+      await processSeasonalWages(staff);
     } catch (error) {
       console.warn('Error during seasonal wage processing:', error);
     }

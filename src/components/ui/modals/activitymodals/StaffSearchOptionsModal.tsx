@@ -214,11 +214,11 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
 
                   {/* Wage Range */}
                   <div>
-                    <h4 className="text-sm font-medium text-white mb-2">Monthly Wage Range</h4>
+                    <h4 className="text-sm font-medium text-white mb-2">Weekly Wage Range</h4>
                     <div className="bg-green-600 rounded-lg p-3">
                       <div className="text-lg font-bold text-white text-center">{previewStats.wageRange}</div>
                       <div className="text-xs text-green-100 mt-1 text-center">
-                        Based on skill level and specializations
+                        Based on skill level and specializations. Paid seasonally.
                       </div>
                     </div>
                   </div>

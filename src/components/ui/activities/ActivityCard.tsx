@@ -145,7 +145,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
             {/* Staff display and assign button */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-1">
-                <span className="text-gray-400 text-xs">
+                <span className={`text-xs ${assignedStaffCount > 0 ? 'text-gray-400' : 'text-red-400'}`}>
                   👥 {assignedStaffCount > 0 ? `${assignedStaffCount} staff` : 'No staff'}
                 </span>
               </div>

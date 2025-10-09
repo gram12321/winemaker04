@@ -1,10 +1,8 @@
-// Staff Modal
-// Detailed view for individual staff members
-
 import React from 'react';
 import { Staff } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
-import { formatCurrency, formatNumber, getFlagIcon, getSpecializationIcon } from '@/lib/utils';
+import { formatCurrency, formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
+import { getWageColorClass, getAllTeams } from '@/lib/services';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
 import { Button } from '@/components/ui/shadCN/button';
@@ -19,6 +17,8 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
   if (!isOpen || !staff) return null;
 
   const skillInfo = getSkillLevelInfo(staff.skillLevel);
+  const allTeams = getAllTeams();
+  const assignedTeam = allTeams.find(team => team.id === staff.teamId);
 
   const handleFire = () => {
     if (onFire && confirm(`Are you sure you want to fire ${staff.name}?`)) {
@@ -65,17 +65,9 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                 </div>
                 <div>
                   <span className="text-gray-400">Skill Level:</span>
-                  <div className="text-white font-medium mt-1">
+                  <div className={`font-medium mt-1 ${getColorClass(staff.skillLevel)}`}>
                     {skillInfo.name} ({formatNumber(staff.skillLevel * 100, { decimals: 0 })}%)
                   </div>
-                </div>
-                <div>
-                  <span className="text-gray-400">Employee ID:</span>
-                  <div className="text-white font-mono text-xs mt-1">{staff.id.slice(0, 8)}...</div>
-                </div>
-                <div>
-                  <span className="text-gray-400">Workforce:</span>
-                  <div className="text-white font-medium mt-1">{staff.workforce} units</div>
                 </div>
                 {staff.specializations.length > 0 && (
                   <div className="col-span-2">
@@ -112,16 +104,16 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
               <h3 className="font-semibold text-white mb-4">Compensation</h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Monthly Wage:</span>
-                  <span className="text-white font-medium">{formatCurrency(staff.wage)}</span>
+                  <span className="text-gray-400">Weekly Wage:</span>
+                  <span className={`font-medium ${getWageColorClass(staff.wage, 'weekly')}`}>{formatCurrency(staff.wage)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Seasonal Wage (12 weeks):</span>
-                  <span className="text-white font-medium">{formatCurrency(staff.wage * 12)}</span>
+                  <span className={`font-medium ${getWageColorClass(staff.wage * 12, 'seasonal')}`}>{formatCurrency(staff.wage * 12)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Annual Wage (48 weeks):</span>
-                  <span className="text-white font-medium">{formatCurrency(staff.wage * 48)}</span>
+                  <span className={`font-medium ${getWageColorClass(staff.wage * 48, 'annual')}`}>{formatCurrency(staff.wage * 48)}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 mt-3">
@@ -148,7 +140,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                 <div>
                   <span className="text-gray-400">Team Assignment:</span>
                   <div className="text-white font-medium mt-1">
-                    {staff.teamId ? `Team ${staff.teamId.slice(0, 8)}...` : 'Unassigned'}
+                    {assignedTeam ? assignedTeam.name : 'Unassigned'}
                   </div>
                 </div>
               </div>

@@ -66,3 +66,10 @@ export const SPECIALIZATION_ICONS = {
 export const getSpecializationIcon = (specialization: string): string => {
   return SPECIALIZATION_ICONS[specialization as keyof typeof SPECIALIZATION_ICONS] || '⭐';
 };
+
+// Team Icon Options - Emoji options for team icons
+export const EMOJI_OPTIONS: readonly string[] = [
+  '📊', '🔧', '🍇', '🍷', '💼', '👥', '🌟', '⚡', '🎯', '🚀', 
+  '💡', '🔥', '⭐', '🎪', '🏆', '🎨', '🎵', '🎮', '📱', '💻',
+  '🏢', '🏭', '🌍', '🌱', '🌿', '🍃', '🌺', '🌻', '🌸', '🌷'
+];

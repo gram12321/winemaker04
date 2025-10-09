@@ -47,7 +47,8 @@ export {
   getChevronIconComponent,
   ICON_SIZES,
   type IconSize,
-  getSpecializationIcon
+  getSpecializationIcon,
+  EMOJI_OPTIONS
 } from './icons';
 export { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateAsymmetricalScaler01, getRandomHectares, vineyardAgePrestigeModifier, calculateBaseWinePrice, calculateSymmetricalMultiplier, calculateOrderAmount } from './calculator';
 export { getCurrentCompanyId, getCompanyQuery, getCompanyDeleteQuery, getCompanyUpdateQuery, insertCompanyRecord, upsertCompanyRecord, getAllCompanyRecords, getCompanyRecord } from './companyUtils';

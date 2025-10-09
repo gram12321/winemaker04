@@ -57,7 +57,7 @@ export function calculateTotalWork(
 
 /**
  * Calculate work contribution from assigned staff for an activity
- * Based on v3's calculateStaffWorkContribution logic
+ * Enhanced with team efficiency scaling for diminishing returns
  * 
  * Formula: For each staff member:
  *   1. Get relevant skill for the activity category
@@ -65,6 +65,12 @@ export function calculateTotalWork(
  *   3. Calculate: workforce × effectiveSkill
  *   4. Divide by number of tasks staff is assigned to
  *   5. Sum all contributions
+ *   6. Apply team size efficiency factor (staffCount^0.92)
+ * 
+ * Team size scaling:
+ *   - 1 staff: 1.0× efficiency (baseline)
+ *   - 10 staff: 8.3× efficiency (not 10× - diminishing returns)
+ *   - 100 staff: 69× efficiency (not 100× - strong diminishing returns)
  * 
  * @param assignedStaff - Staff members assigned to this activity
  * @param category - The activity category
@@ -79,7 +85,7 @@ export function calculateStaffWorkContribution(
   if (assignedStaff.length === 0) return 0;
   
   const relevantSkill = WORK_CATEGORY_INFO[category].skill;
-  let totalWork = 0;
+  let totalIndividualWork = 0;
   
   for (const staff of assignedStaff) {
     // Get relevant skill for this activity type
@@ -96,10 +102,17 @@ export function calculateStaffWorkContribution(
     const taskCount = staffTaskCounts.get(staff.id) || 1;
     const dividedContribution = staffContribution / taskCount;
     
-    totalWork += dividedContribution;
+    totalIndividualWork += dividedContribution;
   }
   
-  return totalWork;
+  // Apply team size efficiency factor with diminishing returns
+  // Formula: staffCount^0.92
+  // This prevents linear scaling while still providing strong benefits
+  const teamSizeFactor = Math.pow(assignedStaff.length, 0.92);
+  const averageWorkPerStaff = totalIndividualWork / assignedStaff.length;
+  const scaledWork = averageWorkPerStaff * teamSizeFactor;
+  
+  return scaledWork;
 }
 
 /**
