@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
-import { getAllStaff, removeStaff, getAllTeams, assignStaffToTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
+import { getAllStaff, removeStaff, getAllTeams, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
 import { getGameState } from '@/lib/services/core/gameState';
 import type { Staff } from '@/lib/types/types';
 import { formatCurrency, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
@@ -61,7 +61,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   // Filter staff based on selected team
   const filteredStaff = selectedTeamFilter === 'all' 
     ? allStaff 
-    : allStaff.filter(staff => staff.teamId === selectedTeamFilter);
+    : allStaff.filter(staff => (staff.teamIds || []).includes(selectedTeamFilter));
 
   // Check for pending staff candidates and auto-open results modal
   useEffect(() => {
@@ -100,9 +100,17 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     setShowTeamAssignmentDialog(true);
   };
 
-  const handleAssignToTeam = (teamId: string | null) => {
+  const handleAssignToTeam = (teamId: string) => {
     if (staffForTeamAssignment) {
       assignStaffToTeam(staffForTeamAssignment.id, teamId);
+      setShowTeamAssignmentDialog(false);
+      setStaffForTeamAssignment(null);
+    }
+  };
+
+  const handleRemoveFromTeam = (teamId: string) => {
+    if (staffForTeamAssignment) {
+      removeStaffFromTeam(staffForTeamAssignment.id, teamId);
       setShowTeamAssignmentDialog(false);
       setStaffForTeamAssignment(null);
     }
@@ -318,7 +326,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                 className="text-xs flex items-center gap-1"
               >
                 <span>{team.icon}</span>
-                {team.name} ({allStaff.filter(s => s.teamId === team.id).length})
+                {team.name} ({allStaff.filter(s => (s.teamIds || []).includes(team.id)).length})
               </Button>
             ))}
           </div>
@@ -617,7 +625,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
 
                   {/* Team Stats */}
                   <div className="text-xs text-gray-500">
-                    {allStaff.filter(s => s.teamId === team.id).length} staff member(s) assigned
+                    {allStaff.filter(s => (s.teamIds || []).includes(team.id)).length} staff member(s) assigned
                   </div>
                 </>
               );
@@ -695,15 +703,20 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">Team:</span>
-                        <div className="flex items-center gap-1">
-                          {staff.teamId ? (
-                            <Badge variant="secondary" className="text-2xs flex items-center gap-1">
-                              <span>{allTeams.find(t => t.id === staff.teamId)?.icon || '👥'}</span>
-                              {allTeams.find(t => t.id === staff.teamId)?.name || 'Unknown Team'}
-                            </Badge>
+                        <span className="text-xs text-gray-500">Teams:</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {(staff.teamIds || []).length > 0 ? (
+                            (staff.teamIds || []).map(teamId => {
+                              const team = allTeams.find(t => t.id === teamId);
+                              return team ? (
+                                <Badge key={teamId} variant="secondary" className="text-2xs flex items-center gap-1">
+                                  <span>{team.icon}</span>
+                                  {team.name}
+                                </Badge>
+                              ) : null;
+                            })
                           ) : (
-                            <Badge variant="outline" className="text-2xs">No Team</Badge>
+                            <Badge variant="outline" className="text-2xs">No Teams</Badge>
                           )}
                           <Button
                             variant="ghost"
@@ -772,30 +785,64 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       <Dialog open={showTeamAssignmentDialog} onOpenChange={setShowTeamAssignmentDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Assign to Team</DialogTitle>
+            <DialogTitle>Manage Teams for {staffForTeamAssignment?.name}</DialogTitle>
             <DialogDescription>
-              Assign {staffForTeamAssignment?.name} to a team or remove from current team
+              Assign or remove teams for this staff member
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Button
-              variant={staffForTeamAssignment?.teamId === null ? "default" : "outline"}
-              className="w-full justify-start"
-              onClick={() => handleAssignToTeam(null)}
-            >
-              No Team
-            </Button>
-            {allTeams.map(team => (
-              <Button
-                key={team.id}
-                variant={staffForTeamAssignment?.teamId === team.id ? "default" : "outline"}
-                className="w-full justify-start"
-                onClick={() => handleAssignToTeam(team.id)}
-              >
-                <span className="mr-2">{team.icon}</span>
-                {team.name}
-              </Button>
-            ))}
+          <div className="space-y-4">
+            {/* Current Teams */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Current Teams:</h4>
+              {(staffForTeamAssignment?.teamIds || []).length ? (
+                <div className="space-y-1">
+                  {(staffForTeamAssignment?.teamIds || []).map(teamId => {
+                    const team = allTeams.find(t => t.id === teamId);
+                    return team ? (
+                      <div key={teamId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-2">
+                          <span>{team.icon}</span>
+                          <span>{team.name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFromTeam(teamId)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">Not assigned to any teams</p>
+              )}
+            </div>
+            
+            {/* Available Teams */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Available Teams:</h4>
+              <div className="space-y-1">
+                {allTeams
+                  .filter(team => !(staffForTeamAssignment?.teamIds || []).includes(team.id))
+                  .map(team => (
+                    <Button
+                      key={team.id}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => handleAssignToTeam(team.id)}
+                    >
+                      <span className="mr-2">{team.icon}</span>
+                      {team.name}
+                    </Button>
+                  ))}
+                {allTeams.filter(team => !(staffForTeamAssignment?.teamIds || []).includes(team.id)).length === 0 && (
+                  <p className="text-gray-500 text-sm">All teams assigned</p>
+                )}
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

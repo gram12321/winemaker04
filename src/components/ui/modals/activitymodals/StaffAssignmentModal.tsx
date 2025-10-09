@@ -6,6 +6,7 @@ import { Activity, Staff } from '@/lib/types/types';
 import { updateActivityInDb } from '@/lib/database/activities/activityDB';
 import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity/workcalculators/workCalculator';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button } from '@/components/ui/shadCN/button';
@@ -67,6 +68,8 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       });
       
       if (success) {
+        // Trigger immediate UI update
+        triggerGameUpdateImmediate();
         notificationService.success(`Assigned ${selectedStaffIds.length} staff to ${activity.title}`);
         onClose();
       } else {

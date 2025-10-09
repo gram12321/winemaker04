@@ -26,7 +26,7 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         skill_level: staff.skillLevel,
         specializations: staff.specializations,
         wage: staff.wage,
-        team_id: staff.teamId,
+        team_ids: staff.teamIds || [],
         skill_field: staff.skills.field,
         skill_winery: staff.skills.winery,
         skill_administration: staff.skills.administration,
@@ -81,7 +81,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
       skillLevel: row.skill_level,
       specializations: row.specializations || [],
       wage: row.wage,
-      teamId: row.team_id,
+      teamIds: row.team_ids || [],
       skills: {
         field: row.skill_field,
         winery: row.skill_winery,
@@ -161,7 +161,7 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
       skillLevel: data.skill_level,
       specializations: data.specializations || [],
       wage: data.wage,
-      teamId: data.team_id,
+      teamIds: data.team_ids || [],
       skills: {
         field: data.skill_field,
         winery: data.skill_winery,

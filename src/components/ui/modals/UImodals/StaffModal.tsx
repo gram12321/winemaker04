@@ -18,7 +18,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
 
   const skillInfo = getSkillLevelInfo(staff.skillLevel);
   const allTeams = getAllTeams();
-  const assignedTeam = allTeams.find(team => team.id === staff.teamId);
 
   const handleFire = () => {
     if (onFire && confirm(`Are you sure you want to fire ${staff.name}?`)) {
@@ -138,9 +137,23 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                   </div>
                 </div>
                 <div>
-                  <span className="text-gray-400">Team Assignment:</span>
+                  <span className="text-gray-400">Team Assignments:</span>
                   <div className="text-white font-medium mt-1">
-                    {assignedTeam ? assignedTeam.name : 'Unassigned'}
+                    {staff.teamIds.length > 0 ? (
+                      <div className="space-y-1">
+                        {staff.teamIds.map(teamId => {
+                          const team = allTeams.find(t => t.id === teamId);
+                          return team ? (
+                            <div key={teamId} className="flex items-center gap-2">
+                              <span>{team.icon}</span>
+                              <span>{team.name}</span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    ) : (
+                      'Unassigned'
+                    )}
                   </div>
                 </div>
               </div>

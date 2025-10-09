@@ -104,7 +104,7 @@ export function createStaff(
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2025
     },
-    teamId: null
+    teamIds: []
   };
 }
 
@@ -208,7 +208,7 @@ export async function createStartingStaff(): Promise<void> {
     
     // Assign to Winery Team if it exists
     if (wineryTeam) {
-      masterWinemaker.teamId = wineryTeam.id;
+      masterWinemaker.teamIds = [wineryTeam.id];
     }
     
     // Create Administrator with administration specialization
@@ -225,7 +225,7 @@ export async function createStartingStaff(): Promise<void> {
     
     // Assign to Administration Team if it exists
     if (adminTeam) {
-      administrator.teamId = adminTeam.id;
+      administrator.teamIds = [adminTeam.id];
     }
     
     await addStaff(masterWinemaker);

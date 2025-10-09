@@ -160,6 +160,7 @@ return (
 - Staff search and recruitment system
 - Advanced hiring mechanics
 - Staff specialization bonuses
+ - Staff training/development
 
 ### 4. Sales System ✅ **IMPLEMENTED**
 - **Customer System**: Regional customers (5 countries) with country-specific characteristics

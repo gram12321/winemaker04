@@ -411,7 +411,7 @@ export interface Staff {
   skillLevel: number;  // 0-1 scale, overall skill level
   specializations: string[]; // Array of specialization keys (e.g., 'field', 'winery')
   wage: number;        // Monthly wage in euros
-  teamId: string | null; // Team assignment
+  teamIds: string[];   // Multiple team assignments (replaces single teamId)
   skills: StaffSkills;
   workforce: number;   // Base work capacity (default 50)
   hireDate: GameDate;

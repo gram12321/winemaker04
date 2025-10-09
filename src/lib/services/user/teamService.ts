@@ -145,7 +145,7 @@ export async function removeTeam(teamId: string): Promise<boolean> {
   // Remove team assignments from all staff members
   const allStaff = gameState.staff || [];
   const updatedStaff = allStaff.map(staff => 
-    staff.teamId === teamId ? { ...staff, teamId: null } : staff
+    staff.teamIds.includes(teamId) ? { ...staff, teamIds: staff.teamIds.filter(id => id !== teamId) } : staff
   );
   
   const updatedTeams = currentTeams.filter(t => t.id !== teamId);
@@ -200,7 +200,7 @@ export function getAllTeams(): StaffTeam[] {
 /**
  * Assign a staff member to a team
  */
-export function assignStaffToTeam(staffId: string, teamId: string | null): boolean {
+export function assignStaffToTeam(staffId: string, teamId: string): boolean {
   const gameState = getGameState();
   const allStaff = gameState.staff || [];
   const allTeams = gameState.teams || [];
@@ -211,40 +211,87 @@ export function assignStaffToTeam(staffId: string, teamId: string | null): boole
     return false;
   }
   
-  // If assigning to a team, verify team exists
-  if (teamId && !allTeams.find(t => t.id === teamId)) {
+  // Verify team exists
+  const team = allTeams.find(t => t.id === teamId);
+  if (!team) {
     notificationService.error('Team not found');
     return false;
   }
   
-  // Update teams: remove staff from old team, add to new team
-  const updatedTeams = allTeams.map(team => {
-    // Remove from current team
-    if (team.id === staff.teamId) {
+  // Check if staff is already assigned to this team
+  if (staff.teamIds.includes(teamId)) {
+    notificationService.error('Staff member is already assigned to this team');
+    return false;
+  }
+  
+  // Update teams: add staff to team
+  const updatedTeams = allTeams.map(t => {
+    if (t.id === teamId && !t.memberIds.includes(staffId)) {
       return {
-        ...team,
-        memberIds: team.memberIds.filter(id => id !== staffId)
+        ...t,
+        memberIds: [...t.memberIds, staffId]
       };
     }
-    // Add to new team
-    if (team.id === teamId && !team.memberIds.includes(staffId)) {
-      return {
-        ...team,
-        memberIds: [...team.memberIds, staffId]
-      };
-    }
-    return team;
+    return t;
   });
   
-  // Update staff member
+  // Update staff member: add team to their assignments
   const updatedStaff = allStaff.map(s => 
-    s.id === staffId ? { ...s, teamId } : s
+    s.id === staffId ? { ...s, teamIds: [...s.teamIds, teamId] } : s
   );
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  const teamName = teamId ? updatedTeams.find(t => t.id === teamId)?.name : 'No Team';
-  notificationService.success(`${staff.name} assigned to ${teamName}`);
+  notificationService.success(`${staff.name} assigned to ${team.name}`);
+  return true;
+}
+
+/**
+ * Remove a staff member from a team
+ */
+export function removeStaffFromTeam(staffId: string, teamId: string): boolean {
+  const gameState = getGameState();
+  const allStaff = gameState.staff || [];
+  const allTeams = gameState.teams || [];
+  
+  const staff = allStaff.find(s => s.id === staffId);
+  if (!staff) {
+    notificationService.error('Staff member not found');
+    return false;
+  }
+  
+  const team = allTeams.find(t => t.id === teamId);
+  if (!team) {
+    notificationService.error('Team not found');
+    return false;
+  }
+  
+  // Check if staff is assigned to this team
+  if (!staff.teamIds.includes(teamId)) {
+    notificationService.error('Staff member is not assigned to this team');
+    return false;
+  }
+  
+  // Update teams: remove staff from team
+  const updatedTeams = allTeams.map(t => {
+    if (t.id === teamId) {
+      return {
+        ...t,
+        memberIds: t.memberIds.filter(id => id !== staffId)
+      };
+    }
+    return t;
+  });
+  
+  // Update staff member: remove team from their assignments
+  const updatedStaff = allStaff.map(s => 
+    s.id === staffId ? { ...s, teamIds: s.teamIds.filter(id => id !== teamId) } : s
+  );
+  
+  updateGameState({ staff: updatedStaff, teams: updatedTeams });
+  
+  notificationService.success(`${staff.name} removed from ${team.name}`);
+  
   return true;
 }
 
@@ -292,7 +339,7 @@ export function resetTeamsToDefault(): void {
   // Clear all team assignments from staff
   const gameState = getGameState();
   const allStaff = gameState.staff || [];
-  const updatedStaff = allStaff.map(staff => ({ ...staff, teamId: null }));
+  const updatedStaff = allStaff.map(staff => ({ ...staff, teamIds: [] }));
   
   updateGameState({ 
     teams: defaultTeams,

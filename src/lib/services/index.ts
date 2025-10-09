@@ -60,6 +60,7 @@ export {
   updateTeam,
   getAllTeams,
   assignStaffToTeam,
+  removeStaffFromTeam,
   initializeTeamsSystem,
   resetTeamsToDefault
 } from './user/teamService';
