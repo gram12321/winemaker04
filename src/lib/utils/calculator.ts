@@ -205,6 +205,33 @@ export function calculateAsymmetricalMultiplier(value: number): number {
 }
 
 
+// ===== TAIL SQUASHING UTIL =====
+/**
+ * Smoothly squash values above a threshold toward a ceiling below 1.0.
+ * Useful to avoid extreme tails in functions that blow up near 1.0.
+ *
+ * @param value Input in [0, +inf)
+ * @param threshold Start of squash (default 0.97)
+ * @param maxTarget Practical ceiling (< 1.0) (default 0.985)
+ * @param alpha Steepness parameter (default 8)
+ * @returns Squashed value in [0, maxTarget)
+ */
+export function squashNormalizeTail(
+  value: number,
+  threshold: number = 0.97,
+  maxTarget: number = 0.985,
+  alpha: number = 8
+): number {
+  const x = Math.max(0, value || 0);
+  if (x <= threshold) return x;
+  const span = Math.max(0, maxTarget - threshold);
+  if (span <= 0) return Math.min(x, maxTarget - 1e-6);
+  const over = x - threshold;
+  const tail = span * (1 - Math.exp(-alpha * over));
+  return threshold + Math.min(tail, span - 1e-6);
+}
+
+
 
 // ===== SYMMETRICAL MULTIPLIER CALCULATIONS =====
 

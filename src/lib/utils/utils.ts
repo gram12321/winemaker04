@@ -31,10 +31,20 @@ export function formatNumber(value: number, options?: {
   decimals?: number;
   forceDecimals?: boolean;
   smartDecimals?: boolean;
+  adaptiveNearOne?: boolean; // when true, increase decimals near 1.0 (e.g., 0.95-1.0)
 }): string {
   if (typeof value !== 'number' || isNaN(value)) return '0';
   
-  const { decimals = 2, forceDecimals = false, smartDecimals = false } = options || {};
+  const { decimals = 2, forceDecimals = false, smartDecimals = false, adaptiveNearOne = true } = options || {};
+
+  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 → 0.9870)
+  let effectiveDecimals = decimals;
+  if (adaptiveNearOne && value < 1 && value >= 0.95) {
+    effectiveDecimals = Math.max(decimals, 4);
+    if (value >= 0.98) {
+      effectiveDecimals = Math.max(effectiveDecimals, 5);
+    }
+  }
   
   // For large numbers (>1000), don't show decimals unless forced
   if (Math.abs(value) >= 1000 && !forceDecimals && !smartDecimals) {
@@ -52,7 +62,7 @@ export function formatNumber(value: number, options?: {
   
   // Smart decimals mode: show up to specified decimals but remove trailing zeros
   if (smartDecimals) {
-    const maxDecimals = Math.min(decimals, 5); // Cap at 5 decimals for readability
+    const maxDecimals = Math.min(effectiveDecimals, 6); // Cap for readability
     const formatted = value.toLocaleString('de-DE', {
       minimumFractionDigits: 0,
       maximumFractionDigits: maxDecimals
@@ -62,8 +72,8 @@ export function formatNumber(value: number, options?: {
   
   // For decimals or when forced, show specified decimal places
   return value.toLocaleString('de-DE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
+    minimumFractionDigits: effectiveDecimals,
+    maximumFractionDigits: effectiveDecimals
   });
 }
 

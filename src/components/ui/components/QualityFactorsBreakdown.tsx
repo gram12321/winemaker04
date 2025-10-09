@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineQualityCategory, getColorCategory, getBadgeColorClasses } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
-import { getEventDisplayData } from '@/lib/services/prestige/prestigeService';
+import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services/prestige/prestigeService';
 
 interface QualityFactorsBreakdownProps {
   vineyard?: Vineyard;
@@ -68,13 +68,15 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
   };
 
   // Get quality factors with error handling
-  let factors, rawValues, qualityScore, qualityCategory;
+  let factors: any, rawValues: any, qualityScore: number, qualityCategory: string;
   
   try {
     const qualityData = getQualityFactors();
     factors = qualityData.factors;
     rawValues = qualityData.rawValues;
-    qualityScore = qualityData.qualityScore;
+
+    // Use the service-provided bounded prestige and quality so UI matches actual calculation
+    qualityScore = Math.max(0, Math.min(1, qualityData.qualityScore));
     qualityCategory = getWineQualityCategory(qualityScore);
   } catch (error) {
     // Display error state
@@ -101,7 +103,7 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
         <div className="p-3 bg-white rounded border border-blue-300">
           <div className="text-sm">
             <div className="flex justify-between mb-1">
-              <span>Wine Value Index:</span>
+              <span>Wine Quality Score:</span>
               <span className="font-mono">
                 {formatNumber(qualityScore, { decimals: 2, forceDecimals: true })}
               </span>
@@ -340,6 +342,32 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
                               </div>
                             </div>
                           </div>
+
+                          {/* Vineyard Prestige Calculation Breakdown */}
+                          {(vineyard || wineBatchVineyard) && (
+                            <div className="mt-3 pt-3 border-t border-purple-200">
+                              {(() => {
+                                const tv = vineyard || (wineBatchVineyard as Vineyard);
+                                const b = BoundedVineyardPrestigeFactor(tv);
+
+                                return (
+                                  <div className="text-xs space-y-2">
+                                    <div className="font-medium text-purple-800 mb-2">Vineyard Prestige Calculation:</div>
+                                    <div className="bg-purple-50 p-2 rounded font-mono">
+                                      <div>ageScaled = asym(min(0.98, {formatNumber(b.ageWithSuitability01, { decimals: 3, forceDecimals: true })})) − 1 = {formatNumber(b.ageScaled, { decimals: 2, smartDecimals: true })}</div>
+                                      <div>landPerHa = asym( squashed({formatNumber(b.landWithSuitability01, { decimals: 3, forceDecimals: true })}) ) − 1 = {formatNumber(b.landPerHa, { decimals: 2, smartDecimals: true })}</div>
+                                      <div>size = sqrt(hectares) {b.sqrtHectares > Math.sqrt(5) ? `→ compressed(${formatNumber(b.sizeFactor, { decimals: 2, forceDecimals: true })})` : `= ${formatNumber(b.sizeFactor, { decimals: 2, forceDecimals: true })}`}</div>
+                                      <div>landScaled = landPerHa × size = {formatNumber(b.landScaled, { decimals: 2, smartDecimals: true })}</div>
+                                      <div>permanentRaw = ageScaled + landScaled = {formatNumber(b.permanentRaw, { decimals: 2, smartDecimals: true })}</div>
+                                      <div>decayingComponent = max(0, currentPrestige − permanentRaw) = {formatNumber(b.decayingComponent, { decimals: 2, smartDecimals: true })}</div>
+                                      <div>combinedRaw = permanentRaw + decaying = {formatNumber(b.combinedRaw, { decimals: 2, smartDecimals: true })}</div>
+                                      <div>boundedFactor = min(combinedRaw ÷ 500, 0.99) = {formatNumber(b.boundedFactor, { decimals: 3, forceDecimals: true })}</div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
 
                           {/* Minimal Vineyard Prestige Events */}
                           {(prestigeBreakdown && (vineyard || wineBatchVineyard)) && (() => {

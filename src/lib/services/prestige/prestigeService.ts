@@ -2,7 +2,7 @@
 import { getGameState } from '../core/gameState';
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
-import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier } from '../../utils/calculator';
+import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail } from '../../utils/calculator';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -68,9 +68,10 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
 
   const maxLandValue = getMaxLandValue();
   // Normalize per-hectare value against max per-hectare benchmark using vineyard.landValue directly (€/ha)
+  // Land base logarithm (can exceed 1 in very high-value regions by design)
   const landBase01 = Math.log((vineyard.landValue) / Math.max(1, maxLandValue) + 1);
-  const landWithSuitability01 = landBase01 * grapeSuitability;
-  // Apply asym multiplier on per-hectare signal, then multiply by size factor (hectares squared)
+  let landWithSuitability01 = squashNormalizeTail(landBase01 * grapeSuitability);
+  // Apply asym multiplier on per-hectare signal, then multiply by size factor (√hectares)
   const landScaledPerHa = Math.max(0, calculateAsymmetricalMultiplier(landWithSuitability01) - 1);
   const landSizeFactor = Math.sqrt(vineyard.hectares || 0);
   const landScaled = landScaledPerHa * landSizeFactor;
@@ -86,6 +87,71 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
     landSizeFactor,
     ageScaled,
     landScaled,
+  };
+}
+
+// Bounded 0-1 prestige factor (and full breakdown) derived from permanent components + decaying events (no DB access)
+export function BoundedVineyardPrestigeFactor(v: Vineyard): {
+  suitability: number;
+  ageBase01: number;
+  ageWithSuitability01: number;
+  ageScaled: number;
+  landBase01: number;
+  landWithSuitability01: number;
+  landPerHa: number;
+  sqrtHectares: number;
+  sizeFactor: number;
+  landScaled: number;
+  permanentRaw: number;
+  decayingComponent: number;
+  combinedRaw: number;
+  boundedFactor: number;
+} {
+  const suitability = v.grape
+    ? calculateGrapeSuitabilityContribution(v.grape as any, v.region, v.country)
+    : 0;
+
+  const ageBase01 = vineyardAgePrestigeModifier(v.vineAge || 0);
+  const ageWithSuitability01 = ageBase01 * suitability;
+  const ageScaledRaw = Math.max(0, calculateAsymmetricalMultiplier(Math.min(0.98, ageWithSuitability01)) - 1);
+  const ageScaled = squashNormalizeTail(ageScaledRaw / 120, 0.90, 0.985, 10);
+
+  const maxValue = getMaxLandValue();
+  const landBase01 = Math.log((v.landValue || 0) / Math.max(1, maxValue) + 1);
+  const landWithSuitability01 = squashNormalizeTail(landBase01 * suitability);
+  const landPerHaRaw = Math.max(0, calculateAsymmetricalMultiplier(landWithSuitability01) - 1);
+  const landPerHa = squashNormalizeTail(landPerHaRaw / 120, 0.90, 0.985, 10);
+
+  const hectares = Math.max(0, v.hectares || 0);
+  const sqrtHectares = Math.sqrt(hectares);
+  const sizeFactor = sqrtHectares <= Math.sqrt(5)
+    ? sqrtHectares
+    : (Math.sqrt(5) + 0.3 * (sqrtHectares - Math.sqrt(5)));
+
+  const landScaledRaw = landPerHa * sizeFactor;
+  const landScaled = landScaledRaw;
+  const permanentRaw = ageScaled + landScaled;
+  const currentTotal = v.vineyardPrestige || 0;
+  const decayingComponent = Math.max(0, currentTotal - permanentRaw);
+  const combinedRaw = permanentRaw + decayingComponent;
+  // Since general prestige is now normalized at creation, just cap at 0.99 for quality usage
+  const boundedFactor = Math.max(0, Math.min(combinedRaw, 0.99));
+
+  return {
+    suitability,
+    ageBase01,
+    ageWithSuitability01,
+    ageScaled,
+    landBase01,
+    landWithSuitability01,
+    landPerHa,
+    sqrtHectares,
+    sizeFactor,
+    landScaled,
+    permanentRaw,
+    decayingComponent,
+    combinedRaw,
+    boundedFactor,
   };
 }
 

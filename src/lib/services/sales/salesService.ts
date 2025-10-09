@@ -5,7 +5,7 @@ import { loadWineBatches, saveWineBatch } from '../../database/activities/invent
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../user/financeService';
 import { createRelationshipBoost } from '../sales/relationshipService';
-import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, calculateVineyardPrestigeFromEvents } from '../prestige/prestigeService';
+import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige } from '../prestige/prestigeService';
 import { getCurrentPrestige } from '../core/gameState';
 import { SALES_CONSTANTS } from '../../constants/constants';
 
@@ -74,16 +74,15 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     
     // Create vineyard-specific prestige event for the sale
     if (wineBatch.vineyardId) {
-      // Get vineyard prestige factor for this vineyard
-      const vineyardPrestigeFactor = await calculateVineyardPrestigeFromEvents(wineBatch.vineyardId);
+      const basePermanentPrestige = await getBaseVineyardPrestige(wineBatch.vineyardId);
+      const vineyardPrestigeFactor = Math.max(0.1, basePermanentPrestige);
       
-      // Create vineyard-specific sale prestige event
       await addVineyardSalePrestigeEvent(
         fulfillableValue,
         order.customerName,
         order.wineName,
         wineBatch.vineyardId,
-        Math.max(0.1, vineyardPrestigeFactor) // Ensure minimum factor of 0.1
+        Math.max(0.1, vineyardPrestigeFactor)
       );
         } else {
           // Fallback to company-level prestige event if no vineyard ID
