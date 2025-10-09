@@ -156,8 +156,7 @@ export async function activateCustomer(customerId: string, initialRelationship: 
         company_id: getCurrentCompanyId(),
         customer_id: customerId,
         relationship: initialRelationship,
-        active_customer: true,
-        updated_at: new Date().toISOString()
+        active_customer: true
       }, {
         onConflict: 'company_id,customer_id'
       });

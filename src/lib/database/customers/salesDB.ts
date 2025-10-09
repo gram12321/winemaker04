@@ -30,8 +30,7 @@ export const saveWineOrder = async (order: WineOrder): Promise<void> => {
         ordered_week: order.orderedAt.week,
         ordered_season: order.orderedAt.season,
         ordered_year: order.orderedAt.year,
-        calculation_data: order.calculationData || null,
-        updated_at: new Date().toISOString()
+        calculation_data: order.calculationData || null
       });
 
     if (error) throw error;
@@ -100,8 +99,7 @@ export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled'
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)
       .update({ 
-        status: status,
-        updated_at: new Date().toISOString()
+        status: status
       })
       .eq('id', orderId)
       .eq('company_id', getCurrentCompanyId());

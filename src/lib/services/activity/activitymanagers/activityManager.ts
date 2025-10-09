@@ -21,7 +21,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   [WorkCategory.PLANTING]: async (activity: Activity) => {
     if (activity.targetId && activity.params.grape && activity.params.density) {
       await plantVineyard(activity.targetId, activity.params.grape, activity.params.density);
-      notificationService.success(`Successfully planted ${activity.params.grape} in ${activity.params.targetName || 'vineyard'}!`);
+      notificationService.addMessage(`Successfully planted ${activity.params.grape} in ${activity.params.targetName || 'vineyard'}!`, 'activityManager.planting', 'Planting Activities', 'vineyard & winemaking');
     }
   },
 
@@ -67,7 +67,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
           ? 'Harvest complete! Vineyard is now dormant for winter.'
           : 'Harvest complete! Vineyard will go dormant in winter.';
 
-        notificationService.success(`${statusMessage} Total: ${Math.round(totalHarvested)}kg of ${activity.params.grape} from ${activity.params.targetName || 'vineyard'}`);
+        notificationService.addMessage(`${statusMessage} Total: ${Math.round(totalHarvested)}kg of ${activity.params.grape} from ${activity.params.targetName || 'vineyard'}`, 'activityManager.harvesting', 'Harvesting Activities', 'vineyard & winemaking');
       }
     }
   },
@@ -75,13 +75,13 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   [WorkCategory.CRUSHING]: async (activity: Activity) => {
     if (activity.params.batchId && activity.params.crushingOptions) {
       await completeCrushing(activity);
-      notificationService.success(`Crushing completed for ${activity.params.vineyardName} ${activity.params.grape}!`);
+      notificationService.addMessage(`Crushing completed for ${activity.params.vineyardName} ${activity.params.grape}!`, 'activityManager.crushing', 'Crushing Activities', 'vineyard & winemaking');
     }
   },
 
   [WorkCategory.FERMENTATION]: async (activity: Activity) => {
     await completeFermentationSetup(activity);
-    notificationService.success(`Successfully started fermentation for ${activity.params.targetName}!`);
+    notificationService.addMessage(`Successfully started fermentation for ${activity.params.targetName}!`, 'activityManager.fermentation', 'Fermentation Activities', 'vineyard & winemaking');
   },
 
   [WorkCategory.CLEARING]: async (_activity: Activity) => {
@@ -130,7 +130,7 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
     if (options.targetId) {
       const hasConflict = await hasActiveActivity(options.targetId, options.category);
       if (hasConflict) {
-        notificationService.warning(`An activity of type ${options.category} is already in progress for this target.`);
+        console.warn(`An activity of type ${options.category} is already in progress for this target.`);
         return null;
       }
     }
@@ -174,7 +174,7 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
         ? `Started ${activity.title} - ${activity.totalWork} work units required (${assignedCount} staff auto-assigned)`
         : `Started ${activity.title} - ${activity.totalWork} work units required`;
       
-      notificationService.info(assignmentMessage);
+      notificationService.addMessage(assignmentMessage, 'activityManager.createActivity', 'Activity Creation', 'activities & tasks');
       return activity.id;
     }
     
@@ -226,7 +226,7 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
       // Trigger immediate UI update for critical activity cancellation
       triggerGameUpdateImmediate();
       
-      notificationService.warning(`Cancelled activity: ${activity.title}`);
+      console.warn(`Cancelled activity: ${activity.title}`);
     }
     
     return success;

@@ -32,8 +32,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         status: vineyard.status,
         ripeness: vineyard.ripeness || 0,
         vineyard_prestige: vineyard.vineyardPrestige,
-        vine_yield: vineyard.vineYield || 0.02, // Default to 0.02 if not set
-        updated_at: new Date().toISOString()
+        vine_yield: vineyard.vineYield || 0.02 // Default to 0.02 if not set
       });
 
     if (error) throw error;

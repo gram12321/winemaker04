@@ -125,7 +125,7 @@ export async function addStaff(staff: Staff): Promise<Staff | null> {
   // Update game state
   updateGameState({ staff: [...currentStaff, staff] });
   
-  notificationService.success(`${staff.name} has been hired!`);
+  notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', 'team & staff');
   return staff;
 }
 

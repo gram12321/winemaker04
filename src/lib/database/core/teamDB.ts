@@ -25,8 +25,7 @@ export async function saveTeamToDb(team: StaffTeam): Promise<boolean> {
         description: team.description,
         icon: team.icon,
         default_task_types: team.defaultTaskTypes,
-        member_ids: team.memberIds,
-        updated_at: new Date().toISOString()
+        member_ids: team.memberIds
       });
 
     if (error) {
@@ -162,8 +161,7 @@ export async function saveTeamsToDb(teams: StaffTeam[]): Promise<boolean> {
       description: team.description,
       icon: team.icon,
       default_task_types: team.defaultTaskTypes,
-      member_ids: team.memberIds,
-      updated_at: new Date().toISOString()
+      member_ids: team.memberIds
     }));
 
     const { error } = await supabase

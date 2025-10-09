@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Button, Badge, ScrollArea } from "../ui";
-import { InfoIcon, AlertTriangleIcon, XCircleIcon, CheckCircleIcon, X, Trash2, Eye } from 'lucide-react';
+import { InfoIcon, X, Trash2, Eye, Filter, Shield } from 'lucide-react';
 import { toast } from "@/lib/utils/toast";
-import { formatTime } from "@/lib/utils/utils";
-import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, DbNotificationType } from "@/lib/database/core/notificationsDB";
+import { formatGameDate } from "@/lib/utils/utils";
+import { getGameState } from "@/lib/services/core/gameState";
+import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, NotificationFilter, saveNotificationFilter, loadNotificationFilters, deleteNotificationFilter, clearNotificationFilters } from "@/lib/database/core/notificationsDB";
 
-type NotificationType = 'info' | 'warning' | 'error' | 'success';
+// Removed NotificationType - using category as the meaningful identifier
 
 export interface PlayerNotification {
   id: string;
-  timestamp: Date;
+  gameWeek: number;
+  gameSeason: string;
+  gameYear: number;
   text: string;
-  type: NotificationType;
+  origin?: string;
+  userFriendlyOrigin?: string;
+  category?: string;
   isRead?: boolean;
   isDismissed?: boolean;
 }
@@ -22,8 +27,10 @@ interface NotificationCenterProps {
 }
 
 let notifications: PlayerNotification[] = [];
+let notificationFilters: NotificationFilter[] = [];
 let listeners: ((messages: PlayerNotification[]) => void)[] = [];
 let hasLoadedFromDb = false;
+let hasLoadedFiltersFromDb = false;
 
 function notifyListeners() {
   listeners.forEach(listener => listener(notifications));
@@ -41,9 +48,13 @@ async function loadFromDbIfNeeded() {
     const records = await loadNotifications();
     notifications = records.map(r => ({
       id: r.id,
-      timestamp: new Date(r.timestamp),
+      gameWeek: r.game_week,
+      gameSeason: r.game_season,
+      gameYear: r.game_year,
       text: r.text,
-      type: r.type as NotificationType
+      origin: r.origin,
+      userFriendlyOrigin: r.userFriendlyOrigin,
+      category: r.category
     }));
     hasLoadedFromDb = true;
     notifyListeners();
@@ -52,21 +63,65 @@ async function loadFromDbIfNeeded() {
   }
 }
 
+async function loadFiltersFromDbIfNeeded() {
+  if (hasLoadedFiltersFromDb) return;
+  try {
+    notificationFilters = await loadNotificationFilters();
+    hasLoadedFiltersFromDb = true;
+  } catch {
+    // Non-critical
+  }
+}
+
+function isNotificationBlocked(origin?: string, category?: string): boolean {
+  return notificationFilters.some(filter => {
+    switch (filter.type) {
+      case 'origin':
+        // Block notifications from specific origin (function/service)
+        return filter.value === origin;
+      case 'category':
+        // Block notifications from specific category
+        return filter.value === category;
+      default:
+        return false;
+    }
+  });
+}
+
 export const notificationService = {
   getMessages() {
     return [...notifications];
   },
 
-  addMessage(text: string, type: NotificationType = 'info') {
+  async addMessage(text: string, origin?: string, userFriendlyOrigin?: string, category?: string) {
+    // Load filters if not already loaded (await to ensure they're loaded before checking)
+    await loadFiltersFromDbIfNeeded();
+    
+    // Check if notification is blocked by filters
+    if (isNotificationBlocked(origin, category)) {
+      console.log(`[Notification Filter] Blocked notification: "${text}" (origin: ${origin}, category: ${category})`);
+      return null;
+    }
+    
     const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
       ? (globalThis.crypto as any).randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const now = new Date();
+    
+    // Get current game state for timestamp
+    const gameState = getGameState();
+    const gameWeek = gameState.week || 1;
+    const gameSeason = gameState.season || 'Spring';
+    const gameYear = gameState.currentYear || 2024;
+    
     const message: PlayerNotification = {
       id,
-      timestamp: now,
+      gameWeek,
+      gameSeason,
+      gameYear,
       text,
-      type
+      origin,
+      userFriendlyOrigin,
+      category
     };
 
     notifications = [message, ...notifications];
@@ -75,17 +130,24 @@ export const notificationService = {
     // Persist to DB (best-effort)
     saveNotification({
       id,
-      timestamp: now.toISOString(),
+      game_week: gameWeek,
+      game_season: gameSeason,
+      game_year: gameYear,
       text,
-      type: type as DbNotificationType
+      origin,
+      userFriendlyOrigin,
+      category
     });
 
     const showToasts = localStorage.getItem('showNotifications') !== 'false';
     if (showToasts) {
       toast({
-        title: type.charAt(0).toUpperCase() + type.slice(1),
+        title: category ? category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Game Update',
         description: text,
-        variant: type === 'error' ? 'destructive' : 'default',
+        variant: 'default',
+        origin,
+        userFriendlyOrigin,
+        category,
       });
     }
 
@@ -115,17 +177,53 @@ export const notificationService = {
     notifyListeners();
   },
 
-  info(text: string) {
-    return this.addMessage(text, 'info');
+  // Simplified - just use addMessage directly
+  // For developer errors/warnings, use console.error() and console.warn() instead
+
+  // ===== NOTIFICATION FILTER MANAGEMENT =====
+  
+  getFilters() {
+    return [...notificationFilters];
   },
-  warning(text: string) {
-    return this.addMessage(text, 'warning');
+
+  addFilter(type: 'origin' | 'category', value: string, description?: string) {
+    const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+      ? (globalThis.crypto as any).randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    
+    const filter: NotificationFilter = {
+      id,
+      type,
+      value,
+      description,
+      createdAt: new Date().toISOString()
+    };
+    
+    notificationFilters = [filter, ...notificationFilters];
+    saveNotificationFilter(filter);
+    
+    return filter;
   },
-  error(text: string) {
-    return this.addMessage(text, 'error');
+
+  removeFilter(filterId: string) {
+    notificationFilters = notificationFilters.filter(f => f.id !== filterId);
+    deleteNotificationFilter(filterId);
   },
-  success(text: string) {
-    return this.addMessage(text, 'success');
+
+  clearFilters() {
+    notificationFilters = [];
+    clearNotificationFilters();
+  },
+
+  // Helper method to block notifications from specific origin
+  blockNotificationOrigin(origin: string) {
+    return this.addFilter('origin', origin, `Blocked origin: ${origin}`);
+  },
+
+  // Helper method to block notifications from specific category
+  blockNotificationCategory(category: string) {
+    const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return this.addFilter('category', category, `Blocked category: ${capitalizedCategory}`);
   }
 };
 
@@ -149,19 +247,9 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
     setIsHistoryOpen(isOpen);
   }, [isOpen]);
 
-  const getIconForType = (type: NotificationType) => {
-    switch (type) {
-      case 'info':
-        return <InfoIcon className="h-4 w-4" />;
-      case 'warning':
-        return <AlertTriangleIcon className="h-4 w-4" />;
-      case 'error':
-        return <XCircleIcon className="h-4 w-4" />;
-      case 'success':
-        return <CheckCircleIcon className="h-4 w-4" />;
-      default:
-        return <InfoIcon className="h-4 w-4" />;
-    }
+  // Simplified - all notifications use the same info icon since we removed types
+  const getNotificationIcon = () => {
+    return <InfoIcon className="h-4 w-4 text-blue-500" />;
   };
 
   const handleClose = () => {
@@ -189,18 +277,75 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
     setShowAll(!showAll);
   };
 
-  // Filter and sort notifications
+  const handleBlockThisOrigin = (origin?: string, userFriendlyOrigin?: string) => {
+    if (origin) {
+      notificationService.blockNotificationOrigin(origin);
+      toast({
+        title: "Filter Added",
+        description: `Notifications from ${userFriendlyOrigin || origin} will be blocked`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "No Origin",
+        description: "This notification has no origin information to block",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBlockThisCategory = (category?: string) => {
+    if (category) {
+      notificationService.blockNotificationCategory(category);
+      const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      toast({
+        title: "Filter Added",
+        description: `All ${capitalizedCategory} notifications will be blocked`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "No Category",
+        description: "This notification has no category information to block",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Filter and sort notifications by game time (most recent first)
   const filteredMessages = messages
     .filter(msg => !msg.isDismissed)
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    .sort((a, b) => {
+      // Sort by year, then season, then week (descending)
+      if (a.gameYear !== b.gameYear) return b.gameYear - a.gameYear;
+      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+      const aSeasonIndex = seasons.indexOf(a.gameSeason);
+      const bSeasonIndex = seasons.indexOf(b.gameSeason);
+      if (aSeasonIndex !== bSeasonIndex) return bSeasonIndex - aSeasonIndex;
+      return b.gameWeek - a.gameWeek;
+    });
 
   const recentMessages = showAll ? filteredMessages : filteredMessages.slice(0, 5);
   const unreadCount = filteredMessages.filter(msg => !msg.isRead).length;
 
-  // Check if notification is old (more than 1 hour)
-  const isOldNotification = (timestamp: Date) => {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    return timestamp < oneHourAgo;
+  // Check if notification is old (more than 1 game year ago)
+  const isOldNotification = (_gameWeek: number, gameSeason: string, gameYear: number) => {
+    const currentGameState = getGameState();
+    const currentSeason = currentGameState.season || 'Spring';
+    const currentYear = currentGameState.currentYear || 2024;
+    
+    // Consider old if more than 1 year behind
+    if (currentYear - gameYear > 1) return true;
+    if (currentYear - gameYear === 1) {
+      // If exactly 1 year behind, check if it's significantly behind
+      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+      const currentSeasonIndex = seasons.indexOf(currentSeason);
+      const notificationSeasonIndex = seasons.indexOf(gameSeason);
+      
+      // If we're in a much later season, it's old
+      if (currentSeasonIndex - notificationSeasonIndex > 2) return true;
+    }
+    return false;
   };
 
   return (
@@ -249,30 +394,22 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                   ) : (
                     <div className="space-y-3">
                       {recentMessages.map((message) => {
-                        const isOld = isOldNotification(message.timestamp);
+                        const isOld = isOldNotification(message.gameWeek, message.gameSeason, message.gameYear);
                         const isUnread = !message.isRead;
                         
                         return (
                           <div
                             key={message.id}
-                            className={`p-2 rounded-md border flex items-start gap-2 text-sm transition-all ${
-                              message.type === 'error'
-                                ? 'bg-red-50 border-red-200'
-                                : message.type === 'warning'
-                                  ? 'bg-yellow-50 border-yellow-200'
-                                  : message.type === 'success'
-                                    ? 'bg-green-50 border-green-200'
-                                    : 'bg-blue-50 border-blue-200'
-                            } ${isOld ? 'opacity-60' : ''} ${isUnread ? 'ring-2 ring-blue-200' : ''}`}
+                            className={`p-2 rounded-md border flex items-start gap-2 text-sm transition-all bg-blue-50 border-blue-200 ${isOld ? 'opacity-60' : ''} ${isUnread ? 'ring-2 ring-blue-200' : ''}`}
                           >
-                            <div className="mt-0.5">{getIconForType(message.type)}</div>
+                            <div className="mt-0.5">{getNotificationIcon()}</div>
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
                                 <Badge 
                                   variant="outline" 
                                   className={`mb-1 text-xs ${isUnread ? 'bg-blue-100' : ''}`}
                                 >
-                                  {formatTime(message.timestamp)}
+                                  {formatGameDate(message.gameWeek, message.gameSeason, message.gameYear)}
                                 </Badge>
                                 <div className="flex gap-1">
                                   {isUnread && (
@@ -284,6 +421,28 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                       title="Mark as read"
                                     >
                                       <Eye className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.origin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisOrigin(message.origin, message.userFriendlyOrigin)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
+                                      title={`Block notifications from ${message.origin}`}
+                                    >
+                                      <Shield className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.category && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisCategory(message.category)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
+                                      title={`Block all ${message.category} notifications`}
+                                    >
+                                      <Filter className="h-3 w-3" />
                                     </Button>
                                   )}
                                   <Button
@@ -379,30 +538,22 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                   ) : (
                     <div className="space-y-3">
                       {recentMessages.map((message) => {
-                        const isOld = isOldNotification(message.timestamp);
+                        const isOld = isOldNotification(message.gameWeek, message.gameSeason, message.gameYear);
                         const isUnread = !message.isRead;
                         
                         return (
                           <div
                             key={message.id}
-                            className={`p-2 md:p-3 rounded-md border flex items-start gap-2 text-sm md:text-base transition-all ${
-                              message.type === 'error'
-                                ? 'bg-red-50 border-red-200'
-                                : message.type === 'warning'
-                                  ? 'bg-yellow-50 border-yellow-200'
-                                  : message.type === 'success'
-                                    ? 'bg-green-50 border-green-200'
-                                    : 'bg-blue-50 border-blue-200'
-                            } ${isOld ? 'opacity-60' : ''} ${isUnread ? 'ring-2 ring-blue-200' : ''}`}
+                            className={`p-2 md:p-3 rounded-md border flex items-start gap-2 text-sm md:text-base transition-all bg-blue-50 border-blue-200 ${isOld ? 'opacity-60' : ''} ${isUnread ? 'ring-2 ring-blue-200' : ''}`}
                           >
-                            <div className="mt-0.5">{getIconForType(message.type)}</div>
+                            <div className="mt-0.5">{getNotificationIcon()}</div>
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
                                 <Badge 
                                   variant="outline" 
                                   className={`mb-1 text-xs md:text-sm ${isUnread ? 'bg-blue-100' : ''}`}
                                 >
-                                  {formatTime(message.timestamp)}
+                                  {formatGameDate(message.gameWeek, message.gameSeason, message.gameYear)}
                                 </Badge>
                                 <div className="flex gap-1">
                                   {isUnread && (
@@ -414,6 +565,28 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                       title="Mark as read"
                                     >
                                       <Eye className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.origin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisOrigin(message.origin, message.userFriendlyOrigin)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
+                                      title={`Block notifications from ${message.origin}`}
+                                    >
+                                      <Shield className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.category && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisCategory(message.category)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
+                                      title={`Block all ${message.category} notifications`}
+                                    >
+                                      <Filter className="h-3 w-3" />
                                     </Button>
                                   )}
                                   <Button
@@ -500,10 +673,13 @@ export function useNotifications() {
     dismissMessage: notificationService.dismissMessage.bind(notificationService),
     markAsRead: notificationService.markAsRead.bind(notificationService),
     markAllAsRead: notificationService.markAllAsRead.bind(notificationService),
-    info: notificationService.info.bind(notificationService),
-    warning: notificationService.warning.bind(notificationService),
-    error: notificationService.error.bind(notificationService),
-    success: notificationService.success.bind(notificationService)
+    // Removed info/warning/error/success methods - use addMessage directly
+    // Filter management
+    getFilters: notificationService.getFilters.bind(notificationService),
+    addFilter: notificationService.addFilter.bind(notificationService),
+    removeFilter: notificationService.removeFilter.bind(notificationService),
+    blockNotificationOrigin: notificationService.blockNotificationOrigin.bind(notificationService),
+    blockNotificationCategory: notificationService.blockNotificationCategory.bind(notificationService)
   };
 }
 

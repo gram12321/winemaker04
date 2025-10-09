@@ -35,8 +35,7 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         workforce: staff.workforce,
         hire_date_week: staff.hireDate.week,
         hire_date_season: staff.hireDate.season,
-        hire_date_year: staff.hireDate.year,
-        updated_at: new Date().toISOString()
+        hire_date_year: staff.hireDate.year
       });
 
     if (error) {

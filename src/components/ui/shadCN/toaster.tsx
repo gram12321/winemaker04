@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "./toast"
 import { getToasts } from "@/lib/utils/toast"
+import { Button } from "@/components/ui"
+import { Filter, Shield } from "lucide-react"
+import { toast } from "@/lib/utils/toast"
 
 export function Toaster() {
   const [toasts, setToasts] = useState(getToasts())
@@ -14,9 +17,35 @@ export function Toaster() {
     return () => clearInterval(interval)
   }, [])
 
+  const handleBlockOrigin = (origin: string, userFriendlyOrigin?: string) => {
+    // Import notification service dynamically to avoid circular dependency
+    import('@/components/layout/NotificationCenter').then(({ notificationService }) => {
+      notificationService.blockNotificationOrigin(origin);
+      toast({
+        title: "Filter Added",
+        description: `Notifications from ${userFriendlyOrigin || origin} will be blocked`,
+        variant: "default"
+      });
+    });
+  };
+
+  const handleBlockCategory = (category: string) => {
+    // Import notification service dynamically to avoid circular dependency
+    import('@/components/layout/NotificationCenter').then(({ notificationService }) => {
+      notificationService.blockNotificationCategory(category);
+      const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      toast({
+        title: "Filter Added",
+        description: `All ${capitalizedCategory} notifications will be blocked`,
+        variant: "default"
+      });
+    });
+  };
+
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      <ToastViewport />
+      {toasts.map(function ({ id, title, description, action, origin, userFriendlyOrigin, category, ...props }) {
         return (
           <Toast key={id} {...props}>
             <div className="grid gap-1">
@@ -25,12 +54,35 @@ export function Toaster() {
                 <ToastDescription>{description}</ToastDescription>
               )}
             </div>
-            {action}
-            <ToastClose />
+            <div className="flex items-center gap-1">
+              {action}
+              {origin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleBlockOrigin(origin, userFriendlyOrigin)}
+                  className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
+                  title={`Block notifications from ${origin}`}
+                >
+                  <Shield className="h-3 w-3" />
+                </Button>
+              )}
+              {category && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleBlockCategory(category)}
+                  className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
+                  title={`Block all ${category} notifications`}
+                >
+                  <Filter className="h-3 w-3" />
+                </Button>
+              )}
+              <ToastClose />
+            </div>
           </Toast>
         )
       })}
-      <ToastViewport />
     </ToastProvider>
   )
 }

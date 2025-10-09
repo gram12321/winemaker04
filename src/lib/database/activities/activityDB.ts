@@ -25,8 +25,7 @@ export async function saveActivityToDb(activity: Activity): Promise<boolean> {
       game_season: activity.gameSeason,
       game_year: activity.gameYear,
       is_cancellable: activity.isCancellable,
-      created_at: activity.createdAt.toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: activity.createdAt.toISOString()
     };
 
     const { error } = await supabase
@@ -95,9 +94,7 @@ export async function updateActivityInDb(activityId: string, updates: Partial<Ac
     }
 
     // Prepare update data (only include fields that exist in the database)
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    };
+    const updateData: any = {};
 
     if (updates.category !== undefined) updateData.category = updates.category;
     if (updates.title !== undefined) updateData.title = updates.title;

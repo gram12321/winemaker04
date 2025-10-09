@@ -8,14 +8,17 @@ import type {
   ToastProps,
 } from "@/components/ui/shadCN/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  origin?: string
+  userFriendlyOrigin?: string
+  category?: string
 }
 
 const actionTypes = {
@@ -138,7 +141,15 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type Toast = ToastProps & {
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+  origin?: string
+  userFriendlyOrigin?: string
+  category?: string
+  variant?: "default" | "destructive"
+}
 
 // Direct toast function without a hook
 export const toast = (props: Toast) => {

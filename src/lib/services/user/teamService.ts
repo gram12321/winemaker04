@@ -118,7 +118,7 @@ export async function addTeam(team: StaffTeam): Promise<StaffTeam> {
   const updatedTeams = [...currentTeams, team];
   updateGameState({ teams: updatedTeams });
   
-  notificationService.success(`Team "${team.name}" has been created!`);
+  notificationService.addMessage(`Team "${team.name}" has been created!`, 'teamService.createTeam', 'Team Creation', 'team & staff');
   return team;
 }
 
@@ -242,7 +242,7 @@ export function assignStaffToTeam(staffId: string, teamId: string): boolean {
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  notificationService.success(`${staff.name} assigned to ${team.name}`);
+  notificationService.addMessage(`${staff.name} assigned to ${team.name}`, 'teamService.assignStaff', 'Staff Assignment', 'team & staff');
   return true;
 }
 

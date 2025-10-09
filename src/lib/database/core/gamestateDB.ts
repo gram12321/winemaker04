@@ -18,8 +18,7 @@ export const saveGameState = async (gameState: Partial<GameState>): Promise<void
       season: gameState.season,
       current_year: gameState.currentYear,
       money: gameState.money || 0,
-      prestige: gameState.prestige,
-      updated_at: new Date().toISOString()
+      prestige: gameState.prestige
     };
     
     const { error } = await supabase

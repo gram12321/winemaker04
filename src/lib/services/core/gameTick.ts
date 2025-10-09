@@ -39,10 +39,12 @@ export const processGameTick = async (): Promise<void> => {
     if (season === 'Spring') {
       currentYear += 1;
       await onNewYear(previousYear, currentYear);
+      await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'gameTick.newYear', 'New Year Events', 'time & calendar');
     }
     
     // Process season change
     await onSeasonChange(previousSeason, season);
+    await notificationService.addMessage(`The season has changed to ${season}!`, 'gameTick.seasonChange', 'Season Changes', 'time & calendar');
   }
   
   // Update game state with new time values
@@ -61,26 +63,22 @@ export const processGameTick = async (): Promise<void> => {
   await updateVineyardRipeness(season, week);
   
   // Log the time advancement
-  notificationService.info(`Time advanced to Week ${week}, ${season}, ${currentYear}`);
+  await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'gameTick.timeAdvancement', 'Time Advancement', 'time & calendar');
 };
 
 /**
  * Handle effects that happen on season change
  */
-const onSeasonChange = async (_previousSeason: string, newSeason: string): Promise<void> => {
-
-  notificationService.info(`The season has changed to ${newSeason}!`);
-  
+const onSeasonChange = async (_previousSeason: string, _newSeason: string): Promise<void> => {
+  // Season change notification is handled in the main processGameTick function
   // TODO: Add seasonal effects when vineyard system is ready
-
 };
 
 /**
  * Handle effects that happen at the start of a new year
  */
-const onNewYear = async (_previousYear: number, newYear: number): Promise<void> => {
-
-  notificationService.info(`A new year has begun! Welcome to ${newYear}!`);
+const onNewYear = async (_previousYear: number, _newYear: number): Promise<void> => {
+  // New year notification is handled in the main processGameTick function
   
   // Update vineyard ages
   await updateVineyardAges();
@@ -114,10 +112,10 @@ const processWeeklyEffects = async (): Promise<void> => {
       // Show summary notification for significant activity
       if (result.totalOrdersCreated > 1) {
         const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
-        notificationService.info(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`);
+        await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'gameTick.orderGeneration', 'Order Generation', 'sales & orders');
       } else if (result.orders.length > 0) {
         const order = result.orders[0];
-        notificationService.info(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`);
+        await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'gameTick.orderGeneration', 'Order Generation', 'sales & orders');
       }
     }
   } catch (error) {
