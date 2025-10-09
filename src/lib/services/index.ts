@@ -2,6 +2,24 @@ export { authService } from './user/authService';
 export { companyService } from './user/companyService';
 export { highscoreService } from './user/highscoreService';
 export { userSettingsService } from './user/userSettingsService';
+export { 
+  createStaff, 
+  addStaff, 
+  removeStaff, 
+  getAllStaff, 
+  getStaffById,
+  initializeStaffSystem,
+  createStartingStaff,
+  generateRandomSkills,
+  calculateWage,
+  getRandomFirstName,
+  getRandomLastName,
+  getRandomNationality,
+  processSeasonalWages,
+  getTotalWeeklyWages,
+  getTotalSeasonalWages,
+  getTotalYearlyWages
+} from './user/staffService';
 export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './core/gameState';
 export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
 export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';

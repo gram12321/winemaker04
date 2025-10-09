@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger, Button, Separator } from "@/c
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { UpgradesPlaceholder } from './UpgradesPlaceholder';
+import { StaffWageSummary } from './StaffWageSummary';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES } from '@/lib/constants';
 
 export default function FinanceView() {
@@ -75,7 +76,10 @@ export default function FinanceView() {
         <Separator className="mb-6 bg-gray-300" />
 
         <TabsContent value="income">
-          <IncomeBalanceView period={activePeriod} />
+          <div className="space-y-6">
+            <IncomeBalanceView period={activePeriod} />
+            <StaffWageSummary />
+          </div>
         </TabsContent>
         <TabsContent value="cashflow">
           <CashFlowView />

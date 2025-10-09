@@ -523,3 +523,62 @@ export const QUALITY_FACTOR_EMOJIS = {
   grapeSuitability: '🍇'
 } as const;
 
+// ===== SKILL COLOR UTILITIES =====
+
+/**
+ * Skill color mapping - matches activity category colors for consistency
+ * Field → Green (planting, harvesting)
+ * Winery → Purple (crushing, fermentation)
+ * Administration → Blue (administration tasks)
+ * Sales → Amber (sales activities)
+ * Maintenance → Red (building, maintenance tasks)
+ */
+export const SKILL_COLORS = {
+  field: '#10b981',        // green-500
+  winery: '#8b5cf6',       // purple-500/wine
+  administration: '#3b82f6', // blue-500
+  sales: '#f59e0b',        // amber-500
+  maintenance: '#ef4444'   // red-500
+} as const;
+
+/**
+ * Get color for a skill key
+ * @param skillKey The skill key (field, winery, administration, sales, maintenance)
+ * @returns Hex color code
+ */
+export function getSkillColor(skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance'): string {
+  return SKILL_COLORS[skillKey];
+}
+
+/**
+ * Get skill letter abbreviation for compact display
+ * @param skillKey The skill key
+ * @returns Single letter abbreviation
+ */
+export function getSkillLetter(skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance'): string {
+  const letters = {
+    field: 'F',
+    winery: 'W',
+    administration: 'A',
+    sales: 'S',
+    maintenance: 'M'
+  };
+  return letters[skillKey];
+}
+
+/**
+ * Get skill display name
+ * @param skillKey The skill key
+ * @returns Full skill name
+ */
+export function getSkillDisplayName(skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance'): string {
+  const names = {
+    field: 'Field Work',
+    winery: 'Winery Work',
+    administration: 'Administration',
+    sales: 'Sales',
+    maintenance: 'Maintenance'
+  };
+  return names[skillKey];
+}
+

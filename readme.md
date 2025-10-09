@@ -147,12 +147,19 @@ return (
 - Dynamic health system (0-1 scale)
 - Field clearing and preparation
 
-### 3. Staff System (NOT YET IMPLEMENTET)
-- Skill-based hiring with specializations
-- Work rate calculations based on skills
+### 3. Staff System ✅ **IMPLEMENTED**
+- **Staff Management**: Hire and fire staff with nationality, skill levels, and specializations
+- **Skill System**: 5 core skills (Field, Winery, Administration, Sales, Maintenance)
+- **Work Calculation**: Dynamic work progression based on assigned staff skills
+- **Staff Assignment**: Assign staff to activities via ActivityCard modal
+- **Wage System**: Automatic wage calculation based on skills and specializations
+- **Database Integration**: Full CRUD operations with Supabase
+- **Starting Staff**: New companies begin with 2 random staff members
+**Future Advanced Features (NOT YET IMPLEMENTED):**
+- Team management and team assignment
 - Staff search and recruitment system
-- Wage calculation and payment system
-- Team management and task assignment
+- Advanced hiring mechanics
+- Staff specialization bonuses
 
 ### 4. Sales System ✅ **IMPLEMENTED**
 - **Customer System**: Regional customers (5 countries) with country-specific characteristics
@@ -207,9 +214,10 @@ return (
 - Advanced sales system with regional customers and multi-factor pricing
 - Finance system with transaction tracking and asset valuation
 - Complete player interface with Winepedia, achievements, and admin tools
+- Staff management system with skill-based work calculation
 
 ❌ **NOT IMPLEMENTED:**
-- Staff management system
+- Advanced staff features (teams, search, recruitment)
 - Contract system for stable income
 - Storage vessel tracking (fermentation tanks, aging tanks)
 - Seasonal effects on vineyards/wine

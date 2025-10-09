@@ -73,7 +73,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
     { id: 'vineyard', label: 'Vineyard', icon: NAVIGATION_EMOJIS.vineyard },
     { id: 'winery', label: 'Winery', icon: NAVIGATION_EMOJIS.winery },
     { id: 'sales', label: 'Sales', icon: NAVIGATION_EMOJIS.sales },
-    { id: 'finance', label: 'Finance', icon: NAVIGATION_EMOJIS.finance }
+    { id: 'finance', label: 'Finance', icon: NAVIGATION_EMOJIS.finance },
+    { id: 'staff', label: 'Staff', icon: '👥' }
   ];
 
   return (

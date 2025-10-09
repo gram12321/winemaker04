@@ -25,6 +25,84 @@
 
 ---
 
+## Version 0.0147 - Staff System Implementation
+**Date:** 2025-10-09
+**Commits:** TBD (to be committed by user)
+
+### 🎉 Major New Feature: Staff Management System
+Implemented comprehensive staff system with skill-based work calculation, replacing hardcoded activity progression.
+
+### New Files & Components
+- **Database Layer:**
+  - **NEW FILE:** `src/lib/database/core/staffDB.ts` (182 lines) - CRUD operations for staff data
+  - **NEW FILE:** Database migration `create_staff_table` - Staff table with skills, wages, and hire tracking
+
+- **Service Layer:**
+  - **NEW FILE:** `src/lib/services/user/staffService.ts` (224 lines) - Staff creation, hiring, wage calculation, skill generation
+  - **NEW FILE:** `src/lib/services/activity/workcalculators/staffWorkCalculator.ts` (91 lines) - Work contribution calculation based on staff skills
+
+- **Constants:**
+  - **NEW FILE:** `src/lib/constants/staffConstants.ts` (217 lines) - Staff nationalities, names, skill levels, specializations
+
+- **UI Components:**
+  - **NEW FILE:** `src/components/pages/Staff.tsx` (237 lines) - Main staff management page with hiring, firing, skill visualization
+  - **NEW FILE:** `src/components/ui/modals/UImodals/HireStaffModal.tsx` (267 lines) - Modal for hiring new staff with skill preview
+  - **NEW FILE:** `src/components/ui/modals/activitymodals/StaffAssignmentModal.tsx` (253 lines) - Modal for assigning staff to activities with work preview
+
+### Core System Changes
+- **Type Definitions:**
+  - `src/lib/types/types.ts` - Added `Nationality`, `StaffSkills`, `Staff` types; added `staff?` to `GameState`
+  
+- **Activity System:**
+  - `src/lib/services/activity/activitymanagers/activityManager.ts` - Replaced hardcoded 50 work/tick with dynamic staff-based calculation
+  - `src/lib/services/core/gameTick.ts` - Updated to use staff-based work progression
+  - `src/components/ui/activities/ActivityCard.tsx` - Added staff count display and "Assign Staff" button
+
+- **Game Initialization:**
+  - `src/lib/services/core/gameState.ts` - Initialize staff system on company load, create starting staff for new companies
+
+- **Navigation:**
+  - `src/App.tsx` - Added Staff page route
+  - `src/components/layout/Header.tsx` - Added Staff navigation item (👥)
+
+- **Constants & Exports:**
+  - `src/lib/constants/activityConstants.ts` - Added `CATEGORY_SKILL_MAPPING` for skill-to-activity mapping
+  - `src/lib/constants/index.ts` - Exported staff constants
+  - `src/lib/database/index.ts` - Exported staffDB
+  - `src/lib/services/index.ts` - Exported staff service functions
+
+### Features Implemented
+- ✅ **Skill-Based Work System:** Activities progress based on assigned staff skills (Field, Winery, Administration, Sales, Maintenance)
+- ✅ **Multi-Tasking Penalty:** Staff assigned to multiple activities divide their work capacity
+- ✅ **Specialization Bonus:** 20% boost for specialized staff on relevant tasks
+- ✅ **Wage Calculation:** Automatic monthly wage based on average skill level
+- ✅ **Staff Management:** Hire/fire staff with nationality, name generation, and skill randomization
+- ✅ **Starting Staff:** New companies begin with 2 random staff members
+- ✅ **Activity Assignment:** Visual staff assignment modal with live work preview
+- ✅ **Skill Visualization:** Color-coded skill bars with relevant skill highlighting
+
+### Database Schema
+```sql
+CREATE TABLE staff (
+  id UUID PRIMARY KEY,
+  company_id UUID REFERENCES companies(id),
+  name TEXT, nationality TEXT,
+  skill_level DECIMAL(3,2),
+  specializations TEXT[],
+  wage INTEGER,
+  skill_field/winery/administration/sales/maintenance DECIMAL(3,2),
+  workforce INTEGER DEFAULT 50,
+  hire_date_week/season/year INTEGER/TEXT,
+  created_at, updated_at TIMESTAMPTZ
+)
+```
+
+### Updated Documentation
+- `readme.md` - Updated Staff System section from "NOT YET IMPLEMENTED" to "✅ IMPLEMENTED"
+- Added staff system to completed systems list
+
+---
+
 ## Version 0.0145-0.0146 - Vineyard Modal & Prestige Scaling Improvements
 **Date:** 2025-10-07 to 2025-10-09
 **Commits:** d7f9153 (0.0145) → 16461f9 (0.0146) - 2 commits

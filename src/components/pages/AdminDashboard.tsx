@@ -36,7 +36,8 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     const { error } = await supabase.from('prestige_events').insert([{
       id: crypto.randomUUID(),
       type: 'admin_cheat',
-      amount: amount,
+      amount_base: amount,
+      created_game_week: null,
       timestamp: Date.now(),
       decay_rate: 0, // Admin prestige doesn't decay
       description: `Admin: Added ${amount} prestige`,

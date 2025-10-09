@@ -389,6 +389,34 @@ export interface ActivityProgress {
   timeRemaining?: string; // estimated time remaining
 }
 
+// ===== STAFF TYPES =====
+
+// Nationality options for staff members
+export type Nationality = 'Italy' | 'Germany' | 'France' | 'Spain' | 'United States';
+
+// Staff skills interface - all skills are 0-1 scale
+export interface StaffSkills {
+  field: number;        // Vineyard work
+  winery: number;       // Wine production
+  administration: number; // Administrative tasks
+  sales: number;        // Sales and marketing
+  maintenance: number;  // Building and equipment maintenance
+}
+
+// Staff member interface
+export interface Staff {
+  id: string;
+  name: string;
+  nationality: Nationality;
+  skillLevel: number;  // 0-1 scale, overall skill level
+  specializations: string[]; // Array of specialization keys (e.g., 'field', 'winery')
+  wage: number;        // Monthly wage in euros
+  teamId: string | null; // Reserved for future team system
+  skills: StaffSkills;
+  workforce: number;   // Base work capacity (default 50)
+  hireDate: GameDate;
+}
+
 // ===== GAME STATE =====
 
 export interface GameState {
@@ -400,4 +428,5 @@ export interface GameState {
   money: number;
   prestige: number; // Company prestige for order generation scaling
   activities?: Activity[]; // Active activities
+  staff?: Staff[]; // Active staff members
 }

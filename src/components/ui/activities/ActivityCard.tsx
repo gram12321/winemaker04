@@ -1,10 +1,11 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { Activity } from '@/lib/types/types';
 import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { Badge } from '@/components/ui/shadCN/badge';
 import { formatNumber } from '@/lib/utils/utils';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { StaffAssignmentModal } from '@/components/ui/modals/activitymodals/StaffAssignmentModal';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -36,14 +37,21 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   dragAttributes,
   dragListeners
 }) => {
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  
   const categoryInfo = WORK_CATEGORY_INFO[activity.category] || {
     displayName: activity.category,
     color: 'border-l-gray-400',
     icon: 'icon_administration.webp',
     isDensityBased: false
   };
+  
+  // Get assigned staff count
+  const assignedStaffIds = activity.params.assignedStaffIds || [];
+  const assignedStaffCount = Array.isArray(assignedStaffIds) ? assignedStaffIds.length : 0;
 
   return (
+    <>
     <div 
       className={`bg-gray-800 rounded-lg border-l-4 ${categoryInfo.color} mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative`}
       onClick={(e) => {
@@ -134,9 +142,26 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
               {activity.title}
             </h3>
 
-            {/* Staff display */}
-            <div className="flex items-center space-x-1 mb-2">
-              <span className="text-gray-400 text-xs">👥 [None]</span>
+            {/* Staff display and assign button */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-1">
+                <span className="text-gray-400 text-xs">
+                  👥 {assignedStaffCount > 0 ? `${assignedStaffCount} staff` : 'No staff'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowStaffModal(true);
+                }}
+                className="text-xs h-6 px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                title="Assign staff to this activity"
+              >
+                Assign
+              </Button>
             </div>
 
             {/* Progress bar */}
@@ -159,5 +184,15 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
         )}
       </div>
     </div>
+    
+    {/* Staff Assignment Modal */}
+    {showStaffModal && (
+      <StaffAssignmentModal
+        isOpen={showStaffModal}
+        onClose={() => setShowStaffModal(false)}
+        activity={activity}
+      />
+    )}
+    </>
   );
 });

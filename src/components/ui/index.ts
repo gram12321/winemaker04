@@ -6,6 +6,7 @@ export { Input } from './shadCN/input';
 export { Label } from './shadCN/label';
 export { Switch } from './shadCN/switch';
 export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './shadCN/select';
+export { Slider } from './shadCN/slider';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './shadCN/tabs';
 export { NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, NavigationMenuViewport } from './shadCN/navigation-menu';
 export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './shadCN/dialog';
@@ -32,3 +33,4 @@ export { default as FermentationOptionsModal } from './modals/activitymodals/Fer
 export { BalanceBreakdownModal } from './modals/winebreakdownmodals/BalanceBreakdownModal';
 export { QualityBreakdownModal } from './modals/winebreakdownmodals/QualityBreakdownModal';
 export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';
+export { StaffSkillBar, StaffSkillBarsList } from './components/StaffSkillBar';

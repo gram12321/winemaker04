@@ -8,6 +8,7 @@ import { getCurrentCompany, updateGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from './companyService';
+import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 
 interface FinancialData {
   income: number;
@@ -41,7 +42,7 @@ export const initializeStartingCapital = async (companyId?: string): Promise<voi
     
     const existingTransactions = await loadTransactions();
     const hasStartingCapital = existingTransactions.some(t => 
-      t.description === 'Starting Capital' && t.category === 'Initial Investment'
+      t.description === 'Starting Capital' && t.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT
     );
     
     if (hasStartingCapital) {
@@ -51,7 +52,7 @@ export const initializeStartingCapital = async (companyId?: string): Promise<voi
     await addTransaction(
       GAME_INITIALIZATION.STARTING_MONEY,
       'Starting Capital',
-      'Initial Investment',
+      TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
       false,
       companyId
     );

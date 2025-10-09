@@ -1,7 +1,7 @@
 // Activity and Work Category Constants
 // Centralized configuration for all activity-related constants
 
-import { WorkCategory } from '@/lib/types/types';
+import { WorkCategory, StaffSkills } from '@/lib/types/types';
 
 // ===== INDIVIDUAL CONSTANTS =====
 
@@ -130,3 +130,20 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
 export const DENSITY_BASED_TASKS: WorkCategory[] = Object.keys(WORK_CATEGORY_INFO).filter(
   category => WORK_CATEGORY_INFO[category as WorkCategory].isDensityBased
 ) as WorkCategory[];
+
+// ===== STAFF SKILL MAPPING =====
+
+// Map activity categories to relevant staff skills
+export const CATEGORY_SKILL_MAPPING: Record<WorkCategory, keyof StaffSkills> = {
+  [WorkCategory.PLANTING]: 'field',
+  [WorkCategory.HARVESTING]: 'field',
+  [WorkCategory.CLEARING]: 'field',
+  [WorkCategory.UPROOTING]: 'field',
+  [WorkCategory.CRUSHING]: 'winery',
+  [WorkCategory.FERMENTATION]: 'winery',
+  [WorkCategory.ADMINISTRATION]: 'administration',
+  [WorkCategory.STAFF_SEARCH]: 'administration',
+  [WorkCategory.BUILDING]: 'maintenance',
+  [WorkCategory.UPGRADING]: 'maintenance',
+  [WorkCategory.MAINTENANCE]: 'maintenance'
+};

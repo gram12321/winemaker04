@@ -24,6 +24,11 @@ export {
   // Flag utilities
   getFlagIcon,
   getCountryFlag,
+  // Skill color utilities
+  SKILL_COLORS,
+  getSkillColor,
+  getSkillLetter,
+  getSkillDisplayName,
   // Emoji mappings
   NAVIGATION_EMOJIS,
   STATUS_EMOJIS,

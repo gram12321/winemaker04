@@ -11,6 +11,7 @@ import { notificationService } from '@/components/layout/NotificationCenter';
 import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
 import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
 import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
+import { calculateStaffWorkContribution } from '../workcalculators/workCalculator';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -207,18 +208,39 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
 }
 
 /**
- * Progress all activities by a fixed amount (called from game tick)
+ * Progress all activities based on assigned staff work contribution
+ * Called from game tick (weekly)
  */
-export async function progressActivities(workPerTick: number = 50): Promise<void> {
+export async function progressActivities(): Promise<void> {
   try {
     const activities = await getAllActivities();
+    const gameState = getGameState();
+    const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
     
+    // Build staff task count map to handle multi-tasking
+    const staffTaskCounts = new Map<string, number>();
     for (const activity of activities) {
+      const assignedStaffIds = activity.params.assignedStaffIds || [];
+      for (const staffId of assignedStaffIds) {
+        staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
+      }
+    }
+    
+    // Process each activity
+    for (const activity of activities) {
+      const assignedStaffIds = activity.params.assignedStaffIds || [];
+      const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
+      
+      // Calculate work contribution from staff (0 if no staff assigned)
+      const workThisTick = assignedStaff.length > 0
+        ? calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts)
+        : 0;
+      
       const oldCompletedWork = activity.completedWork;
       const newCompletedWork = Math.min(
-        activity.totalWork, 
-        activity.completedWork + workPerTick
+        activity.totalWork,
+        activity.completedWork + workThisTick
       );
       
       // Handle partial harvesting for HARVESTING activities

@@ -7,6 +7,7 @@ import { progressActivities } from '../activity/activitymanagers/activityManager
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../vineyard/vineyardManager';
 import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
+import { processSeasonalWages } from '../user/staffService';
 
 /**
  * Enhanced time advancement with automatic game events
@@ -46,8 +47,8 @@ export const processGameTick = async (): Promise<void> => {
   // Update game state with new time values
   await updateGameState({ week, season, currentYear });
   
-  // Progress all activities by 50 work units
-  await progressActivities(50);
+  // Progress all activities based on assigned staff work contribution
+  await progressActivities();
   
   // Check for bookkeeping activity creation (week 1 of any season)
   await checkAndTriggerBookkeeping();
@@ -96,6 +97,9 @@ const onNewYear = async (_previousYear: number, newYear: number): Promise<void> 
  * Process effects that happen every week
  */
 const processWeeklyEffects = async (): Promise<void> => {
+  const gameState = getGameState();
+  const currentWeek = gameState.week || 1;
+  
   // Weekly decay is now handled by the unified prestige hook
   // No need to call decay functions here
 
@@ -127,8 +131,16 @@ const processWeeklyEffects = async (): Promise<void> => {
     console.warn('Error during weekly fermentation processing:', error);
   }
   
+  // Process seasonal wage payments (at the start of each season - week 1)
+  if (currentWeek === 1) {
+    try {
+      await processSeasonalWages();
+    } catch (error) {
+      console.warn('Error during seasonal wage processing:', error);
+    }
+  }
+  
   // TODO: Add other weekly effects when ready
   // - Bottle Wine aging effects. Oxidation risk. Maybe some small risk of oxidation everygametick, higher in different stages (HIgher doing must_fermenting, than doing bottle_aging. ) We could do something like the v1, with a 0-1 value that increment doing wineprogression.
-  // - Financial transactions
 };
 

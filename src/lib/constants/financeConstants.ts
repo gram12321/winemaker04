@@ -17,6 +17,24 @@ export const FINANCE_BUTTON_STYLES = {
   periodInactive: "bg-blue-50 text-blue-600 hover:bg-blue-100"
 } as const;
 
+// Transaction categories
+export const TRANSACTION_CATEGORIES = {
+  // Income categories
+  WINE_SALES: 'Wine Sales',
+  GRAPE_SALES: 'Grape Sales',
+  INITIAL_INVESTMENT: 'Initial Investment',
+  
+  // Expense categories
+  STAFF_WAGES: 'Staff Wages',
+  EQUIPMENT_PURCHASE: 'Equipment Purchase',
+  BUILDING_CONSTRUCTION: 'Building Construction',
+  VINEYARD_PLANTING: 'Vineyard Planting',
+  MAINTENANCE: 'Maintenance',
+  SUPPLIES: 'Supplies',
+  UTILITIES: 'Utilities',
+  OTHER: 'Other'
+} as const;
+
 // Default financial data structure for components
 export const DEFAULT_FINANCIAL_DATA = {
   income: 0,

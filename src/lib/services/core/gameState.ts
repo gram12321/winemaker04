@@ -121,6 +121,14 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     console.error('Failed to initialize prestige system:', error);
   }
   
+  // Initialize staff system for this company
+  try {
+    const { initializeStaffSystem } = await import('../user/staffService');
+    await initializeStaffSystem();
+  } catch (error) {
+    console.error('Failed to initialize staff system:', error);
+  }
+  
   // Initialize starting capital in finance system for this company
   try {
     await initializeStartingCapital(company.id);
@@ -153,6 +161,14 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
     
     if (result.success && result.company) {
       await setActiveCompany(result.company);
+      
+      // Create starting staff for new companies
+      try {
+        const { createStartingStaff } = await import('../user/staffService');
+        await createStartingStaff();
+      } catch (error) {
+        console.error('Error creating starting staff:', error);
+      }
       
       notificationService.success(`Company "${companyName}" created successfully!`);
       return result.company;
