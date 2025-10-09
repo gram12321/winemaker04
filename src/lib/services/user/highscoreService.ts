@@ -381,7 +381,7 @@ class HighscoreService {
       const message = scoreType 
         ? `Cleared ${scoreType} highscores`
         : 'Cleared all highscores';
-      notificationService.info(message);
+      await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', 'System');
       return { success: true };
     } catch (error) {
       console.error('Error clearing highscores:', error);

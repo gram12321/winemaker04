@@ -14,9 +14,9 @@ export interface PlayerNotification {
   gameSeason: string;
   gameYear: number;
   text: string;
-  origin?: string;
-  userFriendlyOrigin?: string;
-  category?: string;
+  origin: string;
+  userFriendlyOrigin: string;
+  category: string;
   isRead?: boolean;
   isDismissed?: boolean;
 }
@@ -73,14 +73,14 @@ async function loadFiltersFromDbIfNeeded() {
   }
 }
 
-function isNotificationBlocked(origin?: string, category?: string): boolean {
+function isNotificationBlocked(origin: string, category: string): boolean {
   return notificationFilters.some(filter => {
     switch (filter.type) {
       case 'origin':
         // Block notifications from specific origin (function/service)
         return filter.value === origin;
       case 'category':
-        // Block notifications from specific category
+        // Block notifications from specific category (exact match)
         return filter.value === category;
       default:
         return false;
@@ -93,7 +93,7 @@ export const notificationService = {
     return [...notifications];
   },
 
-  async addMessage(text: string, origin?: string, userFriendlyOrigin?: string, category?: string) {
+  async addMessage(text: string, origin: string, userFriendlyOrigin: string, category: string) {
     // Load filters if not already loaded (await to ensure they're loaded before checking)
     await loadFiltersFromDbIfNeeded();
     
@@ -142,7 +142,7 @@ export const notificationService = {
     const showToasts = localStorage.getItem('showNotifications') !== 'false';
     if (showToasts) {
       toast({
-        title: category ? category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Game Update',
+        title: userFriendlyOrigin,
         description: text,
         variant: 'default',
         origin,

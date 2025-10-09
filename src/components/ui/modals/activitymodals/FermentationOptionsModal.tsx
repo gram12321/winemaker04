@@ -148,7 +148,7 @@ Note: These effects apply each week while fermentation is active.`
     const result = await startFermentationActivity(batch, fermentationOptions);
     
     if (!result.success) {
-      notificationService.error(result.error || 'Failed to start fermentation activity');
+      await notificationService.addMessage(result.error || 'Failed to start fermentation activity', 'fermentationOptionsModal.handleStartFermentation', 'Fermentation Error', 'System');
     }
     
     onClose();

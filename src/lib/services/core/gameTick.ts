@@ -39,12 +39,12 @@ export const processGameTick = async (): Promise<void> => {
     if (season === 'Spring') {
       currentYear += 1;
       await onNewYear(previousYear, currentYear);
-      await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'gameTick.newYear', 'New Year Events', 'time & calendar');
+      await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', 'Time & Calendar');
     }
     
     // Process season change
     await onSeasonChange(previousSeason, season);
-    await notificationService.addMessage(`The season has changed to ${season}!`, 'gameTick.seasonChange', 'Season Changes', 'time & calendar');
+    await notificationService.addMessage(`The season has changed to ${season}!`, 'time.seasonChange', 'Season Changes', 'Time & Calendar');
   }
   
   // Update game state with new time values
@@ -63,7 +63,7 @@ export const processGameTick = async (): Promise<void> => {
   await updateVineyardRipeness(season, week);
   
   // Log the time advancement
-  await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'gameTick.timeAdvancement', 'Time Advancement', 'time & calendar');
+  await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', 'Time & Calendar');
 };
 
 /**
@@ -112,10 +112,10 @@ const processWeeklyEffects = async (): Promise<void> => {
       // Show summary notification for significant activity
       if (result.totalOrdersCreated > 1) {
         const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
-        await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'gameTick.orderGeneration', 'Order Generation', 'sales & orders');
+        await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'sales.orders', 'New Orders', 'Sales & Orders');
       } else if (result.orders.length > 0) {
         const order = result.orders[0];
-        await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'gameTick.orderGeneration', 'Order Generation', 'sales & orders');
+        await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'sales.orders', 'New Orders', 'Sales & Orders');
       }
     }
   } catch (error) {

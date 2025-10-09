@@ -183,8 +183,11 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
     // Check if we have enough money
     const currentMoney = gameState.money || 0;
     if (currentMoney < searchCost) {
-      notificationService.warning(
-        `Insufficient funds for staff search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`
+      await notificationService.addMessage(
+        `Insufficient funds for staff search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
+        'staffSearchService.startStaffSearch',
+        'Insufficient Funds',
+        'Finance'
       );
       return null;
     }
@@ -217,15 +220,17 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
     });
     
     if (activityId) {
-      notificationService.info(
-        `Staff search started! Cost: €${searchCost.toFixed(2)}`
+      await notificationService.addMessage(
+        `Staff search started! Cost: €${searchCost.toFixed(2)}`,
+        'staffSearchService.startStaffSearch',
+        'Staff Search Started',
+        'Activities & Tasks'
       );
     }
     
     return activityId;
   } catch (error) {
     console.error('Error starting staff search:', error);
-    notificationService.error('Failed to start staff search');
     return null;
   }
 }
@@ -258,12 +263,14 @@ export async function completeStaffSearch(activity: Activity): Promise<void> {
     });
     
     const skillInfo = getSkillLevelInfo(searchOptions.skillLevel);
-    notificationService.success(
-      `Staff search complete! Found ${candidates.length} ${skillInfo.name}-level candidate${candidates.length > 1 ? 's' : ''}.`
+    await notificationService.addMessage(
+      `Staff search complete! Found ${candidates.length} ${skillInfo.name}-level candidate${candidates.length > 1 ? 's' : ''}.`,
+      'staffSearchService.completeStaffSearch',
+      'Staff Search Complete',
+      'Activities & Tasks'
     );
   } catch (error) {
     console.error('Error completing staff search:', error);
-    notificationService.error('Failed to complete staff search');
   }
 }
 
@@ -278,8 +285,11 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     // Check if we have enough money for first month's wage
     const currentMoney = gameState.money || 0;
     if (currentMoney < candidate.wage) {
-      notificationService.warning(
-        `Insufficient funds to hire ${candidate.name}. Need €${candidate.wage.toFixed(2)} for first month's wage.`
+      await notificationService.addMessage(
+        `Insufficient funds to hire ${candidate.name}. Need €${candidate.wage.toFixed(2)} for first month's wage.`,
+        'staffSearchService.startHiringProcess',
+        'Insufficient Funds',
+        'Finance'
       );
       return null;
     }
@@ -301,15 +311,17 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     });
     
     if (activityId) {
-      notificationService.info(
-        `Started hiring process for ${candidate.name}. First month's wage will be €${candidate.wage.toFixed(2)}`
+      await notificationService.addMessage(
+        `Started hiring process for ${candidate.name}. First month's wage will be €${candidate.wage.toFixed(2)}`,
+        'staffSearchService.startHiringProcess',
+        'Hiring Process Started',
+        'Staff Management'
       );
     }
     
     return activityId;
   } catch (error) {
     console.error('Error starting hiring process:', error);
-    notificationService.error('Failed to start hiring process');
     return null;
   }
 }
@@ -361,7 +373,7 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
     const addedStaff = await addStaff(candidateData);
     
     if (!addedStaff) {
-      notificationService.error(`Failed to hire ${candidateData.name}`);
+      console.error(`Failed to hire ${candidateData.name}`);
       return;
     }
     
@@ -378,12 +390,14 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
       ? ` specializing in ${candidateData.specializations.join(', ')}`
       : '';
     
-    notificationService.success(
-      `${candidateData.name} has joined your winery${specText}! Monthly wage: €${candidateData.wage.toFixed(2)}`
+    await notificationService.addMessage(
+      `${candidateData.name} has joined your winery${specText}! Monthly wage: €${candidateData.wage.toFixed(2)}`,
+      'staffSearchService.completeHiringProcess',
+      'Staff Hired',
+      'Staff Management'
     );
   } catch (error) {
     console.error('Error completing hiring process:', error);
-    notificationService.error('Failed to complete hiring process');
   }
 }
 

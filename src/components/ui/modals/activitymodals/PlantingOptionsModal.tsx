@@ -86,7 +86,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     if (activityId) {
       // Success handled by notificationService in activityManager
     } else {
-      notificationService.error('Failed to create planting activity.');
+      await notificationService.addMessage('Failed to create planting activity.', 'plantingOptionsModal.handlePlant', 'Planting Error', 'System');
     }
     
     onClose();

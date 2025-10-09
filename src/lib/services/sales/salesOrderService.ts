@@ -116,12 +116,18 @@ export async function generateSophisticatedWineOrders(): Promise<{
       
       // Send notification about successful customer
       if (orders.length === 1) {
-        notificationService.info(
-          `${customer.name} from ${customer.country} placed an order for ${orders[0].wineName}`
+        await notificationService.addMessage(
+          `${customer.name} from ${customer.country} placed an order for ${orders[0].wineName}`,
+          'salesOrderService.generateOrdersForCustomer',
+          'New Order',
+          'Sales & Orders'
         );
       } else {
-        notificationService.info(
-          `${customer.name} from ${customer.country} placed ${orders.length} orders worth €${totalValue.toFixed(2)}`
+        await notificationService.addMessage(
+          `${customer.name} from ${customer.country} placed ${orders.length} orders worth €${totalValue.toFixed(2)}`,
+          'salesOrderService.generateOrdersForCustomer',
+          'New Orders',
+          'Sales & Orders'
         );
       }
     } else {

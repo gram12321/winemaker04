@@ -138,7 +138,7 @@ export async function generateOrder(
     const notificationMessage = `${customer.name} from ${customer.country} was interested in ${formatCompletedWineName(specificWineBatch)}, but outright rejected our asking price.`;
     
     // Trigger notification for rejected order
-    notificationService.info(notificationMessage);
+    await notificationService.addMessage(notificationMessage, 'generateOrder.generateOrderForSpecificWine', 'Order Rejected', 'Sales & Orders');
     
     return null; // No order generated
   }
@@ -177,7 +177,7 @@ export async function generateOrder(
     const notificationMessage = `${customer.name} from ${customer.country} wanted to buy ${formatCompletedWineName(specificWineBatch)}, but with our current asking price the amount they could afford simply became too low.`;
     
     // Trigger notification for rejected order
-    notificationService.info(notificationMessage);
+    await notificationService.addMessage(notificationMessage, 'generateOrder.generateOrderForSpecificWine', 'Order Rejected', 'Sales & Orders');
     
     return null; // No order generated
   }
@@ -240,15 +240,12 @@ export async function generateOrder(
   
   await saveWineOrder(order);
   
-  // Activate customer if they're not already active (store their relationship)
+
   if (!customer.activeCustomer) {
     await activateCustomer(customer.id, currentRelationship);
   }
   
-  // Don't trigger updates here - let the calling function batch them
-  // triggerGameUpdate() will be called once at the end of order generation
-  
-  // Order created successfully (no logging needed)
+
   
   return order;
 }

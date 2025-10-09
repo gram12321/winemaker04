@@ -67,7 +67,7 @@ export async function startCrushingActivity(batch: WineBatch, options: CrushingO
       return { success: false, error: 'Failed to create crushing activity' };
     }
     
-    notificationService.success(`Started crushing ${batch.grape} from ${batch.vineyardName}`);
+    await notificationService.addMessage(`Started crushing ${batch.grape} from ${batch.vineyardName}`, 'crushingManager.startCrushingActivity', 'Crushing Started', 'Activities & Tasks');
     return { success: true };
     
   } catch (error) {

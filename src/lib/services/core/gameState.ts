@@ -5,7 +5,8 @@ import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyVa
 import { companyService, Company } from '../user/companyService';
 import { highscoreService } from '../user/highscoreService';
 import { calculateFinancialData, initializeStartingCapital } from '../user/financeService';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { initializeStaffSystem, createStartingStaff } from '../user/staffService';
+import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 
 // Current active company and game state
@@ -123,7 +124,6 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   
   // Initialize staff system for this company
   try {
-    const { initializeStaffSystem } = await import('../user/staffService');
     await initializeStaffSystem();
   } catch (error) {
     console.error('Failed to initialize staff system:', error);
@@ -131,7 +131,6 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   
   // Initialize teams system for this company
   try {
-    const { initializeTeamsSystem } = await import('../user/teamService');
     await initializeTeamsSystem();
   } catch (error) {
     console.error('Failed to initialize teams system:', error);
@@ -156,7 +155,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   // Trigger a final game update to ensure all components are synchronized
   triggerGameUpdate();
   
-  notificationService.info(`Switched to company: ${company.name}`);
+
 };
 
 export const createNewCompany = async (companyName: string, associateWithUser: boolean = false, userName?: string): Promise<Company | null> => {
@@ -172,7 +171,6 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
       
       // Initialize teams system for new companies first
       try {
-        const { initializeTeamsSystem } = await import('../user/teamService');
         await initializeTeamsSystem();
       } catch (error) {
         console.error('Error initializing teams system:', error);
@@ -180,21 +178,19 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
       
       // Create starting staff for new companies (after teams are initialized)
       try {
-        const { createStartingStaff } = await import('../user/staffService');
         await createStartingStaff();
       } catch (error) {
         console.error('Error creating starting staff:', error);
       }
       
-      notificationService.success(`Company "${companyName}" created successfully!`);
+
       return result.company;
     } else {
-      notificationService.error(result.error || 'Failed to create company');
+      console.error(result.error || 'Failed to create company');
       return null;
     }
   } catch (error) {
     console.error('Error creating company:', error);
-    notificationService.error('An unexpected error occurred');
     return null;
   }
 };

@@ -42,12 +42,11 @@ export async function checkAndTriggerBookkeeping(): Promise<void> {
     });
     
     if (activityId) {
-      notifyBookkeepingCreated(seasonData, totalWork, spilloverData.incompleteTaskCount > 0);
+      await notifyBookkeepingCreated(seasonData, totalWork, spilloverData.incompleteTaskCount > 0);
     }
     
   } catch (error) {
     console.error('Error in checkAndTriggerBookkeeping:', error);
-    notificationService.error('Failed to create bookkeeping activity.');
   }
 }
 
@@ -62,14 +61,16 @@ async function handleSpilloverPenalties(spilloverData: {
     
     await cleanupIncompleteBookkeeping();
     
-    notificationService.warning(
+    await notificationService.addMessage(
       `Incomplete bookkeeping from previous seasons has affected company prestige! ` +
       `Lost ${spilloverData.prestigePenalty.toFixed(2)} prestige points. ` +
-      `${spilloverData.spilloverWork.toFixed(0)} extra work units added to new bookkeeping task.`
+      `${spilloverData.spilloverWork.toFixed(0)} extra work units added to new bookkeeping task.`,
+      'bookkeepingManager.handleSpillovers',
+      'Bookkeeping Penalty',
+      'Administration'
     );
   } catch (error) {
     console.error('Error handling spillover penalties:', error);
-    notificationService.error('Failed to process bookkeeping spillover penalties.');
   }
 }
 
@@ -93,16 +94,16 @@ async function applyPrestigePenalty(penalty: number, taskCount: number): Promise
 }
 
 // Notify about bookkeeping task creation
-function notifyBookkeepingCreated(
+async function notifyBookkeepingCreated(
   seasonData: { prevSeason: string; prevYear: number; transactionCount: number },
   totalWork: number,
   hasSpillover: boolean
-): void {
+): Promise<void> {
   const baseMessage = `New bookkeeping task created for ${seasonData.prevSeason} ${seasonData.prevYear}`;
   const spilloverText = hasSpillover ? ' with spillover penalties' : '';
   const fullMessage = `${baseMessage}${spilloverText}. Processing ${seasonData.transactionCount} transactions (${totalWork} work units).`;
   
-  notificationService.info(fullMessage);
+  await notificationService.addMessage(fullMessage, 'bookkeepingManager.createBookkeepingNotification', 'Bookkeeping Started', 'Administration');
 }
 
 // Clean up incomplete bookkeeping tasks

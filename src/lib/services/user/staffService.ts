@@ -118,14 +118,14 @@ export async function addStaff(staff: Staff): Promise<Staff | null> {
   // Save to database
   const success = await saveStaffToDb(staff);
   if (!success) {
-    notificationService.error('Failed to hire staff member');
+    console.error('Failed to hire staff member');
     return null;
   }
   
   // Update game state
   updateGameState({ staff: [...currentStaff, staff] });
   
-  notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', 'team & staff');
+  await notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', 'Staff Management');
   return staff;
 }
 
@@ -138,19 +138,19 @@ export async function removeStaff(staffId: string): Promise<boolean> {
   const staff = currentStaff.find(s => s.id === staffId);
   
   if (!staff) {
-    notificationService.error('Staff member not found');
+    console.error('Staff member not found');
     return false;
   }
   
   const success = await deleteStaffFromDb(staffId);
   if (!success) {
-    notificationService.error('Failed to remove staff member');
+    console.error('Failed to remove staff member');
     return false;
   }
   
   updateGameState({ staff: currentStaff.filter(s => s.id !== staffId) });
   
-  notificationService.info(`${staff.name} has left the company`);
+  console.log(`${staff.name} has left the company`);
   return true;
 }
 
@@ -231,7 +231,7 @@ export async function createStartingStaff(): Promise<void> {
     await addStaff(masterWinemaker);
     await addStaff(administrator);
     
-    notificationService.info('Starting staff have joined your company!');
+    console.log('Starting staff have joined your company!');
   } catch (error) {
     console.error('Error creating starting staff:', error);
   }

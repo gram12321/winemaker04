@@ -111,7 +111,7 @@ Processing Effects:
     const result = await startCrushingActivity(batch, crushingOptions);
     
     if (!result.success) {
-      notificationService.error(result.error || 'Failed to start crushing activity');
+      await notificationService.addMessage(result.error || 'Failed to start crushing activity', 'crushingOptionsModal.handleStartCrushing', 'Crushing Error', 'System');
     }
     
     onClose();

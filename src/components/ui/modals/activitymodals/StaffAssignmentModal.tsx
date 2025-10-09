@@ -70,14 +70,14 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       if (success) {
         // Trigger immediate UI update
         triggerGameUpdateImmediate();
-        notificationService.success(`Assigned ${selectedStaffIds.length} staff to ${activity.title}`);
+        await notificationService.addMessage(`Assigned ${selectedStaffIds.length} staff to ${activity.title}`, 'staffAssignmentModal.handleSave', 'Staff Assignment', 'Staff Management');
         onClose();
       } else {
-        notificationService.error('Failed to assign staff');
+        await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', 'System');
       }
     } catch (error) {
       console.error('Error assigning staff:', error);
-      notificationService.error('Failed to assign staff');
+      await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', 'System');
     }
   };
   

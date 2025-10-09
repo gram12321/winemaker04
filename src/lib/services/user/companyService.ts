@@ -1,6 +1,6 @@
 import { supabase } from '../../database/core/supabase';
 import { authService } from './authService';
-import { notificationService } from '@/components/layout/NotificationCenter';
+// Removed notificationService import - company operations use console.log instead
 import { Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 
@@ -102,7 +102,6 @@ class CompanyService {
       }
 
       const mappedCompany = this.mapDatabaseCompany(company);
-      notificationService.success(`Company "${data.name}" created successfully!`);
       return { success: true, company: mappedCompany };
     } catch (error) {
       console.error('Error creating company:', error);
@@ -227,7 +226,7 @@ class CompanyService {
         return { success: false, error: error.message };
       }
 
-      notificationService.info('Company deleted successfully');
+      console.log('Company deleted successfully');
       return { success: true };
     } catch (error) {
       console.error('Error deleting company:', error);

@@ -219,8 +219,11 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
     const season = gameState.season || 'Spring';
     
     if (currentMoney < totalWages) {
-      notificationService.warning(
-        `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`
+      await notificationService.addMessage(
+        `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
+        'wageService.processSeasonalWages',
+        'Insufficient Funds',
+        'Wages'
       );
       // Still process the transaction to show negative balance
     }
@@ -237,6 +240,5 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
     
   } catch (error) {
     console.error('Error processing seasonal wages:', error);
-    notificationService.error('Failed to process staff wage payments');
   }
 }

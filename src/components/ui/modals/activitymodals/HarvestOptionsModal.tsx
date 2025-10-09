@@ -77,7 +77,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     if (activityId) {
       // Success handled by notificationService in activityManager
     } else {
-      notificationService.error('Failed to create harvesting activity.');
+      await notificationService.addMessage('Failed to create harvesting activity.', 'harvestOptionsModal.handleStartHarvest', 'Harvest Error', 'System');
     }
     
     onClose();

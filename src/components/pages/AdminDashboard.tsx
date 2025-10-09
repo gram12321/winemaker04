@@ -8,7 +8,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, getCurrentCompany, clearPrestigeCache } from '@/lib/services';
-import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/core/supabase';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
@@ -26,7 +25,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const handleAddGold = () => withLoading(async () => {
     const amount = parseFloat(goldAmount) || 10000;
     await addTransaction(amount, `Admin: Added ${formatCurrency(amount)}`, 'admin_cheat');
-    notificationService.success(`Added ${formatCurrency(amount)} to active company`);
+
   });
 
   const handleAddPrestige = () => withLoading(async () => {
@@ -47,7 +46,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     
     if (error) {
       console.error('Failed to add prestige event:', error);
-      notificationService.error('Failed to add prestige');
+
       return;
     }
     
@@ -55,48 +54,42 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     clearPrestigeCache();
     await getCurrentPrestige();
     
-    notificationService.success(`Added ${amount} prestige to active company`);
+
   });
 
   const handleClearAllHighscores = () => withLoading(async () => {
     const result = await highscoreService.clearHighscores();
     if (result.success) {
-      notificationService.success('All highscores cleared successfully');
+
     } else {
-      notificationService.error(result.error || 'Failed to clear highscores');
+
     }
   });
 
   const handleClearCompanyValueHighscores = () => withLoading(async () => {
     const result = await highscoreService.clearHighscores('company_value');
     if (result.success) {
-      notificationService.success('Company value highscores cleared');
+
     } else {
-      notificationService.error(result.error || 'Failed to clear company value highscores');
+
     }
   });
 
   const handleClearCompanyValuePerWeekHighscores = () => withLoading(async () => {
     const result = await highscoreService.clearHighscores('company_value_per_week');
     if (result.success) {
-      notificationService.success('Company value per week highscores cleared');
+
     } else {
-      notificationService.error(result.error || 'Failed to clear company value per week highscores');
+
     }
   });
 
-  const handleTestNotifications = () => {
-    notificationService.info('This is an info notification');
-    setTimeout(() => notificationService.success('This is a success notification'), 1000);
-    setTimeout(() => notificationService.warning('This is a warning notification'), 2000);
-    setTimeout(() => notificationService.error('This is an error notification'), 3000);
-  };
 
   // Database cleanup functions
   const handleClearAllCompanies = () => withLoading(async () => {
     const { error } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (error) throw error;
-    notificationService.success('All companies cleared successfully');
+
     
     // Navigate to login and refresh browser
     if (onNavigateToLogin) {
@@ -110,7 +103,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const handleClearAllUsers = () => withLoading(async () => {
     const { error } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (error) throw error;
-    notificationService.success('All users cleared successfully');
+
     
     // Navigate to login and refresh browser
     if (onNavigateToLogin) {
@@ -131,8 +124,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
         // Then clear users
         const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         if (usersError) throw usersError;
-        
-        notificationService.success('All companies and users cleared successfully');
+
         
         // Navigate to login and refresh browser
         if (onNavigateToLogin) {
@@ -143,7 +135,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
         }, 1000);
       } catch (error) {
         console.error('Error clearing companies and users:', error);
-        notificationService.error('Failed to clear companies and users');
+
       }
     });
   };
@@ -160,10 +152,10 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
         // Then recreate them
         await initializeCustomers(1); // Initialize with base prestige
         
-        notificationService.success('All customers cleared and recreated successfully');
+
       } catch (error) {
         console.error('Error recreating customers:', error);
-        notificationService.error('Failed to recreate customers');
+
       }
     });
   };
@@ -174,10 +166,10 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
       try {
         const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         if (error) throw error;
-        notificationService.success('All achievements cleared successfully');
+
       } catch (error) {
         console.error('Error clearing achievements:', error);
-        notificationService.error('Failed to clear achievements');
+
       }
     });
   };
@@ -238,13 +230,12 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
         // Check if there were any errors
         if (errors.length > 0) {
-          const errorMessage = `Database reset completed with ${errors.length} errors:\n${errors.join('\n')}`;
-          notificationService.error(errorMessage);
+
           console.error('Full database reset errors:', errors);
           return; // Don't refresh if there were errors
         }
 
-        notificationService.success('Full database reset completed successfully');
+
         
         // Only navigate and refresh if no errors occurred
         if (onNavigateToLogin) {
@@ -256,7 +247,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
       } catch (error) {
         const errorMessage = `Critical error during full database reset: ${error}`;
         console.error(errorMessage, error);
-        notificationService.error(errorMessage);
+
       }
     });
   };
@@ -472,14 +463,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
           {/* Development Tools */}
           <TabsContent value="tools">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SimpleCard
-                title="Notification Testing"
-                description="Test the notification system"
-              >
-                <Button onClick={handleTestNotifications} className="w-full">
-                  Test All Notification Types
-                </Button>
-              </SimpleCard>
+
 
             </div>
           </TabsContent>

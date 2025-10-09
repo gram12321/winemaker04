@@ -196,7 +196,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     const currentMoney = gameState.money || 0;
     if (currentMoney < option.totalPrice) {
       const errorMsg = `Insufficient funds. You have ${formatCurrency(currentMoney)} but need ${formatCurrency(option.totalPrice)}.`;
-      notificationService.error(errorMsg);
+      await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', 'Finance');
       return { 
         success: false, 
         error: errorMsg
@@ -232,13 +232,12 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     triggerGameUpdate();
     
     // Add success notification
-    notificationService.success(`Successfully purchased ${option.name} for ${formatCurrency(option.totalPrice)}!`);
+    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatCurrency(option.totalPrice)}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', 'Finance');
     
     return { success: true, vineyard };
   } catch (error) {
     console.error('Error purchasing vineyard:', error);
     const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
-    notificationService.error(`Failed to purchase vineyard: ${errorMsg}`);
     return { 
       success: false, 
       error: errorMsg

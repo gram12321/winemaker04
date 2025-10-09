@@ -104,21 +104,21 @@ export async function addTeam(team: StaffTeam): Promise<StaffTeam> {
   // Check if team name already exists
   const existingTeam = currentTeams.find(t => t.name === team.name);
   if (existingTeam) {
-    notificationService.error('A team with this name already exists');
+    await notificationService.addMessage('A team with this name already exists', 'teamService.addTeam', 'Team Creation Error', 'System');
     throw new Error('Team name already exists');
   }
   
   // Save to database
   const success = await saveTeamToDb(team);
   if (!success) {
-    notificationService.error('Failed to save team to database');
+    console.error('Failed to save team to database');
     throw new Error('Failed to save team to database');
   }
   
   const updatedTeams = [...currentTeams, team];
   updateGameState({ teams: updatedTeams });
   
-  notificationService.addMessage(`Team "${team.name}" has been created!`, 'teamService.createTeam', 'Team Creation', 'team & staff');
+  await notificationService.addMessage(`Team "${team.name}" has been created!`, 'teamService.createTeam', 'Team Creation', 'Team Management');
   return team;
 }
 
@@ -131,14 +131,14 @@ export async function removeTeam(teamId: string): Promise<boolean> {
   const team = currentTeams.find(t => t.id === teamId);
   
   if (!team) {
-    notificationService.error('Team not found');
+    await notificationService.addMessage('Team not found', 'teamService.removeTeam', 'Team Deletion Error', 'System');
     return false;
   }
   
   // Delete from database
   const success = await deleteTeamFromDb(teamId);
   if (!success) {
-    notificationService.error('Failed to delete team from database');
+    console.error('Failed to delete team from database');
     return false;
   }
   
@@ -151,7 +151,7 @@ export async function removeTeam(teamId: string): Promise<boolean> {
   const updatedTeams = currentTeams.filter(t => t.id !== teamId);
   updateGameState({ teams: updatedTeams, staff: updatedStaff });
   
-  notificationService.info(`Team "${team.name}" has been deleted`);
+  await notificationService.addMessage(`Team "${team.name}" has been deleted`, 'teamService.removeTeam', 'Team Deletion', 'Team Management');
   return true;
 }
 
@@ -164,21 +164,21 @@ export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
   
   const teamIndex = currentTeams.findIndex(t => t.id === updatedTeam.id);
   if (teamIndex === -1) {
-    notificationService.error('Team not found');
+    await notificationService.addMessage('Team not found', 'teamService.updateTeam', 'Team Update Error', 'System');
     throw new Error('Team not found');
   }
   
   // Check if team name already exists (excluding current team)
   const existingTeam = currentTeams.find(t => t.name === updatedTeam.name && t.id !== updatedTeam.id);
   if (existingTeam) {
-    notificationService.error('A team with this name already exists');
+    await notificationService.addMessage('A team with this name already exists', 'teamService.updateTeam', 'Team Update Error', 'System');
     throw new Error('Team name already exists');
   }
   
   // Save to database
   const success = await saveTeamToDb(updatedTeam);
   if (!success) {
-    notificationService.error('Failed to update team in database');
+    console.error('Failed to update team in database');
     throw new Error('Failed to update team in database');
   }
   
@@ -186,7 +186,7 @@ export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
   updatedTeams[teamIndex] = updatedTeam;
   updateGameState({ teams: updatedTeams });
   
-  notificationService.success(`Team "${updatedTeam.name}" has been updated!`);
+  await notificationService.addMessage(`Team "${updatedTeam.name}" has been updated!`, 'teamService.updateTeam', 'Team Update', 'Team Management');
   return updatedTeam;
 }
 
@@ -200,27 +200,27 @@ export function getAllTeams(): StaffTeam[] {
 /**
  * Assign a staff member to a team
  */
-export function assignStaffToTeam(staffId: string, teamId: string): boolean {
+export async function assignStaffToTeam(staffId: string, teamId: string): Promise<boolean> {
   const gameState = getGameState();
   const allStaff = gameState.staff || [];
   const allTeams = gameState.teams || [];
   
   const staff = allStaff.find(s => s.id === staffId);
   if (!staff) {
-    notificationService.error('Staff member not found');
+    await notificationService.addMessage('Staff member not found', 'teamService.assignStaff', 'Staff Assignment Error', 'System');
     return false;
   }
   
   // Verify team exists
   const team = allTeams.find(t => t.id === teamId);
   if (!team) {
-    notificationService.error('Team not found');
+    await notificationService.addMessage('Team not found', 'teamService.assignStaff', 'Staff Assignment Error', 'System');
     return false;
   }
   
   // Check if staff is already assigned to this team
   if (staff.teamIds.includes(teamId)) {
-    notificationService.error('Staff member is already assigned to this team');
+    await notificationService.addMessage('Staff member is already assigned to this team', 'teamService.assignStaff', 'Staff Assignment Error', 'System');
     return false;
   }
   
@@ -242,33 +242,33 @@ export function assignStaffToTeam(staffId: string, teamId: string): boolean {
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  notificationService.addMessage(`${staff.name} assigned to ${team.name}`, 'teamService.assignStaff', 'Staff Assignment', 'team & staff');
+  await notificationService.addMessage(`${staff.name} assigned to ${team.name}`, 'teamService.assignStaff', 'Staff Assignment', 'Staff Management');
   return true;
 }
 
 /**
  * Remove a staff member from a team
  */
-export function removeStaffFromTeam(staffId: string, teamId: string): boolean {
+export async function removeStaffFromTeam(staffId: string, teamId: string): Promise<boolean> {
   const gameState = getGameState();
   const allStaff = gameState.staff || [];
   const allTeams = gameState.teams || [];
   
   const staff = allStaff.find(s => s.id === staffId);
   if (!staff) {
-    notificationService.error('Staff member not found');
+    await notificationService.addMessage('Staff member not found', 'teamService.removeStaffFromTeam', 'Staff Removal Error', 'System');
     return false;
   }
   
   const team = allTeams.find(t => t.id === teamId);
   if (!team) {
-    notificationService.error('Team not found');
+    await notificationService.addMessage('Team not found', 'teamService.removeStaffFromTeam', 'Staff Removal Error', 'System');
     return false;
   }
   
   // Check if staff is assigned to this team
   if (!staff.teamIds.includes(teamId)) {
-    notificationService.error('Staff member is not assigned to this team');
+    await notificationService.addMessage('Staff member is not assigned to this team', 'teamService.removeStaffFromTeam', 'Staff Removal Error', 'System');
     return false;
   }
   
@@ -290,7 +290,7 @@ export function removeStaffFromTeam(staffId: string, teamId: string): boolean {
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  notificationService.success(`${staff.name} removed from ${team.name}`);
+  await notificationService.addMessage(`${staff.name} removed from ${team.name}`, 'teamService.removeStaffFromTeam', 'Staff Removal', 'Staff Management');
   
   return true;
 }
@@ -333,7 +333,7 @@ export async function initializeTeamsSystem(): Promise<void> {
 /**
  * Reset teams to default configuration
  */
-export function resetTeamsToDefault(): void {
+export async function resetTeamsToDefault(): Promise<void> {
   const defaultTeams = getDefaultTeams();
   
   // Clear all team assignments from staff
@@ -346,5 +346,5 @@ export function resetTeamsToDefault(): void {
     staff: updatedStaff
   });
   
-  notificationService.info('Teams reset to default configuration');
+  await notificationService.addMessage('Teams reset to default configuration', 'teamService.resetTeamsToDefault', 'Team Reset', 'Team Management');
 }

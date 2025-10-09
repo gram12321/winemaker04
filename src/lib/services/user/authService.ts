@@ -139,7 +139,7 @@ class AuthService {
         return { success: false, error: 'Failed to create user profile' };
       }
 
-      notificationService.success(`Welcome ${name}! Please check your email to verify your account.`);
+      await notificationService.addMessage(`Welcome ${name}! Please check your email to verify your account.`, 'authService.register', 'User Registration', 'System');
       return { success: true };
     } catch (error) {
       console.error('Sign up error:', error);
@@ -159,7 +159,7 @@ class AuthService {
       }
 
       if (data.user) {
-        notificationService.success('Welcome back!');
+        await notificationService.addMessage('Welcome back!', 'authService.signIn', 'User Sign In', 'System');
         return { success: true };
       }
 
@@ -178,7 +178,7 @@ class AuthService {
         return { success: false, error: error.message };
       }
 
-      notificationService.info('Signed out successfully');
+      await notificationService.addMessage('Signed out successfully', 'authService.signOut', 'User Sign Out', 'System');
       return { success: true };
     } catch (error) {
       console.error('Sign out error:', error);
@@ -207,7 +207,7 @@ class AuthService {
 
       // Reload user profile
       await this.loadUserProfile(this.currentUser.id);
-      notificationService.success('Profile updated successfully');
+      await notificationService.addMessage('Profile updated successfully', 'authService.updateProfile', 'Profile Update', 'System');
       return { success: true };
     } catch (error) {
       console.error('Update profile error:', error);
@@ -234,7 +234,7 @@ class AuthService {
       // Sign out from auth
       await supabase.auth.signOut();
       
-      notificationService.info('Account deleted successfully');
+      await notificationService.addMessage('Account deleted successfully', 'authService.deleteAccount', 'Account Deletion', 'System');
       return { success: true };
     } catch (error) {
       console.error('Delete account error:', error);

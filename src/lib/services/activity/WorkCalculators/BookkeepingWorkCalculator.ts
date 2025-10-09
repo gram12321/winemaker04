@@ -183,8 +183,11 @@ export async function calculateTotalBookkeepingWork(): Promise<{
 export async function completeBookkeeping(activity: any): Promise<void> {
   const { prevSeason, prevYear, transactionCount } = activity.params;
   
-  notificationService.success(
+  await notificationService.addMessage(
     `Bookkeeping for ${prevSeason} ${prevYear} completed successfully! ` +
-    `Processed ${transactionCount} transactions.`
+    `Processed ${transactionCount} transactions.`,
+    'bookkeepingWorkCalculator.onBookkeepingComplete',
+    'Bookkeeping Complete',
+    'Activities & Tasks'
   );
 }

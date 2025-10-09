@@ -13,9 +13,9 @@ export interface DbNotificationRecord {
   game_season: string;
   game_year: number;
   text: string;
-  origin?: string;
-  userFriendlyOrigin?: string;
-  category?: string;
+  origin: string;
+  userFriendlyOrigin: string;
+  category: string;
 }
 
 export interface NotificationFilter {
@@ -47,7 +47,7 @@ export const saveNotification = async (notification: DbNotificationRecord): Prom
         game_year: notification.game_year,
         text: notification.text,
         origin: notification.origin || null,
-        userFriendlyOrigin: notification.userFriendlyOrigin || null,
+        userfriendlyorigin: notification.userFriendlyOrigin || null,
         category: notification.category || null
       });
 
@@ -76,7 +76,7 @@ export const loadNotifications = async (): Promise<DbNotificationRecord[]> => {
       game_year: row.game_year,
       text: row.text,
       origin: row.origin,
-      userFriendlyOrigin: row.userFriendlyOrigin,
+      userFriendlyOrigin: row.userfriendlyorigin,
       category: row.category
     }));
   } catch (error) {
