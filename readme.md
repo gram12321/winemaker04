@@ -58,7 +58,6 @@ return (
 - **Business logic in services**: Never put calculations in components
 - **Reactive updates**: Services trigger global updates, components auto-refresh
 
-
 **Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
 - Import from `@/lib/constants` (barrel). It re-exports:
   - `constants.ts` - Game initialization, sales constants, wine quality, customer regional data
@@ -119,11 +118,13 @@ return (
 - Dynamic range adjustments and penalty multipliers with interactive UI visualization
 - Grape-specific base characteristics with harvest-specific modifications
 - Crushing activity system with method-specific characteristic modifications (Hand Press, Mechanical Press, Pneumatic Press)
+- Quality breakdown modals with detailed factor analysis and asymmetric function displays
+- Combined wine score system (quality + balance) integrated into pricing and wine evaluation
 - **Note**: Special features like "Green Flavors" were removed for this iteration as they were not fully implemented in v1
 
 **Future Advanced Features:**
-- Quality tracking through production stages
-- Processing influence on characteristics (crushing methods, fermentation)
+- Extended quality tracking through all production stages (aging, bottling effects)
+- Fermentation method influence on characteristics
 - Wine archetypes for style matching
 
 ### 2. Vineyard Management ✅ **IMPLEMENTED**

@@ -1,24 +1,227 @@
 # Guideline for versionlog update for AI-Agents
-- Use your MCP GIT tools to see the latest X Git update (Do not ever use terminal commands for GIT operations). Each corresponds to a version and should have a separate entry in the @versionlog.md . IE 0.0061, 0.007, 0.0071 and 0.0072
-- 5-15 lines for each version entry. Focus on new features/updates, not so much on refactor/reorg/bugfixes
-- Include database schema changes, dead table removal, and significant architectural updates
-- Use consistent formatting: **Date:** YYYY-MM-DD, **Commit:** [commit hash]
-Owner: gram12321
-Repository: winemaker04
-Full URL: https://github.com/gram12321/winemaker04.git
 
-## Version 0.012a - Mobile UI Implementation & Dual UI System
-**Date:** 2025-10-01
-**Commit:** b8f68c047f291cbd82579ce436c0e676df363986 (latest of 8 commits)
+## 🎯 **Core Principles**
+- **ALWAYS use MCP GitHub tools** (`mcp_github2_get_commit`, `mcp_github2_list_commits`) - NEVER use terminal git commands
+- **ALWAYS retrieve actual commit data** - Don't guess or assume what changed
+- **Verify existing entries** against actual commits before adding new ones
 
-### Changes
-- **Mobile Detection:** Added `useIsMobile()` hook with 768px breakpoint detection for responsive UI switching
-- **Responsive Sidebar:** Implemented dual sidebar system using ShadCN Sheet component for mobile offcanvas navigation
-- **Activity Panel:** Created mobile-friendly sliding panel with floating button trigger; desktop maintains fixed sidebar
-- **Table to Cards:** Converted data tables to card-based layouts for mobile views across Sales, Highscores, and WineLog pages
-- **Responsive Components:** Enhanced existing components with mobile-specific rendering using Tailwind responsive classes
-- **UI Architecture:** Established "Dual UI System" pattern where components render differently based on screen size
-- **Mobile Navigation:** Implemented touch-friendly navigation with proper mobile breakpoints and gestures
+## 📋 **Entry Requirements**
+1. **Use `mcp_github2_get_commit` with `include_diff: true`** to get exact file changes and stats
+2. **Include specific details:**
+   - Mark **NEW FILE:** with exact line counts (e.g., "NEW FILE: component.tsx (372 lines)")
+   - Mark **REMOVED:** files that were deleted
+   - Include file change stats (e.g., "42 additions, 15 deletions")
+   - Note database schema changes explicitly
+   
+3. **Grouping commits:**
+   - Related commits (same feature) can be grouped into one version entry
+   - Each entry should cover 1-4 related commits
+   - Large refactors or feature sets may need separate entries
+
+## 📂 **Repository Info**
+- **Owner:** gram12321
+- **Repository:** winemaker04
+- **Full URL:** https://github.com/gram12321/winemaker04.git
+
+---
+
+## Version 0.0145-0.0146 - Vineyard Modal & Prestige Scaling Improvements
+**Date:** 2025-10-07 to 2025-10-09
+**Commits:** d7f9153 (0.0145) → 16461f9 (0.0146) - 2 commits
+
+### Major New Features
+- **Vineyard Information Modal:**
+  - **NEW FILE:** `src/components/ui/modals/UImodals/vineyardModal.tsx` (372 lines) - Comprehensive vineyard details modal with quality factors, prestige breakdown, and vineyard characteristics
+  - Integrated into Vineyard page for detailed vineyard information display
+  - Shows land value, vineyard prestige, quality factors, and harvest information
+
+### Component Refactoring
+- **Quality Display Components:**
+  - `src/components/ui/components/QualityFactorsBreakdown.tsx` - Major refactor (78 additions, 203 deletions) - simplified and improved quality factor display
+  - `src/components/ui/components/qualityFactorBar.tsx` - Enhanced with better visualization (174 additions, 85 deletions)
+  
+### Prestige System Enhancements
+- **Better Scaling Algorithms (0.0146):**
+  - `src/lib/services/prestige/prestigeService.ts` - Improved land value and vine age prestige scaling (69 additions, 3 deletions)
+  - `src/lib/utils/calculator.ts` - Enhanced scaling functions for vineyard prestige (27 changes)
+  - `src/lib/utils/utils.ts` - Additional utility functions for prestige calculations (14 additions, 4 deletions)
+  - `src/lib/services/wine/wineQualityCalculationService.ts` - Updated quality index calculations (9 additions, 5 deletions)
+
+## Version 0.0143-0.0144 - Prestige Events System & Data Model Improvements  
+**Date:** 2025-10-05 to 2025-10-06
+**Commits:** 8683d35 (0.0143) → e482f97 (0.0144) - 2 commits
+
+### Prestige Events Backend Overhaul (0.0143)
+- **Type System Refactor:**
+  - `src/lib/types/types.ts` - Major type definitions update (73 additions, 46 deletions)
+  - Enhanced prestige event types with better structure and validation
+  
+- **Prestige Service Simplification:**
+  - `src/lib/services/prestige/prestigeService.ts` - Streamlined backend logic (42 additions, 100 deletions)
+  - `src/lib/database/customers/prestigeEventsDB.ts` - Improved database operations (11 additions, 17 deletions)
+  - `src/hooks/usePrestigeUpdates.ts` - Better prestige update handling (7 additions, 2 deletions)
+  
+- **UI Simplification:**
+  - `src/components/ui/components/QualityFactorsBreakdown.tsx` - Cleaned up prestige display (26 additions, 68 deletions)
+  - `src/components/ui/modals/UImodals/prestigeModal.tsx` - Simplified modal structure (6 additions, 20 deletions)
+
+### Vineyard Prestige Integration (0.0144)
+- **Vineyard-Specific Prestige:**
+  - `src/lib/services/prestige/prestigeService.ts` - Added vineyard prestige calculations (81 additions, 26 deletions)
+  - Integrated vineyard quality factors into prestige events
+  - Enhanced prestige modal with vineyard-specific information display
+
+### Data Model Change (0.0142)
+- **Harvest Period System:**
+  - Changed from `harvest_date` (specific date) to `harvest_period` (period identifier) across the application
+  - `src/lib/database/activities/inventoryDB.ts` - Updated database schema (27 additions, 25 deletions)
+  - `src/lib/services/wine/inventoryService.ts` - Updated inventory tracking (19 additions, 4 deletions)
+  - `src/lib/services/user/wineLogService.ts` - Updated wine log service (13 additions, 15 deletions)
+  - More flexible harvest tracking and better data consistency
+
+## Version 0.014 - Sales UI Restructure & Combined Wine Score System
+**Date:** 2025-10-05
+**Commits:** f4e9610 (0.014) → 6950c16 (0.0141a) - 4 commits
+**Stats:** Massive restructure - 3185 total changes in initial commit
+
+### Major Code Reorganization
+- **Sales Page Split:**
+  - `src/components/pages/Sales.tsx` - Reduced from 1407 lines to 67 lines (major simplification)
+  - **NEW FILE:** `src/components/pages/sales/OrdersTab.tsx` (955 lines) - Dedicated orders management interface
+  - **NEW FILE:** `src/components/pages/sales/WineCellarTab.tsx` (564 lines) - Wine cellar inventory and management
+  - Moved finished wine display from Winery page to Sales page for better workflow
+
+- **Directory Reorganization:**
+  - Moved `components/winepedia/*` → `components/pages/winepedia/` (13 components)
+  - Reorganized modals into subdirectories: `UImodals/`, `activitymodals/`, `winebreakdownmodals/`
+  - Updated all import paths across the application
+
+### Combined Wine Score System
+- **New Scoring Hook (0.014):**
+  - **NEW FILE:** `src/hooks/useWineCombinedScore.ts` (68 lines) - Unified hook for combined wine quality and balance scoring
+  - Integrated into WineCellarTab for comprehensive wine evaluation display
+
+- **Service Consolidation (0.0141a):**
+  - **NEW FILE:** `src/lib/services/wine/wineScoreCalculation.ts` (27 lines) - Unified wine score calculation service
+  - **REMOVED:** `src/lib/services/sales/pricingService.ts` (15 lines) - Merged into wine score service
+  - **REMOVED:** `src/lib/services/wine/wineCombinedScoreCalculationService.ts` (23 lines) - Replaced by new service
+  - Simplified pricing calculations to use combined scores directly
+
+### Pricing Integration (0.0141)
+- **Combined Score Pricing:**
+  - `src/lib/services/sales/pricingService.ts` - Updated to use combined wine scores (7 additions, 23 deletions)
+  - `src/components/pages/sales/WineCellarTab.tsx` - Enhanced wine display with combined scores (75 additions, 23 deletions)
+  - More accurate wine pricing based on both quality and balance
+
+### UI Enhancements
+- **Wine Cellar Display:**
+  - Comprehensive wine information with quality, balance, and combined scores
+  - Better wine inventory management interface
+  - Integrated wine characteristics visualization
+  
+- **Component Cleanup (0.0141a):**
+  - `src/components/pages/sales/WineCellarTab.tsx` - Simplified hooks usage (79 additions, 122 deletions)
+  - Better performance with optimized data fetching
+
+## Version 0.013 - Quality Breakdown System & Prestige Interface Enhancements
+**Date:** 2025-10-02 to 2025-10-05
+**Commits:** 0221931 (0.013) → bcbef37 (0.0133a) - 8 commits total
+
+### Major New Features
+- **Quality Breakdown Modal System:**
+  - `src/components/ui/components/QualityFactorsBreakdown.tsx` - New 420-line component with detailed factor analysis and asymmetric function displays
+  - `src/components/ui/components/qualityFactorBar.tsx` - New 243-line visual bar component for quality factors
+  - `src/components/ui/modals/QualityBreakdownModal.tsx` - New modal wrapper for quality breakdown display
+  - Integrated into Winery page and Winepedia Mathematical Models tab with interactive quality factor visualization
+
+- **Prestige System Overhaul:**
+  - `src/lib/services/prestige/prestigeService.ts` - Complete refactor with new structured prestige factor interfaces
+  - `src/components/ui/modals/prestigeModal.tsx` - Enhanced with event description parsing and improved factor display
+  - `src/lib/database/customers/prestigeEventsDB.ts` - Updated with better event formatting and retrieval
+  - Added detailed prestige factor breakdown UI with category grouping and formatted descriptions
+
+- **Wine Quality Service Consolidation:**
+  - Removed `src/lib/services/sales/wineQualityIndexCalculationService.ts` (64 lines deleted)
+  - Created `src/lib/services/wine/wineCombinedScoreCalculationService.ts` - New unified scoring service (24 lines)
+  - Renamed/refactored `wineQualityCalculationService.ts` with simplified quality calculation logic
+  - Updated all services (sales, vineyard, wine) to use consolidated quality system
+
+### Technical Improvements
+- **Asymmetric Mathematical Functions:**
+  - `src/lib/utils/calculator.ts` - Enhanced with sophisticated asymmetric scaling functions (88 additions, 45 deletions)
+  - `src/lib/services/sales/wineValueIndexCalculationService.ts` - Updated to use new asymmetric quality multipliers
+  - `src/lib/services/vineyard/vineyardValueCalc.ts` - Integrated asymmetric functions for realistic value calculations
+
+- **UI Enhancements & Bug Fixes:**
+  - Fixed Activity Panel bug (commit 0.013a: 172 additions, 195 deletions in ActivityPanel.tsx)
+  - `src/lib/utils/icons.tsx` - New 54-line icon utility for centralized icon management
+  - `src/components/ui/shadCN/card.tsx` - Enhanced with 30 new lines for better card layouts
+  - Improved Balance and Quality breakdown component responsiveness
+
+- **Type System & Architecture:**
+  - `src/lib/types/types.ts` - Added prestige factor interfaces and event description types
+  - Updated service barrel exports for new quality calculation services
+  - Removed redundant quality constants from `constants.ts` (22 deletions)
+
+### Database & Service Integration
+- Enhanced prestige events database operations with structured factor retrieval
+- Updated pricing service to use combined wine score calculations
+- Integrated quality breakdowns into order generation and sales service
+- Added vineyard value calculations with new quality factor integration
+
+## Version 0.012 - Mobile UI Implementation & Dual UI System
+**Date:** 2025-09-30 to 2025-10-02
+**Commits:** b10c52b (0.012 vercel) → d4781b7 (0.012 AF Docs) - 12 commits total
+
+### Major Mobile UI Overhaul
+- **Responsive Header Redesign (commit 11fc58a6):**
+  - `src/components/layout/Header.tsx` - Complete mobile redesign (291 additions, 122 deletions)
+  - Responsive button sizing and layout (commit 0d1211c1: 24 additions, 6 deletions)
+  - Money badge made clickable for Finance navigation (commit b8f68c04: 6 additions)
+  - Mobile-optimized navigation menu with proper touch targets
+
+- **Table to Card Conversions:**
+  - `src/components/pages/Sales.tsx` - Mobile card layout for orders and wine cellar (323 additions, commit 07f9002a)
+  - `src/components/pages/Highscores.tsx` - Responsive card-based leaderboard (126 additions, 56 deletions)
+  - `src/components/pages/WineLog.tsx` - Card layout for wine history (110 additions)
+  - `src/components/pages/Vineyard.tsx` - Vineyard card display (181 additions, commit 55083360)
+  - `src/components/finance/CashFlowView.tsx` - Mobile-friendly transaction cards (38 additions)
+
+- **Activity Panel Mobile Optimization:**
+  - `src/components/layout/ActivityPanel.tsx` - Mobile-friendly sliding panel (commit 45cdd446: 97 additions, 19 deletions)
+  - Floating button trigger for mobile
+  - Desktop maintains fixed sidebar layout
+
+- **Notification Center Redesign:**
+  - `src/components/layout/NotificationCenter.tsx` - Mobile notification UI (commit 582e9bc5: 163 additions, 27 deletions)
+  - Further enhancements (commit a4fedca4: 239 additions, 107 deletions)
+  - Touch-friendly notification interactions
+
+### Responsive Design System
+- **CSS Infrastructure:**
+  - `src/index.css` - Enhanced responsive utilities (57 additions, 36 deletions, commit 11fc58a6)
+  - Added mobile breakpoint definitions and responsive variables
+  - Improved Tailwind responsive class support
+
+- **Component-Wide Mobile Support:**
+  - Updated 12 pages/components with mobile responsiveness (commit 11fc58a6)
+  - Enhanced modal responsiveness across app (commits 07f9002a)
+  - Consistent mobile-first approach with Tailwind breakpoints
+
+### Infrastructure & Documentation
+- **Vercel Deployment:**
+  - `vercel.json` - New deployment configuration (7 lines, commit b10c52b5)
+  - Production build optimizations
+
+- **Documentation Updates (commit d4781b73):**
+  - `readme.md` - Added mobile UI documentation (39 additions)
+  - `docs/versionlog.md` - Updated version history (13 additions)
+
+### Technical Architecture
+- **Dual UI System Pattern:** Components conditionally render mobile vs desktop layouts using Tailwind responsive classes
+- **Mobile-First Design:** 768px breakpoint for mobile/desktop switching
+- **Touch Optimization:** Larger touch targets, improved gesture support
+- **Performance:** Optimized rendering for mobile devices with conditional component loading
 
 ## Version 0.00951a - Remove duplicate prestige service (cleanup)
 **Date:** 2025-09-29
@@ -53,41 +256,97 @@ Full URL: https://github.com/gram12321/winemaker04.git
 ## Version 0.0094 - Major correction to balance system
 **Date:** 2025-09-28
 **Commit:** e89d22f737e70391a0011d4b45ae0e548094980f
+**Stats:** 2825 additions, 1389 deletions (MASSIVE refactor)
 
-### Changes
-- **Balance Engine:** Introduced new modular balance engine under `src/lib/balance/`:
-  - `calculations/`: `balanceCalculator.ts`, `rangeCalculator.ts`, `ruleCalculator.ts`
-  - `config/`: `rangeAdjustments.ts`; `RULES` integration
-- **UI:** Added `BalanceScoreBreakdown` component with detailed penalty/synergy breakdown; integrated into Winery and Winepedia
-- **Characteristic UI:** `WineCharacteristicsDisplay` now can show balance score; numeric tooltips use fixed decimals
-- **Hooks:** `useWineBalance` updated to use new engine and configs
-- **Winery:** Balance analysis modal + crushing modal; harvest breakdown uses stored `breakdown` or recomputes via new services
+### Major New Architecture
+- **NEW DIRECTORY:** `src/lib/balance/` - Modular balance calculation engine
+  - **NEW FILE:** `calculations/balanceCalculator.ts` (141 lines) - Core balance calculation logic
+  - **NEW FILE:** `calculations/rangeCalculator.ts` (71 lines) - Dynamic range adjustment calculations
+  - **NEW FILE:** `calculations/ruleCalculator.ts` (150 lines) - Synergy and penalty rule engine
+  - **NEW FILE:** `config/rangeAdjustments.ts` (175 lines) - Configuration for range adjustments and rules
+
+### New Components & Modals
+- **NEW FILE:** `src/components/ui/components/BalanceScoreBreakdown.tsx` (764 lines) - Comprehensive balance breakdown display with detailed factor analysis
+- **NEW FILE:** `src/components/ui/modals/BalanceBreakdownModal.tsx` (44 lines) - Modal wrapper for balance analysis
+- **NEW FILE:** `src/components/ui/modals/CrushingOptionsModal.tsx` (220 lines) - Interactive crushing options with balance preview
+
+### Winery & UI Updates
+- `src/components/pages/Winery.tsx` - Major update with balance analysis integration (111 additions, 27 deletions)
+- `src/components/ui/components/characteristicBar.tsx` - Enhanced with balance score display (24 additions, 9 deletions)
+- `src/components/ui/activities/activityOptionsModal.tsx` - Refactored for better UX (180 additions, 151 deletions)
+
+### Winepedia Simplification
+- `src/components/winepedia/CrossTraitPenaltyTab.tsx` - Major simplification (10 additions, 571 deletions) - now uses shared balance components
+- Updated all Winepedia tabs to use new balance engine
+
+### Technical Integration
+- `src/hooks/useWineBalance.ts` - Updated to use new modular balance engine (3 changes)
+- Updated 12+ page components to integrate new balance system
+- Improved admin dashboard with balance system testing tools (40 additions, 12 deletions)
 
 ## Version 0.0093a - Winepedia cleanup & shared UI wrappers
 **Date:** 2025-09-26
 **Commit:** 0734849d058754bb354e2f4be22d0c7e58436955
 
 ### Changes
-- **UI Wrappers:** Added `SimpleCard` and `GridCard` in `ui/shadCN/card.tsx`; replaced ad-hoc Card uses across Winepedia and Finance
-- **Winepedia:** Centralized sliders (`CharacteristicSlider`, `CharacteristicSliderGrid`); simplified tabs and copy
-- **Hooks:** New `useCustomerData` hook consolidating customer loading and relationship breakdowns
-- **Finance:** `CashFlowView`, `IncomeBalanceView` migrated to `SimpleCard`
+- **New Components & Utilities:**
+  - **NEW FILE:** `src/components/ui/components/CharacteristicSlider.tsx` (78 lines) - Centralized slider component for wine characteristics
+  - **NEW FILE:** `src/hooks/useCustomerData.ts` (73 lines) - Hook consolidating customer loading and relationship breakdowns
+  - **NEW FILE:** `src/lib/utils/winepediaUtils.ts` (63 lines) - Shared utilities for Winepedia components
+
+- **UI Wrappers:**
+  - `src/components/ui/shadCN/card.tsx` - Added `SimpleCard` and `GridCard` wrappers (82 additions, 1 deletion)
+  - Replaced ad-hoc Card uses across Winepedia and Finance components
+
+- **Winepedia Cleanup:**
+  - Simplified all 9 Winepedia tab components with consistent patterns
+  - `CrossTraitPenaltyTab.tsx` - Cleaned up (12 additions, 60 deletions)
+  - `DynamicRangeTab.tsx` - Simplified (15 additions, 81 deletions)
+  - `CustomersTab.tsx` - Major cleanup (10 additions, 79 deletions)
+  
+- **Finance Components:**
+  - `CashFlowView.tsx` - Migrated to `SimpleCard` (6 additions, 9 deletions)
+  - `IncomeBalanceView.tsx` - Updated with card wrappers (11 additions, 17 deletions)
 
 ## Version 0.0093 - Finance system cleanup
 **Date:** 2025-09-26
 **Commit:** df1b76c97215d48b50c966c80d8ef0f3b7c04962
 
 ### Changes
-- **Admin Tools:** Improved full DB reset ordering and error handling; added notifications cleanup; safer composite key deletes
-- **Pages:** Import path fixes for shared UI types and components; tightened sales/admin page structures
+- **Finance Constants & Services:**
+  - **NEW FILE:** `src/lib/constants/financeConstants.ts` (51 lines) - Centralized finance constants for transaction categories and financial calculations
+  - `src/lib/services/user/financeService.ts` - Refactored with constants (37 additions, 78 deletions)
+  - `src/lib/services/activity/bookkeepingManager.ts` - Updated to use finance constants (62 additions, 72 deletions)
+  
+- **Finance Components:**
+  - `src/components/finance/FinanceView.tsx` - Cleaned up with better organization (7 additions, 18 deletions)
+  - `src/components/finance/IncomeBalanceView.tsx` - Simplified using constants (4 additions, 23 deletions)
+  
+- **Code Organization:**
+  - Updated barrel exports in `lib/constants/index.ts`
+  - Improved import path consistency across finance components
 
 ## Version 0.0092 - Docs: App-wide update
 **Date:** 2025-09-26
 **Commit:** f4e3974806caa617bba2673704d212895d8fec76
 
 ### Changes
-- **README:** Expanded implemented systems; noted crushing activity methods and removed legacy “Green Flavors” note
-- **Docs:** Synchronized terminology and current feature set across app-wide documentation
+- **New Documentation:**
+  - **NEW FILE:** `docs/AIDescriptions_coregame.md` (263 lines) - Comprehensive core game mechanics documentation for AI agents
+  - **NEW FILE:** `docs/AIpromt_codecleaning.md` (33 lines) - AI prompts for code cleaning tasks
+  
+- **Documentation Updates:**
+  - `readme.md` - Expanded implemented systems and updated feature descriptions (59 additions, 51 deletions)
+  - `docs/AIpromt_docs.md` - Updated AI documentation prompts (27 additions, 15 deletions)
+  - `docs/AIpromt_newpromt.md` - Enhanced development roadmap (65 additions, 13 deletions)
+  - `docs/versionlog.md` - Updated version history (111 additions, 2 deletions)
+
+- **Documentation Cleanup:**
+  - **REMOVED:** `docs/coregame.md` (149 lines) - Replaced by AIDescriptions_coregame.md
+  - **REMOVED:** `docs/salesv2.md` (84 lines) - Legacy sales documentation
+  - **REMOVED:** `docs/knownbugs.md` (9 lines) - Outdated bug tracking
+  - **REMOVED:** `docs/winecharacteristicsBalancesystem.md` (43 lines) - Consolidated into other docs
+  - **REMOVED:** `docs/codecleaningpromt.md` (11 lines) - Replaced by AIpromt_codecleaning.md
 
 ## Version 0.0091b - Documentation & Code Cleanup
 **Date:** 2025-09-26
@@ -112,14 +371,11 @@ Full URL: https://github.com/gram12321/winemaker04.git
 
 ### Changes
 - **Penalty System Enhancements:**
+  - `src/components/winepedia/CrossTraitPenaltyTab.tsx` - Major enhancement with interactive penalty visualization (124 additions, 5 deletions)
+  - `src/lib/constants/balanceAdjustments.ts` - Enhanced penalty multiplier configurations (52 changes)
   - Enhanced cross-trait penalty multipliers with more sophisticated scaling
   - Improved penalty calculation algorithms for better balance scoring
-- **TypeScript Improvements:**
-  - Enhanced type definitions for balance calculations
-  - Improved type safety across wine characteristics system
-- **Code Quality:**
-  - Better error handling and validation
-  - Improved code organization and maintainability
+  - Interactive penalty visualization with real-time calculation display
 
 ## Version 0.0091 - Cross-Trait Balance System & Enhanced Winepedia
 **Date:** 2025-09-25
@@ -130,13 +386,21 @@ Full URL: https://github.com/gram12321/winemaker04.git
   - `src/lib/services/wine/balanceCalculator.ts` - Implemented sophisticated cross-trait penalty scaling and synergy reductions
   - `src/lib/constants/balanceAdjustments.ts` - Configuration-driven dynamic range adjustments and penalty multipliers
   - 7 synergy rules: acidity+tannins, body+spice, aroma+body+sweetness combinations
+
 - **Enhanced Winepedia:**
   - `src/components/winepedia/CrossTraitPenaltyTab.tsx` - Interactive visualization of cross-trait penalties and synergies
   - `src/components/winepedia/DynamicRangeTab.tsx` - Interactive calibration panel for range adjustments
   - Enhanced `CharacteristicBar` component with dynamic range visualization
+
+- **Asset Organization:**
+  - **20 activity icons** reorganized to `public/assets/icons/activities/`
+  - **6 NEW characteristic icons** added to `public/assets/icons/characteristics/` (acidity, aroma, body, spice, sweetness, tannins)
+  - **4 NEW grape icons** added to `public/assets/icons/grape/` (barbera, chardonnay, pinot noir, primitivo)
+
 - **UI Integration:**
   - Updated `Winery.tsx` to use new characteristic display system
   - Real-time balance calculations with live preview
+  - Documentation updates (12 additions, 8 deletions)
 
 ## Version 0.009a - Dynamic Range Adjustments
 **Date:** 2025-09-25
@@ -144,13 +408,15 @@ Full URL: https://github.com/gram12321/winemaker04.git
 
 ### Changes
 - **Dynamic Range System:**
-  - `src/lib/services/wine/balanceCalculator.ts` - Implemented config-driven range adjustments
+  - **NEW FILE:** `src/lib/constants/balanceAdjustments.ts` (74 lines) - Configuration file for dynamic range adjustments and penalty multipliers
+  - `src/lib/services/wine/balanceCalculator.ts` - Implemented config-driven range adjustments (69 additions, 5 deletions)
   - High acidity shifts sweetness range down, high body shifts spice/tannins up
   - Cross-trait effects with penalty multipliers based on characteristic deviations
-- **Interactive UI:**
-  - `src/components/winepedia/DynamicRangeTab.tsx` - Interactive sliders with live preview
-  - Real-time range adjustment visualization
   - Smooth, continuous math (no stepwise penalties)
+- **UI Updates:**
+  - `src/components/pages/Winery.tsx` - Updated to use dynamic range system (4 additions, 1 deletion)
+  - `src/components/ui/components/characteristicBar.tsx` - Minor integration updates (1 addition, 1 deletion)
+  - `src/lib/types/types.ts` - Type definitions for balance adjustments (1 addition, 1 deletion)
 
 ## Version 0.009 - Harvest Characteristics & Differentiated Balance Ranges
 **Date:** 2025-09-25
@@ -158,15 +424,22 @@ Full URL: https://github.com/gram12321/winemaker04.git
 
 ### Changes
 - **Harvest Characteristics System:**
-  - `src/lib/services/wine/harvestCharacteristics.ts` - Vineyard condition modifiers at batch creation
+  - **NEW FILE:** `src/lib/services/wine/harvestCharacteristics.ts` (100 lines) - Vineyard condition modifiers at batch creation
   - Ripeness effects: late harvest → sweetness↑, acidity↓, tannins↑, body↑, aroma↑
   - Quality factor effects: influences body, aroma, tannins (color-aware for reds vs whites)
   - Altitude effects: higher → acidity↑, aroma↑, body↓
   - Regional suitability effects: better regions → body↑, aroma↑
+  - `src/lib/services/wine/wineBatchService.ts` - Integrated harvest characteristics into batch creation (20 additions, 2 deletions)
+
 - **Differentiated Balance Ranges:**
-  - `src/lib/constants/grapeConstants.ts` - Per-characteristic ranges: acidity [0.4,0.6], aroma [0.3,0.7], body [0.4,0.8], spice [0.35,0.65], sweetness [0.4,0.6], tannins [0.35,0.65]
+  - `src/lib/constants/grapeConstants.ts` - Per-characteristic ranges: acidity [0.4,0.6], aroma [0.3,0.7], body [0.4,0.8], spice [0.35,0.65], sweetness [0.4,0.6], tannins [0.35,0.65] (5 additions, 5 deletions)
   - Replaced flat 0.4-0.6 ranges with characteristic-specific balanced ranges
   - Deterministic grape base characteristics + vineyard modifiers = starting characteristics
+
+- **UI Enhancements:**
+  - `src/components/ui/components/characteristicBar.tsx` - Enhanced with range visualization (34 additions, 4 deletions)
+  - `src/components/pages/Winery.tsx` - Updated winery display with harvest characteristics (54 additions, 4 deletions)
+  - `docs/winecharacteristicsBalancesystem.md` - Documentation updates (65 additions, 4 deletions)
 
 ## Version 0.008b - Code Reorganization & Activity System Updates
 **Date:** 2025-09-24
