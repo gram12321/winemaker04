@@ -206,6 +206,8 @@ export async function createWineBatchFromHarvest(
       naturalYield: grapeMetadata.naturalYield,
       fragile: grapeMetadata.fragile,
       proneToOxidation: grapeMetadata.proneToOxidation,
+      oxidation: 0, // Start with 0% oxidation risk
+      isOxidized: false, // Not oxidized at harvest
       harvestStartDate: harvestDate,
       harvestEndDate: harvestDate
     };

@@ -236,7 +236,13 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
       true // recurring transaction
     );
     
-    console.log(`[Staff Wages] Paid €${totalWages.toFixed(2)} to ${staff.length} staff members for ${season}`);
+    // Notify about wage payment
+    await notificationService.addMessage(
+      `Paid €${totalWages.toFixed(2)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`,
+      'staff.wages',
+      'Staff Wages Paid',
+      'Staff & Teams'
+    );
     
   } catch (error) {
     console.error('Error processing seasonal wages:', error);

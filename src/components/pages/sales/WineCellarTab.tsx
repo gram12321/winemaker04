@@ -8,6 +8,8 @@ import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
+import { getOxidationRiskDisplay } from '@/lib/services/wine/oxidationService';
+import { getOxidationRiskLabel } from '@/lib/constants/oxidationConstants';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -32,6 +34,25 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   return (
     <div className="text-xs text-gray-600">
       <span className="font-medium">Quality:</span> <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
+    </div>
+  );
+};
+
+// Component for oxidation risk/status display
+const OxidationDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const riskDisplay = getOxidationRiskDisplay(batch);
+  const riskLabel = getOxidationRiskLabel(batch.oxidation);
+  
+  // Use inverted color for risk (lower risk = better = green)
+  const invertedRisk = 1 - batch.oxidation;
+  const colorClass = getColorClass(invertedRisk);
+
+  return (
+    <div className="text-xs text-gray-600">
+      <span className="font-medium">Oxidation:</span> <span className={`font-medium ${colorClass}`}>{riskDisplay}</span>
+      {!batch.isOxidized && batch.oxidation > 0.05 && (
+        <span className="text-gray-500 ml-1">({riskLabel})</span>
+      )}
     </div>
   );
 };
@@ -418,7 +439,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                         <TableCell colSpan={7} className="bg-gray-50">
                           <div className="p-2.5 space-y-3">
                             {/* Wine Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b pb-3">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 border-b pb-3">
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Harvest Period</div>
                                 <div className="text-sm font-medium text-gray-900">{formatHarvestPeriod(wine)}</div>
@@ -430,6 +451,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Balance</div>
                                 <WineBatchBalanceDisplay batch={wine} />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 uppercase mb-1">Oxidation</div>
+                                <OxidationDisplay batch={wine} />
                               </div>
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Actions</div>

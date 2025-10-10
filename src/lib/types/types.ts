@@ -148,6 +148,11 @@ export interface WineBatch {
   naturalYield: number; // 0-1 scale, affects harvest yield
   fragile: number; // 0-1 scale, affects work requirements (0=robust, 1=fragile)
   proneToOxidation: number; // 0-1 scale, affects wine stability
+  
+  // Oxidation system (risk-based model)
+  oxidation: number; // 0-1 scale, weekly oxidation risk probability
+  isOxidized: boolean; // Once true, wine is permanently oxidized (affects quality/price)
+  
   harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
   harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch
   bottledDate?: GameDate; // When bottling is completed
