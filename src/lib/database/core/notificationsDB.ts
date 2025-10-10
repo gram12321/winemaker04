@@ -23,6 +23,7 @@ export interface NotificationFilter {
   type: 'origin' | 'category';
   value: string;
   description?: string;
+  blockFromHistory?: boolean;  // If true, completely silence (no toast + no history)
   createdAt: string;
 }
 
@@ -32,6 +33,7 @@ export interface NotificationFilterRecord {
   filter_type: 'origin' | 'category';
   filter_value: string;
   description?: string;
+  block_from_history?: boolean;
   created_at: string;
 }
 
@@ -111,6 +113,7 @@ export const saveNotificationFilter = async (filter: NotificationFilter): Promis
         filter_type: filter.type,
         filter_value: filter.value,
         description: filter.description,
+        block_from_history: filter.blockFromHistory ?? false,
         created_at: filter.createdAt
       });
 
@@ -135,6 +138,7 @@ export const loadNotificationFilters = async (): Promise<NotificationFilter[]> =
       type: row.filter_type as 'origin' | 'category',
       value: row.filter_value,
       description: row.description,
+      blockFromHistory: row.block_from_history ?? false,
       createdAt: row.created_at
     }));
   } catch (error) {

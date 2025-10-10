@@ -4,7 +4,7 @@ import { InfoIcon, X, Trash2, Eye, Filter, Shield } from 'lucide-react';
 import { toast } from "@/lib/utils/toast";
 import { formatGameDate } from "@/lib/utils/utils";
 import { getGameState } from "@/lib/services/core/gameState";
-import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, NotificationFilter, saveNotificationFilter, loadNotificationFilters, deleteNotificationFilter, clearNotificationFilters } from "@/lib/database/core/notificationsDB";
+import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, type NotificationFilter, saveNotificationFilter, loadNotificationFilters, deleteNotificationFilter, clearNotificationFilters } from "@/lib/database/core/notificationsDB";
 
 // Removed NotificationType - using category as the meaningful identifier
 
@@ -73,19 +73,33 @@ async function loadFiltersFromDbIfNeeded() {
   }
 }
 
-function isNotificationBlocked(origin: string, category: string): boolean {
-  return notificationFilters.some(filter => {
+function isNotificationBlocked(origin: string, category: string): boolean | 'history' {
+  // Check if notification should be blocked
+  // Returns true if blocked from history, 'history' if only blocked from toast
+  let shouldBlock = false;
+  let blockFromHistory = false;
+
+  notificationFilters.forEach(filter => {
+    let matches = false;
     switch (filter.type) {
       case 'origin':
-        // Block notifications from specific origin (function/service)
-        return filter.value === origin;
+        matches = filter.value === origin;
+        break;
       case 'category':
-        // Block notifications from specific category (exact match)
-        return filter.value === category;
-      default:
-        return false;
+        matches = filter.value === category;
+        break;
+    }
+    
+    if (matches) {
+      shouldBlock = true;
+      if (filter.blockFromHistory) {
+        blockFromHistory = true;
+      }
     }
   });
+
+  if (!shouldBlock) return false;
+  return blockFromHistory ? true : 'history';
 }
 
 export const notificationService = {
@@ -98,8 +112,10 @@ export const notificationService = {
     await loadFiltersFromDbIfNeeded();
     
     // Check if notification is blocked by filters
-    if (isNotificationBlocked(origin, category)) {
-      console.log(`[Notification Filter] Blocked notification: "${text}" (origin: ${origin}, category: ${category})`);
+    const blockStatus = isNotificationBlocked(origin, category);
+    
+    // If completely blocked (true), don't add to history at all
+    if (blockStatus === true) {
       return null;
     }
     
@@ -124,6 +140,7 @@ export const notificationService = {
       category
     };
 
+    // Add to history (even if toast is blocked)
     notifications = [message, ...notifications];
     notifyListeners();
 
@@ -139,8 +156,11 @@ export const notificationService = {
       category
     });
 
+    // Show toast only if not blocked and user has toasts enabled
     const showToasts = localStorage.getItem('showNotifications') !== 'false';
-    if (showToasts) {
+    const shouldShowToast = showToasts && blockStatus === false;
+    
+    if (shouldShowToast) {
       toast({
         title: userFriendlyOrigin,
         description: text,
@@ -213,6 +233,21 @@ export const notificationService = {
   clearFilters() {
     notificationFilters = [];
     clearNotificationFilters();
+  },
+
+  updateFilter(filterId: string, updates: Partial<Omit<NotificationFilter, 'id'>>) {
+    const filterIndex = notificationFilters.findIndex(f => f.id === filterId);
+    if (filterIndex === -1) return null;
+    
+    const updatedFilter = {
+      ...notificationFilters[filterIndex],
+      ...updates
+    };
+    
+    notificationFilters[filterIndex] = updatedFilter;
+    saveNotificationFilter(updatedFilter);
+    
+    return updatedFilter;
   },
 
   // Helper method to block notifications from specific origin
@@ -678,6 +713,7 @@ export function useNotifications() {
     getFilters: notificationService.getFilters.bind(notificationService),
     addFilter: notificationService.addFilter.bind(notificationService),
     removeFilter: notificationService.removeFilter.bind(notificationService),
+    updateFilter: notificationService.updateFilter.bind(notificationService),
     blockNotificationOrigin: notificationService.blockNotificationOrigin.bind(notificationService),
     blockNotificationCategory: notificationService.blockNotificationCategory.bind(notificationService)
   };
