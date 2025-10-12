@@ -630,173 +630,111 @@ export async function addFeaturePrestigeEvent(
   eventType: 'manifestation' | 'sale',
   context?: PrestigeEventContext
 ): Promise<void> {
-  console.log(`🍷 [FEATURE PRESTIGE] Starting ${eventType} event for ${config.name} (${config.id})`);
-  console.log(`🍷 [FEATURE PRESTIGE] Batch: ${batch.vineyardName} ${batch.grape} (${batch.state})`);
-  console.log(`🍷 [FEATURE PRESTIGE] Batch quality: ${batch.quality}, quantity: ${batch.quantity}`);
-  
   const prestigeConfig = eventType === 'manifestation'
     ? config.effects.prestige?.onManifestation
     : config.effects.prestige?.onSale;
   
-  if (!prestigeConfig) {
-    console.log(`🍷 [FEATURE PRESTIGE] No prestige config found for ${eventType}`);
-    return;
-  }
-  
-  console.log(`🍷 [FEATURE PRESTIGE] Prestige config found:`, prestigeConfig);
+  if (!prestigeConfig) return;
   
   const gameState = getGameState();
-  const currentWeek = calculateAbsoluteWeeks(
-    gameState.week!,
-    gameState.season!,
-    gameState.currentYear!
-  );
-  
+  const currentWeek = calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!);
   const eventContext = context || {};
   
-  // Add company prestige event if configured
-  if (prestigeConfig.company) {
-    console.log(`🍷 [FEATURE PRESTIGE] Creating company prestige event for ${eventType}`);
+  // Helper to calculate prestige amount based on config
+  const calculateAmount = (
+    levelConfig: typeof prestigeConfig.company | typeof prestigeConfig.vineyard,
+    isCompany: boolean
+  ): number => {
+    if (!levelConfig) return 0;
     
-    // Calculate amount directly - no wrapper functions!
-    let amount: number;
-    
-    switch (prestigeConfig.company.calculation) {
+    switch (levelConfig.calculation) {
       case 'fixed':
-        amount = prestigeConfig.company.baseAmount;
-        console.log(`🍷 [FEATURE PRESTIGE] Company fixed amount: ${amount}`);
-        break;
+        return levelConfig.baseAmount;
         
       case 'dynamic_sale':
         if (eventType === 'sale' && eventContext.order) {
-          console.log(`🍷 [FEATURE PRESTIGE] Calculating dynamic sale prestige for company`);
-          amount = calculateFeatureSalePrestigeWithReputation(
-            prestigeConfig.company.baseAmount,
-            eventContext.order.totalValue || 0,
-            eventContext.order.requestedQuantity || 0,
-            eventContext.currentCompanyPrestige || 1,
-            prestigeConfig.company.scalingFactors
-          );
-          console.log(`🍷 [FEATURE PRESTIGE] Company calculated amount: ${amount}`);
-        } else {
-          amount = prestigeConfig.company.baseAmount;
-          console.log(`🍷 [FEATURE PRESTIGE] Company non-sale, using base amount: ${amount}`);
+          return isCompany
+            ? calculateFeatureSalePrestigeWithReputation(
+                levelConfig.baseAmount,
+                eventContext.order.totalValue || 0,
+                eventContext.order.requestedQuantity || 0,
+                eventContext.currentCompanyPrestige || 1,
+                levelConfig.scalingFactors
+              )
+            : levelConfig.baseAmount;
         }
-        break;
-        
-      default:
-        amount = prestigeConfig.company.baseAmount;
-        console.log(`🍷 [FEATURE PRESTIGE] Company default case, using base amount: ${amount}`);
-    }
-    
-    console.log(`🍷 [FEATURE PRESTIGE] Inserting company prestige event to database:`);
-    console.log(`🍷 [FEATURE PRESTIGE] - Amount: ${amount}`);
-    console.log(`🍷 [FEATURE PRESTIGE] - Decay rate: ${prestigeConfig.company.decayRate}`);
-    
-    try {
-      await insertPrestigeEvent({
-        id: uuidv4(),
-        type: 'wine_feature' as any,
-        amount_base: amount,
-        created_game_week: currentWeek,
-        decay_rate: prestigeConfig.company.decayRate,
-        source_id: null,
-        payload: {
-          level: 'company',
-          featureId: config.id,
-          featureName: config.name,
-          featureType: config.type,
-          wineName: `${batch.vineyardName} ${batch.grape}`,
-          vintage: batch.harvestStartDate.year,
-          customerName: eventContext.customerName,
-          saleVolume: eventContext.order?.requestedQuantity,
-          saleValue: eventContext.order?.totalValue,
-          companyPrestige: eventContext.currentCompanyPrestige,
-          calculatedAmount: amount,
-          eventType
-        }
-      });
-      console.log(`🍷 [FEATURE PRESTIGE] ✅ Company prestige event inserted successfully`);
-    } catch (error) {
-      console.error(`🍷 [FEATURE PRESTIGE] ❌ Failed to insert company prestige event:`, error);
-    }
-  }
-  
-  // Add vineyard prestige event if configured
-  if (prestigeConfig.vineyard) {
-    console.log(`🍷 [FEATURE PRESTIGE] Creating vineyard prestige event for ${eventType}`);
-    console.log(`🍷 [FEATURE PRESTIGE] Vineyard context:`, eventContext.vineyard?.vineyardPrestige);
-    
-    // Calculate amount directly - no wrapper functions!
-    let amount: number;
-    
-    switch (prestigeConfig.vineyard.calculation) {
-      case 'fixed':
-        amount = prestigeConfig.vineyard.baseAmount;
-        console.log(`🍷 [FEATURE PRESTIGE] Fixed amount: ${amount}`);
-        break;
+        return levelConfig.baseAmount;
         
       case 'dynamic_manifestation':
-        if (eventType === 'manifestation') {
-          console.log(`🍷 [FEATURE PRESTIGE] Calculating dynamic manifestation prestige:`);
-          console.log(`🍷 [FEATURE PRESTIGE] - Base amount: ${prestigeConfig.vineyard.baseAmount}`);
-          console.log(`🍷 [FEATURE PRESTIGE] - Batch quantity: ${batch.quantity}`);
-          console.log(`🍷 [FEATURE PRESTIGE] - Batch quality: ${batch.quality}`);
-          console.log(`🍷 [FEATURE PRESTIGE] - Vineyard prestige: ${eventContext.vineyard?.vineyardPrestige || 1}`);
-          
-          amount = calculateVineyardManifestationPrestige(
-            prestigeConfig.vineyard.baseAmount,
+        if (eventType === 'manifestation' && !isCompany) {
+          return calculateVineyardManifestationPrestige(
+            levelConfig.baseAmount,
             batch.quantity,
             batch.quality,
             eventContext.vineyard?.vineyardPrestige || 1,
-            prestigeConfig.vineyard.scalingFactors
+            levelConfig.scalingFactors
           );
-          
-          console.log(`🍷 [FEATURE PRESTIGE] - Calculated amount: ${amount}`);
-        } else {
-          amount = prestigeConfig.vineyard.baseAmount;
-          console.log(`🍷 [FEATURE PRESTIGE] Non-manifestation, using base amount: ${amount}`);
         }
-        break;
+        return levelConfig.baseAmount;
         
       default:
-        amount = prestigeConfig.vineyard.baseAmount;
-        console.log(`🍷 [FEATURE PRESTIGE] Default case, using base amount: ${amount}`);
+        return levelConfig.baseAmount;
     }
-    
-    console.log(`🍷 [FEATURE PRESTIGE] Inserting vineyard prestige event to database:`);
-    console.log(`🍷 [FEATURE PRESTIGE] - Amount: ${amount}`);
-    console.log(`🍷 [FEATURE PRESTIGE] - Decay rate: ${prestigeConfig.vineyard.decayRate}`);
-    console.log(`🍷 [FEATURE PRESTIGE] - Source ID: ${batch.vineyardId}`);
-    
-    try {
-      await insertPrestigeEvent({
-        id: uuidv4(),
-        type: 'wine_feature' as any,
-        amount_base: amount,
-        created_game_week: currentWeek,
-        decay_rate: prestigeConfig.vineyard.decayRate,
-        source_id: batch.vineyardId,
-        payload: {
-          level: 'vineyard',
-          featureId: config.id,
-          featureName: config.name,
-          featureType: config.type,
-          vineyardName: batch.vineyardName,
-          wineName: `${batch.grape}`,
-          vintage: batch.harvestStartDate.year,
-          batchSize: batch.quantity,
-          wineQuality: batch.quality,
-          vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
-          calculatedAmount: amount,
-          customerName: eventContext.customerName,
-          eventType
-        }
-      });
-      console.log(`🍷 [FEATURE PRESTIGE] ✅ Vineyard prestige event inserted successfully`);
-    } catch (error) {
-      console.error(`🍷 [FEATURE PRESTIGE] ❌ Failed to insert vineyard prestige event:`, error);
-    }
+  };
+  
+  // Create company prestige event
+  if (prestigeConfig.company) {
+    const amount = calculateAmount(prestigeConfig.company, true);
+    await insertPrestigeEvent({
+      id: uuidv4(),
+      type: 'wine_feature' as any,
+      amount_base: amount,
+      created_game_week: currentWeek,
+      decay_rate: prestigeConfig.company.decayRate,
+      source_id: null,
+      payload: {
+        level: 'company',
+        featureId: config.id,
+        featureName: config.name,
+        featureType: config.type,
+        wineName: `${batch.vineyardName} ${batch.grape}`,
+        vintage: batch.harvestStartDate.year,
+        customerName: eventContext.customerName,
+        saleVolume: eventContext.order?.requestedQuantity,
+        saleValue: eventContext.order?.totalValue,
+        companyPrestige: eventContext.currentCompanyPrestige,
+        calculatedAmount: amount,
+        eventType
+      }
+    });
+  }
+  
+  // Create vineyard prestige event
+  if (prestigeConfig.vineyard) {
+    const amount = calculateAmount(prestigeConfig.vineyard, false);
+    await insertPrestigeEvent({
+      id: uuidv4(),
+      type: 'wine_feature' as any,
+      amount_base: amount,
+      created_game_week: currentWeek,
+      decay_rate: prestigeConfig.vineyard.decayRate,
+      source_id: batch.vineyardId,
+      payload: {
+        level: 'vineyard',
+        featureId: config.id,
+        featureName: config.name,
+        featureType: config.type,
+        vineyardName: batch.vineyardName,
+        wineName: `${batch.grape}`,
+        vintage: batch.harvestStartDate.year,
+        batchSize: batch.quantity,
+        wineQuality: batch.quality,
+        vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
+        calculatedAmount: amount,
+        customerName: eventContext.customerName,
+        eventType
+      }
+    });
   }
   
   triggerGameUpdate();

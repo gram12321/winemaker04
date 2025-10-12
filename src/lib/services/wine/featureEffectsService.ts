@@ -180,7 +180,6 @@ export function getFeature(batch: WineBatch, featureId: string): WineFeature | u
  * Check if specific feature is present
  */
 export function hasFeature(batch: WineBatch, featureId: string): boolean {
-  const feature = getFeature(batch, featureId);
-  return feature?.isPresent ?? false;
+  return getFeature(batch, featureId)?.isPresent ?? false;
 }
 

@@ -80,29 +80,33 @@ export function previewFeatureRisks(
 }
 
 /**
+ * Convert wine feature to FeatureRiskInfo (shared helper)
+ */
+function featureToRiskInfo(feature: any, config: any, isPresent: boolean): FeatureRiskInfo {
+  return {
+    featureId: feature.id,
+    featureName: feature.name,
+    icon: feature.icon,
+    currentRisk: feature.risk,
+    newRisk: feature.risk,
+    riskIncrease: 0,
+    isPresent,
+    severity: isPresent ? feature.severity : 0,
+    qualityImpact: config?.effects.quality.type === 'linear' 
+      ? (config.effects.quality.amount as number)
+      : undefined,
+    description: config?.description
+  };
+}
+
+/**
  * Get all present features on a batch with their details
  * For displaying existing features in modals
  */
 export function getPresentFeaturesInfo(batch: WineBatch): FeatureRiskInfo[] {
   return (batch.features || [])
     .filter(f => f.isPresent)
-    .map(feature => {
-      const config = getFeatureConfig(feature.id);
-      return {
-        featureId: feature.id,
-        featureName: feature.name,
-        icon: feature.icon,
-        currentRisk: feature.risk,
-        newRisk: feature.risk,
-        riskIncrease: 0,
-        isPresent: true,
-        severity: feature.severity,
-        qualityImpact: config?.effects.quality.type === 'linear' 
-          ? (config.effects.quality.amount as number)
-          : undefined,
-        description: config?.description
-      };
-    });
+    .map(feature => featureToRiskInfo(feature, getFeatureConfig(feature.id), true));
 }
 
 /**
@@ -112,23 +116,7 @@ export function getPresentFeaturesInfo(batch: WineBatch): FeatureRiskInfo[] {
 export function getAtRiskFeaturesInfo(batch: WineBatch, threshold: number = 0.05): FeatureRiskInfo[] {
   return (batch.features || [])
     .filter(f => !f.isPresent && f.risk >= threshold)
-    .map(feature => {
-      const config = getFeatureConfig(feature.id);
-      return {
-        featureId: feature.id,
-        featureName: feature.name,
-        icon: feature.icon,
-        currentRisk: feature.risk,
-        newRisk: feature.risk,
-        riskIncrease: 0,
-        isPresent: false,
-        severity: 0,
-        qualityImpact: config?.effects.quality.type === 'linear'
-          ? (config.effects.quality.amount as number)
-          : undefined,
-        description: config?.description
-      };
-    });
+    .map(feature => featureToRiskInfo(feature, getFeatureConfig(feature.id), false));
 }
 
 /**

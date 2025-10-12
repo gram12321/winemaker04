@@ -135,35 +135,23 @@ function FeatureStatusItem({
     colorClass = config.type === 'fault' ? 'text-red-600' : 'text-green-600';
     icon = config.icon;
   } else if (config.riskAccumulation.trigger === 'time_based') {
-    // Time-based risk (like oxidation)
+    // Time-based risk
     const riskPercent = (risk * 100).toFixed(1);
     const evolutionIcon = showEvolution ? ' ↗️' : '';
     displayText = `${riskPercent}% risk${evolutionIcon}`;
-    
-    // Use inverted color for risk (lower risk = better = green)
-    const invertedRisk = 1 - risk;
-    colorClass = getColorClass(invertedRisk);
+    colorClass = getColorClass(1 - risk);
     icon = '⚠️';
   } else {
-    // Event-triggered risk (like green flavor)
-    if (config.id === 'green_flavor') {
-      // For green flavor, show current crushing risk, not historical harvest risk
-      const crushingRisk = 0.20; // 20% for Hand Press without destemming
-      displayText = `${(crushingRisk * 100).toFixed(0)}% crushing risk`;
-      colorClass = getColorClass(1 - crushingRisk);
+    // Event-triggered risk
+    const riskPercent = (risk * 100).toFixed(1);
+    displayText = risk > 0 ? `${riskPercent}% event risk` : 'Low risk';
+    
+    if (risk > 0) {
+      colorClass = getColorClass(1 - risk);
       icon = '⚠️';
     } else {
-      const riskPercent = (risk * 100).toFixed(1);
-      displayText = risk > 0 ? `${riskPercent}% risk` : 'Low risk';
-      
-      if (risk > 0) {
-        const invertedRisk = 1 - risk;
-        colorClass = getColorClass(invertedRisk);
-        icon = '⚠️';
-      } else {
-        colorClass = 'text-gray-500';
-        icon = '✅';
-      }
+      colorClass = 'text-gray-500';
+      icon = '✅';
     }
   }
   
@@ -221,153 +209,100 @@ function FeatureStatusItem({
                   <p>Severity: {Math.round(feature.severity * 100)}%</p>
                 )}
                 
-                {config.id === 'green_flavor' && (
+                {/* Characteristic effects - generic for all features */}
+                {config.effects.characteristics && config.effects.characteristics.length > 0 && (
                   <div className="mt-2">
-                    <p className="font-medium">Source:</p>
-                    <p className="text-xs text-gray-300">
-                      Triggered during harvest or crushing
-                    </p>
-                    <p className="text-xs text-gray-300 font-mono">
-                      Total risk when manifested: {(feature.risk * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                )}
-                
-                {config.id === 'oxidation' && (
-                  <div className="mt-2 space-y-2">
                     <p className="font-medium">Effects:</p>
                     <div className="text-xs text-gray-300 space-y-1">
-                      <p>• Aroma: -20%</p>
-                      <p>• Acidity: -12%</p>
-                      <p>• Body: -8%</p>
-                      <p>• Sweetness: +8%</p>
+                      {config.effects.characteristics.map((effect: any) => (
+                        <p key={effect.characteristic}>
+                          • {effect.characteristic}: {effect.modifier > 0 ? '+' : ''}{(effect.modifier * 100).toFixed(0)}%
+                        </p>
+                      ))}
                     </div>
-                    
-                    <p className="font-medium">Calculation:</p>
-                    <p className="text-xs text-gray-300 font-mono">
-                      Base penalty: {Math.abs(config.effects.quality.basePenalty * 100)}%
-                    </p>
-                    <p className="text-xs text-gray-300 font-mono">
-                      Premium penalty: +{Math.abs((config.effects.quality.basePenalty * Math.pow(batch.quality, config.effects.quality.exponent!)) * 100).toFixed(1)}%
-                    </p>
-                    <p className="text-xs text-gray-300 font-mono">
-                      Total penalty: {Math.abs((config.effects.quality.basePenalty * (1 + Math.pow(batch.quality, config.effects.quality.exponent!))) * 100).toFixed(1)}%
-                    </p>
-                    <p className="text-xs text-gray-300 font-mono">
-                      = {Math.abs((config.effects.quality.basePenalty * (1 + Math.pow(batch.quality, config.effects.quality.exponent!))) * batch.quality * 100).toFixed(1)} quality points lost
-                    </p>
                   </div>
                 )}
               </div>
             ) : (
               <div>
-                {config.id === 'green_flavor' ? (
-                  <div>
-                    <p className="font-medium">
-                      Risk: 20% (High Risk)
-                    </p>
-                    <p>Crushing can trigger green flavor.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="font-medium">
-                      Risk: {(risk * 100).toFixed(1)}%
-                      <span className="ml-2 text-xs opacity-80">({getRiskSeverityLabel(risk)})</span>
-                    </p>
-                    <p>Chance this batch develops {config.name.toLowerCase()}.</p>
-                  </div>
-                )}
+                <p className="font-medium">
+                  Risk: {(risk * 100).toFixed(1)}%
+                  <span className="ml-2 text-xs opacity-80">({getRiskSeverityLabel(risk)})</span>
+                </p>
+                <p>Chance this batch develops {config.name.toLowerCase()}.</p>
                 
+                {/* Time-based accumulation with calculations */}
                 {config.riskAccumulation.trigger === 'time_based' && (
                   <div className="mt-2">
                     <p className="font-medium">Time-based accumulation:</p>
                     <p className="text-xs text-gray-300">
-                      Base rate: {config.riskAccumulation.baseRate * 100}% per week
+                      Base rate: {(config.riskAccumulation.baseRate! * 100).toFixed(1)}% per week
                       {config.riskAccumulation.compoundEffect && ' (compound)'}
                     </p>
-                    <p className="text-xs text-gray-300">
-                      Current state: <span className="font-medium">{batch.state}</span>
-                    </p>
-                    {config.riskAccumulation.stateMultipliers && (
-                      <p className="text-xs text-gray-300">
-                        State multiplier: {config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0}x
-                      </p>
-                    )}
-                    {config.riskAccumulation.stateMultipliers && (
-                      <p className="text-xs text-gray-300 font-medium">
-                        Actual rate: {((config.riskAccumulation.baseRate * (config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0)) * 100).toFixed(1)}% per week
-                      </p>
-                    )}
                     
-                    {config.id === 'oxidation' && (
-                      <div className="mt-2 space-y-1">
-                        <p className="font-medium">Weekly Effects:</p>
-                        <div className="text-xs text-gray-300 space-y-1">
-                          <p>• Oxygen exposure during fermentation</p>
-                          <p>• Risk accumulates over time</p>
-                          <p>• Higher risk in warm conditions</p>
-                        </div>
-                        
-                        <p className="font-medium">Calculation:</p>
-                        <p className="text-xs text-gray-300 font-mono">
-                          Base rate: {config.riskAccumulation.baseRate * 100}% per week
+                    {config.riskAccumulation.stateMultipliers && (
+                      <>
+                        <p className="text-xs text-gray-300">
+                          Current state: <span className="font-medium">{batch.state}</span>
                         </p>
-                        {config.riskAccumulation.stateMultipliers && (
-                          <p className="text-xs text-gray-300 font-mono">
-                            State multiplier: {config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0}x
-                          </p>
-                        )}
-                        {config.riskAccumulation.stateMultipliers && (
-                          <p className="text-xs text-gray-300 font-mono">
-                            Effective rate: {((config.riskAccumulation.baseRate * (config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0)) * 100).toFixed(1)}% per week
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-300">
+                          State multiplier: {config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0}x
+                        </p>
+                        
+                        <p className="font-medium mt-1">Calculation:</p>
                         <p className="text-xs text-gray-300 font-mono">
-                          Current risk: {(risk * 100).toFixed(1)}%
+                          Base rate: {(config.riskAccumulation.baseRate! * 100).toFixed(1)}%
+                        </p>
+                        <p className="text-xs text-gray-300 font-mono">
+                          × State multiplier: {config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0}x
                         </p>
                         {config.riskAccumulation.compoundEffect && (
                           <p className="text-xs text-gray-300 font-mono">
-                            Compound effect: Risk grows exponentially
+                            × (1 + current risk): {(1 + risk).toFixed(3)}x
                           </p>
                         )}
-                      </div>
+                        <p className="text-xs text-gray-300 font-mono font-medium">
+                          = {((config.riskAccumulation.baseRate! * (config.riskAccumulation.stateMultipliers[batch.state as keyof typeof config.riskAccumulation.stateMultipliers] || 1.0) * (config.riskAccumulation.compoundEffect ? (1 + risk) : 1)) * 100).toFixed(2)}% per week
+                        </p>
+                      </>
                     )}
                   </div>
                 )}
                 
+                {/* Event-triggered with trigger details */}
                 {config.riskAccumulation.trigger === 'event_triggered' && (
                   <div className="mt-2">
-                    <p className="font-medium">Event-triggered:</p>
+                    <p className="font-medium">Event-triggered</p>
+                    <p className="text-xs text-gray-300">
+                      Risk occurs during specific production events
+                    </p>
                     
-                    {config.id === 'green_flavor' && (
-                      <div className="space-y-1">
-                        <p className="font-medium">Harvest History:</p>
-                        <p className="text-xs text-gray-300">
-                          {feature.risk > 0 ? 'Underripe grapes harvested' : 'Adequate ripeness at harvest'}
-                        </p>
-                        {feature.risk > 0 && (
-                          <p className="text-xs text-gray-300 font-mono">
-                            Harvest risk was {(feature.risk * 100).toFixed(1)}% (did not manifest)
-                          </p>
-                        )}
-                        
-                        <p className="font-medium mt-2">Current Crushing Risk:</p>
-                        <p className="text-xs text-gray-300">
-                          Crushing can trigger green flavor
-                        </p>
+                    {/* Show historical risk if feature has accumulated risk */}
+                    {feature.risk > 0 && (
+                      <>
+                        <p className="font-medium mt-1">Previous Events:</p>
                         <p className="text-xs text-gray-300 font-mono">
-                          Hand Press without destemming: +20% risk
+                          Accumulated risk: {(feature.risk * 100).toFixed(1)}%
                         </p>
                         <p className="text-xs text-gray-300">
-                          Other methods: No additional risk
+                          (did not manifest yet)
                         </p>
-                      </div>
+                      </>
                     )}
                     
-                    {config.id !== 'green_flavor' && (
-                      <p className="text-xs text-gray-300">
-                        Risk from specific actions (harvest, crushing, etc.)
-                      </p>
+                    {/* Show available triggers */}
+                    {config.riskAccumulation.eventTriggers && config.riskAccumulation.eventTriggers.length > 0 && (
+                      <>
+                        <p className="font-medium mt-1">Triggers:</p>
+                        <div className="text-xs text-gray-300 space-y-1">
+                          {config.riskAccumulation.eventTriggers.map((trigger: any, idx: number) => (
+                            <p key={idx}>
+                              • {trigger.event.charAt(0).toUpperCase() + trigger.event.slice(1)} event
+                              {typeof trigger.riskIncrease === 'number' && ` (+${(trigger.riskIncrease * 100).toFixed(0)}% risk)`}
+                            </p>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 )}

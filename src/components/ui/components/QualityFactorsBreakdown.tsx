@@ -447,19 +447,11 @@ interface FeatureImpactsSectionProps {
 }
 
 function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSectionProps) {
-  const configs = getAllFeatureConfigs();
-  const features = wineBatch.features || [];
+  const effectiveQuality = calculateEffectiveQuality(wineBatch);
+  const qualityDifference = effectiveQuality - baseQuality;
+  const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
   
-  // Get all features that could impact quality
-  const qualityImpactingFeatures = configs
-    .filter(config => config.effects.quality)
-    .map(config => {
-      const feature = features.find(f => f.id === config.id);
-      return { config, feature };
-    })
-    .filter(({ feature }) => feature); // Only show features that exist on the batch
-  
-  if (qualityImpactingFeatures.length === 0) {
+  if (presentFeatures.length === 0) {
     return (
       <div className="p-3 bg-white rounded border border-gray-300">
         <div className="text-sm">
@@ -467,31 +459,21 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
             <span className="font-medium">Feature Impacts:</span>
             <span className="text-gray-500">None</span>
           </div>
-          <div className="text-xs text-gray-500">
-            No wine features currently affecting quality
-          </div>
+          <div className="text-xs text-gray-500">No wine features currently affecting quality</div>
         </div>
       </div>
     );
   }
   
-  // Calculate effective quality with features
-  const effectiveQuality = calculateEffectiveQuality(wineBatch);
-  const qualityDifference = effectiveQuality - baseQuality;
+  const configs = getAllFeatureConfigs();
   
   return (
     <div className="p-3 bg-white rounded border border-purple-300">
       <div className="text-sm space-y-3">
         <div className="flex justify-between">
           <span className="font-medium">Feature Impacts:</span>
-          <span className="font-mono">
-            {qualityDifference !== 0 ? (
-              <span className={qualityDifference > 0 ? 'text-green-600' : 'text-red-600'}>
-                {qualityDifference > 0 ? '+' : ''}{(qualityDifference * 100).toFixed(1)}%
-              </span>
-            ) : (
-              <span className="text-gray-500">No impact</span>
-            )}
+          <span className={`font-mono ${qualityDifference !== 0 ? (qualityDifference > 0 ? 'text-green-600' : 'text-red-600') : 'text-gray-500'}`}>
+            {qualityDifference !== 0 ? `${qualityDifference > 0 ? '+' : ''}${(qualityDifference * 100).toFixed(1)}%` : 'No impact'}
           </span>
         </div>
         
@@ -499,26 +481,22 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
           <span>Final Quality:</span>
           <span className="font-mono">
             {formatNumber(effectiveQuality, { decimals: 2, forceDecimals: true })}
-            <span className="text-sm font-normal ml-2">
-              ({getWineQualityCategory(effectiveQuality)})
-            </span>
+            <span className="text-sm font-normal ml-2">({getWineQualityCategory(effectiveQuality)})</span>
           </span>
         </div>
         
         <div className="space-y-2">
-          {qualityImpactingFeatures.map(({ config, feature }) => {
-            if (!feature || !feature.isPresent) return null;
+          {presentFeatures.map(feature => {
+            const config = configs.find(c => c.id === feature.id);
+            if (!config) return null;
             
-            // Calculate quality impact for this feature
             const qualityEffect = config.effects.quality;
             let impactText = '';
             
             if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-              const impact = qualityEffect.amount * feature.severity;
-              impactText = `${(impact * 100).toFixed(1)}%`;
+              impactText = `${(qualityEffect.amount * feature.severity * 100).toFixed(1)}%`;
             } else if (qualityEffect.type === 'power') {
-              const penaltyFactor = Math.pow(baseQuality, qualityEffect.exponent!);
-              const scaledPenalty = qualityEffect.basePenalty! * (1 + penaltyFactor);
+              const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
               impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
             }
             
@@ -528,19 +506,11 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
                   <span>{config.icon}</span>
                   <span>{config.name}:</span>
                 </span>
-                <span className="text-red-600 font-mono">
-                  {impactText}
-                </span>
+                <span className="text-red-600 font-mono">{impactText}</span>
               </div>
             );
           })}
         </div>
-        
-        {qualityImpactingFeatures.every(({ feature }) => !feature?.isPresent) && (
-          <div className="text-xs text-gray-500 text-center">
-            No features currently present
-          </div>
-        )}
       </div>
     </div>
   );

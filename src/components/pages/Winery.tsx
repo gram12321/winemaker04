@@ -185,80 +185,22 @@ const Winery: React.FC = () => {
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
   const vineyards = useGameStateWithData(getAllVineyards, [] as Vineyard[]);
   
-  // Crushing modal state
-  const [crushingModalOpen, setCrushingModalOpen] = useState(false);
-  const [selectedBatchForCrushing, setSelectedBatchForCrushing] = useState<WineBatch | null>(null);
-  
-  // Fermentation modal state
-  const [fermentationModalOpen, setFermentationModalOpen] = useState(false);
-  const [selectedBatchForFermentation, setSelectedBatchForFermentation] = useState<WineBatch | null>(null);
-  
-  // Balance breakdown modal state
-  const [balanceModalOpen, setBalanceModalOpen] = useState(false);
-  const [selectedBatchForBalance, setSelectedBatchForBalance] = useState<WineBatch | null>(null);
+  // Unified modal state
+  const [modals, setModals] = useState({
+    crushing: null as WineBatch | null,
+    fermentation: null as WineBatch | null,
+    balance: null as WineBatch | null,
+    quality: null as WineBatch | null,
+  });
 
-  // Quality breakdown modal state
-  const [qualityModalOpen, setQualityModalOpen] = useState(false);
-  const [selectedBatchForQuality, setSelectedBatchForQuality] = useState<WineBatch | null>(null);
-
-  // Handle opening crushing modal
-  const handleCrushingClick = useCallback((batchId: string) => {
+  // Generic modal handlers
+  const openModal = useCallback((type: keyof typeof modals, batchId: string) => {
     const batch = wineBatches.find(b => b.id === batchId);
-    if (batch) {
-      setSelectedBatchForCrushing(batch);
-      setCrushingModalOpen(true);
-    }
+    if (batch) setModals(prev => ({ ...prev, [type]: batch }));
   }, [wineBatches]);
 
-  // Handle closing crushing modal
-  const handleCrushingModalClose = useCallback(() => {
-    setCrushingModalOpen(false);
-    setSelectedBatchForCrushing(null);
-  }, []);
-
-  // Handle opening fermentation modal
-  const handleFermentationClick = useCallback((batchId: string) => {
-    const batch = wineBatches.find(b => b.id === batchId);
-    if (batch) {
-      setSelectedBatchForFermentation(batch);
-      setFermentationModalOpen(true);
-    }
-  }, [wineBatches]);
-
-  // Handle closing fermentation modal
-  const handleFermentationModalClose = useCallback(() => {
-    setFermentationModalOpen(false);
-    setSelectedBatchForFermentation(null);
-  }, []);
-
-  // Handle opening balance breakdown modal
-  const handleBalanceBreakdownClick = useCallback((batchId: string) => {
-    const batch = wineBatches.find(b => b.id === batchId);
-    if (batch) {
-      setSelectedBatchForBalance(batch);
-      setBalanceModalOpen(true);
-    }
-  }, [wineBatches]);
-
-  // Handle opening quality breakdown modal
-  const handleQualityBreakdownClick = useCallback((batchId: string) => {
-    const batch = wineBatches.find(b => b.id === batchId);
-    if (batch) {
-      setSelectedBatchForQuality(batch);
-      setQualityModalOpen(true);
-    }
-  }, [wineBatches]);
-
-  // Handle closing quality breakdown modal
-  const handleQualityModalClose = useCallback(() => {
-    setQualityModalOpen(false);
-    setSelectedBatchForQuality(null);
-  }, []);
-
-  // Handle closing balance breakdown modal
-  const handleBalanceModalClose = useCallback(() => {
-    setBalanceModalOpen(false);
-    setSelectedBatchForBalance(null);
+  const closeModal = useCallback((type: keyof typeof modals) => {
+    setModals(prev => ({ ...prev, [type]: null }));
   }, []);
 
   const handleAction = useCallback((batchId: string, action: 'bottle') => withLoading(async () => {
@@ -350,49 +292,27 @@ const Winery: React.FC = () => {
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleBalanceBreakdownClick(batch.id)}
-                        size="sm"
-                        variant="outline"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                      >
+                      <Button onClick={() => openModal('balance', batch.id)} size="sm" variant="outline" className="text-blue-600 border-blue-600 hover:bg-blue-50">
                         Balance Analysis
                       </Button>
-                      <Button
-                        onClick={() => handleQualityBreakdownClick(batch.id)}
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                      >
+                      <Button onClick={() => openModal('quality', batch.id)} size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
                         Quality Analysis
                       </Button>
 
                       {isActionAvailable(batch, 'crush') && (
-                        <Button 
-                          onClick={() => handleCrushingClick(batch.id)}
-                          size="sm"
-                          className="bg-orange-600 hover:bg-orange-700"
-                        >
+                        <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
                           Crush Grapes
                         </Button>
                       )}
                       
                       {isFermentationActionAvailable(batch, 'ferment') && (
-                        <Button 
-                          onClick={() => handleFermentationClick(batch.id)}
-                          size="sm"
-                          className="bg-purple-600 hover:bg-purple-700"
-                        >
+                        <Button onClick={() => openModal('fermentation', batch.id)} size="sm" className="bg-purple-600 hover:bg-purple-700">
                           Start Fermentation
                         </Button>
                       )}
                       
                       {isFermentationActionAvailable(batch, 'bottle') && (
-                        <Button 
-                          onClick={() => handleAction(batch.id, 'bottle')}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                        >
+                        <Button onClick={() => handleAction(batch.id, 'bottle')} size="sm" className="bg-green-600 hover:bg-green-700">
                           Bottle Wine
                         </Button>
                       )}
@@ -444,35 +364,32 @@ const Winery: React.FC = () => {
       </div>
 
 
-      {/* Crushing Options Modal */}
+      {/* Modals */}
       <CrushingOptionsModal
-        isOpen={crushingModalOpen}
-        onClose={handleCrushingModalClose}
-        batch={selectedBatchForCrushing}
+        isOpen={!!modals.crushing}
+        onClose={() => closeModal('crushing')}
+        batch={modals.crushing}
       />
 
-      {/* Fermentation Options Modal */}
       <FermentationOptionsModal
-        isOpen={fermentationModalOpen}
-        onClose={handleFermentationModalClose}
-        batch={selectedBatchForFermentation}
+        isOpen={!!modals.fermentation}
+        onClose={() => closeModal('fermentation')}
+        batch={modals.fermentation}
       />
 
-      {/* Balance Breakdown Modal */}
       <BalanceBreakdownModal
-        isOpen={balanceModalOpen}
-        onClose={handleBalanceModalClose}
-        characteristics={selectedBatchForBalance?.characteristics || {} as WineCharacteristics}
-        wineName={selectedBatchForBalance ? `${selectedBatchForBalance.grape} - ${selectedBatchForBalance.vineyardName}` : "Wine"}
+        isOpen={!!modals.balance}
+        onClose={() => closeModal('balance')}
+        characteristics={modals.balance?.characteristics || {} as WineCharacteristics}
+        wineName={modals.balance ? `${modals.balance.grape} - ${modals.balance.vineyardName}` : "Wine"}
       />
 
-      {/* Quality Breakdown Modal */}
       <QualityBreakdownModal
-        isOpen={qualityModalOpen}
-        onClose={handleQualityModalClose}
-        batch={selectedBatchForQuality || undefined}
-        vineyard={selectedBatchForQuality ? vineyards.find(v => v.id === selectedBatchForQuality.vineyardId) : undefined}
-        wineName={selectedBatchForQuality ? `${selectedBatchForQuality.grape} - ${selectedBatchForQuality.vineyardName}` : "Wine"}
+        isOpen={!!modals.quality}
+        onClose={() => closeModal('quality')}
+        batch={modals.quality || undefined}
+        vineyard={modals.quality ? vineyards.find(v => v.id === modals.quality!.vineyardId) : undefined}
+        wineName={modals.quality ? `${modals.quality.grape} - ${modals.quality.vineyardName}` : "Wine"}
       />
     </div>
   );

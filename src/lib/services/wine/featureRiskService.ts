@@ -74,6 +74,34 @@ function checkManifestation(risk: number): boolean {
 }
 
 /**
+ * Handle feature manifestation (shared logic)
+ */
+async function handleManifestation(
+  batch: WineBatch,
+  config: FeatureConfig,
+  vineyard?: any
+): Promise<void> {
+  await sendManifestationNotification(batch, config);
+  
+  if (config.effects.prestige?.onManifestation) {
+    await addFeaturePrestigeEvent(batch, config, 'manifestation', { vineyard });
+  }
+}
+
+/**
+ * Update feature in array (replace or add)
+ */
+function updateFeatureInArray(features: WineFeature[], updatedFeature: WineFeature): WineFeature[] {
+  const index = features.findIndex(f => f.id === updatedFeature.id);
+  if (index >= 0) {
+    const updated = [...features];
+    updated[index] = updatedFeature;
+    return updated;
+  }
+  return [...features, updatedFeature];
+}
+
+/**
  * Process time-based feature for a single batch
  */
 async function processTimeBased(
@@ -85,15 +113,11 @@ async function processTimeBased(
   const feature = getOrCreateFeature(features, config);
   
   // Binary features don't update once manifested
-  if (feature.isPresent && config.manifestation === 'binary') {
-    return features;
-  }
+  if (feature.isPresent && config.manifestation === 'binary') return features;
   
   // Calculate risk increase
   const riskIncrease = calculateRiskIncrease(batch, config, feature);
   const newRisk = Math.min(1.0, feature.risk + riskIncrease);
-  
-  // Track for warnings
   const previousRisk = feature.risk;
   
   // Check for manifestation
@@ -101,56 +125,28 @@ async function processTimeBased(
   let severity = feature.severity;
   
   if (!isPresent) {
-    // Roll for manifestation
     isPresent = checkManifestation(newRisk);
-    
     if (isPresent) {
-      // Feature manifested!
       severity = config.manifestation === 'binary' ? 1.0 : newRisk;
-      
-      // Send notification
-      await sendManifestationNotification(batch, config);
-      
-      // Trigger prestige event if configured (with vineyard context for dynamic calculation)
-      if (config.effects.prestige?.onManifestation) {
-        console.log(`🍷 [FEATURE RISK] Triggering manifestation prestige event for ${config.name}`);
-        console.log(`🍷 [FEATURE RISK] Vineyard context:`, vineyard?.name, vineyard?.vineyardPrestige);
-        await addFeaturePrestigeEvent(batch, config, 'manifestation', {
-          vineyard
-        });
-      } else {
-        console.log(`🍷 [FEATURE RISK] No manifestation prestige config for ${config.name}`);
-      }
+      await handleManifestation(batch, config, vineyard);
     }
   } else if (config.manifestation === 'graduated') {
-    // Grow severity for graduated features
     const growthRate = config.riskAccumulation.severityGrowth?.rate || 0;
     const cap = config.riskAccumulation.severityGrowth?.cap || 1.0;
     severity = Math.min(cap, severity + growthRate);
   }
   
-  // Check for risk warnings (only for features that haven't manifested)
+  // Check for risk warnings
   if (!isPresent && shouldWarnAboutRisk(config, previousRisk, newRisk)) {
     await sendRiskWarning(batch, config, newRisk);
   }
   
-  // Update feature
-  const updatedFeature: WineFeature = {
+  return updateFeatureInArray(features, {
     ...feature,
     risk: newRisk,
     isPresent,
     severity
-  };
-  
-  // Replace or add feature in array
-  const featureIndex = features.findIndex(f => f.id === config.id);
-  if (featureIndex >= 0) {
-    const updated = [...features];
-    updated[featureIndex] = updatedFeature;
-    return updated;
-  } else {
-    return [...features, updatedFeature];
-  }
+  });
 }
 
 /**
@@ -235,50 +231,26 @@ async function applyRiskIncrease(
   const feature = getOrCreateFeature(features, config);
   
   // Already manifested binary features don't change
-  if (feature.isPresent && config.manifestation === 'binary') {
-    return features;
-  }
+  if (feature.isPresent && config.manifestation === 'binary') return features;
   
   const newRisk = Math.min(1.0, feature.risk + riskIncrease);
-  
-  // Check for manifestation
   let isPresent = feature.isPresent;
   let severity = feature.severity;
   
   if (!isPresent) {
     isPresent = checkManifestation(newRisk);
-    
     if (isPresent) {
       severity = config.manifestation === 'binary' ? 1.0 : newRisk;
-      await sendManifestationNotification(batch, config);
-      
-      if (config.effects.prestige?.onManifestation) {
-        console.log(`🍷 [FEATURE RISK] Triggering manifestation prestige event for ${config.name} (event-triggered)`);
-        console.log(`🍷 [FEATURE RISK] Vineyard context:`, vineyard?.name, vineyard?.vineyardPrestige);
-        await addFeaturePrestigeEvent(batch, config, 'manifestation', {
-          vineyard
-        });
-      } else {
-        console.log(`🍷 [FEATURE RISK] No manifestation prestige config for ${config.name} (event-triggered)`);
-      }
+      await handleManifestation(batch, config, vineyard);
     }
   }
   
-  const updatedFeature: WineFeature = {
+  return updateFeatureInArray(features, {
     ...feature,
     risk: newRisk,
     isPresent,
     severity
-  };
-  
-  const featureIndex = features.findIndex(f => f.id === config.id);
-  if (featureIndex >= 0) {
-    const updated = [...features];
-    updated[featureIndex] = updatedFeature;
-    return updated;
-  } else {
-    return [...features, updatedFeature];
-  }
+  });
 }
 
 /**

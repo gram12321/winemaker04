@@ -140,28 +140,40 @@ function HarvestRiskItem({ config, vineyard, conditionMet, currentRisk }: Harves
                   Risk: {(currentRisk * 100).toFixed(1)}% ({getRiskSeverityLabel(currentRisk)})
                 </p>
                 
+                {/* Show calculation for green flavor specifically */}
                 {config.id === 'green_flavor' && (
-                  <div className="space-y-1">
-                    <p className="font-medium">Risk Source:</p>
-                    <p className="text-xs text-gray-300">
-                      Underripe grapes (ripeness &lt; 50%) develop vegetal flavors
-                    </p>
-                    <p className="text-xs text-gray-300 font-mono">
-                      Current ripeness: {Math.round((vineyard.ripeness || 0) * 100)}%
-                    </p>
-                    
-                    <p className="font-medium mt-2">Calculation:</p>
+                  <div className="mt-2 space-y-1">
+                    <p className="font-medium">Calculation:</p>
                     <p className="text-xs text-gray-300 font-mono">
                       Risk = (0.5 - ripeness) × 0.6
                     </p>
                     <p className="text-xs text-gray-300 font-mono">
-                      = (0.5 - {((vineyard.ripeness || 0)).toFixed(2)}) × 0.6 = {(currentRisk * 100).toFixed(1)}%
+                      = (0.5 - {((vineyard.ripeness || 0)).toFixed(2)}) × 0.6
+                    </p>
+                    <p className="text-xs text-gray-300 font-mono">
+                      = {(0.5 - (vineyard.ripeness || 0)).toFixed(2)} × 0.6
+                    </p>
+                    <p className="text-xs text-gray-300 font-mono font-medium">
+                      = {(currentRisk * 100).toFixed(1)}%
                     </p>
                     
-                    <p className="font-medium mt-2">Manifestation:</p>
-                    <p className="text-xs text-gray-300">
-                      Occurs during harvest if grapes are underripe
+                    <p className="text-xs text-gray-300 mt-2">
+                      Ripeness {Math.round((vineyard.ripeness || 0) * 100)}% is below threshold (50%) → triggers green flavor risk
                     </p>
+                  </div>
+                )}
+                
+                {/* Generic calculation info for other features */}
+                {config.id !== 'green_flavor' && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-300">
+                      Current conditions trigger this feature during harvest
+                    </p>
+                    {contextText && (
+                      <p className="text-xs text-gray-300 font-mono">
+                        {contextText}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -170,7 +182,7 @@ function HarvestRiskItem({ config, vineyard, conditionMet, currentRisk }: Harves
                 <p className="font-medium text-green-600">Low Risk</p>
                 
                 {config.id === 'green_flavor' && (
-                  <div className="space-y-1">
+                  <div className="mt-1 space-y-1">
                     <p className="text-xs text-gray-300 font-mono">
                       Current ripeness: {Math.round((vineyard.ripeness || 0) * 100)}% (≥ 50%)
                     </p>
@@ -178,6 +190,12 @@ function HarvestRiskItem({ config, vineyard, conditionMet, currentRisk }: Harves
                       Adequate ripeness prevents green flavors
                     </p>
                   </div>
+                )}
+                
+                {config.id !== 'green_flavor' && contextText && (
+                  <p className="text-xs text-gray-300 mt-1 font-mono">
+                    {contextText}
+                  </p>
                 )}
               </div>
             )}
