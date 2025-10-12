@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types/types';
-import { fulfillWineOrder, rejectWineOrder, generateSophisticatedWineOrders, generateCustomer } from '@/lib/services';
+import { fulfillWineOrder, rejectWineOrder, generateCustomer } from '@/lib/services';
 import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject} from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui';
@@ -236,15 +236,6 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     await rejectWineOrder(orderId);
   });
 
-  // Generate test order (customer acquisition + order creation)
-  const handleGenerateOrder = () => withLoading(async () => {
-    const { chanceInfo } = await generateSophisticatedWineOrders();
-    
-    // Store chance information for tooltip display
-    setOrderChanceInfo(chanceInfo);
-    
-    // Data will be automatically refreshed by the reactive hooks
-  });
 
   // Bulk actions for orders
   const handleAcceptAll = () => withLoading(async () => {
@@ -321,6 +312,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                   {orderChanceInfo ? (
                     <div className="space-y-2 text-xs">
                       <div className="font-semibold">Customer Acquisition Details</div>
+                      <div className="text-[10px] text-gray-400 mb-2">This chance is automatically evaluated every game tick</div>
                       <div className="space-y-1">
                         <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, { decimals: 1, forceDecimals: true })}</span></div>
                         <div>Available Wines: <span className="font-medium">{orderChanceInfo.availableWines}</span></div>
@@ -329,18 +321,14 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, { decimals: 2, forceDecimals: true })}x</span></div>
                         <div className="border-t pt-1">
                           <div>Final Chance: <span className="font-bold text-blue-300">{formatPercent(orderChanceInfo.finalChance, 1, true)}</span></div>
-                          {orderChanceInfo.randomRoll > 0 ? (
-                            <div>Last Roll: <span className="font-medium">{orderChanceInfo.randomRoll < orderChanceInfo.finalChance ? '✅ Customer Acquired' : '❌ No Customer'}</span></div>
-                          ) : (
-                            <div className="text-[10px] text-gray-400">Click "Generate Order" to see roll result</div>
-                          )}
+                          <div className="text-[10px] text-gray-400 mt-1">Updated each game tick</div>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="text-xs">
                       <div className="font-semibold">Customer Acquisition</div>
-                      <div>Click "Generate Order" to see your customer acquisition chance</div>
+                      <div>Loading customer acquisition chance...</div>
                     </div>
                   )}
                 </TooltipContent>
@@ -351,41 +339,32 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       </div>
 
       {/* Order Management */}
-      <div className="bg-white rounded-lg shadow p-3">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="text-sm font-semibold">Order Management</h3>
-            <p className="text-gray-500 text-xs">Generate test orders or manage pending orders</p>
-          </div>
-          <div className="flex space-x-2">
-            {pendingOrders.length > 0 && (
-              <>
-                <button
-                  onClick={handleAcceptAll}
-                  disabled={isLoading}
-                  className="bg-green-600 text-white px-2.5 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-400 text-xs"
-                >
-                  Accept All ({pendingOrders.length})
-                </button>
-                <button
-                  onClick={handleRejectAll}
-                  disabled={isLoading}
-                  className="bg-red-600 text-white px-2.5 py-1.5 rounded hover:bg-red-700 disabled:bg-gray-400 text-xs"
-                >
-                  Reject All
-                </button>
-              </>
-            )}
-            <button
-              onClick={handleGenerateOrder}
-              disabled={isLoading || bottledWines.length === 0}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 disabled:bg-gray-400 text-xs"
-            >
-              {isLoading ? 'Generating...' : 'Generate Order'}
-            </button>
+      {pendingOrders.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-sm font-semibold">Order Management</h3>
+              <p className="text-gray-500 text-xs">Manage pending orders</p>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={handleAcceptAll}
+                disabled={isLoading}
+                className="bg-green-600 text-white px-2.5 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-400 text-xs"
+              >
+                Accept All ({pendingOrders.length})
+              </button>
+              <button
+                onClick={handleRejectAll}
+                disabled={isLoading}
+                className="bg-red-600 text-white px-2.5 py-1.5 rounded hover:bg-red-700 disabled:bg-gray-400 text-xs"
+              >
+                Reject All
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Orders Table - Desktop */}
       <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
@@ -516,25 +495,12 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                 <span>{order.customerName || 'Unknown Customer'}</span>
                               </button>
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <div className="space-y-2 text-xs">
-                              {order.calculationData ? (
-                                <>
-                                  <div className="font-semibold">Price Multiplier Calculation</div>
-                                  <div className="space-y-1 text-[10px]">
-                                    <div>Formula: {formatNumber(order.calculationData.estimatedBaseMultiplier, { decimals: 3, forceDecimals: true })} (B) × {formatNumber(order.calculationData.purchasingPowerMultiplier, { decimals: 3, forceDecimals: true })} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, { decimals: 3, forceDecimals: true })} (WT) × {formatNumber(order.calculationData.marketShareMultiplier, { decimals: 3, forceDecimals: true })} (MS) = {formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x (Mtp)</div>
-                                  </div>
-                                  <div className="font-semibold">Quantity Calculation</div>
-                                  <div className="space-y-1 text-[10px]">
-                                    <div>{order.calculationData.baseQuantity} (B) × {formatNumber(order.calculationData.priceSensitivity, { decimals: 3, forceDecimals: true })} (SENS) × {formatNumber(order.calculationData.purchasingPowerMultiplier, { decimals: 3, forceDecimals: true })} (PP) × {formatNumber(order.calculationData.wineTraditionMultiplier, { decimals: 3, forceDecimals: true })} (WT) × {formatNumber(order.calculationData.quantityMarketShareMultiplier, { decimals: 3, forceDecimals: true })} (MS) = {order.calculationData.finalQuantity} bottles</div>
-                                  </div>
-                                  <div className="text-xs text-gray-500 pt-2 border-top border-gray-600">
-                                    B=Base, PP=Purchasing Power, WT=Wine Tradition, MS=Market Share, SENS=Sensitivity
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-gray-500">Calculation data not available</div>
-                              )}
+                          <TooltipContent>
+                            <div className="text-xs">
+                              <div className="font-semibold">Customer Information</div>
+                              <div className="text-[10px] text-gray-500 mt-1">
+                                Click to view detailed customer information in Winepedia
+                              </div>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -634,17 +600,46 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       {formatCurrency(getAskingPriceForOrder(order), 2)}
                     </TableCell>
                     <TableCell className="text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <span className={`${
-                          order.offeredPrice > getAskingPriceForOrder(order)
-                            ? 'text-green-600 font-medium' // Above asking price
-                            : order.offeredPrice < getAskingPriceForOrder(order)
-                            ? 'text-red-600 font-medium' // Below asking price
-                            : 'text-gray-900' // Equal to asking price
-                        }`}>
-                        {formatCurrency(order.offeredPrice, 2)}
-                        </span>
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`cursor-help ${
+                              order.offeredPrice > getAskingPriceForOrder(order)
+                                ? 'text-green-600 font-medium' // Above asking price
+                                : order.offeredPrice < getAskingPriceForOrder(order)
+                                ? 'text-red-600 font-medium' // Below asking price
+                                : 'text-gray-900' // Equal to asking price
+                            }`}>
+                              {formatCurrency(order.offeredPrice, 2)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <div className="space-y-2 text-xs">
+                              {order.calculationData ? (
+                                <>
+                                  <div className="font-semibold">Bid Price Calculation</div>
+                                  <div className="space-y-1 text-[10px]">
+                                    <div>Asking Price: <span className="font-medium">{formatCurrency(getAskingPriceForOrder(order), 2)}</span></div>
+                                    <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                    {order.calculationData.featurePriceMultiplier !== undefined && order.calculationData.featurePriceMultiplier < 1.0 && (
+                                      <div className="text-red-600">
+                                        Feature Penalty: <span className="font-medium">{formatNumber(order.calculationData.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span>
+                                        <div className="text-[10px] mt-1">Wine features reduce customer bid price</div>
+                                      </div>
+                                    )}
+                                    <div className="border-t pt-1 mt-1">
+                                      <div className="text-[10px] text-gray-500 mb-1">Formula: Asking × Customer × Features</div>
+                                      <div>Final Bid: <span className="font-bold">{formatCurrency(order.offeredPrice, 2)}</span></div>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-gray-500">Calculation data not available</div>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell className="text-gray-500">
                       <TooltipProvider>
@@ -663,17 +658,21 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="text-xs space-y-1">
-                              <div className="font-semibold">Order Analysis</div>
-                              <div className="text-[10px] text-gray-500">
-                                {order.calculationData ? (
-                                  <>
-                                    <div>Multiple Order Penalty: {formatNumber(order.calculationData.multipleOrderModifier, { decimals: 3, forceDecimals: true })}x</div>
-                                    <div>Final Rejection Probability: {formatPercent(order.calculationData.finalRejectionProbability, 1, true)}</div>
-                                    <div>Random Value: {formatPercent(order.calculationData.randomValue, 1, true)}</div>
-                                  </>
-                                ) : (
-                                  <div>Analysis data not available</div>
-                                )}
+                              <div className="font-semibold">Price Difference Analysis</div>
+                              <div className="text-[10px] space-y-1">
+                                <div>Asking Price: <span className="font-medium">{formatCurrency(getAskingPriceForOrder(order), 2)}</span></div>
+                                <div>Bid Price: <span className="font-medium">{formatCurrency(order.offeredPrice, 2)}</span></div>
+                                <div className="border-t pt-1">
+                                  <div className="font-medium">
+                                    {order.offeredPrice > getAskingPriceForOrder(order) ? (
+                                      <span className="text-green-600">Customer is paying premium</span>
+                                    ) : order.offeredPrice < getAskingPriceForOrder(order) ? (
+                                      <span className="text-red-600">Customer wants discount</span>
+                                    ) : (
+                                      <span className="text-gray-600">Customer accepts asking price</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </TooltipContent>

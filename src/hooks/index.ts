@@ -1,4 +1,5 @@
 export { useGameState, useGameStateWithData } from './useGameState';
+export { useWineFeatureDetails } from './useWineFeatureDetails';
 export { useGameUpdates } from './useGameUpdates';
 export { usePrestigeUpdates } from './usePrestigeUpdates';
 export { useLoadingState } from './useLoadingState';

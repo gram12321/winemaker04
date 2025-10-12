@@ -1,4 +1,3 @@
-// Company and database utility functions to reduce code duplication
 import { getCurrentCompany } from '../services/core/gameState';
 import { supabase } from '../database/core/supabase';
 
@@ -7,6 +6,8 @@ import { supabase } from '../database/core/supabase';
 /**
  * Get current company ID - fails fast if no company is active
  * This prevents silent failures when operations run against non-existent companies
+ * 
+ * Used in 85+ locations across database operations
  */
 export function getCurrentCompanyId(): string {
   const currentCompany = getCurrentCompany();
@@ -20,59 +21,14 @@ export function getCurrentCompanyId(): string {
 
 /**
  * Get a query builder with company_id filter applied
- * Reduces duplication across all database operations
+ * Reduces duplication for SELECT operations across database layer
+ * 
+ * @example
+ * const query = getCompanyQuery('wine_batches')
+ *   .eq('state', 'bottled')
+ *   .order('created_at', { ascending: false });
  */
 export function getCompanyQuery(table: string) {
   const companyId = getCurrentCompanyId();
   return supabase.from(table).select().eq('company_id', companyId);
-}
-
-/**
- * Get a query builder for deleting company-specific records
- */
-export function getCompanyDeleteQuery(table: string) {
-  const companyId = getCurrentCompanyId();
-  return supabase.from(table).delete().eq('company_id', companyId);
-}
-
-/**
- * Get a query builder for updating company-specific records
- */
-export function getCompanyUpdateQuery(table: string) {
-  const companyId = getCurrentCompanyId();
-  return supabase.from(table).update({}).eq('company_id', companyId);
-}
-
-/**
- * Insert a record with company_id automatically added
- */
-export async function insertCompanyRecord(table: string, data: any) {
-  const companyId = getCurrentCompanyId();
-  const recordWithCompany = { ...data, company_id: companyId };
-  return supabase.from(table).insert(recordWithCompany);
-}
-
-/**
- * Upsert a record with company_id automatically added
- */
-export async function upsertCompanyRecord(table: string, data: any) {
-  const companyId = getCurrentCompanyId();
-  const recordWithCompany = { ...data, company_id: companyId };
-  return supabase.from(table).upsert(recordWithCompany);
-}
-
-/**
- * Get all records for current company
- */
-export async function getAllCompanyRecords(table: string) {
-  const companyId = getCurrentCompanyId();
-  return supabase.from(table).select().eq('company_id', companyId);
-}
-
-/**
- * Get single record for current company by ID
- */
-export async function getCompanyRecord(table: string, id: string) {
-  const companyId = getCurrentCompanyId();
-  return supabase.from(table).select().eq('company_id', companyId).eq('id', id).single();
 }

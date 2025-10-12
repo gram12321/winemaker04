@@ -34,8 +34,7 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         natural_yield: batch.naturalYield,
         fragile: batch.fragile,
         prone_to_oxidation: batch.proneToOxidation,
-        oxidation: batch.oxidation,
-        is_oxidized: batch.isOxidized,
+        features: batch.features || [], // Store features as JSONB array
         harvest_start_week: Math.round(batch.harvestStartDate.week),
         harvest_start_season: batch.harvestStartDate.season,
         harvest_start_year: Math.round(batch.harvestStartDate.year),
@@ -93,8 +92,7 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         naturalYield: row.natural_yield || grapeData.naturalYield,
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
-        oxidation: row.oxidation ?? 0, // Default to 0 risk for existing batches
-        isOxidized: row.is_oxidized ?? false, // Default to not oxidized
+        features: row.features || [], // Load features array (JSONB)
         harvestStartDate: {
           week: row.harvest_start_week,
           season: row.harvest_start_season as Season,

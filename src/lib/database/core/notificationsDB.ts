@@ -2,6 +2,7 @@
 
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
+import { NotificationCategory } from '../../types/types';
 
 const NOTIFICATIONS_TABLE = 'notifications';
 
@@ -15,7 +16,7 @@ export interface DbNotificationRecord {
   text: string;
   origin: string;
   userFriendlyOrigin: string;
-  category: string;
+  category: NotificationCategory;
 }
 
 export interface NotificationFilter {

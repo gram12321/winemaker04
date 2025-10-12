@@ -68,7 +68,7 @@ export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, c
 export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
 export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';
 export { generateSophisticatedWineOrders } from './sales/salesOrderService';
-export { initializeCustomers, getAllCustomers, getCountryCode } from './sales/createCustomer';
+export { initializeCustomers, getAllCustomers } from './sales/createCustomer';
 
 // Re-export utility functions from constants
 export { getTaskTypeDisplayName, getWorkCategoryDisplayName, isDensityBased } from '@/lib/constants/activityConstants';
@@ -86,6 +86,8 @@ export { startFermentationActivity, bottleWine, isFermentationActionAvailable, p
 export { isActionAvailable } from './wine/winery/wineryService';
 export { getBatchStatus } from './wine/winery/wineryService';
 export { startCrushingActivity, validateCrushingActivity } from './wine/winery/crushingManager';
+export { calculateEffectiveQuality, calculateFeaturePriceMultiplier, getPresentFeaturesSorted, hasAnyFaults, getFeature, hasFeature } from './wine/featureEffectsService';
+export { initializeBatchFeatures, processWeeklyFeatureRisks, processEventTrigger } from './wine/featureRiskService';
 export { recordBottledWine, loadWineLog, getVineyardWineHistory, calculateVineyardStats } from './user/wineLogService';
 export type { VineyardStats } from './user/wineLogService';
 export type { AuthUser } from './user/authService';

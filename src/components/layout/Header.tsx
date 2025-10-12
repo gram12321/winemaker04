@@ -5,12 +5,12 @@ import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/l
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
-import { useGameState, useGameStateWithData } from '@/hooks';
+import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
 import PrestigeModal from '@/components/ui/modals/UImodals/prestigeModal';
 import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeService';
-import { Company } from '@/lib/services/user/companyService';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
+import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 
 interface HeaderProps extends NavigationProps, CompanyProps {
   currentPage: string;
@@ -18,10 +18,11 @@ interface HeaderProps extends NavigationProps, CompanyProps {
   onBackToLogin?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvance, onBackToLogin }) => {
+const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance, onBackToLogin }) => {
   const gameState = useGameState();
   const [prestigeModalOpen, setPrestigeModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isLoading: isAdvancingTime, withLoading } = useLoadingState();
   const [prestigeData, setPrestigeData] = useState<any>({ 
     totalPrestige: 0, 
     eventBreakdown: [],
@@ -37,14 +38,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
   // Use consolidated hook for reactive prestige loading
   const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);
 
-  const handleIncrementWeek = async () => {
-    try {
+  const handleIncrementWeek = () => {
+    withLoading(async () => {
       await processGameTick();
       // Game state will be updated automatically via the useGameState hook
       onTimeAdvance();
-    } catch (error) {
-      console.error('Error advancing time:', error);
-    }
+    });
   };
 
   const handlePrestigeClick = async () => {
@@ -64,7 +63,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
   };
 
   const handleNavigation = (page: string) => {
-    onPageChange(page);
+    onNavigate?.(page);
     setMobileMenuOpen(false);
   };
 
@@ -120,16 +119,18 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
               onClick={handleIncrementWeek}
               variant="secondary" 
               size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white border-red-500 text-xs hidden sm:flex items-center gap-1.5"
+              disabled={isAdvancingTime}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-500 text-xs hidden sm:flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Increment Week
+              {isAdvancingTime ? 'Processing...' : 'Increment Week'}
             </Button>
             
             <Button 
               onClick={handleIncrementWeek}
               variant="ghost" 
               size="icon"
-              className="sm:hidden text-white hover:bg-red-700"
+              disabled={isAdvancingTime}
+              className="sm:hidden text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CalendarDays className="h-4 w-4" />
             </Button>
@@ -307,10 +308,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, onTimeAdvanc
                     }}
                     variant="outline" 
                     size="sm"
-                    className="flex items-center gap-1"
+                    disabled={isAdvancingTime}
+                    className="flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CalendarDays className="h-4 w-4" />
-                    <span>End Week</span>
+                    <span>{isAdvancingTime ? 'Processing...' : 'End Week'}</span>
                   </Button>
                 </div>
                 <div className="flex items-center space-x-2">

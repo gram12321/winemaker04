@@ -2,12 +2,14 @@
 import { WineOrder, WineBatch } from '../../types/types';
 import { loadWineOrders, updateWineOrderStatus, saveWineOrder } from '../../database/customers/salesDB';
 import { loadWineBatches, saveWineBatch } from '../../database/activities/inventoryDB';
+import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../user/financeService';
 import { createRelationshipBoost } from '../sales/relationshipService';
-import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige } from '../prestige/prestigeService';
+import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige, addFeaturePrestigeEvent } from '../prestige/prestigeService';
 import { getCurrentPrestige } from '../core/gameState';
 import { SALES_CONSTANTS } from '../../constants/constants';
+import { getAllFeatureConfigs } from '../../constants/wineFeatures';
 
 // ===== ORDER MANAGEMENT =====
 
@@ -89,7 +91,8 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
           await addSalePrestigeEvent(
             fulfillableValue,
             order.customerName,
-            order.wineName
+            order.wineName,
+            fulfillableQuantity  // Pass volume for dynamic calculation
           );
         }
     
@@ -106,6 +109,35 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
     fulfillableValue,
     status: fulfillableQuantity < order.requestedQuantity ? 'partially_fulfilled' : 'fulfilled'
   };
+  
+  // Check for wine features with onSale prestige events (e.g., oxidation, green flavor)
+  try {
+    const configs = getAllFeatureConfigs();
+    const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
+    
+    if (presentFeatures.length > 0) {
+      // Load vineyard and current prestige for dynamic calculation
+      const vineyards = await loadVineyards();
+      const vineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
+      const currentPrestige = await getCurrentPrestige();
+      
+      for (const feature of presentFeatures) {
+        const config = configs.find(c => c.id === feature.id);
+        if (config?.effects.prestige?.onSale) {
+          // Pass full context for dynamic prestige calculation
+          await addFeaturePrestigeEvent(wineBatch, config, 'sale', {
+            customerName: order.customerName,
+            order: updatedOrder,  // Full order with actual fulfillable volume and value
+            vineyard,
+            currentCompanyPrestige: currentPrestige
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to create feature prestige events:', error);
+    // Don't fail the order fulfillment if these fail
+  }
   
   await saveWineOrder(updatedOrder);
   

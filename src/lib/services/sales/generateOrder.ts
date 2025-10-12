@@ -8,10 +8,12 @@ import { formatCompletedWineName } from '../wine/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
+import { NotificationCategory } from '../../types/types';
 import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoosts } from './relationshipService';
 import { getCurrentPrestige } from '../core/gameState';
 import { activateCustomer } from '../../database/customers/customerDB';
+import { calculateFeaturePriceMultiplier } from '../wine/featureEffectsService';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
@@ -93,8 +95,11 @@ export async function generateOrder(
   const relationshipPriceBonus = 1 + currentRelationship * 0.001; // 0.1% per relationship point
   const relationshipAdjustedMultiplier = customer.priceMultiplier * relationshipPriceBonus;
   
-  // Use customer's individual price multiplier with relationship bonus
-  let bidPrice = Math.round(askingPrice * relationshipAdjustedMultiplier * 100) / 100;
+  // Apply feature price sensitivity (oxidation, etc.)
+  const featurePriceMultiplier = calculateFeaturePriceMultiplier(specificWineBatch, customer.customerType);
+  
+  // Use customer's individual price multiplier with relationship bonus and feature sensitivity
+  let bidPrice = Math.round(askingPrice * relationshipAdjustedMultiplier * featurePriceMultiplier * 100) / 100;
   
   // Cap the bid price to prevent database overflow
   bidPrice = Math.min(bidPrice, SALES_CONSTANTS.MAX_PRICE);
@@ -138,7 +143,7 @@ export async function generateOrder(
     const notificationMessage = `${customer.name} from ${customer.country} was interested in ${formatCompletedWineName(specificWineBatch)}, but outright rejected our asking price.`;
     
     // Trigger notification for rejected order
-    await notificationService.addMessage(notificationMessage, 'generateOrder.generateOrderForSpecificWine', 'Order Rejected', 'Sales & Orders');
+    await notificationService.addMessage(notificationMessage, 'generateOrder.generateOrderForSpecificWine', 'Order Rejected', NotificationCategory.SALES_ORDERS);
     
     return null; // No order generated
   }
@@ -177,7 +182,7 @@ export async function generateOrder(
     const notificationMessage = `${customer.name} from ${customer.country} wanted to buy ${formatCompletedWineName(specificWineBatch)}, but with our current asking price the amount they could afford simply became too low.`;
     
     // Trigger notification for rejected order
-    await notificationService.addMessage(notificationMessage, 'generateOrder.generateOrderForSpecificWine', 'Order Rejected', 'Sales & Orders');
+    await notificationService.addMessage(notificationMessage, 'generateOrder.generateOrderForSpecificWine', 'Order Rejected', NotificationCategory.SALES_ORDERS);
     
     return null; // No order generated
   }
@@ -222,6 +227,7 @@ export async function generateOrder(
       wineTraditionMultiplier,
       marketShareMultiplier,
       finalPriceMultiplier: customer.priceMultiplier,
+      featurePriceMultiplier, // Feature impact on price (oxidation, etc.)
       
       // Quantity calculation
       baseQuantity,

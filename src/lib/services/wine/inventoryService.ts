@@ -13,6 +13,7 @@ import { generateDefaultCharacteristics } from './characteristics/defaultCharact
 import { modifyHarvestCharacteristics } from './characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
+import { initializeBatchFeatures, processEventTrigger } from './featureRiskService';
 
 /**
  * Inventory Service
@@ -206,8 +207,7 @@ export async function createWineBatchFromHarvest(
       naturalYield: grapeMetadata.naturalYield,
       fragile: grapeMetadata.fragile,
       proneToOxidation: grapeMetadata.proneToOxidation,
-      oxidation: 0, // Start with 0% oxidation risk
-      isOxidized: false, // Not oxidized at harvest
+      features: initializeBatchFeatures(), // Initialize features array
       harvestStartDate: harvestDate,
       harvestEndDate: harvestDate
     };
@@ -216,9 +216,12 @@ export async function createWineBatchFromHarvest(
     const estimatedPrice = calculateEstimatedPrice(wineBatch, vineyard);
     wineBatch.estimatedPrice = estimatedPrice;
 
-    await saveWineBatch(wineBatch);
+    // Process harvest event triggers (e.g., green flavor from underripe grapes)
+    const batchWithEventFeatures = await processEventTrigger(wineBatch, 'harvest', vineyard);
+
+    await saveWineBatch(batchWithEventFeatures);
     triggerGameUpdate();
-    return wineBatch;
+    return batchWithEventFeatures;
   }
 }
 

@@ -6,12 +6,14 @@ import { Activity, Staff } from '@/lib/types/types';
 import { updateActivityInDb } from '@/lib/database/activities/activityDB';
 import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity/workcalculators/workCalculator';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button } from '@/components/ui/shadCN/button';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
 import { useGameState } from '@/hooks';
+import { getTeamForCategory } from '@/lib/services/user/teamService';
 
 interface StaffAssignmentModalProps {
   isOpen: boolean;
@@ -70,14 +72,14 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       if (success) {
         // Trigger immediate UI update
         triggerGameUpdateImmediate();
-        await notificationService.addMessage(`Assigned ${selectedStaffIds.length} staff to ${activity.title}`, 'staffAssignmentModal.handleSave', 'Staff Assignment', 'Staff Management');
+        await notificationService.addMessage(`Assigned ${selectedStaffIds.length} staff to ${activity.title}`, 'staffAssignmentModal.handleSave', 'Staff Assignment', NotificationCategory.STAFF_MANAGEMENT);
         onClose();
       } else {
-        await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', 'System');
+        await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', NotificationCategory.SYSTEM);
       }
     } catch (error) {
       console.error('Error assigning staff:', error);
-      await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', 'System');
+      await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     }
   };
   
@@ -98,6 +100,10 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   
   const relevantSkill = getRelevantSkillName(activity.category);
   
+  // Get the team that auto-assigns to this activity
+  const defaultTeam = getTeamForCategory(activity.category);
+  const teamMemberCount = defaultTeam?.memberIds.length || 0;
+  
   // Render skill bars for a staff member (reusable list component)
   const renderSkillBars = (staff: Staff) => (
     <div className="w-60">
@@ -117,6 +123,14 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           <div>
             <h2 className="text-xl font-bold text-white">Assign Staff</h2>
             <p className="text-sm text-gray-400 mt-1">{activity.title}</p>
+            {defaultTeam && (
+              <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                <span>{defaultTeam.icon}</span>
+                <span className="italic">
+                  Auto-assigns team: {defaultTeam.name} ({teamMemberCount} {teamMemberCount === 1 ? 'member' : 'members'})
+                </span>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}

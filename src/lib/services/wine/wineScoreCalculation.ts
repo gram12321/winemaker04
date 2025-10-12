@@ -1,9 +1,12 @@
 import { WineBatch, Vineyard } from '../../types/types';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateAsymmetricalMultiplier } from '../../utils/calculator';
+import { calculateEffectiveQuality } from './featureEffectsService';
 
 export function calculateWineScore(wineBatch: WineBatch): number {
-  const wineScore = (wineBatch.quality + wineBatch.balance) / 2;
+  // Use effective quality (applies feature penalties/bonuses)
+  const effectiveQuality = calculateEffectiveQuality(wineBatch);
+  const wineScore = (effectiveQuality + wineBatch.balance) / 2;
   return wineScore;
 }
 

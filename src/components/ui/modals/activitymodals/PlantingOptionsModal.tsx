@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GrapeVariety, Vineyard } from '@/lib/types/types';
+import { GrapeVariety, Vineyard, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculatePlantingWork } from '@/lib/services/activity/workcalculators/vineyardWorkCalculator';
@@ -86,7 +86,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     if (activityId) {
       // Success handled by notificationService in activityManager
     } else {
-      await notificationService.addMessage('Failed to create planting activity.', 'plantingOptionsModal.handlePlant', 'Planting Error', 'System');
+      await notificationService.addMessage('Failed to create planting activity.', 'plantingOptionsModal.handlePlant', 'Planting Error', NotificationCategory.SYSTEM);
     }
     
     onClose();

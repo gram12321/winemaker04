@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Customer, CustomerCountry, CustomerType } from '../../types/types';
 import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS } from '../../constants/constants';
 import { NAMES } from '../../constants/namesConstants';
-import { getCountryCodeForFlag } from '../../utils/utils';
 import { calculateSkewedMultiplier } from '../../utils/calculator';
 import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '../../database/customers/customerDB';
 
@@ -352,10 +351,3 @@ export async function getAllCustomers(): Promise<Customer[]> {
   }
 }
 
-/**
- * Get country flag code for display purposes
- * Uses the existing utility function to avoid duplication
- */
-export function getCountryCode(country: CustomerCountry): string {
-  return getCountryCodeForFlag(country);
-}

@@ -25,6 +25,222 @@
 
 ---
 
+## 📋 **Version 0.4.5 - Sub-Color System** *(Latest)*
+
+### 🎨 **Sub-Category Color System**
+**Added sub-colors for finer visual distinctions while maintaining the 6-color foundation**
+
+#### Core Changes:
+1. **Expanded COLOR_MAPPING** with 4 new sub-categories:
+   - `time` (cyan) - Time & Calendar notifications
+   - `staff` (amber) - Staff Management notifications (sibling to finance)
+   - `finance` (yellow/gold) - Finance notifications (sibling to staff)
+   - `tasks` (indigo) - Activities & Tasks notifications
+
+2. **Updated NotificationCategory** enum values:
+   - Changed `TIME_CALENDAR` from `'administration'` → `'time'` (cyan)
+   - Changed `STAFF_MANAGEMENT` from `'administration'` → `'staff'` (amber)
+   - Changed `FINANCE` from `'administration'` → `'finance'` (yellow)
+   - Changed `ACTIVITIES_TASKS` from `'administration'` → `'tasks'` (indigo)
+
+3. **Hierarchical Organization**:
+   - Each sub-category includes `parent: 'administration'` field
+   - Maintains logical relationship while providing visual distinction
+   - Future-proof for adding more sub-categories (e.g., crushing vs fermentation)
+
+#### Color Hierarchy:
+```
+6 Main Categories (Foundation):
+├─ system (gray)
+├─ field (green)
+├─ winery (purple)
+├─ administration (blue)
+├─ sales (orange)
+└─ maintenance (red)
+
+4 Sub-Categories (Variants):
+├─ time (cyan) → parent: administration
+├─ staff (teal) → parent: administration
+├─ finance (yellow) → parent: administration
+└─ tasks (indigo) → parent: administration
+```
+
+#### Benefits:
+- ✅ Notifications now have distinct colors (time, staff, finance, tasks no longer all blue)
+- ✅ System is general-purpose (works for any categorization, not just notifications)
+- ✅ Simple lookup: `COLOR_MAPPING[key]` works for both main and sub-categories
+- ✅ Future-proof: Easy to add more sub-categories as game expands
+- ✅ Maintains 6-color skill foundation
+
+---
+
+## 📋 **Version 0.4.4 - Color System Restructuring**
+
+### 🎨 **Major Architecture Change**
+**Restructured color mapping system to be skill-centric rather than notification-centric**
+
+#### Core Changes:
+1. **New Type System**
+   - Added `SkillKey` type to `types.ts`: `'field' | 'winery' | 'administration' | 'sales' | 'maintenance'`
+   - Establishes the 5 core skills as the foundation of the color system
+
+2. **COLOR_MAPPING as Primary**
+   - Restructured `colorMapping.ts` with 6-entry COLOR_MAPPING as the source of truth
+   - 5 core skill colors + 1 'system' color for UI elements
+   - `SKILL_COLORS` now extracts from COLOR_MAPPING (not the reverse)
+   - Clear hierarchy: Skills → Colors → Notifications
+
+3. **NotificationCategory Enum Values**
+   - Changed enum values from display strings to color keys
+   - `SYSTEM = 'system'`, `VINEYARD_OPERATIONS = 'field'`, etc.
+   - Notifications now directly map to the 6 color categories
+   - Removed `getNotificationCategoryFromOrigin()` function (string-based identification)
+
+4. **Simplified Architecture**
+   ```
+   SKILL_COLORS (5 core colors) = Foundation
+       ↓
+   COLOR_MAPPING (5 skills + system) = Extended for UI
+       ↓
+   NotificationCategory = Maps to color keys
+   ```
+
+#### Files Modified:
+- `src/lib/types/types.ts` - Added SkillKey type
+- `src/lib/utils/colorMapping.ts` - Complete restructure (6 entries, skill-centric)
+- `src/lib/types/notificationCategories.ts` - Enum values now color keys
+- `src/lib/utils/utils.ts` - Simplified to re-export from colorMapping
+- `src/lib/database/core/notificationsDB.ts` - Updated to use NotificationCategory enum
+- `src/components/layout/NotificationCenter.tsx` - Uses enum directly (no string conversion)
+- `src/components/ui/shadCN/toaster.tsx` - Uses enum directly
+- `src/lib/services/core/gameTick.ts` - Updated addMessage calls to use enum
+
+#### Additional Cleanup:
+- Removed unused helper functions: `getColorScheme()`, `getSkillColorScheme()`, `getPrimaryColor()`
+- Kept only essential functions: `getSkillColor()` and `getTailwindClasses()`
+- Fixed StaffAssignmentModal.tsx to use NotificationCategory enum
+- **DELETED**: `src/lib/types/notificationCategories.ts` - moved `NotificationCategory` enum to `types.ts`
+- Removed unused `getNotificationCategoryFromActivity()` function
+- Removed re-exports from `utils.ts` (SKILL_COLORS, getSkillColor)
+- Updated all 14 files to import NotificationCategory from types.ts
+
+#### Benefits:
+- ✅ Skills are the foundation (correct for game mechanics)
+- ✅ Type-safe with SkillKey type
+- ✅ Single source of truth (COLOR_MAPPING)
+- ✅ No circular dependencies
+- ✅ Clear separation: 5 game skills + 1 UI-only system category
+- ✅ Minimal API surface - only 2 helper functions needed
+- ✅ Simpler, more maintainable code
+
+---
+
+## 📋 **Version 0.4.3 - Remove Legacy Compatibility**
+
+### 🧹 **Code Cleanup**
+- **DELETED**: `src/lib/utils/notificationColors.ts` (58 lines) - Removed legacy notification color utilities
+- **UPDATED**: `src/components/layout/NotificationCenter.tsx` (744 lines, -legacy imports, +direct new system usage) - Now uses new system directly
+- **UPDATED**: `src/components/ui/shadCN/toaster.tsx` (103 lines, -legacy imports, +direct new system usage) - Now uses new system directly  
+- **UPDATED**: `src/lib/utils/index.ts` (-legacy exports, +cleanup comments) - Removed backward compatibility exports
+
+#### 🔧 **Breaking Changes**
+- **Removed all legacy compatibility** - system now uses new consolidated approach exclusively
+- **Direct imports required** - components must import from `@/lib/constants/notificationCategories` and `@/lib/constants/colorMapping`
+- **Fail-fast approach** - any missed updates will cause compilation errors, ensuring system consistency
+- **Cleaner codebase** - no more duplicate/legacy code paths
+
+#### ✅ **System Integrity**
+- **Type safety enforced** - all components must use proper `NotificationCategory` enum
+- **Consistent imports** - all color and category logic uses the same source
+- **Performance optimized** - no more legacy delegation layers
+- **Maintainable** - single source of truth for all color and category logic
+
+---
+
+## 📋 **Version 0.4.2 - Consolidated Color & Category System**
+
+### 🏗️ **Architecture Refactoring**
+- **NEW FILE**: `src/lib/constants/notificationCategories.ts` (157 lines) - Comprehensive notification category system with enum
+- **NEW FILE**: `src/lib/constants/colorMapping.ts` (180 lines) - Unified color mapping for skills, activities, and notifications
+- **UPDATED**: `src/lib/utils/notificationColors.ts` (58 lines, -31 deletions, +new system integration) - Refactored to use consolidated system
+- **UPDATED**: `src/lib/utils/utils.ts` (604 lines, -12 deletions, +imports) - Updated skill color system to use consolidated mapping
+- **UPDATED**: `src/lib/constants/index.ts` (+2 exports) - Added new systems to exports
+- **UPDATED**: `src/lib/utils/index.ts` (+27 exports) - Added comprehensive color and category system exports
+
+#### 🎯 **Notification Category System**
+- **NotificationCategory enum** with 9 standardized categories
+- **Activity-to-Notification mapping** ensures 1:1 correspondence between activities and notifications
+- **Skill-to-Notification mapping** maintains consistency between skill colors and notification colors
+- **Origin-based category detection** for legacy compatibility
+- **Comprehensive helper functions** for category management and validation
+
+#### 🎨 **Consolidated Color Mapping**
+- **Unified ColorScheme interface** with primary, background, border, text, icon, badge, and ring colors
+- **Consistent colors across systems** - skills, activities, and notifications use the same color palette
+- **Legacy compatibility maintained** - existing skill color functions still work
+- **Tailwind class generation** for easy UI integration
+- **Hex color codes** for programmatic color usage
+
+#### 🔧 **System Integration**
+- **Backward compatibility** - all existing code continues to work
+- **Future-proof design** - easy to add new categories and colors
+- **Type safety** - full TypeScript support with proper interfaces
+- **Performance optimized** - single source of truth for color mappings
+- **Extensible architecture** - supports both enum-based and string-based category systems
+
+---
+
+
+
+## Version 0.017 - Wine Features Framework Implementation
+**Date:** 2025-10-10 | **Commit:** [PENDING] | **Stats:** [To be calculated after commit]
+- **NEW FILE:** `src/lib/types/wineFeatures.ts` (~130 lines) - Core feature type definitions
+- **NEW FILE:** `src/lib/constants/wineFeatures/oxidation.ts` (~67 lines) - Oxidation feature config
+- **NEW FILE:** `src/lib/constants/wineFeatures/index.ts` (~50 lines) - Feature registry system
+- **NEW FILE:** `src/lib/services/wine/featureRiskService.ts` (~210 lines) - Generic risk accumulation service
+- **NEW FILE:** `src/lib/services/wine/featureEffectsService.ts` (~145 lines) - Quality/price effects calculator
+- **NEW FILE:** `src/lib/services/prestige/featurePrestigeService.ts` (~80 lines) - Feature prestige events
+- **NEW FILE:** `src/components/ui/wine/FeatureBadge.tsx` (~90 lines) - Generic feature badges component
+- **NEW FILE:** `src/components/ui/wine/FeatureRiskDisplay.tsx` (~85 lines) - Consolidated feature risk display
+- **NEW FILE:** `src/hooks/useWineFeatureDetails.ts` (~90 lines) - Custom hook for feature impact calculations
+- **NEW FILE:** `docs/wine_features_framework_design.md` (~710 lines) - Complete framework design
+- **NEW FILE:** `docs/wine_features_implementation_summary.md` (~345 lines) - Implementation summary
+- **NEW FILE:** `docs/README_DOCS.md` - Documentation index and navigation guide
+- **DELETED:** `src/lib/services/wine/oxidationService.ts` - Replaced by feature framework
+- **DELETED:** `docs/oxidation_system_design.md` - Superseded by wine features framework
+- **DELETED:** `docs/oxidation_implementation_summary.md` - Superseded by wine features framework
+- **IMPROVED:** `useWineFeatureDetails.ts` - Enhanced price impact calculation using complete service layer functions (getAllVineyards, calculateEstimatedPrice) instead of rough estimates
+- **OrdersTab.tsx**: Added feature price multiplier display to customer name tooltip showing when features reduce offeredPrice
+- **generateOrder.ts**: Added featurePriceMultiplier to calculationData for UI display
+- **types.ts**: Added featurePriceMultiplier field to WineOrder calculationData type
+- `src/lib/types/types.ts` - Added features array to WineBatch (clean, no legacy fields)
+- `src/lib/database/activities/inventoryDB.ts` - Save/load features as JSONB with auto-migration
+- `src/lib/services/wine/inventoryService.ts` - Initialize features on harvest
+- `src/lib/services/core/gameTick.ts` - Replaced oxidation service with feature risk service
+- `src/lib/services/wine/wineScoreCalculation.ts` - Use effective quality (applies feature effects)
+- `src/lib/services/sales/generateOrder.ts` - Apply customer feature sensitivity to bids
+- `src/lib/services/sales/salesService.ts` - Trigger prestige events when selling faults
+- `src/components/pages/sales/WineCellarTab.tsx` - Generic feature display and badges
+- `src/components/pages/Winery.tsx` - Generic feature risk display with tooltip
+- `src/lib/constants/index.ts` - Export wine features
+- `src/lib/services/index.ts` - Export feature services
+- `src/components/ui/index.ts` - Export feature UI components
+- Documentation: Consolidated 6 oxidation docs into 2 main docs + 2 historical references + README index
+
+**Technical Details:**
+- Migrated oxidation from standalone system to generic feature framework
+- Config-driven architecture: add features with config only, no code changes
+- Supports binary (oxidation) and graduated (future terroir) manifestation types
+- Supports time-based (weekly) and event-triggered (harvest/crushing) accumulation
+- Quality effects: power function for oxidation (premium wines hit harder)
+- Customer sensitivity: Collectors 60%, Wine Shops 80%, Restaurants 85%, Chain Stores 90%
+- Prestige: Company -0.5 (20yr decay), Vineyard -2.0 (3yr decay) on oxidized wine sales
+- JSONB storage for features array with GIN index for performance
+- Clean implementation (no backwards compatibility - database will be reset)
+- Generic FeatureRiskDisplay components in WineCellar and Winery pages
+
+---
+
 ## Version 0.0161 - Notification System Polish & Service Cleanup
 **Date:** 2025-10-09 | **Commit:** b1a9501a | **Stats:** 158 additions, 157 deletions
 - `src/lib/services/user/staffSearchService.ts` - Major refactor and cleanup (31 additions, 17 deletions)
@@ -1422,18 +1638,3 @@
 - Established development environment and configuration
 
 ---
-
-## 📋 **Current Status Summary**
-
-- **Database**: ✅ Fully integrated with Supabase + auto-save/load
-- **Frontend**: ✅ Complete React + TypeScript + Tailwind + ShadCN setup
-- **Game State**: ✅ Centralized management with time progression
-- **UI/UX**: ✅ Basic navigation and page structure complete
-- **Development**: ✅ Production-ready codebase with clean architecture
-
-### 🔮 **Next Steps**
-- Vineyard management system (planting, harvesting, field management)
-- Wine production mechanics (crushing, fermentation, aging)
-- Sales system (orders, contracts, pricing)
-- Financial management (expenses, income tracking)
-- Game progression and balancing

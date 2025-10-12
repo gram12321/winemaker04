@@ -3,7 +3,6 @@ import { WorkCategory } from '../../../types/types';
 import { createActivity } from '../../activity/activitymanagers/activityManager';
 import { calculateCrushingWork, validateCrushingBatch } from '../../activity/workcalculators/crushingWorkCalculator';
 import { CrushingOptions } from '../characteristics/crushingCharacteristics';
-import { notificationService } from '../../../../components/layout/NotificationCenter';
 
 /**
  * Crushing Manager
@@ -67,7 +66,6 @@ export async function startCrushingActivity(batch: WineBatch, options: CrushingO
       return { success: false, error: 'Failed to create crushing activity' };
     }
     
-    await notificationService.addMessage(`Started crushing ${batch.grape} from ${batch.vineyardName}`, 'crushingManager.startCrushingActivity', 'Crushing Started', 'Activities & Tasks');
     return { success: true };
     
   } catch (error) {

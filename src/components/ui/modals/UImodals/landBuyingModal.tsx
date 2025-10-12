@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils';
-import { getCountryFlag } from '@/lib/utils';
+import { getFlagIcon } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Button } from '../../shadCN/button';
 import { Badge } from '../../shadCN/badge';
@@ -90,7 +90,7 @@ const LandBuyingModal: React.FC<LandBuyingModalProps> = ({
                       <CardTitle className="text-base sm:text-lg leading-tight">{option.name}</CardTitle>
                       <div className="text-left sm:text-right">
                         <div className="text-xs sm:text-sm text-gray-500 flex items-center sm:justify-end">
-                          <span className={`flag-icon flag-icon-${getCountryFlag(option.country)} mr-1`}></span>
+                          <span className={`${getFlagIcon(option.country)} mr-1`}></span>
                           {option.country}
                         </div>
                         <div className="text-xs text-gray-400">{option.region}</div>

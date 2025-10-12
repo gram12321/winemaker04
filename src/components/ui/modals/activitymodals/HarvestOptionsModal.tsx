@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Vineyard } from '@/lib/types/types';
+import { Vineyard, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculateHarvestWork } from '@/lib/services/activity/workcalculators/vineyardWorkCalculator';
@@ -7,6 +7,7 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
+import { previewFeatureRisks, formatFeatureRiskWarning } from '@/lib/services/wine/featureRiskHelper';
 
 /**
  * Harvest Options Modal
@@ -77,7 +78,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     if (activityId) {
       // Success handled by notificationService in activityManager
     } else {
-      await notificationService.addMessage('Failed to create harvesting activity.', 'harvestOptionsModal.handleStartHarvest', 'Harvest Error', 'System');
+      await notificationService.addMessage('Failed to create harvesting activity.', 'harvestOptionsModal.handleStartHarvest', 'Harvest Error', NotificationCategory.SYSTEM);
     }
     
     onClose();
@@ -94,15 +95,29 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     return true;
   };
 
-  // Data preparation
+  // Feature risk calculations using helper service (GENERIC for all features)
   const warningMessage = useMemo(() => {
     if (!vineyard) return undefined;
     
     const ripenessPercent = (vineyard.ripeness || 0) * 100;
+    const warnings: string[] = [];
+    
+    // Low yield warning
     if (ripenessPercent < 30) {
-      return `⚠️ Low ripeness (${Math.round(ripenessPercent)}%) - harvest will yield very little. Consider waiting for grapes to ripen more.`;
+      warnings.push(`⚠️ Low ripeness (${Math.round(ripenessPercent)}%) - harvest will yield very little.`);
     }
-    return undefined;
+    
+    // Check ALL event-triggered features for this harvest (generic)
+    const featureRisks = previewFeatureRisks(undefined, 'harvest', vineyard);
+    for (const risk of featureRisks) {
+      warnings.push(formatFeatureRiskWarning(risk));
+      // Add tips based on feature
+      if (risk.featureId === 'green_flavor') {
+        warnings.push(`💡 TIP: Wait for ripeness ≥ 50% to avoid green flavor risk.`);
+      }
+    }
+    
+    return warnings.length > 0 ? warnings.join('\n\n') : undefined;
   }, [vineyard]);
 
   // Early returns

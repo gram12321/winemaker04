@@ -186,7 +186,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
       <Header 
         currentPage={currentPage} 
-        onPageChange={handlePageChange}
+        onNavigate={handleNavigate}
         onTimeAdvance={handleTimeAdvance}
         onBackToLogin={handleBackToLogin}
       />

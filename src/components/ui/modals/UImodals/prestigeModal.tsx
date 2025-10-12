@@ -48,6 +48,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     vineyard_achievement: { icon: Star, label: 'Vineyard Achievements', color: 'bg-yellow-100 text-yellow-800' },
     vineyard_age: { icon: Star, label: 'Vine Age', color: 'bg-orange-100 text-orange-800' },
     vineyard_land: { icon: DollarSign, label: 'Land Value', color: 'bg-green-100 text-green-800' },
+    wine_feature: { icon: Star, label: 'Wine Features', color: 'bg-purple-100 text-purple-800' },
     contract: { icon: DollarSign, label: 'Contracts', color: 'bg-purple-100 text-purple-800' },
     penalty: { icon: Star, label: 'Penalties', color: 'bg-red-100 text-red-800' },
   };
@@ -108,7 +109,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const getFilteredVineyards = () => 
     selectedVineyard === 'all' ? vineyards : vineyards.filter(vineyard => vineyard.id === selectedVineyard);
 
-  const companyEventTypes = ['company_value', 'sale', 'contract', 'penalty'];
+  const companyEventTypes = ['company_value', 'sale', 'contract', 'penalty', 'wine_feature'];
   const companyEvents = eventBreakdown.filter(event => companyEventTypes.includes(event.type));
 
   const groupedCompanyEvents = companyEvents.reduce((acc, event) => {

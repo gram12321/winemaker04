@@ -1,13 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { WineBatch } from '@/lib/types/types';
+import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity/workcalculators/crushingWorkCalculator';
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
+import { FeatureBadges } from '@/components/ui/wine/FeatureBadge';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { 
+  previewFeatureRisks,
+  calculateCumulativeRisk,
+  getPresentFeaturesInfo,
+  getAtRiskFeaturesInfo,
+  formatFeatureRiskWarning
+} from '@/lib/services/wine/featureRiskHelper';
 
 /**
  * Crushing Options Modal
@@ -97,6 +106,55 @@ Processing Effects:
     return { workEstimate: { totalWork }, workFactors: factors, cost };
   }, [batch, options]);
 
+  // Feature risk calculations using helper service (GENERIC for all features)
+  const featureRiskData = useMemo(() => {
+    if (!batch) return null;
+    
+    // Preview ALL event risks for this crushing action (generic)
+    const eventRisks = previewFeatureRisks(batch, 'crushing', options);
+    
+    // Calculate cumulative for each risk
+    const cumulativeRisks = eventRisks.map(risk => ({
+      ...risk,
+      cumulative: calculateCumulativeRisk(batch, risk.featureId, risk.riskIncrease, 'Crushing')
+    }));
+    
+    return {
+      presentFeatures: getPresentFeaturesInfo(batch),
+      atRiskFeatures: getAtRiskFeaturesInfo(batch, 0.05),
+      eventRisks: eventRisks,
+      cumulativeRisks: cumulativeRisks
+    };
+  }, [batch, options]);
+
+  // Warning message (GENERIC for all event-triggered features)
+  const warningMessage = useMemo(() => {
+    if (!batch || !featureRiskData) return undefined;
+    
+    const warnings: string[] = [];
+    
+    // Show warnings for ALL triggered feature risks (generic)
+    for (const cumulativeRisk of featureRiskData.cumulativeRisks) {
+      warnings.push(formatFeatureRiskWarning(cumulativeRisk));
+      
+      // Show cumulative if there's existing risk
+      if (cumulativeRisk.cumulative.sources.length > 1) {
+        const total = (cumulativeRisk.cumulative.total * 100).toFixed(1);
+        const sources = cumulativeRisk.cumulative.sources
+          .map(s => `${(s.risk * 100).toFixed(0)}% ${s.source}`)
+          .join(' + ');
+        warnings.push(`📊 CUMULATIVE RISK: ${total}% total (${sources})`);
+      }
+      
+      // Feature-specific tips
+      if (cumulativeRisk.featureId === 'green_flavor') {
+        warnings.push(`💡 TIP: Enable destemming or use Mechanical/Pneumatic Press to avoid this risk.`);
+      }
+    }
+    
+    return warnings.length > 0 ? warnings.join('\n\n') : undefined;
+  }, [batch, featureRiskData]);
+
   // Event handlers
   const handleSubmit = async (submittedOptions: Record<string, any>) => {
     if (!batch) return;
@@ -111,7 +169,7 @@ Processing Effects:
     const result = await startCrushingActivity(batch, crushingOptions);
     
     if (!result.success) {
-      await notificationService.addMessage(result.error || 'Failed to start crushing activity', 'crushingOptionsModal.handleStartCrushing', 'Crushing Error', 'System');
+      await notificationService.addMessage(result.error || 'Failed to start crushing activity', 'crushingOptionsModal.handleStartCrushing', 'Crushing Error', NotificationCategory.SYSTEM);
     }
     
     onClose();
@@ -191,7 +249,7 @@ Processing Effects:
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <ActivityOptionsModal
         onClose={onClose}
-        title={`Crush Wine Batch`}
+        title="Crush Wine Batch"
         subtitle={`Configure crushing options for ${batch.quantity}kg of ${batch.grape} grapes from ${batch.vineyardName}. Choose method and processing options that will affect the final wine characteristics.`}
         category={WorkCategory.CRUSHING}
         fields={fields}
@@ -200,11 +258,64 @@ Processing Effects:
         onSubmit={handleSubmit}
         submitLabel="Start Crushing Activity"
         canSubmit={canSubmit}
+        warningMessage={warningMessage}
         options={formOptions}
         onOptionsChange={handleOptionsChange}
         maxWidth="2xl"
         maxHeight="90vh"
-      />
+      >
+        {/* Feature Badges (if present) */}
+        {featureRiskData && featureRiskData.presentFeatures.length > 0 && (
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Current Features:</span>
+            <FeatureBadges 
+              features={batch.features || []} 
+              configs={getAllFeatureConfigs()} 
+              showSeverity 
+            />
+          </div>
+        )}
+        
+        {/* Feature Risk Summary Panel */}
+        {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+              <span>⚗️</span>
+              <span>Wine Features Status</span>
+            </h4>
+            
+            {/* Present Features */}
+            {featureRiskData.presentFeatures.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-amber-800 mb-2">Current Features:</p>
+                {featureRiskData.presentFeatures.map(feature => (
+                  <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
+                    <span className="font-medium">{feature.icon} {feature.featureName}</span>
+                    {feature.qualityImpact && (
+                      <span className="text-red-600 ml-2">
+                        (Quality: {feature.qualityImpact > 0 ? '+' : ''}{(feature.qualityImpact * 100).toFixed(0)}%)
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* At Risk Features */}
+            {featureRiskData.atRiskFeatures.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-amber-800 mb-2">Accumulating Risk:</p>
+                {featureRiskData.atRiskFeatures.map(feature => (
+                  <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
+                    <span className="font-medium">{feature.icon} {feature.featureName}:</span>
+                    <span className="ml-2">{(feature.currentRisk * 100).toFixed(1)}% risk</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </ActivityOptionsModal>
     </div>
   );
 };

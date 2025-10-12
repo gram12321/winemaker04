@@ -12,6 +12,7 @@ import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './vinya
 import { getGameState } from '../core/gameState';
 import { formatCurrency } from '../../utils/utils';
 import { notificationService } from '../../../components/layout/NotificationCenter';
+import { NotificationCategory } from '../../types/types';
 
 
 // Helper functions for random vineyard generation
@@ -196,7 +197,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     const currentMoney = gameState.money || 0;
     if (currentMoney < option.totalPrice) {
       const errorMsg = `Insufficient funds. You have ${formatCurrency(currentMoney)} but need ${formatCurrency(option.totalPrice)}.`;
-      await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', 'Finance');
+      await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', NotificationCategory.FINANCE);
       return { 
         success: false, 
         error: errorMsg
@@ -232,7 +233,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     triggerGameUpdate();
     
     // Add success notification
-    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatCurrency(option.totalPrice)}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', 'Finance');
+    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatCurrency(option.totalPrice)}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', NotificationCategory.FINANCE);
     
     return { success: true, vineyard };
   } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomerData } from '@/hooks';
 import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
-import { getCountryCode } from '@/lib/services';
+import { getFlagIcon } from '@/lib/utils';
 import { Customer } from '@/lib/types/types';
 import { formatNumber, formatPercent, getColorClass } from '@/lib/utils/utils';
 
@@ -182,7 +182,7 @@ export function CustomersTab() {
                   <TableRow key={customer.id} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={`fi fi-${getCountryCode(customer.country)} text-lg`}></span>
+                        <span className={`${getFlagIcon(customer.country)} text-lg`}></span>
                         {customer.country}
                       </div>
                     </TableCell>

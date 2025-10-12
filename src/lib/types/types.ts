@@ -1,3 +1,4 @@
+import { WineFeature } from './wineFeatures';
 
 // ===== CORE TYPES =====
 
@@ -149,9 +150,8 @@ export interface WineBatch {
   fragile: number; // 0-1 scale, affects work requirements (0=robust, 1=fragile)
   proneToOxidation: number; // 0-1 scale, affects wine stability
   
-  // Oxidation system (risk-based model)
-  oxidation: number; // 0-1 scale, weekly oxidation risk probability
-  isOxidized: boolean; // Once true, wine is permanently oxidized (affects quality/price)
+  // Wine Features Framework (faults and positive features)
+  features: WineFeature[];
   
   harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
   harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch
@@ -232,6 +232,7 @@ export interface WineOrder {
     wineTraditionMultiplier: number;
     marketShareMultiplier: number;
     finalPriceMultiplier: number;
+    featurePriceMultiplier?: number; // Feature impact on price (oxidation, etc.)
     
     // Quantity calculation
     baseQuantity: number;
@@ -260,7 +261,8 @@ export type PrestigeEventType =
   | 'vineyard_base'
   | 'vineyard_achievement'
   | 'vineyard_age'
-  | 'vineyard_land';
+  | 'vineyard_land'
+  | 'wine_feature';
 
 export interface PrestigePayloadBase { }
 
@@ -398,6 +400,36 @@ export interface ActivityProgress {
 
 // Nationality options for staff members
 export type Nationality = 'Italy' | 'Germany' | 'France' | 'Spain' | 'United States';
+
+// Skill key type - the 5 core skills in the game
+export type SkillKey = 'field' | 'winery' | 'administration' | 'sales' | 'maintenance';
+
+// ===== NOTIFICATION TYPES =====
+
+/**
+ * Notification categories - unified system for all notification types
+ * 
+ * Maps to COLOR_MAPPING keys:
+ * - 6 main categories: system, field, winery, administration, sales, maintenance
+ * - 4 sub-categories: time, staff, finance, tasks
+ */
+export enum NotificationCategory {
+  // System notifications
+  SYSTEM = 'system',
+  
+  // Activity-related notifications (map to core skills)
+  VINEYARD_OPERATIONS = 'field',
+  WINEMAKING_PROCESS = 'winery',
+  ADMINISTRATION = 'administration',
+  SALES_ORDERS = 'sales',
+  MAINTENANCE = 'maintenance',
+  
+  // Sub-category notifications (distinct colors, hierarchically under administration)
+  TIME_CALENDAR = 'time',          // Cyan - scheduling and calendar
+  STAFF_MANAGEMENT = 'staff',      // Teal - HR and people management
+  FINANCE = 'finance',             // Yellow/Gold - money and budgets
+  ACTIVITIES_TASKS = 'tasks'       // Indigo - task and activity management
+}
 
 // Staff skills interface - all skills are 0-1 scale
 export interface StaffSkills {

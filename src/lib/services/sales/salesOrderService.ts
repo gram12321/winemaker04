@@ -1,12 +1,11 @@
 // Sales order orchestration service - coordinates sophisticated customer acquisition and multiple order generation
-import { WineOrder, Vineyard } from '../../types/types';
+import { WineOrder, Vineyard, NotificationCategory } from '../../types/types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { getAllCustomers } from './createCustomer';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
-import { getAvailableBottledWines } from '../../utils';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 
@@ -67,7 +66,7 @@ export async function generateSophisticatedWineOrders(): Promise<{
       loadWineBatches(),
       loadVineyards()
     ]);
-    const availableWines = getAvailableBottledWines(allBatches);
+    const availableWines = allBatches.filter(batch => batch.state === 'bottled' && batch.quantity > 0);
     
     if (availableWines.length === 0) {
       return {
@@ -120,14 +119,14 @@ export async function generateSophisticatedWineOrders(): Promise<{
           `${customer.name} from ${customer.country} placed an order for ${orders[0].wineName}`,
           'salesOrderService.generateOrdersForCustomer',
           'New Order',
-          'Sales & Orders'
+          NotificationCategory.SALES_ORDERS
         );
       } else {
         await notificationService.addMessage(
           `${customer.name} from ${customer.country} placed ${orders.length} orders worth €${totalValue.toFixed(2)}`,
           'salesOrderService.generateOrdersForCustomer',
           'New Orders',
-          'Sales & Orders'
+          NotificationCategory.SALES_ORDERS
         );
       }
     } else {

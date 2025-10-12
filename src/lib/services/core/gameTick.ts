@@ -3,19 +3,43 @@ import { getGameState, updateGameState } from './gameState';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
+import { NotificationCategory } from '../../../lib/types/types';
 import { progressActivities } from '../activity/activitymanagers/activityManager';
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../vineyard/vineyardManager';
 import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
 import { processSeasonalWages } from '../user/wageService';
 import { getAllStaff } from '../user/staffService';
-import { processWeeklyOxidation } from '../wine/oxidationService';
+import { processWeeklyFeatureRisks } from '../wine/featureRiskService';
+import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+
+// Prevent concurrent game tick execution
+let isProcessingGameTick = false;
 
 /**
  * Enhanced time advancement with automatic game events
  * This replaces the simple incrementWeek() function with a more sophisticated system
+ * Includes protection against concurrent execution to prevent race conditions
  */
 export const processGameTick = async (): Promise<void> => {
+  // Prevent concurrent execution - if already processing, return early
+  if (isProcessingGameTick) {
+    console.warn('Game tick already in progress, skipping duplicate call to prevent race conditions');
+    return;
+  }
+
+  try {
+    isProcessingGameTick = true;
+    await executeGameTick();
+  } finally {
+    isProcessingGameTick = false;
+  }
+};
+
+/**
+ * Internal function that performs the actual game tick logic
+ */
+const executeGameTick = async (): Promise<void> => {
   const currentState = getGameState();
   let { 
     week = GAME_INITIALIZATION.STARTING_WEEK, 
@@ -40,12 +64,12 @@ export const processGameTick = async (): Promise<void> => {
     if (season === 'Spring') {
       currentYear += 1;
       await onNewYear(previousYear, currentYear);
-      await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', 'Time & Calendar');
+      await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', NotificationCategory.TIME_CALENDAR);
     }
     
     // Process season change
     await onSeasonChange(previousSeason, season);
-    await notificationService.addMessage(`The season has changed to ${season}!`, 'time.seasonChange', 'Season Changes', 'Time & Calendar');
+    await notificationService.addMessage(`The season has changed to ${season}!`, 'time.seasonChange', 'Season Changes', NotificationCategory.TIME_CALENDAR);
   }
   
   // Update game state with new time values
@@ -64,7 +88,12 @@ export const processGameTick = async (): Promise<void> => {
   await updateVineyardRipeness(season, week);
   
   // Log the time advancement
-  await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', 'Time & Calendar');
+  await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);
+  
+  // Trigger final UI refresh after all weekly effects are processed
+  // This ensures components reload data that was updated during processWeeklyEffects()
+  // (e.g., wine batch feature risks, fermentation progress, etc.)
+  triggerGameUpdate();
 };
 
 /**
@@ -113,10 +142,10 @@ const processWeeklyEffects = async (): Promise<void> => {
       // Show summary notification for significant activity
       if (result.totalOrdersCreated > 1) {
         const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
-        await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'sales.orders', 'New Orders', 'Sales & Orders');
+        await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
       } else if (result.orders.length > 0) {
         const order = result.orders[0];
-        await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'sales.orders', 'New Orders', 'Sales & Orders');
+        await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
       }
     }
   } catch (error) {
@@ -141,11 +170,11 @@ const processWeeklyEffects = async (): Promise<void> => {
     }
   }
   
-  // Process weekly oxidation risk for all wine batches
+  // Process weekly feature risks for all wine batches (oxidation, etc.)
   try {
-    await processWeeklyOxidation();
+    await processWeeklyFeatureRisks();
   } catch (error) {
-    console.warn('Error during weekly oxidation processing:', error);
+    console.warn('Error during weekly feature risk processing:', error);
   }
   
   // TODO: Add other weekly effects when ready

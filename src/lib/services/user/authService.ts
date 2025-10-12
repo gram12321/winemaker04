@@ -1,5 +1,6 @@
 import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 
 export interface AuthUser {
   id: string;
@@ -139,7 +140,7 @@ class AuthService {
         return { success: false, error: 'Failed to create user profile' };
       }
 
-      await notificationService.addMessage(`Welcome ${name}! Please check your email to verify your account.`, 'authService.register', 'User Registration', 'System');
+      await notificationService.addMessage(`Welcome ${name}! Please check your email to verify your account.`, 'authService.register', 'User Registration', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
       console.error('Sign up error:', error);
@@ -159,7 +160,7 @@ class AuthService {
       }
 
       if (data.user) {
-        await notificationService.addMessage('Welcome back!', 'authService.signIn', 'User Sign In', 'System');
+        await notificationService.addMessage('Welcome back!', 'authService.signIn', 'User Sign In', NotificationCategory.SYSTEM);
         return { success: true };
       }
 
@@ -178,7 +179,7 @@ class AuthService {
         return { success: false, error: error.message };
       }
 
-      await notificationService.addMessage('Signed out successfully', 'authService.signOut', 'User Sign Out', 'System');
+      await notificationService.addMessage('Signed out successfully', 'authService.signOut', 'User Sign Out', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
       console.error('Sign out error:', error);
@@ -207,7 +208,7 @@ class AuthService {
 
       // Reload user profile
       await this.loadUserProfile(this.currentUser.id);
-      await notificationService.addMessage('Profile updated successfully', 'authService.updateProfile', 'Profile Update', 'System');
+      await notificationService.addMessage('Profile updated successfully', 'authService.updateProfile', 'Profile Update', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
       console.error('Update profile error:', error);
@@ -234,7 +235,7 @@ class AuthService {
       // Sign out from auth
       await supabase.auth.signOut();
       
-      await notificationService.addMessage('Account deleted successfully', 'authService.deleteAccount', 'Account Deletion', 'System');
+      await notificationService.addMessage('Account deleted successfully', 'authService.deleteAccount', 'Account Deletion', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
       console.error('Delete account error:', error);

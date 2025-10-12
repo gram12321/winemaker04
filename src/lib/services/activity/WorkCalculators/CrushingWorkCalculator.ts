@@ -6,6 +6,7 @@ import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics }
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services/user/financeService';
+import { processEventTrigger } from '@/lib/services/wine/featureRiskService';
 
 /**
  * Crushing Work Calculator
@@ -155,11 +156,19 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       ]
     };
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics and breakdown
+    // Process crushing event triggers (e.g., green flavor from basic method without destemming)
+    const batchWithEventFeatures = await processEventTrigger(
+      { ...batch, characteristics: modifiedCharacteristics, breakdown: combinedBreakdown },
+      'crushing',
+      crushingOptions
+    );
+
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, and features
     await updateWineBatch(batchId, {
       state: 'must_ready',
       characteristics: modifiedCharacteristics,
-      breakdown: combinedBreakdown
+      breakdown: combinedBreakdown,
+      features: batchWithEventFeatures.features
     });
 
     // Deduct costs if any

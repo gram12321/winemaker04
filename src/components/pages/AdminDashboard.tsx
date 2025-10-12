@@ -7,9 +7,12 @@ import {
   AlertTriangle,
   Trash2,
 } from 'lucide-react';
-import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, getCurrentCompany, clearPrestigeCache } from '@/lib/services';
+import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState } from '@/lib/services';
 import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/core/supabase';
+import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
+import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
+import { v4 as uuidv4 } from 'uuid';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
@@ -31,30 +34,35 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const handleAddPrestige = () => withLoading(async () => {
     const amount = parseFloat(prestigeAmount) || 100;
     
-    // Add a prestige event directly to the database
-    const { error } = await supabase.from('prestige_events').insert([{
-      id: crypto.randomUUID(),
-      type: 'admin_cheat',
-      amount_base: amount,
-      created_game_week: null,
-      timestamp: Date.now(),
-      decay_rate: 0, // Admin prestige doesn't decay
-      description: `Admin: Added ${amount} prestige`,
-      source_id: null,
-      company_id: getCurrentCompany()?.id || '00000000-0000-0000-0000-000000000000'
-    }]);
-    
-    if (error) {
+    try {
+      const gameState = getGameState();
+      const currentWeek = calculateAbsoluteWeeks(
+        gameState.week!,
+        gameState.season!,
+        gameState.currentYear!
+      );
+      
+      // Add prestige event using the proper service layer
+      await insertPrestigeEvent({
+        id: uuidv4(),
+        type: 'admin_cheat' as any,
+        amount_base: amount,
+        created_game_week: currentWeek,
+        decay_rate: 0, // Admin prestige doesn't decay
+        source_id: null,
+        payload: {
+          reason: 'Admin cheat',
+          addedAmount: amount
+        }
+      });
+      
+      // Clear prestige cache to force recalculation
+      clearPrestigeCache();
+      await getCurrentPrestige();
+      
+    } catch (error) {
       console.error('Failed to add prestige event:', error);
-
-      return;
     }
-    
-    // Clear prestige cache to force recalculation
-    clearPrestigeCache();
-    await getCurrentPrestige();
-    
-
   });
 
   const handleClearAllHighscores = () => withLoading(async () => {
@@ -156,6 +164,21 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
       } catch (error) {
         console.error('Error recreating customers:', error);
 
+      }
+    });
+  };
+
+  const handleGenerateTestOrder = async () => {
+    withLoading(async () => {
+      try {
+        const result = await generateSophisticatedWineOrders();
+        if (result.totalOrdersCreated > 0) {
+          console.log(`Generated ${result.totalOrdersCreated} order(s) from ${result.customersGenerated} customer(s)`);
+        } else {
+          console.log('No orders generated (insufficient prestige or no wines available)');
+        }
+      } catch (error) {
+        console.error('Error generating test order:', error);
       }
     });
   };
@@ -463,8 +486,21 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
           {/* Development Tools */}
           <TabsContent value="tools">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
+              <SimpleCard
+                title="Order Testing"
+                description="Generate test orders for development and testing"
+              >
+                <Button
+                  onClick={handleGenerateTestOrder}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  🛒 Generate Test Order
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Simulates the automatic customer acquisition process and order generation
+                </p>
+              </SimpleCard>
             </div>
           </TabsContent>
         </Tabs>

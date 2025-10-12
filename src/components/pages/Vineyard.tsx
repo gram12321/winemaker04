@@ -5,9 +5,10 @@ import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAl
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
+import { HarvestRisksDisplay } from '../ui/vineyard/HarvestRisksDisplay';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
-import { getCountryFlag } from '@/lib/utils';
+import { getFlagIcon } from '@/lib/utils';
 
 
 
@@ -281,7 +282,7 @@ const Vineyard: React.FC = () => {
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-900">{vineyard.region}</div>
                       <div className="text-xs text-gray-500 flex items-center">
-                        <span className={`flag-icon flag-icon-${getCountryFlag(vineyard.country)} mr-1`}></span>
+                        <span className={`${getFlagIcon(vineyard.country)} mr-1`}></span>
                         {vineyard.country}
                       </div>
                     </td>
@@ -403,6 +404,13 @@ const Vineyard: React.FC = () => {
                         <div className="flex flex-col space-y-1">
                           {getActionButtons(vineyard)}
                         </div>
+                        
+                        {/* Harvest Risks */}
+                        {vineyard.grape && (
+                          <div className="mt-3 pt-2 border-t border-gray-200">
+                            <HarvestRisksDisplay vineyard={vineyard} />
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -444,7 +452,7 @@ const Vineyard: React.FC = () => {
                 
                 {/* Location */}
                 <div className="flex items-center text-sm text-gray-600 mt-2">
-                  <span className={`flag-icon flag-icon-${getCountryFlag(vineyard.country)} mr-2`}></span>
+                  <span className={`${getFlagIcon(vineyard.country)} mr-2`}></span>
                   {vineyard.region}, {vineyard.country}
                 </div>
               </div>
@@ -587,6 +595,13 @@ const Vineyard: React.FC = () => {
                           {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
                         </div>
                       </div>
+                      
+                      {/* Harvest Risks */}
+                      {vineyard.grape && (
+                        <div className="border-t pt-3">
+                          <HarvestRisksDisplay vineyard={vineyard} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

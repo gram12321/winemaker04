@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/shadCN/tooltip';
-import { WineBatch } from '@/lib/types/types';
+import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { calculateFermentationWork, validateFermentationBatch } from '@/lib/services/activity/workcalculators/fermentationWorkCalculator';
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
@@ -148,7 +148,7 @@ Note: These effects apply each week while fermentation is active.`
     const result = await startFermentationActivity(batch, fermentationOptions);
     
     if (!result.success) {
-      await notificationService.addMessage(result.error || 'Failed to start fermentation activity', 'fermentationOptionsModal.handleStartFermentation', 'Fermentation Error', 'System');
+      await notificationService.addMessage(result.error || 'Failed to start fermentation activity', 'fermentationOptionsModal.handleStartFermentation', 'Fermentation Error', NotificationCategory.SYSTEM);
     }
     
     onClose();

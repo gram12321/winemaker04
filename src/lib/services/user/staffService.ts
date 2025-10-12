@@ -13,6 +13,7 @@ import {
 } from '@/lib/constants/staffConstants';
 import { calculateWage } from './wageService';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 
 /**
  * Generate random skills based on skill level and specializations
@@ -125,7 +126,7 @@ export async function addStaff(staff: Staff): Promise<Staff | null> {
   // Update game state
   updateGameState({ staff: [...currentStaff, staff] });
   
-  await notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', 'Staff Management');
+  await notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', NotificationCategory.STAFF_MANAGEMENT);
   return staff;
 }
 
@@ -189,7 +190,7 @@ export async function initializeStaffSystem(): Promise<void> {
 export async function createStartingStaff(): Promise<void> {
   try {
     // Get default teams to assign staff
-    const { getAllTeams } = await import('./teamService');
+    const { getAllTeams, assignStaffToTeam } = await import('./teamService');
     const allTeams = getAllTeams();
     const wineryTeam = allTeams.find(t => t.name === 'Winery Team');
     const adminTeam = allTeams.find(t => t.name === 'Administration Team');
@@ -206,9 +207,12 @@ export async function createStartingStaff(): Promise<void> {
       nationality1
     );
     
-    // Assign to Winery Team if it exists
-    if (wineryTeam) {
-      masterWinemaker.teamIds = [wineryTeam.id];
+    // Add staff member first (without team assignment)
+    const addedWinemaker = await addStaff(masterWinemaker);
+    
+    // Then assign to Winery Team using proper team service (saves both sides)
+    if (addedWinemaker && wineryTeam) {
+      await assignStaffToTeam(addedWinemaker.id, wineryTeam.id);
     }
     
     // Create Administrator with administration specialization
@@ -223,13 +227,13 @@ export async function createStartingStaff(): Promise<void> {
       nationality2
     );
     
-    // Assign to Administration Team if it exists
-    if (adminTeam) {
-      administrator.teamIds = [adminTeam.id];
-    }
+    // Add staff member first (without team assignment)
+    const addedAdmin = await addStaff(administrator);
     
-    await addStaff(masterWinemaker);
-    await addStaff(administrator);
+    // Then assign to Administration Team using proper team service (saves both sides)
+    if (addedAdmin && adminTeam) {
+      await assignStaffToTeam(addedAdmin.id, adminTeam.id);
+    }
     
     console.log('Starting staff have joined your company!');
   } catch (error) {

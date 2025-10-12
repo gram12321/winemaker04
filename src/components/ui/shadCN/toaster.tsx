@@ -4,6 +4,9 @@ import { getToasts } from "@/lib/utils/toast"
 import { Button } from "@/components/ui"
 import { Filter, Shield } from "lucide-react"
 import { toast } from "@/lib/utils/toast"
+import { NotificationCategory } from "@/lib/types/types"
+import { getTailwindClasses } from "@/lib/utils/colorMapping"
+import { cn } from "@/lib/utils/utils"
 
 export function Toaster() {
   const [toasts, setToasts] = useState(getToasts())
@@ -46,8 +49,20 @@ export function Toaster() {
     <ToastProvider>
       <ToastViewport />
       {toasts.map(function ({ id, title, description, action, origin, userFriendlyOrigin, category, ...props }) {
+        // Get category colors for styling using new system
+        const classes = getTailwindClasses(category);
+        
         return (
-          <Toast key={id} {...props}>
+          <Toast 
+            key={id} 
+            {...props}
+            className={cn(
+              props.className,
+              classes.background,
+              classes.border,
+              classes.text
+            )}
+          >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (

@@ -5,6 +5,9 @@ import { toast } from "@/lib/utils/toast";
 import { formatGameDate } from "@/lib/utils/utils";
 import { getGameState } from "@/lib/services/core/gameState";
 import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, type NotificationFilter, saveNotificationFilter, loadNotificationFilters, deleteNotificationFilter, clearNotificationFilters } from "@/lib/database/core/notificationsDB";
+import { NotificationCategory } from "@/lib/types/types";
+import { getTailwindClasses } from "@/lib/utils/colorMapping";
+import { cn } from "@/lib/utils/utils";
 
 // Removed NotificationType - using category as the meaningful identifier
 
@@ -16,7 +19,7 @@ export interface PlayerNotification {
   text: string;
   origin: string;
   userFriendlyOrigin: string;
-  category: string;
+  category: NotificationCategory;
   isRead?: boolean;
   isDismissed?: boolean;
 }
@@ -73,7 +76,7 @@ async function loadFiltersFromDbIfNeeded() {
   }
 }
 
-function isNotificationBlocked(origin: string, category: string): boolean | 'history' {
+function isNotificationBlocked(origin: string, category: NotificationCategory): boolean | 'history' {
   // Check if notification should be blocked
   // Returns true if blocked from history, 'history' if only blocked from toast
   let shouldBlock = false;
@@ -107,7 +110,7 @@ export const notificationService = {
     return [...notifications];
   },
 
-  async addMessage(text: string, origin: string, userFriendlyOrigin: string, category: string) {
+  async addMessage(text: string, origin: string, userFriendlyOrigin: string, category: NotificationCategory) {
     // Load filters if not already loaded (await to ensure they're loaded before checking)
     await loadFiltersFromDbIfNeeded();
     
@@ -282,9 +285,10 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
     setIsHistoryOpen(isOpen);
   }, [isOpen]);
 
-  // Simplified - all notifications use the same info icon since we removed types
-  const getNotificationIcon = () => {
-    return <InfoIcon className="h-4 w-4 text-blue-500" />;
+  // Get notification icon with category-based coloring
+  const getNotificationIcon = (category: NotificationCategory) => {
+    const classes = getTailwindClasses(category);
+    return <InfoIcon className={cn("h-4 w-4", classes.icon)} />;
   };
 
   const handleClose = () => {
@@ -432,17 +436,27 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                         const isOld = isOldNotification(message.gameWeek, message.gameSeason, message.gameYear);
                         const isUnread = !message.isRead;
                         
+                        // Get colors using new system
+                        const classes = getTailwindClasses(message.category);
+                        
                         return (
                           <div
                             key={message.id}
-                            className={`p-2 rounded-md border flex items-start gap-2 text-sm transition-all bg-blue-50 border-blue-200 ${isOld ? 'opacity-60' : ''} ${isUnread ? 'ring-2 ring-blue-200' : ''}`}
+                            className={cn(
+                              "p-2 rounded-md border flex items-start gap-2 text-sm transition-all",
+                              classes.background,
+                              classes.border,
+                              classes.text,
+                              isOld ? 'opacity-60' : '',
+                              isUnread ? `ring-2 ${classes.ring}` : ''
+                            )}
                           >
-                            <div className="mt-0.5">{getNotificationIcon()}</div>
+                            <div className="mt-0.5">{getNotificationIcon(message.category)}</div>
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
                                 <Badge 
                                   variant="outline" 
-                                  className={`mb-1 text-xs ${isUnread ? 'bg-blue-100' : ''}`}
+                                  className={cn("mb-1 text-xs", classes.badge)}
                                 >
                                   {formatGameDate(message.gameWeek, message.gameSeason, message.gameYear)}
                                 </Badge>
@@ -576,17 +590,27 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                         const isOld = isOldNotification(message.gameWeek, message.gameSeason, message.gameYear);
                         const isUnread = !message.isRead;
                         
+                        // Get colors using new system
+                        const classes = getTailwindClasses(message.category);
+                        
                         return (
                           <div
                             key={message.id}
-                            className={`p-2 md:p-3 rounded-md border flex items-start gap-2 text-sm md:text-base transition-all bg-blue-50 border-blue-200 ${isOld ? 'opacity-60' : ''} ${isUnread ? 'ring-2 ring-blue-200' : ''}`}
+                            className={cn(
+                              "p-2 md:p-3 rounded-md border flex items-start gap-2 text-sm md:text-base transition-all",
+                              classes.background,
+                              classes.border,
+                              classes.text,
+                              isOld ? 'opacity-60' : '',
+                              isUnread ? `ring-2 ${classes.ring}` : ''
+                            )}
                           >
-                            <div className="mt-0.5">{getNotificationIcon()}</div>
+                            <div className="mt-0.5">{getNotificationIcon(message.category)}</div>
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
                                 <Badge 
                                   variant="outline" 
-                                  className={`mb-1 text-xs md:text-sm ${isUnread ? 'bg-blue-100' : ''}`}
+                                  className={cn("mb-1 text-xs md:text-sm", classes.badge)}
                                 >
                                   {formatGameDate(message.gameWeek, message.gameSeason, message.gameYear)}
                                 </Badge>

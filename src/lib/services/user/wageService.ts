@@ -8,6 +8,7 @@ import { getGameState } from '../core/gameState';
 import { addTransaction } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 
 // ===== WAGE CALCULATION =====
 
@@ -223,7 +224,7 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
         `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
         'wageService.processSeasonalWages',
         'Insufficient Funds',
-        'Wages'
+        NotificationCategory.FINANCE
       );
       // Still process the transaction to show negative balance
     }
@@ -241,7 +242,7 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
       `Paid €${totalWages.toFixed(2)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`,
       'staff.wages',
       'Staff Wages Paid',
-      'Staff & Teams'
+      NotificationCategory.STAFF_MANAGEMENT
     );
     
   } catch (error) {

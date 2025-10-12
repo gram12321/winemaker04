@@ -8,6 +8,7 @@ import { createWineBatchFromHarvest } from '../../wine/inventoryService';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { calculateVineyardYield } from '../../vineyard/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
 import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
 import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
@@ -21,7 +22,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   [WorkCategory.PLANTING]: async (activity: Activity) => {
     if (activity.targetId && activity.params.grape && activity.params.density) {
       await plantVineyard(activity.targetId, activity.params.grape, activity.params.density);
-      notificationService.addMessage(`Successfully planted ${activity.params.grape} in ${activity.params.targetName || 'vineyard'}!`, 'vineyard.planting', 'Vineyard Planting', 'Vineyard Operations');
+      notificationService.addMessage(`Successfully planted ${activity.params.grape} in ${activity.params.targetName || 'vineyard'}!`, 'vineyard.planting', 'Vineyard Planting', NotificationCategory.VINEYARD_OPERATIONS);
     }
   },
 
@@ -67,7 +68,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
           ? 'Harvest complete! Vineyard is now dormant for winter.'
           : 'Harvest complete! Vineyard will go dormant in winter.';
 
-        notificationService.addMessage(`${statusMessage} Total: ${Math.round(totalHarvested)}kg of ${activity.params.grape} from ${activity.params.targetName || 'vineyard'}`, 'vineyard.harvesting', 'Vineyard Harvesting', 'Vineyard Operations');
+        notificationService.addMessage(`${statusMessage} Total: ${Math.round(totalHarvested)}kg of ${activity.params.grape} from ${activity.params.targetName || 'vineyard'}`, 'vineyard.harvesting', 'Vineyard Harvesting', NotificationCategory.VINEYARD_OPERATIONS);
       }
     }
   },
@@ -75,13 +76,13 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   [WorkCategory.CRUSHING]: async (activity: Activity) => {
     if (activity.params.batchId && activity.params.crushingOptions) {
       await completeCrushing(activity);
-      notificationService.addMessage(`Crushing completed for ${activity.params.vineyardName} ${activity.params.grape}!`, 'winemaking.crushing', 'Grape Crushing', 'Winemaking Process');
+      notificationService.addMessage(`Crushing completed for ${activity.params.vineyardName} ${activity.params.grape}!`, 'winemaking.crushing', 'Grape Crushing', NotificationCategory.WINEMAKING_PROCESS);
     }
   },
 
   [WorkCategory.FERMENTATION]: async (activity: Activity) => {
     await completeFermentationSetup(activity);
-    notificationService.addMessage(`Successfully started fermentation for ${activity.params.targetName}!`, 'winemaking.fermentation', 'Fermentation', 'Winemaking Process');
+    notificationService.addMessage(`Successfully started fermentation for ${activity.params.targetName}!`, 'winemaking.fermentation', 'Fermentation', NotificationCategory.WINEMAKING_PROCESS);
   },
 
   [WorkCategory.CLEARING]: async (_activity: Activity) => {
@@ -156,7 +157,6 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
       const matchingTeam = getTeamForCategory(options.category);
       if (matchingTeam && matchingTeam.memberIds.length > 0) {
         activity.params.assignedStaffIds = matchingTeam.memberIds;
-        console.log(`[Auto-Assignment] Assigned ${matchingTeam.memberIds.length} staff from ${matchingTeam.name} to ${options.category} activity`);
       }
     }
     
@@ -174,7 +174,7 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
         ? `Started ${activity.title} - ${activity.totalWork} work units required (${assignedCount} staff auto-assigned)`
         : `Started ${activity.title} - ${activity.totalWork} work units required`;
       
-      notificationService.addMessage(assignmentMessage, 'activity.creation', 'Activity Creation', 'Activities & Tasks');
+      notificationService.addMessage(assignmentMessage, 'activity.creation', 'Activity Creation', NotificationCategory.ACTIVITIES_TASKS);
       return activity.id;
     }
     
@@ -225,8 +225,6 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
       
       // Trigger immediate UI update for critical activity cancellation
       triggerGameUpdateImmediate();
-      
-      console.warn(`Cancelled activity: ${activity.title}`);
     }
     
     return success;
@@ -387,6 +385,7 @@ async function handlePartialHarvesting(
 
 /**
  * Get progress information for an activity
+ * Calculates accurate ETA based on assigned staff and their multi-tasking load
  */
 export async function getActivityProgress(activityId: string): Promise<ActivityProgress | null> {
   const activity = await getActivityById(activityId);
@@ -395,10 +394,42 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
   const progress = (activity.completedWork / activity.totalWork) * 100;
   const isComplete = progress >= 100;
   
-  // Estimate time remaining (assuming 50 work units per tick)
+  // Calculate accurate time remaining based on actual staff assignments
   const remainingWork = activity.totalWork - activity.completedWork;
-  const ticksRemaining = Math.ceil(remainingWork / 50);
-  const timeRemaining = ticksRemaining === 1 ? '1 week' : `${ticksRemaining} weeks`;
+  let timeRemaining = 'N/A';
+  
+  if (!isComplete && remainingWork > 0) {
+    const gameState = getGameState();
+    const allStaff = gameState.staff || [];
+    const allActivities = await getAllActivities();
+    
+    // Build staff task count map to handle multi-tasking
+    const staffTaskCounts = new Map<string, number>();
+    for (const act of allActivities) {
+      const assignedStaffIds = act.params.assignedStaffIds || [];
+      for (const staffId of assignedStaffIds) {
+        staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
+      }
+    }
+    
+    // Get staff assigned to this activity
+    const assignedStaffIds = activity.params.assignedStaffIds || [];
+    const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
+    
+    if (assignedStaff.length > 0) {
+      // Calculate actual work contribution per week
+      const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts);
+      
+      if (workPerWeek > 0) {
+        const weeksRemaining = Math.ceil(remainingWork / workPerWeek);
+        timeRemaining = weeksRemaining === 1 ? '1 week' : `${weeksRemaining} weeks`;
+      } else {
+        timeRemaining = 'No progress';
+      }
+    } else {
+      timeRemaining = 'No staff assigned';
+    }
+  }
   
   return {
     activityId,

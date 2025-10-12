@@ -1,9 +1,10 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable, getBatchStatus } from '@/lib/services';
+import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
+import { FeatureStatusGrid } from '../ui/wine/FeatureStatusGrid';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
@@ -13,8 +14,6 @@ import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '@/lib/constant
 import { modifyHarvestCharacteristics } from '@/lib/services/wine/characteristics/harvestCharacteristics';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
-import { getOxidationRiskDisplay, calculateExpectedWeeksUntilOxidation } from '@/lib/services/wine/oxidationService';
-import { getOxidationRiskLabel } from '@/lib/constants/oxidationConstants';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -41,60 +40,6 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
     </div>
   );
 };
-
-// Component for oxidation risk/status display
-const OxidationDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const riskDisplay = getOxidationRiskDisplay(batch);
-  const riskLabel = getOxidationRiskLabel(batch.oxidation);
-  
-  // Use inverted color for risk (lower risk = better = green)
-  const invertedRisk = 1 - batch.oxidation;
-  const colorClass = getColorClass(invertedRisk);
-  
-  // Calculate expected weeks if not oxidized and risk > 0
-  const expectedWeeks = !batch.isOxidized && batch.oxidation > 0 
-    ? calculateExpectedWeeksUntilOxidation(batch) 
-    : null;
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="text-xs text-gray-600 mt-1 cursor-help">
-            Oxidation: <span className={`font-medium ${colorClass}`}>{riskDisplay}</span>
-            {!batch.isOxidized && batch.oxidation > 0.05 && (
-              <span className="text-gray-500 ml-1">({riskLabel})</span>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="text-xs space-y-1">
-            {batch.isOxidized ? (
-              <>
-                <p className="font-semibold text-red-600">Wine is oxidized</p>
-                <p>This batch has been permanently damaged by oxygen exposure.</p>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold">Oxidation Risk: {(batch.oxidation * 100).toFixed(1)}%</p>
-                <p>Weekly chance this batch becomes oxidized.</p>
-                {expectedWeeks !== null && expectedWeeks < 50 && (
-                  <p className="text-yellow-600 mt-1">
-                    Expected ~{expectedWeeks} weeks until oxidation (statistical average)
-                  </p>
-                )}
-                <p className="text-gray-500 mt-2">
-                  Current state: <span className="font-medium">{batch.state}</span>
-                </p>
-              </>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
-
 
 // Component for fermentation status badge
 const FermentationStatusBadge: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -396,38 +341,15 @@ const Winery: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {activeBatches.map((batch) => (
-                <div key={batch.id} className="border rounded-lg p-3 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h5 className="font-semibold text-gray-900">
-                        {batch.grape} - {batch.vineyardName}
-                      </h5>
-                      <p className="text-xs text-gray-600">
-                        {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
-                      </p>
-                      <p className="text-xs font-medium text-gray-800 mt-1">
-                        State: <span className="text-purple-600">{batch.state}</span>
-                      </p>
-                      <p className="text-xs font-medium text-gray-800 mt-1">
-                        {getBatchStatus(batch)}
-                      </p>
-                      <WineBatchBalanceDisplay batch={batch} />
-                      <WineQualityDisplay batch={batch} />
-                      <OxidationDisplay batch={batch} />
-                      
-                      {/* Fermentation Status Badge */}
-                      <FermentationStatusBadge batch={batch} />
-                      
-                      {/* Fermentation Effects Display */}
-                      <FermentationEffectsDisplay batch={batch} />
-                      
-                      {/* Wine Characteristics Display */}
-                      <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
-
-                    </div>
+                <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                  {/* Wine Batch Header */}
+                  <div className="flex justify-between items-start mb-3">
+                    <h5 className="font-semibold text-gray-900 text-base">
+                      {batch.grape} - {batch.vineyardName}
+                    </h5>
                     
                     {/* Action Buttons */}
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2">
                       <Button
                         onClick={() => handleBalanceBreakdownClick(batch.id)}
                         size="sm"
@@ -475,6 +397,44 @@ const Winery: React.FC = () => {
                         </Button>
                       )}
                     </div>
+                  </div>
+
+                  {/* 3-Grid Layout */}
+                  <div className="grid grid-cols-3 gap-6">
+                    {/* Left Grid: Basic Wine Info */}
+                    <div className="space-y-2">
+                      <div className="text-xs text-gray-600">
+                        {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
+                      </div>
+                      <WineBatchBalanceDisplay batch={batch} />
+                      <WineQualityDisplay batch={batch} />
+                    </div>
+
+                    {/* Center Grid: Current Activity & Effects */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-gray-800">
+                        Current Activity: <span className="text-purple-600">
+                          {batch.state
+                            .split('_')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ')}
+                        </span>
+                      </div>
+                      
+                      {/* Fermentation Status Badge */}
+                      <FermentationStatusBadge batch={batch} />
+                      
+                      {/* Fermentation Effects Display */}
+                      <FermentationEffectsDisplay batch={batch} />
+                    </div>
+
+                    {/* Right Grid: Features */}
+                    <FeatureStatusGrid batch={batch} />
+                  </div>
+
+                  {/* Wine Characteristics Display (Collapsible) */}
+                  <div className="mt-4">
+                    <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
                   </div>
                 </div>
               ))}

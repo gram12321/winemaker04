@@ -5,6 +5,7 @@ import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState'
 import { getTransactions } from '@/lib/services/user/financeService';
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 
 /**
  * Bookkeeping Work Calculator
@@ -188,6 +189,6 @@ export async function completeBookkeeping(activity: any): Promise<void> {
     `Processed ${transactionCount} transactions.`,
     'bookkeepingWorkCalculator.onBookkeepingComplete',
     'Bookkeeping Complete',
-    'Activities & Tasks'
+    NotificationCategory.ACTIVITIES_TASKS
   );
 }

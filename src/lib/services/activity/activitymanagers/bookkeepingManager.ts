@@ -1,5 +1,5 @@
 import { getGameState } from '@/lib/services/core/gameState';
-import { WorkCategory } from '@/lib/types/types';
+import { WorkCategory, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { calculateTotalBookkeepingWork } from '../workcalculators/bookkeepingWorkCalculator';
@@ -67,7 +67,7 @@ async function handleSpilloverPenalties(spilloverData: {
       `${spilloverData.spilloverWork.toFixed(0)} extra work units added to new bookkeeping task.`,
       'bookkeepingManager.handleSpillovers',
       'Bookkeeping Penalty',
-      'Administration'
+      NotificationCategory.ADMINISTRATION
     );
   } catch (error) {
     console.error('Error handling spillover penalties:', error);
@@ -103,7 +103,7 @@ async function notifyBookkeepingCreated(
   const spilloverText = hasSpillover ? ' with spillover penalties' : '';
   const fullMessage = `${baseMessage}${spilloverText}. Processing ${seasonData.transactionCount} transactions (${totalWork} work units).`;
   
-  await notificationService.addMessage(fullMessage, 'bookkeepingManager.createBookkeepingNotification', 'Bookkeeping Started', 'Administration');
+  await notificationService.addMessage(fullMessage, 'bookkeepingManager.createBookkeepingNotification', 'Bookkeeping Started', NotificationCategory.ADMINISTRATION);
 }
 
 // Clean up incomplete bookkeeping tasks

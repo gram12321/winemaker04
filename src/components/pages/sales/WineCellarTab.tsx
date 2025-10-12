@@ -5,11 +5,10 @@ import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
-import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore } from '@/hooks';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, FeatureBadges, FeatureRiskDisplay } from '../../ui';
+import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { getOxidationRiskDisplay } from '@/lib/services/wine/oxidationService';
-import { getOxidationRiskLabel } from '@/lib/constants/oxidationConstants';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 
 // Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -38,32 +37,14 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   );
 };
 
-// Component for oxidation risk/status display
-const OxidationDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const riskDisplay = getOxidationRiskDisplay(batch);
-  const riskLabel = getOxidationRiskLabel(batch.oxidation);
-  
-  // Use inverted color for risk (lower risk = better = green)
-  const invertedRisk = 1 - batch.oxidation;
-  const colorClass = getColorClass(invertedRisk);
-
-  return (
-    <div className="text-xs text-gray-600">
-      <span className="font-medium">Oxidation:</span> <span className={`font-medium ${colorClass}`}>{riskDisplay}</span>
-      {!batch.isOxidized && batch.oxidation > 0.05 && (
-        <span className="text-gray-500 ml-1">({riskLabel})</span>
-      )}
-    </div>
-  );
-};
-
 // Component for wine score display with tooltip
 const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   const wineScoreData = useWineCombinedScore(wine);
+  const featureDetails = useWineFeatureDetails(wine);
   
-  if (!wineScoreData) return null;
+  if (!wineScoreData || !featureDetails) return null;
   
-  const rawCombinedScore = (wine.quality + wine.balance) / 2;
+  const { effectiveQuality, qualityPenalty, presentFeatures, hasFaults } = featureDetails;
   
   return (
     <TooltipProvider>
@@ -76,12 +57,24 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Wine Score Calculation</div>
-            <div>Quality: <span className="font-medium">{formatPercent(wine.quality, 1, true)}</span></div>
+            <div>Base Quality: <span className="font-medium">{formatPercent(wine.quality, 1, true)}</span></div>
+            {hasFaults && qualityPenalty > 0.001 && (
+              <>
+                <div className="text-red-600">
+                  Feature Penalty: <span className="font-medium">-{formatPercent(qualityPenalty, 1, true)}</span>
+                </div>
+                <div className="ml-2 text-xs text-gray-600">
+                  {presentFeatures.map((f: any, idx: number) => (
+                    <div key={idx}>• {f.feature.icon} {f.config.name}</div>
+                  ))}
+                </div>
+                <div>Effective Quality: <span className="font-medium">{formatPercent(effectiveQuality, 1, true)}</span></div>
+              </>
+            )}
             <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
-            <div>Raw Average: <span className="font-medium">{formatPercent(rawCombinedScore, 1, true)}</span></div>
-            <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
+            <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
             <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-              Formula: (Quality + Balance) ÷ 2
+              Formula: (Effective Quality + Balance) ÷ 2
             </div>
           </div>
         </TooltipContent>
@@ -93,12 +86,15 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 // Component for estimated price display with tooltip
 const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   const wineScoreData = useWineCombinedScore(wine);
+  const featureDetails = useWineFeatureDetails(wine);
   
-  if (!wineScoreData) return null;
+  if (!wineScoreData || !featureDetails) return null;
   
   const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
   const basePrice = wineScoreData.score * baseRate;
   const multiplier = calculateAsymmetricalMultiplier(wineScoreData.score);
+  
+  const { presentFeatures, hasFaults, priceImpact } = featureDetails;
   
   return (
     <TooltipProvider>
@@ -110,11 +106,23 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Estimated Price Calculation</div>
             <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
-            <div>Base Rate: <span className="font-medium">{formatCurrency(baseRate, 2)}/bottle</span></div>
+            {hasFaults && priceImpact && priceImpact.priceDifference > 0.01 && (
+              <>
+                <div className="text-red-600 text-[10px]">
+                  ⚠️ Price reduced by {formatCurrency(priceImpact.priceDifference, 2)} due to:
+                </div>
+                <div className="ml-2 text-[10px] text-gray-600">
+                  {presentFeatures.map((f: any, idx: number) => (
+                    <div key={idx}>• {f.feature.icon} {f.config.name}</div>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="border-t pt-1 mt-1">Base Rate: <span className="font-medium">{formatCurrency(baseRate, 2)}/bottle</span></div>
             <div>Base Price: <span className="font-medium">{formatCurrency(basePrice, 2)}</span></div>
-            <div>Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
+            <div>Quality Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
             <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-              Formula: (Combined × Base Rate) × Multiplier
+              Formula: (Wine Score × Base Rate) × Multiplier
             </div>
           </div>
         </TooltipContent>
@@ -425,13 +433,22 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                         {wine.quantity}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
-                          wine.quantity > 0 
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {wine.quantity > 0 ? 'Ready for Sale' : 'Sold Out'}
-                        </span>
+                        <div className="flex flex-col gap-1.5">
+                          <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
+                            wine.quantity > 0 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {wine.quantity > 0 ? 'Ready for Sale' : 'Sold Out'}
+                          </span>
+                          {wine.features && wine.features.length > 0 && (
+                            <FeatureBadges 
+                              features={wine.features} 
+                              configs={getAllFeatureConfigs()}
+                              showSeverity
+                            />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                     {expandedBatches[wine.id] && (
@@ -453,8 +470,14 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                                 <WineBatchBalanceDisplay batch={wine} />
                               </div>
                               <div>
-                                <div className="text-xs text-gray-500 uppercase mb-1">Oxidation</div>
-                                <OxidationDisplay batch={wine} />
+                                <div className="text-xs text-gray-500 uppercase mb-1">Features</div>
+                                <FeatureRiskDisplay 
+                                  batch={wine} 
+                                  featureId="oxidation" 
+                                  featureName="Oxidation"
+                                  showTooltip={false}
+                                  className="mt-1"
+                                />
                               </div>
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Actions</div>

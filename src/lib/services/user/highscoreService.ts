@@ -1,6 +1,6 @@
 import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
-import { Season } from '../../types/types';
+import { Season, NotificationCategory } from '../../types/types';
 
 export type ScoreType = 
   | 'company_value' 
@@ -381,7 +381,7 @@ class HighscoreService {
       const message = scoreType 
         ? `Cleared ${scoreType} highscores`
         : 'Cleared all highscores';
-      await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', 'System');
+      await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', NotificationCategory.SYSTEM);
       return { success: true };
     } catch (error) {
       console.error('Error clearing highscores:', error);

@@ -3,7 +3,6 @@ import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadWineOrders } from '../../database/customers/salesDB';
 import { getCurrentPrestige } from '../core/gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
-import { getAvailableBottledWines } from '../../utils';
 
 /**
  * Generate a customer based on company prestige
@@ -36,7 +35,7 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   
   // Check if we have bottled wines available
   const allBatches = await loadWineBatches();
-  const bottledWines = getAvailableBottledWines(allBatches);
+  const bottledWines = allBatches.filter(batch => batch.state === 'bottled' && batch.quantity > 0);
   
   if (bottledWines.length === 0) {
     return {

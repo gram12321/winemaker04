@@ -5,7 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { StaffTeam, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 import { saveTeamToDb, loadTeamsFromDb, deleteTeamFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
+import { saveStaffToDb } from '@/lib/database/core/staffDB';
 
 // ===== DEFAULT TEAMS =====
 
@@ -104,7 +106,7 @@ export async function addTeam(team: StaffTeam): Promise<StaffTeam> {
   // Check if team name already exists
   const existingTeam = currentTeams.find(t => t.name === team.name);
   if (existingTeam) {
-    await notificationService.addMessage('A team with this name already exists', 'teamService.addTeam', 'Team Creation Error', 'System');
+    await notificationService.addMessage('A team with this name already exists', 'teamService.addTeam', 'Team Creation Error', NotificationCategory.SYSTEM);
     throw new Error('Team name already exists');
   }
   
@@ -118,7 +120,7 @@ export async function addTeam(team: StaffTeam): Promise<StaffTeam> {
   const updatedTeams = [...currentTeams, team];
   updateGameState({ teams: updatedTeams });
   
-  await notificationService.addMessage(`Team "${team.name}" has been created!`, 'teamService.createTeam', 'Team Creation', 'Team Management');
+  await notificationService.addMessage(`Team "${team.name}" has been created!`, 'teamService.createTeam', 'Team Creation', NotificationCategory.STAFF_MANAGEMENT);
   return team;
 }
 
@@ -131,7 +133,7 @@ export async function removeTeam(teamId: string): Promise<boolean> {
   const team = currentTeams.find(t => t.id === teamId);
   
   if (!team) {
-    await notificationService.addMessage('Team not found', 'teamService.removeTeam', 'Team Deletion Error', 'System');
+    await notificationService.addMessage('Team not found', 'teamService.removeTeam', 'Team Deletion Error', NotificationCategory.SYSTEM);
     return false;
   }
   
@@ -151,7 +153,7 @@ export async function removeTeam(teamId: string): Promise<boolean> {
   const updatedTeams = currentTeams.filter(t => t.id !== teamId);
   updateGameState({ teams: updatedTeams, staff: updatedStaff });
   
-  await notificationService.addMessage(`Team "${team.name}" has been deleted`, 'teamService.removeTeam', 'Team Deletion', 'Team Management');
+  await notificationService.addMessage(`Team "${team.name}" has been deleted`, 'teamService.removeTeam', 'Team Deletion', NotificationCategory.STAFF_MANAGEMENT);
   return true;
 }
 
@@ -164,14 +166,14 @@ export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
   
   const teamIndex = currentTeams.findIndex(t => t.id === updatedTeam.id);
   if (teamIndex === -1) {
-    await notificationService.addMessage('Team not found', 'teamService.updateTeam', 'Team Update Error', 'System');
+    await notificationService.addMessage('Team not found', 'teamService.updateTeam', 'Team Update Error', NotificationCategory.SYSTEM);
     throw new Error('Team not found');
   }
   
   // Check if team name already exists (excluding current team)
   const existingTeam = currentTeams.find(t => t.name === updatedTeam.name && t.id !== updatedTeam.id);
   if (existingTeam) {
-    await notificationService.addMessage('A team with this name already exists', 'teamService.updateTeam', 'Team Update Error', 'System');
+    await notificationService.addMessage('A team with this name already exists', 'teamService.updateTeam', 'Team Update Error', NotificationCategory.SYSTEM);
     throw new Error('Team name already exists');
   }
   
@@ -186,7 +188,7 @@ export async function updateTeam(updatedTeam: StaffTeam): Promise<StaffTeam> {
   updatedTeams[teamIndex] = updatedTeam;
   updateGameState({ teams: updatedTeams });
   
-  await notificationService.addMessage(`Team "${updatedTeam.name}" has been updated!`, 'teamService.updateTeam', 'Team Update', 'Team Management');
+  await notificationService.addMessage(`Team "${updatedTeam.name}" has been updated!`, 'teamService.updateTeam', 'Team Update', NotificationCategory.STAFF_MANAGEMENT);
   return updatedTeam;
 }
 
@@ -207,42 +209,56 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
   
   const staff = allStaff.find(s => s.id === staffId);
   if (!staff) {
-    await notificationService.addMessage('Staff member not found', 'teamService.assignStaff', 'Staff Assignment Error', 'System');
+    await notificationService.addMessage('Staff member not found', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     return false;
   }
   
   // Verify team exists
   const team = allTeams.find(t => t.id === teamId);
   if (!team) {
-    await notificationService.addMessage('Team not found', 'teamService.assignStaff', 'Staff Assignment Error', 'System');
+    await notificationService.addMessage('Team not found', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     return false;
   }
   
   // Check if staff is already assigned to this team
   if (staff.teamIds.includes(teamId)) {
-    await notificationService.addMessage('Staff member is already assigned to this team', 'teamService.assignStaff', 'Staff Assignment Error', 'System');
+    await notificationService.addMessage('Staff member is already assigned to this team', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     return false;
   }
   
   // Update teams: add staff to team
-  const updatedTeams = allTeams.map(t => {
-    if (t.id === teamId && !t.memberIds.includes(staffId)) {
-      return {
-        ...t,
-        memberIds: [...t.memberIds, staffId]
-      };
-    }
-    return t;
-  });
+  const updatedTeam = {
+    ...team,
+    memberIds: [...team.memberIds, staffId]
+  };
+  
+  const updatedTeams = allTeams.map(t => 
+    t.id === teamId ? updatedTeam : t
+  );
   
   // Update staff member: add team to their assignments
+  const updatedStaffMember = {
+    ...staff,
+    teamIds: [...staff.teamIds, teamId]
+  };
+  
   const updatedStaff = allStaff.map(s => 
-    s.id === staffId ? { ...s, teamIds: [...s.teamIds, teamId] } : s
+    s.id === staffId ? updatedStaffMember : s
   );
+  
+  // Persist to database
+  const staffSaved = await saveStaffToDb(updatedStaffMember);
+  const teamSaved = await saveTeamToDb(updatedTeam);
+  
+  if (!staffSaved || !teamSaved) {
+    console.error('Failed to persist staff-team assignment to database');
+    await notificationService.addMessage('Failed to save team assignment', 'teamService.assignStaff', 'Staff Assignment Error', NotificationCategory.SYSTEM);
+    return false;
+  }
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  await notificationService.addMessage(`${staff.name} assigned to ${team.name}`, 'teamService.assignStaff', 'Staff Assignment', 'Staff Management');
+  await notificationService.addMessage(`${staff.name} assigned to ${team.name}`, 'teamService.assignStaff', 'Staff Assignment', NotificationCategory.STAFF_MANAGEMENT);
   return true;
 }
 
@@ -256,41 +272,55 @@ export async function removeStaffFromTeam(staffId: string, teamId: string): Prom
   
   const staff = allStaff.find(s => s.id === staffId);
   if (!staff) {
-    await notificationService.addMessage('Staff member not found', 'teamService.removeStaffFromTeam', 'Staff Removal Error', 'System');
+    await notificationService.addMessage('Staff member not found', 'teamService.removeStaffFromTeam', 'Staff Removal Error', NotificationCategory.SYSTEM);
     return false;
   }
   
   const team = allTeams.find(t => t.id === teamId);
   if (!team) {
-    await notificationService.addMessage('Team not found', 'teamService.removeStaffFromTeam', 'Staff Removal Error', 'System');
+    await notificationService.addMessage('Team not found', 'teamService.removeStaffFromTeam', 'Staff Removal Error', NotificationCategory.SYSTEM);
     return false;
   }
   
   // Check if staff is assigned to this team
   if (!staff.teamIds.includes(teamId)) {
-    await notificationService.addMessage('Staff member is not assigned to this team', 'teamService.removeStaffFromTeam', 'Staff Removal Error', 'System');
+    await notificationService.addMessage('Staff member is not assigned to this team', 'teamService.removeStaffFromTeam', 'Staff Removal Error', NotificationCategory.SYSTEM);
     return false;
   }
   
   // Update teams: remove staff from team
-  const updatedTeams = allTeams.map(t => {
-    if (t.id === teamId) {
-      return {
-        ...t,
-        memberIds: t.memberIds.filter(id => id !== staffId)
-      };
-    }
-    return t;
-  });
+  const updatedTeam = {
+    ...team,
+    memberIds: team.memberIds.filter(id => id !== staffId)
+  };
+  
+  const updatedTeams = allTeams.map(t => 
+    t.id === teamId ? updatedTeam : t
+  );
   
   // Update staff member: remove team from their assignments
+  const updatedStaffMember = {
+    ...staff,
+    teamIds: staff.teamIds.filter(id => id !== teamId)
+  };
+  
   const updatedStaff = allStaff.map(s => 
-    s.id === staffId ? { ...s, teamIds: s.teamIds.filter(id => id !== teamId) } : s
+    s.id === staffId ? updatedStaffMember : s
   );
+  
+  // Persist to database
+  const staffSaved = await saveStaffToDb(updatedStaffMember);
+  const teamSaved = await saveTeamToDb(updatedTeam);
+  
+  if (!staffSaved || !teamSaved) {
+    console.error('Failed to persist staff-team removal to database');
+    await notificationService.addMessage('Failed to save team removal', 'teamService.removeStaffFromTeam', 'Staff Removal Error', NotificationCategory.SYSTEM);
+    return false;
+  }
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  await notificationService.addMessage(`${staff.name} removed from ${team.name}`, 'teamService.removeStaffFromTeam', 'Staff Removal', 'Staff Management');
+  await notificationService.addMessage(`${staff.name} removed from ${team.name}`, 'teamService.removeStaffFromTeam', 'Staff Removal', NotificationCategory.STAFF_MANAGEMENT);
   
   return true;
 }
@@ -346,5 +376,5 @@ export async function resetTeamsToDefault(): Promise<void> {
     staff: updatedStaff
   });
   
-  await notificationService.addMessage('Teams reset to default configuration', 'teamService.resetTeamsToDefault', 'Team Reset', 'Team Management');
+  await notificationService.addMessage('Teams reset to default configuration', 'teamService.resetTeamsToDefault', 'Team Reset', NotificationCategory.STAFF_MANAGEMENT);
 }

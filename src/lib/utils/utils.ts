@@ -1,31 +1,51 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { WineBatch, Customer } from '../types/types';
+import { Customer, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
+import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
 
+// ========================================
+// SECTION 1: CORE UTILITIES
+// ========================================
+
+/**
+ * Merge Tailwind CSS classes with proper conflict resolution
+ * Used throughout the app for dynamic className composition
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-// ===== GENERIC HELPERS =====
 
+/**
+ * Get random element from array
+ * @example getRandomFromArray(['red', 'blue', 'green']) // Returns random color
+ */
 export function getRandomFromArray<T>(array: readonly T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-
-// Format timestamp as HH:MM:SS
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+/**
+ * Clamp value to 0-1 range (used in wine characteristics and balance calculations)
+ */
+export function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
-// ===== NUMBER FORMATTING UTILITIES =====
+// ========================================
+// SECTION 2: NUMBER & CURRENCY FORMATTING
+// ========================================
 
 /**
  * Format a number with appropriate thousand separators and decimal places
  * More flexible version that handles different number sizes intelligently
+ * 
  * @param value The number to format
  * @param options Formatting options
  * @returns Formatted number string
+ * 
+ * @example
+ * formatNumber(1234.5) // "1.234,50" (German locale)
+ * formatNumber(0.987, { adaptiveNearOne: true }) // "0.98700" (extra precision near 1.0)
  */
 export function formatNumber(value: number, options?: {
   decimals?: number;
@@ -79,10 +99,15 @@ export function formatNumber(value: number, options?: {
 
 /**
  * Format a number as currency (Euros) with optional compact notation
+ * 
  * @param value The amount to format
  * @param decimals Number of decimal places (default: 0 for regular, 1 for compact)
  * @param compact Whether to use compact notation (K, M, B, T) (default: false)
  * @returns Formatted currency string
+ * 
+ * @example
+ * formatCurrency(1234.56) // "€1,235"
+ * formatCurrency(1234567, undefined, true) // "€1.2M"
  */
 export function formatCurrency(value: number, decimals?: number, compact: boolean = false): string {
   if (typeof value !== 'number' || isNaN(value)) return '€0';
@@ -117,9 +142,13 @@ export function formatCurrency(value: number, decimals?: number, compact: boolea
 
 /**
  * Format a number in compact notation (K, M, B, T)
+ * 
  * @param value The number to format
  * @param decimals Number of decimal places (default: 1)
  * @returns Compact formatted number string
+ * 
+ * @example
+ * formatCompact(1234567) // "1.2M"
  */
 export function formatCompact(value: number, decimals: number = 1): string {
   if (typeof value !== 'number' || isNaN(value)) return '0';
@@ -141,10 +170,14 @@ export function formatCompact(value: number, decimals: number = 1): string {
 
 /**
  * Format a number as percentage
+ * 
  * @param value The number to format (0-1 range or 0-100 range)
  * @param decimals Number of decimal places (default: 1)
  * @param isDecimal Whether the input is in decimal form (0-1) or percentage form (0-100)
  * @returns Formatted percentage string
+ * 
+ * @example
+ * formatPercent(0.873, 1) // "87.3%"
  */
 export function formatPercent(value: number, decimals: number = 1, isDecimal: boolean = true): string {
   if (typeof value !== 'number' || isNaN(value)) return '0%';
@@ -158,10 +191,20 @@ export function formatPercent(value: number, decimals: number = 1, isDecimal: bo
   }).format(percentage / 100);
 }
 
-// ===== DATE & TIME UTILITIES =====
+// ========================================
+// SECTION 3: DATE & TIME FORMATTING
+// ========================================
+
+/**
+ * Format timestamp as HH:MM:SS
+ */
+export function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 /**
  * Format a date as a readable string
+ * 
  * @param date The date to format
  * @param includeTime Whether to include time (default: false)
  * @returns Formatted date string
@@ -185,10 +228,8 @@ export function formatDate(date: Date, includeTime: boolean = false): string {
 
 /**
  * Format game date components as a readable string
- * @param week The week number
- * @param season The season name
- * @param year The year
- * @returns Formatted game date string
+ * 
+ * @example formatGameDate(3, 'Summer', 2024) // "Week 3, Summer 2024"
  */
 export function formatGameDate(week?: number, season?: string, year?: number): string {
   const weekNum = week || 1;
@@ -200,17 +241,19 @@ export function formatGameDate(week?: number, season?: string, year?: number): s
 
 /**
  * Format game date object as a readable string
- * @param gameDate Object with week, season, and year properties
- * @returns Formatted game date string
  */
 export function formatGameDateFromObject(gameDate: { week: number; season: string; year: number }): string {
   return formatGameDate(gameDate.week, gameDate.season, gameDate.year);
 }
 
-// ===== GAME CALCULATION UTILITIES =====
+// ========================================
+// SECTION 4: GAME TIME CALCULATIONS
+// ========================================
 
 /**
  * Calculate absolute weeks from game start (2024, Week 1)
+ * Used for calculating game progression and time-based effects
+ * 
  * @param currentWeek Current week number
  * @param currentSeason Current season
  * @param currentYear Current year
@@ -241,7 +284,8 @@ export function calculateAbsoluteWeeks(
 }
 
 /**
- * Calculate weeks elapsed for a company
+ * Calculate weeks elapsed for a company since founding
+ * 
  * @param foundedYear Year the company was founded
  * @param currentWeek Current week number
  * @param currentSeason Current season
@@ -257,32 +301,13 @@ export function calculateCompanyWeeks(
   return calculateAbsoluteWeeks(currentWeek, currentSeason, currentYear, 1, 'Spring', foundedYear);
 }
 
-// ===== GAME-SPECIFIC UTILITIES =====
-
-/**
- * Get country code for flag display
- * @param countryName The country name
- * @returns Country code for flag
- */
-export function getCountryCodeForFlag(countryName: string | undefined | null): string {
-  if (!countryName) return '';
-
-  const countryToCodeMap: Record<string, string> = {
-    "Italy": "it",
-    "France": "fr", 
-    "Spain": "es",
-    "US": "us",
-    "United States": "us",
-    "Germany": "de",
-  };
-
-  return countryToCodeMap[countryName] || '';
-}
+// ========================================
+// SECTION 5: WINE QUALITY & SCORING
+// ========================================
 
 /**
  * Get wine quality category based on quality value (0-1)
- * @param quality Quality value between 0 and 1
- * @returns Quality category string
+ * Maps quality scores to readable tier names
  */
 export function getWineQualityCategory(quality: number): string {
   if (quality < 0.1) return "Undrinkable";
@@ -299,8 +324,7 @@ export function getWineQualityCategory(quality: number): string {
 
 /**
  * Get wine quality description based on quality value (0-1)
- * @param quality Quality value between 0 and 1
- * @returns Quality description string
+ * Provides detailed description of quality tier
  */
 export function getWineQualityDescription(quality: number): string {
   if (quality < 0.1) return "Wines that are not suitable for consumption";
@@ -317,8 +341,7 @@ export function getWineQualityDescription(quality: number): string {
 
 /**
  * Get wine quality info (category and description) based on quality value (0-1)
- * @param quality Quality value between 0 and 1
- * @returns Object with category and description
+ * Convenience function combining both category and description
  */
 export function getWineQualityInfo(quality: number): { category: string; description: string } {
   return {
@@ -327,10 +350,13 @@ export function getWineQualityInfo(quality: number): { category: string; descrip
   };
 }
 
+// ========================================
+// SECTION 6: COLOR & BADGE UTILITIES
+// ========================================
+
 /**
- * Get color category based on quality value (0-1)
- * @param value Quality value between 0 and 1
- * @returns Color category string
+ * Get color category name based on value (0-1)
+ * Used for displaying quality level labels
  */
 export function getColorCategory(value: number): string {
   if (value < 0.1) return "Awful";
@@ -346,9 +372,10 @@ export function getColorCategory(value: number): string {
 }
 
 /**
- * Get color class based on quality value (0-1)
- * @param value Quality value between 0 and 1
- * @returns CSS color class
+ * Get Tailwind color class based on quality value (0-1)
+ * Returns text color class from red (poor) to green (excellent)
+ * 
+ * @example getColorClass(0.85) // "text-green-700"
  */
 export function getColorClass(value: number): string {
   const level = Math.max(0, Math.min(9, Math.floor(value * 10)));
@@ -369,8 +396,9 @@ export function getColorClass(value: number): string {
 
 /**
  * Get badge color classes based on rating value (0-1)
- * @param value Rating value between 0 and 1
- * @returns Object with text and background color classes
+ * Returns both text and background colors for badge components
+ * 
+ * @example getBadgeColorClasses(0.85) // { text: 'text-green-700', bg: 'bg-green-100' }
  */
 export function getBadgeColorClasses(value: number): { text: string; bg: string } {
   const level = Math.max(0, Math.min(9, Math.floor(value * 10)));
@@ -389,22 +417,42 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
   return colorMap[level] || { text: 'text-gray-500', bg: 'bg-gray-100' };
 }
 
-
-// ===== WINE FILTERING UTILITIES =====
+// ========================================
+// SECTION 7: UI & DISPLAY UTILITIES
+// ========================================
 
 /**
- * Filter wine batches to only bottled wines with quantity > 0
- * This is a common operation used across order generation and customer acquisition
+ * Get flag icon CSS class for country flags using flag-icon-css
+ * Returns the complete CSS class string for use with flag-icon-css library
+ * Loaded via: https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css
  * 
- * @param batches - Array of wine batches to filter
- * @returns Array of bottled wines with inventory
+ * @param countryName - Name of the country (e.g., "Italy", "France", "US")
+ * @returns Complete CSS class string (e.g., "flag-icon flag-icon-it")
+ * 
+ * @example
+ * <span className={getFlagIcon("Italy")}></span>
+ * // Returns: <span class="flag-icon flag-icon-it"></span>
  */
-export function getAvailableBottledWines(batches: WineBatch[]): WineBatch[] {
-  return batches.filter(batch => 
-    batch.state === 'bottled' && 
-    batch.quantity > 0
-  );
+export function getFlagIcon(countryName: string | undefined | null): string {
+  if (!countryName) return "flag-icon flag-icon-xx";
+  
+  const countryToFlagCode: { [key: string]: string } = {
+    "Italy": "it",
+    "France": "fr", 
+    "Spain": "es",
+    "United States": "us",
+    "US": "us",
+    "Germany": "de",
+  };
+  
+  const flagCode = countryToFlagCode[countryName] || "xx";
+  return `flag-icon flag-icon-${flagCode}`;
 }
+
+/**
+ * Common class names for reset buttons (used in Winepedia)
+ */
+export const RESET_BUTTON_CLASSES = "px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors";
 
 /**
  * Load and format relationship breakdown for UI display
@@ -420,64 +468,15 @@ export async function loadFormattedRelationshipBreakdown(customer: Customer): Pr
   }
 }
 
-// ===== FLAG UTILITIES =====
-
-/**
- * Get flag icon CSS class for country flags using flag-icon-css
- * Note: This requires flag-icon-css library to be loaded
- */
-export function getFlagIcon(countryName: string): string {
-  const countryToFlagCode: { [key: string]: string } = {
-    "Italy": "it",
-    "France": "fr", 
-    "Spain": "es",
-    "United States": "us",
-    "US": "us", // Alternative US format
-    "Germany": "de",
-  };
-  
-  const flagCode = countryToFlagCode[countryName] || "xx"; // Default to unknown flag
-  return `flag-icon flag-icon-${flagCode}`;
-}
-
-/**
- * Get flag code for country flags
- */
-export function getCountryFlag(countryName: string): string {
-  const countryToFlagCode: { [key: string]: string } = {
-    "Italy": "it",
-    "France": "fr", 
-    "Spain": "es",
-    "United States": "us",
-    "US": "us", // Alternative US format
-    "Germany": "de",
-  };
-  
-  const flagCode = countryToFlagCode[countryName] || "xx";
-  return flagCode;
-}
-
-/**
- * Get flag emoji for nationality
- */
-export function getNationalityFlag(nationality: string): string {
-  const flagMap: Record<string, string> = {
-    'Italy': '🇮🇹',
-    'Germany': '🇩🇪',
-    'France': '🇫🇷',
-    'Spain': '🇪🇸',
-    'United States': '🇺🇸',
-    'US': '🇺🇸' // Alternative US format
-  };
-  return flagMap[nationality] || '🌍';
-}
-
-// ===== WINE CHARACTERISTIC UTILITIES =====
+// ========================================
+// SECTION 8: WINE CHARACTERISTICS & BALANCE
+// ========================================
 
 /**
  * Get display name for wine characteristic keys
- * @param characteristic The characteristic key (e.g., 'aroma', 'body')
- * @returns Display name (e.g., 'Aroma', 'Body')
+ * Converts snake_case or camelCase to Title Case
+ * 
+ * @example getCharacteristicDisplayName('aroma') // "Aroma"
  */
 export function getCharacteristicDisplayName(characteristic: string): string {
   const names: Record<string, string> = {
@@ -491,113 +490,32 @@ export function getCharacteristicDisplayName(characteristic: string): string {
   return names[characteristic] || characteristic;
 }
 
-// ===== EMOJI MAPPINGS =====
-
-export const NAVIGATION_EMOJIS = {
-  dashboard: '🏠',
-  vineyard: '🍇',
-  winery: '🏭',
-  sales: '🍷',
-  finance: '💰'
-} as const;
-
-export const STATUS_EMOJIS = {
-  time: '📅',
-  money: '💰',
-  prestige: '⭐',
-  wine: '🍷',
-  grape: '🍇',
-  building: '🏭',
-  field: '🌾',
-  season: {
-    Spring: '🌸',
-    Summer: '☀️',
-    Fall: '🍂',
-    Winter: '❄️'
-  }
-} as const;
-
-export const QUALITY_EMOJIS = {
-  poor: '😞',
-  fair: '😐',
-  good: '😊',
-  excellent: '🤩',
-  perfect: '👑'
-} as const;
-
-export const SEASON_EMOJIS = {
-  Spring: '🌸',
-  Summer: '☀️',
-  Fall: '🍂',
-  Winter: '❄️'
-} as const;
-
-export const QUALITY_FACTOR_EMOJIS = {
-  landValue: '💰',
-  vineyardPrestige: '🌟',
-  regionalPrestige: '🏛️',
-  altitudeRating: '⛰️',
-  aspectRating: '🧭',
-  grapeSuitability: '🍇'
-} as const;
-
-// ===== SKILL COLOR UTILITIES =====
-
 /**
- * Skill color mapping - matches activity category colors for consistency
- * Field → Green (planting, harvesting)
- * Winery → Purple (crushing, fermentation)
- * Administration → Blue (administration tasks)
- * Sales → Amber (sales activities)
- * Maintenance → Red (building, maintenance tasks)
+ * Calculate midpoint characteristics from balanced ranges
+ * Used as default values in Winepedia filters and UI
  */
-export const SKILL_COLORS = {
-  field: '#10b981',        // green-500
-  winery: '#8b5cf6',       // purple-500/wine
-  administration: '#3b82f6', // blue-500
-  sales: '#f59e0b',        // amber-500
-  maintenance: '#ef4444'   // red-500
-} as const;
-
-/**
- * Get color for a skill key
- * @param skillKey The skill key (field, winery, administration, sales, maintenance)
- * @returns Hex color code
- */
-export function getSkillColor(skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance'): string {
-  return SKILL_COLORS[skillKey];
-}
-
-/**
- * Get skill letter abbreviation for compact display
- * @param skillKey The skill key
- * @returns Single letter abbreviation
- */
-export function getSkillLetter(skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance'): string {
-  const letters = {
-    field: 'F',
-    winery: 'W',
-    administration: 'A',
-    sales: 'S',
-    maintenance: 'M'
+export function calculateMidpointCharacteristics(): WineCharacteristics {
+  return {
+    acidity: (BASE_BALANCED_RANGES.acidity[0] + BASE_BALANCED_RANGES.acidity[1]) / 2,
+    aroma: (BASE_BALANCED_RANGES.aroma[0] + BASE_BALANCED_RANGES.aroma[1]) / 2,
+    body: (BASE_BALANCED_RANGES.body[0] + BASE_BALANCED_RANGES.body[1]) / 2,
+    spice: (BASE_BALANCED_RANGES.spice[0] + BASE_BALANCED_RANGES.spice[1]) / 2,
+    sweetness: (BASE_BALANCED_RANGES.sweetness[0] + BASE_BALANCED_RANGES.sweetness[1]) / 2,
+    tannins: (BASE_BALANCED_RANGES.tannins[0] + BASE_BALANCED_RANGES.tannins[1]) / 2
   };
-  return letters[skillKey];
 }
 
 /**
- * Get skill display name
- * @param skillKey The skill key
- * @returns Full skill name
+ * Create adjusted ranges record from base balanced ranges
+ * Returns a mutable copy for dynamic range adjustments in Winepedia
  */
-export function getSkillDisplayName(skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance'): string {
-  const names = {
-    field: 'Field Work',
-    winery: 'Winery Work',
-    administration: 'Administration',
-    sales: 'Sales',
-    maintenance: 'Maintenance'
+export function createAdjustedRangesRecord(): Record<keyof WineCharacteristics, [number, number]> {
+  return {
+    acidity: [...BASE_BALANCED_RANGES.acidity] as [number, number],
+    aroma: [...BASE_BALANCED_RANGES.aroma] as [number, number],
+    body: [...BASE_BALANCED_RANGES.body] as [number, number],
+    spice: [...BASE_BALANCED_RANGES.spice] as [number, number],
+    sweetness: [...BASE_BALANCED_RANGES.sweetness] as [number, number],
+    tannins: [...BASE_BALANCED_RANGES.tannins] as [number, number]
   };
-  return names[skillKey];
 }
-
-

@@ -6,6 +6,7 @@ import { getGameState, updateGameState } from '../core/gameState';
 import { createActivity } from '../activity/activitymanagers/activityManager';
 import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from './staffService';
 import { notificationService } from '@/components/layout/NotificationCenter';
+import { NotificationCategory } from '@/lib/types/types';
 import { addTransaction } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateTotalWork } from '../activity/workcalculators/workCalculator';
@@ -187,7 +188,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
         `Insufficient funds for staff search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
         'staffSearchService.startStaffSearch',
         'Insufficient Funds',
-        'Finance'
+        NotificationCategory.FINANCE
       );
       return null;
     }
@@ -224,7 +225,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
         `Staff search started! Cost: €${searchCost.toFixed(2)}`,
         'staffSearchService.startStaffSearch',
         'Staff Search Started',
-        'Activities & Tasks'
+        NotificationCategory.ACTIVITIES_TASKS
       );
     }
     
@@ -267,7 +268,7 @@ export async function completeStaffSearch(activity: Activity): Promise<void> {
       `Staff search complete! Found ${candidates.length} ${skillInfo.name}-level candidate${candidates.length > 1 ? 's' : ''}.`,
       'staffSearchService.completeStaffSearch',
       'Staff Search Complete',
-      'Activities & Tasks'
+      NotificationCategory.ACTIVITIES_TASKS
     );
   } catch (error) {
     console.error('Error completing staff search:', error);
@@ -289,7 +290,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
         `Insufficient funds to hire ${candidate.name}. Need €${candidate.wage.toFixed(2)} for first month's wage.`,
         'staffSearchService.startHiringProcess',
         'Insufficient Funds',
-        'Finance'
+        NotificationCategory.FINANCE
       );
       return null;
     }
@@ -315,7 +316,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
         `Started hiring process for ${candidate.name}. First month's wage will be €${candidate.wage.toFixed(2)}`,
         'staffSearchService.startHiringProcess',
         'Hiring Process Started',
-        'Staff Management'
+        NotificationCategory.STAFF_MANAGEMENT
       );
     }
     
@@ -394,7 +395,7 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
       `${candidateData.name} has joined your winery${specText}! Monthly wage: €${candidateData.wage.toFixed(2)}`,
       'staffSearchService.completeHiringProcess',
       'Staff Hired',
-      'Staff Management'
+      NotificationCategory.STAFF_MANAGEMENT
     );
   } catch (error) {
     console.error('Error completing hiring process:', error);
