@@ -4,7 +4,7 @@ import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormatte
 import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
-import { FeatureStatusGrid } from '../ui/wine/FeatureStatusGrid';
+import { FeatureStatusGrid } from '../ui/wine/WineryFeatureStatusGrid';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';

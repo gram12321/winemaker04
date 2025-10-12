@@ -34,5 +34,5 @@ export { BalanceBreakdownModal } from './modals/winebreakdownmodals/BalanceBreak
 export { QualityBreakdownModal } from './modals/winebreakdownmodals/QualityBreakdownModal';
 export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';
 export { StaffSkillBar, StaffSkillBarsList } from './components/StaffSkillBar';
-export { FeatureBadge, FeatureBadges } from './wine/FeatureBadge';
-export { FeatureRiskDisplay } from './wine/FeatureRiskDisplay';
+export { FeatureBadge, FeatureBadges } from './FeatureBadge';
+export { FeatureRiskDisplay } from './wine/WineryFeatureRiskDisplay';

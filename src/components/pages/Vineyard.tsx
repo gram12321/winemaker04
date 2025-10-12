@@ -5,7 +5,7 @@ import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAl
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
-import { HarvestRisksDisplay } from '../ui/vineyard/HarvestRisksDisplay';
+import { HarvestRisksDisplay } from '../ui/vineyard/HarvestFeatureRisksDisplay';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { getFlagIcon } from '@/lib/utils';

@@ -1,7 +1,7 @@
 // Generic Feature Badge Component
 // Displays wine features (faults and positive traits) with appropriate styling
 
-import { Badge } from '../shadCN/badge';
+import { Badge } from './shadCN/badge';
 import { WineFeature, FeatureConfig } from '@/lib/types/wineFeatures';
 
 interface FeatureBadgeProps {
