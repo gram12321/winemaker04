@@ -10,6 +10,7 @@ import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
 import { 
   previewFeatureRisks,
   calculateCumulativeRisk,
@@ -17,6 +18,7 @@ import {
   getAtRiskFeaturesInfo,
   formatFeatureRiskWarning
 } from '@/lib/services/wine/featureRiskHelper';
+import { calculateYieldMultiplier, calculatePressingQualityPenalty, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 
 /**
  * Crushing Options Modal
@@ -36,11 +38,15 @@ export const CrushingOptionsModal: React.FC<CrushingOptionsModalProps> = ({
   const [options, setOptions] = useState<CrushingOptions>({
     method: 'Mechanical Press',
     destemming: true,
-    coldSoak: false
+    coldSoak: false,
+    pressingIntensity: 0.5 // Default to medium pressure
   });
 
   // Helper data and functions
   const methodInfo = getCrushingMethodInfo();
+  
+  // Get max pressure for selected method
+  const maxPressure = methodInfo[options.method]?.maxPressure || 1.0;
 
   // Field definitions
   const fields: ActivityOptionField[] = [
@@ -92,6 +98,48 @@ Processing Effects:
 Processing Effects:
 • Yes: Raises aroma, body, and tannin characteristics
 • No: Standard processing without additional extraction effects`
+    },
+    {
+      id: 'pressingIntensity',
+      label: `Pressing Intensity (Max: ${Math.round(maxPressure * 100)}% for ${options.method})`,
+      type: 'range',
+      defaultValue: Math.min(options.pressingIntensity, maxPressure),
+      min: 0,
+      max: maxPressure,
+      step: 0.05,
+      required: true,
+      tooltip: `Control pressing pressure - tradeoff between yield and quality.
+
+EFFECTS BY INTENSITY:
+• Very Gentle (0-10%): No effects
+  → 85-88% yield, no quality impact
+
+• Light (10-30%): Minimal extraction
+  → Slight characteristic changes
+  → 88-94% yield, minor quality impact
+
+• Medium (30-60%): Balanced extraction
+  → Moderate characteristic changes
+  → 94-103% yield, moderate quality impact
+
+• High (60-100%): Aggressive extraction
+  → Significant characteristic changes
+  → 103-115% yield, major quality impact
+
+CHARACTERISTIC EFFECTS (Power Function + Method Multipliers):
+• Hand Press: 1.0x multiplier (gentle extraction)
+• Mechanical Press: 1.5x multiplier (efficient extraction)
+• Pneumatic Press: 1.9x multiplier (maximum extraction)
+
+Base Effects (before method multiplier):
+• Tannins: +20% max (hard pressing extracts more)
+• Spice: -15% max (delicate compounds damaged)
+• Aroma: -12% max (volatile compounds lost)
+
+MAX PRESSURE BY METHOD:
+• Hand Press: 50% (gentle only)
+• Mechanical: 80% (good range)
+• Pneumatic: 100% (full control)`
     }
   ];
 
@@ -135,15 +183,25 @@ Processing Effects:
     
     // Show warnings for ALL triggered feature risks (generic)
     for (const cumulativeRisk of featureRiskData.cumulativeRisks) {
-      warnings.push(formatFeatureRiskWarning(cumulativeRisk));
+      // Check if this is an independent feature
+      const config = getAllFeatureConfigs().find(c => c.id === cumulativeRisk.featureId);
+      const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
       
-      // Show cumulative if there's existing risk
-      if (cumulativeRisk.cumulative.sources.length > 1) {
-        const total = (cumulativeRisk.cumulative.total * 100).toFixed(1);
-        const sources = cumulativeRisk.cumulative.sources
-          .map(s => `${(s.risk * 100).toFixed(0)}% ${s.source}`)
-          .join(' + ');
-        warnings.push(`📊 CUMULATIVE RISK: ${total}% total (${sources})`);
+      if (strategy === 'independent') {
+        // For independent features, only show current event risk
+        warnings.push(formatFeatureRiskWarning(cumulativeRisk));
+      } else {
+        // For cumulative features, show total risk
+        warnings.push(formatFeatureRiskWarning(cumulativeRisk));
+        
+        // Show cumulative breakdown if there's existing risk
+        if (cumulativeRisk.cumulative.sources.length > 1) {
+          const total = (cumulativeRisk.cumulative.total * 100).toFixed(1);
+          const sources = cumulativeRisk.cumulative.sources
+            .map(s => `${(s.risk * 100).toFixed(0)}% ${s.source}`)
+            .join(' + ');
+          warnings.push(`📊 CUMULATIVE RISK: ${total}% total (${sources})`);
+        }
       }
       
       // Feature-specific tips
@@ -162,7 +220,8 @@ Processing Effects:
     const crushingOptions: CrushingOptions = {
       method: submittedOptions.method as CrushingOptions['method'],
       destemming: submittedOptions.destemming === 'true',
-      coldSoak: submittedOptions.coldSoak === 'true'
+      coldSoak: submittedOptions.coldSoak === 'true',
+      pressingIntensity: parseFloat(submittedOptions.pressingIntensity) || 0.5
     };
     
     // Use crushing manager to start the activity
@@ -184,6 +243,22 @@ Processing Effects:
     if ('coldSoak' in convertedOptions) {
       convertedOptions.coldSoak = convertedOptions.coldSoak === 'true';
     }
+    
+    // Clamp pressingIntensity to method's max pressure when method changes
+    if ('method' in convertedOptions && 'pressingIntensity' in convertedOptions) {
+      const newMethod = convertedOptions.method as CrushingOptions['method'];
+      const newMaxPressure = methodInfo[newMethod]?.maxPressure || 1.0;
+      convertedOptions.pressingIntensity = Math.min(
+        parseFloat(convertedOptions.pressingIntensity) || 0.5,
+        newMaxPressure
+      );
+    } else if ('method' in convertedOptions) {
+      // Only method changed - clamp existing intensity
+      const newMethod = convertedOptions.method as CrushingOptions['method'];
+      const newMaxPressure = methodInfo[newMethod]?.maxPressure || 1.0;
+      convertedOptions.pressingIntensity = Math.min(options.pressingIntensity, newMaxPressure);
+    }
+    
     setOptions((prev: CrushingOptions) => ({ ...prev, ...convertedOptions }));
   };
 
@@ -199,8 +274,10 @@ Processing Effects:
     const hasValidColdSoak = typeof currentOptions.coldSoak === 'boolean' || 
                             currentOptions.coldSoak === 'true' || 
                             currentOptions.coldSoak === 'false';
+    const hasValidIntensity = typeof currentOptions.pressingIntensity === 'number' || 
+                             !isNaN(parseFloat(currentOptions.pressingIntensity));
     
-    return validation.valid && currentOptions.method && hasValidDestemming && hasValidColdSoak;
+    return validation.valid && currentOptions.method && hasValidDestemming && hasValidColdSoak && hasValidIntensity;
   };
 
   // Early returns
@@ -264,6 +341,104 @@ Processing Effects:
         maxWidth="2xl"
         maxHeight="90vh"
       >
+        {/* Pressing Intensity Preview */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+            <span>⚙️</span>
+            <span>Pressing Intensity Effects</span>
+          </h4>
+          
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            {/* Left: Yield Impact */}
+            <div>
+              <p className="font-medium text-blue-800 mb-2">Yield Impact:</p>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Current Quantity:</span>
+                  <span className="font-mono text-blue-900">{batch?.quantity || 0} kg</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Yield Multiplier:</span>
+                  <span className="font-mono text-blue-900">
+                    {(calculateYieldMultiplier(options.pressingIntensity) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-blue-300 pt-1">
+                  <span className="text-blue-800 font-medium">Final Quantity:</span>
+                  <span className="font-mono text-blue-900 font-medium">
+                    {Math.round((batch?.quantity || 0) * calculateYieldMultiplier(options.pressingIntensity))} kg
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right: Quality Impact */}
+            <div>
+              <p className="font-medium text-blue-800 mb-2">Quality Impact:</p>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Current Quality:</span>
+                  <span className="font-mono text-blue-900">
+                    {((batch?.quality || 0) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Pressure Impact:</span>
+                  <span className={`font-mono ${calculatePressingQualityPenalty(options.pressingIntensity) < 0 ? 'text-red-600' : 'text-blue-900'}`}>
+                    {(calculatePressingQualityPenalty(options.pressingIntensity) * 100).toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-blue-300 pt-1">
+                  <span className="text-blue-800 font-medium">After Crushing:</span>
+                  <span className="font-mono text-blue-900 font-medium">
+                    {(Math.max(0, Math.min(1, (batch?.quality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Characteristic Effects Badges */}
+          {getPressingIntensityCharacteristicEffects(options.pressingIntensity, options.method).length > 0 && (
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <p className="text-xs font-medium text-blue-800 mb-2">Characteristic Changes:</p>
+              <div className="flex flex-wrap gap-1">
+                {getPressingIntensityCharacteristicEffects(options.pressingIntensity, options.method).map((effect) => {
+                  const percentage = Math.round(effect.modifier * 100);
+                  const isPositive = effect.modifier > 0;
+                  const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
+                  const sign = isPositive ? '+' : '';
+                  
+                  return (
+                    <div key={effect.characteristic} className={`text-xs px-1.5 py-0.5 rounded bg-gray-100 ${colorClass} flex items-center gap-1`}>
+                      <img src={`/assets/icons/characteristics/${effect.characteristic}.png`} alt={`${effect.characteristic} icon`} className="w-3 h-3 opacity-80" />
+                      <span>{effect.characteristic}: {sign}{percentage}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Intensity Level Description */}
+          <div className="mt-3 pt-3 border-t border-blue-200">
+            <p className="text-xs text-blue-800">
+              {options.pressingIntensity <= 0.1 && (
+                <span>🌿 <strong>Very Gentle Pressing:</strong> No effects, maximum quality retention, lower yield.</span>
+              )}
+              {options.pressingIntensity > 0.1 && options.pressingIntensity <= 0.3 && (
+                <span>🌱 <strong>Light Pressing:</strong> Minimal extraction with slight characteristic changes.</span>
+              )}
+              {options.pressingIntensity > 0.3 && options.pressingIntensity <= 0.6 && (
+                <span>⚖️ <strong>Balanced Pressing:</strong> Standard extraction with moderate characteristic changes.</span>
+              )}
+              {options.pressingIntensity > 0.6 && (
+                <span>⚠️ <strong>Aggressive Pressing:</strong> Maximum extraction with significant characteristic changes and quality impact.</span>
+              )}
+            </p>
+          </div>
+        </div>
+        
         {/* Feature Badges (if present) */}
         {featureRiskData && featureRiskData.presentFeatures.length > 0 && (
           <div className="mb-4 flex items-center gap-2">
@@ -277,7 +452,7 @@ Processing Effects:
         )}
         
         {/* Feature Risk Summary Panel */}
-        {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0) && (
+        {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0) && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
             <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
               <span>⚗️</span>
@@ -301,14 +476,38 @@ Processing Effects:
               </div>
             )}
             
-            {/* At Risk Features */}
-            {featureRiskData.atRiskFeatures.length > 0 && (
+            {/* Historical Event Risks (only for cumulative features) */}
+            {(() => {
+              // Filter to only cumulative features with actual risks
+              const cumulativeFeatures = featureRiskData.atRiskFeatures.filter(feature => {
+                const config = getAllFeatureConfigs().find(c => c.id === feature.featureId);
+                const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
+                return strategy !== 'independent' && feature.currentRisk > 0;
+              });
+              
+              if (cumulativeFeatures.length === 0) return null;
+              
+              return (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-amber-800 mb-2">Previous Event Risks:</p>
+                  {cumulativeFeatures.map(feature => (
+                    <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
+                      <span className="font-medium">{feature.icon} {feature.featureName}:</span>
+                      <span className="ml-2">{(feature.currentRisk * 100).toFixed(1)}% (from harvest)</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Current Event Risks (Dynamic Preview) */}
+            {featureRiskData.eventRisks.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-amber-800 mb-2">Accumulating Risk:</p>
-                {featureRiskData.atRiskFeatures.map(feature => (
+                <p className="text-xs font-medium text-amber-800 mb-2">Current Event Risk:</p>
+                {featureRiskData.eventRisks.map(feature => (
                   <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
                     <span className="font-medium">{feature.icon} {feature.featureName}:</span>
-                    <span className="ml-2">{(feature.currentRisk * 100).toFixed(1)}% risk</span>
+                    <span className="ml-2">{(feature.riskIncrease * 100).toFixed(1)}% (from crushing)</span>
                   </div>
                 ))}
               </div>
@@ -321,3 +520,4 @@ Processing Effects:
 };
 
 export default CrushingOptionsModal;
+

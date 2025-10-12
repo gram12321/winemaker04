@@ -9,23 +9,43 @@ import { FeatureConfig } from '../../types/wineFeatures';
  * - Manifestation: Binary (0% → 100% instant)
  * - Trigger: Time-based (weekly accumulation)
  * - Compound: Yes (risk accelerates with current risk)
+ * - Activity-Aware: Fermentation method influences oxidation risk
+ *   - Temperature Controlled: 40% less risk (sealed tanks)
+ *   - Extended Maceration: 40% more risk (oxygen exposure)
+ *   - Basic: Standard fermentation protection
  */
 export const OXIDATION_FEATURE: FeatureConfig = {
   id: 'oxidation',
   name: 'Oxidation',
   type: 'fault',
   icon: '⚠️',
-  description: 'Wine exposed to oxygen, resulting in flavor degradation and browning',
+  description: 'Wine exposed to oxygen, resulting in flavor degradation and browning. Risk influenced by fermentation method.',
   
   manifestation: 'binary',  // Jumps from 0% to 100% severity
   
   riskAccumulation: {
     trigger: 'time_based',
-    baseRate: 0.002,          // 2% per week base rate
+    baseRate: 0.002,          // 0.2% per week base rate
     stateMultipliers: {
       'grapes': 3.0,         // Fresh grapes highly exposed to air
       'must_ready': 1.5,     // Exposed must has moderate risk
-      'must_fermenting': 0.8, // CO2 from fermentation protects
+      'must_fermenting': (batch) => {
+        // Base protection from CO2 during fermentation
+        let multiplier = 0.8;
+        
+        // Fermentation method modifies oxidation risk
+        const method = batch.fermentationOptions?.method;
+        if (method === 'Temperature Controlled') {
+          // Temperature controlled = sealed tanks, better protection
+          multiplier *= 0.6;  // 40% less oxidation risk (final: 0.48)
+        } else if (method === 'Extended Maceration') {
+          // Extended skin contact = more oxygen exposure
+          multiplier *= 1.4;  // 40% more oxidation risk (final: 1.12)
+        }
+        // 'Basic' fermentation uses base multiplier (0.8)
+        
+        return multiplier;
+      },
       'bottled': 0.3         // Sealed environment greatly reduces risk
     },
     compoundEffect: true     // Risk accelerates: rate × (1 + currentRisk)
@@ -49,11 +69,11 @@ export const OXIDATION_FEATURE: FeatureConfig = {
     prestige: {
       onManifestation: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic_manifestation',
           baseAmount: -0.05,  // Company scandal when oxidation manifests
           scalingFactors: {
-            volumeWeight: 1.0,             // Batch size affects company reputation
-            valueWeight: 1.0,              // Wine value affects scandal size
+            batchSizeWeight: 1.0,         // Larger batches hurt more
+            qualityWeight: 1.0,            // Premium wine oxidizing is worse
             companyPrestigeWeight: 1.0     // Higher prestige = bigger fall
           },
           decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
@@ -109,6 +129,11 @@ export const OXIDATION_FEATURE: FeatureConfig = {
     badgeColor: 'destructive',
     warningThresholds: [0.10, 0.20, 0.40],  // 10%, 20%, 40% risk warnings
     sortPriority: 1  // Show first (most serious fault)
+  },
+  
+  harvestContext: {
+    isHarvestRisk: false,        // Oxidation is not a harvest risk (time-based)
+    isHarvestInfluence: false    // Not a harvest influence
   }
 };
 

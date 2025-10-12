@@ -31,8 +31,8 @@ export const HARVEST_YIELD_RATE = 500; // kg/week
 
 // Define initial work for each category
 export const INITIAL_WORK: Record<WorkCategory, number> = {
-  [WorkCategory.PLANTING]: 10,
-  [WorkCategory.HARVESTING]: 5,
+  [WorkCategory.PLANTING]: 30,
+  [WorkCategory.HARVESTING]: 25,
   [WorkCategory.CRUSHING]: 10,
   [WorkCategory.FERMENTATION]: 100,
   [WorkCategory.CLEARING]: 5, // Base initial work for clearing category

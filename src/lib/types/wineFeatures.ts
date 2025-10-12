@@ -51,6 +51,9 @@ export interface FeatureConfig {
   
   // UI
   ui: FeatureUIConfig;
+  
+  // Harvest context
+  harvestContext?: HarvestContextConfig;
 }
 
 /**
@@ -62,7 +65,7 @@ export interface RiskAccumulationConfig {
   
   // For time-based accumulation (like oxidation)
   baseRate?: number;               // Per game tick (week)
-  stateMultipliers?: Record<WineBatchState, number>;
+  stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>;  // Can be number or function for activity-aware multipliers
   compoundEffect?: boolean;        // Risk accelerates with current risk
   
   // For event-triggered (like green flavor from crushing)
@@ -76,7 +79,36 @@ export interface RiskAccumulationConfig {
   severityGrowth?: {
     rate: number;                  // Per game tick
     cap: number;                   // Maximum severity (0-1)
+    stateMultipliers?: Record<WineBatchState, number>; // State-based growth rates
   };
+}
+
+/**
+ * Risk accumulation strategy types - inferred from existing config parameters
+ */
+export type RiskAccumulationStrategy = 'independent' | 'cumulative' | 'severity_growth';
+
+/**
+ * Infer risk accumulation strategy from existing config parameters
+ */
+export function inferRiskAccumulationStrategy(config: RiskAccumulationConfig): RiskAccumulationStrategy {
+  // If has severityGrowth, it's severity_growth pattern
+  if (config.severityGrowth) {
+    return 'severity_growth';
+  }
+  
+  // If has eventTriggers but no baseRate, it's independent events
+  if (config.eventTriggers && config.eventTriggers.length > 0 && !config.baseRate) {
+    return 'independent';
+  }
+  
+  // If has baseRate or compoundEffect, it's cumulative
+  if (config.baseRate || config.compoundEffect) {
+    return 'cumulative';
+  }
+  
+  // Default fallback
+  return 'cumulative';
 }
 
 /**
@@ -175,6 +207,14 @@ export interface FeatureUIConfig {
   badgeColor: 'destructive' | 'warning' | 'info' | 'success';
   warningThresholds?: number[];    // Risk thresholds for warnings
   sortPriority: number;             // Display order (1 = most important)
+}
+
+/**
+ * Harvest context configuration for features
+ */
+export interface HarvestContextConfig {
+  isHarvestRisk?: boolean;     // True if this is a risk during harvest (like green flavor)
+  isHarvestInfluence?: boolean; // True if this is an influence during harvest (like terroir)
 }
 
 // ===== HELPER TYPES =====

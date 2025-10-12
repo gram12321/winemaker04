@@ -14,7 +14,8 @@ import {
   calculateSalePrestigeWithAssets, 
   calculateVineyardSalePrestige,
   calculateFeatureSalePrestigeWithReputation,
-  calculateVineyardManifestationPrestige
+  calculateVineyardManifestationPrestige,
+  calculateCompanyManifestationPrestige
 } from './prestigeCalculator';
 
 // Internal calculation output for creating prestige events
@@ -666,14 +667,24 @@ export async function addFeaturePrestigeEvent(
         return levelConfig.baseAmount;
         
       case 'dynamic_manifestation':
-        if (eventType === 'manifestation' && !isCompany) {
-          return calculateVineyardManifestationPrestige(
-            levelConfig.baseAmount,
-            batch.quantity,
-            batch.quality,
-            eventContext.vineyard?.vineyardPrestige || 1,
-            levelConfig.scalingFactors
-          );
+        if (eventType === 'manifestation') {
+          if (isCompany) {
+            return calculateCompanyManifestationPrestige(
+              levelConfig.baseAmount,
+              batch.quantity,
+              batch.quality,
+              eventContext.currentCompanyPrestige || 1,
+              levelConfig.scalingFactors
+            );
+          } else {
+            return calculateVineyardManifestationPrestige(
+              levelConfig.baseAmount,
+              batch.quantity,
+              batch.quality,
+              eventContext.vineyard?.vineyardPrestige || 1,
+              levelConfig.scalingFactors
+            );
+          }
         }
         return levelConfig.baseAmount;
         

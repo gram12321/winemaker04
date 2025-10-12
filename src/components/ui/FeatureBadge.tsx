@@ -2,6 +2,7 @@
 // Displays wine features (faults and positive traits) with appropriate styling
 
 import { Badge } from './shadCN/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './shadCN/tooltip';
 import { WineFeature, FeatureConfig } from '@/lib/types/wineFeatures';
 
 interface FeatureBadgeProps {
@@ -27,22 +28,55 @@ function getBadgeVariant(badgeColor: FeatureConfig['ui']['badgeColor']): 'defaul
   }
 }
 
+// Generate tooltip content for feature badges
+function getFeatureTooltipContent(feature: WineFeature, config: FeatureConfig): string {
+  if (config.manifestation === 'graduated' && feature.severity > 0) {
+    const severityPercent = Math.round(feature.severity * 100);
+    
+    if (config.id === 'terroir') {
+      return `Terroir Expression: ${severityPercent}% developed\n\nThis represents how much vineyard character has developed in this wine:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Early development - subtle characteristics emerging' : severityPercent < 50 ? 'Moderate development - noticeable vineyard influence' : severityPercent < 75 ? 'Strong development - pronounced terroir' : 'Full development - maximum vineyard character'}\n\nTerroir grows over time and affects wine quality and characteristics.`;
+    } else if (config.id === 'oxidation') {
+      return `Oxidation: ${severityPercent}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Minor oxidation - barely noticeable' : severityPercent < 50 ? 'Moderate oxidation - some off-flavors' : severityPercent < 75 ? 'Significant oxidation - clearly affected' : 'Severe oxidation - wine may be undrinkable'}\n\nOxidation reduces wine quality and can make it unsellable.`;
+    } else if (config.id === 'green_flavor') {
+      return `Green Flavor: ${severityPercent}% severity\n\nThis indicates the intensity of green, unripe flavors:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Subtle green notes' : severityPercent < 50 ? 'Noticeable unripe character' : severityPercent < 75 ? 'Strong green flavors' : 'Severe green, harsh taste'}\n\nGreen flavors reduce wine quality and marketability.`;
+    }
+    
+    // Generic graduated feature tooltip
+    return `${config.name}: ${severityPercent}% severity\n\nThis feature develops over time and affects wine characteristics.`;
+  }
+  
+  // Binary feature tooltip
+  return `${config.name}\n\n${config.description}`;
+}
+
 export function FeatureBadge({ feature, config, showSeverity = false, className }: FeatureBadgeProps) {
   if (!feature.isPresent) return null;
   
   const variant = getBadgeVariant(config.ui.badgeColor);
   const colorClass = config.ui.badgeColor === 'success' ? 'bg-green-100 text-green-800' : '';
+  const tooltipContent = getFeatureTooltipContent(feature, config);
   
   return (
-    <Badge variant={variant} className={`gap-1 ${colorClass} ${className || ''}`}>
-      <span>{config.icon}</span>
-      <span>{config.name}</span>
-      {showSeverity && config.manifestation === 'graduated' && feature.severity > 0 && (
-        <span className="text-xs opacity-90">
-          {Math.round(feature.severity * 100)}%
-        </span>
-      )}
-    </Badge>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant={variant} className={`gap-1 cursor-help ${colorClass} ${className || ''}`}>
+            <span>{config.icon}</span>
+            <span>{config.name}</span>
+            {showSeverity && config.manifestation === 'graduated' && feature.severity > 0 && (
+              <span className="text-xs opacity-90">
+                {Math.round(feature.severity * 100)}%
+              </span>
+            )}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="text-xs whitespace-pre-line">
+            {tooltipContent}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

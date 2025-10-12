@@ -315,6 +315,11 @@ Note: These effects apply each week while fermentation is active.`
           </div>
         </div>
       </div>
+      
+      {/* Simple oxidation risk notice */}
+      <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-700">
+        ⚠️ <strong>Oxidation Risk:</strong> Temperature Controlled reduces oxidation risk, Extended Maceration increases it.
+      </div>
     </div>
   );
 

@@ -5,6 +5,7 @@ import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable } fro
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
 import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
 import { FeatureStatusGrid } from '../ui/wine/WineryFeatureStatusGrid';
+import { EvolvingFeaturesDisplay } from '../ui/wine/WineryEvolvingFeaturesDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
@@ -346,6 +347,9 @@ const Winery: React.FC = () => {
                       
                       {/* Fermentation Effects Display */}
                       <FermentationEffectsDisplay batch={batch} />
+                      
+                      {/* Evolving Features Display */}
+                      <EvolvingFeaturesDisplay batch={batch} />
                     </div>
 
                     {/* Right Grid: Features */}

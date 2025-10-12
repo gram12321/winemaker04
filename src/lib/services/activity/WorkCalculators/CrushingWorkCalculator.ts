@@ -141,10 +141,21 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     }
 
     // Apply crushing effects to characteristics and get breakdown
-    const { characteristics: modifiedCharacteristics, breakdown: crushingBreakdown } = modifyCrushingCharacteristics({
+    const { 
+      characteristics: modifiedCharacteristics, 
+      breakdown: crushingBreakdown,
+      yieldMultiplier,
+      qualityPenalty
+    } = modifyCrushingCharacteristics({
       baseCharacteristics: batch.characteristics,
       ...crushingOptions as CrushingOptions
     });
+
+    // Apply yield multiplier to batch quantity
+    const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
+    
+    // Apply direct quality penalty (if any)
+    const finalQuality = Math.max(0, Math.min(1, batch.quality + qualityPenalty));
 
     // Note: Special features were removed for this iteration
 
@@ -163,12 +174,14 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       crushingOptions
     );
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, and features
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and quality
     await updateWineBatch(batchId, {
       state: 'must_ready',
       characteristics: modifiedCharacteristics,
       breakdown: combinedBreakdown,
-      features: batchWithEventFeatures.features
+      features: batchWithEventFeatures.features,
+      quantity: finalQuantity,
+      quality: finalQuality
     });
 
     // Deduct costs if any

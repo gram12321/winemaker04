@@ -6,6 +6,7 @@ import { WineBatch } from '../../types/types';
 import { getFeature } from './featureEffectsService';
 import { getFeatureConfig } from '../../constants/wineFeatures';
 import { previewEventRisks } from './featureRiskService';
+import { inferRiskAccumulationStrategy } from '../../types/wineFeatures';
 
 /**
  * Risk information for a single feature (generic for all features)
@@ -142,18 +143,33 @@ export function calculateCumulativeRisk(
     return { total: 1.0, sources: [{ source: 'Already present', risk: 1.0 }] };
   }
   
+  // Get feature config and infer accumulation strategy
+  const config = getFeatureConfig(featureId);
+  const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
+  
   const sources: Array<{ source: string; risk: number }> = [];
-  let total = existingFeature?.risk || 0;
+  let total = 0;
   
-  // Existing risk from previous events
-  if (existingFeature && existingFeature.risk > 0) {
-    sources.push({ source: 'Previous events', risk: existingFeature.risk });
-  }
-  
-  // New risk from current action
-  if (newRiskIncrease > 0) {
-    sources.push({ source: newSource, risk: newRiskIncrease });
-    total += newRiskIncrease;
+  if (strategy === 'independent') {
+    // Independent events - only show current event risk
+    if (newRiskIncrease > 0) {
+      sources.push({ source: newSource, risk: newRiskIncrease });
+      total = newRiskIncrease;
+    }
+  } else {
+    // Cumulative or severity_growth - include previous risk
+    total = existingFeature?.risk || 0;
+    
+    // Existing risk from previous events
+    if (existingFeature && existingFeature.risk > 0) {
+      sources.push({ source: 'Previous events', risk: existingFeature.risk });
+    }
+    
+    // New risk from current action
+    if (newRiskIncrease > 0) {
+      sources.push({ source: newSource, risk: newRiskIncrease });
+      total += newRiskIncrease;
+    }
   }
   
   return { total: Math.min(1.0, total), sources };
@@ -205,5 +221,35 @@ export function formatFeatureRiskWarning(riskInfo: FeatureRiskInfo): string {
   }
   
   return parts.join(' ');
+}
+
+/**
+ * Get harvest risks (negative features that can occur during harvest)
+ */
+export function getHarvestRisks(batch?: WineBatch, event: 'harvest' | 'crushing' | 'fermentation' | 'bottling' = 'harvest', context?: any): Array<FeatureRiskInfo & { config: any }> {
+  const risks = previewFeatureRisks(batch, event, context);
+  return risks
+    .map(risk => {
+      const config = getFeatureConfig(risk.featureId);
+      return { ...risk, config };
+    })
+    .filter(riskWithConfig => 
+      riskWithConfig.config?.harvestContext?.isHarvestRisk === true
+    );
+}
+
+/**
+ * Get harvest influences (positive features that manifest during harvest)
+ */
+export function getHarvestInfluences(batch?: WineBatch, event: 'harvest' | 'crushing' | 'fermentation' | 'bottling' = 'harvest', context?: any): Array<FeatureRiskInfo & { config: any }> {
+  const risks = previewFeatureRisks(batch, event, context);
+  return risks
+    .map(risk => {
+      const config = getFeatureConfig(risk.featureId);
+      return { ...risk, config };
+    })
+    .filter(riskWithConfig => 
+      riskWithConfig.config?.harvestContext?.isHarvestInfluence === true
+    );
 }
 

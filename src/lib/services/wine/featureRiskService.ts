@@ -2,7 +2,7 @@
 // Handles risk accumulation, manifestation checks, and feature state updates
 
 import { WineBatch } from '../../types/types';
-import { WineFeature, FeatureConfig, CreateFeatureOptions } from '../../types/wineFeatures';
+import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulationStrategy } from '../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../constants/wineFeatures';
 import { loadWineBatches, updateWineBatch } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
@@ -31,7 +31,16 @@ export function createNewFeature(config: FeatureConfig, options?: Partial<Create
  */
 export function initializeBatchFeatures(): WineFeature[] {
   const configs = getAllFeatureConfigs();
-  return configs.map(config => createNewFeature(config));
+  return configs.map(config => {
+    // Check if this feature should start present (like terroir)
+    const shouldStartPresent = config.type === 'feature' && config.manifestation === 'graduated';
+    
+    return createNewFeature(config, {
+      isPresent: shouldStartPresent,
+      severity: shouldStartPresent ? 0 : 0, // Start at 0 severity
+      initialRisk: shouldStartPresent ? 0.001 : 0 // Small initial risk for guaranteed manifestation
+    });
+  });
 }
 
 /**
@@ -45,12 +54,19 @@ function getOrCreateFeature(features: WineFeature[], config: FeatureConfig): Win
 
 /**
  * Calculate risk increase for time-based features
+ * Supports both static number multipliers and dynamic function multipliers
  */
 function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature: WineFeature): number {
   const baseRate = config.riskAccumulation.baseRate || 0;
   
-  // Get state multiplier if applicable
-  const stateMultiplier = config.riskAccumulation.stateMultipliers?.[batch.state] ?? 1.0;
+  // Get state multiplier (handle both number and function)
+  let stateMultiplier = 1.0;
+  const multiplierValue = config.riskAccumulation.stateMultipliers?.[batch.state];
+  if (typeof multiplierValue === 'function') {
+    stateMultiplier = multiplierValue(batch); // Call function with batch context
+  } else if (typeof multiplierValue === 'number') {
+    stateMultiplier = multiplierValue; // Use number directly
+  }
   
   // Apply compound effect if configured
   const compoundMultiplier = config.riskAccumulation.compoundEffect 
@@ -131,9 +147,11 @@ async function processTimeBased(
       await handleManifestation(batch, config, vineyard);
     }
   } else if (config.manifestation === 'graduated') {
-    const growthRate = config.riskAccumulation.severityGrowth?.rate || 0;
+    const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
+    const stateMultiplier = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
+    const effectiveGrowthRate = baseGrowthRate * stateMultiplier;
     const cap = config.riskAccumulation.severityGrowth?.cap || 1.0;
-    severity = Math.min(cap, severity + growthRate);
+    severity = Math.min(cap, severity + effectiveGrowthRate);
   }
   
   // Check for risk warnings
@@ -290,7 +308,17 @@ export function previewEventRisks(
             ? trigger.riskIncrease(context)
             : trigger.riskIncrease;
           
-          const newRisk = Math.min(1.0, currentRisk + riskIncrease);
+          // Calculate newRisk based on accumulation strategy
+          let newRisk: number;
+          const strategy = inferRiskAccumulationStrategy(config.riskAccumulation);
+          
+          if (strategy === 'independent') {
+            // Independent events - only show current event risk
+            newRisk = riskIncrease;
+          } else {
+            // Cumulative events - add to existing risk
+            newRisk = Math.min(1.0, currentRisk + riskIncrease);
+          }
           
           results.push({
             featureId: config.id,

@@ -498,7 +498,17 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
             } else if (qualityEffect.type === 'power') {
               const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
               impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
+            } else if (qualityEffect.type === 'bonus') {
+              const bonusAmount = typeof qualityEffect.amount === 'function' 
+                ? qualityEffect.amount(feature.severity)
+                : qualityEffect.amount;
+              if (bonusAmount !== undefined) {
+                impactText = `+${(bonusAmount * 100).toFixed(1)}%`;
+              }
             }
+            
+            const isBonus = qualityEffect.type === 'bonus';
+            const colorClass = isBonus ? 'text-green-600' : 'text-red-600';
             
             return (
               <div key={config.id} className="flex justify-between text-xs">
@@ -506,7 +516,7 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
                   <span>{config.icon}</span>
                   <span>{config.name}:</span>
                 </span>
-                <span className="text-red-600 font-mono">{impactText}</span>
+                <span className={`${colorClass} font-mono`}>{impactText}</span>
               </div>
             );
           })}

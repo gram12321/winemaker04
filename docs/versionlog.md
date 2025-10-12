@@ -1478,6 +1478,44 @@ Complete refactoring from standalone oxidation to extensible feature system supp
 - **Requirements**: Defined project dependencies and environment setup
 - **Documentation**: Created initial README and project description
 
+## 2025-01-27 - Terroir Expression Feature Implementation
+
+### 🍷 **New Feature: Terroir Expression**
+- **File**: `src/lib/constants/wineFeatures/terroir.ts` - Complete terroir feature configuration
+- **File**: `src/components/ui/wine/EvolvingFeaturesDisplay.tsx` - New UI component for evolving features
+- **Type**: Positive graduated feature that develops over time with state-dependent growth
+
+#### **Framework Extensions**
+- **File**: `src/lib/types/wineFeatures.ts` - Added `stateMultipliers` to `severityGrowth` configuration
+- **File**: `src/lib/services/wine/featureRiskService.ts` - Enhanced `processTimeBased()` to handle state-based severity growth
+- **File**: `src/lib/services/wine/featureEffectsService.ts` - Added `calculateFeatureCharacteristicModifiers()` function
+
+#### **Feature Configuration**
+- **Manifestation**: Graduated (develops over time from 0% to 100% severity)
+- **Trigger**: Hybrid (harvest event + time-based growth)
+- **State Multipliers**: Different growth rates per wine batch state:
+  - `grapes`: 0.5x (slow growth)
+  - `must_ready`: 1.0x (normal growth)  
+  - `must_fermenting`: 2.0x (fast growth during fermentation)
+  - `bottled`: 0.3x (slow growth when bottled)
+
+#### **Effects System**
+- **Quality**: Up to +15% quality bonus at 100% severity
+- **Price**: Up to +25% price premium (customer-dependent)
+- **Characteristics**: Modifies aroma (+12%), body (+8%), tannins (+10%), spice (+6%), acidity (-4%)
+- **Prestige**: Dynamic positive prestige for sales (company + vineyard)
+
+#### **UI Integration**
+- **File**: `src/components/pages/Winery.tsx` - Added `EvolvingFeaturesDisplay` to Current Activity section
+- **Display**: Shows terroir progress with weekly growth rate and state effects
+- **Tooltips**: Detailed breakdown of severity, growth rates, and effects
+
+#### **Registry Integration**
+- **File**: `src/lib/constants/wineFeatures/index.ts` - Added terroir to active features registry
+- **Initialization**: Features start present at 0% severity with guaranteed manifestation
+
+---
+
 #### 🔧 **Foundation**
 - Set up basic project structure with tools/scraper directory
 - Defined project goals and architecture overview

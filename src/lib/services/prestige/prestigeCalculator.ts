@@ -132,6 +132,49 @@ export function calculateVineyardManifestationPrestige(
 }
 
 /**
+ * Calculate dynamic prestige for COMPANY MANIFESTATION EVENTS (features appearing)
+ * Scales with company PRESTIGE (reputation) - higher reputation = higher standards
+ * 
+ * @param baseAmount - Base prestige amount (negative for faults, positive for features)
+ * @param batchSize - Size of wine batch in kg or bottles
+ * @param wineQuality - Quality of the wine (0-1)
+ * @param companyPrestige - Company's current prestige (reputation)
+ * @param weights - Optional scaling weights
+ * @returns Calculated prestige amount
+ */
+export function calculateCompanyManifestationPrestige(
+  baseAmount: number,
+  batchSize: number,
+  wineQuality: number,
+  companyPrestige: number,
+  weights?: {
+    batchSizeWeight?: number;
+    qualityWeight?: number;
+    companyPrestigeWeight?: number;
+  }
+): number {
+  const { batchSizeWeight = 1, qualityWeight = 1, companyPrestigeWeight = 1 } = weights || {};
+  
+  // Batch size scaling (logarithmic - larger batches = bigger impact)
+  const sizeFactor = Math.log((batchSize / 100) + 1) * batchSizeWeight;
+  
+  // Quality scaling (linear - premium wine failures/achievements matter more)
+  const qualityFactor = (1 + wineQuality) * qualityWeight;
+  
+  // Company prestige scaling (square root - higher prestige = held to higher standards)
+  const prestigeFactor = Math.sqrt(Math.max(0.1, companyPrestige) / 5) * companyPrestigeWeight;
+  
+  // Formula: baseAmount × size × quality × companyPrestige
+  const amount = baseAmount * sizeFactor * qualityFactor * prestigeFactor;
+  
+  // Cap based on positive/negative
+  const maxImpact = baseAmount < 0 ? -10.0 : 10.0;
+  return baseAmount < 0 
+    ? Math.max(maxImpact, amount)
+    : Math.min(maxImpact, amount);
+}
+
+/**
  * Calculate dynamic prestige for VINEYARD SALE EVENTS (regular sales tied to vineyard)
  * Scales with vineyard PRESTIGE for the achievement
  * 

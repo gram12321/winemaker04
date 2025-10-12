@@ -33,7 +33,7 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
   
   riskAccumulation: {
     trigger: 'event_triggered',
-    baseRate: 0,  // No weekly accumulation
+    baseRate: 0,  // No weekly accumulation (inferred as independent)
     compoundEffect: false,
     
     eventTriggers: [
@@ -56,13 +56,30 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
       },
       {
         event: 'crushing',
-        condition: (options: CrushingOptions) => {
-          // Trigger if using Hand Press method without destemming
-          // Hand Press without destemming means stems remain in contact with must
-          // This can extract harsh, green tannins and vegetal flavors
-          return options.method === 'Hand Press' && !options.destemming;
-        },
-        riskIncrease: 0.20  // 20% risk from hand pressing with stems
+        condition: () => true,  // Always evaluate (dynamic risk for all crushing methods)
+        riskIncrease: (options: CrushingOptions) => {
+          // Dynamic risk calculation based on crushing options
+          // Base rates by method (reflects extraction aggressiveness)
+          const baseRates: Record<CrushingOptions['method'], number> = {
+            'Hand Press': 0.05,        // 5% base (gentlest method)
+            'Mechanical Press': 0.15,  // 15% base (most aggressive)
+            'Pneumatic Press': 0.10    // 10% base (middle ground)
+          };
+          
+          // Pressing intensity multiplier (0.5x to 1.5x)
+          // Low pressure = less extraction = less risk
+          // High pressure = more extraction = more risk
+          const intensityMultiplier = 0.5 + options.pressingIntensity;
+          
+          // Destemming modifier (removing stems reduces risk)
+          // Stems contain harsh, green tannins and vegetal compounds
+          const destemmingModifier = options.destemming ? 0.5 : 1.0;
+          
+          const baseRate = baseRates[options.method];
+          const finalRisk = baseRate * intensityMultiplier * destemmingModifier;
+          
+          return finalRisk;
+        }
       }
     ]
   },
@@ -83,11 +100,11 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
     prestige: {
       onManifestation: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic_manifestation',
           baseAmount: -0.02,  // Company scandal when green flavor manifests (lighter than oxidation)
           scalingFactors: {
-            volumeWeight: 1.0,             // Batch size affects company reputation
-            valueWeight: 1.0,              // Wine value affects scandal size
+            batchSizeWeight: 1.0,         // Larger batches hurt more
+            qualityWeight: 1.0,            // Premium wine with green flavor is worse
             companyPrestigeWeight: 1.0     // Higher prestige = bigger fall
           },
           decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
@@ -145,6 +162,11 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
     badgeColor: 'warning',  // Orange/yellow vs red for oxidation
     warningThresholds: [0.15, 0.30],  // Only 2 thresholds (less aggressive than oxidation)
     sortPriority: 2  // Show after oxidation (priority 1)
+  },
+  
+  harvestContext: {
+    isHarvestRisk: true,         // Green flavor is a harvest risk
+    isHarvestInfluence: false    // Not a positive influence
   }
 };
 

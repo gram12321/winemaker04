@@ -2,9 +2,8 @@
 // Shows event-triggered risks for vineyard harvest context
 
 import { Vineyard } from '@/lib/types/types';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 import { getColorClass } from '@/lib/utils/utils';
-import { getRiskSeverityLabel } from '@/lib/services/wine/featureRiskHelper';
+import { getRiskSeverityLabel, getHarvestRisks, getHarvestInfluences } from '@/lib/services/wine/featureRiskHelper';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 
 interface HarvestRisksDisplayProps {
@@ -17,57 +16,54 @@ interface HarvestRisksDisplayProps {
  * Shows event-triggered risks that could occur during harvest
  */
 export function HarvestRisksDisplay({ vineyard, className = '' }: HarvestRisksDisplayProps) {
-  const configs = getAllFeatureConfigs();
+  // Get harvest risks (negative features)
+  const harvestRisks = getHarvestRisks(undefined, 'harvest', vineyard);
   
-  // Find event-triggered features that have harvest triggers
-  const harvestRisks = configs
-    .filter(config => {
-      const triggers = config.riskAccumulation.eventTriggers || [];
-      return triggers.some(trigger => trigger.event === 'harvest');
-    })
-    .map(config => {
-      const triggers = config.riskAccumulation.eventTriggers || [];
-      const harvestTrigger = triggers.find(trigger => trigger.event === 'harvest');
-      
-      if (!harvestTrigger) return null;
-      
-      // Check if condition is met
-      const conditionMet = harvestTrigger.condition(vineyard);
-      const riskIncrease = typeof harvestTrigger.riskIncrease === 'function'
-        ? harvestTrigger.riskIncrease(vineyard)
-        : harvestTrigger.riskIncrease;
-      
-      return {
-        config,
-        conditionMet,
-        riskIncrease,
-        currentRisk: conditionMet ? riskIncrease : 0
-      };
-    })
-    .filter(Boolean) as Array<{ config: any; conditionMet: boolean; riskIncrease: number; currentRisk: number }>;
+  // Get harvest influences (positive features)
+  const harvestInfluences = getHarvestInfluences(undefined, 'harvest', vineyard);
   
-  if (harvestRisks.length === 0) {
+  if (harvestRisks.length === 0 && harvestInfluences.length === 0) {
     return (
       <div className={`text-xs text-gray-500 ${className}`}>
-        <span className="font-medium">Harvest Risks:</span> None detected
+        <span className="font-medium">Harvest Features:</span> None detected
       </div>
     );
   }
   
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="text-xs font-medium text-gray-800">Harvest Risks:</div>
-      <div className="space-y-1">
-        {harvestRisks.map(({ config, conditionMet, currentRisk }) => (
+      {/* Harvest Risks */}
+      {harvestRisks.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-gray-800">Harvest Risks:</div>
+          <div className="space-y-1">
+        {harvestRisks.map((risk) => (
           <HarvestRiskItem
-            key={config.id}
-            config={config}
+            key={risk.config.id}
+            config={risk.config}
             vineyard={vineyard}
-            conditionMet={conditionMet}
-            currentRisk={currentRisk}
+            conditionMet={risk.newRisk > 0}
+            currentRisk={risk.newRisk}
           />
         ))}
-      </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Harvest Influences */}
+      {harvestInfluences.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-green-700">Harvest Influences:</div>
+          <div className="space-y-1">
+            {harvestInfluences.map((influence) => (
+              <HarvestInfluenceItem
+                key={influence.config.id}
+                config={influence.config}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,6 +211,53 @@ function HarvestRiskItem({ config, vineyard, conditionMet, currentRisk }: Harves
                     (Premium wines hit harder)
                   </p>
                 )}
+              </div>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+interface HarvestInfluenceItemProps {
+  config: any;
+}
+
+function HarvestInfluenceItem({ config }: HarvestInfluenceItemProps) {
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center justify-between bg-green-50 px-2 py-1 rounded text-xs cursor-help">
+            <div className="flex items-center">
+              <span className="mr-2">{config.icon}</span>
+              <span className="font-medium text-green-700">{config.name}</span>
+            </div>
+            <span className="text-green-600 font-medium">Positive</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-sm">
+          <div className="text-xs space-y-2">
+            <div>
+              <p className="font-semibold">{config.name}</p>
+              <p className="text-gray-300">{config.description}</p>
+            </div>
+            
+            <div>
+              <p className="font-medium">Harvest Effect:</p>
+              <p className="text-xs text-gray-300">
+                This positive feature will develop in wine from this vineyard over time.
+              </p>
+            </div>
+            
+            {config.effects.quality && (
+              <div className="border-t border-gray-600 pt-2">
+                <p className="font-medium">Quality Impact:</p>
+                <p className="text-xs text-gray-300">
+                  +{Math.round((config.effects.quality.amount(1.0) * 100) * 10) / 10}% quality bonus when fully developed
+                </p>
               </div>
             )}
           </div>

@@ -5,7 +5,8 @@ import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, FeatureBadges, FeatureRiskDisplay } from '../../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, FeatureBadges } from '../../ui';
+import { CombinedFeatureEffectsBadges } from '../../ui/wine/WineryFeatureStatusGrid';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
@@ -80,6 +81,40 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+// Component for combined feature effects display
+const WineFeatureEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  const configs = getAllFeatureConfigs();
+  const features = wine.features || [];
+  
+  // Get manifested features (features that are present)
+  const manifestedFeatures = configs
+    .map(config => {
+      const feature = features.find(f => f.id === config.id);
+      if (feature?.isPresent) {
+        return { feature, config };
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<{ feature: any; config: any }>;
+  
+  if (manifestedFeatures.length === 0) {
+    return (
+      <div className="text-xs text-gray-500">
+        No active features
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex flex-wrap gap-1">
+      <CombinedFeatureEffectsBadges 
+        manifestedFeatures={manifestedFeatures}
+        batch={wine}
+      />
+    </div>
   );
 };
 
@@ -471,13 +506,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                               </div>
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Features</div>
-                                <FeatureRiskDisplay 
-                                  batch={wine} 
-                                  featureId="oxidation" 
-                                  featureName="Oxidation"
-                                  showTooltip={false}
-                                  className="mt-1"
-                                />
+                                <WineFeatureEffectsDisplay wine={wine} />
                               </div>
                               <div>
                                 <div className="text-xs text-gray-500 uppercase mb-1">Actions</div>

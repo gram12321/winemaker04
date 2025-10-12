@@ -7,7 +7,7 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import { previewFeatureRisks, formatFeatureRiskWarning } from '@/lib/services/wine/featureRiskHelper';
+import { getHarvestRisks, getHarvestInfluences, formatFeatureRiskWarning } from '@/lib/services/wine/featureRiskHelper';
 
 /**
  * Harvest Options Modal
@@ -107,13 +107,21 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       warnings.push(`⚠️ Low ripeness (${Math.round(ripenessPercent)}%) - harvest will yield very little.`);
     }
     
-    // Check ALL event-triggered features for this harvest (generic)
-    const featureRisks = previewFeatureRisks(undefined, 'harvest', vineyard);
-    for (const risk of featureRisks) {
+    // Check harvest risks only (not influences)
+    const harvestRisks = getHarvestRisks(undefined, 'harvest', vineyard);
+    for (const risk of harvestRisks) {
       warnings.push(formatFeatureRiskWarning(risk));
       // Add tips based on feature
-      if (risk.featureId === 'green_flavor') {
+      if (risk.config.id === 'green_flavor') {
         warnings.push(`💡 TIP: Wait for ripeness ≥ 50% to avoid green flavor risk.`);
+      }
+    }
+    
+    // Check harvest influences (positive features)
+    const harvestInfluences = getHarvestInfluences(undefined, 'harvest', vineyard);
+    for (const influence of harvestInfluences) {
+      if (influence.config.id === 'terroir') {
+        warnings.push(`🌿 Terroir Expression will develop in this wine over time, enhancing quality and characteristics.`);
       }
     }
     
