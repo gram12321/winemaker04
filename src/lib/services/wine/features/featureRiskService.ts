@@ -148,7 +148,16 @@ async function processTimeBased(
     }
   } else if (config.manifestation === 'graduated') {
     const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
-    const stateMultiplier = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
+    
+    // Get state multiplier (handle both number and function)
+    let stateMultiplier = 1.0;
+    const multiplierValue = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state];
+    if (typeof multiplierValue === 'function') {
+      stateMultiplier = multiplierValue(batch); // Call function with batch context (for age-aware growth)
+    } else if (typeof multiplierValue === 'number') {
+      stateMultiplier = multiplierValue; // Use number directly
+    }
+    
     const effectiveGrowthRate = baseGrowthRate * stateMultiplier;
     const cap = config.riskAccumulation.severityGrowth?.cap || 1.0;
     severity = Math.min(cap, severity + effectiveGrowthRate);

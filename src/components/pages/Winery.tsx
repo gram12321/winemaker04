@@ -3,7 +3,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
 import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable } from '@/lib/services';
 import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
-import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
+import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureStatusGrid } from '../ui/wine/WineryFeatureStatusGrid';
 import { EvolvingFeaturesDisplay } from '../ui/wine/WineryEvolvingFeaturesDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
@@ -190,8 +190,7 @@ const Winery: React.FC = () => {
   const [modals, setModals] = useState({
     crushing: null as WineBatch | null,
     fermentation: null as WineBatch | null,
-    balance: null as WineBatch | null,
-    quality: null as WineBatch | null,
+    wine: null as WineBatch | null,
   });
 
   // Generic modal handlers
@@ -293,11 +292,8 @@ const Winery: React.FC = () => {
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2">
-                      <Button onClick={() => openModal('balance', batch.id)} size="sm" variant="outline" className="text-blue-600 border-blue-600 hover:bg-blue-50">
-                        Balance Analysis
-                      </Button>
-                      <Button onClick={() => openModal('quality', batch.id)} size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
-                        Quality Analysis
+                      <Button onClick={() => openModal('wine', batch.id)} size="sm" variant="outline" className="text-purple-600 border-purple-600 hover:bg-purple-50">
+                        Wine Details
                       </Button>
 
                       {isActionAvailable(batch, 'crush') && (
@@ -381,19 +377,11 @@ const Winery: React.FC = () => {
         batch={modals.fermentation}
       />
 
-      <BalanceBreakdownModal
-        isOpen={!!modals.balance}
-        onClose={() => closeModal('balance')}
-        characteristics={modals.balance?.characteristics || {} as WineCharacteristics}
-        wineName={modals.balance ? `${modals.balance.grape} - ${modals.balance.vineyardName}` : "Wine"}
-      />
-
-      <QualityBreakdownModal
-        isOpen={!!modals.quality}
-        onClose={() => closeModal('quality')}
-        batch={modals.quality || undefined}
-        vineyard={modals.quality ? vineyards.find(v => v.id === modals.quality!.vineyardId) : undefined}
-        wineName={modals.quality ? `${modals.quality.grape} - ${modals.quality.vineyardName}` : "Wine"}
+      <WineModal
+        isOpen={!!modals.wine}
+        onClose={() => closeModal('wine')}
+        wineBatch={modals.wine}
+        wineName={modals.wine ? `${modals.wine.grape} - ${modals.wine.vineyardName}` : "Wine"}
       />
     </div>
   );

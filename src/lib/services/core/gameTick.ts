@@ -12,6 +12,8 @@ import { processSeasonalWages } from '../user/wageService';
 import { getAllStaff } from '../user/staffService';
 import { processWeeklyFeatureRisks } from '../wine/features/featureRiskService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { updateCellarCollectionPrestige } from '../prestige/prestigeService';
+import { loadWineBatches, saveWineBatch } from '../../database/activities/inventoryDB';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -170,14 +172,45 @@ const processWeeklyEffects = async (): Promise<void> => {
     }
   }
   
-  // Process weekly feature risks for all wine batches (oxidation, etc.)
+  // Process weekly feature risks for all wine batches (oxidation, terroir, etc.)
   try {
     await processWeeklyFeatureRisks();
   } catch (error) {
     console.warn('Error during weekly feature risk processing:', error);
   }
   
-  // TODO: Add other weekly effects when ready
-  // - Wine aging effects (separate from oxidation risk)
+  // Update aging progress for all bottled wines
+  try {
+    await updateBottledWineAging();
+  } catch (error) {
+    console.warn('Error during wine aging progress update:', error);
+  }
+  
+  // Update cellar collection prestige (permanent event recalculation)
+  try {
+    await updateCellarCollectionPrestige();
+  } catch (error) {
+    console.warn('Error during cellar collection prestige update:', error);
+  }
+};
+
+/**
+ * Update aging progress for all bottled wines
+ * Increments agingProgress by 1 week for each wine in bottled state
+ */
+async function updateBottledWineAging(): Promise<void> {
+  const batches = await loadWineBatches();
+  const bottledWines = batches.filter(batch => batch.state === 'bottled');
+  
+  if (bottledWines.length === 0) return;
+  
+  // Increment aging progress for each bottled wine
+  for (const batch of bottledWines) {
+    const updatedBatch = {
+      ...batch,
+      agingProgress: (batch.agingProgress || 0) + 1
+    };
+    await saveWineBatch(updatedBatch);
+  }
 };
 

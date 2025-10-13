@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { WineBatch, WineCharacteristics } from '@/lib/types/types';
+import { WineBatch } from '@/lib/types/types';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { loadWineOrders } from '@/lib/database/customers/salesDB';
-import { BalanceBreakdownModal, QualityBreakdownModal } from '../ui';
+import { WineModal } from '../ui';
 import { NavigationProps } from '../../lib/types/UItypes';
 import WineCellarTab from './sales/WineCellarTab';
 import OrdersTab from './sales/OrdersTab';
@@ -18,11 +18,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
   const [showSoldOut, setShowSoldOut] = useState<boolean>(false);
 
-  // Breakdown modal state
-  const [balanceModalOpen, setBalanceModalOpen] = useState(false);
-  const [selectedBatchForBalance, setSelectedBatchForBalance] = useState<WineBatch | null>(null);
-  const [qualityModalOpen, setQualityModalOpen] = useState(false);
-  const [selectedBatchForQuality, setSelectedBatchForQuality] = useState<WineBatch | null>(null);
+  // Wine modal state
+  const [wineModalOpen, setWineModalOpen] = useState(false);
+  const [selectedWineBatch, setSelectedWineBatch] = useState<WineBatch | null>(null);
 
   // Use consolidated hooks for reactive data loading
   const allOrders = useGameStateWithData(
@@ -35,10 +33,6 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     []
   );
 
-  const vineyards = useGameStateWithData(
-    () => import('@/lib/services').then(services => services.getAllVineyards()),
-    []
-  );
 
   // Memoize filtered bottled wines
   const bottledWines = React.useMemo(() => 
@@ -48,34 +42,19 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     [allBatches, showSoldOut]
   );
 
-  // Handle opening balance breakdown modal
-  const handleBalanceBreakdownClick = useCallback((batchId: string) => {
+  // Handle opening wine modal
+  const handleWineDetailsClick = useCallback((batchId: string) => {
     const batch = allBatches.find(b => b.id === batchId);
     if (batch) {
-      setSelectedBatchForBalance(batch);
-      setBalanceModalOpen(true);
+      setSelectedWineBatch(batch);
+      setWineModalOpen(true);
     }
   }, [allBatches]);
 
-  // Handle opening quality breakdown modal
-  const handleQualityBreakdownClick = useCallback((batchId: string) => {
-    const batch = allBatches.find(b => b.id === batchId);
-    if (batch) {
-      setSelectedBatchForQuality(batch);
-      setQualityModalOpen(true);
-    }
-  }, [allBatches]);
-
-  // Handle closing balance breakdown modal
-  const handleBalanceModalClose = useCallback(() => {
-    setBalanceModalOpen(false);
-    setSelectedBatchForBalance(null);
-  }, []);
-
-  // Handle closing quality breakdown modal
-  const handleQualityModalClose = useCallback(() => {
-    setQualityModalOpen(false);
-    setSelectedBatchForQuality(null);
+  // Handle closing wine modal
+  const handleWineModalClose = useCallback(() => {
+    setWineModalOpen(false);
+    setSelectedWineBatch(null);
   }, []);
 
   return (
@@ -126,8 +105,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
           bottledWines={bottledWines}
           showSoldOut={showSoldOut}
           setShowSoldOut={setShowSoldOut}
-          onBalanceBreakdownClick={handleBalanceBreakdownClick}
-          onQualityBreakdownClick={handleQualityBreakdownClick}
+          onWineDetailsClick={handleWineDetailsClick}
         />
       )}
 
@@ -142,20 +120,12 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         />
       )}
 
-      {/* Breakdown Modals */}
-      <BalanceBreakdownModal
-        isOpen={balanceModalOpen}
-        onClose={handleBalanceModalClose}
-        characteristics={selectedBatchForBalance?.characteristics || {} as WineCharacteristics}
-        wineName={selectedBatchForBalance ? `${selectedBatchForBalance.grape} - ${selectedBatchForBalance.vineyardName}` : "Wine"}
-      />
-
-      <QualityBreakdownModal
-        isOpen={qualityModalOpen}
-        onClose={handleQualityModalClose}
-        batch={selectedBatchForQuality || undefined}
-        vineyard={selectedBatchForQuality ? vineyards.find(v => v.id === selectedBatchForQuality.vineyardId) : undefined}
-        wineName={selectedBatchForQuality ? `${selectedBatchForQuality.grape} - ${selectedBatchForQuality.vineyardName}` : "Wine"}
+      {/* Wine Modal */}
+      <WineModal
+        isOpen={wineModalOpen}
+        onClose={handleWineModalClose}
+        wineBatch={selectedWineBatch}
+        wineName={selectedWineBatch ? `${selectedWineBatch.grape} - ${selectedWineBatch.vineyardName}` : "Wine"}
       />
     </div>
   );

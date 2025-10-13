@@ -3,27 +3,12 @@ import { WineBatch } from '@/lib/types/types';
 import { formatCurrency, formatNumber, formatPercent, formatGameDateFromObject, getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
-import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, WineCharacteristicsDisplay, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, FeatureBadges } from '../../ui';
-import { CombinedFeatureEffectsBadges } from '../../ui/wine/WineryFeatureStatusGrid';
-import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, FeatureBadges } from '../../ui';
+import { useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 
-// Component for wine batch balance display (needed to use hooks properly)
-const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const balanceResult = useWineBatchBalance(batch);
-  const formattedBalance = useFormattedBalance(balanceResult);
-  const balanceQuality = useBalanceQuality(balanceResult);
-  const colorClass = getColorClass(batch.balance);
-  
-  return (
-    <div className="text-xs text-gray-600">
-      <span className="font-medium">Balance:</span> <span className={`font-medium ${colorClass}`}>{formattedBalance}</span> ({balanceQuality})
-    </div>
-  );
-};
 
 // Component for wine quality category display
 const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -34,6 +19,41 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   return (
     <div className="text-xs text-gray-600">
       <span className="font-medium">Quality:</span> <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
+    </div>
+  );
+};
+
+// Component for combined feature effects display
+const WineFeatureEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  const configs = getAllFeatureConfigs();
+  const features = wine.features || [];
+  
+  // Get manifested features (features that are present)
+  const manifestedFeatures = configs
+    .map(config => {
+      const feature = features.find(f => f.id === config.id);
+      if (feature?.isPresent) {
+        return { feature, config };
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<{ feature: any; config: any }>;
+  
+  if (manifestedFeatures.length === 0) {
+    return (
+      <div className="text-xs text-gray-500">
+        No active features
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex flex-wrap gap-1">
+      <FeatureBadges 
+        features={features} 
+        configs={configs}
+        showSeverity
+      />
     </div>
   );
 };
@@ -84,39 +104,6 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   );
 };
 
-// Component for combined feature effects display
-const WineFeatureEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
-  const configs = getAllFeatureConfigs();
-  const features = wine.features || [];
-  
-  // Get manifested features (features that are present)
-  const manifestedFeatures = configs
-    .map(config => {
-      const feature = features.find(f => f.id === config.id);
-      if (feature?.isPresent) {
-        return { feature, config };
-      }
-      return null;
-    })
-    .filter(Boolean) as Array<{ feature: any; config: any }>;
-  
-  if (manifestedFeatures.length === 0) {
-    return (
-      <div className="text-xs text-gray-500">
-        No active features
-      </div>
-    );
-  }
-  
-  return (
-    <div className="flex flex-wrap gap-1">
-      <CombinedFeatureEffectsBadges 
-        manifestedFeatures={manifestedFeatures}
-        batch={wine}
-      />
-    </div>
-  );
-};
 
 // Component for estimated price display with tooltip
 const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
@@ -177,33 +164,28 @@ interface WineCellarTabProps {
   bottledWines: WineBatch[];
   showSoldOut: boolean;
   setShowSoldOut: (show: boolean) => void;
-  onBalanceBreakdownClick: (batchId: string) => void;
-  onQualityBreakdownClick: (batchId: string) => void;
+  onWineDetailsClick: (batchId: string) => void;
 }
 
 const WineCellarTab: React.FC<WineCellarTabProps> = ({
   bottledWines,
   showSoldOut,
   setShowSoldOut,
-  onBalanceBreakdownClick,
-  onQualityBreakdownClick
+  onWineDetailsClick
 }) => {
   const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
-  const [expandedBatches, setExpandedBatches] = useState<Record<string, boolean>>({});
 
   // Define sortable columns for wine cellar
   const cellarColumns: SortableColumn<WineBatch>[] = [
     { key: 'grape', label: 'Wine', sortable: true },
-    { key: 'harvestStartDate', label: 'Vintage', sortable: true, accessor: (wine) => wine.harvestStartDate.year },
     { key: 'vineyardName', label: 'Vineyard', sortable: true },
+    { key: 'harvestStartDate', label: 'Vintage', sortable: true, accessor: (wine) => wine.harvestStartDate.year },
     { 
       key: 'harvestStartDate', 
       label: 'Harvest Period', 
       sortable: true,
       accessor: (wine) => formatHarvestPeriod(wine)
     },
-    { key: 'quality', label: 'Quality', sortable: true },
-    { key: 'balance', label: 'Balance', sortable: true },
     { 
       key: 'wineScore' as any, 
       label: 'Wine Score', 
@@ -217,7 +199,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       sortable: true,
       accessor: (wine) => wine.askingPrice ?? wine.estimatedPrice
     },
-    { key: 'quantity', label: 'Bottles', sortable: true }
+    { key: 'quantity', label: 'Bottles', sortable: true },
+    { key: 'quality' as any, label: 'Quality', sortable: false },
+    { key: 'features' as any, label: 'Features', sortable: false },
+    { key: 'actions' as any, label: 'Actions', sortable: false }
   ];
 
   const {
@@ -347,6 +332,14 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 </TableHead>
                 <TableHead 
                   sortable 
+                  onSort={() => handleCellarSort('harvestStartDate')}
+                  sortIndicator={getCellarSortIndicator('harvestStartDate')}
+                  isSorted={isCellarColumnSorted('harvestStartDate')}
+                >
+                  Harvest Period
+                </TableHead>
+                <TableHead 
+                  sortable 
                   onSort={() => handleCellarSort('wineScore' as any)}
                   sortIndicator={getCellarSortIndicator('wineScore' as any)}
                   isSorted={isCellarColumnSorted('wineScore' as any)}
@@ -377,13 +370,15 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 >
                   Bottles
                 </TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Quality</TableHead>
+                <TableHead>Features</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedBottledWines.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-500 py-6">
+                  <TableCell colSpan={10} className="text-center text-gray-500 py-6">
                     No bottled wines available for sale
                   </TableCell>
                 </TableRow>
@@ -392,13 +387,6 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                   <React.Fragment key={wine.id}>
                     <TableRow>
                       <TableCell className="font-medium text-gray-900">
-                        <button
-                          onClick={() => setExpandedBatches(prev => ({ ...prev, [wine.id]: !prev[wine.id] }))}
-                          className="mr-2 text-gray-600 hover:text-gray-900"
-                          title={expandedBatches[wine.id] ? 'Hide details' : 'Show details'}
-                        >
-                          {expandedBatches[wine.id] ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
-                        </button>
                         {wine.grape}
                       </TableCell>
                       <TableCell className="text-gray-500">
@@ -406,6 +394,9 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                       </TableCell>
                       <TableCell className="text-gray-500">
                         {wine.harvestStartDate.year}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {formatHarvestPeriod(wine)}
                       </TableCell>
                       <TableCell className="text-gray-500">
                         <WineScoreDisplay wine={wine} />
@@ -467,87 +458,23 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                       <TableCell className="text-gray-500">
                         {wine.quantity}
                       </TableCell>
+                      <TableCell className="text-gray-500">
+                        <WineQualityDisplay batch={wine} />
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        <WineFeatureEffectsDisplay wine={wine} />
+                      </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1.5">
-                          <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
-                            wine.quantity > 0 
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {wine.quantity > 0 ? 'Ready for Sale' : 'Sold Out'}
-                          </span>
-                          {wine.features && wine.features.length > 0 && (
-                            <FeatureBadges 
-                              features={wine.features} 
-                              configs={getAllFeatureConfigs()}
-                              showSeverity
-                            />
-                          )}
-                        </div>
+                        <Button
+                          onClick={() => onWineDetailsClick(wine.id)}
+                          size="sm"
+                          variant="outline"
+                          className="text-purple-600 border-purple-600 hover:bg-purple-50 text-xs px-2 py-1"
+                        >
+                          Details
+                        </Button>
                       </TableCell>
                     </TableRow>
-                    {expandedBatches[wine.id] && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="bg-gray-50">
-                          <div className="p-2.5 space-y-3">
-                            {/* Wine Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 border-b pb-3">
-                              <div>
-                                <div className="text-xs text-gray-500 uppercase mb-1">Harvest Period</div>
-                                <div className="text-sm font-medium text-gray-900">{formatHarvestPeriod(wine)}</div>
-                              </div>
-                              <div>
-                                <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
-                                <WineQualityDisplay batch={wine} />
-                              </div>
-                              <div>
-                                <div className="text-xs text-gray-500 uppercase mb-1">Balance</div>
-                                <WineBatchBalanceDisplay batch={wine} />
-                              </div>
-                              <div>
-                                <div className="text-xs text-gray-500 uppercase mb-1">Features</div>
-                                <WineFeatureEffectsDisplay wine={wine} />
-                              </div>
-                              <div>
-                                <div className="text-xs text-gray-500 uppercase mb-1">Actions</div>
-                                <div className="flex gap-2 mt-1">
-                                  <Button
-                                    onClick={() => onBalanceBreakdownClick(wine.id)}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-blue-600 border-blue-600 hover:bg-blue-50 text-xs px-2 py-1"
-                                  >
-                                    Balance
-                                  </Button>
-                                  <Button
-                                    onClick={() => onQualityBreakdownClick(wine.id)}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-green-600 border-green-600 hover:bg-green-50 text-xs px-2 py-1"
-                                  >
-                                    Quality
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Completion Date */}
-                            {wine.bottledDate && (
-                              <div className="text-xs text-gray-600 border-b pb-2">
-                                <span className="font-medium">Completed:</span> Week {wine.bottledDate.week}, {wine.bottledDate.season} {wine.bottledDate.year}
-                              </div>
-                            )}
-                            
-                            <WineCharacteristicsDisplay 
-                              characteristics={wine.characteristics}
-                              collapsible={false}
-                              showBalanceScore={true}
-                              title="Wine Characteristics"
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </React.Fragment>
                 ))
               )}
@@ -592,31 +519,20 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
               {/* Card Body */}
               <div className="p-4 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      wine.quality >= 0.8 ? 'bg-green-100 text-green-800' :
-                      wine.quality >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {formatPercent(wine.quality, 0, true)}
-                    </span>
+                    <WineQualityDisplay batch={wine} />
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase mb-1">Balance</div>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      wine.balance >= 0.8 ? 'bg-green-100 text-green-800' :
-                      wine.balance >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {formatPercent(wine.balance, 0, true)}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase mb-1">Combined</div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Wine Score</div>
                     <WineScoreDisplay wine={wine} />
                   </div>
+                </div>
+
+                <div className="border-t pt-3">
+                  <div className="text-xs text-gray-500 uppercase mb-1">Features</div>
+                  <WineFeatureEffectsDisplay wine={wine} />
                 </div>
 
                 <div className="border-t pt-3">
@@ -677,44 +593,19 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                   </div>
                 </div>
 
-                {/* Analysis Buttons */}
+                {/* Wine Details Button */}
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => onBalanceBreakdownClick(wine.id)}
+                    onClick={() => onWineDetailsClick(wine.id)}
                     size="sm"
                     variant="outline"
-                    className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50 text-xs"
+                    className="flex-1 text-purple-600 border-purple-600 hover:bg-purple-50 text-xs"
                   >
-                    Balance Analysis
-                  </Button>
-                  <Button
-                    onClick={() => onQualityBreakdownClick(wine.id)}
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 text-green-600 border-green-600 hover:bg-green-50 text-xs"
-                  >
-                    Quality Analysis
+                    Wine Details
                   </Button>
                 </div>
 
-                {/* Expandable characteristics */}
-                <button
-                  onClick={() => setExpandedBatches(prev => ({ ...prev, [wine.id]: !prev[wine.id] }))}
-                  className="w-full text-center text-xs text-blue-600 hover:text-blue-800 py-2 border-t"
-                >
-                  {expandedBatches[wine.id] ? '▼ Hide Details' : '▶ Show Wine Characteristics'}
-                </button>
-                
-                {expandedBatches[wine.id] && (
-                  <div className="border-t pt-3">
-                    <WineCharacteristicsDisplay 
-                      characteristics={wine.characteristics}
-                      collapsible={false}
-                      showBalanceScore={true}
-                      title="Wine Characteristics"
-                    />
-                  </div>
-                )}
+
               </div>
             </div>
           ))

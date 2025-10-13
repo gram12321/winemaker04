@@ -21,6 +21,11 @@ export interface GrapeData {
   grapeColor: 'red' | 'white';
   baseCharacteristics: WineCharacteristics; // Base wine characteristics for this grape
   description: string; // Short UI description
+  agingProfile: {
+    earlyPeak: number;  // Years - end of fast growth phase
+    latePeak: number;   // Years - end of moderate growth phase (plateau after this)
+    ageWorthiness: 'low' | 'medium' | 'high';  // For UI display
+  };
 }
 
 // Grape constants for all varieties
@@ -34,7 +39,12 @@ export const GRAPE_CONST: Record<GrapeVariety, GrapeData> = {
     baseCharacteristics: {
       acidity: 0.7, aroma: 0.5, body: 0.6, spice: 0.5, sweetness: 0.5, tannins: 0.6
     },
-    description: 'A versatile grape known for high acidity and moderate tannins, producing medium-bodied wines.'
+    description: 'A versatile grape known for high acidity and moderate tannins, producing medium-bodied wines.',
+    agingProfile: {
+      earlyPeak: 3,
+      latePeak: 7,
+      ageWorthiness: 'medium'
+    }
   },
   'Chardonnay': {
     name: 'Chardonnay',
@@ -45,7 +55,12 @@ export const GRAPE_CONST: Record<GrapeVariety, GrapeData> = {
     baseCharacteristics: {
       acidity: 0.4, aroma: 0.65, body: 0.75, spice: 0.5, sweetness: 0.5, tannins: 0.35
     },
-    description: 'A noble grape variety producing aromatic, medium-bodied wines with moderate acidity.'
+    description: 'A noble grape variety producing aromatic, medium-bodied wines with moderate acidity.',
+    agingProfile: {
+      earlyPeak: 2,
+      latePeak: 5,
+      ageWorthiness: 'medium'
+    }
   },
   'Pinot Noir': {
     name: 'Pinot Noir',
@@ -56,7 +71,12 @@ export const GRAPE_CONST: Record<GrapeVariety, GrapeData> = {
     baseCharacteristics: {
       acidity: 0.65, aroma: 0.6, body: 0.35, spice: 0.5, sweetness: 0.5, tannins: 0.4
     },
-    description: 'A delicate grape creating light-bodied, aromatic wines with high acidity and soft tannins.'
+    description: 'A delicate grape creating light-bodied, aromatic wines with high acidity and soft tannins.',
+    agingProfile: {
+      earlyPeak: 3,
+      latePeak: 7,
+      ageWorthiness: 'high'
+    }
   },
   'Primitivo': {
     name: 'Primitivo',
@@ -67,7 +87,12 @@ export const GRAPE_CONST: Record<GrapeVariety, GrapeData> = {
     baseCharacteristics: {
       acidity: 0.5, aroma: 0.7, body: 0.7, spice: 0.5, sweetness: 0.7, tannins: 0.7
     },
-    description: 'A robust grape yielding full-bodied, aromatic wines with natural sweetness and high tannins.'
+    description: 'A robust grape yielding full-bodied, aromatic wines with natural sweetness and high tannins.',
+    agingProfile: {
+      earlyPeak: 4,
+      latePeak: 10,
+      ageWorthiness: 'high'
+    }
   },
   'Sauvignon Blanc': {
     name: 'Sauvignon Blanc',
@@ -78,7 +103,12 @@ export const GRAPE_CONST: Record<GrapeVariety, GrapeData> = {
     baseCharacteristics: {
       acidity: 0.8, aroma: 0.75, body: 0.3, spice: 0.6, sweetness: 0.4, tannins: 0.3
     },
-    description: 'A crisp grape variety producing aromatic, light-bodied wines with high acidity.'
+    description: 'A crisp grape variety producing aromatic, light-bodied wines with high acidity.',
+    agingProfile: {
+      earlyPeak: 1,
+      latePeak: 3,
+      ageWorthiness: 'low'
+    }
   }
 } as const;
 

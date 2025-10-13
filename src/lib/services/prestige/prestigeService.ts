@@ -268,7 +268,7 @@ export async function getBaseVineyardPrestige(vineyardId: string): Promise<numbe
 }
 
 export async function updateBasePrestigeEvent(
-  type: 'company_value' | 'vineyard' | 'vineyard_base' | 'vineyard_age' | 'vineyard_land' | 'vineyard_region',
+  type: 'company_value' | 'vineyard' | 'vineyard_base' | 'vineyard_age' | 'vineyard_land' | 'vineyard_region' | 'cellar_collection',
   sourceId: string,
   newAmount: number,
   metadata?: PrestigeEvent['metadata']
@@ -360,6 +360,94 @@ export async function updateBaseVineyardPrestigeEvent(vineyardId: string): Promi
     await createVineyardFactorPrestigeEvents(vineyard);
   } catch (error) {
     console.error('Failed to update base vineyard prestige event:', error);
+  }
+}
+
+/**
+ * Update cellar collection prestige based on aged wine inventory
+ * 
+ * Calculates prestige from wines aged 5+ years (non-oxidized)
+ * Uses gentle power function for age scaling with diminishing returns
+ * 
+ * Called on weekly tick to maintain up-to-date prestige
+ * Permanent event (decay_rate: 0) that gets recalculated
+ */
+export async function updateCellarCollectionPrestige(): Promise<void> {
+  try {
+    const { loadWineBatches } = await import('../../database/activities/inventoryDB');
+    const allBatches = await loadWineBatches();
+    
+    // Filter aged wines (5+ years, bottled, not oxidized)
+    const agedWines = allBatches.filter(batch => {
+      const ageInYears = (batch.agingProgress || 0) / 52;
+      if (ageInYears < 5) return false;  // Must be 5+ years
+      if (batch.state !== 'bottled') return false;  // Must be in cellar
+      
+      // Check for oxidation feature
+      const oxidationFeature = batch.features?.find(f => f.id === 'oxidation');
+      if (oxidationFeature?.isPresent) return false;  // Exclude oxidized wines (x0 multiplier)
+      
+      return true;
+    });
+    
+    if (agedWines.length === 0) {
+      // No aged wines - set prestige to 0
+      await updateBasePrestigeEvent(
+        'cellar_collection',
+        'aged_wine_inventory',
+        0,
+        { totalBottles: 0, totalValue: 0, vintageCount: 0, averageAge: 0, oldestAge: 0 }
+      );
+      return;
+    }
+    
+    // Calculate prestige with gentle power function for age
+    let totalPrestige = 0;
+    
+    for (const batch of agedWines) {
+      const ageInYears = (batch.agingProgress || 0) / 52;
+      const bottleCount = batch.quantity;
+      const bottleValue = batch.estimatedPrice;
+      
+      // Gentle power function: sqrt(age - 4) * 0.1
+      // This gives ~0.1 at year 5, ~0.2 at year 8, ~0.5 at year 29, ~1.0 at year 104
+      // Much gentler scaling suitable for wines up to 100 years
+      const ageFactor = Math.sqrt(ageInYears - 4) * 0.1;
+      
+      // Volume and value contribute logarithmically
+      const volumeFactor = Math.log(bottleCount + 1);
+      const valueFactor = Math.log(bottleValue * 10 + 1);
+      
+      const batchPrestige = ageFactor * volumeFactor * valueFactor * 0.01;
+      totalPrestige += batchPrestige;
+    }
+    
+    // Apply diminishing returns to total
+    const finalPrestige = Math.sqrt(totalPrestige);
+    
+    // Calculate metadata
+    const totalBottles = agedWines.reduce((sum, b) => sum + b.quantity, 0);
+    const totalValue = agedWines.reduce((sum, b) => sum + (b.quantity * b.estimatedPrice), 0);
+    const vintageCount = agedWines.length;
+    const averageAge = agedWines.reduce((sum, b) => sum + (b.agingProgress || 0), 0) / agedWines.length / 52;
+    const oldestAge = Math.max(...agedWines.map(b => (b.agingProgress || 0) / 52));
+    
+    // Update permanent prestige event
+    await updateBasePrestigeEvent(
+      'cellar_collection',
+      'aged_wine_inventory',
+      finalPrestige,
+      {
+        totalBottles,
+        totalValue,
+        vintageCount,
+        averageAge,
+        oldestAge
+      }
+    );
+    
+  } catch (error) {
+    console.error('Failed to update cellar collection prestige:', error);
   }
 }
 

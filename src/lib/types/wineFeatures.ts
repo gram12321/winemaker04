@@ -79,7 +79,7 @@ export interface RiskAccumulationConfig {
   severityGrowth?: {
     rate: number;                  // Per game tick
     cap: number;                   // Maximum severity (0-1)
-    stateMultipliers?: Record<WineBatchState, number>; // State-based growth rates
+    stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>; // State-based growth rates (can be function for age-aware growth)
   };
 }
 

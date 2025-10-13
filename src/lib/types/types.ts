@@ -156,6 +156,9 @@ export interface WineBatch {
   harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
   harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch
   bottledDate?: GameDate; // When bottling is completed
+  
+  // Aging tracking (weeks since bottling)
+  agingProgress?: number; // Weeks aged in bottle (0 if not bottled)
 }
 
 // Wine production log entry - recorded when wine is bottled

@@ -43,7 +43,8 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         harvest_end_year: Math.round(batch.harvestEndDate.year),
         bottled_week: batch.bottledDate ? Math.round(batch.bottledDate.week) : null,
         bottled_season: batch.bottledDate?.season,
-        bottled_year: batch.bottledDate ? Math.round(batch.bottledDate.year) : null
+        bottled_year: batch.bottledDate ? Math.round(batch.bottledDate.year) : null,
+        aging_progress: Math.round(batch.agingProgress || 0)
       });
 
     if (error) throw error;
@@ -108,7 +109,9 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
           week: row.bottled_week,
           season: row.bottled_season as Season,
           year: row.bottled_year
-        } : undefined
+        } : undefined,
+        
+        agingProgress: row.aging_progress || 0
       };
     });
   } catch (error) {
