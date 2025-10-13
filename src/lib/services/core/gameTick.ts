@@ -13,7 +13,7 @@ import { getAllStaff } from '../user/staffService';
 import { processWeeklyFeatureRisks } from '../wine/features/featureRiskService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { updateCellarCollectionPrestige } from '../prestige/prestigeService';
-import { loadWineBatches, saveWineBatch } from '../../database/activities/inventoryDB';
+import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -126,6 +126,7 @@ const onNewYear = async (_previousYear: number, _newYear: number): Promise<void>
 
 /**
  * Process effects that happen every week
+ * OPTIMIZED: Runs independent operations in parallel
  */
 const processWeeklyEffects = async (): Promise<void> => {
   const gameState = getGameState();
@@ -134,69 +135,90 @@ const processWeeklyEffects = async (): Promise<void> => {
   // Weekly decay is now handled by the unified prestige hook
   // No need to call decay functions here
 
-  // Enhanced automatic customer acquisition and sophisticated order generation
-  try {
-    const result = await generateSophisticatedWineOrders(); // Generate customer event and orders
-    
-    if (result.totalOrdersCreated > 0) {
-      console.log(`[Weekly Orders] Generated ${result.totalOrdersCreated} orders from ${result.customersGenerated} customers`);
-      
-      // Show summary notification for significant activity
-      if (result.totalOrdersCreated > 1) {
-        const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
-        await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
-      } else if (result.orders.length > 0) {
-        const order = result.orders[0];
-        await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
+  // OPTIMIZATION: Run all independent weekly operations in parallel
+  // These operations don't depend on each other and can execute concurrently
+  const weeklyTasks = [
+    // Enhanced automatic customer acquisition and sophisticated order generation
+    (async () => {
+      try {
+        const result = await generateSophisticatedWineOrders();
+        
+        if (result.totalOrdersCreated > 0) {
+          console.log(`[Weekly Orders] Generated ${result.totalOrdersCreated} orders from ${result.customersGenerated} customers`);
+          
+          // Show summary notification for significant activity
+          if (result.totalOrdersCreated > 1) {
+            const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
+            await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
+          } else if (result.orders.length > 0) {
+            const order = result.orders[0];
+            await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
+          }
+        }
+      } catch (error) {
+        console.warn('Error during sophisticated order generation:', error);
       }
-    }
-  } catch (error) {
-    console.warn('Error during sophisticated order generation:', error);
-    // No fallback - sophisticated system is the only system now
-  }
-  
-  // Process weekly fermentation effects for all fermenting batches
-  try {
-    await processWeeklyFermentation();
-  } catch (error) {
-    console.warn('Error during weekly fermentation processing:', error);
-  }
+    })(),
+    
+    // Process weekly fermentation effects for all fermenting batches
+    (async () => {
+      try {
+        await processWeeklyFermentation();
+      } catch (error) {
+        console.warn('Error during weekly fermentation processing:', error);
+      }
+    })(),
+    
+    // Process weekly feature risks for all wine batches (oxidation, terroir, etc.)
+    (async () => {
+      try {
+        await processWeeklyFeatureRisks();
+      } catch (error) {
+        console.warn('Error during weekly feature risk processing:', error);
+      }
+    })(),
+    
+    // Update aging progress for all bottled wines
+    (async () => {
+      try {
+        await updateBottledWineAging();
+      } catch (error) {
+        console.warn('Error during wine aging progress update:', error);
+      }
+    })(),
+    
+    // Update cellar collection prestige (permanent event recalculation)
+    (async () => {
+      try {
+        await updateCellarCollectionPrestige();
+      } catch (error) {
+        console.warn('Error during cellar collection prestige update:', error);
+      }
+    })()
+  ];
   
   // Process seasonal wage payments (at the start of each season - week 1)
   if (currentWeek === 1) {
-    try {
-      const staff = getAllStaff();
-      await processSeasonalWages(staff);
-    } catch (error) {
-      console.warn('Error during seasonal wage processing:', error);
-    }
+    weeklyTasks.push(
+      (async () => {
+        try {
+          const staff = getAllStaff();
+          await processSeasonalWages(staff);
+        } catch (error) {
+          console.warn('Error during seasonal wage processing:', error);
+        }
+      })()
+    );
   }
   
-  // Process weekly feature risks for all wine batches (oxidation, terroir, etc.)
-  try {
-    await processWeeklyFeatureRisks();
-  } catch (error) {
-    console.warn('Error during weekly feature risk processing:', error);
-  }
-  
-  // Update aging progress for all bottled wines
-  try {
-    await updateBottledWineAging();
-  } catch (error) {
-    console.warn('Error during wine aging progress update:', error);
-  }
-  
-  // Update cellar collection prestige (permanent event recalculation)
-  try {
-    await updateCellarCollectionPrestige();
-  } catch (error) {
-    console.warn('Error during cellar collection prestige update:', error);
-  }
+  // OPTIMIZATION: Wait for all tasks to complete in parallel
+  await Promise.all(weeklyTasks);
 };
 
 /**
  * Update aging progress for all bottled wines
  * Increments agingProgress by 1 week for each wine in bottled state
+ * OPTIMIZED: Uses bulk update instead of individual saves
  */
 async function updateBottledWineAging(): Promise<void> {
   const batches = await loadWineBatches();
@@ -204,13 +226,15 @@ async function updateBottledWineAging(): Promise<void> {
   
   if (bottledWines.length === 0) return;
   
-  // Increment aging progress for each bottled wine
-  for (const batch of bottledWines) {
-    const updatedBatch = {
-      ...batch,
+  // OPTIMIZATION: Collect all updates for bulk operation
+  const updates = bottledWines.map(batch => ({
+    id: batch.id,
+    updates: {
       agingProgress: (batch.agingProgress || 0) + 1
-    };
-    await saveWineBatch(updatedBatch);
-  }
+    }
+  }));
+  
+  // OPTIMIZATION: Single bulk update instead of N individual saves
+  await bulkUpdateWineBatches(updates);
 };
 

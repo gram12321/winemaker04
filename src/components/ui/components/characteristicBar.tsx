@@ -1,7 +1,7 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
-import { getColorClass, formatNumber } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, getWineBalanceCategory } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
 
@@ -202,9 +202,12 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
       {showBalanceScore && balanceResult && (
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium">Current Balance Score:</span>
-          <span className={`text-2xl font-bold ${getColorClass(balanceResult.score)}`}>
-            {formatNumber(balanceResult.score, { decimals: 2, forceDecimals: true })}
-          </span>
+          <div className="text-right">
+            <div className={`text-2xl font-bold ${getColorClass(balanceResult.score)}`}>
+              {formatNumber(balanceResult.score, { decimals: 2, forceDecimals: true })}
+            </div>
+            <div className="text-sm text-gray-600">{getWineBalanceCategory(balanceResult.score)}</div>
+          </div>
         </div>
       )}
       

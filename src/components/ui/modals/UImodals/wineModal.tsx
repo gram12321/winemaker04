@@ -4,16 +4,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../shadCN/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Badge } from '../../shadCN/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
 import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
-import { getWineQualityCategory, getColorClass } from '@/lib/utils/utils';
+import { getWineQualityCategory, getWineQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { QualityFactorsBreakdown } from '../../components/QualityFactorsBreakdown';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureStatusGrid } from '../../wine/WineryFeatureStatusGrid';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { calculateEffectiveQuality } from '@/lib/services/wine/features/featureEffectsService';
+import { calculateEffectiveQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 
 interface WineModalProps extends DialogProps {
@@ -56,16 +57,12 @@ export const WineModal: React.FC<WineModalProps> = ({
   const configs = getAllFeatureConfigs();
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
 
-  // Calculate wine age in weeks
-  const currentWeek = 1; // TODO: Get from game state
-  const currentYear = 2024; // TODO: Get from game state
-  const harvestWeek = wineBatch.harvestStartDate.week;
-  const harvestYear = wineBatch.harvestStartDate.year;
-  const weeksSinceHarvest = ((currentYear - harvestYear) * 52) + (currentWeek - harvestWeek);
+  // Calculate wine age using service layer
+  const weeksSinceHarvest = getWineAgeFromHarvest(wineBatch.harvestStartDate);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-y-auto">
         {/* Header with wine image */}
         <div
           className="h-32 bg-cover bg-center relative"
@@ -159,26 +156,66 @@ export const WineModal: React.FC<WineModalProps> = ({
                   <Card>
                     <CardHeader className="py-3">
                       <CardTitle className="text-xs font-medium flex items-center gap-2">
-                        <Award className="h-4 w-4" /> Quality
+                        <Award className="h-4 w-4" /> Scores
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Score:</span>
-                        <span className={`font-medium ${qualityColorClass}`}>
-                          {formatNumber(effectiveQuality, { decimals: 2, forceDecimals: true })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Category:</span>
-                        <span className="font-medium">{qualityCategory}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Base Quality:</span>
-                        <span className="font-medium">
-                          {formatNumber(wineBatch.quality, { decimals: 2, forceDecimals: true })}
-                        </span>
-                      </div>
+                    <CardContent className="py-3 text-sm space-y-3">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex justify-between cursor-help">
+                              <span className="text-muted-foreground">Wine Score:</span>
+                              <div className="text-right">
+                                <div className={`font-medium ${getColorClass((effectiveQuality + wineBatch.balance) / 2)}`}>
+                                  {formatNumber((effectiveQuality + wineBatch.balance) / 2, { decimals: 2, forceDecimals: true })}
+                                </div>
+                                <div className="text-xs text-gray-500">{getWineQualityCategory((effectiveQuality + wineBatch.balance) / 2)}</div>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <div className="text-xs">{getWineQualityDescription((effectiveQuality + wineBatch.balance) / 2)}</div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex justify-between cursor-help">
+                              <span className="text-muted-foreground">Balance:</span>
+                              <div className="text-right">
+                                <div className={`font-medium ${getColorClass(wineBatch.balance)}`}>
+                                  {formatNumber(wineBatch.balance, { decimals: 2, forceDecimals: true })}
+                                </div>
+                                <div className="text-xs text-gray-500">{getWineBalanceCategory(wineBatch.balance)}</div>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <div className="text-xs">{getWineBalanceDescription(wineBatch.balance)}</div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex justify-between cursor-help">
+                              <span className="text-muted-foreground">Quality:</span>
+                              <div className="text-right">
+                                <div className={`font-medium ${getColorClass(effectiveQuality)}`}>
+                                  {formatNumber(effectiveQuality, { decimals: 2, forceDecimals: true })}
+                                </div>
+                                <div className="text-xs text-gray-500">{getWineQualityCategory(effectiveQuality)}</div>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <div className="text-xs">{getWineQualityDescription(effectiveQuality)}</div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardContent>
                   </Card>
 
@@ -230,15 +267,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Natural Yield:</span>
-                      <span className="font-medium">{formatNumber(wineBatch.naturalYield, { decimals: 2, forceDecimals: true })}</span>
+                      <span className="font-medium">{formatNumber(wineBatch.naturalYield * 100)}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Fragile:</span>
-                      <span className="font-medium">{formatNumber(wineBatch.fragile, { decimals: 2, forceDecimals: true })}</span>
+                      <span className="font-medium">{formatNumber(wineBatch.fragile * 100)}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Prone to Oxidation:</span>
-                      <span className="font-medium">{formatNumber(wineBatch.proneToOxidation, { decimals: 2, forceDecimals: true })}</span>
+                      <span className="font-medium">{formatNumber(wineBatch.proneToOxidation * 100)}%</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -368,7 +405,10 @@ export const WineModal: React.FC<WineModalProps> = ({
                               </div>
                               <div className="text-right">
                                 <div className="text-sm font-medium">
-                                  {config.manifestation === 'binary' ? 'Present' : `${Math.round(feature.severity * 100)}%`}
+                                  {config.manifestation === 'binary' ? 'Present' : 
+                                    config.id === 'bottle_aging' ? 
+                                      `${formatNumber(getBottleAgingSeverity(wineBatch) * 100, { decimals: 1, adaptiveNearOne: true })}%` :
+                                      `${Math.round(feature.severity * 100)}%`}
                                 </div>
                                 {impactText && (
                                   <div className="text-xs text-gray-600">Quality: {impactText}</div>

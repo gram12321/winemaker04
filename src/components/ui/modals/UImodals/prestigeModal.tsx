@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, formatPercent } from '@/lib/utils';
-import { getEventDisplayData } from '@/lib/services/prestige/prestigeService';
+import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services/prestige/prestigeService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
@@ -106,13 +106,106 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     );
   };
 
+  const ConsolidatedWineFeatureDisplay = ({ consolidatedEvent }: { consolidatedEvent: ConsolidatedWineFeatureEvent }) => {
+    const { vineyardName, grape, vintage, features, totalAmount, totalOriginalAmount } = consolidatedEvent;
+    
+    const getEventTypeLabel = (eventType: string) => {
+      switch (eventType) {
+        case 'manifestation': return 'Manifestation';
+        case 'sale': return 'Sale';
+        default: return 'Event';
+      }
+    };
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-sm font-medium cursor-help">
+                      {vineyardName} - {grape} ({vintage})
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm">
+                    <div className="space-y-2 text-xs">
+                      <div className="font-semibold">Wine Details</div>
+                      <div>• Vineyard: {vineyardName}</div>
+                      <div>• Grape: {grape}</div>
+                      <div>• Vintage: {vintage}</div>
+                      <div>• Features: {features.length} feature{features.length !== 1 ? 's' : ''}</div>
+                      <div className="border-t pt-1 mt-2">Feature Breakdown:</div>
+                      {features.map((feature, idx) => (
+                        <div key={idx} className="text-gray-600">
+                          • {feature.featureName} ({feature.eventType}): {formatAmount(feature.totalAmount)}
+                        </div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Badge variant="outline" className="text-xs">
+                {features.length} feature{features.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium">{formatAmount(totalAmount)}</p>
+            {totalOriginalAmount !== totalAmount && (
+              <p className="text-xs text-muted-foreground">
+                (was {formatAmount(totalOriginalAmount)})
+              </p>
+            )}
+          </div>
+        </div>
+        
+        {/* Feature breakdown */}
+        <div className="ml-4 space-y-1">
+          {features.map((feature, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">
+                  {feature.featureName} ({getEventTypeLabel(feature.eventType)})
+                </span>
+                <Badge variant="outline" className="text-[10px]">
+                  {feature.eventCount} {feature.eventCount === 1 ? 'event' : 'events'}
+                </Badge>
+              </div>
+              <div className="text-right">
+                <span className="font-medium">{formatAmount(feature.totalAmount)}</span>
+                <span className="text-gray-500 ml-1">({formatDecayRate(feature.decayRate)})</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const getFilteredVineyards = () => 
     selectedVineyard === 'all' ? vineyards : vineyards.filter(vineyard => vineyard.id === selectedVineyard);
 
-  const companyEventTypes = ['company_value', 'sale', 'contract', 'penalty', 'wine_feature'];
-  const companyEvents = eventBreakdown.filter(event => companyEventTypes.includes(event.type));
-
-  const groupedCompanyEvents = companyEvents.reduce((acc, event) => {
+  // Separate wine feature events by level (company vs vineyard)
+  const allWineFeatureEvents = eventBreakdown.filter(event => event.type === 'wine_feature');
+  
+  const companyWineFeatureEvents = allWineFeatureEvents.filter(event => {
+    const metadata: any = event.metadata ?? {};
+    return metadata.level === 'company';
+  });
+  const vineyardWineFeatureEvents = allWineFeatureEvents.filter(event => {
+    const metadata: any = event.metadata ?? {};
+    return metadata.level === 'vineyard';
+  });
+  
+  // Consolidate wine feature events by wine/vineyard
+  const consolidatedCompanyWineFeatures = consolidateWineFeatureEvents(companyWineFeatureEvents);
+  const consolidatedVineyardWineFeatures = consolidateWineFeatureEvents(vineyardWineFeatureEvents);
+  
+  // Group other company events by type
+  const otherCompanyEvents = eventBreakdown.filter(event => ['company_value', 'sale', 'contract', 'penalty'].includes(event.type));
+  const groupedCompanyEvents = otherCompanyEvents.reduce((acc, event) => {
     if (!acc[event.type]) acc[event.type] = [];
     acc[event.type].push(event);
     return acc;
@@ -184,12 +277,38 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               Company Prestige Sources
             </h3>
             
-            {Object.keys(groupedCompanyEvents).length === 0 ? (
+            {/* Company Wine Feature Events (Consolidated) */}
+            {consolidatedCompanyWineFeatures.length > 0 && (
               <Card>
-                <CardContent className="py-6 text-center text-muted-foreground">
-                  No company prestige events found.
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Star className="h-4 w-4 text-purple-600" />
+                    Wine Features (Company Level)
+                    <Badge className="bg-purple-100 text-purple-800">
+                      {consolidatedCompanyWineFeatures.length} {consolidatedCompanyWineFeatures.length === 1 ? 'wine' : 'wines'}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {consolidatedCompanyWineFeatures.map((consolidatedEvent, index) => (
+                    <div key={`${consolidatedEvent.vineyardId}_${consolidatedEvent.grape}_${consolidatedEvent.vintage}`}>
+                      <ConsolidatedWineFeatureDisplay consolidatedEvent={consolidatedEvent} />
+                      {index < consolidatedCompanyWineFeatures.length - 1 && <Separator className="mt-3" />}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Other Company Events */}
+            {Object.keys(groupedCompanyEvents).length === 0 ? (
+              consolidatedCompanyWineFeatures.length === 0 && (
+                <Card>
+                  <CardContent className="py-6 text-center text-muted-foreground">
+                    No company prestige events found.
+                  </CardContent>
+                </Card>
+              )
             ) : (
               Object.entries(groupedCompanyEvents).map(([type, events]) => (
                 <Card key={type}>
@@ -299,30 +418,63 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             ) : (
               // Detailed view for selected vineyard
               <div className="space-y-3">
-                {getFilteredVineyards().map((vineyard) => (
-                  <Card key={vineyard.id}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Grape className="h-4 w-4 text-green-600" />
-                        {vineyard.name}
-                        <Badge className="bg-green-100 text-green-800">
-                          {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
-                        </Badge>
-                        <Badge variant="outline" className="ml-auto">
-                          {formatAmount(vineyard.prestige)} prestige
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {vineyard.events.map((event, index) => (
-                        <div key={event.id}>
-                          <EventDisplay event={event} />
-                          {index < vineyard.events.length - 1 && <Separator className="mt-3" />}
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                ))}
+                {getFilteredVineyards().map((vineyard) => {
+                  // Get wine features for this vineyard
+                  const vineyardWineFeatures = consolidatedVineyardWineFeatures.filter(
+                    wine => wine.vineyardId === vineyard.id || wine.vineyardName === vineyard.name
+                  );
+                  
+                  return (
+                    <div key={vineyard.id} className="space-y-3">
+                      {/* Vineyard Wine Features */}
+                      {vineyardWineFeatures.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                              <Star className="h-4 w-4 text-purple-600" />
+                              Wine Features - {vineyard.name}
+                              <Badge className="bg-purple-100 text-purple-800">
+                                {vineyardWineFeatures.length} {vineyardWineFeatures.length === 1 ? 'wine' : 'wines'}
+                              </Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {vineyardWineFeatures.map((consolidatedEvent, index) => (
+                              <div key={`${consolidatedEvent.vineyardId}_${consolidatedEvent.grape}_${consolidatedEvent.vintage}`}>
+                                <ConsolidatedWineFeatureDisplay consolidatedEvent={consolidatedEvent} />
+                                {index < vineyardWineFeatures.length - 1 && <Separator className="mt-3" />}
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {/* Other Vineyard Events */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Grape className="h-4 w-4 text-green-600" />
+                            {vineyard.name}
+                            <Badge className="bg-green-100 text-green-800">
+                              {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
+                            </Badge>
+                            <Badge variant="outline" className="ml-auto">
+                              {formatAmount(vineyard.prestige)} prestige
+                            </Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {vineyard.events.map((event, index) => (
+                            <div key={event.id}>
+                              <EventDisplay event={event} />
+                              {index < vineyard.events.length - 1 && <Separator className="mt-3" />}
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

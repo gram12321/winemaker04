@@ -1,12 +1,9 @@
-// Wine production log service - tracks finished wine production history
 import { v4 as uuidv4 } from 'uuid';
-import { WineLogEntry, WineBatch } from '../../types/types';
-import { supabase } from '../../database/core/supabase';
+import { WineBatch, WineLogEntry } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from './highscoreService';
 import { getGameState, getCurrentCompany } from '../core/gameState';
-
-const WINE_LOG_TABLE = 'wine_log';
+import { insertWineLogEntry, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -22,7 +19,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       throw new Error('Bottled wine must have a completed date');
     }
 
-    const wineLogEntry = {
+    const wineLogData: WineLogData = {
       id: uuidv4(),
       company_id: getCurrentCompanyId(),
       vineyard_id: wineBatch.vineyardId,
@@ -42,11 +39,8 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       bottled_year: wineBatch.bottledDate.year
     };
 
-    const { error } = await supabase
-      .from(WINE_LOG_TABLE)
-      .insert(wineLogEntry);
-
-    if (error) throw error;
+    const result = await insertWineLogEntry(wineLogData);
+    if (!result.success) throw new Error(result.error);
 
     // Submit wine-based highscores
     try {
@@ -86,60 +80,12 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
 }
 
 /**
- * Load all wine log entries for the current company
- */
-export async function loadWineLog(): Promise<WineLogEntry[]> {
-  try {
-    const { data, error } = await supabase
-      .from(WINE_LOG_TABLE)
-      .select('*')
-      .eq('company_id', getCurrentCompanyId())
-      .order('bottled_year', { ascending: false })
-      .order('bottled_season', { ascending: false })
-      .order('bottled_week', { ascending: false });
-
-    if (error) throw error;
-
-    return (data || []).map(row => ({
-      id: row.id,
-      vineyardId: row.vineyard_id,
-      vineyardName: row.vineyard_name,
-      grape: row.grape_variety,
-      vintage: row.vintage,
-      quantity: row.quantity,
-      quality: row.quality,
-      balance: row.balance,
-      characteristics: row.characteristics,
-      estimatedPrice: row.estimated_price,
-      harvestDate: {
-        week: row.harvest_week,
-        season: row.harvest_season,
-        year: row.harvest_year
-      },
-      bottledDate: {
-        week: row.bottled_week,
-        season: row.bottled_season,
-        year: row.bottled_year
-      }
-    }));
-  } catch (error) {
-    console.error('Error loading wine log:', error);
-    return [];
-  }
-}
-
-/**
  * Get wine log entries for a specific vineyard
  */
 export async function getVineyardWineHistory(vineyardId: string): Promise<WineLogEntry[]> {
-  try {
-    const allEntries = await loadWineLog();
-    return allEntries.filter(entry => entry.vineyardId === vineyardId);
-  } catch (error) {
-    console.error('Error loading vineyard wine history:', error);
-    return [];
-  }
+  return await loadWineLogByVineyard(vineyardId);
 }
+
 
 /**
  * Calculate statistics for a vineyard based on its wine log

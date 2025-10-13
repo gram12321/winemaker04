@@ -1,31 +1,20 @@
-import { supabase } from '../../database/core/supabase';
+import { 
+  getUserSettings as loadUserSettingsFromDB, 
+  upsertUserSettings as saveUserSettingsToDB, 
+  deleteUserSettings as deleteUserSettingsFromDB,
+  type UserSettings,
+  type UserSettingsData
+} from '@/lib/database';
 
 export interface NotificationSettings {
-  categories: Record<string, boolean>;  // e.g., { "Production": false }
-  specificMessages: Record<string, boolean>;  // e.g., { "Production:complete": false }
+  categories: Record<string, boolean>;
+  specificMessages: Record<string, boolean>;
 }
 
 export interface ViewPreferences {
   hideEmpty: boolean;
   selectedTier: string;
   hierarchyView: boolean;
-}
-
-export interface UserSettings {
-  id?: string;
-  userId: string;
-  companyId: string;
-  showToastNotifications: boolean;
-  allowResourceSubstitution: boolean;
-  showDetailedInputSection: boolean;
-  notificationCategories: NotificationSettings['categories'];
-  notificationSpecificMessages: NotificationSettings['specificMessages'];
-  viewPreferences: {
-    market?: ViewPreferences;
-    inventory?: ViewPreferences;
-  };
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 // Default settings
@@ -64,14 +53,9 @@ const DEFAULT_USER_SETTINGS: Omit<UserSettings, 'id' | 'userId' | 'companyId' | 
 class UserSettingsService {
   public async getUserSettings(userId: string, companyId: string): Promise<UserSettings> {
     try {
-      const { data: settings, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('company_id', companyId)
-        .single();
+      const settings = await loadUserSettingsFromDB(userId, companyId);
 
-      if (error || !settings) {
+      if (!settings) {
         // Return default settings if none exist
         return {
           userId,
@@ -80,7 +64,7 @@ class UserSettingsService {
         };
       }
 
-      return this.mapDatabaseSettings(settings);
+      return settings;
     } catch (error) {
       console.error('Error getting user settings:', error);
       return {
@@ -93,7 +77,7 @@ class UserSettingsService {
 
   public async saveUserSettings(settings: Partial<UserSettings> & { userId: string; companyId: string }): Promise<{ success: boolean; error?: string }> {
     try {
-      const settingsData = {
+      const settingsData: UserSettingsData = {
         user_id: settings.userId,
         company_id: settings.companyId,
         show_toast_notifications: settings.showToastNotifications,
@@ -107,17 +91,7 @@ class UserSettingsService {
         }
       };
 
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert(settingsData, {
-          onConflict: 'user_id,company_id'
-        });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
+      return await saveUserSettingsToDB(settingsData);
     } catch (error) {
       console.error('Error saving user settings:', error);
       return { success: false, error: 'An unexpected error occurred' };
@@ -179,24 +153,7 @@ class UserSettingsService {
   }
 
   public async deleteUserSettings(userId: string, companyId?: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      let query = supabase.from('user_settings').delete().eq('user_id', userId);
-      
-      if (companyId) {
-        query = query.eq('company_id', companyId);
-      }
-
-      const { error } = await query;
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting user settings:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    }
+    return await deleteUserSettingsFromDB(userId, companyId);
   }
 
   // Helper methods for localStorage fallback (for anonymous users)
@@ -254,24 +211,6 @@ class UserSettingsService {
     }
   }
 
-  private mapDatabaseSettings(dbSettings: any): UserSettings {
-    return {
-      id: dbSettings.id,
-      userId: dbSettings.user_id,
-      companyId: dbSettings.company_id,
-      showToastNotifications: dbSettings.show_toast_notifications ?? true,
-      allowResourceSubstitution: dbSettings.allow_resource_substitution ?? true,
-      showDetailedInputSection: dbSettings.show_detailed_input_section ?? true,
-      notificationCategories: dbSettings.notification_categories || DEFAULT_NOTIFICATION_CATEGORIES,
-      notificationSpecificMessages: dbSettings.notification_specific_messages || DEFAULT_NOTIFICATION_SPECIFIC_MESSAGES,
-      viewPreferences: dbSettings.view_preferences || {
-        market: DEFAULT_VIEW_PREFERENCES,
-        inventory: DEFAULT_VIEW_PREFERENCES
-      },
-      createdAt: new Date(dbSettings.created_at),
-      updatedAt: new Date(dbSettings.updated_at)
-    };
-  }
 }
 
 export const userSettingsService = new UserSettingsService();

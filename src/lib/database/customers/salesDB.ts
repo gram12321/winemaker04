@@ -94,6 +94,16 @@ export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
   }
 };
 
+export const getOrderById = async (orderId: string): Promise<WineOrder | null> => {
+  try {
+    const orders = await loadWineOrders();
+    return orders.find(o => o.id === orderId) || null;
+  } catch (error) {
+    console.error('Error getting order by ID:', error);
+    return null;
+  }
+};
+
 export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected'): Promise<void> => {
   try {
     const { error } = await supabase

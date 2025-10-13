@@ -1,9 +1,11 @@
 // Wine quality calculation service - handles all vineyard and regional factors that contribute to wine quality
-import { Vineyard } from '../../../types/types';
+import { Vineyard, WineBatch } from '../../../types/types';
 import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSuitabilityContribution } from '../../vineyard/vineyardValueCalc';
 import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
+import { calculateEffectiveQuality } from '../features/featureEffectsService';
+import { getFeatureImpacts } from '../features/featureDisplayService';
 
 export function getMaxLandValue(): number {
   let maxValue = 0;
@@ -89,6 +91,51 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
       grapeSuitability: vineyard.grape || ''
     },
     qualityScore
+  };
+}
+
+// ===== QUALITY BREAKDOWN FOR UI =====
+
+export interface QualityBreakdown {
+  baseQuality: number;
+  effectiveQuality: number;
+  featureImpacts: Array<{
+    featureId: string;
+    featureName: string;
+    icon: string;
+    impact: number;
+    impactType: 'penalty' | 'bonus';
+  }>;
+  totalFeatureImpact: number;
+}
+
+/**
+ * Get detailed quality breakdown for UI display
+ * Used by QualityFactorsBreakdown and WineModal components
+ * 
+ * @param batch - Wine batch to analyze
+ * @returns Comprehensive quality breakdown with feature impacts
+ */
+export function getQualityBreakdown(batch: WineBatch): QualityBreakdown {
+  const baseQuality = batch.quality;
+  const effectiveQuality = calculateEffectiveQuality(batch);
+  const featureImpacts = getFeatureImpacts(batch);
+  
+  const qualityImpacts = featureImpacts.map(impact => ({
+    featureId: impact.featureId,
+    featureName: impact.featureName,
+    icon: impact.icon,
+    impact: impact.qualityImpact,
+    impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
+  }));
+  
+  const totalFeatureImpact = effectiveQuality - baseQuality;
+  
+  return {
+    baseQuality,
+    effectiveQuality,
+    featureImpacts: qualityImpacts,
+    totalFeatureImpact
   };
 }
 

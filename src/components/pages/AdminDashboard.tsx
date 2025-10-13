@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState } from '@/lib/services';
 import { formatCurrency } from '@/lib/utils/utils';
-import { supabase } from '@/lib/database/core/supabase';
-import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
+import { supabase } from '@/lib/database/core/supabase'; // Admin operations - direct DB access acceptable for cleanup
+import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';

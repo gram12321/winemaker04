@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
-import { highscoreService, HighscoreEntry, ScoreType } from '@/lib/services';
+import { highscoreService } from '@/lib/services';
+import { type HighscoreEntry, type ScoreType } from '@/lib/database';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 

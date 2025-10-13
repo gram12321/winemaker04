@@ -1,8 +1,9 @@
 import { WineBatch } from '../../../types/types';
 import { updateInventoryBatch } from '../inventoryService';
-import { loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
+import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
+import { processEventTrigger } from '../features/featureRiskService';
 import { createActivity } from '../../activity/activitymanagers/activityManager';
 import { WorkCategory } from '../../activity';
 import { calculateFermentationWork } from '../../activity/workcalculators/fermentationWorkCalculator';
@@ -80,7 +81,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
     }
   });
 
-  // Record the bottled wine in the production log
+  // Record the bottled wine in the production log and trigger bottling events
   if (success) {
     try {
       // Get the updated batch to record in the log
@@ -89,6 +90,9 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       
       if (bottledBatch && bottledBatch.state === 'bottled') {
         await recordBottledWine(bottledBatch);
+        
+        // Trigger bottling event for wine features (e.g., bottle aging)
+        await processEventTrigger(bottledBatch, 'bottling', {});
       }
     } catch (error) {
       console.error('Failed to record bottled wine in production log:', error);
@@ -131,6 +135,7 @@ export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment
 /**
  * Process weekly fermentation effects for all fermenting batches
  * Called by game tick system
+ * OPTIMIZED: Loads vineyards once and uses bulk updates
  */
 export async function processWeeklyFermentation(): Promise<void> {
   try {
@@ -138,6 +143,15 @@ export async function processWeeklyFermentation(): Promise<void> {
     const fermentingBatches = batches.filter(batch => 
       batch.state === 'must_fermenting' && batch.fermentationOptions
     );
+
+    if (fermentingBatches.length === 0) return;
+
+    // OPTIMIZATION: Load vineyards once before processing all batches
+    const vineyards = await loadVineyards();
+    const vineyardMap = new Map(vineyards.map(v => [v.id, v]));
+
+    // OPTIMIZATION: Collect all updates to perform bulk update
+    const updates: Array<{ id: string; updates: Partial<WineBatch> }> = [];
 
     for (const batch of fermentingBatches) {
       if (!batch.fermentationOptions) continue;
@@ -152,9 +166,8 @@ export async function processWeeklyFermentation(): Promise<void> {
       // Recalculate balance based on new characteristics
       const balanceResult = calculateWineBalance(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
       
-      // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
-      const vineyards = await loadVineyards();
-      const vineyard = vineyards.find(v => v.id === batch.vineyardId);
+      // Calculate quality from vineyard factors (using pre-loaded vineyards)
+      const vineyard = vineyardMap.get(batch.vineyardId);
       const newQuality = vineyard ? calculateWineQuality(vineyard) : batch.quality;
 
       // Combine existing breakdown with new fermentation breakdown
@@ -165,13 +178,21 @@ export async function processWeeklyFermentation(): Promise<void> {
         ]
       };
 
-      // Update the batch with new characteristics, quality, and balance
-      await updateWineBatch(batch.id, {
-        characteristics: newCharacteristics,
-        quality: newQuality,
-        balance: balanceResult.score,
-        breakdown: combinedBreakdown
+      // Collect update instead of immediately saving
+      updates.push({
+        id: batch.id,
+        updates: {
+          characteristics: newCharacteristics,
+          quality: newQuality,
+          balance: balanceResult.score,
+          breakdown: combinedBreakdown
+        }
       });
+    }
+
+    // OPTIMIZATION: Single bulk update for all batches
+    if (updates.length > 0) {
+      await bulkUpdateWineBatches(updates);
     }
   } catch (error) {
     console.error('Error processing weekly fermentation:', error);

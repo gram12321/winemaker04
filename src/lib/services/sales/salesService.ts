@@ -1,7 +1,7 @@
 // Sales service for wine order management (fulfillment and rejection)
 import { WineOrder, WineBatch } from '../../types/types';
-import { loadWineOrders, updateWineOrderStatus, saveWineOrder } from '../../database/customers/salesDB';
-import { loadWineBatches, saveWineBatch } from '../../database/activities/inventoryDB';
+import { loadWineOrders, updateWineOrderStatus, saveWineOrder, getOrderById } from '../../database/customers/salesDB';
+import { saveWineBatch, getWineBatchById } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addTransaction } from '../user/financeService';
@@ -20,16 +20,14 @@ export async function getPendingOrders(): Promise<WineOrder[]> {
 
 // Fulfill a wine order (sell the wine) - supports partial fulfillment
 export async function fulfillWineOrder(orderId: string): Promise<boolean> {
-  const orders = await loadWineOrders();
-  const order = orders.find(o => o.id === orderId);
+  const order = await getOrderById(orderId);
   
   if (!order) {
     return false;
   }
   
   // Get the wine batch
-  const allBatches = await loadWineBatches();
-  const wineBatch = allBatches.find(batch => batch.id === order.wineBatchId);
+  const wineBatch = await getWineBatchById(order.wineBatchId);
   
   if (!wineBatch) {
     return false;

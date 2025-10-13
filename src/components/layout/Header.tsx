@@ -205,14 +205,14 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                     <AvatarFallback className="bg-red-600 text-white">
                       {currentCompany?.name ? (() => {
                         const name = currentCompany.name;
-                        const words = name.split(' ').filter(word => word.length > 0);
+                        const words = name.split(' ').filter((word: string) => word.length > 0);
                         
                         if (words.length === 1) {
                           // Single word: take first 2 letters
                           return words[0].substring(0, 2).toUpperCase();
                         } else {
                           // Multiple words: take first letter from first 2 words
-                          return words.slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
+                          return words.slice(0, 2).map((word: string) => word.charAt(0)).join('').toUpperCase();
                         }
                       })() : 'CO'}
                     </AvatarFallback>

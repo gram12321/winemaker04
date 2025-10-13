@@ -141,20 +141,26 @@ function HarvestRiskItem({ config, vineyard, conditionMet, currentRisk }: Harves
                   <div className="mt-2 space-y-1">
                     <p className="font-medium">Calculation:</p>
                     <p className="text-xs text-gray-300 font-mono">
-                      Risk = (0.5 - ripeness) × 0.6
+                      Risk = max(0, (0.5 - ripeness) × 0.6)
                     </p>
                     <p className="text-xs text-gray-300 font-mono">
-                      = (0.5 - {((vineyard.ripeness || 0)).toFixed(2)}) × 0.6
+                      = max(0, (0.5 - {((vineyard.ripeness || 0)).toFixed(2)}) × 0.6)
                     </p>
                     <p className="text-xs text-gray-300 font-mono">
-                      = {(0.5 - (vineyard.ripeness || 0)).toFixed(2)} × 0.6
+                      = max(0, {(0.5 - (vineyard.ripeness || 0)).toFixed(2)} × 0.6)
+                    </p>
+                    <p className="text-xs text-gray-300 font-mono">
+                      = max(0, {((0.5 - (vineyard.ripeness || 0)) * 0.6).toFixed(3)})
                     </p>
                     <p className="text-xs text-gray-300 font-mono font-medium">
                       = {(currentRisk * 100).toFixed(1)}%
                     </p>
                     
                     <p className="text-xs text-gray-300 mt-2">
-                      Ripeness {Math.round((vineyard.ripeness || 0) * 100)}% is below threshold (50%) → triggers green flavor risk
+                      {((vineyard.ripeness || 0) < 0.5) 
+                        ? `Ripeness ${Math.round((vineyard.ripeness || 0) * 100)}% is below threshold (50%) → triggers green flavor risk`
+                        : `Ripeness ${Math.round((vineyard.ripeness || 0) * 100)}% is above threshold (50%) → no green flavor risk`
+                      }
                     </p>
                   </div>
                 )}

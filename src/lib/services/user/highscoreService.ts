@@ -1,35 +1,6 @@
-import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { Season, NotificationCategory } from '../../types/types';
-
-export type ScoreType = 
-  | 'company_value' 
-  | 'company_value_per_week'
-  | 'highest_vintage_quantity'
-  | 'most_productive_vineyard'
-  | 'highest_wine_quality'
-  | 'highest_wine_balance'
-  | 'highest_wine_price'
-  | 'lowest_wine_price';
-
-export interface HighscoreEntry {
-  id: string;
-  companyId: string;
-  companyName: string;
-  scoreType: ScoreType;
-  scoreValue: number;
-  gameWeek?: number;
-  gameSeason?: Season;
-  gameYear?: number;
-  achievedAt: Date;
-  createdAt: Date;
-  
-  // Wine-specific data
-  vineyardId?: string;
-  vineyardName?: string;
-  wineVintage?: number;
-  grapeVariety?: string;
-}
+import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
 
 export interface HighscoreSubmission {
   companyId: string;
@@ -51,19 +22,7 @@ class HighscoreService {
   public async submitHighscore(submission: HighscoreSubmission): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if there's an existing highscore for this company and score type
-      const { data: existingScores, error: existingError } = await supabase
-        .from('highscores')
-        .select('score_value')
-        .eq('company_id', submission.companyId)
-        .eq('score_type', submission.scoreType)
-        .limit(1);
-
-      if (existingError) {
-        console.error('Error checking existing score:', existingError);
-        return { success: false, error: existingError.message };
-      }
-
-      const existingScore = existingScores?.[0];
+      const existingScore = await getExistingScore(submission.companyId, submission.scoreType);
 
       // For most scores, higher is better. For lowest_wine_price, lower is better.
       const isLowerBetter = submission.scoreType === 'lowest_wine_price';
@@ -76,31 +35,22 @@ class HighscoreService {
         return { success: true }; // Score not improved, but not an error
       }
 
-      const { error } = await supabase
-        .from('highscores')
-        .upsert({
-          company_id: submission.companyId,
-          company_name: submission.companyName,
-          score_type: submission.scoreType,
-          score_value: submission.scoreValue, // Store in euros directly
-          game_week: submission.gameWeek,
-          game_season: submission.gameSeason,
-          game_year: submission.gameYear,
-          vineyard_id: submission.vineyardId,
-          vineyard_name: submission.vineyardName,
-          wine_vintage: submission.wineVintage,
-          grape_variety: submission.grapeVariety,
-          achieved_at: new Date().toISOString()
-        }, {
-          onConflict: 'company_id,score_type'
-        });
+      const highscoreData: HighscoreData = {
+        company_id: submission.companyId,
+        company_name: submission.companyName,
+        score_type: submission.scoreType,
+        score_value: submission.scoreValue,
+        game_week: submission.gameWeek,
+        game_season: submission.gameSeason,
+        game_year: submission.gameYear,
+        vineyard_id: submission.vineyardId,
+        vineyard_name: submission.vineyardName,
+        wine_vintage: submission.wineVintage,
+        grape_variety: submission.grapeVariety,
+        achieved_at: new Date().toISOString()
+      };
 
-      if (error) {
-        console.error('Error submitting highscore:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
+      return await upsertHighscore(highscoreData);
     } catch (error) {
       console.error('Error submitting highscore:', error);
       return { success: false, error: 'An unexpected error occurred' };
@@ -109,22 +59,7 @@ class HighscoreService {
 
   public async getHighscores(scoreType: ScoreType, limit: number = 20): Promise<HighscoreEntry[]> {
     try {
-      // For lowest_wine_price, order ascending (lowest first). For others, descending (highest first).
-      const ascending = scoreType === 'lowest_wine_price';
-      
-      const { data: scores, error } = await supabase
-        .from('highscores')
-        .select('*')
-        .eq('score_type', scoreType)
-        .order('score_value', { ascending })
-        .limit(limit);
-
-      if (error) {
-        console.error('Error getting highscores:', error);
-        return [];
-      }
-
-      return scores.map(this.mapDatabaseHighscore);
+      return await loadHighscores(scoreType, limit);
     } catch (error) {
       console.error('Error getting highscores:', error);
       return [];
@@ -134,49 +69,25 @@ class HighscoreService {
   public async getCompanyRanking(companyId: string, scoreType: ScoreType): Promise<{ position: number; total: number } | null> {
     try {
       // Get the company's score
-      const { data: companyScores, error } = await supabase
-        .from('highscores')
-        .select('score_value')
-        .eq('company_id', companyId)
-        .eq('score_type', scoreType);
+      const companyScore = await getCompanyScore(companyId, scoreType);
 
-      if (error) {
-        console.error('Error getting company score:', error);
+      if (!companyScore) {
         return null;
       }
-
-      if (!companyScores || companyScores.length === 0) {
-        return null;
-      }
-
-      const companyScore = companyScores[0];
 
       // Count how many companies have a higher score
-      const { count: higherCount, error: higherCountError } = await supabase
-        .from('highscores')
-        .select('*', { count: 'exact', head: true })
-        .eq('score_type', scoreType)
-        .gt('score_value', companyScore.score_value);
-
-      if (higherCountError) {
-        console.error('Error counting higher scores:', higherCountError);
-        return null;
-      }
-
+      const higherCount = await countHigherScores(scoreType, companyScore.score_value);
+      
       // Count total companies for this score type
-      const { count: totalCount, error: totalCountError } = await supabase
-        .from('highscores')
-        .select('*', { count: 'exact', head: true })
-        .eq('score_type', scoreType);
+      const totalCount = await countTotalScores(scoreType);
 
-      if (totalCountError) {
-        console.error('Error counting total scores:', totalCountError);
+      if (higherCount === null || totalCount === null) {
         return null;
       }
 
       return {
-        position: (higherCount || 0) + 1,
-        total: totalCount || 0
+        position: higherCount + 1,
+        total: totalCount
       };
     } catch (error) {
       console.error('Error getting company ranking:', error);
@@ -364,48 +275,20 @@ class HighscoreService {
 
   public async clearHighscores(scoreType?: ScoreType): Promise<{ success: boolean; error?: string }> {
     try {
-      let query = supabase.from('highscores').delete();
+      const result = await deleteHighscores(scoreType);
       
-      if (scoreType) {
-        query = query.eq('score_type', scoreType);
-      } else {
-        query = query.neq('id', ''); // Delete all
+      if (result.success) {
+        const message = scoreType 
+          ? `Cleared ${scoreType} highscores`
+          : 'Cleared all highscores';
+        await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', NotificationCategory.SYSTEM);
       }
-
-      const { error } = await query;
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const message = scoreType 
-        ? `Cleared ${scoreType} highscores`
-        : 'Cleared all highscores';
-      await notificationService.addMessage(message, 'highscoreService.clearHighscores', 'Highscores Cleared', NotificationCategory.SYSTEM);
-      return { success: true };
+      
+      return result;
     } catch (error) {
       console.error('Error clearing highscores:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
-  }
-
-  private mapDatabaseHighscore(dbScore: any): HighscoreEntry {
-    return {
-      id: dbScore.id,
-      companyId: dbScore.company_id,
-      companyName: dbScore.company_name,
-      scoreType: dbScore.score_type as ScoreType,
-      scoreValue: dbScore.score_value, // Already in euros
-      gameWeek: dbScore.game_week,
-      gameSeason: dbScore.game_season as Season,
-      gameYear: dbScore.game_year,
-      achievedAt: new Date(dbScore.achieved_at),
-      createdAt: new Date(dbScore.created_at),
-      vineyardId: dbScore.vineyard_id,
-      vineyardName: dbScore.vineyard_name,
-      wineVintage: dbScore.wine_vintage,
-      grapeVariety: dbScore.grape_variety
-    };
   }
 
   /**

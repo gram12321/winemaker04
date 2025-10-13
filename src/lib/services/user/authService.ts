@@ -1,16 +1,7 @@
 import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { NotificationCategory } from '@/lib/types/types';
-
-export interface AuthUser {
-  id: string;
-  email?: string;
-  name: string;
-  avatar?: string;
-  avatarColor?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { getUserById, updateUser, deleteUser, type AuthUser } from '@/lib/database';
 
 export interface SignUpData {
   email: string;
@@ -52,27 +43,10 @@ class AuthService {
 
   private async loadUserProfile(userId: string): Promise<void> {
     try {
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error loading user profile:', error);
-        return;
-      }
+      const user = await getUserById(userId);
 
       if (user) {
-        this.setCurrentUser({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatar: user.avatar,
-          avatarColor: user.avatar_color,
-          createdAt: new Date(user.created_at),
-          updatedAt: new Date(user.updated_at)
-        });
+        this.setCurrentUser(user);
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -193,17 +167,14 @@ class AuthService {
     }
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          name: updates.name,
-          avatar: updates.avatar,
-          avatar_color: updates.avatarColor
-        })
-        .eq('id', this.currentUser.id);
+      const result = await updateUser(this.currentUser.id, {
+        name: updates.name,
+        avatar: updates.avatar,
+        avatar_color: updates.avatarColor
+      });
 
-      if (error) {
-        return { success: false, error: error.message };
+      if (!result.success) {
+        return { success: false, error: result.error };
       }
 
       // Reload user profile
@@ -223,13 +194,10 @@ class AuthService {
 
     try {
       // Delete user profile (this will cascade delete companies, settings, etc.)
-      const { error: profileError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', this.currentUser.id);
+      const result = await deleteUser(this.currentUser.id);
 
-      if (profileError) {
-        return { success: false, error: profileError.message };
+      if (!result.success) {
+        return { success: false, error: result.error };
       }
 
       // Sign out from auth

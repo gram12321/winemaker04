@@ -1,6 +1,5 @@
 import { getGameState } from '../core/gameState';
 import { Transaction } from '../../types/types';
-import { supabase } from '../../database/core/supabase';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { GAME_INITIALIZATION } from '../../constants/constants';
@@ -9,6 +8,7 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from './companyService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
+import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
 
 interface FinancialData {
   income: number;
@@ -26,7 +26,6 @@ interface FinancialData {
   grapesValue: number;
 }
 
-const TRANSACTIONS_TABLE = 'transactions';
 let transactionsCache: Transaction[] = [];
 
 // Initialize starting capital for new games
@@ -90,7 +89,7 @@ export const addTransaction = async (
     
     const gameState = getGameState();
     
-    const transaction = {
+    const transactionData: TransactionData = {
       company_id: companyId,
       amount,
       description,
@@ -107,26 +106,24 @@ export const addTransaction = async (
     
     triggerGameUpdate();
     
-    const { data, error } = await supabase
-      .from(TRANSACTIONS_TABLE)
-      .insert(transaction)
-      .select()
-      .single();
+    const result = await insertTransactionDB(transactionData);
     
-    if (error) throw error;
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to insert transaction');
+    }
     
     const newTransaction: Transaction = {
-      id: data.id,
+      id: result.data.id,
       date: {
-        week: data.week,
-        season: data.season,
-        year: data.year
+        week: result.data.week,
+        season: result.data.season,
+        year: result.data.year
       },
-      amount: data.amount,
-      description: data.description,
-      category: data.category,
-      recurring: data.recurring,
-      money: data.money
+      amount: result.data.amount,
+      description: result.data.description,
+      category: result.data.category,
+      recurring: result.data.recurring,
+      money: result.data.money
     };
     
     transactionsCache.push(newTransaction);
@@ -140,42 +137,18 @@ export const addTransaction = async (
       return b.date.week - a.date.week;
     });
     
-    return data.id;
+    return result.data.id;
   } catch (error) {
     console.error('Error adding transaction:', error);
     throw error;
   }
 };
 
-// Load transactions from Supabase
+// Load transactions from database
 export const loadTransactions = async (): Promise<Transaction[]> => {
   try {
-    const { data, error } = await supabase
-      .from(TRANSACTIONS_TABLE)
-      .select('*')
-      .eq('company_id', getCurrentCompanyId())
-      .order('year', { ascending: false })
-      .order('season', { ascending: false })  
-      .order('week', { ascending: false });
-    
-    if (error) throw error;
-    
-    const transactions: Transaction[] = (data || []).map(row => ({
-      id: row.id,
-      date: {
-        week: row.week || 1,
-        season: row.season || 'Spring',
-        year: row.year || 2024
-      },
-      amount: row.amount,
-      description: row.description,
-      category: row.category,
-      recurring: row.recurring || false,
-      money: row.money
-    }));
-    
+    const transactions = await loadTransactionsDB();
     transactionsCache = transactions;
-    
     return transactions;
   } catch (error) {
     console.error('Error loading transactions:', error);
@@ -263,7 +236,7 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
                             batch.state === 'must_ready' || batch.state === 'must_fermenting' ? 0.5 : 0.3;
     const qualityMultiplier = batch.quality || 0.5;
     
-    return sum + (batch.quantity * stageMultiplier * qualityMultiplier * (batch.finalPrice || 10));
+    return sum + (batch.quantity * stageMultiplier * qualityMultiplier * (batch.estimatedPrice || 10));
   }, 0);
   
   const grapesValue = wineBatches.reduce((sum, batch) => {

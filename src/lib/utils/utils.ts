@@ -350,6 +350,40 @@ export function getWineQualityInfo(quality: number): { category: string; descrip
   };
 }
 
+/**
+ * Get wine balance category based on balance value (0-1)
+ * Maps balance scores to humorous tier names
+ */
+export function getWineBalanceCategory(balance: number): string {
+  if (balance < 0.1) return "Train Wreck";
+  if (balance < 0.2) return "Crashed";
+  if (balance < 0.3) return "Chaotic";
+  if (balance < 0.4) return "Confused Identity";
+  if (balance < 0.5) return "Finding Harmony";
+  if (balance < 0.6) return "Well-Composed";
+  if (balance < 0.7) return "Elegantly Balanced";
+  if (balance < 0.8) return "B-E-Autiful!";
+  if (balance < 0.9) return "Symphony in a Glass";
+  return "Perfection Achieved";
+}
+
+/**
+ * Get wine balance description based on balance value (0-1)
+ * Provides detailed description of balance tier
+ */
+export function getWineBalanceDescription(balance: number): string {
+  if (balance < 0.1) return "A catastrophic clash of flavors that should never have met";
+  if (balance < 0.2) return "Characteristics fighting each other for dominance";
+  if (balance < 0.3) return "Unbalanced with one or more elements overpowering the rest";
+  if (balance < 0.4) return "Lacking cohesion, though individual elements show promise";
+  if (balance < 0.5) return "Approaching balance but still noticeably rough around the edges";
+  if (balance < 0.6) return "Pleasant harmony emerging with good integration of characteristics";
+  if (balance < 0.7) return "Well-balanced with all elements working together nicely";
+  if (balance < 0.8) return "Beautifully integrated characteristics creating a refined experience";
+  if (balance < 0.9) return "Exceptional balance where every element enhances the whole";
+  return "A masterpiece of balance representing the pinnacle of winemaking harmony";
+}
+
 // ========================================
 // SECTION 6: COLOR & BADGE UTILITIES
 // ========================================

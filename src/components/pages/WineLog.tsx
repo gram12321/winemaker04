@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useGameStateWithData } from '@/hooks';
-import { loadWineLog, getAllVineyards } from '@/lib/services';
+import { getAllVineyards } from '@/lib/services';
+import { loadWineLog } from '@/lib/database';
 import { WineLogEntry } from '@/lib/types/types';
 import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineCharacteristicsDisplay } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber, formatGameDateFromObject } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
+import { CompanyProps } from '@/lib/types/UItypes';
 
 interface WineLogProps extends CompanyProps {
   // Inherits currentCompany from CompanyProps
@@ -336,7 +338,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                             <div>
                               <div className="text-xs text-gray-500 uppercase mb-1">Price</div>
                               <div className="text-base font-bold text-green-600">
-                                {formatCurrency(entry.finalPrice)}
+                                {formatCurrency(entry.estimatedPrice)}
                               </div>
                               <div className="text-xs text-gray-500">per bottle</div>
                             </div>

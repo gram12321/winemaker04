@@ -1,18 +1,14 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, getAllVineyards, bottleWine, isActionAvailable } from '@/lib/services';
-import { WineBatch, WineCharacteristics, Vineyard } from '@/lib/types/types';
-import { Button, WineCharacteristicsDisplay, CrushingOptionsModal, WineModal } from '../ui';
+import { getAllWineBatches, bottleWine, isActionAvailable } from '@/lib/services';
+import { WineBatch } from '@/lib/types/types';
+import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureStatusGrid } from '../ui/wine/WineryFeatureStatusGrid';
 import { EvolvingFeaturesDisplay } from '../ui/wine/WineryEvolvingFeaturesDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
-import { getWineQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
-import { getCharacteristicDisplayName } from '@/lib/utils/utils';
-import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
-import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '@/lib/constants/vineyardConstants';
-import { modifyHarvestCharacteristics } from '@/lib/services/wine/characteristics/harvestCharacteristics';
+import { getWineQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 
@@ -32,12 +28,12 @@ const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
 // Component for wine quality category display
 const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const qualityCategory = getWineQualityCategory(batch.quality);
-  const qualityLabel = getColorCategory(batch.quality);
   const colorClass = getColorClass(batch.quality);
+  const qualityPercentage = Math.round(batch.quality * 100);
 
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Quality: <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
+      Quality: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
     </div>
   );
 };
@@ -103,88 +99,10 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
   );
 };
 
-// Component for detailed wine characteristics display
-const WineBatchCharacteristicsDisplay: React.FC<{ batch: WineBatch; vineyards: Vineyard[] }> = ({ batch, vineyards }) => {
-  const balanceResult = useWineBatchBalance(batch);
-  
-  // Build optional tooltips by recomputing harvest deltas from vineyard data
-  const tooltips = useMemo(() => {
-    const vineyard = vineyards.find(v => v.id === batch.vineyardId);
-    if (!vineyard) return undefined;
-    const base = GRAPE_CONST[batch.grape]?.baseCharacteristics as WineCharacteristics | undefined;
-    if (!base) return undefined;
-
-    const country = vineyard.country;
-    const region = vineyard.region;
-    const altitude = vineyard.altitude;
-    const countryAlt = (REGION_ALTITUDE_RANGES as any)[country] || {};
-    const [minAlt, maxAlt] = (countryAlt[region] as [number, number]) || [0, 100];
-    const suitCountry = (REGION_GRAPE_SUITABILITY as any)[country] || {};
-    const suitability = (suitCountry[region]?.[batch.grape] ?? 0.5) as number;
-
-    // Use stored breakdown data if available, otherwise fall back to recalculating harvest breakdown
-    let breakdown = batch.breakdown;
-    
-    // If no breakdown data exists (legacy batches), recalculate harvest breakdown
-    if (!breakdown) {
-      const harvestBreakdown = modifyHarvestCharacteristics({
-        baseCharacteristics: base,
-        ripeness: vineyard.ripeness || 0.5,
-        qualityFactor: batch.quality,
-        suitability,
-        altitude,
-        medianAltitude: (minAlt + maxAlt) / 2,
-        maxAltitude: maxAlt,
-        grapeColor: GRAPE_CONST[batch.grape].grapeColor
-      });
-      breakdown = harvestBreakdown.breakdown;
-    }
-
-    const formatDelta = (n?: number) => (typeof n === 'number' && Math.abs(n) > 0.0001 ? `${(n * 100).toFixed(1)}%` : undefined);
-
-    const keys = Object.keys(base) as (keyof WineCharacteristics)[];
-    const map: Partial<Record<keyof WineCharacteristics, string>> = {};
-    for (const k of keys) {
-      const parts: string[] = [];
-      
-      // Find all effects for this characteristic
-      const characteristicEffects = breakdown?.effects?.filter(e => e.characteristic === k) || [];
-      
-      // Add each effect to the tooltip
-      for (const effect of characteristicEffects) {
-        const delta = formatDelta(effect.modifier);
-        if (delta) {
-          // Use the full description as the effect name (e.g., "Grape Ripeness", "Hand Pressing")
-          const effectName = effect.description;
-          parts.push(`${effectName} ${effect.modifier >= 0 ? '+' : ''}${delta}`);
-        }
-      }
-      
-      if (parts.length) map[k] = parts.join(' • ');
-    }
-    return map;
-  }, [batch, vineyards]);
-
-  return (
-    <div className="mt-3">
-      <WineCharacteristicsDisplay 
-        characteristics={batch.characteristics} 
-        adjustedRanges={balanceResult?.dynamicRanges}
-        collapsible={true}
-        defaultExpanded={false}
-        title="Wine Characteristics"
-        tooltips={tooltips}
-        baseValues={GRAPE_CONST[batch.grape]?.baseCharacteristics}
-        showBalanceScore={true}
-      />
-    </div>
-  );
-};
 
 const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
-  const vineyards = useGameStateWithData(getAllVineyards, [] as Vineyard[]);
   
   // Unified modal state
   const [modals, setModals] = useState({
@@ -352,10 +270,6 @@ const Winery: React.FC = () => {
                     <FeatureStatusGrid batch={batch} />
                   </div>
 
-                  {/* Wine Characteristics Display (Collapsible) */}
-                  <div className="mt-4">
-                    <WineBatchCharacteristicsDisplay batch={batch} vineyards={vineyards} />
-                  </div>
                 </div>
               ))}
             </div>

@@ -601,6 +601,121 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
   }
 }
 
+/**
+ * Consolidated wine feature event for UI display
+ */
+export interface ConsolidatedWineFeatureEvent {
+  vineyardId: string;
+  vineyardName: string;
+  grape: string;
+  vintage: number;
+  features: Array<{
+    featureId: string;
+    featureName: string;
+    featureType: string;
+    level: 'company' | 'vineyard';
+    eventType: 'manifestation' | 'sale';
+    totalAmount: number;
+    totalOriginalAmount: number;
+    eventCount: number;
+    decayRate: number;
+    recentEvents: PrestigeEvent[];
+  }>;
+  totalAmount: number;
+  totalOriginalAmount: number;
+}
+
+/**
+ * Consolidate wine feature events by wine/vineyard instead of event type
+ * Groups events by vineyard + grape + vintage combination
+ */
+export function consolidateWineFeatureEvents(events: PrestigeEvent[]): ConsolidatedWineFeatureEvent[] {
+  const wineFeatureEvents = events.filter(e => e.type === 'wine_feature');
+  
+  // Group by vineyard + grape + vintage combination
+  const wineGroups = new Map<string, PrestigeEvent[]>();
+  
+  for (const event of wineFeatureEvents) {
+    const metadata: any = event.metadata ?? {};
+    
+    // Use proper fields from metadata (no string parsing needed!)
+    const vineyardName = metadata.vineyardName || 'Unknown Vineyard';
+    const grape = metadata.grape || 'Unknown Grape';
+    const vintage = metadata.vintage || 0;
+    
+    const key = `${vineyardName}_${grape}_${vintage}`;
+    
+    if (!wineGroups.has(key)) {
+      wineGroups.set(key, []);
+    }
+    wineGroups.get(key)!.push(event);
+  }
+  
+  // Convert groups to consolidated events
+  const consolidated: ConsolidatedWineFeatureEvent[] = [];
+  
+  for (const [, wineEvents] of wineGroups) {
+    if (wineEvents.length === 0) continue;
+    
+    const firstEvent = wineEvents[0];
+    const metadata: any = firstEvent.metadata ?? {};
+    
+    // Group features within this wine
+    const featureGroups = new Map<string, PrestigeEvent[]>();
+    
+    for (const event of wineEvents) {
+      const eventMetadata: any = event.metadata ?? {};
+      const featureKey = `${eventMetadata.featureId || 'unknown'}_${eventMetadata.level || 'unknown'}_${eventMetadata.eventType || 'unknown'}`;
+      
+      if (!featureGroups.has(featureKey)) {
+        featureGroups.set(featureKey, []);
+      }
+      featureGroups.get(featureKey)!.push(event);
+    }
+    
+    // Convert feature groups to feature summaries
+    const features = [];
+    for (const [, featureEvents] of featureGroups) {
+      const featureFirstEvent = featureEvents[0];
+      const featureMetadata: any = featureFirstEvent.metadata ?? {};
+      
+      const totalAmount = featureEvents.reduce((sum, e) => sum + (e.currentAmount ?? e.amount), 0);
+      const totalOriginalAmount = featureEvents.reduce((sum, e) => sum + (e.originalAmount ?? e.amount), 0);
+      
+      features.push({
+        featureId: featureMetadata.featureId || 'unknown',
+        featureName: featureMetadata.featureName || 'Unknown Feature',
+        featureType: featureMetadata.featureType || 'unknown',
+        level: featureMetadata.level || 'company',
+        eventType: featureMetadata.eventType || 'unknown',
+        totalAmount,
+        totalOriginalAmount,
+        eventCount: featureEvents.length,
+        decayRate: featureFirstEvent.decayRate,
+        recentEvents: featureEvents.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      });
+    }
+    
+    // Calculate wine totals
+    const wineTotalAmount = wineEvents.reduce((sum, e) => sum + (e.currentAmount ?? e.amount), 0);
+    const wineTotalOriginalAmount = wineEvents.reduce((sum, e) => sum + (e.originalAmount ?? e.amount), 0);
+    
+    // Use proper fields from metadata (no string parsing needed!)
+    consolidated.push({
+      vineyardId: metadata.vineyardId || 'unknown',
+      vineyardName: metadata.vineyardName || 'Unknown Vineyard',
+      grape: metadata.grape || 'Unknown Grape',
+      vintage: metadata.vintage || 0,
+      features,
+      totalAmount: wineTotalAmount,
+      totalOriginalAmount: wineTotalOriginalAmount
+    });
+  }
+  
+  // Sort by total amount (highest first)
+  return consolidated.sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
 export function getEventDisplayData(event: PrestigeEvent): {
   title: string;
   titleBase: string;
@@ -796,6 +911,9 @@ export async function addFeaturePrestigeEvent(
         featureId: config.id,
         featureName: config.name,
         featureType: config.type,
+        vineyardId: batch.vineyardId,
+        vineyardName: batch.vineyardName,
+        grape: batch.grape,
         wineName: `${batch.vineyardName} ${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         customerName: eventContext.customerName,
@@ -823,7 +941,9 @@ export async function addFeaturePrestigeEvent(
         featureId: config.id,
         featureName: config.name,
         featureType: config.type,
+        vineyardId: batch.vineyardId,
         vineyardName: batch.vineyardName,
+        grape: batch.grape,
         wineName: `${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         batchSize: batch.quantity,

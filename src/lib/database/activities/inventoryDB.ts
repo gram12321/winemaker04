@@ -119,6 +119,16 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
   }
 };
 
+export const getWineBatchById = async (batchId: string): Promise<WineBatch | null> => {
+  try {
+    const batches = await loadWineBatches();
+    return batches.find(b => b.id === batchId) || null;
+  } catch (error) {
+    console.error('Error getting wine batch by ID:', error);
+    return null;
+  }
+};
+
 export const updateWineBatch = async (batchId: string, updates: Partial<WineBatch>): Promise<boolean> => {
   try {
     const batches = await loadWineBatches();
@@ -138,5 +148,72 @@ export const updateWineBatch = async (batchId: string, updates: Partial<WineBatc
   } catch (error) {
     console.error('Error updating wine batch:', error);
     return false;
+  }
+};
+
+/**
+ * Bulk update wine batches - optimized for performance
+ * Updates multiple batches in a single database operation
+ */
+export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates: Partial<WineBatch> }>): Promise<void> => {
+  if (updates.length === 0) return;
+
+  try {
+    // Load all batches once
+    const batches = await loadWineBatches();
+    const batchMap = new Map(batches.map(b => [b.id, b]));
+
+    // Prepare upsert data
+    const upsertData = updates
+      .map(({ id, updates: partialUpdates }) => {
+        const batch = batchMap.get(id);
+        if (!batch) return null;
+
+        const updatedBatch = { ...batch, ...partialUpdates };
+        
+        return {
+          id: updatedBatch.id,
+          company_id: getCurrentCompanyId(),
+          vineyard_id: updatedBatch.vineyardId,
+          vineyard_name: updatedBatch.vineyardName,
+          grape_variety: updatedBatch.grape,
+          quantity: Math.round(updatedBatch.quantity),
+          state: updatedBatch.state,
+          fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
+          fermentation_options: updatedBatch.fermentationOptions,
+          quality: updatedBatch.quality,
+          balance: updatedBatch.balance,
+          characteristics: updatedBatch.characteristics,
+          breakdown: updatedBatch.breakdown,
+          estimated_price: updatedBatch.estimatedPrice,
+          asking_price: updatedBatch.askingPrice,
+          grape_color: updatedBatch.grapeColor,
+          natural_yield: updatedBatch.naturalYield,
+          fragile: updatedBatch.fragile,
+          prone_to_oxidation: updatedBatch.proneToOxidation,
+          features: updatedBatch.features || [],
+          harvest_start_week: Math.round(updatedBatch.harvestStartDate.week),
+          harvest_start_season: updatedBatch.harvestStartDate.season,
+          harvest_start_year: Math.round(updatedBatch.harvestStartDate.year),
+          harvest_end_week: Math.round(updatedBatch.harvestEndDate.week),
+          harvest_end_season: updatedBatch.harvestEndDate.season,
+          harvest_end_year: Math.round(updatedBatch.harvestEndDate.year),
+          bottled_week: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.week) : null,
+          bottled_season: updatedBatch.bottledDate?.season,
+          bottled_year: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.year) : null,
+          aging_progress: Math.round(updatedBatch.agingProgress || 0)
+        };
+      })
+      .filter(Boolean);
+
+    // Single bulk upsert operation
+    const { error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .upsert(upsertData);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Bulk update wine batches failed:', error);
+    throw error;
   }
 };

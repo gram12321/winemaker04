@@ -5,6 +5,7 @@ import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules,
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
+import { getWineBalanceCategory } from '@/lib/utils/utils';
 
 
 interface BalanceScoreBreakdownProps {
@@ -512,7 +513,10 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
             </div>
             <div className="flex justify-between text-lg font-bold">
               <span>Final Score:</span>
-              <span>{Math.round(balanceResult.score * 100)}%</span>
+              <div className="text-right">
+                <div>{Math.round(balanceResult.score * 100)}%</div>
+                <div className="text-sm font-normal text-gray-600">{getWineBalanceCategory(balanceResult.score)}</div>
+              </div>
             </div>
           </div>
         </div>

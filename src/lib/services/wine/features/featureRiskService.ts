@@ -4,7 +4,7 @@
 import { WineBatch } from '../../../types/types';
 import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulationStrategy } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../../constants/wineFeatures';
-import { loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
+import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { notificationService } from '../../../../components/layout/NotificationCenter';
 import { NotificationCategory } from '../../../types/types';
@@ -179,12 +179,16 @@ async function processTimeBased(
 /**
  * Process weekly risk accumulation for all time-based features
  * Called by game tick system
+ * OPTIMIZED: Uses bulk updates instead of individual saves
  */
 export async function processWeeklyFeatureRisks(): Promise<void> {
   try {
     const batches = await loadWineBatches();
     const vineyards = await loadVineyards();
     const timeBasedConfigs = getTimeBasedFeatures();
+    
+    // OPTIMIZATION: Collect all updates for bulk operation
+    const updates: Array<{ id: string; updates: Partial<WineBatch> }> = [];
     
     for (const batch of batches) {
       let updatedFeatures = [...(batch.features || [])];
@@ -196,10 +200,18 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
         updatedFeatures = await processTimeBased(batch, config, updatedFeatures, vineyard);
       }
       
-      // Only update if features changed
+      // Only collect update if features changed
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
-        await updateWineBatch(batch.id, { features: updatedFeatures });
+        updates.push({
+          id: batch.id,
+          updates: { features: updatedFeatures }
+        });
       }
+    }
+    
+    // OPTIMIZATION: Single bulk update for all batches
+    if (updates.length > 0) {
+      await bulkUpdateWineBatches(updates);
     }
   } catch (error) {
     console.error('Error processing weekly feature risks:', error);

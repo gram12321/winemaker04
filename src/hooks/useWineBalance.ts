@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { WineBatch, WineCharacteristics, BalanceResult } from '../lib/types/types';
 import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../lib/balance';
+import { getWineBalanceCategory } from '../lib/utils/utils';
 
 /**
  * Hook to calculate balance for a wine batch
@@ -40,21 +41,13 @@ export function useFormattedBalance(balanceResult: BalanceResult | null): string
 }
 
 /**
- * Hook to get balance quality description
+ * Hook to get balance quality description (uses getWineBalanceCategory)
  * @param balanceResult - Balance result from useWineBalance
  * @returns Quality description string
  */
 export function useBalanceQuality(balanceResult: BalanceResult | null): string {
   return useMemo(() => {
     if (!balanceResult) return 'Unknown';
-    
-    const score = balanceResult.score;
-    if (score >= 0.9) return 'Exceptional';
-    if (score >= 0.8) return 'Excellent';
-    if (score >= 0.7) return 'Very Good';
-    if (score >= 0.6) return 'Good';
-    if (score >= 0.5) return 'Average';
-    if (score >= 0.4) return 'Below Average';
-    return 'Poor';
+    return getWineBalanceCategory(balanceResult.score);
   }, [balanceResult]);
 }

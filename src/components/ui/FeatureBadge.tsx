@@ -39,6 +39,8 @@ function getFeatureTooltipContent(feature: WineFeature, config: FeatureConfig): 
       return `Oxidation: ${severityPercent}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Minor oxidation - barely noticeable' : severityPercent < 50 ? 'Moderate oxidation - some off-flavors' : severityPercent < 75 ? 'Significant oxidation - clearly affected' : 'Severe oxidation - wine may be undrinkable'}\n\nOxidation reduces wine quality and can make it unsellable.`;
     } else if (config.id === 'green_flavor') {
       return `Green Flavor: ${severityPercent}% severity\n\nThis indicates the intensity of green, unripe flavors:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Subtle green notes' : severityPercent < 50 ? 'Noticeable unripe character' : severityPercent < 75 ? 'Strong green flavors' : 'Severe green, harsh taste'}\n\nGreen flavors reduce wine quality and marketability.`;
+    } else if (config.id === 'bottle_aging') {
+      return `Bottle Aging: ${severityPercent}% developed\n\nThis shows how much complexity and smoothness has developed through aging:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Early development - subtle complexity emerging' : severityPercent < 50 ? 'Moderate aging - noticeable smoothness' : severityPercent < 75 ? 'Well-aged - pronounced complexity' : 'Fully matured - maximum aging benefits'}\n\nAging improves wine quality, characteristics, and increases value.`;
     }
     
     // Generic graduated feature tooltip
