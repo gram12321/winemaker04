@@ -123,3 +123,4 @@ export const QUALITY_FACTOR_EMOJIS = {
   aspectRating: '🧭',
   grapeSuitability: '🍇'
 } as const;
+

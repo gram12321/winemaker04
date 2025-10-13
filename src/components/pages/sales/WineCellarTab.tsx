@@ -5,10 +5,24 @@ import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, FeatureBadges } from '../../ui';
-import { useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
+import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 
+
+// Component for wine batch balance display (needed to use hooks properly)
+const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const balanceResult = useWineBatchBalance(batch);
+  const formattedBalance = useFormattedBalance(balanceResult);
+  const balanceQuality = useBalanceQuality(balanceResult);
+  const colorClass = getColorClass(batch.balance);
+  
+  return (
+    <div className="text-xs text-gray-600">
+      <span className="font-medium">Balance:</span> <span className={`font-medium ${colorClass}`}>{formattedBalance}</span> ({balanceQuality})
+    </div>
+  );
+};
 
 // Component for wine quality category display
 const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -19,6 +33,45 @@ const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   return (
     <div className="text-xs text-gray-600">
       <span className="font-medium">Quality:</span> <span className={`font-medium ${colorClass}`}>{qualityCategory}</span> ({qualityLabel})
+    </div>
+  );
+};
+
+// Component for wine characteristics display with icons and percentages
+const WineCharacteristicsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  const characteristics = wine.characteristics;
+
+  const characteristicLabels: Record<string, string> = {
+    sweetness: 'sweetness',
+    body: 'body',
+    tannins: 'tannins',
+    spice: 'spice',
+    acidity: 'acidity',
+    aroma: 'aroma',
+    finish: 'finish'
+  };
+
+  return (
+    <div className="text-xs space-y-1">
+      {Object.entries(characteristics).map(([key, value]) => {
+        const label = characteristicLabels[key] || key;
+        const percentage = Math.round(value * 100);
+        const isPositive = percentage > 0;
+        const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
+        
+        return (
+          <div key={key} className="flex items-center gap-1">
+            <img 
+              src={`/assets/icons/characteristics/${key}.png`} 
+              alt={key}
+              className="w-3 h-3"
+            />
+            <span className={colorClass}>
+              {label}: {isPositive ? '+' : ''}{percentage}%
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -200,8 +253,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       accessor: (wine) => wine.askingPrice ?? wine.estimatedPrice
     },
     { key: 'quantity', label: 'Bottles', sortable: true },
+    { key: 'balance' as any, label: 'Balance', sortable: false },
+    { key: 'characteristics' as any, label: 'Features', sortable: false },
     { key: 'quality' as any, label: 'Quality', sortable: false },
-    { key: 'features' as any, label: 'Features', sortable: false },
+    { key: 'features' as any, label: 'Feature Effects', sortable: false },
     { key: 'actions' as any, label: 'Actions', sortable: false }
   ];
 
@@ -370,15 +425,17 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 >
                   Bottles
                 </TableHead>
-                <TableHead>Quality</TableHead>
+                <TableHead>Balance</TableHead>
                 <TableHead>Features</TableHead>
+                <TableHead>Quality</TableHead>
+                <TableHead>Feature Effects</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedBottledWines.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-gray-500 py-6">
+                  <TableCell colSpan={12} className="text-center text-gray-500 py-6">
                     No bottled wines available for sale
                   </TableCell>
                 </TableRow>
@@ -457,6 +514,12 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                       </TableCell>
                       <TableCell className="text-gray-500">
                         {wine.quantity}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        <WineBatchBalanceDisplay batch={wine} />
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        <WineCharacteristicsDisplay wine={wine} />
                       </TableCell>
                       <TableCell className="text-gray-500">
                         <WineQualityDisplay batch={wine} />
