@@ -11,7 +11,7 @@ import { formatCurrency, formatNumber, getBadgeColorClasses, getFlagIcon, format
 import { getAltitudeRating, getAspectRating } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
 import { getRegionalPriceRange } from '@/lib/services';
-import { getVineyardQualityFactors } from '@/lib/services/wine/wineQualityCalculationService';
+import { getVineyardQualityFactors } from '@/lib/services/wine/winescore/wineQualityCalculationService';
 
 interface VineyardModalProps extends DialogProps {
   vineyard: VineyardType | null;

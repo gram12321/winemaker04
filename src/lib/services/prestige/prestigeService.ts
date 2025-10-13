@@ -7,7 +7,7 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
-import { getMaxLandValue } from '../wine/wineQualityCalculationService';
+import { getMaxLandValue } from '../wine/winescore/wineQualityCalculationService';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import type { FeatureConfig } from '../../types/wineFeatures';
 import { 

@@ -86,8 +86,8 @@ export { startFermentationActivity, bottleWine, isFermentationActionAvailable, p
 export { isActionAvailable } from './wine/winery/wineryService';
 export { getBatchStatus } from './wine/winery/wineryService';
 export { startCrushingActivity, validateCrushingActivity } from './wine/winery/crushingManager';
-export { calculateEffectiveQuality, calculateFeaturePriceMultiplier, getPresentFeaturesSorted, hasAnyFaults, getFeature, hasFeature } from './wine/featureEffectsService';
-export { initializeBatchFeatures, processWeeklyFeatureRisks, processEventTrigger } from './wine/featureRiskService';
+export { calculateEffectiveQuality, calculateFeaturePriceMultiplier, getPresentFeaturesSorted, hasAnyFaults, getFeature, hasFeature } from './wine/features/featureEffectsService';
+export { initializeBatchFeatures, processWeeklyFeatureRisks, processEventTrigger } from './wine/features/featureRiskService';
 export { recordBottledWine, loadWineLog, getVineyardWineHistory, calculateVineyardStats } from './user/wineLogService';
 export type { VineyardStats } from './user/wineLogService';
 export type { AuthUser } from './user/authService';

@@ -2,11 +2,11 @@
 // Business logic for presenting feature risks in UI (generic for all features)
 // Keeps UI components clean by extracting risk calculations
 
-import { WineBatch } from '../../types/types';
+import { WineBatch } from '../../../types/types';
 import { getFeature } from './featureEffectsService';
-import { getFeatureConfig } from '../../constants/wineFeatures';
+import { getFeatureConfig } from '../../../constants/wineFeatures';
 import { previewEventRisks } from './featureRiskService';
-import { inferRiskAccumulationStrategy } from '../../types/wineFeatures';
+import { inferRiskAccumulationStrategy } from '../../../types/wineFeatures';
 
 /**
  * Risk information for a single feature (generic for all features)

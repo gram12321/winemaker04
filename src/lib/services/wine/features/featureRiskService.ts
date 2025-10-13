@@ -1,14 +1,14 @@
 // Feature Risk Service
 // Handles risk accumulation, manifestation checks, and feature state updates
 
-import { WineBatch } from '../../types/types';
-import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulationStrategy } from '../../types/wineFeatures';
-import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../constants/wineFeatures';
-import { loadWineBatches, updateWineBatch } from '../../database/activities/inventoryDB';
-import { loadVineyards } from '../../database/activities/vineyardDB';
-import { notificationService } from '../../../components/layout/NotificationCenter';
-import { NotificationCategory } from '../../types/types';
-import { addFeaturePrestigeEvent } from '../prestige/prestigeService';
+import { WineBatch } from '../../../types/types';
+import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulationStrategy } from '../../../types/wineFeatures';
+import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../../constants/wineFeatures';
+import { loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
+import { loadVineyards } from '../../../database/activities/vineyardDB';
+import { notificationService } from '../../../../components/layout/NotificationCenter';
+import { NotificationCategory } from '../../../types/types';
+import { addFeaturePrestigeEvent } from '../../prestige/prestigeService';
 
 /**
  * Create a new feature instance from config
@@ -217,13 +217,16 @@ export async function processEventTrigger(
     
     for (const trigger of triggers) {
       if (trigger.event === event) {
+        // Create context object with both options and batch for event triggers
+        const triggerContext = { options: context, batch };
+
         // Check condition
-        const conditionMet = trigger.condition(context);
-        
+        const conditionMet = trigger.condition(triggerContext);
+
         if (conditionMet) {
           // Calculate risk increase
           const riskIncrease = typeof trigger.riskIncrease === 'function'
-            ? trigger.riskIncrease(context)
+            ? trigger.riskIncrease(triggerContext)
             : trigger.riskIncrease;
           
           // Apply risk increase with vineyard context
@@ -301,11 +304,14 @@ export function previewEventRisks(
     
     for (const trigger of triggers) {
       if (trigger.event === event) {
-        const conditionMet = trigger.condition(context);
-        
+        // Create context object with both options and batch for event triggers
+        const triggerContext = { options: context, batch };
+
+        const conditionMet = trigger.condition(triggerContext);
+
         if (conditionMet) {
           const riskIncrease = typeof trigger.riskIncrease === 'function'
-            ? trigger.riskIncrease(context)
+            ? trigger.riskIncrease(triggerContext)
             : trigger.riskIncrease;
           
           // Calculate newRisk based on accumulation strategy

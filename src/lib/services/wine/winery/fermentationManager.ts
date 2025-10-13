@@ -9,7 +9,7 @@ import { calculateFermentationWork } from '../../activity/workcalculators/fermen
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
-import { calculateWineQuality } from '../wineQualityCalculationService';
+import { calculateWineQuality } from '../winescore/wineQualityCalculationService';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 
 /**

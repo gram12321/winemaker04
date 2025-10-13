@@ -5,15 +5,15 @@ import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../database/
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { getGameState } from '../core/gameState';
-import { calculateEstimatedPrice } from './wineScoreCalculation';
+import { calculateEstimatedPrice } from './winescore/wineScoreCalculation';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../balance';
 import { BASE_BALANCED_RANGES } from '../../constants/grapeConstants';
-import { calculateWineQuality } from './wineQualityCalculationService';
+import { calculateWineQuality } from './winescore/wineQualityCalculationService';
 import { generateDefaultCharacteristics } from './characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from './characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../constants/vineyardConstants';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { initializeBatchFeatures, processEventTrigger } from './featureRiskService';
+import { initializeBatchFeatures, processEventTrigger } from './features/featureRiskService';
 
 /**
  * Inventory Service

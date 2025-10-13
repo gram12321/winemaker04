@@ -4,7 +4,7 @@ import { getGameState, getCurrentCompany } from '../lib/services/core/gameState'
 import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
 import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
-import { getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
+import { getMaxLandValue } from '@/lib/services/wine/winescore/wineQualityCalculationService';
 
 /**
  * Unified hook that monitors all prestige-affecting changes and updates prestige events accordingly

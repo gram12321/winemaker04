@@ -3,7 +3,7 @@
 
 import { Vineyard } from '@/lib/types/types';
 import { getColorClass } from '@/lib/utils/utils';
-import { getRiskSeverityLabel, getHarvestRisks, getHarvestInfluences } from '@/lib/services/wine/featureRiskHelper';
+import { getRiskSeverityLabel, getHarvestRisks, getHarvestInfluences } from '@/lib/services/wine/features/featureRiskHelper';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 
 interface HarvestRisksDisplayProps {

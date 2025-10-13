@@ -1,9 +1,9 @@
 // Feature Effects Service
 // Calculates quality, price, and characteristic impacts from wine features
 
-import { WineBatch, CustomerType, WineCharacteristics } from '../../types/types';
-import { WineFeature, FeatureConfig } from '../../types/wineFeatures';
-import { getAllFeatureConfigs } from '../../constants/wineFeatures';
+import { WineBatch, CustomerType, WineCharacteristics } from '../../../types/types';
+import { WineFeature, FeatureConfig } from '../../../types/wineFeatures';
+import { getAllFeatureConfigs } from '../../../constants/wineFeatures';
 
 /**
  * Calculate effective quality after applying all feature effects
@@ -186,30 +186,30 @@ export function hasFeature(batch: WineBatch, featureId: string): boolean {
 /**
  * Calculate characteristic modifications from all present features
  * Returns modifications that should be applied to wine characteristics
- * 
+ *
  * @param batch - Wine batch to calculate for
  * @returns Object with characteristic modifiers (can be positive or negative)
  */
 export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Partial<Record<keyof WineCharacteristics, number>> {
   const configs = getAllFeatureConfigs();
   const modifiers: Partial<Record<keyof WineCharacteristics, number>> = {};
-  
+
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
-  
+
   for (const feature of presentFeatures) {
     const config = configs.find(c => c.id === feature.id);
     if (!config?.effects.characteristics) continue;
-    
+
     for (const effect of config.effects.characteristics) {
-      const modifier = typeof effect.modifier === 'function' 
+      const modifier = typeof effect.modifier === 'function'
         ? effect.modifier(feature.severity)
         : effect.modifier * feature.severity;
-      
+
       // Accumulate modifiers (multiple features can affect same characteristic)
       modifiers[effect.characteristic] = (modifiers[effect.characteristic] || 0) + modifier;
     }
   }
-  
+
   return modifiers;
 }
 

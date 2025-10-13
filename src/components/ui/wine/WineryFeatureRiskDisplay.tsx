@@ -4,7 +4,7 @@
 import { WineBatch } from '@/lib/types/types';
 import { getFeature } from '@/lib/services';
 import { getColorClass } from '@/lib/utils/utils';
-import { getRiskSeverityLabel } from '@/lib/services/wine/featureRiskHelper';
+import { getRiskSeverityLabel } from '@/lib/services/wine/features/featureRiskHelper';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 
 interface FeatureRiskDisplayProps {

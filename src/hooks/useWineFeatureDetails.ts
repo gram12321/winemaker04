@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { calculateEffectiveQuality, getPresentFeaturesSorted, getAllVineyards } from '@/lib/services';
-import { calculateEstimatedPrice } from '@/lib/services/wine/wineScoreCalculation';
+import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface FeatureDetails {
   effectiveQuality: number;

@@ -10,7 +10,7 @@ import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkee
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
 import { processSeasonalWages } from '../user/wageService';
 import { getAllStaff } from '../user/staffService';
-import { processWeeklyFeatureRisks } from '../wine/featureRiskService';
+import { processWeeklyFeatureRisks } from '../wine/features/featureRiskService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 
 // Prevent concurrent game tick execution

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { calculateWineScore } from '@/lib/services/wine/wineScoreCalculation';
+import { calculateWineScore } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { getWineQualityCategory, getWineQualityDescription, getColorClass, getBadgeColorClasses, formatPercent } from '@/lib/utils/utils';
 
 /**

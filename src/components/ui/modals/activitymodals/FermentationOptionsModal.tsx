@@ -9,6 +9,12 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { DialogProps } from '@/lib/types/UItypes';
+import {
+  previewFeatureRisks,
+  calculateCumulativeRisk,
+  getPresentFeaturesInfo,
+  getAtRiskFeaturesInfo
+} from '@/lib/services/wine/features/featureRiskHelper';
 
 /**
  * Fermentation Options Modal
@@ -40,7 +46,7 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
   // Helper function to parse characteristic effects and create visual display
   const parseCharacteristicEffects = (effectsText: string): Array<{ value: number; characteristic: string }> => {
     if (!effectsText || effectsText === 'No additional effects') return [];
-    
+
     const effects: Array<{ value: number; characteristic: string }> = [];
     const matches = effectsText.match(/([+-]?\d+\.?\d*)%\s+(\w+)/g);
     if (matches) {
@@ -51,31 +57,44 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
         }
       });
     }
-    
+
     // Sort characteristics alphabetically
     return effects.sort((a, b) => a.characteristic.localeCompare(b.characteristic));
   };
+
+  // Helper function to get oxidation risk modifier based on fermentation method
+  const getOxidationRiskModifier = (method: FermentationOptions['method']): number => {
+    switch (method) {
+      case 'Temperature Controlled':
+        return -0.4; // 40% decrease
+      case 'Extended Maceration':
+        return 0.4;  // 40% increase
+      default:
+        return 0;    // No change
+    }
+  };
+
 
 
   // Combined effects display (moved before early returns to fix hooks order)
   const combinedEffects = useMemo(() => {
     const methodEffects = methodInfo[options.method]?.weeklyEffects || '';
     const temperatureEffects = temperatureInfo[options.temperature]?.weeklyEffects || '';
-    
+
     // Clean up the text by removing redundant "Weekly:" and "per week"
     const cleanMethodEffects = methodEffects.replace(/^Weekly:\s*/, '').replace(/\s+per week$/, '');
     const cleanTemperatureEffects = temperatureEffects.replace(/^Weekly:\s*/, '').replace(/\s+per week$/, '');
-    
+
     // Parse effects for visual display
     const methodEffectsParsed = parseCharacteristicEffects(cleanMethodEffects);
     const temperatureEffectsParsed = parseCharacteristicEffects(cleanTemperatureEffects);
-    
+
     // Combine effects intelligently
     let combined = cleanMethodEffects;
     if (cleanTemperatureEffects !== 'No additional effects') {
       combined += ` + ${cleanTemperatureEffects}`;
     }
-    
+
     return {
       method: cleanMethodEffects,
       temperature: cleanTemperatureEffects,
@@ -84,6 +103,28 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
       temperatureParsed: temperatureEffectsParsed
     };
   }, [options.method, options.temperature, methodInfo, temperatureInfo]);
+
+  // Feature risk calculations using helper service (same pattern as CrushingOptionsModal.tsx)
+  const featureRiskData = useMemo(() => {
+    if (!batch) return null;
+
+    // Preview ALL event risks for this fermentation action
+    const eventRisks = previewFeatureRisks(batch, 'fermentation', options);
+
+
+    // Calculate cumulative for each risk
+    const cumulativeRisks = eventRisks.map(risk => ({
+      ...risk,
+      cumulative: calculateCumulativeRisk(batch, risk.featureId, risk.riskIncrease, 'Fermentation')
+    }));
+
+    return {
+      presentFeatures: getPresentFeaturesInfo(batch),
+      atRiskFeatures: getAtRiskFeaturesInfo(batch, 0.05),
+      eventRisks: eventRisks,
+      cumulativeRisks: cumulativeRisks
+    };
+  }, [batch, options]);
 
   // Field definitions
   const fields: ActivityOptionField[] = [
@@ -316,10 +357,60 @@ Note: These effects apply each week while fermentation is active.`
         </div>
       </div>
       
-      {/* Simple oxidation risk notice */}
-      <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-700">
-        ⚠️ <strong>Oxidation Risk:</strong> Temperature Controlled reduces oxidation risk, Extended Maceration increases it.
+      {/* Fermentation Risk Calculations */}
+      {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+          <span>⚠️</span>
+          <span>Fermentation Risks & Information</span>
+        </h4>
+        <div className="text-sm text-amber-800 space-y-3">
+          {/* Oxidation Risk Calculation */}
+          <div className="bg-amber-100 border border-amber-200 rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium">⚠️ Oxidation Risk:</span>
+              <span className={`font-mono ${getOxidationRiskModifier(options.method) < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {getOxidationRiskModifier(options.method) < 0 ? getOxidationRiskModifier(options.method) * -100 : getOxidationRiskModifier(options.method) * 100}%
+              </span>
+            </div>
+            <p className="text-xs text-amber-700">
+              {getOxidationRiskModifier(options.method) < 0
+                ? `Temperature Controlled reduces oxidation risk by ${Math.abs(getOxidationRiskModifier(options.method) * 100).toFixed(1)}%`
+                : `Extended Maceration increases oxidation risk by ${getOxidationRiskModifier(options.method) * 100}%`
+              }
+            </p>
+          </div>
+
+           {/* Stuck Fermentation Risk Calculation - use feature risk data */}
+           {(() => {
+             const stuckRisk = featureRiskData?.cumulativeRisks.find(r => r.featureId === 'stuck_fermentation');
+             
+             if (!stuckRisk) {
+               return null; // Don't show if no risk detected
+             }
+
+             return (
+               <div className="bg-red-100 border border-red-200 rounded p-3">
+                 <div className="flex items-center justify-between mb-2">
+                   <span className="font-medium">🧊 Stuck Fermentation Risk:</span>
+                   <span className="font-mono text-red-600">
+                     {(stuckRisk.cumulative.total * 100).toFixed(1)}%
+                   </span>
+                 </div>
+                 <p className="text-xs text-red-700">
+                   {batch?.grapeColor === 'red' && options.temperature === 'Cool'
+                     ? 'Red wines + Cool temperatures create high stuck fermentation risk (tannins inhibit yeast)'
+                     : options.method === 'Temperature Controlled'
+                       ? `${batch?.grapeColor === 'red' ? 'Red' : 'White'} grapes have ${batch?.grapeColor === 'red' ? '8%' : '3%'} base risk. Temperature Controlled reduces this risk.`
+                       : `${batch?.grapeColor === 'red' ? 'Red' : 'White'} grapes have ${batch?.grapeColor === 'red' ? '8%' : '3%'} base risk of stuck fermentation. This can be modified by controlling temperature during fermentation.`
+                   }
+                 </p>
+               </div>
+             );
+           })()}
+        </div>
       </div>
+      )}
     </div>
   );
 

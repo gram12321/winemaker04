@@ -11,8 +11,13 @@ import { CrushingOptions } from '../../services/wine/characteristics/crushingCha
  * A wine fault characterized by herbaceous, vegetal, or "green" flavors
  * Caused by:
  * - Harvesting underripe grapes (ripeness < 0.5)
- * - Rough crushing with stems included
- * - Poor handling during crushing
+ * - Aggressive crushing with high pressure
+ * - Crushing delicate grapes roughly
+ * - Not destemming (stems = harsh vegetal compounds)
+ * 
+ * Grape-specific modifiers:
+ * - White grapes: 30% more prone (lack tannin masking)
+ * - Fragile grapes: Scale with crushing pressure (bruising releases harsh compounds)
  * 
  * Effects:
  * - Reduces quality by 20% (linear penalty)
@@ -45,19 +50,23 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
         },
         riskIncrease: (vineyard: Vineyard) => {
           // More underripe = higher risk
-          // Risk = (0.5 - ripeness) × 0.6
-          // Examples:
-          // - Ripeness 0.4 → 6% risk
-          // - Ripeness 0.3 → 12% risk
-          // - Ripeness 0.2 → 18% risk
+          // Base formula: (0.5 - ripeness) × 0.6
+          // White grapes show green/vegetal notes more prominently (lack tannin masking)
           const ripeness = vineyard.ripeness || 0;
-          return Math.max(0, (0.5 - ripeness) * 0.6);
+          const baseRisk = Math.max(0, (0.5 - ripeness) * 0.6);
+          
+          // Grape color multiplier (white grapes 30% more prone to showing vegetal character)
+          // This will be applied when batch is created with grape metadata
+          // For now, return base risk - batch processing will apply multiplier
+          return baseRisk;
         }
       },
       {
         event: 'crushing',
-        condition: () => true,  // Always evaluate (dynamic risk for all crushing methods)
-        riskIncrease: (options: CrushingOptions) => {
+        condition: () => true,  // Always evaluate
+        riskIncrease: (context: { options: CrushingOptions; batch: any }) => {
+          const { options, batch } = context;
+          
           // Dynamic risk calculation based on crushing options
           // Base rates by method (reflects extraction aggressiveness)
           const baseRates: Record<CrushingOptions['method'], number> = {
@@ -75,10 +84,18 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
           // Stems contain harsh, green tannins and vegetal compounds
           const destemmingModifier = options.destemming ? 0.5 : 1.0;
           
-          const baseRate = baseRates[options.method];
-          const finalRisk = baseRate * intensityMultiplier * destemmingModifier;
+          // Fragile grape multiplier - delicate grapes bruise easier, releasing harsh compounds
+          // fragile = 0.0 (robust) → 1.0x, fragile = 1.0 (delicate) → up to 1.8x
+          const fragile = batch.fragile || 0;
+          const fragileMultiplier = 1.0 + (fragile * options.pressingIntensity * 0.8);
           
-          return finalRisk;
+          // White grape multiplier (30% more prone to showing vegetal character)
+          const grapeColorMultiplier = batch.grapeColor === 'white' ? 1.3 : 1.0;
+          
+          const baseRate = baseRates[options.method];
+          const finalRisk = baseRate * intensityMultiplier * destemmingModifier * fragileMultiplier * grapeColorMultiplier;
+          
+          return Math.min(0.45, finalRisk);  // Cap at 45% max risk
         }
       }
     ]
@@ -163,7 +180,7 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
     warningThresholds: [0.15, 0.30],  // Only 2 thresholds (less aggressive than oxidation)
     sortPriority: 2  // Show after oxidation (priority 1)
   },
-  
+
   harvestContext: {
     isHarvestRisk: true,         // Green flavor is a harvest risk
     isHarvestInfluence: false    // Not a positive influence

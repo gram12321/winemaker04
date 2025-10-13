@@ -11,13 +11,12 @@ import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
-import { 
+import {
   previewFeatureRisks,
   calculateCumulativeRisk,
   getPresentFeaturesInfo,
-  getAtRiskFeaturesInfo,
-  formatFeatureRiskWarning
-} from '@/lib/services/wine/featureRiskHelper';
+  getAtRiskFeaturesInfo
+} from '@/lib/services/wine/features/featureRiskHelper';
 import { calculateYieldMultiplier, calculatePressingQualityPenalty, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 
 /**
@@ -175,42 +174,46 @@ MAX PRESSURE BY METHOD:
     };
   }, [batch, options]);
 
-  // Warning message (GENERIC for all event-triggered features)
-  const warningMessage = useMemo(() => {
-    if (!batch || !featureRiskData) return undefined;
-    
-    const warnings: string[] = [];
-    
-    // Show warnings for ALL triggered feature risks (generic)
+  // Organized warning message for consolidated display in Wine Features Status section
+  const organizedWarnings = useMemo(() => {
+    if (!batch || !featureRiskData) return null;
+
+    const riskMessages: string[] = [];
+
+    // Process each cumulative risk in organized format
     for (const cumulativeRisk of featureRiskData.cumulativeRisks) {
-      // Check if this is an independent feature
       const config = getAllFeatureConfigs().find(c => c.id === cumulativeRisk.featureId);
       const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
-      
+
+      // Format main risk message
+      const riskPercent = (cumulativeRisk.cumulative.total * 100).toFixed(1);
+
       if (strategy === 'independent') {
         // For independent features, only show current event risk
-        warnings.push(formatFeatureRiskWarning(cumulativeRisk));
+        riskMessages.push(`📊 ${riskPercent}% chance of ${cumulativeRisk.featureName} (${config?.description || ''})`);
       } else {
-        // For cumulative features, show total risk
-        warnings.push(formatFeatureRiskWarning(cumulativeRisk));
-        
-        // Show cumulative breakdown if there's existing risk
+        // For cumulative features, show total risk with breakdown
         if (cumulativeRisk.cumulative.sources.length > 1) {
           const total = (cumulativeRisk.cumulative.total * 100).toFixed(1);
           const sources = cumulativeRisk.cumulative.sources
             .map(s => `${(s.risk * 100).toFixed(0)}% ${s.source}`)
             .join(' + ');
-          warnings.push(`📊 CUMULATIVE RISK: ${total}% total (${sources})`);
+          riskMessages.push(`📊 ${riskPercent}% chance of ${cumulativeRisk.featureName} (${config?.description || ''}). CUMULATIVE RISK: ${total}% total (${sources})`);
+        } else {
+          riskMessages.push(`📊 ${riskPercent}% chance of ${cumulativeRisk.featureName} (${config?.description || ''})`);
         }
       }
-      
-      // Feature-specific tips
+
+      // Add feature-specific tips
       if (cumulativeRisk.featureId === 'green_flavor') {
-        warnings.push(`💡 TIP: Enable destemming or use Mechanical/Pneumatic Press to avoid this risk.`);
+        riskMessages.push(`💡 TIP: Enable destemming or use Mechanical/Pneumatic Press to avoid this risk.`);
+      }
+      if (cumulativeRisk.featureId === 'oxidation') {
+        riskMessages.push(`💡 TIP: Fragile grapes (like Pinot Noir) with high pressing intensity increase oxidation risk.`);
       }
     }
-    
-    return warnings.length > 0 ? warnings.join('\n\n') : undefined;
+
+    return riskMessages.length > 0 ? riskMessages : null;
   }, [batch, featureRiskData]);
 
   // Event handlers
@@ -335,7 +338,6 @@ MAX PRESSURE BY METHOD:
         onSubmit={handleSubmit}
         submitLabel="Start Crushing Activity"
         canSubmit={canSubmit}
-        warningMessage={warningMessage}
         options={formOptions}
         onOptionsChange={handleOptionsChange}
         maxWidth="2xl"
@@ -451,14 +453,25 @@ MAX PRESSURE BY METHOD:
           </div>
         )}
         
-        {/* Feature Risk Summary Panel */}
-        {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0) && (
+        {/* Wine Features Status Panel - Consolidated Risk Information */}
+        {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0 || organizedWarnings) && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
             <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
               <span>⚗️</span>
               <span>Wine Features Status</span>
             </h4>
-            
+
+            {/* Organized Risk Warnings */}
+            {organizedWarnings && (
+              <div className="mb-3 p-2 bg-amber-100 rounded text-xs">
+                {organizedWarnings.map((warning, index) => (
+                  <div key={index} className="mb-1">
+                    {warning}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Present Features */}
             {featureRiskData.presentFeatures.length > 0 && (
               <div className="mb-3">
@@ -475,7 +488,7 @@ MAX PRESSURE BY METHOD:
                 ))}
               </div>
             )}
-            
+
             {/* Historical Event Risks (only for cumulative features) */}
             {(() => {
               // Filter to only cumulative features with actual risks
@@ -484,9 +497,9 @@ MAX PRESSURE BY METHOD:
                 const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
                 return strategy !== 'independent' && feature.currentRisk > 0;
               });
-              
+
               if (cumulativeFeatures.length === 0) return null;
-              
+
               return (
                 <div className="mb-3">
                   <p className="text-xs font-medium text-amber-800 mb-2">Previous Event Risks:</p>
@@ -499,19 +512,6 @@ MAX PRESSURE BY METHOD:
                 </div>
               );
             })()}
-
-            {/* Current Event Risks (Dynamic Preview) */}
-            {featureRiskData.eventRisks.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-amber-800 mb-2">Current Event Risk:</p>
-                {featureRiskData.eventRisks.map(feature => (
-                  <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
-                    <span className="font-medium">{feature.icon} {feature.featureName}:</span>
-                    <span className="ml-2">{(feature.riskIncrease * 100).toFixed(1)}% (from crushing)</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </ActivityOptionsModal>

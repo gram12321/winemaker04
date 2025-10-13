@@ -13,7 +13,7 @@ import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoosts } from './relationshipService';
 import { getCurrentPrestige } from '../core/gameState';
 import { activateCustomer } from '../../database/customers/customerDB';
-import { calculateFeaturePriceMultiplier } from '../wine/featureEffectsService';
+import { calculateFeaturePriceMultiplier } from '../wine/features/featureEffectsService';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;

@@ -6,6 +6,7 @@ import { getFermentationMethodInfo, getFermentationTemperatureInfo, Fermentation
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services/user/financeService';
+import { processEventTrigger } from '@/lib/services/wine/features/featureRiskService';
 
 /**
  * Fermentation Work Calculator
@@ -128,11 +129,23 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       return;
     }
 
-    // Update the batch: change state to 'must_fermenting' and store fermentation options
+    // Process fermentation event triggers (e.g., stuck fermentation risk)
+    const updatedBatch = {
+      ...batch,
+      state: 'must_fermenting' as const,
+      fermentationOptions: fermentationOptions as FermentationOptions
+    };
+    const batchWithEventFeatures = await processEventTrigger(
+      updatedBatch,
+      'fermentation',
+      { options: fermentationOptions, batch: updatedBatch }  // Pass context with options and batch
+    );
+
+    // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
     await updateWineBatch(batchId, {
       state: 'must_fermenting',
-      // Store fermentation options in the batch for weekly processing
-      fermentationOptions: fermentationOptions as FermentationOptions
+      fermentationOptions: fermentationOptions as FermentationOptions,
+      features: batchWithEventFeatures.features
     });
 
     // Deduct costs if any

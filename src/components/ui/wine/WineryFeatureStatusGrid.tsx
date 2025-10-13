@@ -5,7 +5,7 @@ import React from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
 import { getColorClass } from '@/lib/utils/utils';
-import { getRiskSeverityLabel } from '@/lib/services/wine/featureRiskHelper';
+import { getRiskSeverityLabel } from '@/lib/services/wine/features/featureRiskHelper';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
 

@@ -4,6 +4,7 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { OXIDATION_FEATURE } from './oxidation';
 import { GREEN_FLAVOR_FEATURE } from './greenFlavor';
+import { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';
 import { TERROIR_FEATURE } from './terroir';
 
 /**
@@ -11,9 +12,10 @@ import { TERROIR_FEATURE } from './terroir';
  * Add new features here as they are implemented
  */
 export const ACTIVE_FEATURES: FeatureConfig[] = [
-  OXIDATION_FEATURE,
-  GREEN_FLAVOR_FEATURE,  // Phase 2 - Event-triggered fault
-  TERROIR_FEATURE,       // Phase 3 - Positive graduated feature
+  OXIDATION_FEATURE,          // Time-based + crushing event (hybrid)
+  GREEN_FLAVOR_FEATURE,       // Event-triggered (harvest + crushing)
+  STUCK_FERMENTATION_FEATURE, // Event-triggered (fermentation)
+  TERROIR_FEATURE,            // Positive graduated feature
 ];
 
 /**
@@ -64,5 +66,6 @@ export function getEventTriggeredFeatures(
 // Re-export for convenience
 export { OXIDATION_FEATURE } from './oxidation';
 export { GREEN_FLAVOR_FEATURE } from './greenFlavor';
+export { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';
 export { TERROIR_FEATURE } from './terroir';
 

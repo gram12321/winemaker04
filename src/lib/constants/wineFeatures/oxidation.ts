@@ -7,12 +7,21 @@ import { FeatureConfig } from '../../types/wineFeatures';
  * Oxidation Feature
  * - Type: Fault (negative)
  * - Manifestation: Binary (0% → 100% instant)
- * - Trigger: Time-based (weekly accumulation)
+ * - Trigger: Hybrid (time-based + event-triggered)
  * - Compound: Yes (risk accelerates with current risk)
- * - Activity-Aware: Fermentation method influences oxidation risk
- *   - Temperature Controlled: 40% less risk (sealed tanks)
- *   - Extended Maceration: 40% more risk (oxygen exposure)
- *   - Basic: Standard fermentation protection
+ * 
+ * Time-based accumulation:
+ * - Weekly risk based on wine state (grapes most vulnerable, bottled least)
+ * - Fermentation method influences risk (Temperature Controlled = less, Extended Maceration = more)
+ * - Compound effect: risk accelerates over time
+ * 
+ * Event-triggered accumulation:
+ * - Crushing fragile grapes with high pressure increases oxidation risk
+ * - Delicate grapes bruise easily, exposing juice to oxygen
+ * 
+ * Grape-specific modifiers:
+ * - proneToOxidation: Scales all oxidation risk (both time-based and event)
+ * - fragile: Scales crushing oxidation risk (bruising = oxygen exposure)
  */
 export const OXIDATION_FEATURE: FeatureConfig = {
   id: 'oxidation',
@@ -24,8 +33,8 @@ export const OXIDATION_FEATURE: FeatureConfig = {
   manifestation: 'binary',  // Jumps from 0% to 100% severity
   
   riskAccumulation: {
-    trigger: 'time_based',
-    baseRate: 0.002,          // 0.2% per week base rate
+    trigger: 'hybrid',  // Both time-based and event-triggered
+    baseRate: 0.002,    // 0.2% per week base rate
     stateMultipliers: {
       'grapes': 3.0,         // Fresh grapes highly exposed to air
       'must_ready': 1.5,     // Exposed must has moderate risk
@@ -48,7 +57,38 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       },
       'bottled': 0.3         // Sealed environment greatly reduces risk
     },
-    compoundEffect: true     // Risk accelerates: rate × (1 + currentRisk)
+    compoundEffect: true,    // Risk accelerates: rate × (1 + currentRisk)
+    
+    // Event-triggered oxidation from crushing fragile grapes
+    eventTriggers: [
+      {
+        event: 'crushing',
+        condition: (context: { options: any; batch: any }) => {
+          // Trigger for fragile grapes - delicate grapes bruise easily during crushing
+          const { batch } = context;
+          return (batch.fragile || 0) > 0.3;  // Only for moderately fragile+ grapes
+        },
+        riskIncrease: (context: { options: any; batch: any }) => {
+          const { options, batch } = context;
+          
+          // Base risk from crushing fragile grapes
+          // fragile = 0.3 → 1.5% risk, fragile = 1.0 → 5% base risk
+          const fragile = batch.fragile || 0;
+          const baseRisk = (fragile - 0.3) * 0.07;  // Scales from 0% to 5%
+          
+          // Pressing intensity multiplier (harder pressing = more bruising)
+          // pressingIntensity: 0.0 (low) → 0.5x, 1.0 (high) → 1.5x
+          const intensityMultiplier = 0.5 + options.pressingIntensity;
+          
+          // Grape's natural oxidation susceptibility
+          const proneToOxidation = batch.proneToOxidation || 0.5;
+          
+          const finalRisk = baseRisk * intensityMultiplier * (0.5 + proneToOxidation);
+          
+          return Math.min(0.10, finalRisk);  // Cap at 10% max from crushing
+        }
+      }
+    ]
   },
   
   effects: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Vineyard, WineBatch } from '@/lib/types/types';
 import { QualityFactorsDisplay } from './qualityFactorBar';
-import { getVineyardQualityFactors, getMaxLandValue } from '@/lib/services/wine/wineQualityCalculationService';
+import { getVineyardQualityFactors, getMaxLandValue } from '@/lib/services/wine/winescore/wineQualityCalculationService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui/shadCN/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
@@ -10,7 +10,7 @@ import { getWineQualityCategory, getColorCategory, getBadgeColorClasses } from '
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services/prestige/prestigeService';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
-import { calculateEffectiveQuality } from '@/lib/services/wine/featureEffectsService';
+import { calculateEffectiveQuality } from '@/lib/services/wine/features/featureEffectsService';
 
 interface QualityFactorsBreakdownProps {
   vineyard?: Vineyard;

@@ -1,9 +1,9 @@
 // Wine quality calculation service - handles all vineyard and regional factors that contribute to wine quality
-import { Vineyard } from '../../types/types';
-import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
-import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../constants/vineyardConstants';
-import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../utils/calculator';
-import { BoundedVineyardPrestigeFactor } from '../prestige/prestigeService';
+import { Vineyard } from '../../../types/types';
+import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSuitabilityContribution } from '../../vineyard/vineyardValueCalc';
+import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
+import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
+import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
 
 export function getMaxLandValue(): number {
   let maxValue = 0;
