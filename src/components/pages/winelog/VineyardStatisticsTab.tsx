@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from
 import { Wine, TrendingUp, Award, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
 import { getColorClass, formatCurrency, formatNumber, formatPercent, getWineQualityCategory } from '@/lib/utils/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/shadCN/tooltip';
-import { calculateVineyardAnalytics, VineyardAnalytics } from '@/lib/services/user/wineLogService';
+import { calculateVineyardAnalytics } from '@/lib/services/user/wineLogService';
 
 interface VineyardStatisticsTabProps {
   vineyards: Vineyard[];
