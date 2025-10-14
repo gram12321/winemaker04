@@ -3,7 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
 import { authService, companyService } from '@/lib/services';
-import { type AuthUser, type Company } from '@/lib/database';
+import { type AuthUser, type Company, supabase } from '@/lib/database';
 import type { CompanyStats } from '@/lib/services/user/companyService';
 import { formatNumber, formatCurrency, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';

@@ -1,26 +1,83 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useGameStateWithData } from '@/hooks';
 import { getAllVineyards } from '@/lib/services';
 import { loadWineLog } from '@/lib/database';
-import { WineLogEntry } from '@/lib/types/types';
-import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineCharacteristicsDisplay } from '../ui';
+import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
+import { WineLogEntry, WineBatch } from '@/lib/types/types';
+import { SimpleCard, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, Button, WineModal } from '../ui';
 import { Wine, TrendingUp, Award, BarChart3 } from 'lucide-react';
-import { getWineQualityCategory, getColorCategory, getColorClass, formatCurrency, formatGameDate, formatNumber, formatGameDateFromObject } from '@/lib/utils/utils';
-import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
+import { getWineQualityCategory, getColorClass, formatCurrency, formatGameDate, formatNumber, formatGameDateFromObject, formatPercent } from '@/lib/utils/utils';
 import { CompanyProps } from '@/lib/types/UItypes';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/shadCN/tooltip';
 
 interface WineLogProps extends CompanyProps {
   // Inherits currentCompany from CompanyProps
 }
 
+// Component for combined balance and quality display (historical data)
+const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
+  const balanceColorClass = getColorClass(entry.balance);
+  const qualityColorClass = getColorClass(entry.quality);
+  const balancePercentage = Math.round(entry.balance * 100);
+  const qualityPercentage = Math.round(entry.quality * 100);
+
+  return (
+    <div className="text-xs text-gray-600 space-y-1">
+      <div>
+        <span className="font-medium">Balance:</span> <span className={`font-medium ${balanceColorClass}`}>{balancePercentage}%</span>
+      </div>
+      <div>
+        <span className="font-medium">Quality:</span> <span className={`font-medium ${qualityColorClass}`}>{qualityPercentage}%</span>
+      </div>
+    </div>
+  );
+};
+
+// Component for wine score display with tooltip (historical data)
+const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
+  const wineScore = (entry.quality + entry.balance) / 2;
+  const scoreCategory = getWineQualityCategory(wineScore);
+  const colorClass = getColorClass(wineScore);
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${colorClass} bg-opacity-20`}>
+            {formatPercent(wineScore, 0, true)}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1 text-xs">
+            <div className="font-semibold">Wine Score Calculation</div>
+            <div>Quality: <span className="font-medium">{formatPercent(entry.quality, 1, true)}</span></div>
+            <div>Balance: <span className="font-medium">{formatPercent(entry.balance, 1, true)}</span></div>
+            <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
+            <div className="text-[10px] text-gray-500">Category: {scoreCategory}</div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 export function WineLog({ currentCompany }: WineLogProps) {
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
   const [page, setPage] = useState<number>(1);
   const pageSize = 20;
-  const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({});
+  
+  // Wine modal state
+  const [wineModalOpen, setWineModalOpen] = useState(false);
+  const [selectedWineBatch, setSelectedWineBatch] = useState<WineBatch | null>(null);
   
   const wineLog = useGameStateWithData(loadWineLog, []);
   const vineyards = useGameStateWithData(getAllVineyards, []);
+  
+  // Load current wine batches to link log entries to live wines
+  const allBatches = useGameStateWithData(
+    () => loadWineBatches(),
+    []
+  );
 
   const filteredWineLog = React.useMemo(() => 
     selectedVineyard === 'all' 
@@ -45,6 +102,30 @@ export function WineLog({ currentCompany }: WineLogProps) {
     const start = formatGameDateFromObject(harvestDate);
     return `${start} - ${start}`;
   };
+  
+  // Find corresponding wine batch for a log entry (if still exists)
+  const findCorrespondingBatch = useCallback((entry: WineLogEntry): WineBatch | undefined => {
+    return allBatches.find(batch => 
+      batch.vineyardId === entry.vineyardId &&
+      batch.grape === entry.grape &&
+      batch.harvestStartDate.year === entry.vintage
+    );
+  }, [allBatches]);
+  
+  // Handle opening wine modal
+  const handleWineDetailsClick = useCallback((entry: WineLogEntry) => {
+    const batch = findCorrespondingBatch(entry);
+    if (batch) {
+      setSelectedWineBatch(batch);
+      setWineModalOpen(true);
+    }
+  }, [findCorrespondingBatch]);
+  
+  // Handle closing wine modal
+  const handleWineModalClose = useCallback(() => {
+    setWineModalOpen(false);
+    setSelectedWineBatch(null);
+  }, []);
 
   const vineyardGroups = React.useMemo(() => 
     wineLog.reduce((groups, entry) => {
@@ -96,6 +177,16 @@ export function WineLog({ currentCompany }: WineLogProps) {
         <p className="text-muted-foreground">
           Complete history of wines produced and bottled by {currentCompany.name}
         </p>
+        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <div className="text-blue-600 text-sm">ℹ️</div>
+            <div className="text-sm text-blue-800">
+              <strong>Note:</strong> This log shows wine quality and characteristics <strong>at bottling time</strong>. 
+              For wines still in your cellar, features may continue evolving until the last bottle is sold. 
+              Use "View Details" to see current wine state.
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Overall Statistics */}
@@ -209,24 +300,21 @@ export function WineLog({ currentCompany }: WineLogProps) {
                         <th className="pb-3">Vintage</th>
                         <th className="pb-3">Harvest Period</th>
                         <th className="pb-3">Bottles</th>
-                        <th className="pb-3">Quality</th>
+                        <th className="pb-3">Balance & Quality</th>
+                        <th className="pb-3">Score</th>
                         <th className="pb-3">Price</th>
                         <th className="pb-3">Bottled</th>
+                        <th className="pb-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {paginatedWineLog.map((entry) => (
-                        <React.Fragment key={entry.id}>
-                          <tr className="text-sm">
+                      {paginatedWineLog.map((entry) => {
+                        const correspondingBatch = findCorrespondingBatch(entry);
+                        
+                        return (
+                          <tr key={entry.id} className="text-sm hover:bg-gray-50">
                             <td className="py-3">
-                              <div className="font-medium flex items-center gap-2">
-                                <button
-                                  onClick={() => setExpandedEntries(prev => ({ ...prev, [entry.id]: !prev[entry.id] }))}
-                                  className="text-gray-600 hover:text-gray-900"
-                                  title={expandedEntries[entry.id] ? 'Hide details' : 'Show details'}
-                                >
-                                  {expandedEntries[entry.id] ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
-                                </button>
+                              <div className="font-medium text-gray-900">
                                 {entry.grape}
                               </div>
                             </td>
@@ -243,12 +331,10 @@ export function WineLog({ currentCompany }: WineLogProps) {
                               <div className="font-medium">{entry.quantity} bottles</div>
                             </td>
                             <td className="py-3">
-                              <div className={`font-medium ${getColorClass(entry.quality)}`}>
-                                {getWineQualityCategory(entry.quality)}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {getColorCategory(entry.quality)}
-                              </div>
+                              <BalanceAndQualityDisplay entry={entry} />
+                            </td>
+                            <td className="py-3">
+                              <WineScoreDisplay entry={entry} />
                             </td>
                             <td className="py-3">
                               <div className="font-medium">{formatCurrency(entry.estimatedPrice)}</div>
@@ -259,23 +345,28 @@ export function WineLog({ currentCompany }: WineLogProps) {
                                 {formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}
                               </div>
                             </td>
-                          </tr>
-                          {expandedEntries[entry.id] && (
-                            <tr>
-                              <td className="py-2 bg-gray-50" colSpan={8}>
-                                <div className="p-3">
-                                  <WineCharacteristicsDisplay 
-                                    characteristics={entry.characteristics}
-                                    collapsible={false}
-                                    showBalanceScore={true}
-                                    title="Wine Characteristics"
-                                  />
+                            <td className="py-3">
+                              {correspondingBatch ? (
+                                <Button
+                                  onClick={() => handleWineDetailsClick(entry)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-purple-600 border-purple-600 hover:bg-purple-50 text-xs px-2 py-1"
+                                >
+                                  View Details
+                                </Button>
+                              ) : (
+                                <div className="text-xs text-gray-400">
+                                  <div className="font-medium">Sold out</div>
+                                  <div className="text-[10px] text-gray-400">
+                                    Log: bottled state
+                                  </div>
                                 </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      )                      )}
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   
@@ -310,76 +401,86 @@ export function WineLog({ currentCompany }: WineLogProps) {
 
                   {/* Mobile Cards */}
                   <div className="lg:hidden space-y-4">
-                    {paginatedWineLog.map((entry) => (
-                      <div key={entry.id} className="bg-white rounded-lg shadow overflow-hidden border">
-                        {/* Card Header */}
-                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-b">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h3 className="text-lg font-bold text-gray-900">{entry.grape}</h3>
-                              <div className="text-sm text-gray-600 mt-1">{entry.vineyardName}</div>
+                    {paginatedWineLog.map((entry) => {
+                      const correspondingBatch = findCorrespondingBatch(entry);
+                      
+                      return (
+                        <div key={entry.id} className="bg-white rounded-lg shadow overflow-hidden border">
+                          {/* Card Header */}
+                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-b">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h3 className="text-lg font-bold text-gray-900">{entry.grape}</h3>
+                                <div className="text-sm text-gray-600 mt-1">{entry.vineyardName}</div>
+                              </div>
+                              <Badge variant="outline" className="text-sm">{entry.vintage}</Badge>
                             </div>
-                            <Badge variant="outline" className="text-sm">{entry.vintage}</Badge>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="p-4 space-y-3">
+                            {/* Score and Balance/Quality */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <div className="text-xs text-gray-500 uppercase mb-1">Wine Score</div>
+                                <WineScoreDisplay entry={entry} />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 uppercase mb-1">Price</div>
+                                <div className="text-base font-bold text-green-600">
+                                  {formatCurrency(entry.estimatedPrice)}
+                                </div>
+                                <div className="text-xs text-gray-500">per bottle</div>
+                              </div>
+                            </div>
+                            
+                            {/* Balance & Quality Details */}
+                            <div>
+                              <BalanceAndQualityDisplay entry={entry} />
+                            </div>
+
+                            <div className="border-t pt-3 space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Bottles:</span>
+                                <span className="font-medium">{entry.quantity} bottles</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Harvest Period:</span>
+                                <span className="font-medium">{formatHarvestPeriod(entry.harvestDate)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Bottled:</span>
+                                <span className="font-medium">{formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}</span>
+                              </div>
+                            </div>
+
+                            {/* View Details Button */}
+                            {correspondingBatch && (
+                              <div className="border-t pt-3">
+                                <Button
+                                  onClick={() => handleWineDetailsClick(entry)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full text-purple-600 border-purple-600 hover:bg-purple-50 text-xs"
+                                >
+                                  View Wine Details
+                                </Button>
+                              </div>
+                            )}
+                            
+                            {!correspondingBatch && (
+                              <div className="border-t pt-3 text-center text-xs text-gray-500">
+                                <div className="font-medium text-gray-600 mb-1">Fully Sold</div>
+                                <div>This wine has been completely sold - no current data available</div>
+                                <div className="text-[10px] text-gray-400 mt-1">
+                                  Log shows bottled state • Features evolved until last bottle sold
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-
-                        {/* Card Body */}
-                        <div className="p-4 space-y-3">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-xs text-gray-500 uppercase mb-1">Quality</div>
-                              <div className={`text-base font-bold ${getColorClass(entry.quality)}`}>
-                                {getWineQualityCategory(entry.quality)}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {getColorCategory(entry.quality)}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500 uppercase mb-1">Price</div>
-                              <div className="text-base font-bold text-green-600">
-                                {formatCurrency(entry.estimatedPrice)}
-                              </div>
-                              <div className="text-xs text-gray-500">per bottle</div>
-                            </div>
-                          </div>
-
-                          <div className="border-t pt-3 space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Bottles:</span>
-                              <span className="font-medium">{entry.quantity} bottles</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Harvest Period:</span>
-                              <span className="font-medium">{formatHarvestPeriod(entry.harvestDate)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Bottled:</span>
-                              <span className="font-medium">{formatGameDate(entry.bottledDate.week, entry.bottledDate.season, entry.bottledDate.year)}</span>
-                            </div>
-                          </div>
-
-                          {/* Expandable characteristics */}
-                          <button
-                            onClick={() => setExpandedEntries(prev => ({ ...prev, [entry.id]: !prev[entry.id] }))}
-                            className="w-full text-center text-xs text-blue-600 hover:text-blue-800 py-2 border-t"
-                          >
-                            {expandedEntries[entry.id] ? '▼ Hide Characteristics' : '▶ Show Wine Characteristics'}
-                          </button>
-                          
-                          {expandedEntries[entry.id] && (
-                            <div className="border-t pt-3">
-                              <WineCharacteristicsDisplay 
-                                characteristics={entry.characteristics}
-                                collapsible={false}
-                                showBalanceScore={true}
-                                title="Wine Characteristics"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Mobile Pagination */}
                     {filteredWineLog.length > pageSize && (
@@ -485,6 +586,14 @@ export function WineLog({ currentCompany }: WineLogProps) {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Wine Modal */}
+      <WineModal
+        isOpen={wineModalOpen}
+        onClose={handleWineModalClose}
+        wineBatch={selectedWineBatch}
+        wineName={selectedWineBatch ? `${selectedWineBatch.grape} - ${selectedWineBatch.vineyardName}` : "Wine"}
+      />
     </div>
   );
 }

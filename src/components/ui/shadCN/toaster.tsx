@@ -4,7 +4,6 @@ import { getToasts } from "@/lib/utils/toast"
 import { Button } from "@/components/ui"
 import { Filter, Shield } from "lucide-react"
 import { toast } from "@/lib/utils/toast"
-import { NotificationCategory } from "@/lib/types/types"
 import { getTailwindClasses } from "@/lib/utils/colorMapping"
 import { cn } from "@/lib/utils/utils"
 
@@ -50,7 +49,7 @@ export function Toaster() {
       <ToastViewport />
       {toasts.map(function ({ id, title, description, action, origin, userFriendlyOrigin, category, ...props }) {
         // Get category colors for styling using new system
-        const classes = getTailwindClasses(category);
+        const classes = getTailwindClasses(category || '');
         
         return (
           <Toast 

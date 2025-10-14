@@ -17,7 +17,8 @@ export function GrapeVarietiesTab() {
   if (selectedGrape) {
     return (
       <GrapeInfoView 
-        grapeName={selectedGrape} 
+        grapeName={selectedGrape}
+        isOpen={true}
         onClose={() => setSelectedGrape(null)} 
       />
     );

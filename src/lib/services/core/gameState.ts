@@ -2,7 +2,8 @@
 import { GameState } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
-import { companyService, Company } from '../user/companyService';
+import { companyService } from '../user/companyService';
+import { Company } from '@/lib/database';
 import { highscoreService } from '../user/highscoreService';
 import { calculateFinancialData, initializeStartingCapital } from '../user/financeService';
 import { initializeStaffSystem, createStartingStaff } from '../user/staffService';

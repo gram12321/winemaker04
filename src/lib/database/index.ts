@@ -12,3 +12,4 @@ export * from './core/userSettingsDB';
 export * from './customers/customerDB';
 export * from './customers/relationshipBoostsDB';
 export * from './customers/prestigeEventsDB';
+export { supabase } from './core/supabase';

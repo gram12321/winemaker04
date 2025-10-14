@@ -49,14 +49,16 @@ export function CrossTraitPenaltyTab() {
         <section>
           <h3 className="text-lg font-medium">Live Balance Calculation</h3>
           <div className="p-4 rounded-lg">
-            <WineCharacteristicsDisplay 
-              characteristics={characteristics}
-              adjustedRanges={balanceResult.dynamicRanges}
-              showValues={true}
-              title="Wine Characteristics"
-              collapsible={false}
-              showBalanceScore={true}
-            />
+            {balanceResult && (
+              <WineCharacteristicsDisplay 
+                characteristics={characteristics}
+                adjustedRanges={balanceResult.dynamicRanges}
+                showValues={true}
+                title="Wine Characteristics"
+                collapsible={false}
+                showBalanceScore={true}
+              />
+            )}
           </div>
         </section>
 

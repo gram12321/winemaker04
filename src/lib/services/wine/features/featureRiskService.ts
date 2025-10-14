@@ -191,6 +191,9 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
     const updates: Array<{ id: string; updates: Partial<WineBatch> }> = [];
     
     for (const batch of batches) {
+      // Skip fully sold wines - no more feature evolution
+      if (batch.state === 'bottled' && batch.quantity === 0) continue;
+      
       let updatedFeatures = [...(batch.features || [])];
       
       // Find vineyard for prestige context

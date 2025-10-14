@@ -16,6 +16,7 @@ import { FeatureStatusGrid } from '../../wine/WineryFeatureStatusGrid';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import { calculateEffectiveQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { useWineBalance } from '@/hooks';
 
 interface WineModalProps extends DialogProps {
   wineBatch: WineBatch | null;
@@ -59,6 +60,10 @@ export const WineModal: React.FC<WineModalProps> = ({
 
   // Calculate wine age using service layer
   const weeksSinceHarvest = getWineAgeFromHarvest(wineBatch.harvestStartDate);
+  
+  // Calculate current balance from characteristics (reflects feature evolution)
+  const balanceResult = useWineBalance(wineBatch.characteristics);
+  const currentBalance = balanceResult?.score ?? wineBatch.balance;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -166,15 +171,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                             <div className="flex justify-between cursor-help">
                               <span className="text-muted-foreground">Wine Score:</span>
                               <div className="text-right">
-                                <div className={`font-medium ${getColorClass((effectiveQuality + wineBatch.balance) / 2)}`}>
-                                  {formatNumber((effectiveQuality + wineBatch.balance) / 2, { decimals: 2, forceDecimals: true })}
+                                <div className={`font-medium ${getColorClass((effectiveQuality + currentBalance) / 2)}`}>
+                                  {formatNumber((effectiveQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
                                 </div>
-                                <div className="text-xs text-gray-500">{getWineQualityCategory((effectiveQuality + wineBatch.balance) / 2)}</div>
+                                <div className="text-xs text-gray-500">{getWineQualityCategory((effectiveQuality + currentBalance) / 2)}</div>
                               </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getWineQualityDescription((effectiveQuality + wineBatch.balance) / 2)}</div>
+                            <div className="text-xs">{getWineQualityDescription((effectiveQuality + currentBalance) / 2)}</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -185,15 +190,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                             <div className="flex justify-between cursor-help">
                               <span className="text-muted-foreground">Balance:</span>
                               <div className="text-right">
-                                <div className={`font-medium ${getColorClass(wineBatch.balance)}`}>
-                                  {formatNumber(wineBatch.balance, { decimals: 2, forceDecimals: true })}
+                                <div className={`font-medium ${getColorClass(currentBalance)}`}>
+                                  {formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
                                 </div>
-                                <div className="text-xs text-gray-500">{getWineBalanceCategory(wineBatch.balance)}</div>
+                                <div className="text-xs text-gray-500">{getWineBalanceCategory(currentBalance)}</div>
                               </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getWineBalanceDescription(wineBatch.balance)}</div>
+                            <div className="text-xs">{getWineBalanceDescription(currentBalance)}</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

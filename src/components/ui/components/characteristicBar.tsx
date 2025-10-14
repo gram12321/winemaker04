@@ -177,6 +177,8 @@ interface WineCharacteristicsDisplayProps {
   baseValues?: Partial<Record<keyof WineCharacteristics, number>>;
   // Show balance score at the top
   showBalanceScore?: boolean;
+  // Optional pre-calculated balance value (if not provided, will recalculate from characteristics)
+  balanceValue?: number;
 }
 
 export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProps> = ({
@@ -189,12 +191,18 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
   title = "Wine Characteristics",
   tooltips,
   baseValues,
-  showBalanceScore = false
+  showBalanceScore = false,
+  balanceValue
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   
-  // Calculate balance score if requested
-  const balanceResult = showBalanceScore ? useWineBalance(characteristics) : null;
+  // Calculate balance score if requested and not provided
+  const calculatedBalance = showBalanceScore && !balanceValue ? useWineBalance(characteristics) : null;
+  
+  // Use provided balance value or calculated balance
+  const balanceResult = balanceValue !== undefined 
+    ? { score: balanceValue, qualifies: true, dynamicRanges: {} as any }
+    : calculatedBalance;
 
   const content = (
     <div className="space-y-1">

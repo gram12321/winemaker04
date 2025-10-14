@@ -1,8 +1,11 @@
 // Shared characteristic slider component for winepedia
 import { Tooltip, TooltipContent, TooltipTrigger } from '../shadCN/tooltip';
-import { CharacteristicSliderProps } from '@/lib/utils';
 
-interface CharacteristicSliderComponentProps extends CharacteristicSliderProps {
+interface CharacteristicSliderProps {
+  value: number;
+  onChange: (value: number) => void;
+  label: string;
+  icon: string;
   className?: string;
 }
 
@@ -12,7 +15,7 @@ export function CharacteristicSlider({
   label, 
   icon, 
   className = "" 
-}: Omit<CharacteristicSliderComponentProps, 'key'>) {
+}: CharacteristicSliderProps) {
   return (
     <div className={`flex items-center gap-3 py-1 ${className}`}>
       <div className="w-24 flex items-center gap-2 text-xs">
