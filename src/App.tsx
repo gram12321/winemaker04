@@ -21,6 +21,7 @@ import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem } from './lib/services';
+import { Analytics } from '@vercel/analytics/react';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -187,23 +188,26 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <Header 
-        currentPage={currentPage} 
+      <Header
+        currentPage={currentPage}
         onNavigate={handleNavigate}
         onTimeAdvance={handleTimeAdvance}
         onBackToLogin={handleBackToLogin}
       />
-      
+
       <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 mx-auto w-full max-w-7xl">
         {renderCurrentPage()}
       </main>
-      
+
       {/* Activity Panel - only show when logged in */}
       {isGameInitialized && currentCompany && (
         <ActivityPanel />
       )}
-      
+
       <Toaster />
+
+      {/* Vercel Analytics */}
+      <Analytics />
     </div>
   );
 }

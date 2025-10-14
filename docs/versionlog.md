@@ -25,6 +25,41 @@
 
 ---
 
+## Version 0.018 - Vercel Dual Database Setup (commit named 0.0018 - typo)
+**Date:** 2025-10-14 | **Commits:** 59b05c09 + 88ee6c43 + bba60b47 + a0b871ad + 81615c7d | **Stats:** 610 additions, 620 deletions
+- **✅ Active dual database setup:** Local dev database (via `.env.local`) + Vercel test database (via Vercel env vars)
+- **REMOVED:** Example/documentation files only (VERCEL_SETUP.md, docs/vercel_setup_guide.md, docs/env.example, env.example, migrations/vercel_initial_setup.sql)
+- Fixed case-sensitivity issues for Vercel build: Renamed WorkCalculators → workcalculators directory
+- Renamed 5 work calculator files to lowercase (bookkeepingWorkCalculator, crushingWorkCalculator, fermentationWorkCalculator, vineyardWorkCalculator, workCalculator)
+- Fixed TypeScript errors and unused imports for successful Vercel deployment
+- **Note:** Dual setup IS running - git repo represents Vercel test environment, `.env.local` (gitignored) provides local dev database separation
+
+---
+
+## Version 0.0177 - Wine Log Feature Enhancement
+**Date:** 2025-10-14 | **Commits:** cd22aed0 (0.0177) + a329f645 (0.0177a) | **Stats:** 1184 additions, 513 deletions
+- **NEW FILE:** `src/components/pages/winelog/ProductionHistoryTab.tsx` (321 lines) - Production history with filtering
+- **NEW FILE:** `src/components/pages/winelog/VineyardStatisticsTab.tsx` (362 lines) - Vineyard analytics and statistics
+- `src/components/pages/WineLog.tsx` - Complete restructure into tabbed interface (230 additions, 458 deletions total)
+- `src/lib/services/user/wineLogService.ts` - Enhanced service with statistics calculations (204 changes)
+- Split WineLog page into Production History and Vineyard Statistics tabs
+- Added comprehensive filtering, sorting, and analytics to wine log
+- Enhanced characteristic display in wine modal and various UI components
+- App routing optimization (removed unused imports)
+
+---
+
+## Version 0.0176 - Cellar Collection Prestige System
+**Date:** 2025-10-14 | **Commit:** 97bda27a | **Stats:** 525 additions, 78 deletions
+- `src/components/pages/CompanyOverview.tsx` - Added cellar collection prestige display (84 additions, 4 deletions)
+- `src/lib/services/prestige/prestigeService.ts` - Implemented cellar collection prestige calculations (15 changes)
+- New prestige source: Quality and diversity of wine cellar collection
+- Prestige awarded for maintaining high-quality, diverse wine portfolio
+- Company overview now displays cellar collection as prestige factor
+- Enhanced prestige modal integration for collection tracking
+
+---
+
 ## Version 0.0175 - Wine Features Zeta & Architecture Refactoring
 **Date:** 2025-10-13 | **Commit:** a9a4fcda | **Stats:** 2590 additions, 2592 deletions
 - **NEW FILE:** `docs/Designdoc_dynamic_achiement.md` (37 lines) - Dynamic achievement design doc
