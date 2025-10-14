@@ -262,7 +262,8 @@ CREATE TABLE highscores (
     vineyard_id text,
     vineyard_name text,
     wine_vintage integer,
-    grape_variety text
+    grape_variety text,
+    UNIQUE (company_id, score_type)
 );
 
 -- Achievements table
@@ -369,8 +370,9 @@ CREATE TABLE staff (
 
 COMMENT ON TABLE staff IS 'Staff members employed by companies, with skills and wage tracking';
 
--- Enable RLS on staff table
-ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+-- Note: RLS is disabled for staff table to allow all operations
+-- Enable RLS if you need fine-grained access control
+-- ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 
 -- Teams table
 CREATE TABLE teams (
