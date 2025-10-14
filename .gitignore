@@ -27,5 +27,9 @@ dist-ssr
 # Environment variables
 .env
 
+# Dev override files (local development only)
+*.dev.ts
+*.dev.tsx
+
 # Old iterations directory
 docs/old_iterations/
