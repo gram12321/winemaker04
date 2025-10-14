@@ -354,11 +354,9 @@ export function Login({ onCompanySelected }: LoginProps) {
         {/* Links Container */}
         <div className="mt-4 flex items-center justify-center gap-3 text-xs">
           <a 
-            href="#" 
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Trello board coming soon!');
-            }}
+            href="https://trello.com/b/sipiTJrV/winemaker" 
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-white/80 hover:text-white transition-colors flex items-center gap-1"
             title="View Development Roadmap"
           >

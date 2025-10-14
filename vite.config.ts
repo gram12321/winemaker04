@@ -25,6 +25,12 @@ function devFileOverridePlugin() {
       // Only process relative or aliased imports
       if (!importer) return null;
       
+      // CRITICAL: Don't override imports from within .dev.ts files themselves
+      // This prevents circular references when constants.dev.ts does: export * from './constants'
+      if (importer.endsWith('.dev.ts') || importer.endsWith('.dev.tsx')) {
+        return null;
+      }
+      
       // Resolve the full path
       let resolvedPath: string;
       

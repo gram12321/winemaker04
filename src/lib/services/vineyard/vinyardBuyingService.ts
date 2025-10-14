@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, Aspect } from '../../types/types';
-import { calculateLandValue } from './vineyardValueCalc';
+import { calculateLandValue, getAltitudeRating as getAltitudeRatingFromCalc } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '../../constants/vineyardConstants';
@@ -25,6 +25,7 @@ export interface VineyardPurchaseOption {
   landValue: number; // Price per hectare
   totalPrice: number; // Total price for the vineyard
   aspectRating: number; // Aspect rating for display
+  altitudeRating: number; // Altitude rating normalized to regional range (0-1)
 }
 
 // Helper functions for random vineyard generation
@@ -121,8 +122,9 @@ export function generateVineyardPurchaseOptions(
     const landValue = calculateLandValue(country, region, altitude, aspect);
     const totalPrice = landValue * hectares;
     
-    // Get aspect rating for display
+    // Get ratings for display
     const aspectRating = getAspectRating(country, region, aspect);
+    const altitudeRating = getAltitudeRatingFromCalc(country, region, altitude);
     
     const option: VineyardPurchaseOption = {
       id: uuidv4(),
@@ -135,7 +137,8 @@ export function generateVineyardPurchaseOptions(
       aspect,
       landValue,
       totalPrice,
-      aspectRating
+      aspectRating,
+      altitudeRating
     };
     
     options.push(option);

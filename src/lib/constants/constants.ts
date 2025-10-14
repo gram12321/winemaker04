@@ -3,7 +3,7 @@
 // Starting values for new games
 export const GAME_INITIALIZATION = {
   // Starting financial capital (amount added as transaction)
-  STARTING_MONEY: 10000000, // €10M starting capital transaction
+  STARTING_MONEY: 100000, // €100k starting capital transaction
   
   // Starting time
   STARTING_WEEK: 1,

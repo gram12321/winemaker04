@@ -8,6 +8,8 @@ import { notificationService } from '@/components/layout/NotificationCenter';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
+import { calculateGrapeSuitabilityContribution } from '@/lib/services/vineyard/vineyardValueCalc';
+import { getBadgeColorClasses } from '@/lib/utils';
 
 
 /**
@@ -53,6 +55,12 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
       tooltip: `Recommended density is around ${DEFAULT_VINE_DENSITY}. Higher density can increase yield but may affect quality and require more work.`
     }
   ];
+
+  // Grape suitability calculation
+  const grapeSuitability = useMemo(() => {
+    if (!vineyard) return null;
+    return calculateGrapeSuitabilityContribution(options.grape, vineyard.region, vineyard.country);
+  }, [vineyard, options.grape]);
 
   // Work calculation
   const workCalculation = useMemo((): { workEstimate: ActivityWorkEstimate; workFactors: WorkFactor[] } | null => {
@@ -115,7 +123,35 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
         submitLabel="Start Planting Activity"
         options={options}
         onOptionsChange={handleOptionsChange}
-      />
+      >
+        {/* Grape Suitability Info */}
+        {grapeSuitability !== null && (() => {
+          const colors = getBadgeColorClasses(grapeSuitability);
+          return (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-700">Grape Suitability for {vineyard.region}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    How well {options.grape} grows in this region
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${colors.text} ${colors.bg}`}>
+                    {(grapeSuitability * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-600">
+                {grapeSuitability >= 0.9 ? '✅ Excellent match - this grape thrives here!' :
+                 grapeSuitability >= 0.7 ? '👍 Good match - suitable for quality wine production' :
+                 grapeSuitability >= 0.5 ? '⚠️ Moderate match - can work but not ideal' :
+                 '❌ Poor match - this grape struggles in this region'}
+              </div>
+            </div>
+          );
+        })()}
+      </ActivityOptionsModal>
     </div>
   );
 };

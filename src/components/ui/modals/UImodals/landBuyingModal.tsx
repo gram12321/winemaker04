@@ -126,7 +126,20 @@ const LandBuyingModal: React.FC<LandBuyingModalProps> = ({
                       
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-600">Altitude:</span>
-                        <span className="text-xs text-gray-800">{option.altitude}m</span>
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs text-gray-800">{option.altitude}m</span>
+                          {(() => {
+                            const colors = getBadgeColorClasses(option.altitudeRating);
+                            return (
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs px-1 py-0 ${colors.text} ${colors.bg}`}
+                              >
+                                {formatNumber(option.altitudeRating, { decimals: 2, forceDecimals: true })}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
                       </div>
                       
                       <div className="flex justify-between items-center">

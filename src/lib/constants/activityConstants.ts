@@ -6,7 +6,7 @@ import { WorkCategory, StaffSkills } from '@/lib/types/types';
 // ===== INDIVIDUAL CONSTANTS =====
 
 // Base work units per standard week
-export const BASE_WORK_UNITS = 50;
+export const BASE_WORK_UNITS = 25;
 
 // Default vine density used for density-based calculations
 export const DEFAULT_VINE_DENSITY = 5000;
