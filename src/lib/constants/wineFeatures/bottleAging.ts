@@ -89,7 +89,7 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
     
     price: {
       type: 'premium',
-      premiumPercentage: (severity: number) => severity * 0.20 // Up to +20% price premium
+      premiumPercentage: (severity: number) => severity * 2.20 // Up to +20% price premium //TODO make this dynamic/power/assymetrical something
     },
     
     // Age-specific characteristic changes

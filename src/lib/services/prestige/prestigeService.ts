@@ -761,6 +761,21 @@ export function getEventDisplayData(event: PrestigeEvent): {
         calc: `base=log(€${metadata.companyMoney.toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.prestigeBase01?.toFixed(2)} → scaled=${event.amount.toFixed(2)}`,
       };
     }
+    
+    if (event.type === 'cellar_collection') {
+      const totalBottles = metadata.totalBottles || 0;
+      const vintageCount = metadata.vintageCount || 0;
+      const averageAge = metadata.averageAge || 0;
+      const oldestAge = metadata.oldestAge || 0;
+      const totalValue = metadata.totalValue || 0;
+      
+      return {
+        title: `Cellar Collection: ${vintageCount} aged vintage${vintageCount !== 1 ? 's' : ''} (${totalBottles} bottles)`,
+        titleBase: 'Cellar Collection',
+        amountText: `${vintageCount} vintage${vintageCount !== 1 ? 's' : ''}, avg ${averageAge.toFixed(1)} years`,
+        displayInfo: `Total: ${totalBottles} bottles • Value: €${totalValue.toLocaleString()} • Avg Age: ${averageAge.toFixed(1)} years • Oldest: ${oldestAge.toFixed(1)} years`,
+      };
+    }
   }
 
   // Handle wine feature events

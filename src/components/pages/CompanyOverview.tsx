@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
-import { Building2, TrendingUp, Trophy, Calendar, BarChart3 } from 'lucide-react';
+import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine } from 'lucide-react';
 import { formatGameDateFromObject, formatCurrency, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
-import { useGameState } from '@/hooks';
+import { useGameState, useGameUpdates } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
+import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { NavigationProps } from '../../lib/types/UItypes';
 
 interface CompanyOverviewProps extends NavigationProps {
@@ -25,6 +26,14 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     company_value: { position: 0, total: 0 },
     company_value_per_week: { position: 0, total: 0 }
   });
+  
+  const [cellarStats, setCellarStats] = useState({
+    totalWineValue: 0,
+    bottledWineCount: 0,
+    bottledBottles: 0,
+    agedWineValue: 0,
+    agedWineCount: 0
+  });
 
   const gameDate = {
     week: gameState.week || 1,
@@ -35,8 +44,18 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   useEffect(() => {
     if (company) {
       loadCompanyRankings();
+      loadCellarStats();
     }
   }, [company?.id]);
+  
+  // Reactive update for cellar stats when game state changes
+  const { subscribe } = useGameUpdates();
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      loadCellarStats();
+    });
+    return () => { unsubscribe(); };
+  }, [subscribe]);
 
   const loadCompanyRankings = () => withLoading(async () => {
     if (!company) return;
@@ -44,6 +63,28 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     const companyRankings = await highscoreService.getCompanyRankings(company.id);
     setRankings(companyRankings);
   });
+  
+  const loadCellarStats = async () => {
+    try {
+      const batches = await loadWineBatches();
+      const bottledWines = batches.filter(b => b.state === 'bottled');
+      const agedWines = bottledWines.filter(b => (b.agingProgress || 0) >= 260); // 5+ years
+      
+      const totalWineValue = bottledWines.reduce((sum, b) => sum + (b.quantity * b.estimatedPrice), 0);
+      const bottledBottles = bottledWines.reduce((sum, b) => sum + b.quantity, 0);
+      const agedWineValue = agedWines.reduce((sum, b) => sum + (b.quantity * b.estimatedPrice), 0);
+      
+      setCellarStats({
+        totalWineValue,
+        bottledWineCount: bottledWines.length,
+        bottledBottles,
+        agedWineValue,
+        agedWineCount: agedWines.length
+      });
+    } catch (error) {
+      console.error('Error loading cellar stats:', error);
+    }
+  };
 
   const formatCompanyGameDate = useCallback(() => {
     if (!company) return formatGameDateFromObject(gameDate);
@@ -164,9 +205,9 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* Financial Overview */}
-          <Card className="lg:col-span-2">
+          <Card>
             <CardHeader className="py-2 px-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <BarChart3 className="h-3.5 w-3.5" />
@@ -238,6 +279,45 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+          
+          {/* Wine Cellar Stats */}
+          <Card>
+            <CardHeader className="py-2 px-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Wine className="h-3.5 w-3.5" />
+                Wine Cellar
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Your bottled wine inventory and aged collection
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 px-3 pb-3">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Bottled Wines:</span>
+                  <span className="text-sm font-semibold">{cellarStats.bottledWineCount} batches</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Total Bottles:</span>
+                  <span className="text-sm font-semibold">{cellarStats.bottledBottles.toLocaleString()} bottles</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Cellar Value:</span>
+                  <span className="text-sm font-semibold">{formatCurrency(cellarStats.totalWineValue, 0, cellarStats.totalWineValue >= 1000)}</span>
+                </div>
+                <div className="border-t pt-1.5 mt-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">Aged Wines (5+ years):</span>
+                    <span className="text-xs font-semibold text-amber-600">{cellarStats.agedWineCount} batches</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-muted-foreground text-xs">Aged Wine Value:</span>
+                    <span className="text-xs font-semibold text-amber-600">{formatCurrency(cellarStats.agedWineValue, 0, cellarStats.agedWineValue >= 1000)}</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

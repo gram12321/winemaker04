@@ -43,6 +43,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     company_value: { icon: DollarSign, label: 'Company Value', color: 'bg-blue-100 text-blue-800' },
     vineyard: { icon: Grape, label: 'Vineyard (Legacy)', color: 'bg-green-100 text-green-800' },
     sale: { icon: TrendingUp, label: 'Company Sales', color: 'bg-emerald-100 text-emerald-800' },
+    cellar_collection: { icon: TrendingUp, label: 'Cellar Collection', color: 'bg-amber-100 text-amber-800' },
     vineyard_sale: { icon: Grape, label: 'Vineyard Sales', color: 'bg-green-100 text-green-800' },
     vineyard_base: { icon: Grape, label: 'Vineyard Base', color: 'bg-blue-100 text-blue-800' },
     vineyard_achievement: { icon: Star, label: 'Vineyard Achievements', color: 'bg-yellow-100 text-yellow-800' },
@@ -204,7 +205,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const consolidatedVineyardWineFeatures = consolidateWineFeatureEvents(vineyardWineFeatureEvents);
   
   // Group other company events by type
-  const otherCompanyEvents = eventBreakdown.filter(event => ['company_value', 'sale', 'contract', 'penalty'].includes(event.type));
+  const otherCompanyEvents = eventBreakdown.filter(event => ['company_value', 'sale', 'contract', 'penalty', 'cellar_collection'].includes(event.type));
   const groupedCompanyEvents = otherCompanyEvents.reduce((acc, event) => {
     if (!acc[event.type]) acc[event.type] = [];
     acc[event.type].push(event);
