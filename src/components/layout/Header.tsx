@@ -245,6 +245,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 <DropdownMenuItem onClick={() => handleNavigation('achievements')}>
                   Achievements
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleNavigation('wine-log')}>
+                  Wine Production Log
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleNavigation('highscores')}>
                   Global Leaderboards
                 </DropdownMenuItem>
@@ -360,6 +363,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 { id: 'admin', label: 'Admin Dashboard' },
                 { id: 'highscores', label: 'Highscores' },
                 { id: 'achievements', label: 'Achievements' },
+                { id: 'wine-log', label: 'Wine Production Log' },
                 { id: 'winepedia', label: 'Wine-Pedia' }
               ].map(({ id, label }) => (
                 <Button

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '../ui';
-import { Trophy, Award, Medal, Lock, Calendar, TrendingUp, Wine } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '../ui';
+import { Trophy, Award, Medal, Lock, Calendar, TrendingUp } from 'lucide-react';
 // import { Company } from '@/lib/services'; // Not needed with shared interfaces
 import { formatNumber, formatCompact, formatPercent } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-import { WineLog } from './WineLog';
 
 interface AchievementsProps extends PageProps, CompanyProps {
   // Inherits currentCompany and onBack from shared interfaces
@@ -225,19 +224,7 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
         )}
       </div>
 
-      <Tabs defaultValue="achievements" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="achievements" className="flex items-center gap-2">
-            <Trophy className="h-4 w-4" />
-            Achievements
-          </TabsTrigger>
-          <TabsTrigger value="wine-log" className="flex items-center gap-2">
-            <Wine className="h-4 w-4" />
-            Wine Production Log
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="achievements" className="space-y-6">
+      <div className="space-y-6">
 
         {/* Progress Overview */}
         <Card className="mb-6">
@@ -413,12 +400,7 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
             </div>
           </CardContent>
         </Card>
-        </TabsContent>
-
-        <TabsContent value="wine-log">
-          <WineLog currentCompany={currentCompany} />
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 }

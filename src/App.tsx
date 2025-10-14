@@ -10,6 +10,7 @@ import { Profile } from './components/pages/Profile';
 import { Settings } from './components/pages/Settings';
 import { AdminDashboard } from './components/pages/AdminDashboard';
 import { Achievements } from './components/pages/Achievements';
+import { WineLog } from './components/pages/WineLog';
 import Winepedia from './components/pages/Winepedia';
 import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
@@ -147,9 +148,15 @@ function App() {
         );
       case 'achievements':
         return (
-          <Achievements 
+          <Achievements
             currentCompany={currentCompany}
             onBack={() => setCurrentPage('company-overview')}
+          />
+        );
+      case 'wine-log':
+        return (
+          <WineLog
+            currentCompany={currentCompany}
           />
         );
       case 'highscores':
