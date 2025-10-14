@@ -64,6 +64,14 @@ export {
   initializeTeamsSystem,
   resetTeamsToDefault
 } from './user/teamService';
+
+// Achievement services
+export {
+  checkAndUnlockAchievement,
+  checkAllAchievements,
+  getAllAchievementsWithStatus,
+  getAchievementStats
+} from './user/achievementService';
 export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './core/gameState';
 export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
 export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';

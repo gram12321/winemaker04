@@ -14,6 +14,7 @@ import { processWeeklyFeatureRisks } from '../wine/features/featureRiskService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { updateCellarCollectionPrestige } from '../prestige/prestigeService';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
+import { checkAllAchievements } from '../user/achievementService';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -193,6 +194,18 @@ const processWeeklyEffects = async (): Promise<void> => {
         await updateCellarCollectionPrestige();
       } catch (error) {
         console.warn('Error during cellar collection prestige update:', error);
+      }
+    })(),
+    
+    // Check and unlock achievements (weekly check for all conditions)
+    (async () => {
+      try {
+        const newUnlocks = await checkAllAchievements();
+        if (newUnlocks.length > 0) {
+          console.log(`[Weekly Achievements] Unlocked ${newUnlocks.length} achievement(s)`);
+        }
+      } catch (error) {
+        console.warn('Error during achievement checking:', error);
       }
     })()
   ];

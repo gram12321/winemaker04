@@ -487,6 +487,100 @@ export interface PendingStaffCandidates {
   timestamp: number;
 }
 
+// ===== ACHIEVEMENT SYSTEM =====
+
+/**
+ * Achievement categories for organization and filtering
+ */
+export type AchievementCategory = 'financial' | 'production' | 'time' | 'prestige' | 'special';
+
+/**
+ * Achievement rarity levels
+ */
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+/**
+ * Achievement condition types
+ */
+export type AchievementConditionType = 
+  | 'money_threshold'       // Check if company money >= threshold
+  | 'prestige_threshold'    // Check if company prestige >= threshold
+  | 'time_threshold'        // Check if company age >= threshold (in years)
+  | 'sales_count'           // Check if total sales count >= threshold
+  | 'sales_value'           // Check if total sales value >= threshold
+  | 'production_count'      // Check if total wines produced >= threshold
+  | 'bottles_produced'      // Check if total bottles produced >= threshold
+  | 'vineyard_count'        // Check if vineyard count >= threshold
+  | 'custom';               // Custom condition with checker function
+
+/**
+ * Achievement condition configuration
+ */
+export interface AchievementCondition {
+  type: AchievementConditionType;
+  threshold?: number;        // For numeric thresholds
+  customChecker?: string;    // For custom conditions (function name)
+}
+
+/**
+ * Achievement prestige configuration
+ */
+export interface AchievementPrestigeConfig {
+  company?: {
+    baseAmount: number;
+    decayRate: number;        // 0 for permanent, >0 for decaying
+  };
+  vineyard?: {
+    baseAmount: number;
+    decayRate: number;
+    vineyardId?: string;      // Optional specific vineyard
+  };
+}
+
+/**
+ * Achievement definition (constant configuration)
+ */
+export interface AchievementConfig {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: AchievementCategory;
+  rarity: AchievementRarity;
+  condition: AchievementCondition;
+  prestige?: AchievementPrestigeConfig;
+  hidden?: boolean;          // Hidden until unlocked
+}
+
+/**
+ * Achievement unlock record (database record)
+ */
+export interface AchievementUnlock {
+  id: string;
+  achievementId: string;
+  companyId: string;
+  unlockedAt: GameDate;
+  unlockedAtTimestamp: number;
+  progress?: number;         // Current progress towards achievement
+  metadata?: {
+    value?: number;          // Value at unlock (e.g., money amount, prestige amount)
+    [key: string]: any;
+  };
+}
+
+/**
+ * Achievement with unlock status (UI display)
+ */
+export interface AchievementWithStatus extends AchievementConfig {
+  isUnlocked: boolean;
+  unlockedAt?: GameDate;
+  progress?: {
+    current: number;
+    target: number;
+    unit: string;
+  };
+}
+
 // ===== GAME STATE =====
 
 export interface GameState {
