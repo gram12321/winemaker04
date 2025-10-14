@@ -5,6 +5,23 @@
 -- This migration syncs the Vercel database schema with the current dev database
 -- Run this in Vercel Supabase SQL Editor: 
 -- https://supabase.com/dashboard/project/uuzoeoukixvunbnkrowi/editor
+--
+-- HOW TO REGENERATE THIS FILE (for AI agents):
+-- 1. Run: mcp_supabase-dev_list_tables with schemas: ["public"]
+-- 2. Extract all table schemas from the result
+-- 3. Create DROP TABLE statements in reverse dependency order
+-- 4. Create CREATE TABLE statements with all columns, constraints, checks
+-- 5. CRITICAL: Add these or Vercel will break:
+--    - highscores table: ADD "UNIQUE (company_id, score_type)" at end
+--    - staff table: DO NOT enable RLS (comment out ALTER TABLE staff ENABLE ROW LEVEL SECURITY)
+-- 6. Add indexes for performance
+-- 7. Test the generated SQL on Vercel database
+--
+-- KNOWN ISSUES TO AVOID:
+-- ❌ DO NOT enable RLS on staff table without policies
+-- ✅ DO add unique constraint on highscores(company_id, score_type)
+-- ✅ DO include all CHECK constraints from dev database
+-- ✅ DO preserve all default values exactly as in dev
 -- ============================================================
 
 -- Enable required extensions
