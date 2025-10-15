@@ -75,12 +75,17 @@ export interface Vineyard {
   ripeness: number; // Grape ripeness (0-1 scale, affects harvest readiness)
   vineyardPrestige: number;
   vineYield: number; // Persistent vine yield factor (0-1+ scale, can exceed 1.0)
-  // completedClearingTasks: string[]; // Commented out as per request
+  yearsSinceLastClearing?: number; // Years since last clearing activity (affects overgrowth modifier)
+  plantingHealthBonus?: number; // Gradual health improvement from planting/replanting (0-0.2, increases over 5 years)
+  healthTrend?: {
+    seasonalDecay: number; // Health lost this season
+    plantingImprovement: number; // Health gained from planting/replanting this season
+    netChange: number; // Total health change this season
+  };
   // annualYieldFactor: number; // Random value simulating vintage yield Commented out as per request
   // annualQualityFactor: number; // Random value simulating vintage quality Commented out as per request
   // farmingMethod: FarmingMethod; // Commented out as per request
   // organicYears: number; // Commented out as per request
-  // remainingYield: number | null; // Used in old iterations, for tracking yield doing harvest. Commented out as per request
   // upgrades?: string[]; // Commented out as per request
   // generateFarmlandPreview not implemented yet (Creates a specific Farmland instance based on country/region for starting conditions)
 }

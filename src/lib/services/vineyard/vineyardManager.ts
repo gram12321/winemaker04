@@ -4,6 +4,8 @@ import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
+import { notificationService } from '../../../components/layout/NotificationCenter';
+import { NotificationCategory } from '../../types/types';
 
 /**
  * Calculate yield for a vineyard based on all factors
@@ -127,9 +129,44 @@ export async function updateVineyardAges(): Promise<void> {
     for (const vineyard of vineyards) {
       // Only age vines that are planted (have a grape variety) and have a vine age (not null)
       if (vineyard.grape && vineyard.vineAge !== null) {
+        // Calculate gradual health improvement from planting/replanting
+        let newHealth = vineyard.vineyardHealth;
+        let newPlantingHealthBonus = vineyard.plantingHealthBonus || 0;
+        
+        // Apply gradual health improvement for young vines (0-5 years old)
+        let plantingImprovement = 0;
+        if (vineyard.vineAge < 5 && newPlantingHealthBonus > 0) {
+          const annualImprovement = newPlantingHealthBonus / 5; // Linear improvement over 5 years
+          
+          // Apply this year's improvement
+          plantingImprovement = annualImprovement;
+          newHealth = Math.min(1.0, newHealth + annualImprovement);
+          newPlantingHealthBonus = Math.max(0, newPlantingHealthBonus - annualImprovement);
+        }
+        
+        // Calculate health trend for this year
+        const seasonalDecay = vineyard.healthTrend?.seasonalDecay || 0; // Will be set by health degradation function
+        const netChange = plantingImprovement - seasonalDecay;
+        
         const updatedVineyard = {
           ...vineyard,
-          vineAge: vineyard.vineAge + 1
+          vineAge: vineyard.vineAge + 1,
+          yearsSinceLastClearing: (vineyard.yearsSinceLastClearing || 0) + 1, // Increment years since last clearing
+          vineyardHealth: newHealth,
+          plantingHealthBonus: newPlantingHealthBonus,
+          healthTrend: {
+            seasonalDecay,
+            plantingImprovement,
+            netChange
+          }
+        };
+        
+        await saveVineyard(updatedVineyard);
+      } else {
+        // For unplanted vineyards, still increment years since last clearing
+        const updatedVineyard = {
+          ...vineyard,
+          yearsSinceLastClearing: (vineyard.yearsSinceLastClearing || 0) + 1
         };
         
         await saveVineyard(updatedVineyard);
@@ -137,6 +174,103 @@ export async function updateVineyardAges(): Promise<void> {
     }
   } catch (error) {
     console.error('Error updating vineyard ages:', error);
+  }
+}
+
+/**
+ * Apply health degradation to vineyards based on v1 system
+ * Health degrades over time naturally - clearing activities are the primary maintenance method
+ */
+export async function updateVineyardHealthDegradation(season: string, _week: number): Promise<void> {
+  try {
+    const vineyards = await loadVineyards();
+    const healthDegradations: Array<{ vineyard: string; oldHealth: number; newHealth: number; degradation: number }> = [];
+    
+    for (const vineyard of vineyards) {
+      // Skip vineyards that are already at minimum health (0.1 = 10%)
+      if (vineyard.vineyardHealth <= 0.1) continue;
+      
+      // Base degradation rate per week (from v1 system)
+      let weeklyDegradation = 0;
+      
+      // Seasonal degradation rates (from v1 endDay.js)
+      switch (season) {
+        case 'Spring':
+          weeklyDegradation = 0.002; // 0.2% per week
+          break;
+        case 'Summer':
+          weeklyDegradation = 0.006; // 0.6% per week
+          break;
+        case 'Fall':
+          weeklyDegradation = 0.01; // 1.0% per week
+          break;
+        case 'Winter':
+          weeklyDegradation = 0.001; // 0.1% per week (reduced degradation in winter)
+          break;
+        default:
+          weeklyDegradation = 0.005; // 0.5% per week default
+      }
+      
+      // Apply small random variation (±20%)
+      const variation = (Math.random() - 0.5) * 0.4; // -20% to +20%
+      weeklyDegradation *= (1 + variation);
+      
+      // Calculate new health
+      const oldHealth = vineyard.vineyardHealth;
+      const newHealth = Math.max(0.1, oldHealth - weeklyDegradation); // Minimum 10% health
+      const actualDegradation = oldHealth - newHealth;
+      
+      if (actualDegradation > 0.001) { // Only update if significant degradation (>0.1%)
+        // Update health trend with seasonal decay
+        const currentTrend = vineyard.healthTrend || { seasonalDecay: 0, plantingImprovement: 0, netChange: 0 };
+        const updatedTrend = {
+          ...currentTrend,
+          seasonalDecay: currentTrend.seasonalDecay + actualDegradation,
+          netChange: currentTrend.plantingImprovement - (currentTrend.seasonalDecay + actualDegradation)
+        };
+        
+        const updatedVineyard = {
+          ...vineyard,
+          vineyardHealth: newHealth,
+          healthTrend: updatedTrend
+        };
+        
+        await saveVineyard(updatedVineyard);
+        
+        healthDegradations.push({
+          vineyard: vineyard.name,
+          oldHealth,
+          newHealth,
+          degradation: actualDegradation
+        });
+      }
+    }
+    
+    // Add notification for significant health degradations (only show first few to avoid spam)
+    if (healthDegradations.length > 0) {
+      const significantDegradations = healthDegradations.filter(d => d.degradation > 0.005); // >0.5% degradation
+      
+      if (significantDegradations.length > 0) {
+        const topDegradation = significantDegradations[0];
+        const additionalCount = significantDegradations.length - 1;
+        
+        let message = `Vineyard health declined: ${topDegradation.vineyard} health dropped from ${Math.round(topDegradation.oldHealth * 100)}% to ${Math.round(topDegradation.newHealth * 100)}%`;
+        
+        if (additionalCount > 0) {
+          message += ` (+${additionalCount} other vineyard${additionalCount === 1 ? '' : 's'})`;
+        }
+        
+        await notificationService.addMessage(
+          message,
+          'vineyardManager.updateVineyardHealthDegradation',
+          'Vineyard Health Decline',
+          NotificationCategory.VINEYARD_OPERATIONS
+        );
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error updating vineyard health degradation:', error);
   }
 }
 

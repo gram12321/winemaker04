@@ -2,7 +2,7 @@
 
 > **📌 Current v4 implementation:**
 > - **Oxidation:** See `wine_features_framework_design.md` (config-driven, generic framework)
-> - **Vineyard Health:** Not implemented (V3 reference below for future)
+> - **Vineyard Health:** Basic property exists but no clearing/improvement system implemented
 
 ---
 
@@ -24,15 +24,37 @@
 
 ## 🌱 **Vineyard Health Comparison**
 
-| Feature | V1 | V3 | V4 |
+| Feature | V1 | V3 | V4 (Current) |
 |---------|----|----|-----|
-| **Property** | `farmlandHealth` | `vineyardHealth` | `vineyardHealth` |
-| **Default** | 0.5 (50%) | 1.0 (100%) | 1.0 (100%) |
-| **Yield Impact** | Quality multiplier | Quality multiplier | Quality multiplier |
+| **Property** | `farmlandHealth` | `vineyardHealth` | `vineyardHealth` ✅ |
+| **Default** | 0.5 (50%) | 1.0 (100%) | 1.0 (100%) ✅ |
+| **Yield Impact** | Quality multiplier | Quality multiplier | ❌ Not used in yield calculation |
 | **Clearing Tasks** | Generic improvement | Specific % per task | ❌ Not implemented |
-| **Task Tracking** | `canBeCleared` flag | `completedClearingTasks[]` | ❌ Commented out |
-| **Farming Methods** | 3 types | 3 types + organic | ❌ Not implemented |
+| **Task Tracking** | `canBeCleared` flag | `completedClearingTasks[]` | ❌ Commented out in types |
+| **Farming Methods** | 3 types | 3 types + organic | ❌ Commented out in types |
 | **UI Components** | HealthBar, Overlay | HealthBar, Modal | ❌ Not implemented |
+| **Database Storage** | N/A | N/A | ✅ Stored in vineyard table |
+
+---
+
+## 🎯 **V4 Current State Analysis**
+
+### **What Exists in V4:**
+- ✅ `vineyardHealth` property in `Vineyard` interface (0-1 scale)
+- ✅ Database storage for vineyard health
+- ✅ Default health of 1.0 (100%) for new vineyards
+- ✅ Health displayed in vineyard UI (basic property)
+
+### **What's Missing in V4:**
+- ❌ **Yield Impact**: Health not used in yield calculations (unlike V1/V3)
+- ❌ **Clearing Activities**: No way to improve vineyard health
+- ❌ **Farming Methods**: No organic/conventional system
+- ❌ **Health Progression**: No natural health degradation or improvement
+- ❌ **UI Components**: No health bar, clearing modals, or health management
+- ❌ **Activity System**: No clearing tasks in activity system
+
+### **Key Insight:**
+The health system is completely separate from the wine features framework. Health affects **vineyard productivity** (yield/quality), while wine features affect **wine characteristics** (oxidation, terroir, etc.).
 
 ---
 

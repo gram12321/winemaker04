@@ -55,6 +55,52 @@ export const REGION_SOIL_TYPES = {
   }
 } as const;
 
+// Soil difficulty modifiers for clearing work (0-1 scale, positive = more work)
+export const SOIL_DIFFICULTY_MODIFIERS = {
+  // Easy soils (negative modifiers = less work)
+  'Sand': -0.10,           // -10% work
+  'Loam': -0.05,           // -5% work
+  'Loess': -0.03,          // -3% work
+  
+  // Medium soils (no modifier)
+  'Alluvial': 0.00,        // 0% work
+  'Clay': 0.00,            // 0% work
+  'Limestone': 0.00,       // 0% work
+  
+  // Difficult soils (positive modifiers = more work)
+  'Clay-Limestone': 0.05,  // +5% work
+  'Gravel': 0.08,          // +8% work
+  'Marl': 0.10,            // +10% work
+  'Shale': 0.12,           // +12% work
+  
+  // Very difficult soils (high modifiers = much more work)
+  'Heavy Clay': 0.15,      // +15% work
+  'Rocky': 0.20,           // +20% work
+  'Granite': 0.18,         // +18% work
+  'Basalt': 0.20,          // +20% work
+  'Sandstone': 0.15,       // +15% work
+  'Slate': 0.22,           // +22% work
+  'Schist': 0.25,          // +25% work
+  'Chalk': 0.15,           // +15% work
+  'Volcanic Soil': 0.18,   // +18% work
+  'Volcanic': 0.18,        // +18% work
+  'Galestro': 0.20,        // +20% work
+  'Ferrous Clay': 0.16,    // +16% work
+  'Marine Sediment': 0.14, // +14% work
+  'Devonian Slate': 0.24,  // +24% work
+  'Blue Devonian Slate': 0.25, // +25% work
+  'Red Devonian Slate': 0.25,  // +25% work
+  'Greywacke': 0.20,       // +20% work
+  'Phyllite': 0.18,        // +18% work
+  'Quartzite': 0.20,       // +20% work
+  'Quartz': 0.22,          // +22% work
+  'Red Earth': 0.12,       // +12% work
+  'Albariza': 0.16,        // +16% work
+  'Barros': 0.14,          // +14% work
+  'Arenas': 0.08,          // +8% work
+  'Flint': 0.26,           // +26% work (very hard)
+} as const;
+
 // Altitude ranges by region (in meters)
 export const REGION_ALTITUDE_RANGES = {
   "France": {
@@ -270,7 +316,7 @@ export const RIPENESS_INCREASE = {
 } as const;
 
 // Vineyard health constants
-export const DEFAULT_VINEYARD_HEALTH = 1.0; // Perfect health as placeholder
+export const DEFAULT_VINEYARD_HEALTH = 0.6; // Default health for new vineyards (60% - requires some clearing)
 
 // Aspect modifiers for ripeness (0-1 scale)
 export const ASPECT_RIPENESS_MODIFIERS = {

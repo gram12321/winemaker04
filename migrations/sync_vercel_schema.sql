@@ -1,6 +1,6 @@
 -- ============================================================
 -- Winemaker Game - Vercel Database Schema Sync
--- Generated: 2025-10-14 (Updated with exact dev constraints)
+-- Generated: 2025-01-27 (Updated with years_since_last_clearing field)
 -- Dev Database: uuribntaigecwtkdxeyw
 -- Vercel Database: uuzoeoukixvunbnkrowi
 -- ============================================================
@@ -134,8 +134,15 @@ CREATE TABLE vineyards (
     density integer DEFAULT 0,
     vineyard_health numeric DEFAULT 1.0,
     ripeness numeric DEFAULT 0.0,
-    vine_yield numeric DEFAULT 0.02
+    vine_yield numeric DEFAULT 0.02,
+    years_since_last_clearing integer DEFAULT 0,
+    planting_health_bonus numeric DEFAULT 0,
+    health_trend jsonb
 );
+
+COMMENT ON COLUMN vineyards.years_since_last_clearing IS 'Years since last clearing activity (affects overgrowth modifier for clearing work)';
+COMMENT ON COLUMN vineyards.planting_health_bonus IS 'Gradual health improvement from planting/replanting (0-0.2, increases over 5 years)';
+COMMENT ON COLUMN vineyards.health_trend IS 'Health trend tracking (seasonal decay, planting improvements, net change)';
 
 -- Wine batches table
 CREATE TABLE wine_batches (

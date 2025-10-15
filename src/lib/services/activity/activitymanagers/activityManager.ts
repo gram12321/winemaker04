@@ -16,6 +16,7 @@ import { calculateStaffWorkContribution } from '../workcalculators/workCalculato
 import { completeStaffSearch, completeHiringProcess } from '../../user/staffSearchService';
 import { getTeamForCategory } from '../../user/teamService';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
+import { completeClearingActivity } from '../../vineyard/clearingManager';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -85,8 +86,8 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     notificationService.addMessage(`Successfully started fermentation for ${activity.params.targetName}!`, 'winemaking.fermentation', 'Fermentation', NotificationCategory.WINEMAKING_PROCESS);
   },
 
-  [WorkCategory.CLEARING]: async (_activity: Activity) => {
-    // TODO: Implement clearing completion
+  [WorkCategory.CLEARING]: async (activity: Activity) => {
+    await completeClearingActivity(activity);
   },
 
   [WorkCategory.UPROOTING]: async (_activity: Activity) => {

@@ -29,6 +29,40 @@ export const TASK_RATES: Record<WorkCategory, number> = {
 // Harvest yield rate - how much grapes can be harvested per week
 export const HARVEST_YIELD_RATE = 500; // kg/week
 
+// ===== CLEARING TASK CONSTANTS =====
+
+// Clearing subtask types and their health improvements
+export const CLEARING_TASKS = {
+  CLEAR_VEGETATION: {
+    id: 'clear-vegetation',
+    name: 'Clear vegetation',
+    healthImprovement: 0.10, // +10% health
+    rate: 0.5, // hectares/week
+    initialWork: 5
+  },
+  REMOVE_DEBRIS: {
+    id: 'remove-debris', 
+    name: 'Remove debris',
+    healthImprovement: 0.05, // +5% health
+    rate: 0.4, // hectares/week
+    initialWork: 3
+  },
+  UPROOT_VINES: {
+    id: 'uproot-vines',
+    name: 'Uproot vines', 
+    setHealth: 0.5, // Set health to absolute 50% (no gradual improvement)
+    rate: 0.35, // hectares/week (just removing vines)
+    initialWork: 8
+  },
+  REPLANT_VINES: {
+    id: 'replant-vines',
+    name: 'Replant vines', 
+    setHealth: 0.5, // Set health to 50% initially, then gradual improvement via plantingHealthBonus
+    rate: 0.155, // hectares/week (calculated: 1/(1/0.35 + 1/0.28) = 0.155)
+    initialWork: 12 // Starting threshold for replanting task (not additive)
+  }
+} as const;
+
 // Define initial work for each category
 export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.PLANTING]: 30,

@@ -22,6 +22,7 @@ export const WorkCalculationTable: React.FC<WorkCalculationTableProps> = ({ fact
     const modifierText = modifier > 0 ? 'more' : 'less';
     const colorClass = modifier > 0 ? 'text-red-600' : 'text-green-600'; // Red for more work, green for less
     
+    
     return (
       <small className={`block ${colorClass} text-xs`}>
         {Math.abs(Number(percentage))}% {modifierText} work {label ? `(${label})` : ''}

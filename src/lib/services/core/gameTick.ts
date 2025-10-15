@@ -5,7 +5,7 @@ import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { NotificationCategory } from '../../../lib/types/types';
 import { progressActivities } from '../activity/activitymanagers/activityManager';
-import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields } from '../vineyard/vineyardManager';
+import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation } from '../vineyard/vineyardManager';
 import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
 import { processSeasonalWages } from '../user/wageService';
@@ -94,6 +94,9 @@ const executeGameTick = async (): Promise<void> => {
   
   // Update vineyard ripeness and status based on current season and week
   await updateVineyardRipeness(season, week);
+  
+  // Apply health degradation to vineyards
+  await updateVineyardHealthDegradation(season, week);
   
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);

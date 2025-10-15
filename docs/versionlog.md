@@ -15,7 +15,7 @@
    
 3. **Grouping commits:**
    - Related commits (same feature) can be grouped into one version entry
-   - Each entry should cover 1-4 related commits
+   - Each entry should cover 1-4 related commits if similiar
    - Large refactors or feature sets may need separate entries
 
 ## 📂 **Repository Info**
@@ -25,11 +25,48 @@
 
 ---
 
-## Version 0.022 - Customer Persistence Fix & Init Guards
-**Date:** 2025-10-15 | **Uncommitted local changes**
-- `src/lib/database/customers/customerDB.ts` - Fixed customer existence check to use Supabase `count` when using `head: true` (prevents false 0 result and unintended customer regeneration on login/refresh)
-- `src/components/pages/sales/OrdersTab.tsx` - Added guard to skip customer chance calculation when no active company is set (prevents prestige error on first mount)
-- Impact: Customers are no longer recreated on relogin/refresh; relationship state persists correctly. Prevents transient "No active company" errors during hot reloads.
+## Version 0.023a - Mobile/UI Improvements (Combined 0.02 → 0.023a)
+**Date:** 2025-10-14 to 2025-10-15 | **Commits:** f7a1d3d9 (0.02), abe8a197 (0.0211), 13ca0208 (0.0211a), 2105e7ca (0.023), 3f37b8b8 (0.023a), 7449f88e (0.023a header)
+**Scope:** Mobile layout polish, responsive fixes, dependency updates, minor DB/achievement fixes
+- `src/components/layout/Header.tsx` - Multiple rounds of mobile spacing, button styles, and layout fixes
+- `src/components/pages/Vineyard.tsx` / `src/components/pages/Sales.tsx` - Breakpoint tweaks and responsive UI improvements
+- `src/components/ui/modals/...` - Land buying and planting modals: mobile-friendly controls and spacing
+- `src/components/pages/Login.tsx` - Minor mobile polish; `vite.config.ts` adjusted for mobile builds
+- `src/lib/services/user/achievementService.ts` - Minor DB-related fix (with 0.0211/0.0211a)
+- `package.json` / lockfile - Dependency updates supporting mobile build stability
+- `src/vite-env.d.ts` - Updated Vite env typings
+
+
+## Version 0.0221 - Customer Recreation Fix
+**Date:** 2025-10-15 | **Commit:** b804db47 | **Stats:** 525 additions, 78 deletions (includes docs churn from prior reset)
+- `src/components/pages/CompanyOverview.tsx` - UI adjustments related to prestige/customer state (84 additions, 4 deletions)
+- `src/lib/services/prestige/prestigeService.ts` - Minor updates (15 changes)
+- Ensures customers are not recreated on relogin/refresh; relationship persistence stabilized
+
+
+## Version 0.019 - Dynamic Achievements
+**Date:** 2025-10-14 | **Commit:** aef79714 | **Stats:** 1529 additions, 222 deletions
+- **NEW FILE:** `src/lib/constants/achievementConstants.ts` (622 lines) - Config-driven achievements
+- **NEW FILE:** `src/lib/database/core/achievementsDB.ts` (246 lines) - Achievements CRUD
+- **NEW FILE:** `src/lib/services/user/achievementService.ts` (395 lines) - Evaluation & unlock logic
+- `src/components/pages/Achievements.tsx` - Dynamic UI with categories and progress (150 additions, 220 deletions)
+- `src/lib/types/types.ts` - Added achievement types (94 additions)
+- Game tick integration for incremental progress (13 additions)
+
+---
+
+## Version 0.0182 - Vercel Dual Database & Migrations (Combined 0.018 → 0.0182)
+**Date:** 2025-10-14 | **Commits:** 59b05c09 (setup docs), 4b53b2d3 (analytics), 20bdef86 (dev overrule), 8af8f226 (schema sync), aeb3c47a (constraints & RLS), c134b69f (migration header), 81615c7d (cleanup), a0b871ad (minor import fix)
+**Status:** Dual DB setup is active (local `.env.local` for dev; Vercel env for test). Example/docs files were removed from git.
+- **NEW (later removed):** `migrations/vercel_initial_setup.sql` (429 lines), `docs/vercel_setup_guide.md` (115), `VERCEL_SETUP.md` (38), `docs/env.example` (27), `env.example` (9)
+- `migrations/sync_vercel_schema.sql` / `schema_snapshot.sql` / `README.md` - Schema snapshot + sync migration; later consolidated and cleaned
+- `migrations/fix_vercel_issues.sql` - Highscores unique constraint; disabled staff RLS for Vercel test
+- `.gitignore` - Ensured local overrides are ignored
+- `vite.config.ts` - Dev overrule logic to keep local dev DB separate from Vercel test
+- `src/App.tsx` - Vercel analytics wiring
+- Note: Git repo reflects the Vercel test environment; local development uses `.env.local` (gitignored)
+
+--
 
 ---
 

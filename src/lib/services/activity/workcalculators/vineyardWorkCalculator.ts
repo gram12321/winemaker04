@@ -5,6 +5,7 @@ import { WorkCategory } from '@/lib/services/activity';
 import { GRAPE_CONST } from '@/lib/constants/grapeConstants';
 import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
+import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
 
 /**
  * Vineyard Work Calculator
@@ -22,12 +23,29 @@ export function getAltitudeModifier(vineyard: Vineyard): number {
   return rating; // 0..1
 }
 
+export function getSoilTypeModifier(soil: string[]): number {
+  let totalModifier = 0;
+  let validSoils = 0;
+  
+  soil.forEach(soilType => {
+    const modifier = SOIL_DIFFICULTY_MODIFIERS[soilType as keyof typeof SOIL_DIFFICULTY_MODIFIERS];
+    if (modifier !== undefined) {
+      totalModifier += modifier;
+      validSoils++;
+    }
+  });
+  
+  // Average the modifiers if multiple soil types
+  return validSoils > 0 ? totalModifier / validSoils : 0;
+}
+
 export function calculatePlantingWork(
   vineyard: Vineyard,
   params: { grape: GrapeVariety; density: number }
 ): { totalWork: number; factors: WorkFactor[] } {
   const fragilityModifier = getFragilityModifier(params.grape);
   const altitudeModifier = getAltitudeModifier(vineyard);
+  const soilModifier = getSoilTypeModifier(vineyard.soil);
 
   const category = WorkCategory.PLANTING;
   const rate = TASK_RATES[category];
@@ -38,7 +56,7 @@ export function calculatePlantingWork(
     initialWork,
     density: params.density > 0 ? params.density : undefined,
     useDensityAdjustment: isDensityBased(category),
-    workModifiers: [fragilityModifier, altitudeModifier]
+    workModifiers: [fragilityModifier, altitudeModifier, soilModifier]
   });
 
   const factors: WorkFactor[] = [
@@ -55,6 +73,9 @@ export function calculatePlantingWork(
   if (altitudeModifier > 0) {
     factors.push({ label: 'Altitude Impact', value: 'Difficult conditions', modifier: altitudeModifier, modifierLabel: 'planting difficulty' });
   }
+        if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
+    factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
+  }
 
   return { totalWork, factors };
 }
@@ -66,6 +87,7 @@ export function calculateHarvestWork(
   const grape = vineyard.grape as GrapeVariety; // ensured by caller
   const fragilityModifier = getFragilityModifier(grape);
   const altitudeModifier = getAltitudeModifier(vineyard);
+  const soilModifier = getSoilTypeModifier(vineyard.soil);
 
   const category = WorkCategory.HARVESTING;
   const yieldRate = HARVEST_YIELD_RATE;
@@ -78,7 +100,7 @@ export function calculateHarvestWork(
   
   // Add initial work and apply modifiers
   const workWithInitial = baseWork + initialWork;
-  const totalWork = [fragilityModifier, altitudeModifier].reduce((work, modifier) => 
+  const totalWork = [fragilityModifier, altitudeModifier, soilModifier].reduce((work, modifier) => 
     work * (1 + modifier), workWithInitial);
 
   const factors: WorkFactor[] = [
@@ -95,6 +117,9 @@ export function calculateHarvestWork(
   }
   if (altitudeModifier > 0) {
     factors.push({ label: 'Altitude Impact', value: 'Difficult conditions', modifier: altitudeModifier, modifierLabel: 'harvest difficulty' });
+  }
+        if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
+    factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
   }
 
   return { totalWork, expectedYield, factors };

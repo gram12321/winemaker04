@@ -5,7 +5,9 @@ import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAl
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
+import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { HarvestRisksDisplay } from '../ui/vineyard/HarvestFeatureRisksDisplay';
+import HealthTooltip from '../ui/vineyard/HealthTooltip';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { getFlagIcon } from '@/lib/utils';
@@ -18,6 +20,7 @@ const Vineyard: React.FC = () => {
   const [showHarvestDialog, setShowHarvestDialog] = useState(false);
   const [showBuyLandModal, setShowBuyLandModal] = useState(false);
   const [showVineyardModal, setShowVineyardModal] = useState(false);
+  const [showClearingModal, setShowClearingModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const [landPurchaseOptions, setLandPurchaseOptions] = useState<VineyardPurchaseOption[]>([]);
   const [expectedYields, setExpectedYields] = useState<Record<string, number>>({});
@@ -96,69 +99,157 @@ const Vineyard: React.FC = () => {
     setShowVineyardModal(true);
   }, []);
 
+  const handleShowClearingModal = useCallback((vineyard: VineyardType) => {
+    setSelectedVineyard(vineyard);
+    setShowClearingModal(true);
+  }, []);
+
+  const handleClearingSubmit = useCallback(async (options: {
+    tasks: { [key: string]: boolean };
+    replantingIntensity: number;
+  }) => {
+    if (!selectedVineyard) return;
+    
+    await withLoading(async () => {
+      // Import the clearing activity manager
+      const { createClearingActivity } = await import('@/lib/services/vineyard/clearingManager');
+      
+      const success = await createClearingActivity(
+        selectedVineyard.id,
+        selectedVineyard.name,
+        options
+      );
+      
+      if (success) {
+        setShowClearingModal(false);
+        setSelectedVineyard(null);
+      }
+    });
+  }, [selectedVineyard, withLoading]);
+
   const getActionButtons = useCallback((vineyard: VineyardType) => {
     if (!vineyard.grape) {
       const hasActivePlanting = vineyardsWithActiveActivities.planting.has(vineyard.id);
       return (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedVineyard(vineyard);
-            setShowPlantDialog(true);
-          }}
-          disabled={hasActivePlanting}
-          className={`px-2 py-1 rounded text-xs font-medium ${
-            hasActivePlanting 
-              ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-              : 'bg-green-600 hover:bg-green-700 text-white'
-          }`}
-        >
-          {hasActivePlanting ? 'Planting...' : 'Plant'}
-        </button>
+        <div className="flex flex-col space-y-1">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedVineyard(vineyard);
+              setShowPlantDialog(true);
+            }}
+            disabled={hasActivePlanting}
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              hasActivePlanting 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {hasActivePlanting ? 'Planting...' : 'Plant'}
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShowClearingModal(vineyard);
+            }}
+            className="px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white"
+            title="Clear vegetation and debris to improve vineyard health"
+          >
+            Clear
+          </button>
+        </div>
       );
     }
 
     switch (vineyard.status) {
       case 'Planted':
         return (
-          <div className="text-xs text-gray-500">
-            Planted (will grow in Spring)
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500">
+              Planted (will grow in Spring)
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShowClearingModal(vineyard);
+              }}
+              className="px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white"
+              title="Clear vegetation and debris to improve vineyard health"
+            >
+              Clear
+            </button>
           </div>
         );
       case 'Growing':
         const hasActiveHarvesting = vineyardsWithActiveActivities.harvesting.has(vineyard.id);
         return (
-          <button 
-            onClick={(e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }}
-            disabled={hasActiveHarvesting}
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              hasActiveHarvesting 
-                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                : (vineyard.ripeness || 0) < 0.3 
-                  ? 'bg-gray-400 hover:bg-gray-500 text-white' 
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'
-            }`}
-            title={
-              hasActiveHarvesting 
-                ? 'Harvesting in progress...'
-                : (vineyard.ripeness || 0) < 0.3 
-                  ? 'Low ripeness - will yield very little' 
-                  : 'Ready to harvest'
-            }
-          >
-            {hasActiveHarvesting ? 'Harvesting...' : 'Harvest'}
-          </button>
+          <div className="space-y-1">
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }}
+              disabled={hasActiveHarvesting}
+              className={`w-full px-2 py-1 rounded text-xs font-medium ${
+                hasActiveHarvesting 
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : (vineyard.ripeness || 0) < 0.3 
+                    ? 'bg-gray-400 hover:bg-gray-500 text-white' 
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+              }`}
+              title={
+                hasActiveHarvesting 
+                  ? 'Harvesting in progress...'
+                  : (vineyard.ripeness || 0) < 0.3 
+                    ? 'Low ripeness - will yield very little' 
+                    : 'Ready to harvest'
+              }
+            >
+              {hasActiveHarvesting ? 'Harvesting...' : 'Harvest'}
+            </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShowClearingModal(vineyard);
+              }}
+              className="w-full px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white"
+              title="Clear vegetation and debris to improve vineyard health"
+            >
+              Clear
+            </button>
+          </div>
         );
       case 'Harvested':
         return (
-          <div className="text-xs text-gray-500">
-            Harvested (will go dormant in Winter)
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500">
+              Harvested (will go dormant in Winter)
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShowClearingModal(vineyard);
+              }}
+              className="px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white"
+              title="Clear vegetation and debris to improve vineyard health"
+            >
+              Clear
+            </button>
           </div>
         );
       case 'Dormant':
         return (
-          <div className="text-xs text-gray-500">
-            Dormant
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500">
+              Dormant
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShowClearingModal(vineyard);
+              }}
+              className="px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white"
+              title="Clear vegetation and debris to improve vineyard health"
+            >
+              Clear
+            </button>
           </div>
         );
       default:
@@ -265,28 +356,27 @@ const Vineyard: React.FC = () => {
       {/* Vineyards Table - Desktop */}
       <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
+          <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vineyard</th>
-                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Size & Value</th>
-                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Characteristics</th>
-                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vine Info</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vineyard & Location</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Details & Characteristics</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vine Details</th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Progress</th>
                 <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Status & Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {vineyards.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     No vineyards yet. Create your first vineyard to get started!
                   </td>
                 </tr>
               ) : (
                 vineyards.map((vineyard) => (
                   <tr key={vineyard.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(vineyard)}>
-                    {/* Vineyard Name and Grape */}
+                    {/* Vineyard & Location */}
                     <td className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-900">{vineyard.name}</div>
                       <div className="text-sm text-gray-500">
@@ -298,35 +388,23 @@ const Vineyard: React.FC = () => {
                           <span className="text-gray-400">No grape planted</span>
                         )}
                       </div>
-                    </td>
-
-                    {/* Location */}
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-gray-900">{vineyard.region}</div>
-                      <div className="text-xs text-gray-500 flex items-center">
-                        <span className={`${getFlagIcon(vineyard.country)} mr-1`}></span>
-                        {vineyard.country}
+                      <div className="text-xs text-gray-600 mt-1">
+                        {vineyard.region}, {vineyard.country}
+                        <span className={`${getFlagIcon(vineyard.country)} ml-1`}></span>
                       </div>
                     </td>
 
-                    {/* Size & Value */}
+                    {/* Details & Characteristics */}
                     <td className="px-4 py-4">
-                      <div className="text-sm text-gray-900">{vineyard.hectares} ha</div>
-                      <div className="text-xs text-gray-500">
-                        {formatCurrency(vineyard.landValue)}/ha
-                      </div>
-                      <div className="text-xs font-medium text-blue-600">
-                        Total: {formatCurrency(vineyard.vineyardTotalValue)}
-                      </div>
-                    </td>
-
-                    {/* Characteristics */}
-                    <td className="px-4 py-4">
-                      <div className="text-xs text-gray-900">
-                        <div className="mb-1">
+                      <div className="text-xs text-gray-900 space-y-1">
+                        <div>
+                          <span className="font-medium">Size:</span> {vineyard.hectares} ha | 
+                          <span className="font-medium ml-1">Value:</span> {formatCurrency(vineyard.vineyardTotalValue)}
+                        </div>
+                        <div>
                           <span className="font-medium">Soil:</span> {vineyard.soil.join(', ')}
                         </div>
-                        <div className="mb-1 flex items-center">
+                        <div className="flex items-center">
                           <span className="font-medium">Altitude:</span> 
                           <span className="ml-1">{vineyard.altitude}m</span>
                           {(() => {
@@ -355,7 +433,7 @@ const Vineyard: React.FC = () => {
                       </div>
                     </td>
 
-                    {/* Vine Info */}
+                    {/* Vine Details */}
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-900">
                         {vineyard.vineAge === null ? (
@@ -372,24 +450,51 @@ const Vineyard: React.FC = () => {
                       <div className="text-xs text-gray-500">
                         Density: {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
                       </div>
-                      {/* Ripeness Progress Bar */}
-                      {vineyard.grape && (
-                        <div className="mt-2">
-                          <div className="text-xs text-gray-500 mb-1">
-                            Ripeness: {Math.round((vineyard.ripeness || 0) * 100)}%
+                    </td>
+
+                    {/* Progress */}
+                    <td className="px-4 py-4">
+                      {vineyard.grape ? (
+                        <div className="space-y-2">
+                          {/* Ripeness Progress Bar */}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">
+                              Ripeness: {Math.round((vineyard.ripeness || 0) * 100)}%
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
+                                  (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full transition-all duration-300 ${
-                                (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
-                                (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
-                              }`}
-                              style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
-                            ></div>
+                          
+                          {/* Vineyard Health Progress Bar */}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">
+                              Health: {Math.round((vineyard.vineyardHealth || 1.0) * 100)}%
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  (vineyard.vineyardHealth || 1.0) < 0.3 ? 'bg-red-500' :
+                                  (vineyard.vineyardHealth || 1.0) < 0.6 ? 'bg-amber-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
+                              ></div>
+                              {/* Health Tooltip */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
+                                <HealthTooltip vineyard={vineyard} />
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
                           </div>
                           
                           {/* Vine Yield Progress Bar */}
-                          <div className="mt-2">
+                          <div>
                             <div className="text-xs text-gray-500 mb-1">
                               Vine Yield: {Math.round((vineyard.vineYield || 0.02) * 100)}%
                             </div>
@@ -406,7 +511,7 @@ const Vineyard: React.FC = () => {
                           </div>
                           
                           {/* Expected/Remaining Yield */}
-                          <div className="mt-2 text-xs">
+                          <div className="text-xs">
                             <div className="text-gray-500">
                               {(vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield')}: <span className="font-medium text-green-600">
                                 {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
@@ -414,6 +519,8 @@ const Vineyard: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                      ) : (
+                        <div className="text-xs text-gray-400">No progress data</div>
                       )}
                     </td>
 
@@ -590,6 +697,28 @@ const Vineyard: React.FC = () => {
                         </div>
                       </div>
                       
+                      {/* Vineyard Health Progress */}
+                      <div>
+                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                          <span>Health</span>
+                          <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3 relative group cursor-help">
+                          <div 
+                            className={`h-3 rounded-full transition-all duration-300 ${
+                              (vineyard.vineyardHealth || 1.0) < 0.3 ? 'bg-red-500' :
+                              (vineyard.vineyardHealth || 1.0) < 0.6 ? 'bg-amber-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
+                          ></div>
+                          {/* Health Tooltip */}
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
+                            <HealthTooltip vineyard={vineyard} />
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                      </div>
+                      
                       {/* Vine Yield Progress */}
                       <div>
                         <div className="flex justify-between text-xs text-gray-600 mb-1">
@@ -668,6 +797,16 @@ const Vineyard: React.FC = () => {
         isOpen={showVineyardModal}
         onClose={() => setShowVineyardModal(false)}
         vineyard={selectedVineyard}
+      />
+
+      <ClearingOptionsModal
+        isOpen={showClearingModal}
+        vineyard={selectedVineyard}
+        onClose={() => {
+          setShowClearingModal(false);
+          setSelectedVineyard(null);
+        }}
+        onSubmit={handleClearingSubmit}
       />
     </div>
   );

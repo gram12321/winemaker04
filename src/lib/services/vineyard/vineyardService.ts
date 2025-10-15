@@ -84,6 +84,11 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
   // Calculate land value using new calculation service
   const landValue = calculateLandValue(country, region, altitude, aspect);
   
+  // Generate realistic health with some variation (0.4 to 0.8)
+  const baseHealth = DEFAULT_VINEYARD_HEALTH;
+  const healthVariation = (Math.random() - 0.5) * 0.4; // ±20% variation
+  const vineyardHealth = Math.max(0.3, Math.min(0.9, baseHealth + healthVariation));
+
   const vineyard: Vineyard = {
     id: uuidv4(),
     name: vineyardName,
@@ -96,7 +101,7 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     altitude,
     aspect,
     density: 0, // No density until planted
-    vineyardHealth: DEFAULT_VINEYARD_HEALTH, // Perfect health as placeholder
+    vineyardHealth, // Realistic health with variation
     landValue, // Calculated land value in euros per hectare
     vineyardTotalValue: landValue * hectares, // Total vineyard value
     status: 'Barren',
@@ -149,7 +154,8 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
     density: density || DEFAULT_VINE_DENSITY, // Use provided density or default
     vineyardHealth: vineyard.vineyardHealth || DEFAULT_VINEYARD_HEALTH, // Ensure health is set
     status: initialStatus,
-    ripeness: initialRipeness
+    ripeness: initialRipeness,
+    plantingHealthBonus: 0.2 // Start with 20% gradual health improvement over 5 years
   };
 
 

@@ -154,6 +154,11 @@ export function generateVineyardPurchaseOptions(
  * @returns Full Vineyard object ready for saving
  */
 export function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<Vineyard, 'id'> {
+  // Generate realistic health with some variation (0.4 to 0.8)
+  const baseHealth = 0.6; // DEFAULT_VINEYARD_HEALTH
+  const healthVariation = (Math.random() - 0.5) * 0.4; // ±20% variation
+  const vineyardHealth = Math.max(0.3, Math.min(0.9, baseHealth + healthVariation));
+
   return {
     name: option.name,
     country: option.country,
@@ -165,7 +170,7 @@ export function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption):
     altitude: option.altitude,
     aspect: option.aspect,
     density: 0, // No density until planted
-    vineyardHealth: 1.0, // Default perfect health
+    vineyardHealth, // Realistic health with variation
     landValue: option.landValue,
     vineyardTotalValue: option.totalPrice,
     status: 'Barren',

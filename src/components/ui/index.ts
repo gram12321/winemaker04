@@ -31,6 +31,7 @@ export { default as PlantingOptionsModal } from './modals/activitymodals/Plantin
 export { default as HarvestOptionsModal } from './modals/activitymodals/HarvestOptionsModal';
 export { default as CrushingOptionsModal } from './modals/activitymodals/CrushingOptionsModal';
 export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
+export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
 export { BalanceBreakdownModal } from './modals/winebreakdownmodals/BalanceBreakdownModal';
 export { QualityBreakdownModal } from './modals/winebreakdownmodals/QualityBreakdownModal';
 export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';

@@ -32,7 +32,10 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         status: vineyard.status,
         ripeness: vineyard.ripeness || 0,
         vineyard_prestige: vineyard.vineyardPrestige,
-        vine_yield: vineyard.vineYield || 0.02 // Default to 0.02 if not set
+        vine_yield: vineyard.vineYield || 0.02, // Default to 0.02 if not set
+        years_since_last_clearing: vineyard.yearsSinceLastClearing || 0, // Default to 0 (no overgrowth)
+        planting_health_bonus: vineyard.plantingHealthBonus || 0, // Default to 0 (no gradual improvement)
+        health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null // Store health trend as JSON
       });
 
     if (error) throw error;
@@ -67,7 +70,10 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       status: row.status,
       ripeness: row.ripeness ?? 0, // Default to 0 ripeness
       vineyardPrestige: row.vineyard_prestige || 0,
-      vineYield: row.vine_yield ?? 0.02 // Default to 0.02 if not set (will be 0.02 for existing records)
+      vineYield: row.vine_yield ?? 0.02, // Default to 0.02 if not set (will be 0.02 for existing records)
+      yearsSinceLastClearing: row.years_since_last_clearing ?? 0, // Default to 0 (no overgrowth)
+      plantingHealthBonus: row.planting_health_bonus ?? 0, // Default to 0 (no gradual improvement)
+      healthTrend: row.health_trend ? JSON.parse(row.health_trend) : undefined // Parse health trend from JSON
     }));
   } catch (error) {
     return [];
