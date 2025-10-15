@@ -54,7 +54,7 @@ export const WineModal: React.FC<WineModalProps> = ({
 
   // Calculate current balance from characteristics (reflects feature evolution)
   const balanceResult = useWineBalance(wineBatch?.characteristics || null);
-  const currentBalance = balanceResult?.score ?? wineBatch?.balance;
+  const currentBalance: number = balanceResult?.score ?? wineBatch?.balance ?? 0;
 
   // Calculate wine age using service layer
   const weeksSinceHarvest = wineBatch ? getWineAgeFromHarvest(wineBatch.harvestStartDate || { week: 1, season: 'Spring', year: 2024 }) : 0;
@@ -63,7 +63,7 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch) return null;
 
   const displayName = wineName || `${wineBatch.grape} - ${wineBatch.vineyardName}`;
-  const effectiveQuality = calculateEffectiveQuality(wineBatch);
+  const effectiveQuality: number = calculateEffectiveQuality(wineBatch) || 0;
   const qualityCategory = getWineQualityCategory(effectiveQuality);
   const qualityColorClass = getColorClass(effectiveQuality);
   const configs = getAllFeatureConfigs();
