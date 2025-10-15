@@ -25,6 +25,14 @@
 
 ---
 
+## Version 0.022 - Customer Persistence Fix & Init Guards
+**Date:** 2025-10-15 | **Uncommitted local changes**
+- `src/lib/database/customers/customerDB.ts` - Fixed customer existence check to use Supabase `count` when using `head: true` (prevents false 0 result and unintended customer regeneration on login/refresh)
+- `src/components/pages/sales/OrdersTab.tsx` - Added guard to skip customer chance calculation when no active company is set (prevents prestige error on first mount)
+- Impact: Customers are no longer recreated on relogin/refresh; relationship state persists correctly. Prevents transient "No active company" errors during hot reloads.
+
+---
+
 ## Version 0.018 - Vercel Dual Database Setup (commit named 0.0018 - typo)
 **Date:** 2025-10-14 | **Commits:** 59b05c09 + 88ee6c43 + bba60b47 + a0b871ad + 81615c7d | **Stats:** 610 additions, 620 deletions
 - **✅ Active dual database setup:** Local dev database (via `.env.local`) + Vercel test database (via Vercel env vars)

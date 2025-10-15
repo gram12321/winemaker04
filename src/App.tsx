@@ -73,7 +73,6 @@ function App() {
       // Initialize activity system
       await initializeActivitySystem();
       
-      console.log('Game systems initialized for company');
     } catch (error) {
       console.error('Error initializing game for company:', error);
 

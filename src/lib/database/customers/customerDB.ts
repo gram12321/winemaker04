@@ -225,9 +225,8 @@ export async function loadActiveCustomers(): Promise<Customer[]> {
 export async function checkCustomersExist(): Promise<boolean> {
   try {
     const companyId = getCurrentCompanyId();
-    console.log(`[Customer Check] Checking if customers exist for company: ${companyId}`);
     
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from('customers')
       .select('id', { count: 'exact', head: true })
       .eq('company_id', companyId);
@@ -237,9 +236,8 @@ export async function checkCustomersExist(): Promise<boolean> {
       return false;
     }
 
-    const count = data?.length || 0;
-    const exists = count > 0;
-    console.log(`[Customer Check] Found ${count} customers for company ${companyId}: ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+    const total = count ?? 0;
+    const exists = total > 0;
     return exists;
   } catch (error) {
     console.error('Failed to check customers existence:', error);

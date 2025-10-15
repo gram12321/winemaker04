@@ -9,6 +9,7 @@ import { calculateRelationshipBreakdown } from '@/lib/services/sales/relationshi
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
+import { getCurrentCompany } from '@/lib/services/core/gameState';
 
 /**
  * Create minimal customer object for relationship breakdown from order data
@@ -180,6 +181,11 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   // Load current customer acquisition chance
   const loadCustomerChance = async () => {
     try {
+      // Guard: only compute chance when a company is active
+      const company = getCurrentCompany();
+      if (!company) {
+        return;
+      }
       const { chanceInfo } = await generateCustomer({ dryRun: true }); // dry run for display
       setOrderChanceInfo(chanceInfo);
     } catch (error) {
