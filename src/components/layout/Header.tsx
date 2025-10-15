@@ -185,6 +185,21 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 </span>
               )}
             </Button>
+
+            {/* Console button - mobile */}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => consoleHook.openHistory()}
+              className="rounded-full h-8 w-8 flex items-center justify-center text-white hover:bg-red-700 relative sm:hidden"
+            >
+              <MessageSquareText className="h-4 w-4" />
+              {consoleHook.messages.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">
+                  {Math.min(consoleHook.messages.length, 99)}
+                </span>
+              )}
+            </Button>
             
             {/* Mobile menu button */}
             <Button
