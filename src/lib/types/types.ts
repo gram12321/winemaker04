@@ -498,12 +498,12 @@ export interface PendingStaffCandidates {
 /**
  * Achievement categories for organization and filtering
  */
-export type AchievementCategory = 'financial' | 'production' | 'time' | 'prestige' | 'special';
+export type AchievementCategory = 'financial' | 'production' | 'time' | 'prestige' | 'sales' | 'vineyard' | 'special';
 
 /**
- * Achievement rarity levels
+ * Achievement level for tiered achievements
  */
-export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type AchievementLevel = 1 | 2 | 3 | 4 | 5;
 
 /**
  * Achievement condition types
@@ -517,6 +517,29 @@ export type AchievementConditionType =
   | 'production_count'      // Check if total wines produced >= threshold
   | 'bottles_produced'      // Check if total bottles produced >= threshold
   | 'vineyard_count'        // Check if vineyard count >= threshold
+  | 'vineyard_time_same_grape'      // Check if vineyard has same grape for X years
+  | 'vineyard_wine_variety_count'   // Check if vineyard produced X different grape varieties
+  | 'vineyard_bottles_produced'     // Check if vineyard produced X bottles
+  | 'vineyard_sales_count'          // Check if vineyard made X sales
+  | 'vineyard_prestige_threshold'   // Check if vineyard has X prestige
+  | 'single_contract_bottles'       // Check if single contract sold X bottles
+  | 'single_contract_value'         // Check if single contract value >= threshold
+  | 'cellar_value'                  // Check if cellar wine value >= threshold
+  | 'total_assets'                  // Check if total company assets >= threshold
+  | 'vineyard_value'                // Check if total vineyard value >= threshold
+  | 'achievement_completion'        // Check if X% of achievements completed
+  | 'different_grapes'              // Check if produced X different grape varieties
+  | 'wine_quality_threshold'        // Check if wine quality >= threshold
+  | 'wine_balance_threshold'        // Check if wine balance >= threshold
+  | 'wine_score_threshold'          // Check if wine score >= threshold
+  | 'wine_price_threshold'          // Check if wine estimated price >= threshold
+  | 'sales_price_percentage'        // Check if sales price is X% over/under estimated
+  | 'prestige_by_year'              // Check if prestige >= threshold by specific year
+  | 'revenue_by_year'               // Check if revenue >= threshold in single year
+  | 'assets_by_year'                // Check if assets >= threshold by specific year
+  | 'hectares_by_year'              // Check if hectares >= threshold by specific year
+  | 'total_hectares'                // Check if total hectares >= threshold
+  | 'average_hectare_value'         // Check if average hectare value >= threshold
   | 'custom';               // Custom condition with checker function
 
 /**
@@ -552,10 +575,11 @@ export interface AchievementConfig {
   description: string;
   icon: string;
   category: AchievementCategory;
-  rarity: AchievementRarity;
+  achievementLevel?: AchievementLevel;  // Tiered system (1-5)
   condition: AchievementCondition;
+  prerequisites?: string[];             // Array of achievement IDs that must be completed first
   prestige?: AchievementPrestigeConfig;
-  hidden?: boolean;          // Hidden until unlocked
+  hidden?: boolean;                     // Hidden until unlocked
 }
 
 /**

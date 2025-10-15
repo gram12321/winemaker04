@@ -1,555 +1,525 @@
-import { AchievementConfig } from '../types/types';
+import { AchievementConfig, AchievementCategory, AchievementLevel } from '../types/types';
+import { formatNumber as formatNumberUtil, getBadgeColorClasses } from '../utils/utils';
 
 /**
  * Achievement Definitions
  * 
- * Centralized configuration for all game achievements
+ * Tiered achievement system with skill levels
  * Each achievement can spawn prestige events when unlocked
  */
 
+// ===== ACHIEVEMENT LEVEL SYSTEM =====
+
+export const achievementLevels = {
+  1: { name: 'Fresh Off the Vine', prestige: 0.1, decayYears: 1 },
+  2: { name: 'Cork Puller', prestige: 5, decayYears: 5 },
+  3: { name: 'Cellar Hand', prestige: 50, decayYears: 25 },
+  4: { name: 'Wine Wizard', prestige: 350, decayYears: 75 },
+  5: { name: 'Living Legend', prestige: 1000, decayYears: 100 },
+} as const;
+
+/**
+ * Get achievement level info including colors
+ * Uses the existing badge color system from utils.ts
+ */
+export function getAchievementLevelInfo(level: AchievementLevel): {
+  name: string;
+  prestige: number;
+  decayYears: number;
+  color: string;
+} {
+  const levelData = achievementLevels[level];
+  // Map achievement levels 1-5 to quality values 0.2-1.0 for color progression
+  const qualityValue = (level - 1) / 4; // 0, 0.25, 0.5, 0.75, 1.0
+  const colors = getBadgeColorClasses(qualityValue);
+  
+  return {
+    name: levelData.name,
+    prestige: levelData.prestige,
+    decayYears: levelData.decayYears,
+    color: `${colors.bg} ${colors.text}`
+  };
+}
+
+// ===== TIERED ACHIEVEMENT CONFIGURATIONS =====
+
+/**
+ * Generate tiered achievements for a specific type
+ */
+function createTieredAchievements(
+  baseId: string,
+  baseName: string,
+  baseDescription: string,
+  icon: string,
+  category: AchievementCategory,
+  conditionType: string,
+  thresholds: number[],
+  prerequisites: string[] = [],
+  options: {
+    includeVineyard?: boolean;
+    vineyardDecayMultiplier?: number; // Vineyard events decay faster (default 0.5 = half company decay time)
+  } = {}
+): AchievementConfig[] {
+  return thresholds.map((threshold, index) => {
+    const tier = index + 1;
+    const achievementLevel = Math.min(5, Math.max(1, tier)) as AchievementLevel;
+    const prevId = index > 0 ? `${baseId}_tier_${index}` : null;
+    const levelInfo = achievementLevels[achievementLevel];
+    
+    // Calculate weekly retention rates (0-1, where 1 = no decay, 0 = immediate decay)
+    // For yearly decay, we want the weekly retention rate that results in the desired yearly decay
+    // If we want 50% decay over X years, weekly retention = (0.5)^(1/(52*X))
+    const yearlyRetentionRate = 0.5; // 50% retention after the specified years
+    const companyDecayRate = Math.pow(yearlyRetentionRate, 1 / (levelInfo.decayYears * 52));
+    const vineyardDecayRate = options.includeVineyard 
+      ? Math.pow(yearlyRetentionRate, 1 / (levelInfo.decayYears * 52 * (options.vineyardDecayMultiplier || 0.5)))
+      : undefined;
+    
+    const prestigeConfig: any = {
+    company: {
+        baseAmount: levelInfo.prestige,
+        decayRate: companyDecayRate
+      }
+    };
+    
+    // Add vineyard prestige if requested
+    if (options.includeVineyard) {
+      prestigeConfig.vineyard = {
+        baseAmount: levelInfo.prestige,
+        decayRate: vineyardDecayRate
+      };
+    }
+    
+    return {
+      id: `${baseId}_tier_${tier}`,
+      name: `${baseName} - Tier ${tier}`,
+      description: baseDescription.replace('{threshold}', formatNumberUtil(threshold)),
+      icon,
+      category,
+      achievementLevel,
+  condition: {
+        type: conditionType as any,
+        threshold
+      },
+      prerequisites: prevId ? [prevId] : prerequisites,
+      prestige: prestigeConfig
+    };
+  });
+}
+
+
 // ===== FINANCIAL ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_FIRST_EURO: AchievementConfig = {
-  id: 'first_euro',
-  name: 'First Euro',
-  description: 'Your winery journey begins with a single euro',
-  icon: '💶',
-  category: 'financial',
-  rarity: 'common',
-  condition: {
-    type: 'money_threshold',
-    threshold: 1
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.1,
-      decayRate: 0
-    }
-  }
-};
+// Money Accumulation Series (fixed thresholds starting above €100k)
+export const MONEY_ACCUMULATION_ACHIEVEMENTS = createTieredAchievements(
+  'money_accumulation',
+  'Wealth Builder',
+  'Accumulate €{threshold} in cash reserves',
+  '💰',
+  'financial',
+  'money_threshold',
+  [200000, 500000, 1000000, 5000000, 25000000], // Start above €100k starting money
+  []
+);
 
-export const ACHIEVEMENT_PROFITABLE: AchievementConfig = {
-  id: 'profitable',
-  name: 'Profitable Winery',
-  description: 'Reach €10,000 in cash reserves',
-  icon: '💰',
-  category: 'financial',
-  rarity: 'common',
-  condition: {
-    type: 'money_threshold',
-    threshold: 10000
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.5,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_COMFORTABLE: AchievementConfig = {
-  id: 'comfortable',
-  name: 'Comfortable Position',
-  description: 'Accumulate €100,000 in cash',
-  icon: '💵',
-  category: 'financial',
-  rarity: 'rare',
-  condition: {
-    type: 'money_threshold',
-    threshold: 100000
-  },
-  prestige: {
-    company: {
-      baseAmount: 2.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_MILLIONAIRE: AchievementConfig = {
-  id: 'millionaire',
-  name: 'Millionaire',
-  description: 'Accumulate €1,000,000 in cash',
-  icon: '💎',
-  category: 'financial',
-  rarity: 'epic',
-  condition: {
-    type: 'money_threshold',
-    threshold: 1000000
-  },
-  prestige: {
-    company: {
-      baseAmount: 10.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_MOGUL: AchievementConfig = {
-  id: 'mogul',
-  name: 'Wine Mogul',
-  description: 'Reach €10,000,000 in cash reserves',
-  icon: '👑',
-  category: 'financial',
-  rarity: 'legendary',
-  condition: {
-    type: 'money_threshold',
-    threshold: 10000000
-  },
-  prestige: {
-    company: {
-      baseAmount: 50.0,
-      decayRate: 0
-    }
-  }
-};
+// Revenue Generation Series (money earned through sales)
+export const REVENUE_GENERATION_ACHIEVEMENTS = createTieredAchievements(
+  'revenue_generation',
+  'Revenue Master',
+  'Generate €{threshold} in total sales revenue',
+  '💸',
+  'financial',
+  'sales_value',
+  [100000, 500000, 2000000, 10000000, 50000000],
+  []
+);
 
 // ===== TIME-BASED ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_FIRST_YEAR: AchievementConfig = {
-  id: 'first_year',
-  name: 'Rookie Vintner',
-  description: 'Survive your first year in business',
-  icon: '📅',
-  category: 'time',
-  rarity: 'common',
-  condition: {
-    type: 'time_threshold',
-    threshold: 1
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.5,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_VETERAN: AchievementConfig = {
-  id: 'veteran_vintner',
-  name: 'Veteran Vintner',
-  description: 'Run your company for 5 years',
-  icon: '⏰',
-  category: 'time',
-  rarity: 'rare',
-  condition: {
-    type: 'time_threshold',
-    threshold: 5
-  },
-  prestige: {
-    company: {
-      baseAmount: 3.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_DECADE: AchievementConfig = {
-  id: 'decade_winery',
-  name: 'Decade of Excellence',
-  description: 'Operate your winery for 10 years',
-  icon: '🎂',
-  category: 'time',
-  rarity: 'epic',
-  condition: {
-    type: 'time_threshold',
-    threshold: 10
-  },
-  prestige: {
-    company: {
-      baseAmount: 8.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_LEGACY: AchievementConfig = {
-  id: 'legacy_winery',
-  name: 'Legacy Winery',
-  description: 'Build a 25-year legacy',
-  icon: '🏛️',
-  category: 'time',
-  rarity: 'legendary',
-  condition: {
-    type: 'time_threshold',
-    threshold: 25
-  },
-  prestige: {
-    company: {
-      baseAmount: 20.0,
-      decayRate: 0
-    }
-  }
-};
+export const TIME_ACHIEVEMENTS = createTieredAchievements(
+  'time_survival',
+  'Vintage Veteran',
+  'Operate your winery for {threshold} years',
+  '📅',
+  'time',
+  'time_threshold',
+  [1, 5, 10, 20, 50],
+  []
+);
 
 // ===== PRODUCTION ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_FIRST_WINE: AchievementConfig = {
-  id: 'first_wine',
-  name: 'First Vintage',
-  description: 'Produce your first wine',
-  icon: '🍾',
-  category: 'production',
-  rarity: 'common',
-  condition: {
-    type: 'production_count',
-    threshold: 1
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.3,
-      decayRate: 0
-    }
-  }
-};
+// Wine Variety Production Series
+export const WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
+  'wine_variety',
+  'Wine Creator',
+  'Produce {threshold} different wine varieties',
+  '🍾',
+  'production',
+  'production_count',
+  [1, 10, 25, 50, 100],
+  []
+);
 
-export const ACHIEVEMENT_BOTTLER: AchievementConfig = {
-  id: 'dedicated_bottler',
-  name: 'Dedicated Bottler',
-  description: 'Produce 10 different wines',
-  icon: '🍷',
-  category: 'production',
-  rarity: 'common',
-  condition: {
-    type: 'production_count',
-    threshold: 10
-  },
-  prestige: {
-    company: {
-      baseAmount: 1.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_WINE_MASTER: AchievementConfig = {
-  id: 'wine_master',
-  name: 'Wine Master',
-  description: 'Produce 50 different wines',
-  icon: '🎯',
-  category: 'production',
-  rarity: 'rare',
-  condition: {
-    type: 'production_count',
-    threshold: 50
-  },
-  prestige: {
-    company: {
-      baseAmount: 4.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_PROLIFIC: AchievementConfig = {
-  id: 'prolific_producer',
-  name: 'Prolific Producer',
-  description: 'Produce 100 different wines',
-  icon: '🏭',
-  category: 'production',
-  rarity: 'epic',
-  condition: {
-    type: 'production_count',
-    threshold: 100
-  },
-  prestige: {
-    company: {
-      baseAmount: 10.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_FIRST_BOTTLE: AchievementConfig = {
-  id: 'first_bottle',
-  name: 'First Bottle',
-  description: 'Bottle your first wine',
-  icon: '🍇',
-  category: 'production',
-  rarity: 'common',
-  condition: {
-    type: 'bottles_produced',
-    threshold: 1
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.2,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_THOUSAND_BOTTLES: AchievementConfig = {
-  id: 'thousand_bottles',
-  name: 'Thousand Bottles',
-  description: 'Produce 1,000 bottles of wine',
-  icon: '📦',
-  category: 'production',
-  rarity: 'rare',
-  condition: {
-    type: 'bottles_produced',
-    threshold: 1000
-  },
-  prestige: {
-    company: {
-      baseAmount: 3.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_MASS_PRODUCTION: AchievementConfig = {
-  id: 'mass_production',
-  name: 'Mass Production',
-  description: 'Produce 10,000 bottles of wine',
-  icon: '🏗️',
-  category: 'production',
-  rarity: 'epic',
-  condition: {
-    type: 'bottles_produced',
-    threshold: 10000
-  },
-  prestige: {
-    company: {
-      baseAmount: 8.0,
-      decayRate: 0
-    }
-  }
-};
+// Bottle Production Series
+export const BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
+  'bottle_production',
+  'Bottle Master',
+  'Produce {threshold} bottles of wine',
+  '📦',
+  'production',
+  'bottles_produced',
+  [100, 1000, 10000, 100000, 1000000],
+  []
+);
 
 // ===== SALES ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_FIRST_SALE: AchievementConfig = {
-  id: 'first_sale',
-  name: 'First Sale',
-  description: 'Make your first wine sale',
-  icon: '🤝',
-  category: 'production',
-  rarity: 'common',
-  condition: {
-    type: 'sales_count',
-    threshold: 1
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.3,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_REGULAR_SELLER: AchievementConfig = {
-  id: 'regular_seller',
-  name: 'Regular Seller',
-  description: 'Complete 10 sales',
-  icon: '💼',
-  category: 'production',
-  rarity: 'common',
-  condition: {
-    type: 'sales_count',
-    threshold: 10
-  },
-  prestige: {
-    company: {
-      baseAmount: 1.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_SALES_PRO: AchievementConfig = {
-  id: 'sales_pro',
-  name: 'Sales Professional',
-  description: 'Complete 100 sales',
-  icon: '📈',
-  category: 'production',
-  rarity: 'rare',
-  condition: {
-    type: 'sales_count',
-    threshold: 100
-  },
-  prestige: {
-    company: {
-      baseAmount: 4.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_SALES_MOGUL: AchievementConfig = {
-  id: 'sales_mogul',
-  name: 'Sales Mogul',
-  description: 'Complete 500 sales',
-  icon: '💹',
-  category: 'production',
-  rarity: 'epic',
-  condition: {
-    type: 'sales_count',
-    threshold: 500
-  },
-  prestige: {
-    company: {
-      baseAmount: 12.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_REVENUE_MILESTONE: AchievementConfig = {
-  id: 'revenue_milestone',
-  name: 'Revenue Milestone',
-  description: 'Reach €100,000 in total sales',
-  icon: '💸',
-  category: 'production',
-  rarity: 'rare',
-  condition: {
-    type: 'sales_value',
-    threshold: 100000
-  },
-  prestige: {
-    company: {
-      baseAmount: 3.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_REVENUE_KING: AchievementConfig = {
-  id: 'revenue_king',
-  name: 'Revenue King',
-  description: 'Reach €1,000,000 in total sales',
-  icon: '🏆',
-  category: 'production',
-  rarity: 'epic',
-  condition: {
-    type: 'sales_value',
-    threshold: 1000000
-  },
-  prestige: {
-    company: {
-      baseAmount: 10.0,
-      decayRate: 0
-    }
-  }
-};
+// Sales Count Series
+export const SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
+  'sales_count',
+  'Sales Professional',
+  'Complete {threshold} wine sales',
+  '🤝',
+  'sales',
+  'sales_count',
+  [1, 10, 50, 200, 1000],
+  []
+);
 
 // ===== PRESTIGE ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_PRESTIGIOUS: AchievementConfig = {
-  id: 'prestigious_company',
-  name: 'Prestigious Company',
-  description: 'Accumulate 100 prestige points',
-  icon: '⭐',
-  category: 'prestige',
-  rarity: 'rare',
-  condition: {
-    type: 'prestige_threshold',
-    threshold: 100
-  },
-  prestige: {
-    company: {
-      baseAmount: 5.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_RENOWNED: AchievementConfig = {
-  id: 'renowned_winery',
-  name: 'Renowned Winery',
-  description: 'Reach 500 prestige points',
-  icon: '🌟',
-  category: 'prestige',
-  rarity: 'epic',
-  condition: {
-    type: 'prestige_threshold',
-    threshold: 500
-  },
-  prestige: {
-    company: {
-      baseAmount: 15.0,
-      decayRate: 0
-    }
-  }
-};
-
-export const ACHIEVEMENT_LEGENDARY: AchievementConfig = {
-  id: 'legendary_status',
-  name: 'Legendary Status',
-  description: 'Achieve 1000 prestige points',
-  icon: '👑',
-  category: 'prestige',
-  rarity: 'legendary',
-  condition: {
-    type: 'prestige_threshold',
-    threshold: 1000
-  },
-  prestige: {
-    company: {
-      baseAmount: 30.0,
-      decayRate: 0
-    }
-  }
-};
+export const PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
+  'prestige_master',
+  'Prestige Master',
+  'Accumulate {threshold} prestige points',
+  '⭐',
+  'prestige',
+  'prestige_threshold',
+  [50, 200, 500, 1500, 5000],
+  []
+);
 
 // ===== VINEYARD ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_FIRST_VINEYARD: AchievementConfig = {
-  id: 'first_vineyard',
-  name: 'Land Owner',
-  description: 'Purchase your first vineyard',
-  icon: '🌿',
-  category: 'special',
-  rarity: 'common',
-  condition: {
-    type: 'vineyard_count',
-    threshold: 1
-  },
-  prestige: {
-    company: {
-      baseAmount: 0.5,
-      decayRate: 0
-    }
-  }
-};
+export const VINEYARD_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_empire',
+  'Vineyard Empire',
+  'Own {threshold} vineyards',
+  '🌿',
+  'vineyard',
+  'vineyard_count',
+  [1, 3, 7, 15, 30],
+  []
+);
 
-export const ACHIEVEMENT_VINEYARD_PORTFOLIO: AchievementConfig = {
-  id: 'vineyard_portfolio',
-  name: 'Vineyard Portfolio',
-  description: 'Own 5 vineyards',
-  icon: '🏞️',
-  category: 'special',
-  rarity: 'rare',
-  condition: {
-    type: 'vineyard_count',
-    threshold: 5
-  },
-  prestige: {
-    company: {
-      baseAmount: 4.0,
-      decayRate: 0
-    }
-  }
-};
+// ===== ADDITIONAL FINANCIAL ACHIEVEMENTS =====
 
-export const ACHIEVEMENT_VINEYARD_EMPIRE: AchievementConfig = {
-  id: 'vineyard_empire',
-  name: 'Vineyard Empire',
-  description: 'Own 10 vineyards',
-  icon: '🗺️',
-  category: 'special',
-  rarity: 'epic',
-  condition: {
-    type: 'vineyard_count',
-    threshold: 10
-  },
-  prestige: {
-    company: {
-      baseAmount: 12.0,
-      decayRate: 0
-    }
-  }
-};
+// Single Contract Bottle Sales
+export const SINGLE_CONTRACT_BOTTLES_ACHIEVEMENTS = createTieredAchievements(
+  'single_contract_bottles',
+  'Big Deal',
+  'Sell {threshold} bottles in a single contract',
+  '📦',
+  'financial',
+  'single_contract_bottles',
+  [100, 500, 1000, 2500, 5000], // Bottles in one contract
+  []
+);
+
+// Single Contract Value
+export const SINGLE_CONTRACT_VALUE_ACHIEVEMENTS = createTieredAchievements(
+  'single_contract_value',
+  'Mega Sale',
+  'Sell {threshold} worth of wine in a single contract',
+  '💰',
+  'financial',
+  'single_contract_value',
+  [10000, 50000, 100000, 250000, 500000], // Euros in one contract
+  []
+);
+
+// Cellar Wine Value
+export const CELLAR_VALUE_ACHIEVEMENTS = createTieredAchievements(
+  'cellar_value',
+  'Cellar Master',
+  'Have {threshold} worth of wine in cellar',
+  '🏰',
+  'financial',
+  'cellar_value',
+  [50000, 100000, 250000, 500000, 1000000], // Cellar value in euros
+  []
+);
+
+// Total Assets
+export const TOTAL_ASSETS_ACHIEVEMENTS = createTieredAchievements(
+  'total_assets',
+  'Asset Accumulator',
+  'Accumulate {threshold} in total assets',
+  '🏦',
+  'financial',
+  'total_assets',
+  [200000, 500000, 1000000, 2500000, 5000000], // Total assets in euros
+  []
+);
+
+// Vineyard Value
+export const VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_value',
+  'Land Baron',
+  'Own {threshold} worth of vineyard land',
+  '🌾',
+  'financial',
+  'vineyard_value',
+  [100000, 250000, 500000, 1000000, 2500000], // Vineyard value in euros
+  []
+);
+
+// ===== META ACHIEVEMENTS =====
+
+// Meta Achievement: Achievement Completion Percentage
+// Excludes itself from completion calculation to avoid chicken-and-egg problem
+export const ACHIEVEMENT_COMPLETION_ACHIEVEMENTS = createTieredAchievements(
+  'achievement_completion',
+  'Achievement Hunter',
+  'Complete {threshold}% of all achievements',
+  '🏆',
+  'prestige',
+  'achievement_completion',
+  [10, 25, 50, 75, 100],
+  []
+);
+
+// ===== WINE PRODUCTION ACHIEVEMENTS =====
+
+// Different Grape Varieties
+export const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
+  'different_grapes',
+  'Grape Explorer',
+  'Produce wines from {threshold} different grape varieties',
+  '🍇',
+  'production',
+  'different_grapes',
+  [3, 5, 8, 12, 15], // Different grape varieties
+  []
+);
+
+// Wine Quality Threshold
+export const WINE_QUALITY_ACHIEVEMENTS = createTieredAchievements(
+  'wine_quality',
+  'Quality Master',
+  'Produce a wine with quality rating of {threshold}',
+  '⭐',
+  'production',
+  'wine_quality_threshold',
+  [80, 85, 90, 95, 98], // Quality rating
+  []
+);
+
+// Wine Balance Threshold
+export const WINE_BALANCE_ACHIEVEMENTS = createTieredAchievements(
+  'wine_balance',
+  'Balance Virtuoso',
+  'Produce a wine with balance rating of {threshold}',
+  '⚖️',
+  'production',
+  'wine_balance_threshold',
+  [80, 85, 90, 95, 98], // Balance rating
+  []
+);
+
+// Wine Score Threshold
+export const WINE_SCORE_ACHIEVEMENTS = createTieredAchievements(
+  'wine_score',
+  'Score Champion',
+  'Produce a wine with wine score of {threshold}',
+  '🎯',
+  'production',
+  'wine_score_threshold',
+  [85, 90, 95, 98, 100], // Wine score
+  []
+);
+
+// Wine Price Threshold
+export const WINE_PRICE_ACHIEVEMENTS = createTieredAchievements(
+  'wine_price',
+  'Premium Producer',
+  'Produce a wine with estimated price of {threshold} per bottle',
+  '💎',
+  'production',
+  'wine_price_threshold',
+  [50, 100, 200, 500, 1000], // Price per bottle in euros
+  []
+);
+
+// ===== SALES ACHIEVEMENTS =====
+
+// Sales Price Percentage (Over Estimated)
+export const SALES_PRICE_OVER_ACHIEVEMENTS = createTieredAchievements(
+  'sales_price_over',
+  'Price Maximizer',
+  'Sell wine for {threshold}% over estimated price',
+  '📈',
+  'sales',
+  'sales_price_percentage',
+  [10, 25, 50, 100, 200], // Percentage over estimated price
+  []
+);
+
+// Sales Price Percentage (Under Estimated) - for volume sales
+export const SALES_PRICE_UNDER_ACHIEVEMENTS = createTieredAchievements(
+  'sales_price_under',
+  'Volume Seller',
+  'Sell wine for {threshold}% under estimated price',
+  '📉',
+  'sales',
+  'sales_price_percentage',
+  [10, 25, 50, 75, 90], // Percentage under estimated price (still profitable)
+  []
+);
+
+// ===== TIME-BASED ACHIEVEMENTS =====
+
+// Prestige by Year
+export const PRESTIGE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+  'prestige_by_year',
+  'Early Prestige',
+  'Achieve {threshold} prestige before year 5',
+  '⏰',
+  'time',
+  'prestige_by_year',
+  [100, 500, 1000, 2500, 5000], // Prestige by year 5
+  []
+);
+
+// Revenue by Year
+export const REVENUE_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+  'revenue_by_year',
+  'Yearly Revenue',
+  'Generate {threshold} revenue in a single year',
+  '📊',
+  'time',
+  'revenue_by_year',
+  [100000, 250000, 500000, 1000000, 2500000], // Revenue in one year
+  []
+);
+
+// Assets by Year
+export const ASSETS_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+  'assets_by_year',
+  'Rapid Growth',
+  'Accumulate {threshold} assets before year 10',
+  '🚀',
+  'time',
+  'assets_by_year',
+  [500000, 1000000, 2500000, 5000000, 10000000], // Assets by year 10
+  []
+);
+
+// Hectares by Year
+export const HECTARES_BY_YEAR_ACHIEVEMENTS = createTieredAchievements(
+  'hectares_by_year',
+  'Land Rush',
+  'Own {threshold} hectares before year 15',
+  '🏞️',
+  'time',
+  'hectares_by_year',
+  [10, 25, 50, 100, 200], // Hectares by year 15
+  []
+);
+
+// ===== LAND ACHIEVEMENTS =====
+
+// Total Hectares
+export const TOTAL_HECTARES_ACHIEVEMENTS = createTieredAchievements(
+  'total_hectares',
+  'Land Baron',
+  'Own {threshold} hectares of vineyard land',
+  '🌍',
+  'vineyard',
+  'total_hectares',
+  [5, 15, 30, 60, 100], // Total hectares
+  []
+);
+
+// Average Hectare Value
+export const AVERAGE_HECTARE_VALUE_ACHIEVEMENTS = createTieredAchievements(
+  'average_hectare_value',
+  'Prime Real Estate',
+  'Own vineyards with average value above {threshold} per hectare',
+  '💎',
+  'vineyard',
+  'average_hectare_value',
+  [10000, 25000, 50000, 100000, 250000], // Average value per hectare
+  []
+);
+
+// ===== VINEYARD-SPECIFIC ACHIEVEMENTS =====
+
+// Vineyard Time Achievements (same grape type, resets if grape changes)
+export const VINEYARD_TIME_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_time',
+  'Vineyard Veteran',
+  'Maintain the same grape variety in a vineyard for {threshold} years',
+  '📅',
+  'vineyard',
+  'vineyard_time_same_grape',
+  [1, 3, 5, 10, 20], // Years with same grape
+  [],
+  { includeVineyard: true, vineyardDecayMultiplier: 0.3 } // Vineyard events decay much faster
+);
+
+// Vineyard Wine Variety Achievements (different grapes from same vineyard)
+export const VINEYARD_WINE_VARIETY_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_wine_variety',
+  'Vineyard Explorer',
+  'Produce {threshold} different grape varieties from the same vineyard',
+  '🍇',
+  'vineyard',
+  'vineyard_wine_variety_count',
+  [2, 5, 10, 15, 20], // Different grape varieties
+  [],
+  { includeVineyard: true, vineyardDecayMultiplier: 0.4 }
+);
+
+// Vineyard Bottle Production Achievements (per vineyard)
+export const VINEYARD_BOTTLE_PRODUCTION_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_bottle_production',
+  'Vineyard Producer',
+  'Produce {threshold} bottles from a single vineyard',
+  '🍷',
+  'vineyard',
+  'vineyard_bottles_produced',
+  [100, 1000, 10000, 50000, 100000], // Bottles per vineyard
+  [],
+  { includeVineyard: true, vineyardDecayMultiplier: 0.4 }
+);
+
+// Vineyard Sales Count Achievements (per vineyard)
+export const VINEYARD_SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_sales_count',
+  'Vineyard Sales Master',
+  'Make {threshold} sales from wines produced in a single vineyard',
+  '💰',
+  'vineyard',
+  'vineyard_sales_count',
+  [10, 50, 200, 500, 1000], // Sales per vineyard
+  [],
+  { includeVineyard: true, vineyardDecayMultiplier: 0.4 }
+);
+
+// Vineyard Prestige Achievements (vineyard-specific prestige)
+export const VINEYARD_PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
+  'vineyard_prestige',
+  'Vineyard Legend',
+  'Achieve {threshold} prestige from a single vineyard',
+  '⭐',
+  'vineyard',
+  'vineyard_prestige_threshold',
+  [10, 50, 200, 500, 1000], // Prestige per vineyard
+  [],
+  { includeVineyard: true, vineyardDecayMultiplier: 0.3 }
+);
 
 // ===== EXPORT ALL ACHIEVEMENTS =====
 
@@ -559,44 +529,50 @@ export const ACHIEVEMENT_VINEYARD_EMPIRE: AchievementConfig = {
  */
 export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   // Financial
-  ACHIEVEMENT_FIRST_EURO,
-  ACHIEVEMENT_PROFITABLE,
-  ACHIEVEMENT_COMFORTABLE,
-  ACHIEVEMENT_MILLIONAIRE,
-  ACHIEVEMENT_MOGUL,
+  ...MONEY_ACCUMULATION_ACHIEVEMENTS,
+  ...REVENUE_GENERATION_ACHIEVEMENTS,
+  ...SINGLE_CONTRACT_BOTTLES_ACHIEVEMENTS,
+  ...SINGLE_CONTRACT_VALUE_ACHIEVEMENTS,
+  ...CELLAR_VALUE_ACHIEVEMENTS,
+  ...TOTAL_ASSETS_ACHIEVEMENTS,
+  ...VINEYARD_VALUE_ACHIEVEMENTS,
   
   // Time
-  ACHIEVEMENT_FIRST_YEAR,
-  ACHIEVEMENT_VETERAN,
-  ACHIEVEMENT_DECADE,
-  ACHIEVEMENT_LEGACY,
+  ...TIME_ACHIEVEMENTS,
+  ...PRESTIGE_BY_YEAR_ACHIEVEMENTS,
+  ...REVENUE_BY_YEAR_ACHIEVEMENTS,
+  ...ASSETS_BY_YEAR_ACHIEVEMENTS,
+  ...HECTARES_BY_YEAR_ACHIEVEMENTS,
   
   // Production
-  ACHIEVEMENT_FIRST_WINE,
-  ACHIEVEMENT_BOTTLER,
-  ACHIEVEMENT_WINE_MASTER,
-  ACHIEVEMENT_PROLIFIC,
-  ACHIEVEMENT_FIRST_BOTTLE,
-  ACHIEVEMENT_THOUSAND_BOTTLES,
-  ACHIEVEMENT_MASS_PRODUCTION,
+  ...WINE_VARIETY_ACHIEVEMENTS,
+  ...BOTTLE_PRODUCTION_ACHIEVEMENTS,
+  ...DIFFERENT_GRAPES_ACHIEVEMENTS,
+  ...WINE_QUALITY_ACHIEVEMENTS,
+  ...WINE_BALANCE_ACHIEVEMENTS,
+  ...WINE_SCORE_ACHIEVEMENTS,
+  ...WINE_PRICE_ACHIEVEMENTS,
   
   // Sales
-  ACHIEVEMENT_FIRST_SALE,
-  ACHIEVEMENT_REGULAR_SELLER,
-  ACHIEVEMENT_SALES_PRO,
-  ACHIEVEMENT_SALES_MOGUL,
-  ACHIEVEMENT_REVENUE_MILESTONE,
-  ACHIEVEMENT_REVENUE_KING,
+  ...SALES_COUNT_ACHIEVEMENTS,
+  ...SALES_PRICE_OVER_ACHIEVEMENTS,
+  ...SALES_PRICE_UNDER_ACHIEVEMENTS,
   
   // Prestige
-  ACHIEVEMENT_PRESTIGIOUS,
-  ACHIEVEMENT_RENOWNED,
-  ACHIEVEMENT_LEGENDARY,
+  ...PRESTIGE_ACHIEVEMENTS,
+  ...ACHIEVEMENT_COMPLETION_ACHIEVEMENTS,
   
   // Vineyards
-  ACHIEVEMENT_FIRST_VINEYARD,
-  ACHIEVEMENT_VINEYARD_PORTFOLIO,
-  ACHIEVEMENT_VINEYARD_EMPIRE,
+  ...VINEYARD_ACHIEVEMENTS,
+  ...TOTAL_HECTARES_ACHIEVEMENTS,
+  ...AVERAGE_HECTARE_VALUE_ACHIEVEMENTS,
+  
+  // Vineyard-Specific
+  ...VINEYARD_TIME_ACHIEVEMENTS,
+  ...VINEYARD_WINE_VARIETY_ACHIEVEMENTS,
+  ...VINEYARD_BOTTLE_PRODUCTION_ACHIEVEMENTS,
+  ...VINEYARD_SALES_COUNT_ACHIEVEMENTS,
+  ...VINEYARD_PRESTIGE_ACHIEVEMENTS,
 ];
 
 /**
@@ -614,9 +590,9 @@ export function getAchievementsByCategory(category: string): AchievementConfig[]
 }
 
 /**
- * Get achievements by rarity
+ * Get achievements by achievement level
  */
-export function getAchievementsByRarity(rarity: string): AchievementConfig[] {
-  return ALL_ACHIEVEMENTS.filter(achievement => achievement.rarity === rarity);
+export function getAchievementsByLevel(level: number): AchievementConfig[] {
+  return ALL_ACHIEVEMENTS.filter(achievement => achievement.achievementLevel === level);
 }
 

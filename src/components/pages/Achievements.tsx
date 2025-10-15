@@ -5,6 +5,8 @@ import { Trophy, Medal, Lock, Calendar, Coins, Wine, Star } from 'lucide-react';
 import { formatNumber, formatCompact, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 import { getAllAchievementsWithStatus, getAchievementStats } from '@/lib/services/user/achievementService';
+import { getAchievementLevelInfo } from '@/lib/constants/achievementConstants';
+import { AchievementLevel } from '@/lib/types/types';
 
 interface AchievementsProps extends PageProps, CompanyProps {
   // Inherits currentCompany and onBack from shared interfaces
@@ -47,19 +49,11 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
     });
   };
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity) {
-      case 'common':
-        return 'bg-gray-100 text-gray-800';
-      case 'rare':
-        return 'bg-blue-100 text-blue-800';
-      case 'epic':
-        return 'bg-purple-100 text-purple-800';
-      case 'legendary':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const getAchievementLevelDisplayInfo = (achievementLevel?: number) => {
+    if (!achievementLevel || achievementLevel < 1 || achievementLevel > 5) {
+      return { name: 'Unknown', color: 'bg-gray-100 text-gray-800' };
     }
+    return getAchievementLevelInfo(achievementLevel as AchievementLevel);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -72,16 +66,78 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
         return <Calendar className="h-4 w-4" />;
       case 'prestige':
         return <Star className="h-4 w-4" />;
-      case 'special':
+      case 'sales':
         return <Trophy className="h-4 w-4" />;
+      case 'vineyard':
+        return <Medal className="h-4 w-4" />;
       default:
         return <Medal className="h-4 w-4" />;
     }
   };
 
-  const filteredAchievements = selectedCategory === 'all'
+  // Filter achievements to show only completed tiers and next achievable tier in each series
+  const filterAchievementsBySeries = (achievements: any[]) => {
+    // Group achievements by series (base ID without tier)
+    const seriesMap = new Map<string, any[]>();
+    const nonTieredAchievements: any[] = [];
+    
+    achievements.forEach(achievement => {
+      // Check if this is a tiered achievement
+      if (achievement.id.includes('_tier_')) {
+        // Extract base ID (remove _tier_X suffix)
+        const baseId = achievement.id.replace(/_tier_\d+$/, '');
+        if (!seriesMap.has(baseId)) {
+          seriesMap.set(baseId, []);
+        }
+        seriesMap.get(baseId)!.push(achievement);
+      } else {
+        // Non-tiered achievements (like vineyard achievements)
+        nonTieredAchievements.push(achievement);
+      }
+    });
+
+    const filteredAchievements: any[] = [];
+    
+    // Process tiered achievements
+    seriesMap.forEach((seriesAchievements) => {
+      // Sort by tier (extract tier number from ID)
+      const sortedAchievements = seriesAchievements.sort((a, b) => {
+        const aTier = parseInt(a.id.match(/_tier_(\d+)$/)?.[1] || '0');
+        const bTier = parseInt(b.id.match(/_tier_(\d+)$/)?.[1] || '0');
+        return aTier - bTier;
+      });
+
+      // Find the highest completed tier
+      let highestCompletedTier = -1;
+      for (let i = 0; i < sortedAchievements.length; i++) {
+        if (sortedAchievements[i].isUnlocked) {
+          highestCompletedTier = i;
+        }
+      }
+
+      // Add all completed tiers
+      for (let i = 0; i <= highestCompletedTier; i++) {
+        filteredAchievements.push(sortedAchievements[i]);
+      }
+
+      // Add the next achievable tier (if any)
+      const nextTierIndex = highestCompletedTier + 1;
+      if (nextTierIndex < sortedAchievements.length) {
+        filteredAchievements.push(sortedAchievements[nextTierIndex]);
+      }
+    });
+
+    // Add all non-tiered achievements (individual achievements that don't follow the _tier_X pattern)
+    filteredAchievements.push(...nonTieredAchievements);
+
+    return filteredAchievements;
+  };
+
+  const categoryFilteredAchievements = selectedCategory === 'all'
     ? achievementsWithStatus
     : achievementsWithStatus.filter(a => a.category === selectedCategory);
+
+  const filteredAchievements = filterAchievementsBySeries(categoryFilteredAchievements);
 
   const unlockedCount = achievementStats?.unlockedCount || 0;
   const totalCount = achievementStats?.totalAchievements || 0;
@@ -207,13 +263,22 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
                 Prestige ({achievementStats?.byCategory?.prestige?.total || 0})
               </Button>
               <Button
-                variant={selectedCategory === 'special' ? 'default' : 'outline'}
+                variant={selectedCategory === 'sales' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory('special')}
+                onClick={() => setSelectedCategory('sales')}
                 className="flex items-center gap-2"
               >
                 <Trophy className="h-3 w-3" />
-                Special ({achievementStats?.byCategory?.special?.total || 0})
+                Sales ({achievementStats?.byCategory?.sales?.total || 0})
+              </Button>
+              <Button
+                variant={selectedCategory === 'vineyard' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('vineyard')}
+                className="flex items-center gap-2"
+              >
+                <Medal className="h-3 w-3" />
+                Vineyard ({achievementStats?.byCategory?.vineyard?.total || 0})
               </Button>
             </div>
           </CardContent>
@@ -275,8 +340,8 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           {getCategoryIcon(achievement.category)}
-                          <Badge className={getRarityColor(achievement.rarity)}>
-                            {achievement.rarity}
+                          <Badge className={getAchievementLevelDisplayInfo(achievement.achievementLevel).color}>
+                            {getAchievementLevelDisplayInfo(achievement.achievementLevel).name}
                           </Badge>
                         </div>
                       </div>

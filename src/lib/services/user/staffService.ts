@@ -235,7 +235,6 @@ export async function createStartingStaff(): Promise<void> {
       await assignStaffToTeam(addedAdmin.id, adminTeam.id);
     }
     
-    console.log('Starting staff have joined your company!');
   } catch (error) {
     console.error('Error creating starting staff:', error);
   }

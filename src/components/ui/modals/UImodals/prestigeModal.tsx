@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services/prestige/prestigeService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Separator } from '../../shadCN/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
-import { Star, TrendingUp, Grape, DollarSign } from 'lucide-react';
+import { Star, TrendingUp, Grape, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 
 /**
@@ -38,6 +38,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 }) => {
   // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   const eventConfig = {
     company_value: { icon: DollarSign, label: 'Company Value', color: 'bg-blue-100 text-blue-800' },
@@ -57,31 +58,55 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 
   const getEventConfig = (type: string) => eventConfig[type as keyof typeof eventConfig] || { icon: Star, label: type, color: 'bg-gray-100 text-gray-800' };
 
-  const formatDecayRate = (decayRate: number) => 
-    decayRate === 0 ? 'No decay' : `${formatPercent((1 - decayRate), 1, true)} weekly decay`;
+  const formatDecayRate = (decayRate: number) => {
+    if (decayRate === 0) return 'No decay';
+    
+    // decayRate is the weekly retention rate (0-1)
+    // Calculate weekly decay rate
+    const weeklyDecayRate = 1 - decayRate;
+    const weeklyDecayPercent = weeklyDecayRate * 100;
+    
+    // Calculate annual retention rate (decayRate^52)
+    const annualRetentionRate = Math.pow(decayRate, 52);
+    const annualDecayPercent = (1 - annualRetentionRate) * 100;
+    
+    // For very small decay rates, show more precision
+    if (weeklyDecayPercent < 0.1) {
+      return `${weeklyDecayPercent.toFixed(3)}% weekly decay (${annualDecayPercent.toFixed(1)}% annually)`;
+    } else if (weeklyDecayPercent < 1) {
+      return `${weeklyDecayPercent.toFixed(2)}% weekly decay (${annualDecayPercent.toFixed(1)}% annually)`;
+    } else {
+      return `${weeklyDecayPercent.toFixed(1)}% weekly decay (${annualDecayPercent.toFixed(1)}% annually)`;
+    }
+  };
 
   const formatAmount = (amount: number) => formatNumber(amount, { decimals: 2, forceDecimals: true });
 
   const EventDisplay = ({ event }: { event: PrestigeEvent }) => {
     const displayData = getEventDisplayData(event);
+    const isAchievement = event.type === 'achievement' || event.type === 'vineyard_achievement';
 
     return (
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <p className="text-sm font-medium cursor-help">{displayData.title}</p>
-                </TooltipTrigger>
-                {displayData.calc && (
-                  <TooltipContent>
-                    <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-            {displayData.displayInfo && (
+            {isAchievement ? (
+              <p className="text-sm font-medium">{displayData.title}</p>
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-sm font-medium cursor-help">{displayData.title}</p>
+                  </TooltipTrigger>
+                  {displayData.calc && (
+                    <TooltipContent>
+                      <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {!isAchievement && displayData.displayInfo && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -124,30 +149,9 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="text-sm font-medium cursor-help">
-                      {vineyardName} - {grape} ({vintage})
-                    </p>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-sm">
-                    <div className="space-y-2 text-xs">
-                      <div className="font-semibold">Wine Details</div>
-                      <div>• Vineyard: {vineyardName}</div>
-                      <div>• Grape: {grape}</div>
-                      <div>• Vintage: {vintage}</div>
-                      <div>• Features: {features.length} feature{features.length !== 1 ? 's' : ''}</div>
-                      <div className="border-t pt-1 mt-2">Feature Breakdown:</div>
-                      {features.map((feature, idx) => (
-                        <div key={idx} className="text-gray-600">
-                          • {feature.featureName} ({feature.eventType}): {formatAmount(feature.totalAmount)}
-                        </div>
-                      ))}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <p className="text-sm font-medium">
+                {vineyardName} - {grape} ({vintage})
+              </p>
               <Badge variant="outline" className="text-xs">
                 {features.length} feature{features.length !== 1 ? 's' : ''}
               </Badge>
@@ -189,6 +193,25 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const getFilteredVineyards = () => 
     selectedVineyard === 'all' ? vineyards : vineyards.filter(vineyard => vineyard.id === selectedVineyard);
 
+  // Collapsible section helpers
+  const toggleSection = (sectionId: string) => {
+    const newCollapsed = new Set(collapsedSections);
+    if (newCollapsed.has(sectionId)) {
+      newCollapsed.delete(sectionId);
+    } else {
+      newCollapsed.add(sectionId);
+    }
+    setCollapsedSections(newCollapsed);
+  };
+
+  const isSectionCollapsed = (sectionId: string) => collapsedSections.has(sectionId);
+
+  // Auto-collapse sections with more than 3 achievements
+  const shouldAutoCollapse = (events: PrestigeEvent[]) => {
+    return events.length > 3;
+  };
+
+
   // Separate wine feature events by level (company vs vineyard)
   const allWineFeatureEvents = eventBreakdown.filter(event => event.type === 'wine_feature');
   
@@ -212,6 +235,31 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     acc[event.type].push(event);
     return acc;
   }, {} as Record<string, PrestigeEvent[]>);
+
+  // Auto-collapse sections with many items on first render
+  React.useEffect(() => {
+    const newCollapsed = new Set(collapsedSections);
+    
+    // Auto-collapse company event sections with more than 3 items
+    Object.entries(groupedCompanyEvents).forEach(([type, events]) => {
+      const sectionId = `company_${type}`;
+      if (shouldAutoCollapse(events) && !newCollapsed.has(sectionId)) {
+        newCollapsed.add(sectionId);
+      }
+    });
+    
+    // Auto-collapse vineyard sections with more than 3 items
+    vineyards.forEach((vineyard) => {
+      const sectionId = `vineyard_${vineyard.id}`;
+      if (shouldAutoCollapse(vineyard.events) && !newCollapsed.has(sectionId)) {
+        newCollapsed.add(sectionId);
+      }
+    });
+    
+    if (newCollapsed.size !== collapsedSections.size) {
+      setCollapsedSections(newCollapsed);
+    }
+  }, [groupedCompanyEvents, vineyards, collapsedSections]);
 
   // Render
   return (
@@ -312,31 +360,83 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 </Card>
               )
             ) : (
-              Object.entries(groupedCompanyEvents).map(([type, events]) => (
-                <Card key={type}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      {(() => {
-                        const config = getEventConfig(type);
-                        const IconComponent = config.icon;
-                        return <IconComponent className="h-4 w-4" />;
-                      })()}
-                      {getEventConfig(type).label}
-                      <Badge className={getEventConfig(type).color}>
-                        {events.length} {events.length === 1 ? 'source' : 'sources'}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {events.map((event, index) => (
-                      <div key={event.id}>
-                        <EventDisplay event={event} />
-                        {index < events.length - 1 && <Separator className="mt-3" />}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))
+              Object.entries(groupedCompanyEvents).map(([type, events]) => {
+                const sectionId = `company_${type}`;
+                const isCollapsed = isSectionCollapsed(sectionId);
+
+                return (
+                  <Card key={type}>
+                    <CardHeader>
+                      <CardTitle 
+                        className="flex items-center gap-2 text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                        onClick={() => toggleSection(sectionId)}
+                      >
+                        {(() => {
+                          const config = getEventConfig(type);
+                          const IconComponent = config.icon;
+                          return <IconComponent className="h-4 w-4" />;
+                        })()}
+                        {getEventConfig(type).label}
+                        <Badge className={getEventConfig(type).color}>
+                          {events.length} {events.length === 1 ? 'source' : 'sources'}
+                        </Badge>
+                        {events.length > 1 && (
+                          <>
+                            {isCollapsed ? (
+                              <ChevronRight className="h-4 w-4 ml-auto" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 ml-auto" />
+                            )}
+                          </>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    {!isCollapsed && (
+                      <CardContent className="space-y-3">
+                        {type === 'achievement' ? (
+                          // Group achievements by category
+                          (() => {
+                            const achievementsByCategory = events.reduce((acc, event) => {
+                              const metadata: any = event.metadata ?? {};
+                              const category = metadata.achievementCategory || 'other';
+                              if (!acc[category]) acc[category] = [];
+                              acc[category].push(event);
+                              return acc;
+                            }, {} as Record<string, PrestigeEvent[]>);
+
+                            return Object.entries(achievementsByCategory).map(([category, categoryEvents]) => (
+                              <div key={category}>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2 capitalize">
+                                  {category} achievements:
+                                </h4>
+                                <div className="ml-2 space-y-3">
+                                  {categoryEvents.map((event, index) => (
+                                    <div key={event.id}>
+                                      <EventDisplay event={event} />
+                                      {index < categoryEvents.length - 1 && <Separator className="mt-3" />}
+                                    </div>
+                                  ))}
+                                </div>
+                                {Object.keys(achievementsByCategory).indexOf(category) < Object.keys(achievementsByCategory).length - 1 && (
+                                  <Separator className="mt-4 mb-4" />
+                                )}
+                              </div>
+                            ));
+                          })()
+                        ) : (
+                          // Regular event display for non-achievements
+                          events.map((event, index) => (
+                            <div key={event.id}>
+                              <EventDisplay event={event} />
+                              {index < events.length - 1 && <Separator className="mt-3" />}
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })
             )}
           </div>
 
@@ -454,7 +554,10 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                       {/* Other Vineyard Events */}
                       <Card>
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
+                          <CardTitle 
+                            className="flex items-center gap-2 text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                            onClick={() => toggleSection(`vineyard_${vineyard.id}`)}
+                          >
                             <Grape className="h-4 w-4 text-green-600" />
                             {vineyard.name}
                             <Badge className="bg-green-100 text-green-800">
@@ -463,16 +566,27 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                             <Badge variant="outline" className="ml-auto">
                               {formatAmount(vineyard.prestige)} prestige
                             </Badge>
+                            {vineyard.events.length > 1 && (
+                              <>
+                                {isSectionCollapsed(`vineyard_${vineyard.id}`) ? (
+                                  <ChevronRight className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </>
+                            )}
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
-                          {vineyard.events.map((event, index) => (
-                            <div key={event.id}>
-                              <EventDisplay event={event} />
-                              {index < vineyard.events.length - 1 && <Separator className="mt-3" />}
-                            </div>
-                          ))}
-                        </CardContent>
+                        {!isSectionCollapsed(`vineyard_${vineyard.id}`) && (
+                          <CardContent className="space-y-3">
+                            {vineyard.events.map((event, index) => (
+                              <div key={event.id}>
+                                <EventDisplay event={event} />
+                                {index < vineyard.events.length - 1 && <Separator className="mt-3" />}
+                              </div>
+                            ))}
+                          </CardContent>
+                        )}
                       </Card>
                     </div>
                   );

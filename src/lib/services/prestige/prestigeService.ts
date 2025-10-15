@@ -779,10 +779,10 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
     if (event.type === 'achievement' && metadata.achievementName) {
       return {
-        title: `Achievement Unlocked: ${metadata.achievementName}`,
+        title: `${metadata.achievementIcon} ${metadata.achievementName}`,
         titleBase: 'Achievement',
         amountText: `${metadata.achievementIcon} ${metadata.achievementName}`,
-        displayInfo: `Category: ${metadata.achievementCategory} | Rarity: ${metadata.achievementRarity} | Unlocked: ${metadata.unlockedAt ? new Date(metadata.unlockedAt).toLocaleDateString() : 'Unknown'}`
+        displayInfo: `Category: ${metadata.achievementCategory} | Skill Level: ${metadata.achievementLevel || 'Unknown'} | Unlocked: ${metadata.unlockedAt ? new Date(metadata.unlockedAt).toLocaleDateString() : 'Unknown'}`
       };
     }
   }

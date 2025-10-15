@@ -132,7 +132,6 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
         modifier: soilModifier,
         modifierLabel: 'soil difficulty'
       });
-      console.log('Added soil factor:', { label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier });
     }
 
     if (Math.abs(terrainModifier) > 0.01) {
@@ -282,7 +281,6 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
       timeEstimate,
     });
 
-    console.log('All work factors:', factors);
     setWorkFactors(factors);
   }, [options, vineyard]);
 
