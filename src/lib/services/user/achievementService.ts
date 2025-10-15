@@ -172,7 +172,7 @@ async function spawnAchievementPrestigeEvents(
   if (achievement.prestige.company) {
     await insertPrestigeEvent({
       id: uuidv4(),
-      type: 'contract', // Using 'contract' type for achievements (or we could add 'achievement' type)
+      type: 'achievement',
       amount_base: achievement.prestige.company.baseAmount,
       created_game_week: currentWeek,
       decay_rate: achievement.prestige.company.decayRate,

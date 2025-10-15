@@ -1,6 +1,8 @@
 -- ============================================================
 -- Winemaker Game - Vercel Database Schema Sync
--- Generated: 2025-10-14
+-- Generated: 2025-10-14 (Updated with exact dev constraints)
+-- Dev Database: uuribntaigecwtkdxeyw
+-- Vercel Database: uuzoeoukixvunbnkrowi
 -- ============================================================
 -- This migration syncs the Vercel database schema with the current dev database
 -- Run this in Vercel Supabase SQL Editor: 
@@ -8,20 +10,23 @@
 --
 -- HOW TO REGENERATE THIS FILE (for AI agents):
 -- 1. Run: mcp_supabase-dev_list_tables with schemas: ["public"]
--- 2. Extract all table schemas from the result
--- 3. Create DROP TABLE statements in reverse dependency order
--- 4. Create CREATE TABLE statements with all columns, constraints, checks
--- 5. CRITICAL: Add these or Vercel will break:
---    - highscores table: ADD "UNIQUE (company_id, score_type)" at end
---    - staff table: DO NOT enable RLS (comment out ALTER TABLE staff ENABLE ROW LEVEL SECURITY)
--- 6. Add indexes for performance
--- 7. Test the generated SQL on Vercel database
+-- 2. Query constraints: SELECT conname, conrelid::regclass, pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace = 'public'::regnamespace;
+-- 3. Query RLS status: SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
+-- 4. Query RLS policies: SELECT * FROM pg_policies WHERE schemaname = 'public';
+-- 5. Generate complete SQL with all constraints from dev database
 --
--- KNOWN ISSUES TO AVOID:
--- ❌ DO NOT enable RLS on staff table without policies
--- ✅ DO add unique constraint on highscores(company_id, score_type)
--- ✅ DO include all CHECK constraints from dev database
--- ✅ DO preserve all default values exactly as in dev
+-- CRITICAL UNIQUE CONSTRAINTS (from dev database):
+-- ✅ highscores: UNIQUE (company_id, score_type)
+-- ✅ achievements: UNIQUE (company_id, achievement_key)
+-- ✅ user_settings: UNIQUE (user_id, company_id)
+-- ✅ companies: UNIQUE (name)
+--
+-- CRITICAL RLS SETUP (from dev database):
+-- ✅ staff table: RLS ENABLED with 4 permissive policies for public role
+--
+-- FOREIGN KEY DELETE RULES (from dev database):
+-- ✅ company_customers: NO ACTION (not CASCADE) on both foreign keys
+-- ✅ All others: CASCADE or SET NULL as specified
 -- ============================================================
 
 -- Enable required extensions
@@ -94,7 +99,8 @@ CREATE TABLE user_settings (
     notification_specific_messages jsonb DEFAULT '{}'::jsonb,
     view_preferences jsonb DEFAULT '{}'::jsonb,
     created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
+    updated_at timestamptz DEFAULT now(),
+    UNIQUE (user_id, company_id)
 );
 
 -- Vineyards table
@@ -224,13 +230,15 @@ CREATE TABLE customers (
 
 -- Company customers junction table
 CREATE TABLE company_customers (
-    company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
-    customer_id uuid REFERENCES customers(id) ON DELETE CASCADE,
-    relationship numeric DEFAULT 0,
-    active_customer boolean DEFAULT false,
+    company_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    relationship numeric NOT NULL DEFAULT 0,
+    active_customer boolean NOT NULL DEFAULT false,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now(),
-    PRIMARY KEY (company_id, customer_id)
+    PRIMARY KEY (company_id, customer_id),
+    FOREIGN KEY (company_id) REFERENCES companies(id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
 
 -- Prestige events table
@@ -296,7 +304,8 @@ CREATE TABLE achievements (
     unlocked_game_season varchar,
     unlocked_game_year integer,
     progress jsonb DEFAULT '{}'::jsonb,
-    metadata jsonb DEFAULT '{}'::jsonb
+    metadata jsonb DEFAULT '{}'::jsonb,
+    UNIQUE (company_id, achievement_key)
 );
 
 COMMENT ON TABLE achievements IS 'Tracks unlocked achievements for each company with prestige integration and progress tracking';
@@ -387,9 +396,21 @@ CREATE TABLE staff (
 
 COMMENT ON TABLE staff IS 'Staff members employed by companies, with skills and wage tracking';
 
--- Note: RLS is disabled for staff table to allow all operations
--- Enable RLS if you need fine-grained access control
--- ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on staff table (matches dev database)
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies (matches dev database)
+CREATE POLICY "Allow read access to all users" ON staff
+    FOR SELECT TO public USING (true);
+
+CREATE POLICY "Allow insert for authenticated users" ON staff
+    FOR INSERT TO public WITH CHECK (true);
+
+CREATE POLICY "Allow update for authenticated users" ON staff
+    FOR UPDATE TO public USING (true);
+
+CREATE POLICY "Allow delete for authenticated users" ON staff
+    FOR DELETE TO public USING (true);
 
 -- Teams table
 CREATE TABLE teams (
