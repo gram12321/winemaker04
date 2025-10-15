@@ -39,16 +39,27 @@ export const WineModal: React.FC<WineModalProps> = ({
 
   // Load vineyard data
   useEffect(() => {
-    if (wineBatch) {
+    if (wineBatch && wineBatch.vineyardId) {
       loadVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setVineyard(foundVineyard || null);
       }).catch((error) => {
         console.error('Failed to load vineyard for wine batch:', error);
+        setVineyard(null);
       });
+    } else {
+      setVineyard(null);
     }
   }, [wineBatch]);
 
+  // Calculate current balance from characteristics (reflects feature evolution)
+  const balanceResult = useWineBalance(wineBatch?.characteristics || null);
+  const currentBalance = balanceResult?.score ?? wineBatch?.balance;
+
+  // Calculate wine age using service layer
+  const weeksSinceHarvest = wineBatch ? getWineAgeFromHarvest(wineBatch.harvestStartDate || { week: 1, season: 'Spring', year: 2024 }) : 0;
+
+  // Early return AFTER all hooks are called
   if (!wineBatch) return null;
 
   const displayName = wineName || `${wineBatch.grape} - ${wineBatch.vineyardName}`;
@@ -57,13 +68,6 @@ export const WineModal: React.FC<WineModalProps> = ({
   const qualityColorClass = getColorClass(effectiveQuality);
   const configs = getAllFeatureConfigs();
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
-
-  // Calculate wine age using service layer
-  const weeksSinceHarvest = getWineAgeFromHarvest(wineBatch.harvestStartDate);
-  
-  // Calculate current balance from characteristics (reflects feature evolution)
-  const balanceResult = useWineBalance(wineBatch.characteristics);
-  const currentBalance = balanceResult?.score ?? wineBatch.balance;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
