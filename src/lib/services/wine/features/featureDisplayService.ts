@@ -4,7 +4,7 @@
 
 import { WineBatch, WineCharacteristics } from '../../../types/types';
 import { getAllFeatureConfigs } from '../../../constants/wineFeatures';
-import { getBottleAgingSeverity } from '../agingService';
+import { getBottleAgingSeverity } from './agingService';
 
 // ===== FEATURE IMPACT INTERFACE =====
 

@@ -89,7 +89,7 @@ export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } fr
 export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating, getRegionalPriceRange } from './vineyard/vineyardValueCalc';
 export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from './prestige/prestigeService';
-export { getAllWineBatches, formatCompletedWineName, createWineBatchFromHarvest } from './wine/inventoryService';
+export { getAllWineBatches, formatCompletedWineName, createWineBatchFromHarvest } from './wine/winery/inventoryService';
 export { startFermentationActivity, bottleWine, isFermentationActionAvailable, processWeeklyFermentation } from './wine/winery/fermentationManager';
 export { getQualityBreakdown } from './wine/winescore/wineQualityCalculationService';
 export type { QualityBreakdown } from './wine/winescore/wineQualityCalculationService';
@@ -99,7 +99,7 @@ export { startCrushingActivity, validateCrushingActivity } from './wine/winery/c
 export { calculateEffectiveQuality, calculateFeaturePriceMultiplier, getPresentFeaturesSorted, hasAnyFaults, getFeature, hasFeature } from './wine/features/featureEffectsService';
 export { initializeBatchFeatures, processWeeklyFeatureRisks, processEventTrigger } from './wine/features/featureRiskService';
 export * from './wine/features/featureDisplayService';
-export * from './wine/agingService';
+export * from './wine/features/agingService';
 export { recordBottledWine, getVineyardWineHistory, calculateVineyardStats } from './user/wineLogService';
 export type { VineyardStats } from './user/wineLogService';
 export type { VineyardPurchaseOption } from './vineyard/vinyardBuyingService';

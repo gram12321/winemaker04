@@ -5,7 +5,7 @@ import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/act
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
-import { FeatureBadges } from '@/components/ui/FeatureBadge';
+import { FeatureBadges } from '@/components/ui/wine/FeatureBadge';
 import { notificationService } from '@/components/layout/NotificationCenter';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';

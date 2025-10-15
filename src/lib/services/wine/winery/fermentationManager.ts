@@ -1,5 +1,5 @@
 import { WineBatch } from '../../../types/types';
-import { updateInventoryBatch } from '../inventoryService';
+import { updateInventoryBatch } from './inventoryService';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';

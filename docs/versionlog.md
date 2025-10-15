@@ -25,6 +25,40 @@
 
 ---
 
+## Version 0.03 - Vineyard Health System & Clearing/Uprooting
+**Date:** 2025-10-15 | **Commit:** a2dca8df | **Stats:** 1714 additions, 117 deletions
+
+### 🌿 Major Feature: Comprehensive Vineyard Health System
+- **NEW FILE:** `src/components/ui/vineyard/HealthTooltip.tsx` (71 lines) - Interactive health display tooltip
+- **NEW FILE:** `src/components/ui/modals/activitymodals/ClearingOptionsModal.tsx` (575 lines) - Comprehensive clearing/uprooting activity modal
+- **NEW FILE:** `src/lib/services/vineyard/clearingManager.ts` (232 lines) - Clearing activity management with health impact
+- **NEW FILE:** `src/lib/services/vineyard/clearingService.ts` (179 lines) - Health-aware clearing business logic
+
+### Vineyard Management Overhaul
+- `src/components/pages/Vineyard.tsx` - Major UI overhaul with health system integration (227 additions, 88 deletions)
+- `src/components/ui/modals/UImodals/vineyardModal.tsx` - Enhanced vineyard modal with health display (68 additions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Major vineyard management updates with health tracking (135 additions, 1 deletion)
+- `src/lib/constants/vineyardConstants.ts` - Enhanced vineyard constants with health parameters (47 additions, 1 deletion)
+
+### Activity & Work System Integration
+- `src/lib/constants/activityConstants.ts` - Added clearing activity constants (34 additions)
+- `src/lib/services/activity/workcalculators/vineyardWorkCalculator.ts` - Health-aware work calculations (27 additions, 2 deletions)
+- `src/lib/services/core/gameTick.ts` - Weekly health progression and clearing updates (4 additions, 1 deletion)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Activity management updates (3 additions, 2 deletions)
+
+### Database & Infrastructure
+- `src/lib/database/activities/vineyardDB.ts` - Database support for health and clearing operations (8 additions, 2 deletions)
+- `src/lib/types/types.ts` - Added health and clearing-related types (7 additions, 2 deletions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates for vineyard health tracking (9 additions, 2 deletions)
+- `docs/oxidation_and_health_analysis.md` - Updated documentation with health system analysis (29 additions, 7 deletions)
+
+### System Features
+- Vineyard health tracking and display system
+- Interactive health tooltips with detailed information
+- Clearing/uprooting activities that impact vineyard health
+- Health-aware work calculations and activity management
+- Database integration for persistent health state
+
 ## Version 0.023a - Mobile/UI Improvements (Combined 0.02 → 0.023a)
 **Date:** 2025-10-14 to 2025-10-15 | **Commits:** f7a1d3d9 (0.02), abe8a197 (0.0211), 13ca0208 (0.0211a), 2105e7ca (0.023), 3f37b8b8 (0.023a), 7449f88e (0.023a header)
 **Scope:** Mobile layout polish, responsive fixes, dependency updates, minor DB/achievement fixes
@@ -36,12 +70,38 @@
 - `package.json` / lockfile - Dependency updates supporting mobile build stability
 - `src/vite-env.d.ts` - Updated Vite env typings
 
+---
 
 ## Version 0.0221 - Customer Recreation Fix
 **Date:** 2025-10-15 | **Commit:** b804db47 | **Stats:** 525 additions, 78 deletions (includes docs churn from prior reset)
 - `src/components/pages/CompanyOverview.tsx` - UI adjustments related to prestige/customer state (84 additions, 4 deletions)
 - `src/lib/services/prestige/prestigeService.ts` - Minor updates (15 changes)
 - Ensures customers are not recreated on relogin/refresh; relationship persistence stabilized
+---
+
+## Version 0.022a - Enhanced Tier-Based Achievement System
+**Date:** 2025-10-15 | **Commit:** 09e7e844 | **Stats:** 1251 additions, 694 deletions
+- `src/lib/constants/achievementConstants.ts` - Major refactor to tier-based system (533 additions, 557 deletions)
+- `src/lib/services/user/achievementService.ts` - Enhanced evaluation logic with tiers (414 additions, 33 deletions)
+- `src/components/pages/Achievements.tsx` - Updated UI for tier-based display (84 additions, 19 deletions)
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Enhanced prestige modal integration (189 additions, 75 deletions)
+- `src/lib/types/types.ts` - Added tier-based achievement types (29 additions, 5 deletions)
+- `src/lib/services/prestige/prestigeService.ts` - Minor integration updates (2 additions, 2 deletions)
+- `src/components/ui/modals/activitymodals/ClearingOptionsModal.tsx` - Minor cleanup (2 deletions)
+- `src/lib/services/user/staffService.ts` - Minor cleanup (1 deletion)
+- Achievement system now supports progressive tiers with enhanced evaluation logic
+- Prestige modal integration for achievement-related prestige events
+
+---
+## Version 0.022 - Achievement System Fix
+**Date:** 2025-10-15 | **Commit:** 0a361368 | **Stats:** 51 additions, 15 deletions
+- `src/lib/services/core/gameTick.ts` - Achievement evaluation integration in game tick (27 additions, 12 deletions)
+- `src/lib/services/prestige/prestigeService.ts` - Achievement-related prestige updates (10 additions)
+- `src/lib/services/user/achievementService.ts` - Achievement logic fixes and improvements (9 additions, 1 deletion)
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Minor achievement display fix (2 additions, 1 deletion)
+- `src/lib/types/types.ts` - Achievement type refinement (1 addition)
+- `readme.md` - Documentation update (2 additions, 1 deletion)
+- Fixes achievement evaluation timing and prestige integration issues from 0.019
 
 
 ## Version 0.019 - Dynamic Achievements

@@ -4,7 +4,7 @@ import { WorkCategory } from '@/lib/services/activity';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { plantVineyard } from '@/lib/services';
-import { createWineBatchFromHarvest } from '../../wine/inventoryService';
+import { createWineBatchFromHarvest } from '../../wine/winery/inventoryService';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { calculateVineyardYield } from '../../vineyard/vineyardManager';
 import { notificationService } from '@/components/layout/NotificationCenter';

@@ -2,10 +2,10 @@
 // Dedicated service for all bottle aging calculations and progression
 // Handles aging progress, peak status, weekly updates, and UI display data
 
-import { WineBatch, GrapeVariety, GameDate } from '../../types/types';
-import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { squashNormalizeTail } from '../../utils/calculator';
-import { getGameState } from '../core/gameState';
+import { WineBatch, GrapeVariety, GameDate } from '../../../types/types';
+import { GRAPE_CONST } from '../../../constants/grapeConstants';
+import { squashNormalizeTail } from '../../../utils/calculator';
+import { getGameState } from '../../core/gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 
 // ===== AGING STATUS INTERFACE =====

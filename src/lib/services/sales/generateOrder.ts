@@ -4,7 +4,7 @@ import { WineOrder, Customer, WineBatch, Vineyard } from '../../types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { saveWineOrder } from '../../database/customers/salesDB';
 import { getGameState } from '../core/gameState';
-import { formatCompletedWineName } from '../wine/inventoryService';
+import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../../../components/layout/NotificationCenter';
