@@ -200,25 +200,7 @@ const Vineyard: React.FC = () => {
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-gray-800">Vineyard Management</h2>
       
-      {/* Summary Statistics - Desktop/Tablet (hidden on mobile) */}
-      <div className="hidden lg:grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-gray-900">{vineyards.length}</div>
-          <div className="text-xs text-gray-500">Total Vineyards</div>
-        </div>
-        <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-green-600">{totalHectares} ha</div>
-          <div className="text-xs text-gray-500">Total Area</div>
-        </div>
-        <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-blue-600">{formatCurrency(totalValue)}</div>
-          <div className="text-xs text-gray-500">Total Value</div>
-        </div>
-        <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-purple-600">{activeVineyards}/{plantedVineyards}</div>
-          <div className="text-xs text-gray-500">Active/Planted</div>
-        </div>
-      </div>
+      
       
       {/* Vineyard Image */}
       <div 
@@ -237,6 +219,26 @@ const Vineyard: React.FC = () => {
               Buy Land
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Summary Statistics - Desktop/Tablet (hidden on mobile) */}
+      <div className="hidden lg:grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-gray-900">{vineyards.length}</div>
+          <div className="text-xs text-gray-500">Total Vineyards</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-green-600">{totalHectares} ha</div>
+          <div className="text-xs text-gray-500">Total Area</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-blue-600">{formatCurrency(totalValue)}</div>
+          <div className="text-xs text-gray-500">Total Value</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-purple-600">{activeVineyards}/{plantedVineyards}</div>
+          <div className="text-xs text-gray-500">Active/Planted</div>
         </div>
       </div>
 

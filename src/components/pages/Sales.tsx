@@ -59,6 +59,20 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
   return (
     <div className="space-y-3 text-sm">
+      {/* Page Hero */}
+      <div 
+        className="h-28 bg-cover bg-center rounded-lg relative"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1510076857177-7470076d4098?w=1200&h=400&fit=crop')"
+        }}
+      >
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2.5">
+          <h3 className="text-white text-sm font-semibold">
+            {activeTab === 'cellar' ? 'Wine Cellar Inventory' : 'Pending Orders'}
+          </h3>
+        </div>
+      </div>
+
       <h2 className="text-xl font-semibold text-gray-800">Sales</h2>
       
       {/* Navigation Tabs */}
@@ -83,20 +97,6 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         >
           Orders ({allOrders.filter(o => o.status === 'pending').length})
         </button>
-      </div>
-
-      {/* Wine Cellar Image */}
-      <div 
-        className="h-28 bg-cover bg-center rounded-lg relative"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1510076857177-7470076d4098?w=1200&h=400&fit=crop')"
-        }}
-      >
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2.5">
-          <h3 className="text-white text-sm font-semibold">
-            {activeTab === 'cellar' ? 'Wine Cellar Inventory' : 'Pending Orders'}
-          </h3>
-        </div>
       </div>
 
       {/* Content based on active tab */}
