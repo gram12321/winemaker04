@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { getCurrentPrestige } from '@/lib/services/core/gameState';
 import { processGameTick } from '@/lib/services/core/gameTick';
 import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils/utils';
@@ -11,6 +11,7 @@ import PrestigeModal from '@/components/ui/modals/UImodals/prestigeModal';
 import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeService';
 import { getCurrentCompany } from '@/lib/services/core/gameState';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
+import versionLogRaw from '../../../docs/versionlog.md?raw';
 
 interface HeaderProps extends NavigationProps, CompanyProps {
   currentPage: string;
@@ -31,6 +32,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
     vineyards: []
   });
   const consoleHook = useNotifications();
+  
+  // Extract latest version from docs/versionlog.md (first "## Version X" occurrence)
+  const appVersion = useMemo(() => {
+    try {
+      const match = versionLogRaw.match(/^##\s+Version\s+([\d\.]+)/m);
+      return match ? `v${match[1]}` : 'v0.0.0';
+    } catch {
+      return 'v0.0.0';
+    }
+  }, []);
   
   // Get current company once instead of multiple calls
   const currentCompany = getCurrentCompany();
@@ -82,7 +93,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
         <div className="max-w-7xl mx-auto flex justify-between items-center py-0.5 px-3 sm:px-4 md:px-6 lg:px-8 text-sm">
           <div className="flex items-center space-x-4">
             <button onClick={() => handleNavigation('dashboard')} className="text-sm font-semibold">
-              🍷 Winery Management v0.012a
+              🍷 Winery Management {appVersion}
             </button>
             
             {/* Desktop Navigation */}
