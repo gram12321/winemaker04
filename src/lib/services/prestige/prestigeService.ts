@@ -776,6 +776,15 @@ export function getEventDisplayData(event: PrestigeEvent): {
         displayInfo: `Total: ${totalBottles} bottles • Value: €${totalValue.toLocaleString()} • Avg Age: ${averageAge.toFixed(1)} years • Oldest: ${oldestAge.toFixed(1)} years`,
       };
     }
+
+    if (event.type === 'achievement' && metadata.achievementName) {
+      return {
+        title: `Achievement Unlocked: ${metadata.achievementName}`,
+        titleBase: 'Achievement',
+        amountText: `${metadata.achievementIcon} ${metadata.achievementName}`,
+        displayInfo: `Category: ${metadata.achievementCategory} | Rarity: ${metadata.achievementRarity} | Unlocked: ${metadata.unlockedAt ? new Date(metadata.unlockedAt).toLocaleDateString() : 'Unknown'}`
+      };
+    }
   }
 
   // Handle wine feature events
@@ -807,6 +816,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
       calc: `Base: ${metadata.calculatedAmount?.toFixed(4)} | Event: ${eventType} | Level: ${level}`
     };
   }
+
 
   // Handle other event types with fallback display
   if (['contract', 'penalty', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement'].includes(event.type)) {

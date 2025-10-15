@@ -12,6 +12,8 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { notificationService } from '../../../components/layout/NotificationCenter';
+import { NotificationCategory } from '../../types/types';
 
 /**
  * Achievement condition checker context
@@ -247,7 +249,13 @@ async function unlockAchievementWithPrestige(
   // Trigger global update for UI
   triggerGameUpdate();
   
-  console.log(`🏆 Achievement Unlocked: ${achievement.name} (${achievement.icon})`);
+  // User-facing notification
+  await notificationService.addMessage(
+    `🏆 Achievement Unlocked: ${achievement.name} (${achievement.icon})`,
+    'achievements.unlock',
+    'Achievements',
+    NotificationCategory.SYSTEM
+  );
   
   return unlock;
 }

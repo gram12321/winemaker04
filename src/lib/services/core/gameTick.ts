@@ -15,9 +15,14 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { updateCellarCollectionPrestige } from '../prestige/prestigeService';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
 import { checkAllAchievements } from '../user/achievementService';
+import { calculateAbsoluteWeeks } from '../../utils/utils';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
+
+// Throttle configuration for expensive, non-critical checks
+const ACHIEVEMENT_CHECK_INTERVAL_WEEKS = 4; // run every 4 weeks
+let lastAchievementCheckAbsoluteWeek = -1;
 
 /**
  * Enhanced time advancement with automatic game events
@@ -195,21 +200,31 @@ const processWeeklyEffects = async (): Promise<void> => {
       } catch (error) {
         console.warn('Error during cellar collection prestige update:', error);
       }
-    })(),
-    
-    // Check and unlock achievements (weekly check for all conditions)
-    (async () => {
-      try {
-        const newUnlocks = await checkAllAchievements();
-        if (newUnlocks.length > 0) {
-          console.log(`[Weekly Achievements] Unlocked ${newUnlocks.length} achievement(s)`);
-        }
-      } catch (error) {
-        console.warn('Error during achievement checking:', error);
-      }
     })()
   ];
   
+  // Throttled, non-blocking achievement checks (decoupled from tick critical path)
+  try {
+    const absWeek = calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!);
+    const shouldRunAchievements =
+      lastAchievementCheckAbsoluteWeek < 0 ||
+      absWeek - lastAchievementCheckAbsoluteWeek >= ACHIEVEMENT_CHECK_INTERVAL_WEEKS;
+
+    if (shouldRunAchievements) {
+      lastAchievementCheckAbsoluteWeek = absWeek;
+      // Fire-and-forget; do not await to keep tick latency low
+      void (async () => {
+        try {
+          await checkAllAchievements();
+        } catch (error) {
+          console.warn('Error during throttled achievement checking:', error);
+        }
+      })();
+    }
+  } catch (error) {
+    console.warn('Failed to schedule achievement checks:', error);
+  }
+
   // Process seasonal wage payments (at the start of each season - week 1)
   if (currentWeek === 1) {
     weeklyTasks.push(

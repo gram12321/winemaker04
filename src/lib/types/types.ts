@@ -261,6 +261,7 @@ export type PrestigeEventType =
   | 'contract'
   | 'penalty'
   | 'cellar_collection'
+  | 'achievement'
   | 'vineyard_sale'
   | 'vineyard_base'
   | 'vineyard_achievement'

@@ -216,9 +216,10 @@ return (
 - Finance system with transaction tracking and asset valuation
 - Complete player interface with Winepedia, achievements, and admin tools
 - Staff management system with skill-based work calculation
+- Advanced staff features (teams, search, recruitment)
 
 ❌ **NOT IMPLEMENTED:**
-- Advanced staff features (teams, search, recruitment)
+
 - Contract system for stable income
 - Storage vessel tracking (fermentation tanks, aging tanks)
 - Seasonal effects on vineyards/wine
