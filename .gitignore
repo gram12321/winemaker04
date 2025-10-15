@@ -33,3 +33,4 @@ dist-ssr
 
 # Old iterations directory
 docs/old_iterations/
+migrations/

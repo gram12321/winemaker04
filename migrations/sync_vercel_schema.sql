@@ -22,6 +22,7 @@
 -- ✅ companies: UNIQUE (name)
 --
 -- CRITICAL RLS SETUP (from dev database):
+-- ✅ ALL tables: RLS DISABLED (except staff)
 -- ✅ staff table: RLS ENABLED with 4 permissive policies for public role
 --
 -- FOREIGN KEY DELETE RULES (from dev database):
@@ -33,9 +34,11 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
--- DROP EXISTING TABLES (in reverse dependency order)
+-- CLEANUP EXISTING SCHEMA
 -- ============================================================
 
+-- Drop existing tables if they exist (safe cleanup)
+-- Run each statement individually to avoid transaction issues
 DROP TABLE IF EXISTS notification_filters CASCADE;
 DROP TABLE IF EXISTS teams CASCADE;
 DROP TABLE IF EXISTS staff CASCADE;
@@ -396,21 +399,6 @@ CREATE TABLE staff (
 
 COMMENT ON TABLE staff IS 'Staff members employed by companies, with skills and wage tracking';
 
--- Enable RLS on staff table (matches dev database)
-ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policies (matches dev database)
-CREATE POLICY "Allow read access to all users" ON staff
-    FOR SELECT TO public USING (true);
-
-CREATE POLICY "Allow insert for authenticated users" ON staff
-    FOR INSERT TO public WITH CHECK (true);
-
-CREATE POLICY "Allow update for authenticated users" ON staff
-    FOR UPDATE TO public USING (true);
-
-CREATE POLICY "Allow delete for authenticated users" ON staff
-    FOR DELETE TO public USING (true);
 
 -- Teams table
 CREATE TABLE teams (
@@ -435,6 +423,73 @@ CREATE TABLE notification_filters (
     created_at timestamptz DEFAULT now(),
     block_from_history boolean DEFAULT false
 );
+
+-- ============================================================
+-- ROW LEVEL SECURITY SETUP (matches dev database exactly)
+-- ============================================================
+
+-- Disable RLS on all tables except staff (matches dev database)
+-- In dev database, only staff table has RLS enabled
+
+-- First drop any existing RLS policies (critical for 406 error fix)
+DROP POLICY IF EXISTS "Anyone can view achievements" ON achievements;
+DROP POLICY IF EXISTS "Anyone can insert achievements" ON achievements;
+DROP POLICY IF EXISTS "Anyone can update achievements" ON achievements;
+DROP POLICY IF EXISTS "Allow company access to activities" ON activities;
+DROP POLICY IF EXISTS "Anyone can create companies" ON companies;
+DROP POLICY IF EXISTS "Anyone can delete companies" ON companies;
+DROP POLICY IF EXISTS "Anyone can view companies" ON companies;
+DROP POLICY IF EXISTS "Users can update own companies" ON companies;
+DROP POLICY IF EXISTS "Anyone can delete highscores" ON highscores;
+DROP POLICY IF EXISTS "Anyone can insert highscores" ON highscores;
+DROP POLICY IF EXISTS "Anyone can update highscores" ON highscores;
+DROP POLICY IF EXISTS "Anyone can view highscores" ON highscores;
+DROP POLICY IF EXISTS "Allow company access to notifications" ON notifications;
+DROP POLICY IF EXISTS "Allow all operations on prestige_events" ON prestige_events;
+DROP POLICY IF EXISTS "Allow all operations on relationship_boosts" ON relationship_boosts;
+DROP POLICY IF EXISTS "teams_policy" ON teams;
+DROP POLICY IF EXISTS "Users can manage own settings" ON user_settings;
+DROP POLICY IF EXISTS "Anyone can create users" ON users;
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Users can manage their own wine batches" ON wine_batches;
+
+-- Then disable RLS
+ALTER TABLE achievements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE activities DISABLE ROW LEVEL SECURITY;
+ALTER TABLE companies DISABLE ROW LEVEL SECURITY;
+ALTER TABLE company_customers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE highscores DISABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_filters DISABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE prestige_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE relationship_boosts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE teams DISABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE user_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vineyards DISABLE ROW LEVEL SECURITY;
+ALTER TABLE wine_batches DISABLE ROW LEVEL SECURITY;
+ALTER TABLE wine_log DISABLE ROW LEVEL SECURITY;
+ALTER TABLE wine_orders DISABLE ROW LEVEL SECURITY;
+
+-- Enable RLS only on staff table (matches dev database)
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for staff table (matches dev database)
+CREATE POLICY "Allow read access to all users" ON staff
+    FOR SELECT TO public USING (true);
+
+CREATE POLICY "Allow insert for authenticated users" ON staff
+    FOR INSERT TO public WITH CHECK (true);
+
+CREATE POLICY "Allow update for authenticated users" ON staff
+    FOR UPDATE TO public USING (true);
+
+CREATE POLICY "Allow delete for authenticated users" ON staff
+    FOR DELETE TO public USING (true);
 
 -- ============================================================
 -- CREATE INDEXES FOR PERFORMANCE

@@ -128,7 +128,7 @@ export async function getAchievementUnlock(achievementId: string, companyId?: st
     .select('*')
     .eq('achievement_key', achievementId)
     .eq('company_id', targetCompanyId)
-    .single();
+    .maybeSingle();
   
   if (error) {
     if (error.code === 'PGRST116') return null; // Not found
