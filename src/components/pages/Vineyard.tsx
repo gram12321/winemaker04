@@ -1,16 +1,16 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { getAllVineyards, purchaseVineyard, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
+import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandBuyingModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
+import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { HarvestRisksDisplay } from '../ui/vineyard/HarvestFeatureRisksDisplay';
 import HealthTooltip from '../ui/vineyard/HealthTooltip';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
-import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 import { getFlagIcon } from '@/lib/utils';
+import { clearPendingLandSearchResults } from '@/lib/services/vineyard/landSearchService';
 
 
 
@@ -18,11 +18,11 @@ const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [showHarvestDialog, setShowHarvestDialog] = useState(false);
-  const [showBuyLandModal, setShowBuyLandModal] = useState(false);
+  const [showLandSearchModal, setShowLandSearchModal] = useState(false);
+  const [showLandResultsModal, setShowLandResultsModal] = useState(false);
   const [showVineyardModal, setShowVineyardModal] = useState(false);
   const [showClearingModal, setShowClearingModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
-  const [landPurchaseOptions, setLandPurchaseOptions] = useState<VineyardPurchaseOption[]>([]);
   const [expectedYields, setExpectedYields] = useState<Record<string, number>>({});
   const vineyards = useGameStateWithData(getAllVineyards, []);
   const activities = useGameStateWithData(getAllActivities, []);
@@ -84,15 +84,12 @@ const Vineyard: React.FC = () => {
 
 
 
-  const handleShowBuyLandModal = useCallback(() => {
-    const options = generateVineyardPurchaseOptions(5, vineyards);
-    setLandPurchaseOptions(options);
-    setShowBuyLandModal(true);
-  }, [vineyards]);
-
-  const handlePurchaseVineyard = useCallback((option: VineyardPurchaseOption) => withLoading(async () => {
-    await purchaseVineyard(option);
-  }), [withLoading]);
+  // Watch for pending land search results
+  useEffect(() => {
+    if (gameState.pendingLandSearchResults) {
+      setShowLandResultsModal(true);
+    }
+  }, [gameState.pendingLandSearchResults]);
 
   const handleRowClick = useCallback((vineyard: VineyardType) => {
     setSelectedVineyard(vineyard);
@@ -304,10 +301,10 @@ const Vineyard: React.FC = () => {
           <div className="flex justify-between items-end">
             <h3 className="text-white text-base font-semibold">Vineyard Portfolio</h3>
             <button 
-              onClick={handleShowBuyLandModal}
+              onClick={() => setShowLandSearchModal(true)}
               className="bg-green-700 hover:bg-green-800 text-white px-3 py-1.5 rounded"
             >
-              Buy Land
+              Search for Land
             </button>
           </div>
         </div>
@@ -785,12 +782,19 @@ const Vineyard: React.FC = () => {
         }}
       />
 
-      <LandBuyingModal
-        isOpen={showBuyLandModal}
-        onClose={() => setShowBuyLandModal(false)}
-        options={landPurchaseOptions}
-        onPurchase={handlePurchaseVineyard}
-        currentMoney={gameState.money || 0}
+      <LandSearchOptionsModal
+        isOpen={showLandSearchModal}
+        onClose={() => setShowLandSearchModal(false)}
+        onSearchStarted={() => setShowLandSearchModal(false)}
+      />
+
+      <LandSearchResultsModal
+        isOpen={showLandResultsModal}
+        onClose={() => {
+          setShowLandResultsModal(false);
+          clearPendingLandSearchResults();
+        }}
+        options={gameState.pendingLandSearchResults?.options || []}
       />
 
       <VineyardModal

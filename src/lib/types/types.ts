@@ -14,6 +14,7 @@ export enum WorkCategory {
   UPGRADING = 'UPGRADING',
   MAINTENANCE = 'MAINTENANCE',
   STAFF_SEARCH = 'STAFF_SEARCH',
+  LAND_SEARCH = 'LAND_SEARCH',
   ADMINISTRATION = 'ADMINISTRATION'
 }
 
@@ -493,6 +494,27 @@ export interface PendingStaffCandidates {
   timestamp: number;
 }
 
+// ===== LAND SEARCH TYPES =====
+
+/**
+ * Pending land search results
+ * Temporary storage for properties generated from completed search activity
+ */
+export interface PendingLandSearchResults {
+  activityId: string;
+  options: any[]; // VineyardPurchaseOption[]
+  searchOptions: {
+    numberOfOptions: number;
+    regions: string[];
+    altitudeRange?: [number, number];
+    aspectPreferences?: string[];
+    hectareRange: [number, number];
+    soilTypes?: string[];
+    minGrapeSuitability?: number;
+  };
+  timestamp: number;
+}
+
 // ===== ACHIEVEMENT SYSTEM =====
 
 /**
@@ -625,4 +647,5 @@ export interface GameState {
   staff?: Staff[]; // Active staff members
   teams?: StaffTeam[]; // Staff teams
   pendingStaffCandidates?: PendingStaffCandidates;
+  pendingLandSearchResults?: PendingLandSearchResults;
 }

@@ -366,7 +366,7 @@ CREATE TABLE notifications (
 CREATE TABLE activities (
     id text PRIMARY KEY,
     company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
-    category text NOT NULL CHECK (category IN ('PLANTING', 'HARVESTING', 'CRUSHING', 'FERMENTATION', 'CLEARING', 'UPROOTING', 'BUILDING', 'UPGRADING', 'MAINTENANCE', 'STAFF_SEARCH', 'ADMINISTRATION')),
+    category text NOT NULL CHECK (category IN ('PLANTING', 'HARVESTING', 'CRUSHING', 'FERMENTATION', 'CLEARING', 'UPROOTING', 'BUILDING', 'UPGRADING', 'MAINTENANCE', 'STAFF_SEARCH', 'LAND_SEARCH', 'ADMINISTRATION')),
     title text NOT NULL,
     total_work numeric NOT NULL CHECK (total_work > 0),
     completed_work numeric DEFAULT 0 CHECK (completed_work >= 0),

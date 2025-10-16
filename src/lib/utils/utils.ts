@@ -46,21 +46,38 @@ export function clamp01(value: number): number {
  * @example
  * formatNumber(1234.5) // "1.234,50" (German locale)
  * formatNumber(0.987, { adaptiveNearOne: true }) // "0.98700" (extra precision near 1.0)
+ * formatNumber(0.01, { smartMaxDecimals: true }) // "0.01" (2 decimals for small numbers)
+ * formatNumber(5.2, { smartMaxDecimals: true }) // "5.2" (1 decimal for medium numbers)
+ * formatNumber(15, { smartMaxDecimals: true }) // "15" (0 decimals for large numbers)
  */
 export function formatNumber(value: number, options?: {
   decimals?: number;
   forceDecimals?: boolean;
   smartDecimals?: boolean;
+  smartMaxDecimals?: boolean; // when true, reduce decimals for larger numbers (0-1%: 2-3 decimals, 1-10%: 1 decimal, 10%+: 0 decimals)
   adaptiveNearOne?: boolean; // when true, increase decimals near 1.0 (e.g., 0.95-1.0)
 }): string {
   if (typeof value !== 'number' || isNaN(value)) return '0';
   
-  const { decimals = 2, forceDecimals = false, smartDecimals = false, adaptiveNearOne = true } = options || {};
+  const { decimals = 2, forceDecimals = false, smartDecimals = false, smartMaxDecimals = false, adaptiveNearOne = true } = options || {};
 
-  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 → 0.9870)
+  // Smart max decimals: reduce decimals for larger numbers
   let effectiveDecimals = decimals;
+  if (smartMaxDecimals) {
+    const absValue = Math.abs(value);
+    if (absValue >= 10) {
+      effectiveDecimals = 0; // 10%+: 0 decimals (15%, 100%)
+    } else if (absValue >= 1) {
+      effectiveDecimals = 1; // 1-10%: 1 decimal (1.2%, 8.5%)
+    } else {
+      effectiveDecimals = 2; // 0-1%: 2 decimals (0.01%, 0.15%)
+    }
+  }
+  
+  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 → 0.9870)
+  // This ALWAYS takes precedence over smart options when near 1.0
   if (adaptiveNearOne && value < 1 && value >= 0.95) {
-    effectiveDecimals = Math.max(decimals, 4);
+    effectiveDecimals = Math.max(effectiveDecimals, 4);
     if (value >= 0.98) {
       effectiveDecimals = Math.max(effectiveDecimals, 5);
     }

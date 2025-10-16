@@ -14,6 +14,7 @@ import { completeFermentationSetup } from '../workcalculators/fermentationWorkCa
 import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
 import { calculateStaffWorkContribution } from '../workcalculators/workCalculator';
 import { completeStaffSearch, completeHiringProcess } from '../../user/staffSearchService';
+import { completeLandSearch } from '../../vineyard/landSearchService';
 import { getTeamForCategory } from '../../user/teamService';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { completeClearingActivity } from '../../vineyard/clearingManager';
@@ -108,6 +109,10 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
 
   [WorkCategory.STAFF_SEARCH]: async (activity: Activity) => {
     await completeStaffSearch(activity);
+  },
+
+  [WorkCategory.LAND_SEARCH]: async (activity: Activity) => {
+    await completeLandSearch(activity);
   },
 
   [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {

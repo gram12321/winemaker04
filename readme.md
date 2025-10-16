@@ -72,6 +72,25 @@ return (
 - Both anon and service role keys available
 - PAT required for database management
 
+### 🗄️ **Dual Database Setup**
+
+**Development Database (Local):**
+- Supabase project: `uuribntaigecwtkdxeyw`
+- Environment: `.env.local` (gitignored)
+- Management: MCP tools (`mcp_supabase-dev_*`) for agentic operations
+- Usage: `localhost:3000` with frequent resets
+
+**Vercel Database (Staging):**
+- Supabase project: `uuzoeoukixvunbnkrowi`
+- Environment: Vercel Dashboard → Environment Variables
+- Management: Manual SQL migrations via `migrations/sync_vercel_schema.sql`
+- Usage: `winemaker-omega.vercel.app` (stable for testing)
+
+**Migration Process:**
+1. Update dev database via MCP tools
+2. Run `migrations/sync_vercel_schema.sql` in Vercel Supabase SQL Editor
+3. Verify Vercel deployment works
+
 **Legacy Reference Documentation:**
 - `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
 - `@docs/old_iterations/v3/` - Previous React/TypeScript iteration with different architecture
@@ -217,6 +236,9 @@ return (
 - Complete player interface with Winepedia, achievements, and admin tools
 - Staff management system with skill-based work calculation
 - Advanced staff features (teams, search, recruitment)
+- **Dual database architecture** with development and staging environments
+- **MCP integration** for agentic database management
+- **Automated migration system** for Vercel database synchronization
 
 ❌ **NOT IMPLEMENTED:**
 

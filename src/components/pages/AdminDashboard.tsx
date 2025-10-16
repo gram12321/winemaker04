@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { useLoadingState } from '@/hooks';
-import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, LandBuyingModal } from '../ui';
 import { 
   Settings, 
   Users, 
   AlertTriangle,
   Trash2,
 } from 'lucide-react';
-import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState } from '@/lib/services';
+import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, getAllVineyards, purchaseVineyard } from '@/lib/services';
 import { formatCurrency } from '@/lib/utils/utils';
 import { supabase } from '@/lib/database/core/supabase'; // Admin operations - direct DB access acceptable for cleanup
 import { insertPrestigeEvent } from '@/lib/database';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
+import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces
@@ -23,6 +24,8 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const { isLoading, withLoading } = useLoadingState();
   const [goldAmount, setGoldAmount] = useState('10000');
   const [prestigeAmount, setPrestigeAmount] = useState('100');
+  const [showQuickLandBuy, setShowQuickLandBuy] = useState(false);
+  const [quickLandOptions, setQuickLandOptions] = useState<VineyardPurchaseOption[]>([]);
 
   // Cheat functions (for development/testing)
   const handleAddGold = () => withLoading(async () => {
@@ -182,6 +185,21 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
       }
     });
   };
+
+  const handleQuickLandBuy = () => withLoading(async () => {
+    try {
+      const existingVineyards = await getAllVineyards();
+      const options = generateVineyardPurchaseOptions(5, existingVineyards);
+      setQuickLandOptions(options);
+      setShowQuickLandBuy(true);
+    } catch (error) {
+      console.error('Error generating quick land options:', error);
+    }
+  });
+
+  const handleQuickLandPurchase = (option: VineyardPurchaseOption) => withLoading(async () => {
+    await purchaseVineyard(option);
+  });
 
 
   const handleClearAllAchievements = async () => {
@@ -501,7 +519,32 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   Simulates the automatic customer acquisition process and order generation
                 </p>
               </SimpleCard>
+
+              <SimpleCard
+                title="Quick Land Buy (Legacy)"
+                description="Generate 5 random properties using the old instant system"
+              >
+                <Button
+                  onClick={handleQuickLandBuy}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  🏡 Generate 5 Random Properties
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Legacy system for testing/dev purposes. Uses the old instant generation method.
+                </p>
+              </SimpleCard>
             </div>
+
+            {/* Quick Land Buy Modal */}
+            <LandBuyingModal
+              isOpen={showQuickLandBuy}
+              onClose={() => setShowQuickLandBuy(false)}
+              options={quickLandOptions}
+              onPurchase={handleQuickLandPurchase}
+              currentMoney={getGameState().money || 0}
+            />
           </TabsContent>
         </Tabs>
     </div>

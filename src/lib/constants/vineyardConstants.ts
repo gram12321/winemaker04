@@ -6,7 +6,8 @@
 // ===== COUNTRY-REGION MAPPING =====
 
 export const COUNTRY_REGION_MAP = {
-  "France": ["Bordeaux", "Bourgogne", "Champagne", "Loire Valley", "Rhone Valley", "Jura"],
+  "France": ["Bordeaux", "Bourgogne", "Champagne", //"Loire Valley", 
+   "Rhone Valley", "Jura"],
   "Germany": ["Ahr", "Mosel", "Pfalz", "Rheingau", "Rheinhessen"],
   "Italy": ["Piedmont", "Puglia", "Sicily", "Tuscany", "Veneto"],
   "Spain": ["Jumilla", "La Mancha", "Ribera del Duero", "Rioja", "Jerez"],
@@ -21,7 +22,7 @@ export const REGION_SOIL_TYPES = {
     "Bordeaux": ["Clay", "Gravel", "Limestone", "Sand"],
     "Bourgogne": ["Clay-Limestone", "Limestone", "Marl"],
     "Champagne": ["Chalk", "Clay", "Limestone"],
-    "Loire Valley": ["Clay", "Flint", "Limestone", "Sand", "Schist"],
+    //"Loire Valley": ["Clay", "Flint", "Limestone", "Sand", "Schist"],
     "Rhone Valley": ["Clay", "Granite", "Limestone", "Sand"],
     "Jura": ["Clay", "Limestone", "Marl"]
   },
@@ -107,7 +108,7 @@ export const REGION_ALTITUDE_RANGES = {
     "Bordeaux": [0, 100],
     "Bourgogne": [200, 500],
     "Champagne": [100, 300],
-    "Loire Valley": [50, 200],
+    //"Loire Valley": [50, 200],
     "Rhone Valley": [100, 400],
     "Jura": [250, 400]
   },
@@ -154,7 +155,7 @@ export const REGION_ASPECT_RATINGS = {
     "Bordeaux": { "North": 0.30, "Northeast": 0.40, "East": 0.60, "Southeast": 0.85, "South": 1.00, "Southwest": 0.95, "West": 0.80, "Northwest": 0.50 },
     "Bourgogne": { "North": 0.25, "Northeast": 0.45, "East": 0.65, "Southeast": 1.00, "South": 0.90, "Southwest": 0.80, "West": 0.55, "Northwest": 0.40 },
     "Champagne": { "North": 0.20, "Northeast": 0.35, "East": 0.55, "Southeast": 0.90, "South": 1.00, "Southwest": 0.80, "West": 0.60, "Northwest": 0.35 },
-    "Loire Valley": { "North": 0.30, "Northeast": 0.50, "East": 0.65, "Southeast": 0.85, "South": 1.00, "Southwest": 0.90, "West": 0.75, "Northwest": 0.45 },
+    //"Loire Valley": { "North": 0.30, "Northeast": 0.50, "East": 0.65, "Southeast": 0.85, "South": 1.00, "Southwest": 0.90, "West": 0.75, "Northwest": 0.45 },
     "Rhone Valley": { "North": 0.25, "Northeast": 0.50, "East": 0.70, "Southeast": 1.00, "South": 0.90, "Southwest": 0.85, "West": 0.65, "Northwest": 0.40 },
     "Jura": { "North": 0.20, "Northeast": 0.45, "East": 0.65, "Southeast": 0.95, "South": 1.00, "Southwest": 0.85, "West": 0.60, "Northwest": 0.35 }
   },
@@ -190,7 +191,7 @@ export const REGION_PRESTIGE_RANKINGS = {
     "Champagne": 0.98,
     "Bordeaux": 0.87,
     "Jura": 0.65,
-    "Loire Valley": 0.61,
+//    "Loire Valley": 0.61,
     "Rhone Valley": 0.60
   },
   "United States": {
@@ -229,7 +230,7 @@ export const REGION_PRICE_RANGES = {
     "Bourgogne": [1000000, 10000000],
     "Champagne": [500000, 2000000],
     "Bordeaux": [100000, 1000000],
-    "Loire Valley": [20000, 80000],
+    //"Loire Valley": [20000, 80000],
     "Rhone Valley": [30000, 120000],
     "Jura": [25000, 45000]
   },
@@ -278,7 +279,7 @@ export const REGION_GRAPE_SUITABILITY = {
     "Bordeaux": { "Barbera": 0.7, "Chardonnay": 0.8, "Pinot Noir": 0.6, "Primitivo": 0.6, "Sauvignon Blanc": 0.9 },
     "Bourgogne": { "Barbera": 0.4, "Chardonnay": 0.9, "Pinot Noir": 0.9, "Primitivo": 0.3, "Sauvignon Blanc": 0.7 },
     "Champagne": { "Barbera": 0.2, "Chardonnay": 0.9, "Pinot Noir": 0.8, "Primitivo": 0.2, "Sauvignon Blanc": 0.6 },
-    "Loire Valley": { "Barbera": 0.35, "Chardonnay": 0.85, "Pinot Noir": 0.7, "Primitivo": 0.3, "Sauvignon Blanc": 1.0 },
+    //"Loire Valley": { "Barbera": 0.35, "Chardonnay": 0.85, "Pinot Noir": 0.7, "Primitivo": 0.3, "Sauvignon Blanc": 1.0 },
     "Rhone Valley": { "Barbera": 0.85, "Chardonnay": 0.75, "Pinot Noir": 0.5, "Primitivo": 0.7, "Sauvignon Blanc": 0.7 },
     "Jura": { "Barbera": 0.3, "Chardonnay": 0.9, "Pinot Noir": 0.8, "Primitivo": 0.2, "Sauvignon Blanc": 0.6 }
   },

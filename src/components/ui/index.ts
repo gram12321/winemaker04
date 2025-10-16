@@ -23,6 +23,8 @@ export { QualityFactorBar, QualityFactorsDisplay, QualityFactorLegend } from './
 export { BalanceScoreBreakdown } from './components/BalanceScoreBreakdown';
 export { QualityFactorsBreakdown } from './components/QualityFactorsBreakdown';
 export { default as LandBuyingModal } from './modals/UImodals/landBuyingModal';
+export { LandSearchOptionsModal } from './modals/activitymodals/LandSearchOptionsModal';
+export { LandSearchResultsModal } from './modals/activitymodals/LandSearchResultsModal';
 export { default as VineyardModal } from './modals/UImodals/vineyardModal';
 export { default as WineModal } from './modals/UImodals/wineModal';
 export { default as WorkCalculationTable } from './activities/workCalculationTable';

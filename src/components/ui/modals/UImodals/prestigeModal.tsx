@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils';
 import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services/prestige/prestigeService';
@@ -39,6 +39,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const didInitAutoCollapse = useRef(false);
 
   const eventConfig = {
     company_value: { icon: DollarSign, label: 'Company Value', color: 'bg-blue-100 text-blue-800' },
@@ -236,30 +237,33 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     return acc;
   }, {} as Record<string, PrestigeEvent[]>);
 
-  // Auto-collapse sections with many items on first render
+  // Auto-collapse sections with many items only once on initial render
   React.useEffect(() => {
-    const newCollapsed = new Set(collapsedSections);
-    
+    if (didInitAutoCollapse.current) return;
+
+    const initialCollapsed = new Set<string>();
+
     // Auto-collapse company event sections with more than 3 items
     Object.entries(groupedCompanyEvents).forEach(([type, events]) => {
       const sectionId = `company_${type}`;
-      if (shouldAutoCollapse(events) && !newCollapsed.has(sectionId)) {
-        newCollapsed.add(sectionId);
+      if (shouldAutoCollapse(events)) {
+        initialCollapsed.add(sectionId);
       }
     });
-    
+
     // Auto-collapse vineyard sections with more than 3 items
     vineyards.forEach((vineyard) => {
       const sectionId = `vineyard_${vineyard.id}`;
-      if (shouldAutoCollapse(vineyard.events) && !newCollapsed.has(sectionId)) {
-        newCollapsed.add(sectionId);
+      if (shouldAutoCollapse(vineyard.events)) {
+        initialCollapsed.add(sectionId);
       }
     });
-    
-    if (newCollapsed.size !== collapsedSections.size) {
-      setCollapsedSections(newCollapsed);
+
+    if (initialCollapsed.size > 0) {
+      setCollapsedSections(initialCollapsed);
     }
-  }, [groupedCompanyEvents, vineyards, collapsedSections]);
+    didInitAutoCollapse.current = true;
+  }, [groupedCompanyEvents, vineyards]);
 
   // Render
   return (

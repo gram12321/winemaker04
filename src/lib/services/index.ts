@@ -50,6 +50,26 @@ export type {
   HiringWorkEstimate
 } from './user/staffSearchService';
 
+// Land search services
+export {
+  calculateSearchCost as calculateLandSearchCost,
+  calculateSearchWork as calculateLandSearchWork,
+  getAccessibleRegions,
+  getAccessibleRegionsWithMaxCaps,
+  calculateRedistributedProbabilities,
+  calculateMaxRegionProbability,
+  calculateRegionProbability,
+  generateVineyardSearchResults,
+  startLandSearch,
+  completeLandSearch,
+  clearPendingLandSearchResults
+} from './vineyard/landSearchService';
+
+export type {
+  LandSearchOptions,
+  LandSearchEstimate
+} from './vineyard/landSearchService';
+
 // Team management services
 export {
   getDefaultTeams,
