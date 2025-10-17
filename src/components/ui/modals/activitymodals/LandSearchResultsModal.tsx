@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
+import { VineyardPurchaseOption } from '@/lib/services/vineyard/landSearchService';
 import { formatCurrency, getFlagIcon, getBadgeColorClasses, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/shadCN/button';
 import { Badge } from '@/components/ui/shadCN/badge';
@@ -260,44 +260,44 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Purchase Information */}
+                  {/* Purchase Information (acts as purchase button) */}
                   <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                     <h4 className="text-sm font-medium text-white mb-4">Purchase Information</h4>
-                    <div className="bg-green-600 rounded-lg p-4 text-center">
-                      <div className="text-3xl font-bold text-white">
-                        {formatCurrency(selectedProperty.totalPrice)}
-                      </div>
-                      <div className="text-sm text-green-100 mt-2">
-                        Total purchase price for {selectedProperty.hectares} hectares
-                      </div>
-                      <div className="text-xs text-green-200 mt-1">
-                        {formatCurrency(selectedProperty.landValue)} per hectare
-                      </div>
-                    </div>
+                    {(() => {
+                      const canAfford = (gameState.money || 0) >= selectedProperty.totalPrice;
+                      return (
+                        <button
+                          className={`w-full rounded-lg p-4 text-center transition-colors ${
+                            canAfford
+                              ? 'bg-green-600 hover:bg-green-700 text-white'
+                              : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                          }`}
+                          onClick={() => canAfford && handlePurchase(selectedProperty)}
+                          disabled={!canAfford}
+                          aria-disabled={!canAfford}
+                        >
+                          <div className="text-3xl font-bold">
+                            {formatCurrency(selectedProperty.totalPrice)}
+                          </div>
+                          <div className={`text-sm mt-2 ${canAfford ? 'text-green-100' : 'text-gray-200'}`}>
+                            Total purchase price for {selectedProperty.hectares} hectares
+                          </div>
+                          <div className={`text-xs mt-1 ${canAfford ? 'text-green-200' : 'text-gray-300'}`}>
+                            {formatCurrency(selectedProperty.landValue)} per hectare
+                          </div>
+                        </button>
+                      );
+                    })()}
                   </div>
 
-                  {/* Purchase Button */}
-                  <div className="pt-4">
-                    <Button 
-                      className={`w-full text-white ${
-                        (gameState.money || 0) >= selectedProperty.totalPrice
-                          ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-gray-600 cursor-not-allowed'
-                      }`}
-                      onClick={() => handlePurchase(selectedProperty)}
-                      disabled={(gameState.money || 0) < selectedProperty.totalPrice}
-                    >
-                      {(gameState.money || 0) >= selectedProperty.totalPrice
-                        ? `Purchase ${selectedProperty.name}`
-                        : 'Insufficient Funds'
-                      }
-                    </Button>
-                    {(gameState.money || 0) < selectedProperty.totalPrice && (
-                      <p className="text-xs text-red-400 text-center mt-2">
+                  {/* Insufficient funds note */}
+                  {(gameState.money || 0) < selectedProperty.totalPrice && (
+                    <div className="pt-2">
+                      <p className="text-xs text-red-400 text-center">
                         Need {formatCurrency(selectedProperty.totalPrice - (gameState.money || 0))} more
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

@@ -1,6 +1,3 @@
-// Land Search Service
-// Business logic for searching and purchasing land through the activity system
-
 import { Activity, WorkCategory, Aspect } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createActivity } from '../activity/activitymanagers/activityManager';
@@ -10,24 +7,54 @@ import { addTransaction } from '../user/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateTotalWork } from '../activity/workcalculators/workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
-import { 
-  REGION_PRESTIGE_RANKINGS, 
-  COUNTRY_REGION_MAP, 
-  REGION_SOIL_TYPES, 
-  REGION_ASPECT_RATINGS,
-  REGION_ALTITUDE_RANGES,
-  REGION_GRAPE_SUITABILITY,
-  ALL_SOIL_TYPES
-} from '@/lib/constants/vineyardConstants';
-import { 
-  VineyardPurchaseOption,
-  generateVineyardName
-} from './vinyardBuyingService';
+import { REGION_PRESTIGE_RANKINGS, COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { NAMES } from '@/lib/constants/namesConstants';
 import { calculateLandValue } from './vineyardValueCalc';
 import { v4 as uuidv4 } from 'uuid';
 import { probabilityMassInRange, getRandomHectares, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
 
 // (hectare distribution helpers now live in '@/lib/utils/calculator')
+
+/**
+ * Interface for vineyard purchase options (before actual purchase)
+ */
+export interface VineyardPurchaseOption {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  hectares: number;
+  soil: string[];
+  altitude: number;
+  aspect: Aspect;
+  landValue: number; // Price per hectare
+  totalPrice: number; // Total price for the vineyard
+  aspectRating: number; // Aspect rating for display
+  altitudeRating: number; // Altitude rating normalized to regional range (0-1)
+}
+
+/**
+ * Generate a vineyard name based on country and aspect
+ */
+export function generateVineyardName(country: string, aspect: Aspect): string {
+  const isFemaleAspect = ["East", "Southeast", "South", "Southwest"].includes(aspect);
+  const nameData = NAMES[country as keyof typeof NAMES];
+  
+  if (!nameData) {
+    console.error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
+    throw new Error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
+  }
+  
+  // Select appropriate name list based on aspect gender
+  const names = isFemaleAspect ? nameData.firstNames.female : nameData.firstNames.male;
+  
+  // Select a random name
+  const randomIndex = Math.floor(Math.random() * names.length);
+  const selectedName = names[randomIndex];
+  
+  // Construct the name like "[Random Name]'s [Aspect] Vineyard"
+  return `${selectedName}'s ${aspect} Vineyard`;
+}
 
 /**
  * Land search options interface
@@ -640,7 +667,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
     // Create the search activity
     const activityId = await createActivity({
       category: WorkCategory.LAND_SEARCH,
-      title: `Search: ${options.numberOfOptions} propert${options.numberOfOptions > 1 ? 'ies' : 'y'} in ${options.regions.length > 0 ? options.regions.join(', ') : 'accessible regions'}`,
+      title: 'Search for Land',
       totalWork,
       params: {
         searchOptions: options,

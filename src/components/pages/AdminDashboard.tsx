@@ -1,20 +1,13 @@
 import { useState } from 'react';
 import { useLoadingState } from '@/hooks';
 import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, LandBuyingModal } from '../ui';
-import { 
-  Settings, 
-  Users, 
-  AlertTriangle,
-  Trash2,
-} from 'lucide-react';
-import { highscoreService, initializeCustomers, addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, getAllVineyards, purchaseVineyard } from '@/lib/services';
-import { formatCurrency } from '@/lib/utils/utils';
-import { supabase } from '@/lib/database/core/supabase'; // Admin operations - direct DB access acceptable for cleanup
-import { insertPrestigeEvent } from '@/lib/database';
-import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
-import { v4 as uuidv4 } from 'uuid';
+import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
+import { getGameState } from '@/lib/services';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
-import { generateVineyardPurchaseOptions, VineyardPurchaseOption } from '@/lib/services/vineyard/vinyardBuyingService';
+import { VineyardPurchaseOption } from '@/lib/services/vineyard/landSearchService';
+import {
+  adminAddGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminQuickLandBuyGenerateOptions, adminQuickLandBuyPurchase, adminClearAllAchievements, adminFullDatabaseReset
+} from '@/lib/services/admin/adminService';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces
@@ -30,78 +23,30 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   // Cheat functions (for development/testing)
   const handleAddGold = () => withLoading(async () => {
     const amount = parseFloat(goldAmount) || 10000;
-    await addTransaction(amount, `Admin: Added ${formatCurrency(amount)}`, 'admin_cheat');
-
+    await adminAddGoldToCompany(amount);
   });
 
   const handleAddPrestige = () => withLoading(async () => {
     const amount = parseFloat(prestigeAmount) || 100;
-    
-    try {
-      const gameState = getGameState();
-      const currentWeek = calculateAbsoluteWeeks(
-        gameState.week!,
-        gameState.season!,
-        gameState.currentYear!
-      );
-      
-      // Add prestige event using the proper service layer
-      await insertPrestigeEvent({
-        id: uuidv4(),
-        type: 'admin_cheat' as any,
-        amount_base: amount,
-        created_game_week: currentWeek,
-        decay_rate: 0, // Admin prestige doesn't decay
-        source_id: null,
-        payload: {
-          reason: 'Admin cheat',
-          addedAmount: amount
-        }
-      });
-      
-      // Clear prestige cache to force recalculation
-      clearPrestigeCache();
-      await getCurrentPrestige();
-      
-    } catch (error) {
-      console.error('Failed to add prestige event:', error);
-    }
+    await adminAddPrestigeToCompany(amount);
   });
 
   const handleClearAllHighscores = () => withLoading(async () => {
-    const result = await highscoreService.clearHighscores();
-    if (result.success) {
-
-    } else {
-
-    }
+    await adminClearAllHighscores();
   });
 
   const handleClearCompanyValueHighscores = () => withLoading(async () => {
-    const result = await highscoreService.clearHighscores('company_value');
-    if (result.success) {
-
-    } else {
-
-    }
+    await adminClearCompanyValueHighscores();
   });
 
   const handleClearCompanyValuePerWeekHighscores = () => withLoading(async () => {
-    const result = await highscoreService.clearHighscores('company_value_per_week');
-    if (result.success) {
-
-    } else {
-
-    }
+    await adminClearCompanyValuePerWeekHighscores();
   });
 
 
   // Database cleanup functions
   const handleClearAllCompanies = () => withLoading(async () => {
-    const { error } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) throw error;
-
-    
+    await adminClearAllCompanies();
     // Navigate to login and refresh browser
     if (onNavigateToLogin) {
       onNavigateToLogin();
@@ -112,10 +57,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   });
 
   const handleClearAllUsers = () => withLoading(async () => {
-    const { error } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) throw error;
-
-    
+    await adminClearAllUsers();
     // Navigate to login and refresh browser
     if (onNavigateToLogin) {
       onNavigateToLogin();
@@ -125,173 +67,53 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     }, 1000);
   });
 
-  const handleClearAllCompaniesAndUsers = async () => {
-    withLoading(async () => {
-      try {
-        // Clear companies first (due to foreign key constraints)
-        const { error: companiesError } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (companiesError) throw companiesError;
-        
-        // Then clear users
-        const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (usersError) throw usersError;
-
-        
-        // Navigate to login and refresh browser
-        if (onNavigateToLogin) {
-          onNavigateToLogin();
-        }
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } catch (error) {
-        console.error('Error clearing companies and users:', error);
-
-      }
-    });
-  };
+  const handleClearAllCompaniesAndUsers = () => withLoading(async () => {
+    await adminClearAllCompaniesAndUsers();
+    // Navigate to login and refresh browser
+    if (onNavigateToLogin) {
+      onNavigateToLogin();
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  });
 
 
 
-  const handleRecreateCustomers = async () => {
-    withLoading(async () => {
-      try {
-        // First clear all existing customers
-        const { error: deleteError } = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (deleteError) throw deleteError;
-        
-        // Then recreate them
-        await initializeCustomers(1); // Initialize with base prestige
-        
+  const handleRecreateCustomers = () => withLoading(async () => {
+    await adminRecreateCustomers();
+  });
 
-      } catch (error) {
-        console.error('Error recreating customers:', error);
-
-      }
-    });
-  };
-
-  const handleGenerateTestOrder = async () => {
-    withLoading(async () => {
-      try {
-        const result = await generateSophisticatedWineOrders();
-        if (result.totalOrdersCreated > 0) {
-          console.log(`Generated ${result.totalOrdersCreated} order(s) from ${result.customersGenerated} customer(s)`);
-        } else {
-          console.log('No orders generated (insufficient prestige or no wines available)');
-        }
-      } catch (error) {
-        console.error('Error generating test order:', error);
-      }
-    });
-  };
+  const handleGenerateTestOrder = () => withLoading(async () => {
+    await adminGenerateTestOrders();
+  });
 
   const handleQuickLandBuy = () => withLoading(async () => {
-    try {
-      const existingVineyards = await getAllVineyards();
-      const options = generateVineyardPurchaseOptions(5, existingVineyards);
-      setQuickLandOptions(options);
-      setShowQuickLandBuy(true);
-    } catch (error) {
-      console.error('Error generating quick land options:', error);
-    }
+    const options = await adminQuickLandBuyGenerateOptions(5);
+    setQuickLandOptions(options);
+    setShowQuickLandBuy(true);
   });
 
   const handleQuickLandPurchase = (option: VineyardPurchaseOption) => withLoading(async () => {
-    await purchaseVineyard(option);
+    await adminQuickLandBuyPurchase(option);
   });
 
 
-  const handleClearAllAchievements = async () => {
-    withLoading(async () => {
-      try {
-        const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (error) throw error;
-
-      } catch (error) {
-        console.error('Error clearing achievements:', error);
-
-      }
-    });
-  };
+  const handleClearAllAchievements = () => withLoading(async () => {
+    await adminClearAllAchievements();
+  });
 
 
-  const handleFullDatabaseReset = async () => {
-    withLoading(async () => {
-      try {
-        // Clear all tables in the correct order to respect foreign key constraints
-        // Delete child tables first, then parent tables
-        const tables = [
-          'relationship_boosts',
-          'wine_orders', 
-          'wine_batches',
-          'vineyards',
-          'activities',
-          'achievements',
-          'user_settings',
-          'highscores',
-          'prestige_events',
-          'transactions',
-          'company_customers',
-          'notifications',  // Clear notifications before companies (it references companies)
-          'companies',
-          'users',
-          'customers',
-          'wine_log'
-        ];
-
-        const errors: string[] = [];
-        
-        // Clear all tables - use DELETE with proper ordering for foreign keys
-        for (const table of tables) {
-          try {
-            let deleteQuery;
-            
-            // Handle different table structures
-            if (table === 'company_customers') {
-              // company_customers has composite primary key, no single id column
-              deleteQuery = supabase.from(table).delete().neq('company_id', '00000000-0000-0000-0000-000000000000');
-            } else {
-              // All other tables have id columns - delete all records
-              deleteQuery = supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            }
-            
-            const { error } = await deleteQuery;
-            if (error) {
-              const errorMsg = `Error clearing table ${table}: ${error.message}`;
-              console.error(errorMsg, error);
-              errors.push(errorMsg);
-            }
-          } catch (err) {
-            const errorMsg = `Exception clearing table ${table}: ${err}`;
-            console.error(errorMsg, err);
-            errors.push(errorMsg);
-          }
-        }
-
-        // Check if there were any errors
-        if (errors.length > 0) {
-
-          console.error('Full database reset errors:', errors);
-          return; // Don't refresh if there were errors
-        }
-
-
-        
-        // Only navigate and refresh if no errors occurred
-        if (onNavigateToLogin) {
-          onNavigateToLogin();
-        }
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000); // Increased delay to give time to see success message
-      } catch (error) {
-        const errorMessage = `Critical error during full database reset: ${error}`;
-        console.error(errorMessage, error);
-
-      }
-    });
-  };
+  const handleFullDatabaseReset = () => withLoading(async () => {
+    await adminFullDatabaseReset();
+    // Navigate to login and refresh browser
+    if (onNavigateToLogin) {
+      onNavigateToLogin();
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
+  });
 
   return (
     <div className="space-y-6">

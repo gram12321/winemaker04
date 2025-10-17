@@ -121,6 +121,6 @@ export * from './wine/features/featureDisplayService';
 export * from './wine/features/agingService';
 export { recordBottledWine, getVineyardWineHistory, calculateVineyardStats } from './user/wineLogService';
 export type { VineyardStats } from './user/wineLogService';
-export type { VineyardPurchaseOption } from './vineyard/vinyardBuyingService';
+export type { VineyardPurchaseOption } from './vineyard/landSearchService';
 export * from './activity';
 export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activity/activitymanagers/activityManager';

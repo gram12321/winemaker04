@@ -4,6 +4,33 @@ import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatCurrency } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
 import { Button } from '@/components/ui/shadCN/button';
+import * as SliderPrimitive from '@radix-ui/react-slider';
+
+// Two-thumb slider built on Radix Slider primitives
+const DualSlider: React.FC<{
+  value: [number, number];
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (value: [number, number]) => void;
+}> = ({ value, min, max, step = 1, onChange }) => {
+  return (
+    <SliderPrimitive.Root
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onValueChange={(v) => onChange([v[0] as number, v[1] as number])}
+      className="relative flex items-center select-none touch-none w-full h-6"
+    >
+      <SliderPrimitive.Track className="bg-gray-700 relative grow rounded-full h-2">
+        <SliderPrimitive.Range className="absolute bg-green-500 rounded-full h-full" />
+      </SliderPrimitive.Track>
+      <SliderPrimitive.Thumb className="block w-4 h-4 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400" />
+      <SliderPrimitive.Thumb className="block w-4 h-4 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400" />
+    </SliderPrimitive.Root>
+  );
+};
 // import { Badge } from '@/components/ui/shadCN/badge';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
@@ -304,7 +331,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
             {/* Middle Column - Combined Controls */}
             <div className="space-y-6">
-              {/* Hectare Range */}
+            {/* Hectare Range */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Hectare Range ({formatNumber(options.hectareRange[0], { smartDecimals: true, smartMaxDecimals: true })} - {formatNumber(options.hectareRange[1], { smartDecimals: true, smartMaxDecimals: true })} hectares)
@@ -323,38 +350,17 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   const maxSlider = toSlider(options.hectareRange[1]);
                   return (
                     <div className="space-y-2">
-                      <input
-                        type="range"
-                        min={0}
-                        max={SLIDER_MAX}
-                        step={1}
-                        value={minSlider}
-                        onChange={(e) => {
-                          const s = Number(e.target.value);
-                          const newMin = toHa(Math.min(s, maxSlider));
-                          setOptions(prev => ({
-                            ...prev,
-                            hectareRange: [newMin, Math.max(newMin, prev.hectareRange[1])]
-                          }));
-                        }}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                      <input
-                        type="range"
-                        min={0}
-                        max={SLIDER_MAX}
-                        step={1}
-                        value={maxSlider}
-                        onChange={(e) => {
-                          const s = Number(e.target.value);
-                          const newMax = toHa(Math.max(s, minSlider));
-                          setOptions(prev => ({
-                            ...prev,
-                            hectareRange: [Math.min(prev.hectareRange[0], newMax), newMax]
-                          }));
-                        }}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                      />
+                    <DualSlider
+                      value={[minSlider, maxSlider]}
+                      min={0}
+                      max={SLIDER_MAX}
+                      step={1}
+                      onChange={([sMin, sMax]) => {
+                        const newMin = toHa(Math.min(sMin, sMax));
+                        const newMax = toHa(Math.max(sMin, sMax));
+                        setOptions(prev => ({ ...prev, hectareRange: [newMin, newMax] }));
+                      }}
+                    />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
                         <span>{formatNumber(MIN_HA, { smartMaxDecimals: true })} ha</span>
                         <span>{formatNumber(MAX_HA)} ha</span>
@@ -364,7 +370,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 })()}
               </div>
 
-              {/* Altitude Range (normalized 0-1) */}
+            {/* Altitude Range (normalized 0-1) */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Altitude Range (normalized, optional)
@@ -377,32 +383,17 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   const currentMax = options.altitudeRange?.[1] ?? MAX_N;
                   return (
                     <div className="space-y-2">
-                      <input
-                        type="range"
-                        min={MIN_N}
-                        max={MAX_N}
-                        step={STEP}
-                        value={currentMin}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          const newMin = Math.min(v, currentMax);
-                          setOptions(prev => ({ ...prev, altitudeRange: [newMin, prev.altitudeRange?.[1] ?? MAX_N] }));
-                        }}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                      <input
-                        type="range"
-                        min={MIN_N}
-                        max={MAX_N}
-                        step={STEP}
-                        value={currentMax}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          const newMax = Math.max(v, currentMin);
-                          setOptions(prev => ({ ...prev, altitudeRange: [prev.altitudeRange?.[0] ?? MIN_N, newMax] }));
-                        }}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                      />
+                    <DualSlider
+                      value={[currentMin, currentMax]}
+                      min={MIN_N}
+                      max={MAX_N}
+                      step={STEP}
+                      onChange={([minVal, maxVal]) => {
+                        const newMin = Math.min(minVal, maxVal);
+                        const newMax = Math.max(minVal, maxVal);
+                        setOptions(prev => ({ ...prev, altitudeRange: [newMin, newMax] }));
+                      }}
+                    />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
                         <span>{Math.round((currentMin) * 100)}%</span>
                         <span>{Math.round((currentMax) * 100)}%</span>

@@ -25,6 +25,42 @@
 
 ---
 
+## Version 0.0311 - Buyland Fixes & 1000→0-1 Scale Function
+**Date:** 2025-10-17 | **Commit:** daf1ea72 | **Stats:** 794 additions, 310 deletions
+- `src/lib/services/vineyard/landSearchService.ts` - Refined generation logic, affordability checks, and filtering (298 additions, 135 deletions)
+- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` - UI/UX fixes, range handling, validation (190 additions, 82 deletions)
+- `src/lib/utils/calculator.ts` - Introduced 1000→0-1 scaling function with asymmetric curve options (84 additions, 48 deletions)
+- `src/lib/services/wine/winescore/wineScoreCalculation.ts` - Score normalization updates (29 additions, 5 deletions)
+- `src/components/pages/winepedia/MathematicalModelsTab.tsx` - Added docs and examples for new scaling (111 additions)
+- Misc: prestige calculator, customer generation, inventory service small fixes
+
+---
+
+## Version 0.031 - Buyland System
+**Date:** 2025-10-16 | **Commit:** d1c66d59 | **Stats:** 2037 additions, 48 deletions
+- **NEW FILE:** `src/lib/services/vineyard/landSearchService.ts` (556 lines) - Land generation, scoring, pricing, filters
+- **NEW FILE:** `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` (592 lines) - Configurable search with live previews
+- **NEW FILE:** `src/components/ui/modals/activitymodals/LandSearchResultsModal.tsx` (330 lines) - Results list, details, purchase flow
+- `src/components/pages/Vineyard.tsx` - Integrated Buyland entrypoint and state (26 additions, 22 deletions)
+- `src/lib/constants/vineyardConstants.ts` - Added market and terrain params for search (8 additions, 7 deletions)
+- `src/lib/constants/financeConstants.ts` - Finance hooks for land affordability (2 additions)
+- `src/lib/constants/activityConstants.ts` - Land search activity constants (8 additions)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Activity integration (5 additions)
+- `src/lib/utils/utils.ts` - Utility helpers for land search presentation (20 additions, 3 deletions)
+- `src/lib/types/types.ts` - Types for land parcels and search criteria (23 additions)
+- `src/components/pages/AdminDashboard.tsx` - Admin tools for land system (45 additions)
+- Docs: `docs/PROJECT_INFO.md` added (360 lines), `readme.md` updates (22 additions)
+
+---
+
+## Version 0.03a - Docs Cleanup & Service Reorg
+**Date:** 2025-10-15 | **Commit:** 00647a18 | **Stats:** 88 additions, 625 deletions
+- Removed outdated wine feature docs (design/implementation summaries) and oxidation analysis
+- Renamed/cleaned wine services (agingService, inventoryService), feature badge path
+- Minor tweaks across services and UI barrel exports
+- Updated versionlog with prior entries
+
+---
 ## Version 0.03 - Vineyard Health System & Clearing/Uprooting
 **Date:** 2025-10-15 | **Commit:** a2dca8df | **Stats:** 1714 additions, 117 deletions
 

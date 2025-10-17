@@ -8,7 +8,7 @@ import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY } from '../../constants';
 import { addTransaction } from '../user/financeService';
-import { VineyardPurchaseOption, convertPurchaseOptionToVineyard } from './vinyardBuyingService';
+import { VineyardPurchaseOption } from './landSearchService';
 import { getGameState } from '../core/gameState';
 import { formatCurrency } from '../../utils/utils';
 import { notificationService } from '../../../components/layout/NotificationCenter';
@@ -19,6 +19,34 @@ import { NotificationCategory } from '../../types/types';
 function getRandomFromObject<T>(obj: Record<string, T>): string {
   const keys = Object.keys(obj);
   return keys[Math.floor(Math.random() * keys.length)];
+}
+
+// Convert a vineyard purchase option to a full Vineyard object (domain-level, used by purchase flow)
+function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<Vineyard, 'id'> {
+  // Generate realistic health with some variation (0.4 to 0.8)
+  const baseHealth = DEFAULT_VINEYARD_HEALTH;
+  const healthVariation = (Math.random() - 0.5) * 0.4; // ±20% variation
+  const vineyardHealth = Math.max(0.3, Math.min(0.9, baseHealth + healthVariation));
+
+  return {
+    name: option.name,
+    country: option.country,
+    region: option.region,
+    hectares: option.hectares,
+    grape: null,
+    vineAge: null,
+    soil: option.soil,
+    altitude: option.altitude,
+    aspect: option.aspect,
+    density: 0, // No density until planted
+    vineyardHealth,
+    landValue: option.landValue,
+    vineyardTotalValue: option.totalPrice,
+    status: 'Barren',
+    vineyardPrestige: 0,
+    vineYield: 0.02,
+    ripeness: 0
+  };
 }
 
 function getRandomAspect(): Aspect {

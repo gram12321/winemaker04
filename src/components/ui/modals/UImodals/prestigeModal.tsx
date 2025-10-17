@@ -251,6 +251,9 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
       }
     });
 
+    // Always start the Achievements section collapsed by default
+    initialCollapsed.add('company_achievement');
+
     // Auto-collapse vineyard sections with more than 3 items
     vineyards.forEach((vineyard) => {
       const sectionId = `vineyard_${vineyard.id}`;
