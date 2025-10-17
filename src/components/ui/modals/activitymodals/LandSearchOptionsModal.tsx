@@ -102,7 +102,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
       .map(r => r.region)
       .filter(region => !excludedRegions.includes(region));
     
-    const redistributed = calculateRedistributedProbabilities(accessible, includedRegions);
+    const redistributed = calculateRedistributedProbabilities(accessible, includedRegions, gameState.prestige || 0);
     setRedistributedProbabilities(redistributed);
 
     // New: compute selected regions and total probability
