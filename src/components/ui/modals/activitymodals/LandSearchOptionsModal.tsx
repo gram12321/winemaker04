@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LandSearchOptions, calculateSearchCost, calculateSearchWork, getAccessibleRegionsWithMaxCaps, calculateRedistributedProbabilities } from '@/lib/services/vineyard/landSearchService';
+import { LandSearchOptions, calculateSearchCost, calculateSearchWork, getAccessibleRegions, calculateRegionDistribution } from '@/lib/services/vineyard/landSearchService';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatCurrency } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
@@ -87,33 +87,31 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
     const weeks = Math.ceil(totalWork / 100); // Assuming 100 work units per week
     const timeEstimate = `${weeks} week${weeks === 1 ? '' : 's'}`;
 
-    // Get accessible regions with max probability caps, filtered by grape suitability and soil types
-    const accessible = getAccessibleRegionsWithMaxCaps(
+    // Get accessible regions, filtered by grape suitability and soil types
+    const accessible = getAccessibleRegions(
       gameState.prestige || 0, 
       options.grapeVarieties || [], 
       options.minGrapeSuitability || 0,
       options.soilTypes || []
     );
     
-    // Calculate redistributed probabilities - options.regions contains EXCLUDED regions
-    // So we want to use all accessible regions EXCEPT the excluded ones
+    // Filter by selected regions - options.regions contains EXCLUDED regions
     const excludedRegions = options.regions;
-    const includedRegions = accessible
-      .map(r => r.region)
-      .filter(region => !excludedRegions.includes(region));
+    const includedRegions = accessible.filter(region => !excludedRegions.includes(region));
     
-    const redistributed = calculateRedistributedProbabilities(accessible, includedRegions, gameState.prestige || 0);
-    setRedistributedProbabilities(redistributed);
+    // Calculate region distribution
+    const distribution = calculateRegionDistribution(includedRegions, gameState.prestige || 0);
+    setRedistributedProbabilities(distribution.probabilities);
 
     // New: compute selected regions and total probability
-    const selectedRegions = redistributed.length;
-    const totalProbability = redistributed.reduce((sum, r) => sum + (r.probability || 0), 0);
+    const selectedRegions = distribution.probabilities.length;
+    const totalProbability = distribution.totalSum;
 
     setPreviewStats({
       totalCost,
       totalWork,
       timeEstimate,
-      accessibleRegions: redistributed.length,
+      accessibleRegions: distribution.probabilities.length,
       selectedRegions,
       totalProbability
     });
@@ -221,10 +219,10 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 <div className="space-y-4">
                   {(() => {
                     // Get ALL regions (not filtered by grape suitability or soil) to show them all
-                    const allRegions = getAccessibleRegionsWithMaxCaps(gameState.prestige || 0);
+                    const allRegions = getAccessibleRegions(gameState.prestige || 0);
                     
                     // Get accessible regions filtered by grape suitability and soil types
-                    const accessible = getAccessibleRegionsWithMaxCaps(
+                    const accessible = getAccessibleRegions(
                       gameState.prestige || 0, 
                       options.grapeVarieties || [], 
                       options.minGrapeSuitability || 0,
@@ -232,27 +230,27 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     );
                     
                     // Group ALL regions by country maintaining original order
-                    const regionsByCountry = allRegions.reduce((acc, regionInfo) => {
+                    const regionsByCountry = allRegions.reduce((acc, region) => {
                       // Find country for this region
                       let country = '';
                       for (const [countryName, regions] of Object.entries(COUNTRY_REGION_MAP)) {
-                        if ((regions as any).includes(regionInfo.region)) {
+                        if ((regions as any).includes(region)) {
                           country = countryName;
                           break;
                         }
                       }
                       
                       if (!acc[country]) acc[country] = [];
-                      acc[country].push(regionInfo);
+                      acc[country].push(region);
                       return acc;
-                    }, {} as Record<string, typeof allRegions>);
+                    }, {} as Record<string, string[]>);
 
                     // Filter out countries where all regions are excluded (manually OR by grape suitability OR by soil)
                     const filteredCountries = Object.entries(regionsByCountry).filter(([country]) => {
                       const countryRegions = [...(COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP] as readonly string[])];
                       const manuallyExcludedRegions = countryRegions.filter(region => options.regions.includes(region));
                       const grapeAndSoilFilteredRegions = countryRegions.filter(region => 
-                        !accessible.find(r => r.region === region)
+                        !accessible.includes(region)
                       );
                       const totalExcludedRegions = new Set([...manuallyExcludedRegions, ...grapeAndSoilFilteredRegions]).size;
                       return totalExcludedRegions < countryRegions.length; // Show country if not all regions are excluded
@@ -264,19 +262,19 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                           {country}
                         </div>
                         <div className="grid grid-cols-5 gap-1">
-                          {regions.map((regionInfo) => {
+                          {regions.map((region) => {
                             // Check if region is manually excluded
-                            const isManuallyExcluded = options.regions.includes(regionInfo.region);
+                            const isManuallyExcluded = options.regions.includes(region);
                             
                             // Check if region is filtered out by grape suitability or soil types
-                            const isGrapeOrSoilFiltered = !accessible.find(r => r.region === regionInfo.region);
+                            const isGrapeOrSoilFiltered = !accessible.includes(region);
                             
                             // Region is "excluded" if either manually excluded OR grape/soil filtered
                             const isExcluded = isManuallyExcluded || isGrapeOrSoilFiltered;
                             
                             // For excluded regions, show 0% probability
                             // For included regions, use redistributed probability
-                            const redistributedRegion = redistributedProbabilities.find(r => r.region === regionInfo.region);
+                            const redistributedRegion = redistributedProbabilities.find(r => r.region === region);
                             const probability = isExcluded ? 0 : (redistributedRegion ? redistributedRegion.probability : 0);
                             
                             const probabilityColors = probability > 0.5 
@@ -287,7 +285,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
                             return (
                               <div 
-                                key={regionInfo.region} 
+                                key={region} 
                                 className={`p-2 rounded border-dashed cursor-pointer transition-all duration-200 ${
                                   isExcluded 
                                     ? 'bg-gray-600 border-gray-500 text-gray-400 opacity-60' 
@@ -298,14 +296,14 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                                   if (!isGrapeOrSoilFiltered) {
                                     // Clicking excludes/includes the region in the search
                                     const newRegions = isManuallyExcluded
-                                      ? options.regions.filter(r => r !== regionInfo.region)
-                                      : [...options.regions, regionInfo.region];
+                                      ? options.regions.filter(r => r !== region)
+                                      : [...options.regions, region];
                                     setOptions(prev => ({ ...prev, regions: newRegions }));
                                   }
                                 }}
                               >
                                 <div className="text-center">
-                                  <div className="text-xs font-medium mb-1">{regionInfo.region}</div>
+                                  <div className="text-xs font-medium mb-1">{region}</div>
                                   <div className={`text-xs px-1.5 py-0.5 rounded ${
                                     isExcluded ? 'bg-gray-500 text-gray-300' : probabilityColors
                                   }`}>

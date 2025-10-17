@@ -11,7 +11,7 @@ import { REGION_PRESTIGE_RANKINGS, COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION
 import { NAMES } from '@/lib/constants/namesConstants';
 import { calculateLandValue } from './vineyardValueCalc';
 import { v4 as uuidv4 } from 'uuid';
-import { probabilityMassInRange, getRandomHectares, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
+import { probabilityMassInRange, getRandomHectares, NormalizeScrewed1000To01WithTail, calculateInvertedSkewedMultiplier } from '@/lib/utils/calculator';
 
 /**
  * Interface for vineyard purchase options (before actual purchase)
@@ -363,137 +363,81 @@ function getRegionPrestige(region: string): number {
 
 
 /**
- * Calculate prestige-based weight for a region
- * Higher weight = more likely to appear (low prestige regions get higher weights)
- * This is the core prestige calculation used for both weighting and capping
+ * Calculate region distribution with prestige-based redistribution
+ * Returns probabilities for each region and total sum
  */
-export function calculatePrestigeWeight(regionPrestige: number, companyPrestige: number): number {
+export function calculateRegionDistribution(
+  regions: string[],
+  companyPrestige: number
+): { probabilities: Array<{region: string, probability: number}>, totalSum: number } {
+  if (regions.length === 0) {
+    return { probabilities: [], totalSum: 0 };
+  }
+  
   const normalizedCompanyPrestige = NormalizeScrewed1000To01WithTail(companyPrestige);
   
-  // Prestige ratio: company prestige / region prestige
-  // Higher ratio = company is more prestigious relative to region = higher weight
-  const prestigeRatio = normalizedCompanyPrestige / regionPrestige;
+  // Step 1: Start with equal distribution (100% / number of regions)
+  const equalProbability = 1.0 / regions.length;
   
-  // Use exponential scaling: weight = (prestigeRatio)^3 * 0.1
-  // This gives low prestige regions higher weights, high prestige regions lower weights
-  const weight = Math.pow(Math.max(0, prestigeRatio), 3) * 0.1;
-  
-  return weight;
-}
-
-/**
- * Calculate max probability cap for a region based on company prestige vs region prestige
- * This serves as the maximum probability cap for any region
- */
-export function calculateMaxRegionProbability(regionPrestige: number, companyPrestige: number): number {
-  const weight = calculatePrestigeWeight(regionPrestige, companyPrestige);
-  
-  // Cap at reasonable maximum (40% for very high prestige companies)
-  return Math.min(weight, 0.4);
-}
-
-/**
- * Get accessible regions with max probability caps
- */
-export function getAccessibleRegionsWithMaxCaps(
-  companyPrestige: number, 
-  grapeVarieties: string[] = [], 
-  minGrapeSuitability: number = 0,
-  selectedSoils: string[] = []
-): Array<{region: string, maxProbability: number}> {
-  const accessibleRegions: Array<{region: string, maxProbability: number}> = [];
-  
-  // Get all regions from all countries
-  for (const country of Object.keys(COUNTRY_REGION_MAP)) {
-      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
-      for (const region of regions as any) {
-      // Filter by grape suitability requirement
-      if (!meetsGrapeSuitabilityRequirement(country, region, grapeVarieties, minGrapeSuitability)) {
-        continue;
-      }
-      
-      // Filter by soil requirement
-      if (!meetsSoilRequirement(country, region, selectedSoils)) {
-        continue;
-      }
-      
-      const regionPrestige = getRegionPrestige(region);
-      const maxProbability = calculateMaxRegionProbability(regionPrestige, companyPrestige);
-      
-      // Include regions that meet both requirements
-      accessibleRegions.push({ region, maxProbability });
-    }
-  }
-  
-  // Sort by max probability (highest first)
-  return accessibleRegions.sort((a, b) => b.maxProbability - a.maxProbability);
-}
-
-/**
- * Calculate redistributed probabilities when regions are filtered
- * @param allRegions All available regions with max probability caps
- * @param selectedRegions Array of selected region names (empty = all regions)
- * @param companyPrestige Company prestige for prestige-based weighting
- * @returns Array of regions with redistributed probabilities that sum to 100%
- */
-export function calculateRedistributedProbabilities(
-  allRegions: Array<{region: string, maxProbability: number}>,
-  selectedRegions: string[] = [],
-  companyPrestige: number = 0
-): Array<{region: string, probability: number}> {
-  // If no regions selected, use all regions
-  const targetRegions = selectedRegions.length > 0 
-    ? allRegions.filter(r => selectedRegions.includes(r.region))
-    : allRegions;
-  
-  if (targetRegions.length === 0) {
-    return [];
-  }
-  
-  // Step 1: Apply prestige-based redistribution
-  // Low prestige regions get higher probability, high prestige regions get lower
-  const redistributedWeights = targetRegions.map(r => {
-    // Get the region prestige and calculate proper prestige weight
-    const regionPrestige = getRegionPrestige(r.region);
-    const prestigeWeight = calculatePrestigeWeight(regionPrestige, companyPrestige);
+  // Step 2: Apply prestige-based redistribution
+  // Low prestige regions get higher weight, high prestige regions get lower weight
+  const redistributedWeights = regions.map(region => {
+    const regionPrestige = getRegionPrestige(region);
+    
+    // Prestige modifier: low prestige = higher weight
+    // Use regionPrestige (0-1) and companyPrestige (0-1) for less screwing
+    // Make it MORE aggressive by using higher powers
+    const baseModifier = (1 - regionPrestige) * (1 - normalizedCompanyPrestige) + 1;
+    const prestigeModifier = Math.pow(baseModifier, 10); // ^10 makes it much more aggressive
     
     return {
-      region: r.region,
-      weight: prestigeWeight
+      region,
+      weight: equalProbability * prestigeModifier
     };
   });
   
-  // Step 2: Normalize weights to sum to 100%
+  // Step 3: Normalize to sum to 1
   const totalWeight = redistributedWeights.reduce((sum, r) => sum + r.weight, 0);
   const normalizedWeights = redistributedWeights.map(r => ({
     region: r.region,
     probability: r.weight / totalWeight
   }));
   
-  // Step 3: Apply individual region caps and redistribute remainder
+  // Step 4: Apply max region cap AFTER normalization
   const cappedRegions = normalizedWeights.map(r => {
-    const originalRegion = targetRegions.find(tr => tr.region === r.region);
-    const maxCap = originalRegion?.maxProbability || 0;
+    const regionPrestige = getRegionPrestige(r.region);
+    
+    // Use inverted skewed multiplier for unified, non-linear max cap system
+    // Input: (1 - regionPrestige) + normalizedCompanyPrestige
+    // This gives us a value where high prestige regions get low input, low prestige regions get high input
+    const capInput = Math.min(1.0, (1 - regionPrestige) + normalizedCompanyPrestige);
+    
+    // Double inversion: apply calculateInvertedSkewedMultiplier twice
+    // This makes high prestige regions (low input) extremely low, while keeping low prestige regions (high input) high
+    const firstInversion = calculateInvertedSkewedMultiplier(capInput);
+    const secondInversion = calculateInvertedSkewedMultiplier(firstInversion);
+    
+    // Apply power scaling to make high prestige regions even more restrictive
+    // This will make Bourgogne go from 41% to <1%
+    const maxCap = Math.pow(secondInversion, 5) * 0.7; 
     
     return {
       region: r.region,
       probability: Math.min(r.probability, maxCap),
-      maxCap: maxCap
+      maxCap
     };
   });
   
-  // Calculate how much probability was capped
+  // Step 5: Redistribute remainder among uncapped regions
   const totalCapped = cappedRegions.reduce((sum, r) => sum + r.probability, 0);
   const remainder = 1.0 - totalCapped;
   
-  // Step 4: Redistribute remainder among regions that didn't hit their caps
   const uncappedRegions = cappedRegions.filter(r => r.probability < r.maxCap);
   
   if (remainder > 0 && uncappedRegions.length > 0) {
-    // Redistribute remainder proportionally among uncapped regions
     const uncappedWeight = uncappedRegions.reduce((sum, r) => sum + (r.maxCap - r.probability), 0);
     
-    return cappedRegions.map(r => {
+    const finalProbabilities = cappedRegions.map(r => {
       if (r.probability < r.maxCap) {
         const additionalWeight = (r.maxCap - r.probability) / uncappedWeight;
         const additionalProbability = remainder * additionalWeight;
@@ -507,60 +451,91 @@ export function calculateRedistributedProbabilities(
         probability: r.probability
       };
     });
+    
+    const totalSum = finalProbabilities.reduce((sum, r) => sum + r.probability, 0);
+    return { probabilities: finalProbabilities, totalSum };
   }
   
-  // If no remainder or no uncapped regions, return capped probabilities
-  return cappedRegions.map(r => ({
-    region: r.region,
-    probability: r.probability
-  }));
+  // If no uncapped regions or remainder <= 0, return capped probabilities
+  // This ensures max caps are enforced even when total < 100%
+  const totalSum = cappedRegions.reduce((sum, r) => sum + r.probability, 0);
+  return { 
+    probabilities: cappedRegions.map(r => ({ region: r.region, probability: r.probability })), 
+    totalSum 
+  };
 }
 
 /**
- * Get accessible regions based on company prestige - DEPRECATED: Use getAccessibleRegionsWithMaxCaps instead
+ * Get accessible regions (simplified - no max probability caps)
  */
-export function getAccessibleRegions(companyPrestige: number): Array<{region: string, probability: number}> {
-  const maxCapRegions = getAccessibleRegionsWithMaxCaps(companyPrestige);
-  return calculateRedistributedProbabilities(maxCapRegions, [], companyPrestige);
+export function getAccessibleRegions(
+  _companyPrestige: number, 
+  grapeVarieties: string[] = [], 
+  minGrapeSuitability: number = 0,
+  selectedSoils: string[] = []
+): string[] {
+  const accessibleRegions: string[] = [];
+  
+  // Get all regions from all countries
+  for (const country of Object.keys(COUNTRY_REGION_MAP)) {
+    const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+    for (const region of regions as any) {
+      // Filter by grape suitability requirement
+      if (!meetsGrapeSuitabilityRequirement(country, region, grapeVarieties, minGrapeSuitability)) {
+        continue;
+      }
+      
+      // Filter by soil requirement
+      if (!meetsSoilRequirement(country, region, selectedSoils)) {
+        continue;
+      }
+      
+      // Include regions that meet both requirements
+      accessibleRegions.push(region);
+    }
+  }
+  
+  return accessibleRegions;
 }
+
 
 /**
  * Generate vineyard search results based on criteria
- * INTENDED DESIGN: Always generate exactly X properties with 100% success rate
- * Only fails when sum of maxProbabilities < 100% (insufficient accessible regions)
+ * Uses the new RegionDistribution function for probability calculation
  */
 export function generateVineyardSearchResults(
   options: LandSearchOptions, 
   companyPrestige: number
 ): VineyardPurchaseOption[] {
-  // Get all regions with max probability caps, filtered by grape suitability and soil types
-  const allRegionsWithMaxCaps = getAccessibleRegionsWithMaxCaps(
+  // Get accessible regions (filtered by grape suitability and soil types)
+  const accessibleRegions = getAccessibleRegions(
     companyPrestige, 
     options.grapeVarieties || [], 
     options.minGrapeSuitability || 0,
     options.soilTypes || []
   );
   
-  // Calculate redistributed probabilities based on selected regions
-  const targetRegions = calculateRedistributedProbabilities(allRegionsWithMaxCaps, options.regions, companyPrestige);
+  // Filter by selected regions if any
+  const targetRegions = options.regions.length > 0 
+    ? accessibleRegions.filter(region => !options.regions.includes(region))
+    : accessibleRegions;
   
   if (targetRegions.length === 0) {
     throw new Error('No accessible regions match your criteria');
   }
   
-  // Calculate total probability - should always be 100% (1.0) unless caps prevent it
-  const totalProbability = targetRegions.reduce((sum, region) => sum + region.probability, 0);
+  // Calculate region distribution
+  const distribution = calculateRegionDistribution(targetRegions, companyPrestige);
   
-  // If total probability < 100%, it means the selected regions' caps are insufficient
-  // This is the only valid case where we can't guarantee results
-  if (totalProbability < 0.99) { // Allow small floating point errors
-    throw new Error(`Insufficient accessible regions. Total probability: ${(totalProbability * 100).toFixed(1)}%`);
+  // If total probability < 100%, there's a risk we won't find properties
+  if (distribution.totalSum < 0.99) {
+    throw new Error(`Insufficient accessible regions. Total probability: ${(distribution.totalSum * 100).toFixed(1)}%`);
   }
   
-  // Always generate exactly the requested number of properties using weighted selection
+  // Generate exactly the requested number of properties using weighted selection
   const results: VineyardPurchaseOption[] = [];
   for (let i = 0; i < options.numberOfOptions; i++) {
-    const selectedRegion = selectWeightedRegion(targetRegions);
+    const selectedRegion = selectWeightedRegion(distribution.probabilities);
     const vineyard = generateMatchingVineyard(selectedRegion, options);
     results.push(vineyard);
   }

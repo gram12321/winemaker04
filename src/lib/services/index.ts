@@ -54,10 +54,6 @@ export type {
 export {
   calculateSearchCost as calculateLandSearchCost,
   calculateSearchWork as calculateLandSearchWork,
-  getAccessibleRegions,
-  getAccessibleRegionsWithMaxCaps,
-  calculateRedistributedProbabilities,
-  calculateMaxRegionProbability,
   generateVineyardSearchResults,
   startLandSearch,
   completeLandSearch,
