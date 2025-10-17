@@ -61,7 +61,7 @@ function getRandomAltitude(country: string, region: string): number {
 }
 
 // Generate a vineyard name based on country and aspect
-function generateVineyardName(country: string, aspect: Aspect): string {
+export function generateVineyardName(country: string, aspect: Aspect): string {
   const isFemaleAspect = ["East", "Southeast", "South", "Southwest"].includes(aspect);
   const nameData = NAMES[country as keyof typeof NAMES];
   

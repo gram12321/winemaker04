@@ -7,6 +7,7 @@ interface SelectedWine {
   // Add other properties as needed when integrating
 }
 
+
 // =====Scale Converter Functions =====
 
 /**
@@ -308,6 +309,35 @@ export function calculateSymmetricalMultiplier(
 
 
 // ===== VINEYARD SIZE CALCULATIONS =====
+// ===== HECTARE DISTRIBUTION (Shared) =====
+// Central source of truth for vineyard size distribution used by both generation and cost/work calculations
+export const HECTARE_BUCKETS: Array<{ w: number; min: number; max: number }> = [
+  { w: 0.25, min: 0.05, max: 0.5 },    // Very Small 25%
+  { w: 0.35, min: 0.5,  max: 2.5 },    // Small 35%
+  { w: 0.28, min: 2.5,  max: 5 },      // Medium 28%
+  { w: 0.07, min: 5,    max: 10 },     // Large 7%
+  { w: 0.03, min: 10,   max: 20 },     // Very Large 3%
+  { w: 0.014, min: 20,  max: 100 },    // Extra Large 1.4%
+  { w: 0.005, min: 100, max: 500 },    // Ultra Large 0.5%
+  { w: 0.001, min: 500, max: 2000 }    // Massive 0.1%
+];
+
+export function probabilityMassInRange(minHa: number, maxHa: number): number {
+  const min = Math.max(0.05, Math.min(minHa, 2000));
+  const max = Math.max(min, Math.min(maxHa, 2000));
+  let mass = 0;
+  for (const b of HECTARE_BUCKETS) {
+    const overlapMin = Math.max(min, b.min);
+    const overlapMax = Math.min(max, b.max);
+    if (overlapMax > overlapMin) {
+      const bucketSpan = b.max - b.min;
+      const overlapSpan = overlapMax - overlapMin;
+      mass += b.w * (overlapSpan / bucketSpan);
+    }
+  }
+  return Math.max(0, Math.min(1, mass));
+}
+
 
 /**
  * Generate random vineyard size in hectares with realistic distribution
@@ -316,30 +346,15 @@ export function calculateSymmetricalMultiplier(
  * @returns Random vineyard size in hectares
  */
 export function getRandomHectares(): number {
-  const rand = Math.random() * 100;
-  let hectares;
-
-  if (rand < 25) { // Very Small: 25%
-    hectares = 0.05 + Math.random() * 0.45; // 0.05-0.5 hectares
-  } else if (rand < 60) { // Small: 35%
-    hectares = 0.5 + Math.random() * 2; // 0.5-2.5 hectares
-  } else if (rand < 88) { // Medium: 28%
-    hectares = 2.5 + Math.random() * 2.5; // 2.5-5 hectares
-  } else if (rand < 95) { // Large: 7%
-    hectares = 5 + Math.random() * 5; // 5-10 hectares
-  } else if (rand < 98) { // Very Large: 3%
-    hectares = 10 + Math.random() * 10; // 10-20 hectares
-  } else if (rand < 99.4) { // Extra Large: 1.4%
-    hectares = 20 + Math.random() * 80; // 20-100 hectares
-  } else if (rand < 99.9) { // Ultra Large: 0.5%
-    hectares = 100 + Math.random() * 400; // 100-500 hectares
-  } else if (rand < 100) { // Massive: 0.1%
-    hectares = 500 + Math.random() * 1500; // 500-2000 hectares
-  } else { // Fallback to medium size
-    hectares = 2.5 + Math.random() * 2.5; // 2.5-5 hectares
+  // Pick a bucket by cumulative weights
+  const totalW = HECTARE_BUCKETS.reduce((s, b) => s + b.w, 0);
+  let r = Math.random() * totalW;
+  let chosen = HECTARE_BUCKETS[HECTARE_BUCKETS.length - 1];
+  for (const b of HECTARE_BUCKETS) {
+    if (r < b.w) { chosen = b; break; }
+    r -= b.w;
   }
-
-  // Ensure we return a number, not a string
+  const hectares = chosen.min + Math.random() * (chosen.max - chosen.min);
   return Number(hectares.toFixed(2));
 }
 
@@ -372,31 +387,6 @@ export function vineyardAgePrestigeModifier(vineAge: number): number {
     return 1.0;
   }
 }
-
-// ===== BASE PRICE CALCULATIONS =====
-
-/**
- * Calculate base wine price using land value and prestige
- * Now uses real normalized values instead of placeholders
- * 
- * @param landValue - Land value in euros per hectare
- * @param prestige - Prestige value (0-1 scale)
- * @param baseRate - Base rate per bottle (default: 25 from constants)
- * @returns Base price per bottle
- */
-export function calculateBaseWinePrice(
-  landValue: number, 
-  prestige: number, 
-  baseRate: number = 25
-): number {
-  // Normalize land value to 0-1 scale using the same constant as prestige calculation
-  const normalizedLandValue = landValue / 200000; // Using same constant as VINEYARD_PRESTIGE_CONSTANTS.LAND_VALUE_NORMALIZATION
-  
-  // Base Price = (Normalized Land Value + Prestige) × Base Rate
-  // This creates a price range based on both land value and prestige
-  return (normalizedLandValue + prestige) * baseRate;
-}
-
 
 // ===== ORDER AMOUNT CALCULATIONS =====
 
@@ -503,6 +493,52 @@ export function calculateOrderAmount(
   }
   
   return amountAdjustment;
+}
+
+// ===== PRESTIGE NORMALIZATION =====
+
+/**
+ * Normalize prestige values from 0-1000+ range to 0-1 scale with tail squashing
+ * Designed for realistic prestige distribution:
+ * - Most companies: 0.1-10 prestige (maps to ~0.1-0.7)
+ * - Some companies: 10-100 prestige (maps to ~0.7-0.9) 
+ * - Few companies: 100-1000 prestige (maps to ~0.9-0.98)
+ * - Exceptional: >1000 prestige (uses tail squash to prevent hard 1.0)
+ * 
+ * @param prestige - Prestige value to normalize
+ * @returns Normalized value between 0 and 1 (never quite reaches 1.0)
+ */
+export function NormalizeScrewed1000To01WithTail(prestige: number): number {
+  const safePrestige = Math.max(0, prestige || 0);
+  
+  let normalized: number;
+  
+  if (safePrestige <= 10) {
+    // Most companies: 0.1-10 prestige → 0.1-0.7 (linear with slight curve)
+    const ratio = safePrestige / 10;
+    normalized = 0.1 + (0.6 * Math.pow(ratio, 0.8)); // Slight curve upward
+  } else if (safePrestige <= 100) {
+    // Some companies: 10-100 prestige → 0.7-0.9 (logarithmic)
+    const ratio = (safePrestige - 10) / 90;
+    normalized = 0.7 + (0.2 * Math.log(1 + 3 * ratio) / Math.log(4)); // Logarithmic growth
+  } else if (safePrestige <= 1000) {
+    // Few companies: 100-1000 prestige → 0.9-0.98 (very slow growth)
+    const ratio = (safePrestige - 100) / 900;
+    normalized = 0.9 + (0.08 * Math.pow(ratio, 0.5)); // Square root growth
+  } else {
+    // Exceptional cases: >1000 prestige → 0.98+ (use tail squash)
+    const excess = safePrestige - 1000;
+    const excessRatio = Math.min(excess / 1000, 1); // Cap at 2000 for calculation
+    normalized = 0.98 + (0.02 * excessRatio);
+  }
+  
+  // Use squashNormalizeTail only for very high prestige (>1000) to prevent hard 1.0
+  if (safePrestige > 1000) {
+    const result = squashNormalizeTail(normalized, 0.98, 0.999, 5);
+    return result;
+  }
+  
+  return Math.min(0.999, Math.max(0.001, normalized));
 }
 
 // ===== EXPORT TYPES =====

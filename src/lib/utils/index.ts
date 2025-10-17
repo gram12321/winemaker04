@@ -5,7 +5,7 @@ export { cn, formatNumber, formatCurrency, formatDate, formatGameDate, formatGam
 export { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, ChevronLeftIcon, getChevronIcon, getChevronIconComponent, ICON_SIZES, type IconSize, getSpecializationIcon, EMOJI_OPTIONS, NAVIGATION_EMOJIS, STATUS_EMOJIS, QUALITY_EMOJIS, SEASON_EMOJIS, QUALITY_FACTOR_EMOJIS } from './icons';
 
 // Calculators and game formulas
-export { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateAsymmetricalScaler01, getRandomHectares, vineyardAgePrestigeModifier, calculateBaseWinePrice, calculateSymmetricalMultiplier, calculateOrderAmount } from './calculator';
+export { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateAsymmetricalScaler01, getRandomHectares, vineyardAgePrestigeModifier, calculateSymmetricalMultiplier, calculateOrderAmount } from './calculator';
 
 // Company and database utilities
 export { getCurrentCompanyId, getCompanyQuery } from './companyUtils';

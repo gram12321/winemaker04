@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { LandSearchOptions, calculateSearchCost, calculateSearchWork, getAccessibleRegionsWithMaxCaps, calculateRedistributedProbabilities } from '@/lib/services/vineyard/landSearchService';
-import { ASPECTS } from '@/lib/types/types';
+import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatCurrency } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
 import { Button } from '@/components/ui/shadCN/button';
 // import { Badge } from '@/components/ui/shadCN/badge';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
-import { COUNTRY_REGION_MAP } from '@/lib/constants/vineyardConstants';
+import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 
 interface LandSearchOptionsModalProps {
   isOpen: boolean;
@@ -24,10 +24,11 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
     numberOfOptions: 3,
     regions: [],
     selectedCountries: [],
-    hectareRange: [2, 8],
-    soilTypes: [],
-    aspectPreferences: [],
-    minGrapeSuitability: 0.5
+    hectareRange: [0.05, 2000],
+    soilTypes: [...ALL_SOIL_TYPES],
+    aspectPreferences: [...ASPECTS],
+    minGrapeSuitability: 0,
+    grapeVarieties: []
   });
 
   // Preview calculations for search results
@@ -59,8 +60,13 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
     const weeks = Math.ceil(totalWork / 100); // Assuming 100 work units per week
     const timeEstimate = `${weeks} week${weeks === 1 ? '' : 's'}`;
 
-    // Get accessible regions with max probability caps
-    const accessible = getAccessibleRegionsWithMaxCaps(gameState.prestige || 0);
+    // Get accessible regions with max probability caps, filtered by grape suitability and soil types
+    const accessible = getAccessibleRegionsWithMaxCaps(
+      gameState.prestige || 0, 
+      options.grapeVarieties || [], 
+      options.minGrapeSuitability || 0,
+      options.soilTypes || []
+    );
     
     // Calculate redistributed probabilities - options.regions contains EXCLUDED regions
     // So we want to use all accessible regions EXCEPT the excluded ones
@@ -187,11 +193,19 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 {/* Region Grid */}
                 <div className="space-y-4">
                   {(() => {
-                    // Get all accessible regions with their original order and max probabilities
-                    const accessible = getAccessibleRegionsWithMaxCaps(gameState.prestige || 0);
+                    // Get ALL regions (not filtered by grape suitability or soil) to show them all
+                    const allRegions = getAccessibleRegionsWithMaxCaps(gameState.prestige || 0);
                     
-                    // Group by country maintaining original order
-                    const regionsByCountry = accessible.reduce((acc, regionInfo) => {
+                    // Get accessible regions filtered by grape suitability and soil types
+                    const accessible = getAccessibleRegionsWithMaxCaps(
+                      gameState.prestige || 0, 
+                      options.grapeVarieties || [], 
+                      options.minGrapeSuitability || 0,
+                      options.soilTypes || []
+                    );
+                    
+                    // Group ALL regions by country maintaining original order
+                    const regionsByCountry = allRegions.reduce((acc, regionInfo) => {
                       // Find country for this region
                       let country = '';
                       for (const [countryName, regions] of Object.entries(COUNTRY_REGION_MAP)) {
@@ -204,13 +218,17 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                       if (!acc[country]) acc[country] = [];
                       acc[country].push(regionInfo);
                       return acc;
-                    }, {} as Record<string, typeof accessible>);
+                    }, {} as Record<string, typeof allRegions>);
 
-                    // Filter out countries where all regions are excluded
+                    // Filter out countries where all regions are excluded (manually OR by grape suitability OR by soil)
                     const filteredCountries = Object.entries(regionsByCountry).filter(([country]) => {
                       const countryRegions = [...(COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP] as readonly string[])];
-                      const excludedCountryRegions = countryRegions.filter(region => options.regions.includes(region));
-                      return excludedCountryRegions.length < countryRegions.length; // Show country if not all regions are excluded
+                      const manuallyExcludedRegions = countryRegions.filter(region => options.regions.includes(region));
+                      const grapeAndSoilFilteredRegions = countryRegions.filter(region => 
+                        !accessible.find(r => r.region === region)
+                      );
+                      const totalExcludedRegions = new Set([...manuallyExcludedRegions, ...grapeAndSoilFilteredRegions]).size;
+                      return totalExcludedRegions < countryRegions.length; // Show country if not all regions are excluded
                     });
 
                     return filteredCountries.map(([country, regions]) => (
@@ -220,8 +238,14 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                         </div>
                         <div className="grid grid-cols-5 gap-1">
                           {regions.map((regionInfo) => {
-                            // Region is "selected" (excluded) if it's in the options.regions array
-                            const isExcluded = options.regions.includes(regionInfo.region);
+                            // Check if region is manually excluded
+                            const isManuallyExcluded = options.regions.includes(regionInfo.region);
+                            
+                            // Check if region is filtered out by grape suitability or soil types
+                            const isGrapeOrSoilFiltered = !accessible.find(r => r.region === regionInfo.region);
+                            
+                            // Region is "excluded" if either manually excluded OR grape/soil filtered
+                            const isExcluded = isManuallyExcluded || isGrapeOrSoilFiltered;
                             
                             // For excluded regions, show 0% probability
                             // For included regions, use redistributed probability
@@ -243,11 +267,14 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                                     : 'bg-gray-800/50 border-gray-600 hover:bg-gray-700/50 text-gray-300 hover:text-white'
                                 }`}
                                 onClick={() => {
-                                  // Clicking excludes/includes the region in the search
-                                  const newRegions = isExcluded
-                                    ? options.regions.filter(r => r !== regionInfo.region)
-                                    : [...options.regions, regionInfo.region];
-                                  setOptions(prev => ({ ...prev, regions: newRegions }));
+                                  // Only allow clicking if not grape/soil filtered (filtering is automatic)
+                                  if (!isGrapeOrSoilFiltered) {
+                                    // Clicking excludes/includes the region in the search
+                                    const newRegions = isManuallyExcluded
+                                      ? options.regions.filter(r => r !== regionInfo.region)
+                                      : [...options.regions, regionInfo.region];
+                                    setOptions(prev => ({ ...prev, regions: newRegions }));
+                                  }
                                 }}
                               >
                                 <div className="text-center">
@@ -257,6 +284,9 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                                   }`}>
                                     {isExcluded ? '0%' : `${formatNumber(probability * 100, { smartMaxDecimals: true })}%`}
                                   </div>
+                                  {isGrapeOrSoilFiltered && (
+                                    <div className="text-[10px] text-gray-500 mt-1">Filtered</div>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -267,7 +297,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   })()}
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
-                  Click countries to exclude/include all regions from that country. Click individual regions to exclude them from search (red = excluded). Countries with all regions excluded are automatically filtered out. Higher company prestige increases chances of finding properties in premium regions.
+                  Click countries to exclude/include all regions from that country. Click individual regions to exclude them from search (red = excluded). Countries with all regions excluded are automatically filtered out. Grape suitability and soil type selections can also filter out regions. Higher company prestige increases chances of finding properties in premium regions.
                 </p>
               </div>
             </div>
@@ -277,67 +307,139 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
               {/* Hectare Range */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Hectare Range ({formatNumber(options.hectareRange[0])} - {formatNumber(options.hectareRange[1])} hectares)
+                  Hectare Range ({formatNumber(options.hectareRange[0], { smartDecimals: true, smartMaxDecimals: true })} - {formatNumber(options.hectareRange[1], { smartDecimals: true, smartMaxDecimals: true })} hectares)
                 </label>
-                <div className="space-y-2">
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    step="1"
-                    value={options.hectareRange[0]}
-                    onChange={(e) => setOptions(prev => ({ 
-                      ...prev, 
-                      hectareRange: [Number(e.target.value), Math.max(Number(e.target.value), prev.hectareRange[1])] 
-                    }))}
-                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                  />
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    step="1"
-                    value={options.hectareRange[1]}
-                    onChange={(e) => setOptions(prev => ({ 
-                      ...prev, 
-                      hectareRange: [Math.min(Number(e.target.value), prev.hectareRange[0]), Number(e.target.value)] 
-                    }))}
-                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>{formatNumber(1)} ha</span>
-                  <span>{formatNumber(20)} ha</span>
-                </div>
+                {(() => {
+                  // Log slider helpers: map slider [0,1000] to hectares [0.05,2000]
+                  const MIN_HA = 0.05;
+                  const MAX_HA = 2000;
+                  const SLIDER_MAX = 1000;
+                  const toHa = (s: number) => MIN_HA * Math.pow(MAX_HA / MIN_HA, s / SLIDER_MAX);
+                  const toSlider = (ha: number) => {
+                    const clamped = Math.max(MIN_HA, Math.min(MAX_HA, ha));
+                    return Math.round(Math.log(clamped / MIN_HA) / Math.log(MAX_HA / MIN_HA) * SLIDER_MAX);
+                  };
+                  const minSlider = toSlider(options.hectareRange[0]);
+                  const maxSlider = toSlider(options.hectareRange[1]);
+                  return (
+                    <div className="space-y-2">
+                      <input
+                        type="range"
+                        min={0}
+                        max={SLIDER_MAX}
+                        step={1}
+                        value={minSlider}
+                        onChange={(e) => {
+                          const s = Number(e.target.value);
+                          const newMin = toHa(Math.min(s, maxSlider));
+                          setOptions(prev => ({
+                            ...prev,
+                            hectareRange: [newMin, Math.max(newMin, prev.hectareRange[1])]
+                          }));
+                        }}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <input
+                        type="range"
+                        min={0}
+                        max={SLIDER_MAX}
+                        step={1}
+                        value={maxSlider}
+                        onChange={(e) => {
+                          const s = Number(e.target.value);
+                          const newMax = toHa(Math.max(s, minSlider));
+                          setOptions(prev => ({
+                            ...prev,
+                            hectareRange: [Math.min(prev.hectareRange[0], newMax), newMax]
+                          }));
+                        }}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>{formatNumber(MIN_HA, { smartMaxDecimals: true })} ha</span>
+                        <span>{formatNumber(MAX_HA)} ha</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Altitude Range */}
+              {/* Altitude Range (normalized 0-1) */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Altitude Range (optional)
+                  Altitude Range (normalized, optional)
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min altitude"
-                    value={options.altitudeRange?.[0] || ''}
-                    onChange={(e) => setOptions(prev => ({ 
-                      ...prev, 
-                      altitudeRange: [Number(e.target.value) || 0, prev.altitudeRange?.[1] || 1000] 
-                    }))}
-                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max altitude"
-                    value={options.altitudeRange?.[1] || ''}
-                    onChange={(e) => setOptions(prev => ({ 
-                      ...prev, 
-                      altitudeRange: [prev.altitudeRange?.[0] || 0, Number(e.target.value) || 1000] 
-                    }))}
-                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                  />
+                {(() => {
+                  const MIN_N = 0;
+                  const MAX_N = 1;
+                  const STEP = 0.01;
+                  const currentMin = options.altitudeRange?.[0] ?? MIN_N;
+                  const currentMax = options.altitudeRange?.[1] ?? MAX_N;
+                  return (
+                    <div className="space-y-2">
+                      <input
+                        type="range"
+                        min={MIN_N}
+                        max={MAX_N}
+                        step={STEP}
+                        value={currentMin}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          const newMin = Math.min(v, currentMax);
+                          setOptions(prev => ({ ...prev, altitudeRange: [newMin, prev.altitudeRange?.[1] ?? MAX_N] }));
+                        }}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <input
+                        type="range"
+                        min={MIN_N}
+                        max={MAX_N}
+                        step={STEP}
+                        value={currentMax}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          const newMax = Math.max(v, currentMin);
+                          setOptions(prev => ({ ...prev, altitudeRange: [prev.altitudeRange?.[0] ?? MIN_N, newMax] }));
+                        }}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>{Math.round((currentMin) * 100)}%</span>
+                        <span>{Math.round((currentMax) * 100)}%</span>
+                      </div>
+                      <p className="text-xs text-gray-400">Normalized by region. Higher is always better.</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Grape Variety Selection */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-3">
+                  Grape Variety Preferences (optional)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {GRAPE_VARIETIES.map((grape) => (
+                    <label key={grape} className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={options.grapeVarieties?.includes(grape) || false}
+                        onChange={(e) => {
+                          const current = options.grapeVarieties || [];
+                          const newGrapes = e.target.checked
+                            ? [...current, grape]
+                            : current.filter(g => g !== grape);
+                          setOptions(prev => ({ ...prev, grapeVarieties: newGrapes }));
+                        }}
+                        className="mr-2 h-4 w-4 rounded border-gray-500 bg-gray-700 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-white">{grape}</span>
+                    </label>
+                  ))}
                 </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Select grape varieties to filter regions by suitability. Higher suitability requirements will exclude more regions and increase cost.
+                </p>
               </div>
 
               {/* Min Grape Suitability */}
@@ -394,8 +496,8 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 <label className="block text-sm font-medium text-white mb-3">
                   Soil Type Preferences (optional)
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['Clay', 'Limestone', 'Sand', 'Loam', 'Volcanic Soil', 'Granite', 'Slate', 'Chalk', 'Alluvial', 'Marl'].map((soil) => (
+                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                  {[...ALL_SOIL_TYPES].sort().map((soil) => (
                     <label key={soil} className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -425,7 +527,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <input
                   type="range"
-                  min="1"
+                  min="3"
                   max="10"
                   step="1"
                   value={options.numberOfOptions}
@@ -433,7 +535,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>{formatNumber(1)}</span>
+                  <span>{formatNumber(3)}</span>
                   <span>{formatNumber(10)}</span>
                 </div>
               </div>
@@ -556,6 +658,12 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     <div className="flex justify-between">
                       <span className="text-gray-400">Soil Types:</span>
                       <span className="text-white">{options.soilTypes.length}</span>
+                    </div>
+                  )}
+                  {options.grapeVarieties && options.grapeVarieties.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Grape Varieties:</span>
+                      <span className="text-white">{options.grapeVarieties.join(', ')}</span>
                     </div>
                   )}
                   {options.minGrapeSuitability && options.minGrapeSuitability > 0 && (

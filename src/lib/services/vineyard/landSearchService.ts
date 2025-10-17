@@ -14,13 +14,20 @@ import {
   REGION_PRESTIGE_RANKINGS, 
   COUNTRY_REGION_MAP, 
   REGION_SOIL_TYPES, 
-  REGION_ASPECT_RATINGS
+  REGION_ASPECT_RATINGS,
+  REGION_ALTITUDE_RANGES,
+  REGION_GRAPE_SUITABILITY,
+  ALL_SOIL_TYPES
 } from '@/lib/constants/vineyardConstants';
 import { 
-  generateVineyardPurchaseOptions, 
-  VineyardPurchaseOption
+  VineyardPurchaseOption,
+  generateVineyardName
 } from './vinyardBuyingService';
-import { squashNormalizeTail } from '@/lib/utils/calculator';
+import { calculateLandValue } from './vineyardValueCalc';
+import { v4 as uuidv4 } from 'uuid';
+import { probabilityMassInRange, getRandomHectares, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
+
+// (hectare distribution helpers now live in '@/lib/utils/calculator')
 
 /**
  * Land search options interface
@@ -34,6 +41,7 @@ export interface LandSearchOptions {
   hectareRange: [number, number];
   soilTypes?: string[];
   minGrapeSuitability?: number;
+  grapeVarieties?: string[]; // Selected grape varieties for suitability filtering
 }
 
 /**
@@ -47,110 +55,271 @@ export interface LandSearchEstimate {
 
 /**
  * Calculate the cost of a land search based on parameters
- * Uses exponential scaling for search constraints
+ * Uses average-then-power scaling: Base * (Σ constraints / count)^count * (n-2)
  */
 export function calculateSearchCost(options: LandSearchOptions, _companyPrestige: number): number {
   const baseCost = 5000;
   
-  // Count number of search constraints (exponential scaling)
-  let constraintCount = 0;
+  // Track which constraints are active and their intensities
+  const activeConstraints: number[] = [];
   
-  // Region filtering constraint (small penalty)
-  if (options.regions.length > 0) {
-    constraintCount += 0.5; // Small penalty for region filtering
+  // Region filtering constraint - penalize when regions are excluded (manually OR by soil filtering OR by grape suitability)
+  const totalRegions = Object.values(COUNTRY_REGION_MAP).flat().length;
+  let excludedRegions = new Set(options.regions); // Start with manually excluded regions
+  
+  // Add regions excluded by soil filtering
+  if (options.soilTypes && options.soilTypes.length > 0 && options.soilTypes.length < ALL_SOIL_TYPES.length) {
+    for (const country of Object.keys(COUNTRY_REGION_MAP)) {
+      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+      for (const region of regions as any) {
+        if (!meetsSoilRequirement(country, region, options.soilTypes)) {
+          excludedRegions.add(region);
+        }
+      }
+    }
   }
   
-  // Hectare range constraint
-  const hectareRange = options.hectareRange[1] - options.hectareRange[0];
-  if (hectareRange < 15) { // Less than full range (1-20)
-    constraintCount += 1;
+  // Add regions excluded by grape suitability filtering
+  if (options.grapeVarieties && options.grapeVarieties.length > 0 && options.minGrapeSuitability && options.minGrapeSuitability > 0) {
+    for (const country of Object.keys(COUNTRY_REGION_MAP)) {
+      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+      for (const region of regions as any) {
+        if (!meetsGrapeSuitabilityRequirement(country, region, options.grapeVarieties, options.minGrapeSuitability)) {
+          excludedRegions.add(region);
+        }
+      }
+    }
   }
   
-  // Altitude range constraint
-  if (options.altitudeRange && (options.altitudeRange[1] - options.altitudeRange[0]) < 1000) {
-    constraintCount += 1;
+  // Apply region constraint if any regions are excluded
+  if (excludedRegions.size > 0) {
+    const exclusionRatio = excludedRegions.size / totalRegions;
+    const regionModifier = 1.8; // Base multiplier for region constraint
+    const regionIntensity = 1 + (exclusionRatio * 2); // 1.0-3.0 based on exclusion ratio
+    activeConstraints.push(regionModifier * regionIntensity);
   }
   
-  // Aspect preferences constraint
-  if (options.aspectPreferences && options.aspectPreferences.length > 0) {
-    constraintCount += 1;
+  
+  // Hectare range constraint - use distribution mass removed as intensity
+  {
+    const [minHa, maxHa] = options.hectareRange;
+    const massKept = probabilityMassInRange(minHa, maxHa); // 0-1
+    const massRemoved = 1 - massKept; // 0-1, higher when excluding common small sizes
+    if (massRemoved > 0) {
+      const hectareModifier = 1.8; // Strong base since this filter is impactful
+      // Nonlinear penalty to emphasize removing common small sizes
+      const hectareIntensity = 1 + Math.pow(massRemoved, 0.75) * 2.5; // 1.0-3.5
+      activeConstraints.push(hectareModifier * hectareIntensity);
+    }
   }
   
-  // Soil type constraint
-  if (options.soilTypes && options.soilTypes.length > 0) {
-    constraintCount += 1;
+  // Altitude range constraint - normalized 0-1 width
+  if (options.altitudeRange) {
+    const width = Math.max(0, Math.min(1, (options.altitudeRange[1] - options.altitudeRange[0])));
+    if (width < 1) {
+      const removal = 1 - width; // 0-1 removed fraction
+      const altitudeModifier = 1.5;
+      const altitudeIntensityValue = 1 + Math.pow(removal, 0.85) * 2.0; // 1.0-3.0
+      activeConstraints.push(altitudeModifier * altitudeIntensityValue);
+    }
   }
   
-  // Grape suitability constraint
-  if (options.minGrapeSuitability && options.minGrapeSuitability > 0.3) {
-    constraintCount += 1;
+  // Aspect preferences constraint - penalize when aspects are deselected (restricted)
+  if (options.aspectPreferences && options.aspectPreferences.length < 8) {
+    const deselectedAspects = 8 - options.aspectPreferences.length; // How many aspects deselected
+    const restrictionRatio = deselectedAspects / 8; // 0-1 based on how many aspects deselected
+    const aspectModifier = 1.4; // Base multiplier for aspect constraint
+    const aspectIntensityValue = 1 + (restrictionRatio * 2.5); // 1.0-3.5 based on how many aspects deselected
+    activeConstraints.push(aspectModifier * aspectIntensityValue);
   }
   
-  // Number of options multiplier (linear scaling)
-  const optionsMultiplier = 1 + ((options.numberOfOptions - 1) * 0.3);
+  // Soil type constraint - penalize when soils are deselected (restricted)
+  if (options.soilTypes && options.soilTypes.length < ALL_SOIL_TYPES.length) {
+    const deselectedSoils = ALL_SOIL_TYPES.length - options.soilTypes.length; // How many soils deselected
+    const restrictionRatio = deselectedSoils / ALL_SOIL_TYPES.length; // 0-1 based on how many soils deselected
+    const soilModifier = 1.3; // Base multiplier for soil constraint
+    const soilIntensityValue = 1 + (restrictionRatio * 2.5); // 1.0-3.5 based on how many soils deselected
+    activeConstraints.push(soilModifier * soilIntensityValue);
+  }
   
-  // Exponential cost scaling: baseCost * (1.5 ^ constraintCount)
-  const exponentialMultiplier = Math.pow(1.5, constraintCount);
   
-  return Math.round(baseCost * exponentialMultiplier * optionsMultiplier);
+  // Average-then-power: Base × (Σ constraints / count)^count
+  const constraintCount = activeConstraints.length;
+  let totalMultiplier = 1;
+  
+  if (constraintCount > 0) {
+    const constraintSum = activeConstraints.reduce((sum, constraint) => sum + constraint, 0);
+    const constraintAverage = constraintSum / constraintCount;
+    totalMultiplier = Math.pow(constraintAverage, constraintCount);
+  }
+  
+  // Initial + variable cost (average-then-power):
+  // cost = initialCost + baseCost * (totalMultiplier) * (n - 2)
+  // where totalMultiplier = (Σ constraints / count)^count
+  const n = Math.max(3, Math.min(10, options.numberOfOptions || 3));
+  const initialCost = 20000; // Fixed activation cost, independent of options
+  const finalCost = initialCost + (baseCost * totalMultiplier * (n - 2));
+  
+  return Math.round(finalCost);
 }
 
 /**
  * Calculate work required for land search activity
- * Uses similar exponential scaling as cost calculation
+ * Uses multiplicative scaling similar to cost calculation - more constraints = more work
  */
 export function calculateSearchWork(options: LandSearchOptions, _companyPrestige: number): number {
   const rate = TASK_RATES[WorkCategory.ADMINISTRATION];
   const initialWork = INITIAL_WORK[WorkCategory.ADMINISTRATION];
   
-  // Count number of search constraints (exponential scaling for work too)
-  let constraintCount = 0;
+  // Track which constraints are active and their intensities (similar to cost calculation)
+  const activeConstraints: number[] = [];
   
-  // Region filtering constraint (small penalty)
-  if (options.regions.length > 0) {
-    constraintCount += 0.3; // Small penalty for region filtering
+  // Region filtering constraint - penalize when regions are excluded (manually OR by soil filtering OR by grape suitability) - work calculation
+  const totalRegions = Object.values(COUNTRY_REGION_MAP).flat().length;
+  let excludedRegions = new Set(options.regions); // Start with manually excluded regions
+  
+  // Add regions excluded by soil filtering
+  if (options.soilTypes && options.soilTypes.length > 0 && options.soilTypes.length < ALL_SOIL_TYPES.length) {
+    for (const country of Object.keys(COUNTRY_REGION_MAP)) {
+      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+      for (const region of regions as any) {
+        if (!meetsSoilRequirement(country, region, options.soilTypes)) {
+          excludedRegions.add(region);
+        }
+      }
+    }
   }
   
-  // Hectare range constraint
-  const hectareRange = options.hectareRange[1] - options.hectareRange[0];
-  if (hectareRange < 15) { // Less than full range (1-20)
-    constraintCount += 0.5;
+  // Add regions excluded by grape suitability filtering
+  if (options.grapeVarieties && options.grapeVarieties.length > 0 && options.minGrapeSuitability && options.minGrapeSuitability > 0) {
+    for (const country of Object.keys(COUNTRY_REGION_MAP)) {
+      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+      for (const region of regions as any) {
+        if (!meetsGrapeSuitabilityRequirement(country, region, options.grapeVarieties, options.minGrapeSuitability)) {
+          excludedRegions.add(region);
+        }
+      }
+    }
   }
   
-  // Altitude range constraint
-  if (options.altitudeRange && (options.altitudeRange[1] - options.altitudeRange[0]) < 1000) {
-    constraintCount += 0.5;
+  // Apply region constraint if any regions are excluded
+  if (excludedRegions.size > 0) {
+    const exclusionRatio = excludedRegions.size / totalRegions;
+    const regionModifier = 1.5; // Base multiplier for region constraint (lower than cost)
+    const regionIntensity = 1 + (exclusionRatio * 1.5); // 1.0-2.5 based on exclusion ratio
+    activeConstraints.push(regionModifier * regionIntensity);
   }
   
-  // Aspect preferences constraint
-  if (options.aspectPreferences && options.aspectPreferences.length > 0) {
-    constraintCount += 0.5;
+  
+  // Hectare range constraint - use distribution mass removed as intensity (same approach as cost)
+  {
+    const [minHa, maxHa] = options.hectareRange;
+    const massKept = probabilityMassInRange(minHa, maxHa); // 0-1
+    const massRemoved = 1 - massKept; // 0-1
+    if (massRemoved > 0) {
+      const hectareModifier = 1.3; // milder than cost
+      const hectareIntensity = 1 + Math.pow(massRemoved, 0.8) * 2.0; // 1.0-3.0
+      activeConstraints.push(hectareModifier * hectareIntensity);
+    }
   }
   
-  // Soil type constraint
-  if (options.soilTypes && options.soilTypes.length > 0) {
-    constraintCount += 0.5;
+  // Altitude range constraint - normalized 0-1 width (work model)
+  if (options.altitudeRange) {
+    const width = Math.max(0, Math.min(1, (options.altitudeRange[1] - options.altitudeRange[0])));
+    if (width < 1) {
+      const removal = 1 - width;
+      const altitudeModifier = 1.2;
+      const altitudeIntensityValue = 1 + Math.pow(removal, 0.85) * 1.6; // 1.0-2.6
+      activeConstraints.push(altitudeModifier * altitudeIntensityValue);
+    }
   }
   
-  // Grape suitability constraint
-  if (options.minGrapeSuitability && options.minGrapeSuitability > 0.3) {
-    constraintCount += 0.5;
+  // Aspect preferences constraint - penalize when aspects are deselected (restricted)
+  if (options.aspectPreferences && options.aspectPreferences.length < 8) {
+    const deselectedAspects = 8 - options.aspectPreferences.length; // How many aspects deselected
+    const restrictionRatio = deselectedAspects / 8; // 0-1 based on how many aspects deselected
+    const aspectModifier = 1.15; // Base multiplier for aspect constraint
+    const aspectIntensityValue = 1 + (restrictionRatio * 2.0); // 1.0-3.0 based on how many aspects deselected
+    activeConstraints.push(aspectModifier * aspectIntensityValue);
   }
   
-  // Number of options modifier (linear scaling)
-  const optionsModifier = (options.numberOfOptions - 1) * 0.1; // 0.1 per additional option
+  // Soil type constraint - penalize when soils are deselected (restricted)
+  if (options.soilTypes && options.soilTypes.length < ALL_SOIL_TYPES.length) {
+    const deselectedSoils = ALL_SOIL_TYPES.length - options.soilTypes.length; // How many soils deselected
+    const restrictionRatio = deselectedSoils / ALL_SOIL_TYPES.length; // 0-1 based on how many soils deselected
+    const soilModifier = 1.1; // Base multiplier for soil constraint
+    const soilIntensityValue = 1 + (restrictionRatio * 2.0); // 1.0-3.0 based on how many soils deselected
+    activeConstraints.push(soilModifier * soilIntensityValue);
+  }
   
-  // Exponential work scaling: 1.3 ^ constraintCount
-  const exponentialModifier = Math.pow(1.3, constraintCount);
+  
+  // Average-then-power: Base × (Σ constraints / count)^count (less aggressive than cost)
+  const constraintCount = activeConstraints.length;
+  let totalMultiplier = 1;
+  
+  if (constraintCount > 0) {
+    const constraintSum = activeConstraints.reduce((sum, constraint) => sum + constraint, 0);
+    const constraintAverage = constraintSum / constraintCount;
+    totalMultiplier = Math.pow(constraintAverage, constraintCount);
+  }
+  
+  // Strong final multiplier for work (less aggressive than cost): (totalMultiplier^2) * (n - 2)
+  const n = Math.max(3, Math.min(10, options.numberOfOptions || 3));
+  const combinedMultiplier = Math.pow(totalMultiplier, 2) * (n - 2);
   
   // Convert to work modifiers format
-  const workModifiers = [exponentialModifier - 1, optionsModifier]; // -1 to get the additional work
+  const workModifiers = [combinedMultiplier - 1];
   
   return calculateTotalWork(1, {
     rate,
     initialWork,
     workModifiers
   });
+}
+
+/**
+ * Check if a region meets the grape suitability requirements
+ * Returns true if ALL selected grape varieties have suitability >= minSuitability in this region
+ */
+function meetsGrapeSuitabilityRequirement(
+  country: string, 
+  region: string, 
+  grapeVarieties: string[], 
+  minSuitability: number
+): boolean {
+  if (!grapeVarieties || grapeVarieties.length === 0 || minSuitability <= 0) return true; // No requirement
+  
+  const countrySuitability = REGION_GRAPE_SUITABILITY[country as keyof typeof REGION_GRAPE_SUITABILITY];
+  if (!countrySuitability) return false;
+  
+  const regionSuitability = countrySuitability[region as keyof typeof countrySuitability];
+  if (!regionSuitability) return false;
+  
+  // Check if ALL selected grape varieties meet the minimum suitability
+  return grapeVarieties.every(grape => {
+    const suitability = regionSuitability[grape as keyof typeof regionSuitability];
+    return suitability !== undefined && suitability >= minSuitability;
+  });
+}
+
+/**
+ * Check if a region meets the soil type requirements
+ * Returns true if the region has at least one of the selected soil types
+ */
+function meetsSoilRequirement(
+  country: string, 
+  region: string, 
+  selectedSoils: string[]
+): boolean {
+  if (!selectedSoils || selectedSoils.length === 0) return true; // No requirement
+  
+  const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
+  if (!countryData) return false;
+  
+  const regionSoils = countryData[region as keyof typeof countryData] as readonly string[] || [];
+  
+  // Check if the region has at least one of the selected soil types
+  return selectedSoils.some(soil => regionSoils.includes(soil));
 }
 
 /**
@@ -167,53 +336,13 @@ function getRegionPrestige(region: string): number {
   return 0.5; // Default if not found
 }
 
-/**
- * Normalize company prestige for comparison (0-1 scale)
- * Designed for realistic prestige distribution:
- * - Most companies: 0.1-10 prestige (maps to ~0.1-0.7)
- * - Some companies: 10-100 prestige (maps to ~0.7-0.9) 
- * - Few companies: 100-1000 prestige (maps to ~0.9-0.98)
- * - Exceptional: >1000 prestige (uses tail squash to prevent hard 1.0)
- */
-function normalizeCompanyPrestige(prestige: number): number {
-  const safePrestige = Math.max(0, prestige || 0);
-  
-  let normalized: number;
-  
-  if (safePrestige <= 10) {
-    // Most companies: 0.1-10 prestige → 0.1-0.7 (linear with slight curve)
-    const ratio = safePrestige / 10;
-    normalized = 0.1 + (0.6 * Math.pow(ratio, 0.8)); // Slight curve upward
-  } else if (safePrestige <= 100) {
-    // Some companies: 10-100 prestige → 0.7-0.9 (logarithmic)
-    const ratio = (safePrestige - 10) / 90;
-    normalized = 0.7 + (0.2 * Math.log(1 + 3 * ratio) / Math.log(4)); // Logarithmic growth
-  } else if (safePrestige <= 1000) {
-    // Few companies: 100-1000 prestige → 0.9-0.98 (very slow growth)
-    const ratio = (safePrestige - 100) / 900;
-    normalized = 0.9 + (0.08 * Math.pow(ratio, 0.5)); // Square root growth
-  } else {
-    // Exceptional cases: >1000 prestige → 0.98+ (use tail squash)
-    const excess = safePrestige - 1000;
-    const excessRatio = Math.min(excess / 1000, 1); // Cap at 2000 for calculation
-    normalized = 0.98 + (0.02 * excessRatio);
-  }
-  
-  // Use squashNormalizeTail only for very high prestige (>1000) to prevent hard 1.0
-  if (safePrestige > 1000) {
-    const result = squashNormalizeTail(normalized, 0.98, 0.999, 5);
-    return result;
-  }
-  
-  return Math.min(0.999, Math.max(0.001, normalized));
-}
 
 /**
  * Calculate max probability for a region based on company prestige vs region prestige
  * This serves as the maximum probability cap for any region
  */
 export function calculateMaxRegionProbability(regionPrestige: number, companyPrestige: number): number {
-  const normalizedCompanyPrestige = normalizeCompanyPrestige(companyPrestige);
+  const normalizedCompanyPrestige = NormalizeScrewed1000To01WithTail(companyPrestige);
   
   // Much more restrictive scaling - prestige difference has exponential impact
   // For low prestige companies, high prestige regions should be nearly impossible
@@ -228,27 +357,34 @@ export function calculateMaxRegionProbability(regionPrestige: number, companyPre
 }
 
 /**
- * Calculate region probability based on company prestige vs region prestige
- * Uses diminishing power function - DEPRECATED: Use calculateMaxRegionProbability instead
- */
-export function calculateRegionProbability(regionPrestige: number, companyPrestige: number): number {
-  return calculateMaxRegionProbability(regionPrestige, companyPrestige);
-}
-
-/**
  * Get accessible regions with max probability caps
  */
-export function getAccessibleRegionsWithMaxCaps(companyPrestige: number): Array<{region: string, maxProbability: number}> {
+export function getAccessibleRegionsWithMaxCaps(
+  companyPrestige: number, 
+  grapeVarieties: string[] = [], 
+  minGrapeSuitability: number = 0,
+  selectedSoils: string[] = []
+): Array<{region: string, maxProbability: number}> {
   const accessibleRegions: Array<{region: string, maxProbability: number}> = [];
   
   // Get all regions from all countries
   for (const country of Object.keys(COUNTRY_REGION_MAP)) {
       const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
       for (const region of regions as any) {
+      // Filter by grape suitability requirement
+      if (!meetsGrapeSuitabilityRequirement(country, region, grapeVarieties, minGrapeSuitability)) {
+        continue;
+      }
+      
+      // Filter by soil requirement
+      if (!meetsSoilRequirement(country, region, selectedSoils)) {
+        continue;
+      }
+      
       const regionPrestige = getRegionPrestige(region);
       const maxProbability = calculateMaxRegionProbability(regionPrestige, companyPrestige);
       
-      // Include all regions regardless of probability
+      // Include regions that meet both requirements
       accessibleRegions.push({ region, maxProbability });
     }
   }
@@ -315,8 +451,13 @@ export function generateVineyardSearchResults(
   options: LandSearchOptions, 
   companyPrestige: number
 ): VineyardPurchaseOption[] {
-  // Get all regions with max probability caps
-  const allRegionsWithMaxCaps = getAccessibleRegionsWithMaxCaps(companyPrestige);
+  // Get all regions with max probability caps, filtered by grape suitability and soil types
+  const allRegionsWithMaxCaps = getAccessibleRegionsWithMaxCaps(
+    companyPrestige, 
+    options.grapeVarieties || [], 
+    options.minGrapeSuitability || 0,
+    options.soilTypes || []
+  );
   
   // Calculate redistributed probabilities based on selected regions
   const targetRegions = calculateRedistributedProbabilities(allRegionsWithMaxCaps, options.regions);
@@ -386,51 +527,73 @@ function generateMatchingVineyard(
     throw new Error(`Country not found for region: ${regionInfo.region}`);
   }
   
-  // Generate vineyards using existing system but with filters
-  const tempOptions = generateVineyardPurchaseOptions(1, []);
-  const vineyard = tempOptions[0];
+  // Build vineyard option directly from constants and user filters
   
-  // Override with criteria-based generation
+  // Hectares: sample distribution until within [min,max]
   const [minHectares, maxHectares] = options.hectareRange;
-  const hectares = Math.random() * (maxHectares - minHectares) + minHectares;
-  
-  // Generate altitude within range if specified
-  let altitude = vineyard.altitude;
-  if (options.altitudeRange) {
-    const [minAlt, maxAlt] = options.altitudeRange;
-    altitude = Math.floor(Math.random() * (maxAlt - minAlt + 1)) + minAlt;
+  let hectares = getRandomHectares();
+  // Ensure we honour user range strictly
+  while (hectares < minHectares || hectares > maxHectares) {
+    hectares = getRandomHectares();
   }
+
+  // Altitude: map normalized 0-1 window to region-specific meter range
+  const countryAlts = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] as any;
+  const regionAltRange = countryAlts ? (countryAlts[regionInfo.region] as [number, number]) : [0, 1000];
+  const [regionAltMin, regionAltMax] = regionAltRange;
+  let altitudeRating = 0.5;
+  if (options.altitudeRange) {
+    const [minN, maxN] = options.altitudeRange; // 0-1
+    altitudeRating = Math.random() * (maxN - minN) + minN;
+  } else {
+    altitudeRating = 0.5;
+  }
+  const altitude = Math.round(regionAltMin + altitudeRating * (regionAltMax - regionAltMin));
   
-  // Select aspect if preferences specified
-  let aspect = vineyard.aspect;
+  // Select aspect from preferences or pick randomly
+  let aspect: Aspect;
   if (options.aspectPreferences && options.aspectPreferences.length > 0) {
     aspect = options.aspectPreferences[Math.floor(Math.random() * options.aspectPreferences.length)];
+  } else {
+    const aspectsPool: Aspect[] = ['North','Northeast','East','Southeast','South','Southwest','West','Northwest'];
+    aspect = aspectsPool[Math.floor(Math.random() * aspectsPool.length)];
   }
   
-  // Select soil types if specified
-  let soil = vineyard.soil;
-  if (options.soilTypes && options.soilTypes.length > 0) {
+  // Select soil types from intersection of region availability and user filter
+  // Use same logic as getRandomSoils for consistency
+  let soil: string[] = [];
+  {
     const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
     const availableSoils = countryData ? (countryData as any)[regionInfo.region] || [] : [];
-    const matchingSoils = options.soilTypes.filter(s => availableSoils.includes(s));
+    const allowed = (options.soilTypes && options.soilTypes.length > 0)
+      ? options.soilTypes.filter(s => availableSoils.includes(s))
+      : availableSoils;
     
-    if (matchingSoils.length > 0) {
-      const numSoils = Math.min(Math.floor(Math.random() * 3) + 1, matchingSoils.length);
-      soil = matchingSoils.slice(0, numSoils);
+    if (allowed.length > 0) {
+      const numberOfSoils = Math.floor(Math.random() * 3) + 1; // 1-3 soil types (same as getRandomSoils)
+      const selectedSoils = new Set<string>();
+      
+      while (selectedSoils.size < numberOfSoils && selectedSoils.size < allowed.length) {
+        selectedSoils.add(allowed[Math.floor(Math.random() * allowed.length)]);
+      }
+      
+      soil = Array.from(selectedSoils);
     }
   }
   
-  // Recalculate values with new parameters
-  const landValue = vineyard.landValue; // Use existing calculation
+  // Compute values and construct option
+  const landValue = calculateLandValue(country, regionInfo.region, altitude, aspect);
   const totalPrice = landValue * hectares;
   const countryAspects = REGION_ASPECT_RATINGS[country as keyof typeof REGION_ASPECT_RATINGS];
   const regionAspects = countryAspects ? (countryAspects as any)[regionInfo.region] : null;
   const aspectRating = regionAspects ? (regionAspects[aspect] ?? 0.5) : 0.5;
-  const altitudeRating = Math.max(0, Math.min(1, altitude / 1000)); // Normalize to 0-1
   
+  // Use the existing generateVineyardName function
+  const name = generateVineyardName(country, aspect);
+
   return {
-    ...vineyard,
-    name: `${vineyard.name.split("'s")[0]}'s ${aspect} Vineyard`, // Update name with aspect
+    id: uuidv4(),
+    name,
     region: regionInfo.region,
     country,
     hectares,

@@ -8,7 +8,8 @@ import {
   calculateAsymmetricalMultiplier, 
   calculateSymmetricalMultiplier, 
   vineyardAgePrestigeModifier,
-  calculateAsymmetricalScaler01
+  calculateAsymmetricalScaler01,
+  NormalizeScrewed1000To01WithTail
 } from '@/lib/utils/calculator';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
@@ -83,6 +84,41 @@ export function MathematicalModelsTab() {
         const y = calculateAsymmetricalScaler01(x);
         data.push({ input: x, output: y });
       }
+      return data;
+    };
+
+    // Generate NormalizeScrewed1000To01WithTail data
+    const generatePrestigeNormalizationData = () => {
+      const data = [] as { prestige: number; normalized: number }[];
+      
+      // Dense points in early range (0-10): 30 points
+      for (let i = 0; i <= 30; i++) {
+        const prestige = (i / 30) * 10; // 0 to 10
+        const normalized = NormalizeScrewed1000To01WithTail(prestige);
+        data.push({ prestige, normalized });
+      }
+      
+      // Medium density (10-100): 25 points
+      for (let i = 1; i <= 25; i++) {
+        const prestige = 10 + (i / 25) * 90; // 10 to 100
+        const normalized = NormalizeScrewed1000To01WithTail(prestige);
+        data.push({ prestige, normalized });
+      }
+      
+      // High density (100-1000): 30 points
+      for (let i = 1; i <= 30; i++) {
+        const prestige = 100 + (i / 30) * 900; // 100 to 1000
+        const normalized = NormalizeScrewed1000To01WithTail(prestige);
+        data.push({ prestige, normalized });
+      }
+      
+      // Very high range (1000-2000): 20 points
+      for (let i = 1; i <= 20; i++) {
+        const prestige = 1000 + (i / 20) * 1000; // 1000 to 2000
+        const normalized = NormalizeScrewed1000To01WithTail(prestige);
+        data.push({ prestige, normalized });
+      }
+      
       return data;
     };
 
@@ -187,7 +223,8 @@ export function MathematicalModelsTab() {
       symmetricalData: generateSymmetricalData(),
       ageData: generateAgeData(),
       yieldByRipeness: generateYieldByRipeness(),
-      yieldByAge: generateYieldByAge()
+      yieldByAge: generateYieldByAge(),
+      prestigeNormalizationData: generatePrestigeNormalizationData()
     };
   }, []); // Empty dependency array - only generate once
 
@@ -465,6 +502,78 @@ export function MathematicalModelsTab() {
                   <div>• Monotonic increasing</div>
                   <div>• Adjustable breakpoints for tuning</div>
                   <div>• Early saturation for premium tiers</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* NormalizeScrewed1000To01WithTail */}
+          <div className="border rounded-lg p-6">
+            <h3 className="text-xl font-semibold mb-4">Prestige Normalization (NormalizeScrewed1000To01WithTail)</h3>
+            <p className="text-gray-600 mb-4">
+              Converts raw prestige values (0-1000+) to a normalized 0-1 scale with "screwed" distribution and tail compression.
+              Designed to make both low and high prestige values meaningful while compressing extreme values.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Prestige → Normalized Mappings:</h4>
+                <div className="space-y-1 text-sm font-mono">
+                  <div>0 → 0.100</div>
+                  <div>1 → 0.195</div>
+                  <div>5 → 0.445</div>
+                  <div>10 → 0.700</div>
+                  <div>50 → 0.822</div>
+                  <div>100 → 0.900</div>
+                  <div>500 → 0.953</div>
+                  <div>1000 → 0.980</div>
+                  <div>2000 → 0.999</div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Usage in Game:</h4>
+                <div className="space-y-1 text-sm">
+                  <div>• <strong>Customer Relationships</strong> - Normalize company prestige for relationship calculations</div>
+                  <div>• <strong>Wine Pricing</strong> - Add company/vineyard prestige bonuses to wine prices</div>
+                  <div>• <strong>Prestige Scaling</strong> - Used in prestige calculator for event impact scaling</div>
+                  <div>• <strong>Land Search</strong> - Normalize company prestige for region probability calculations</div>
+                </div>
+                <div className="mt-3">
+                  <h5 className="font-semibold mb-2">Curve Shape:</h5>
+                  <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData.prestigeNormalizationData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="prestige" domain={[0, 2000]} tickFormatter={(value) => formatNumber(value, { decimals: 0 })} />
+                        <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
+                        <RechartsTooltip 
+                          formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Normalized']}
+                          labelFormatter={(value: number) => `Prestige: ${formatNumber(value, { decimals: 0 })}`}
+                        />
+                        <Line type="monotone" dataKey="normalized" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Mathematical Segments:</h4>
+                <div className="space-y-1 text-sm">
+                  <div>• 0-10: Polynomial (0.1 + 0.6×x^0.8)</div>
+                  <div>• 10-100: Logarithmic (0.7 + 0.2×log)</div>
+                  <div>• 100-1000: Square root (0.9 + 0.08×√x)</div>
+                  <div>• 1000+: Tail compression (0.98 + 0.02×x)</div>
+                  <div>• Output range: 0.1 to 0.999</div>
+                  <div>• Designed for meaningful scaling</div>
+                </div>
+                <div className="mt-3">
+                  <h5 className="font-semibold mb-2">Key Properties:</h5>
+                  <div className="space-y-1 text-sm">
+                    <div>• Low prestige (1-10): Gets 0.1-0.7 range</div>
+                    <div>• Medium prestige (10-100): Gets 0.7-0.9 range</div>
+                    <div>• High prestige (100-1000): Gets 0.9-0.98 range</div>
+                    <div>• Extreme prestige (1000+): Compressed tail</div>
+                    <div>• Consistent across all game systems</div>
+                  </div>
                 </div>
               </div>
             </div>

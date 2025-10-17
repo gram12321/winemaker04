@@ -56,6 +56,38 @@ export const REGION_SOIL_TYPES = {
   }
 } as const;
 
+// Complete list of all soil types used in the game (extracted from REGION_SOIL_TYPES)
+export const ALL_SOIL_TYPES = [
+  // Basic soils
+  'Clay', 'Limestone', 'Sand', 'Loam', 'Alluvial', 'Marl', 'Gravel',
+  
+  // Limestone variations
+  'Clay-Limestone', 'Chalk',
+  
+  // Volcanic soils
+  'Volcanic Soil', 'Volcanic', 'Basalt',
+  
+  // Slate variations
+  'Slate', 'Devonian Slate', 'Blue Devonian Slate', 'Red Devonian Slate',
+  
+  // Rock and stone types
+  'Granite', 'Sandstone', 'Quartzite', 'Quartz', 'Greywacke', 'Phyllite',
+  
+  // Regional specialty soils
+  'Red Earth', 'Galestro', 'Ferrous Clay', 'Loess',
+  
+  // Spanish specialty soils (Jerez region)
+  'Albariza', 'Barros', 'Arenas',
+  
+  // Sedimentary soils
+  'Shale', 'Marine Sediment',
+  
+  // Additional soils (some may be region-specific variations)
+  'Schist', 'Flint'
+] as const;
+
+export type SoilType = typeof ALL_SOIL_TYPES[number];
+
 // Soil difficulty modifiers for clearing work (0-1 scale, positive = more work)
 export const SOIL_DIFFICULTY_MODIFIERS = {
   // Easy soils (negative modifiers = less work)

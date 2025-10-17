@@ -3,15 +3,15 @@ import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadWineOrders } from '../../database/customers/salesDB';
 import { getCurrentPrestige } from '../core/gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
+import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 
 /**
  * Generate a customer based on company prestige
- * Uses sophisticated scaling based on company prestige with diminishing returns
+ * Uses normalized prestige scaling for consistent behavior across the app
  * 
  * Business Logic:
- * - Low prestige (0-100): Linear scaling from 5% to 15% chance
- * - Medium prestige (100-500): Logarithmic scaling from 15% to 35% chance with arctan
- * - High prestige (500+): Diminishing returns, approaches but never exceeds 35%
+ * - Uses NormalizeScrewed1000To01WithTail for consistent prestige scaling
+ * - Maps normalized prestige (0-1) to chance range (5%-35%)
  * - Pending orders reduce chance to prevent spam
  * 
  * @param options - Configuration options for customer generation
@@ -56,22 +56,14 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   const pendingOrders = await loadWineOrders('pending');
   const pendingCount = pendingOrders.length;
   
-  // Calculate base chance from prestige
-  let baseChance: number;
+  // Calculate base chance from normalized prestige
+  // Use consistent normalization function for prestige scaling
+  const normalizedPrestige = NormalizeScrewed1000To01WithTail(currentPrestige);
   
-  if (currentPrestige <= PRESTIGE_ORDER_GENERATION.PRESTIGE_THRESHOLD) {
-    // Linear scaling for low prestige (0-100)
-    baseChance = PRESTIGE_ORDER_GENERATION.MIN_BASE_CHANCE + 
-      (currentPrestige / PRESTIGE_ORDER_GENERATION.PRESTIGE_THRESHOLD) * 
-      (PRESTIGE_ORDER_GENERATION.MID_PRESTIGE_CHANCE - PRESTIGE_ORDER_GENERATION.MIN_BASE_CHANCE);
-  } else {
-    // Logarithmic scaling with diminishing returns for high prestige (100+)
-    const excessPrestige = currentPrestige - PRESTIGE_ORDER_GENERATION.PRESTIGE_THRESHOLD;
-    const arcTanFactor = Math.atan(excessPrestige / PRESTIGE_ORDER_GENERATION.DIMINISHING_FACTOR) / Math.PI;
-    
-    baseChance = PRESTIGE_ORDER_GENERATION.MID_PRESTIGE_CHANCE + 
-      arcTanFactor * (PRESTIGE_ORDER_GENERATION.MAX_BASE_CHANCE - PRESTIGE_ORDER_GENERATION.MID_PRESTIGE_CHANCE);
-  }
+  // Map normalized prestige (0-1) to chance range (5%-35%)
+  // This creates a smooth curve from low to high prestige
+  const baseChance = PRESTIGE_ORDER_GENERATION.MIN_BASE_CHANCE + 
+    normalizedPrestige * (PRESTIGE_ORDER_GENERATION.MAX_BASE_CHANCE - PRESTIGE_ORDER_GENERATION.MIN_BASE_CHANCE);
   
   // Apply pending order penalty
   const pendingPenalty = Math.pow(PRESTIGE_ORDER_GENERATION.PENDING_ORDER_PENALTY, pendingCount);

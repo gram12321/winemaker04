@@ -3,17 +3,17 @@ import { v4 as uuidv4 } from 'uuid';
 import { Customer, CustomerCountry, CustomerType } from '../../types/types';
 import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS } from '../../constants/constants';
 import { NAMES } from '../../constants/namesConstants';
-import { calculateSkewedMultiplier } from '../../utils/calculator';
+import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '../../database/customers/customerDB';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
 /**
  * Calculate customer relationship based on company prestige and market share
- * Uses a logarithmic scaling for prestige and a power-based scaling for market share
+ * Uses normalized prestige scaling and power-based scaling for market share
  * to create the desired relationship values:
  * - Zero prestige → ~0.1 relationship
- * - Prestige 100 → ~15 relationship
+ * - Prestige 100 → ~15 relationship  
  * - Prestige 1000 → ~25 relationship
  * - 0.1% market share → ~1.16 divisor
  * - 1% market share → ~1.77 divisor
@@ -24,9 +24,12 @@ export function calculateCustomerRelationship(marketShare: number, companyPresti
   // Very low base relationship
   const baseRelationship = 0.1;
   
-  // Prestige contribution with logarithmic scaling (diminishing returns)
-  // This gives ~15 at prestige 100 and ~25 at prestige 1000
-  const prestigeContribution = Math.log(companyPrestige + 1) * 3.3;
+  // Normalize prestige to 0-1 scale using consistent function
+  const normalizedPrestige = NormalizeScrewed1000To01WithTail(companyPrestige);
+  
+  // Scale normalized prestige to match desired relationship values
+  // 0 prestige → 0 contribution, 1000+ prestige → ~25 contribution
+  const prestigeContribution = normalizedPrestige * 25;
   
   // Market share impact - more aggressive formula for larger importers
   // Uses a combination of power functions to match the specified divisor values

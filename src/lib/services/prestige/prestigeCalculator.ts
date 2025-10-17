@@ -5,6 +5,8 @@
 // - Sale events (no features): Scale with company ASSETS (business size)
 // - Feature events (positive/negative): Scale with company/vineyard PRESTIGE (reputation standards)
 
+import { NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
+
 /**
  * Calculate dynamic prestige for REGULAR SALE EVENTS (positive, no features)
  * Scales with company ASSETS (business size) - bigger companies make bigger sales
@@ -75,8 +77,9 @@ export function calculateFeatureSalePrestigeWithReputation(
   // Value scaling (logarithmic)
   const valueFactor = Math.log((saleValue / 1000) + 1) * valueWeight;
   
-  // Prestige scaling (square root - higher prestige = held to higher standards)
-  const prestigeFactor = Math.sqrt(Math.max(1, companyPrestige) / 10) * prestigeWeight;
+  // Prestige scaling using NormalizeScrewed1000To01WithTail + inverted log scaling
+  // Higher prestige companies are held to much higher standards (17.9x scaling from prestige 1 to 1000)
+  const prestigeFactor = Math.log(1 / (1 - NormalizeScrewed1000To01WithTail(companyPrestige) + 0.001)) / 5 * prestigeWeight;
   
   // Formula: baseAmount × (volume + value) × prestige
   const amount = baseAmount * (volumeFactor + valueFactor) * prestigeFactor;
@@ -118,8 +121,9 @@ export function calculateVineyardManifestationPrestige(
   // Quality scaling (linear - premium wine failures/achievements matter more)
   const qualityFactor = (1 + wineQuality) * qualityWeight;
   
-  // Vineyard prestige scaling (square root - premium vineyards held to higher standard)
-  const vineyardFactor = Math.sqrt(Math.max(0.1, vineyardPrestige) / 5) * vineyardPrestigeWeight;
+  // Vineyard prestige scaling using NormalizeScrewed1000To01WithTail + inverted log scaling
+  // Higher prestige vineyards are held to much higher standards (17.9x scaling from prestige 1 to 1000)
+  const vineyardFactor = Math.log(1 / (1 - NormalizeScrewed1000To01WithTail(vineyardPrestige) + 0.001)) / 5 * vineyardPrestigeWeight;
   
   // Formula: baseAmount × size × quality × vineyardPrestige
   const amount = baseAmount * sizeFactor * qualityFactor * vineyardFactor;
@@ -161,8 +165,9 @@ export function calculateCompanyManifestationPrestige(
   // Quality scaling (linear - premium wine failures/achievements matter more)
   const qualityFactor = (1 + wineQuality) * qualityWeight;
   
-  // Company prestige scaling (square root - higher prestige = held to higher standards)
-  const prestigeFactor = Math.sqrt(Math.max(0.1, companyPrestige) / 5) * companyPrestigeWeight;
+  // Company prestige scaling using NormalizeScrewed1000To01WithTail + inverted log scaling
+  // Higher prestige companies are held to much higher standards (17.9x scaling from prestige 1 to 1000)
+  const prestigeFactor = Math.log(1 / (1 - NormalizeScrewed1000To01WithTail(companyPrestige) + 0.001)) / 5 * companyPrestigeWeight;
   
   // Formula: baseAmount × size × quality × companyPrestige
   const amount = baseAmount * sizeFactor * qualityFactor * prestigeFactor;

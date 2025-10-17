@@ -6,6 +6,7 @@ import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { getGameState } from '../../core/gameState';
 import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
+import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineQuality } from '../winescore/wineQualityCalculationService';
@@ -166,8 +167,14 @@ export async function createWineBatchFromHarvest(
       characteristics
     );
     
-    // Recalculate estimated price for the combined batch
-    const estimatedPrice = calculateEstimatedPrice(combinedBatch, vineyard);
+    // Recalculate estimated price for the combined batch with prestige multipliers
+    const prestigeData = await calculateCurrentPrestige();
+    const estimatedPrice = calculateEstimatedPrice(
+      combinedBatch, 
+      vineyard, 
+      prestigeData.companyPrestige, 
+      vineyard.vineyardPrestige
+    );
     combinedBatch.estimatedPrice = estimatedPrice;
     
     // Update harvest period bounds
@@ -212,8 +219,14 @@ export async function createWineBatchFromHarvest(
       harvestEndDate: harvestDate
     };
 
-    // Calculate estimated price using the pricing service
-    const estimatedPrice = calculateEstimatedPrice(wineBatch, vineyard);
+    // Calculate estimated price using the pricing service with prestige multipliers
+    const prestigeData = await calculateCurrentPrestige();
+    const estimatedPrice = calculateEstimatedPrice(
+      wineBatch, 
+      vineyard, 
+      prestigeData.companyPrestige, 
+      vineyard.vineyardPrestige
+    );
     wineBatch.estimatedPrice = estimatedPrice;
 
     // Process harvest event triggers (e.g., green flavor from underripe grapes)

@@ -58,7 +58,6 @@ export {
   getAccessibleRegionsWithMaxCaps,
   calculateRedistributedProbabilities,
   calculateMaxRegionProbability,
-  calculateRegionProbability,
   generateVineyardSearchResults,
   startLandSearch,
   completeLandSearch,
