@@ -12,7 +12,7 @@ import { loadWineOrders } from '../../database/customers/salesDB';
 import { loadWineLog } from '../../database/core/wineLogDB';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 
 /**

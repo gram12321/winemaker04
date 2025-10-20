@@ -2,7 +2,7 @@
 import { getGameState, updateGameState } from './gameState';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from './notificationService';
 import { NotificationCategory } from '../../../lib/types/types';
 import { progressActivities } from '../activity/activitymanagers/activityManager';
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation } from '../vineyard/vineyardManager';

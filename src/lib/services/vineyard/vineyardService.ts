@@ -11,7 +11,7 @@ import { addTransaction } from '../user/financeService';
 import { VineyardPurchaseOption } from './landSearchService';
 import { getGameState } from '../core/gameState';
 import { formatCurrency } from '../../utils/utils';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 
 

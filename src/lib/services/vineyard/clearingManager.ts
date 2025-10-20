@@ -2,7 +2,7 @@ import { Activity, WorkCategory } from '@/lib/types/types';
 import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
 import { createActivity } from '../activity/activitymanagers/activityManager';
 import { updateVineyardHealth } from './clearingService';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { getGameState } from '../core/gameState';

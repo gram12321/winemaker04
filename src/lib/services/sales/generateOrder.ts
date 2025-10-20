@@ -7,7 +7,7 @@ import { getGameState } from '../core/gameState';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoosts } from './relationshipService';

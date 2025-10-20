@@ -3,7 +3,7 @@ import { WineOrder, Vineyard, NotificationCategory } from '../../types/types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { getAllCustomers } from './createCustomer';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from '../core/notificationService';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { SALES_CONSTANTS } from '../../constants/constants';

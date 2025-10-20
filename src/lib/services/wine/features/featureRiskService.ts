@@ -6,7 +6,7 @@ import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulation
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../../constants/wineFeatures';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
-import { notificationService } from '../../../../components/layout/NotificationCenter';
+import { notificationService } from '../../core/notificationService';
 import { NotificationCategory } from '../../../types/types';
 import { addFeaturePrestigeEvent } from '../../prestige/prestigeService';
 

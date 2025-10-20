@@ -5,7 +5,7 @@ import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMN
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 import { loadActivitiesFromDb, removeActivityFromDb } from '../../database/activities/activityDB';
 import { WorkCategory } from '../../services/activity';
-import { notificationService } from '../../../components/layout/NotificationCenter';
+import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 
 
