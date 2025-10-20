@@ -4,7 +4,7 @@ import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, QualityFactorsBreakdown, VineyardModal } from '../ui';
+import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal } from '../ui';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { HarvestRisksDisplay } from '../ui/vineyard/HarvestFeatureRisksDisplay';
 import HealthTooltip from '../ui/vineyard/HealthTooltip';
@@ -694,14 +694,6 @@ const Vineyard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Quality Factors Section */}
-                <div className="border-t pt-3">
-                  <QualityFactorsBreakdown
-                    vineyard={vineyard}
-                    showFactorDetails={false}
-                    className="bg-gray-50 p-3 rounded-lg"
-                  />
-                </div>
                 
                 {/* Vineyard Health Section - Always show */}
                 <div className="border-t pt-3">

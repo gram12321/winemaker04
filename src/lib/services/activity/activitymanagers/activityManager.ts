@@ -120,18 +120,16 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     await completeStaffSearch(activity);
   },
 
+  [WorkCategory.STAFF_HIRING]: async (activity: Activity) => {
+    await completeHiringProcess(activity);
+  },
+
   [WorkCategory.LAND_SEARCH]: async (activity: Activity) => {
     await completeLandSearch(activity);
   },
 
   [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
-    // Check if this is a hiring activity (distinguished by isHiringActivity param)
-    // Otherwise it's a bookkeeping/administration activity
-    if (activity.params.isHiringActivity) {
-      await completeHiringProcess(activity);
-    } else {
-      await completeBookkeeping(activity);
-    }
+    await completeBookkeeping(activity);
   }
 };
 

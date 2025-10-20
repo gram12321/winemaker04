@@ -23,6 +23,7 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.UPGRADING]: 100000, // €/week
   [WorkCategory.MAINTENANCE]: 500000, // €/week
   [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
+  [WorkCategory.STAFF_HIRING]: 2.0,  // hires/week
   [WorkCategory.LAND_SEARCH]: 45,   // properties/week
   [WorkCategory.ADMINISTRATION]: 500 // tasks/week; with BASE_WORK_UNITS 50 => 0.1 work/tx
 };
@@ -76,6 +77,7 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.UPGRADING]: 150,
   [WorkCategory.MAINTENANCE]: 10,
   [WorkCategory.STAFF_SEARCH]: 25,
+  [WorkCategory.STAFF_HIRING]: 25,
   [WorkCategory.LAND_SEARCH]: 75,
   [WorkCategory.ADMINISTRATION]: 25
 };
@@ -155,6 +157,12 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
   },
   [WorkCategory.STAFF_SEARCH]: {
     displayName: 'Staff Search',
+    icon: 'icon_hiring.webp',
+    isDensityBased: false,
+    skill: 'administration'
+  },
+  [WorkCategory.STAFF_HIRING]: {
+    displayName: 'Staff Hiring',
     icon: 'icon_hiring.webp',
     isDensityBased: false,
     skill: 'administration'

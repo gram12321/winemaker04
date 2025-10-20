@@ -201,16 +201,11 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
       false
     );
     
-    // Get specialization names for title
-    const skillInfo = getSkillLevelInfo(options.skillLevel);
-    const specText = options.specializations.length > 0 
-      ? ` (${options.specializations.join(', ')})` 
-      : '';
-    
+  
     // Create the search activity
     const activityId = await createActivity({
       category: WorkCategory.STAFF_SEARCH,
-      title: `Search: ${options.numberOfCandidates} ${skillInfo.name} candidate${options.numberOfCandidates > 1 ? 's' : ''}${specText}`,
+      title: 'Search Staff',
       totalWork,
       params: {
         searchOptions: options,
@@ -300,11 +295,10 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     
     // Create the hiring activity
     const activityId = await createActivity({
-      category: WorkCategory.ADMINISTRATION,
+      category: WorkCategory.STAFF_HIRING,
       title: `Hiring: ${candidate.name}`,
       totalWork: hiringWork,
       params: {
-        isHiringActivity: true, // Flag to distinguish from bookkeeping
         candidateData: candidate,
         hiringCost: candidate.wage
       },
