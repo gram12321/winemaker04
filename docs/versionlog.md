@@ -25,6 +25,8 @@
 
 ---
 
+## Version 0.0331a Mobilefix Deployment issue
+
 ## Version 0.032 - Planting Enhancements & Bug Fixes
 **Date:** 2025-10-20 | **Commit:** d90b1cd | **Stats:** 1079 additions, 550 deletions
 - **NEW FILE:** `src/lib/services/activity/workcalculators/clearingWorkCalculator.ts` (288 lines) - Dedicated clearing work calculator
