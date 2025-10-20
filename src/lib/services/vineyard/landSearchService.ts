@@ -193,8 +193,8 @@ export function calculateSearchCost(options: LandSearchOptions, _companyPrestige
  * Uses multiplicative scaling similar to cost calculation - more constraints = more work
  */
 export function calculateSearchWork(options: LandSearchOptions, _companyPrestige: number): number {
-  const rate = TASK_RATES[WorkCategory.ADMINISTRATION];
-  const initialWork = INITIAL_WORK[WorkCategory.ADMINISTRATION];
+  const rate = TASK_RATES[WorkCategory.LAND_SEARCH];
+  const initialWork = INITIAL_WORK[WorkCategory.LAND_SEARCH];
   
   // Track which constraints are active and their intensities (similar to cost calculation)
   const activeConstraints: number[] = [];

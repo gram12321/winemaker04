@@ -232,6 +232,20 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
             <>
               {/* Mobile Card Layout */}
               <div className="block sm:hidden space-y-3">
+                {/* Mobile Assign All Button */}
+                <div className="flex justify-between items-center mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                    className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
+                  >
+                    {selectAll ? 'Deselect All' : 'Select All'}
+                  </Button>
+                  <span className="text-xs text-gray-400">
+                    {selectedStaffIds.length} of {allStaff.length} selected
+                  </span>
+                </div>
                 {allStaff.map(staff => {
                   const skillInfo = getSkillLevelInfo(staff.skillLevel);
                   const isSelected = selectedStaffIds.includes(staff.id);

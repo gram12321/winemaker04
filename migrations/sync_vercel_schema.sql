@@ -1,4 +1,12 @@
 -- ============================================================
+-- AI AGENT INSTRUCTIONS: Vercel Database Full Reset Migration
+-- ============================================================
+-- PURPOSE: Complete schema reset - DROPS ALL DATA
+-- USE: Major breaking changes, corrupted data, or clean slate needed
+-- DATA LOSS: ✅ All data is lost
+-- WHEN TO USE: When vercel_migration_preserve_data.sql fails or major schema changes
+-- HOW TO REGENERATE: Run mcp_supabase-dev_list_tables, then generate complete schema
+-- ============================================================
 -- Winemaker Game - Vercel Database Schema Sync
 -- Generated: 2025-01-27 (Updated with years_since_last_clearing field)
 -- Dev Database: uuribntaigecwtkdxeyw
@@ -7,13 +15,6 @@
 -- This migration syncs the Vercel database schema with the current dev database
 -- Run this in Vercel Supabase SQL Editor: 
 -- https://supabase.com/dashboard/project/uuzoeoukixvunbnkrowi/editor
---
--- HOW TO REGENERATE THIS FILE (for AI agents):
--- 1. Run: mcp_supabase-dev_list_tables with schemas: ["public"]
--- 2. Query constraints: SELECT conname, conrelid::regclass, pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace = 'public'::regnamespace;
--- 3. Query RLS status: SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
--- 4. Query RLS policies: SELECT * FROM pg_policies WHERE schemaname = 'public';
--- 5. Generate complete SQL with all constraints from dev database
 --
 -- CRITICAL UNIQUE CONSTRAINTS (from dev database):
 -- ✅ highscores: UNIQUE (company_id, score_type)

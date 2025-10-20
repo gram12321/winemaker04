@@ -378,3 +378,4 @@ export async function resetTeamsToDefault(): Promise<void> {
   
   await notificationService.addMessage('Teams reset to default configuration', 'teamService.resetTeamsToDefault', 'Team Reset', NotificationCategory.STAFF_MANAGEMENT);
 }
+

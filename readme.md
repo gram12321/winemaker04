@@ -83,13 +83,16 @@ return (
 **Vercel Database (Staging):**
 - Supabase project: `uuzoeoukixvunbnkrowi`
 - Environment: Vercel Dashboard → Environment Variables
-- Management: Manual SQL migrations via `migrations/sync_vercel_schema.sql`
+- Management: Manual SQL migrations via `migrations/` (data-preserving or full reset)
 - Usage: `winemaker-omega.vercel.app` (stable for testing)
 
 **Migration Process:**
 1. Update dev database via MCP tools
-2. Run `migrations/sync_vercel_schema.sql` in Vercel Supabase SQL Editor
-3. Verify Vercel deployment works
+2. Choose migration type:
+   - **Data-preserving**: `migrations/vercel_migration_preserve_data.sql` (recommended for regular updates)
+   - **Full reset**: `migrations/sync_vercel_schema.sql` (major breaking changes only)
+3. Run chosen migration in Vercel Supabase SQL Editor
+4. Verify Vercel deployment works
 
 **Legacy Reference Documentation:**
 - `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
