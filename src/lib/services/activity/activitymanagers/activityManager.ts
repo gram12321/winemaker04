@@ -3,7 +3,7 @@ import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types
 import { WorkCategory } from '@/lib/services/activity';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
-import { completePlanting } from '@/lib/services';
+import { completePlanting } from '../../vineyard/vineyardService';
 import { createWineBatchFromHarvest } from '../../wine/winery/inventoryService';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { calculateVineyardYield } from '../../vineyard/vineyardManager';
