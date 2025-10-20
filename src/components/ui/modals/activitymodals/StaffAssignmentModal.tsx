@@ -106,7 +106,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   
   // Render skill bars for a staff member (reusable list component)
   const renderSkillBars = (staff: Staff) => (
-    <div className="w-60">
+    <div className="w-full sm:w-60">
       <StaffSkillBarsList
         staff={staff}
         relevantSkill={relevantSkill.toLowerCase() as any}
@@ -116,17 +116,17 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   );
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-xs sm:max-w-2xl lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
-          <div>
-            <h2 className="text-xl font-bold text-white">Assign Staff</h2>
-            <p className="text-sm text-gray-400 mt-1">{activity.title}</p>
+        <div className="flex justify-between items-start p-3 sm:p-6 border-b border-gray-700">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-white">Assign Staff</h2>
+            <p className="text-xs sm:text-sm text-gray-400 mt-1 truncate">{activity.title}</p>
             {defaultTeam && (
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <span>{defaultTeam.icon}</span>
-                <span className="italic">
+                <span className="italic truncate">
                   Auto-assigns team: {defaultTeam.name} ({teamMemberCount} {teamMemberCount === 1 ? 'member' : 'members'})
                 </span>
               </div>
@@ -134,25 +134,28 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
+            className="text-gray-400 hover:text-white text-2xl leading-none ml-2 flex-shrink-0"
           >
             ×
           </button>
         </div>
         
         {/* Work Preview */}
-        <div className="bg-gray-800 p-4 border-b border-gray-700">
+        <div className="bg-gray-800 p-3 sm:p-4 border-b border-gray-700">
           <h3 className="text-sm font-semibold text-white mb-3">Work Progress Preview</h3>
           
-          <div className="grid grid-cols-3 gap-4 mb-3 text-sm text-gray-300">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-3 text-xs sm:text-sm text-gray-300">
             <div>
-              <span className="font-medium">Work per Week:</span> {formatNumber(workPerWeek, { decimals: 0 })} units
+              <span className="font-medium">Work per Week:</span><br className="sm:hidden" />
+              <span className="sm:ml-1">{formatNumber(workPerWeek, { decimals: 0 })} units</span>
             </div>
             <div>
-              <span className="font-medium">Progress:</span> {formatNumber(activity.completedWork, { decimals: 0 })}/{formatNumber(activity.totalWork, { decimals: 0 })} units
+              <span className="font-medium">Progress:</span><br className="sm:hidden" />
+              <span className="sm:ml-1">{formatNumber(activity.completedWork, { decimals: 0 })}/{formatNumber(activity.totalWork, { decimals: 0 })} units</span>
             </div>
             <div>
-              <span className="font-medium">Weeks to Complete:</span> {weeksToComplete > 0 ? weeksToComplete : 'N/A'}
+              <span className="font-medium">Weeks to Complete:</span><br className="sm:hidden" />
+              <span className="sm:ml-1">{weeksToComplete > 0 ? weeksToComplete : 'N/A'}</span>
             </div>
           </div>
           
@@ -210,14 +213,14 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           )}
           
           <p className="text-xs text-gray-400 mt-2">
-            Primary skill for this activity: <span className="font-medium" style={{ color: getSkillColor(relevantSkill.toLowerCase() as any) }}>{relevantSkill}</span>
+            Primary skill: <span className="font-medium" style={{ color: getSkillColor(relevantSkill.toLowerCase() as any) }}>{relevantSkill}</span>
           </p>
         </div>
         
         {/* Staff List */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-white">Available Staff ({allStaff.length})</h3>
+            <h3 className="font-semibold text-white text-sm sm:text-base">Available Staff ({allStaff.length})</h3>
           </div>
           
           {allStaff.length === 0 ? (
@@ -226,86 +229,141 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
               <p className="text-sm mt-2">Hire staff from the Staff page to assign them to activities.</p>
             </div>
           ) : (
-            <div className="bg-gray-800 rounded-lg overflow-hidden">
-              <table className="min-w-full">
-                <thead className="bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Nationality</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Skills</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Specializations</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300">Wage</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={selectAll}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-500 bg-gray-700"
-                      />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {allStaff.map(staff => {
-                    const skillInfo = getSkillLevelInfo(staff.skillLevel);
-                    
-                    return (
-                      <tr key={staff.id} className="hover:bg-gray-750 transition-colors">
-                        <td className="px-4 py-3 text-sm text-white">
-                          <div className="flex items-center gap-2">
-                            <span className={`${getFlagIcon(staff.nationality)} text-base`}></span>
-                            <div>
-                              <div>{staff.name}</div>
-                              <div className="text-xs text-gray-400">{skillInfo.name}</div>
-                            </div>
+            <>
+              {/* Mobile Card Layout */}
+              <div className="block sm:hidden space-y-3">
+                {allStaff.map(staff => {
+                  const skillInfo = getSkillLevelInfo(staff.skillLevel);
+                  const isSelected = selectedStaffIds.includes(staff.id);
+                  
+                  return (
+                    <div 
+                      key={staff.id} 
+                      className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${
+                        isSelected ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className={`${getFlagIcon(staff.nationality)} text-base flex-shrink-0`}></span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-white truncate">{staff.name}</div>
+                            <div className="text-xs text-gray-400">{skillInfo.name}</div>
+                            <div className="text-xs text-gray-500">{staff.nationality}</div>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-300">{staff.nationality}</td>
-                        <td className="px-4 py-3">{renderSkillBars(staff)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-300">
-                          {staff.specializations.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {staff.specializations.map(spec => (
-                                <span key={spec} className="text-xs bg-blue-600 text-white px-2 py-1 rounded flex items-center gap-1">
-                                  <span>{getSpecializationIcon(spec)}</span>
-                                  <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 text-xs">None</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-300 text-right">€{formatNumber(staff.wage)}/wk</td>
-                        <td className="px-4 py-3 text-center">
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs text-gray-300">€{formatNumber(staff.wage)}/wk</span>
                           <input
                             type="checkbox"
-                            checked={selectedStaffIds.includes(staff.id)}
+                            checked={isSelected}
                             onChange={() => handleToggleStaff(staff.id)}
                             className="rounded border-gray-500 bg-gray-700"
                           />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        {renderSkillBars(staff)}
+                      </div>
+                      
+                      {staff.specializations.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {staff.specializations.map(spec => (
+                            <span key={spec} className="text-xs bg-blue-600 text-white px-2 py-1 rounded flex items-center gap-1">
+                              <span>{getSpecializationIcon(spec)}</span>
+                              <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Desktop Table Layout */}
+              <div className="hidden sm:block bg-gray-800 rounded-lg overflow-hidden">
+                <table className="min-w-full">
+                  <thead className="bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Nationality</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Skills</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Specializations</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300">Wage</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={selectAll}
+                          onChange={handleSelectAll}
+                          className="rounded border-gray-500 bg-gray-700"
+                        />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {allStaff.map(staff => {
+                      const skillInfo = getSkillLevelInfo(staff.skillLevel);
+                      
+                      return (
+                        <tr key={staff.id} className="hover:bg-gray-750 transition-colors">
+                          <td className="px-4 py-3 text-sm text-white">
+                            <div className="flex items-center gap-2">
+                              <span className={`${getFlagIcon(staff.nationality)} text-base`}></span>
+                              <div>
+                                <div>{staff.name}</div>
+                                <div className="text-xs text-gray-400">{skillInfo.name}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-300">{staff.nationality}</td>
+                          <td className="px-4 py-3">{renderSkillBars(staff)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-300">
+                            {staff.specializations.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.specializations.map(spec => (
+                                  <span key={spec} className="text-xs bg-blue-600 text-white px-2 py-1 rounded flex items-center gap-1">
+                                    <span>{getSpecializationIcon(spec)}</span>
+                                    <span>{SPECIALIZED_ROLES[spec]?.title || spec}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 text-xs">None</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-300 text-right">€{formatNumber(staff.wage)}/wk</td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedStaffIds.includes(staff.id)}
+                              onChange={() => handleToggleStaff(staff.id)}
+                              className="rounded border-gray-500 bg-gray-700"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
         
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-3 sm:p-6 border-t border-gray-700">
           <Button
             variant="outline"
             onClick={onClose}
-            className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
+            className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600 text-sm sm:text-base"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base"
           >
             Assign {selectedStaffIds.length} Staff
           </Button>

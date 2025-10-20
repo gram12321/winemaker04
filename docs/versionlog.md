@@ -25,6 +25,37 @@
 
 ---
 
+## Version 0.032 - Planting Enhancements & Bug Fixes
+**Date:** 2025-10-20 | **Commit:** d90b1cd | **Stats:** 1079 additions, 550 deletions
+- **NEW FILE:** `src/lib/services/activity/workcalculators/clearingWorkCalculator.ts` (288 lines) - Dedicated clearing work calculator
+- `src/components/pages/Vineyard.tsx` - Enhanced vineyard management with planting improvements (162 additions, 100 deletions)
+- `src/components/ui/modals/UImodals/vineyardModal.tsx` - Major vineyard modal enhancements (202 additions, 68 deletions)
+- `src/components/ui/modals/activitymodals/ClearingOptionsModal.tsx` - Streamlined clearing options (119 additions, 188 deletions)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Enhanced activity management with partial event penalties (65 additions, 4 deletions)
+- `src/lib/services/vineyard/clearingManager.ts` - Simplified clearing management (35 additions, 117 deletions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Enhanced vineyard operations (78 additions, 27 deletions)
+- `src/lib/services/vineyard/vineyardService.ts` - Improved vineyard service logic (44 additions, 15 deletions)
+- `src/lib/services/activity/workcalculators/vineyardWorkCalculator.ts` - Enhanced vineyard work calculations (37 additions, 2 deletions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates for planting enhancements (7 additions, 1 deletion)
+- **Key Feature:** Transition to partial event system for planting activities with penalties for incomplete tasks
+
+---
+
+## Version 0.0312b - Probability Fix
+**Date:** 2025-10-17 | **Commit:** b09052a | **Stats:** 124 additions, 155 deletions
+- `src/lib/services/vineyard/landSearchService.ts` - Fixed probability calculations and refined land generation logic (98 additions, 123 deletions)
+- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` - UI improvements for probability display (26 additions, 28 deletions)
+- `src/lib/services/index.ts` - Service export cleanup (4 deletions)
+
+---
+
+## Version 0.0312a - Probability Bug Fix
+**Date:** 2025-10-17 | **Commit:** 18100c4 | **Stats:** 96 additions, 44 deletions
+- `src/lib/services/vineyard/landSearchService.ts` - Fixed probability calculation bug in land search (95 additions, 43 deletions)
+- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` - Minor UI adjustment (1 addition, 1 deletion)
+
+---
+
 ## Version 0.0312 - Vineyard Schema Fix
 **Date:** 2025-01-27 | **Commit:** Schema Fix | **Stats:** Database schema synchronization
 - Fixed vineyard creation runtime error by adding missing fields to dev database
