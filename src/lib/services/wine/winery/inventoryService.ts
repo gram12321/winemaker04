@@ -134,7 +134,7 @@ export async function createWineBatchFromHarvest(
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,
-    qualityFactor: 0.5, // Use default quality factor since we'll use balance score
+    qualityFactor: calculateWineQuality(vineyard), // Use actual vineyard quality instead of hardcoded 0.5
     suitability,
     altitude,
     medianAltitude: (minAlt + maxAlt) / 2,

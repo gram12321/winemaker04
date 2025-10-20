@@ -117,7 +117,7 @@ export const QualityFactorsBreakdown: React.FC<QualityFactorsBreakdownProps> = (
             <div className="flex justify-between text-lg font-bold">
               <span>Weighted Calculation:</span>
               <span className="font-mono">
-                ({formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}×0.6) + ({formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}×0.4) = {formatNumber(qualityScore, { decimals: 2, forceDecimals: true })}
+                (({formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}×0.6) + ({formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}×0.4)) × {formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })} = {formatNumber(qualityScore, { decimals: 2, forceDecimals: true })}
               </span>
             </div>
           </div>

@@ -117,8 +117,16 @@ export async function updateVineyardHealth(
       // 100% replanting just means all vines are replaced with new ones of the same variety
     }
     
-    // Track individual clearing tasks for yearly limits
-    const currentYear = new Date().getFullYear();
+    // Update overgrowth object - reset specific task types to 0
+    const currentOvergrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+    const updatedOvergrowth = { ...currentOvergrowth };
+    
+    // Reset specific task types to 0 when completed
+    if (tasks['clear-vegetation']) updatedOvergrowth.vegetation = 0;
+    if (tasks['remove-debris']) updatedOvergrowth.debris = 0;
+    if (tasks['uproot-vines']) updatedOvergrowth.uproot = 0;
+    if (tasks['replant-vines']) updatedOvergrowth.replant = 0;
+
     const updatedVineyard = {
       ...vineyard,
       vineyardHealth: newHealth,
@@ -127,10 +135,7 @@ export async function updateVineyardHealth(
       status: newStatus,
       grape: newGrape,
       density: newDensity,
-      yearsSinceLastClearing: 0, // Reset to 0 since clearing was just completed
-      lastClearingYear: currentYear, // Track the year when clearing was completed
-      lastClearVegetationYear: tasks['clear-vegetation'] ? currentYear : vineyard.lastClearVegetationYear || 0, // Track clear vegetation separately
-      lastRemoveDebrisYear: tasks['remove-debris'] ? currentYear : vineyard.lastRemoveDebrisYear || 0, // Track remove debris separately
+      overgrowth: updatedOvergrowth,
       plantingHealthBonus: newPlantingHealthBonus // Set gradual health improvement for replanting
     };
 

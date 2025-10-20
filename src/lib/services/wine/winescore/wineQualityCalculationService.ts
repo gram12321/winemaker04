@@ -6,6 +6,7 @@ import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../uti
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
 import { calculateEffectiveQuality } from '../features/featureEffectsService';
 import { getFeatureImpacts } from '../features/featureDisplayService';
+import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
 
 export function getMaxLandValue(): number {
   let maxValue = 0;
@@ -33,10 +34,44 @@ function normalizeLandValue(landValue: number): number {
   return calculateAsymmetricalScaler01(ratio);
 }
 
+/**
+ * Calculate overgrowth quality penalty based on vineyard neglect
+ * @param overgrowth - Overgrowth values from vineyard
+ * @returns Quality multiplier (0-1, where 1 = no penalty, 0.5 = 50% penalty)
+ */
+function calculateOvergrowthQualityPenalty(overgrowth: Vineyard['overgrowth']): number {
+  if (!overgrowth) return 1.0; // No overgrowth = no penalty
+  
+  // Calculate weighted average of overgrowth years
+  // Different overgrowth types have different quality impacts
+  const overgrowthYears = combineOvergrowthYears(overgrowth, undefined, {
+    vegetation: 1.0,  // High impact - overgrown vines = poor grape quality
+    debris: 0.8,      // Medium-high impact - poor drainage = stressed vines
+    uproot: 1.2,      // Highest impact - neglected old vines = declining quality
+    replant: 1.1      // High impact - over-mature vines = past peak
+  });
+  
+  if (overgrowthYears <= 0) return 1.0; // No overgrowth = no penalty
+  
+  // Quality penalty formula: exponential decay with diminishing returns
+  // Each year of overgrowth reduces quality by ~5-8%, with diminishing returns
+  const basePenalty = 0.06; // 6% penalty per year
+  const decayRate = 0.3;    // Diminishing returns factor
+  const maxPenalty = 0.5;   // Maximum 50% quality reduction
+  
+  const penalty = basePenalty * (1 - Math.pow(1 - decayRate, overgrowthYears));
+  const qualityMultiplier = Math.max(1 - penalty, maxPenalty);
+  
+  return qualityMultiplier;
+}
+
 export function calculateWineQuality(vineyard: Vineyard): number {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue || 50000);
   const boundedVineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
-  const wineQuality = (normalizedLandValue * 0.6) + (boundedVineyardPrestige * 0.4);
+  const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
+  
+  const wineQuality = ((normalizedLandValue * 0.6) + (boundedVineyardPrestige * 0.4)) * overgrowthPenalty;
+  
   return Math.max(0, Math.min(1, wineQuality));
 }
 
@@ -48,6 +83,7 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
     altitudeRating: number;
     aspectRating: number;
     grapeSuitability: number;
+    overgrowthPenalty: number;
   };
   rawValues: {
     landValue: number;
@@ -56,6 +92,7 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
     altitudeRating: string;
     aspectRating: string;
     grapeSuitability: string;
+    overgrowthPenalty: string;
   };
   qualityScore: number;
 } {
@@ -71,7 +108,13 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
   const grapeSuitability = vineyard.grape ? 
     calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country) : 0;
 
+  const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
   const qualityScore = calculateWineQuality(vineyard);
+
+  // Format overgrowth penalty for display
+  const overgrowthDisplay = vineyard.overgrowth ? 
+    `Vegetation: ${vineyard.overgrowth.vegetation}y, Debris: ${vineyard.overgrowth.debris}y, Uproot: ${vineyard.overgrowth.uproot}y, Replant: ${vineyard.overgrowth.replant}y` :
+    'No overgrowth';
 
   return {
     factors: {
@@ -80,7 +123,8 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
       regionalPrestige,
       altitudeRating,
       aspectRating,
-      grapeSuitability
+      grapeSuitability,
+      overgrowthPenalty
     },
     rawValues: {
       landValue: vineyard.landValue || 0,
@@ -88,7 +132,8 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
       regionalPrestige: rawPrestige,
       altitudeRating: `${vineyard.altitude}m`,
       aspectRating: vineyard.aspect,
-      grapeSuitability: vineyard.grape || ''
+      grapeSuitability: vineyard.grape || '',
+      overgrowthPenalty: overgrowthDisplay
     },
     qualityScore
   };

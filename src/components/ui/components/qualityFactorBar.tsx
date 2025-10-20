@@ -13,7 +13,8 @@ export type QualityFactorType =
   | 'regionalPrestige'
   | 'altitudeRating'
   | 'aspectRating'
-  | 'grapeSuitability';
+  | 'grapeSuitability'
+  | 'overgrowthPenalty';
 
 interface QualityFactorBarProps {
   factorType: QualityFactorType;
@@ -37,7 +38,7 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
   showIcon = true
 }) => {
   const getIcon = (factorType: QualityFactorType): string => {
-    return QUALITY_FACTOR_EMOJIS[factorType] || '❓';
+    return (QUALITY_FACTOR_EMOJIS as any)[factorType] || '❓';
   };
 
   // Clamp value to 0-1 range
@@ -229,9 +230,10 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
 
-  // Separate factors into direct and indirect influence
+  // Separate factors into direct, indirect, and quality modifiers
   const directFactors = ['landValue', 'vineyardPrestige'] as const;
   const indirectFactors = ['regionalPrestige', 'altitudeRating', 'aspectRating', 'grapeSuitability'] as const;
+  const qualityModifiers = ['overgrowthPenalty'] as const;
 
   const content = (
     <div className="space-y-4">
@@ -274,6 +276,27 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
         </div>
         <div className="bg-green-50 rounded-lg p-2 space-y-1">
           {indirectFactors.map((key) => (
+            <QualityFactorBar
+              key={key}
+              factorType={key}
+              label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+              value={factors[key]}
+              vineyard={vineyard}
+              showValue={showValues}
+              rawValue={rawValues?.[key]}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Quality Modifiers */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+          <h3 className="text-sm font-semibold text-gray-700">Quality Modifiers (Final Adjustments)</h3>
+        </div>
+        <div className="bg-orange-50 rounded-lg p-2 space-y-1">
+          {qualityModifiers.map((key) => (
             <QualityFactorBar
               key={key}
               factorType={key}

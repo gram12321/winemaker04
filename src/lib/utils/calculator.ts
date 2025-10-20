@@ -355,6 +355,7 @@ export function getRandomHectares(): number {
     r -= b.w;
   }
   const hectares = chosen.min + Math.random() * (chosen.max - chosen.min);
+  // Round to 0.01 ha resolution as requested
   return Number(hectares.toFixed(2));
 }
 

@@ -83,6 +83,22 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 
   const formatAmount = (amount: number) => formatNumber(amount, { decimals: 2, forceDecimals: true });
 
+  // Estimate elapsed weeks based on decay retention and original/current amounts
+  const estimateWeeksFromDecay = (
+    originalAmount?: number,
+    currentAmount?: number,
+    decayRate?: number
+  ) => {
+    if (!originalAmount || !currentAmount || !decayRate) return undefined;
+    if (originalAmount <= 0 || currentAmount <= 0) return undefined;
+    if (decayRate <= 0 || decayRate >= 1 && currentAmount > originalAmount) return undefined;
+    const ratio = currentAmount / originalAmount;
+    if (ratio <= 0 || ratio > 1) return undefined;
+    const weeks = Math.log(ratio) / Math.log(decayRate);
+    if (!isFinite(weeks) || weeks < 0) return undefined;
+    return Math.round(weeks);
+  };
+
   const EventDisplay = ({ event }: { event: PrestigeEvent }) => {
     const displayData = getEventDisplayData(event);
     const isAchievement = event.type === 'achievement' || event.type === 'vineyard_achievement';
@@ -123,7 +139,37 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
           <p className="text-xs text-muted-foreground">{formatDecayRate(event.decayRate)}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-medium">{formatAmount(event.currentAmount ?? event.amount)}</p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-sm font-medium cursor-help">{formatAmount(event.currentAmount ?? event.amount)}</p>
+              </TooltipTrigger>
+              <TooltipContent>
+                {(() => {
+                  const original = event.originalAmount ?? event.amount;
+                  const current = event.currentAmount ?? event.amount;
+                  const weeks = estimateWeeksFromDecay(original, current, event.decayRate);
+                  return (
+                    <div className="space-y-1">
+                      <p>Original: {formatAmount(original)}</p>
+                      <p>
+                        {event.decayRate === 0
+                          ? 'No decay'
+                          : `Weekly retention: ${(event.decayRate * 100).toFixed(2)}%`}
+                      </p>
+                      {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
+                        <p>
+                          Est.: {formatAmount(original)} × {event.decayRate.toFixed(4)}^{weeks} ≈ {formatAmount(current)}
+                        </p>
+                      ) : (
+                        <p>Current ≈ Original × retention^weeks</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {event.originalAmount !== event.currentAmount && (
             <p className="text-xs text-muted-foreground">
               (was {formatAmount(event.originalAmount ?? event.amount)})

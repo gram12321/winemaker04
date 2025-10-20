@@ -5,6 +5,7 @@ import { getAltitudeRating } from '../../vineyard/vineyardValueCalc';
 import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
 import { getGameState } from '../../core/gameState';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
+import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
 
 export interface ClearingWorkCalculationOptions {
   tasks: { [key: string]: boolean };
@@ -42,24 +43,6 @@ function getSoilTypeModifier(soil: string[]): number {
   
   // Average the modifiers if multiple soil types
   return validSoils > 0 ? totalModifier / validSoils : 0;
-}
-
-/**
- * Get overgrowth modifier based on years since last clearing
- * Uses diminishing returns: 1 year = 10%, 2 years = 15%, 3 years = 17.5%, etc.
- */
-function getOvergrowthModifier(yearsSinceLastClearing: number): number {
-  if (yearsSinceLastClearing <= 0) return 0;
-  
-  // Diminishing returns formula: base * (1 - (1 - decay)^years)
-  // This gives: 1 year = 10%, 2 years = 15%, 3 years = 17.5%, max ~200%
-  const baseIncrease = 0.10; // 10% base increase per year
-  const decayRate = 0.5; // Diminishing factor
-  
-  const maxModifier = baseIncrease / decayRate; // Theoretical maximum
-  const actualModifier = maxModifier * (1 - Math.pow(1 - decayRate, yearsSinceLastClearing));
-  
-  return Math.min(actualModifier, 2.0); // Cap at 200%
 }
 
 /**
@@ -122,7 +105,11 @@ export function calculateClearingWork(
   const soilModifier = getSoilTypeModifier(vineyard.soil);
   const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
   const terrainModifier = altitudeRating * 1.5; // Up to +150% work for very high altitude
-  const overgrowthModifier = getOvergrowthModifier(vineyard.yearsSinceLastClearing || 0);
+  
+  // Use the shared overgrowth util; clearing should consider all relevant types (weighted average)
+  const overgrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+  const combinedYears = combineOvergrowthYears(overgrowth);
+  const overgrowthModifier = calculateOvergrowthModifier(combinedYears, 0.10, 0.5, 2.0);
   
   // Get current season for seasonal modifiers
   const gameState = getGameState();
@@ -168,7 +155,7 @@ export function calculateClearingWork(
   if (Math.abs(overgrowthModifier) > 0.01) {
     workFactors.push({
       label: 'Overgrowth',
-      value: `${vineyard.yearsSinceLastClearing || 0} years since last clearing`,
+      value: `${combinedYears} years since relevant clearing`,
       modifier: overgrowthModifier,
       modifierLabel: 'overgrowth effect'
     });
@@ -239,7 +226,7 @@ export function calculateClearingWork(
     const taskWork = calculateTotalWork(taskAmount, {
       rate: task.rate,
       initialWork: task.initialWork,
-      useDensityAdjustment: taskId === 'uproot-vines' || taskId === 'replant-vines', // Vine uprooting and replanting use density adjustment
+      useDensityAdjustment: taskId === 'uproot-vines' || taskId === 'replant-vines',
       density: vineyard.density,
       workModifiers: taskModifiers
     });
@@ -251,14 +238,14 @@ export function calculateClearingWork(
       label: task.name,
       value: taskAmount,
       unit: 'hectares',
-      modifier: task.initialWork / (taskAmount * task.rate * 25), // Initial work as modifier
+      modifier: task.initialWork / (taskAmount * task.rate * 25),
       modifierLabel: 'setup work'
     });
     
     // Add density factor for vine uprooting and replanting
     if ((taskId === 'uproot-vines' || taskId === 'replant-vines') && vineyard.density > 0) {
-      const densityModifier = (vineyard.density / DEFAULT_VINE_DENSITY) - 1; // Use correct constant
-      if (Math.abs(densityModifier) > 0.05) { // Only show if significant (>5%)
+      const densityModifier = (vineyard.density / DEFAULT_VINE_DENSITY) - 1;
+      if (Math.abs(densityModifier) > 0.05) {
         workFactors.push({
           label: 'Vine Density',
           value: `${vineyard.density.toFixed(0)} vines/ha`,
@@ -275,7 +262,7 @@ export function calculateClearingWork(
     workFactors.push({
       label: 'Selected Tasks',
       value: selectedTaskCount,
-      modifier: selectedTaskCount > 1 ? 0.1 : 0, // 10% efficiency bonus for multiple tasks
+      modifier: selectedTaskCount > 1 ? 0.1 : 0,
       modifierLabel: 'task coordination'
     });
   }

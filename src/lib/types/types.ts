@@ -76,10 +76,12 @@ export interface Vineyard {
   ripeness: number; // Grape ripeness (0-1 scale, affects harvest readiness)
   vineyardPrestige: number;
   vineYield: number; // Persistent vine yield factor (0-1+ scale, can exceed 1.0)
-  yearsSinceLastClearing?: number; // Years since last clearing activity (affects overgrowth modifier)
-  lastClearingYear?: number; // Year when clearing was last completed (for yearly limits)
-  lastClearVegetationYear?: number; // Year when clear vegetation was last completed (for yearly limits)
-  lastRemoveDebrisYear?: number; // Year when remove debris was last completed (for yearly limits)
+  overgrowth?: {
+    vegetation: number; // Years since last clear-vegetation
+    debris: number;     // Years since last remove-debris  
+    uproot: number;      // Years since last uproot-vines
+    replant: number;     // Years since last replant-vines
+  };
   plantingHealthBonus?: number; // Gradual health improvement from planting/replanting (0-0.2, increases over 5 years)
   healthTrend?: {
     seasonalDecay: number; // Health lost this season

@@ -33,10 +33,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         ripeness: vineyard.ripeness || 0,
         vineyard_prestige: vineyard.vineyardPrestige,
         vine_yield: vineyard.vineYield || 0.02, // Default to 0.02 if not set
-        years_since_last_clearing: vineyard.yearsSinceLastClearing || 0, // Default to 0 (no overgrowth)
-        last_clearing_year: vineyard.lastClearingYear || 0, // Track the year when clearing was completed
-        last_clear_vegetation_year: vineyard.lastClearVegetationYear || 0, // Track when clear vegetation was last done
-        last_remove_debris_year: vineyard.lastRemoveDebrisYear || 0, // Track when remove debris was last done
+        overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
         planting_health_bonus: vineyard.plantingHealthBonus || 0, // Default to 0 (no gradual improvement)
         health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null // Store health trend as JSON
       });
@@ -74,10 +71,7 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       ripeness: row.ripeness ?? 0, // Default to 0 ripeness
       vineyardPrestige: row.vineyard_prestige || 0,
       vineYield: row.vine_yield ?? 0.02, // Default to 0.02 if not set (will be 0.02 for existing records)
-      yearsSinceLastClearing: row.years_since_last_clearing ?? 0, // Default to 0 (no overgrowth)
-      lastClearingYear: row.last_clearing_year ?? 0, // Track the year when clearing was completed
-      lastClearVegetationYear: row.last_clear_vegetation_year ?? 0, // Track when clear vegetation was last done
-      lastRemoveDebrisYear: row.last_remove_debris_year ?? 0, // Track when remove debris was last done
+      overgrowth: row.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
       plantingHealthBonus: row.planting_health_bonus ?? 0, // Default to 0 (no gradual improvement)
       healthTrend: row.health_trend ? JSON.parse(row.health_trend) : undefined // Parse health trend from JSON
     }));

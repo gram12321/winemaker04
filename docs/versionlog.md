@@ -27,6 +27,12 @@
 
 ## Version 0.0331a Mobilefix Deployment issue
 
+## Version 0.0332 - Achievements: Value-Based Names
+**Date:** 2025-10-20 | **Local change**
+- `src/lib/constants/achievementConstants.ts` - Added `getConditionSuffix()` and switched tiered achievement names from "Tier X" to target/value suffixes (e.g., "Big Deal - 100 Bottles").
+- Affects both Achievements page and Prestige Modal display; existing prestige events retain old names until new achievements unlock.
+- No functional logic changed; display names now reflect thresholds for better clarity.
+
 ## Version 0.032 - Planting Enhancements & Bug Fixes
 **Date:** 2025-10-20 | **Commit:** d90b1cd | **Stats:** 1079 additions, 550 deletions
 - **NEW FILE:** `src/lib/services/activity/workcalculators/clearingWorkCalculator.ts` (288 lines) - Dedicated clearing work calculator
@@ -638,6 +644,19 @@ Complete refactoring from standalone oxidation to extensible config-driven featu
 - **Mobile-First Design:** 768px breakpoint for mobile/desktop switching
 - **Touch Optimization:** Larger touch targets, improved gesture support
 - **Performance:** Optimized rendering for mobile devices with conditional component loading
+
+---
+
+## 🎯 **Overgrowth System Refactor** (Latest)
+- **New Structure**: Replaced separate year tracking fields with nested `overgrowth` object
+- **Task-Specific Tracking**: Each clearing task type (vegetation, debris, uproot, replant) tracked separately
+- **Flexible Usage**: Work calculators can use specific overgrowth types as needed
+- **Database Migration**: Updated dev database and sync schema for new structure
+- **UI Updates**: Vineyard modal now displays detailed overgrowth status per task type
+- **Work Calculator Integration**: 
+  - **Planting**: Uses vegetation + debris overgrowth for penalties
+  - **Clearing**: Uses maximum overgrowth from all task types
+  - **Harvesting**: No overgrowth effects (as requested)
 
 ---
 

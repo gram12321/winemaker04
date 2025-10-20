@@ -220,10 +220,19 @@ export async function updateVineyardAges(): Promise<void> {
         const seasonalDecay = vineyard.healthTrend?.seasonalDecay || 0; // Will be set by health degradation function
         const netChange = plantingImprovement - seasonalDecay;
         
+        // Update overgrowth for planted vineyards - increment each task type
+        const currentOvergrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+        const updatedOvergrowth = {
+          vegetation: currentOvergrowth.vegetation + 1,
+          debris: currentOvergrowth.debris + 1,
+          uproot: currentOvergrowth.uproot + 1,
+          replant: currentOvergrowth.replant + 1
+        };
+
         const updatedVineyard = {
           ...vineyard,
           vineAge: vineyard.vineAge + 1,
-          yearsSinceLastClearing: (vineyard.yearsSinceLastClearing || 0) + 1, // Increment years since last clearing
+          overgrowth: updatedOvergrowth,
           vineyardHealth: newHealth,
           plantingHealthBonus: newPlantingHealthBonus,
           healthTrend: {
@@ -235,10 +244,18 @@ export async function updateVineyardAges(): Promise<void> {
         
         await saveVineyard(updatedVineyard);
       } else {
-        // For unplanted vineyards, still increment years since last clearing
+        // For unplanted vineyards, still increment overgrowth
+        const currentOvergrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+        const updatedOvergrowth = {
+          vegetation: currentOvergrowth.vegetation + 1,
+          debris: currentOvergrowth.debris + 1,
+          uproot: currentOvergrowth.uproot + 1,
+          replant: currentOvergrowth.replant + 1
+        };
+
         const updatedVineyard = {
           ...vineyard,
-          yearsSinceLastClearing: (vineyard.yearsSinceLastClearing || 0) + 1
+          overgrowth: updatedOvergrowth
         };
         
         await saveVineyard(updatedVineyard);

@@ -342,104 +342,58 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                 <CardTitle className="text-xs font-medium">Clearing Information</CardTitle>
               </CardHeader>
               <CardContent className="py-3 text-sm space-y-3">
-                {/* Last Clearing Tasks */}
-                <div className="space-y-2">
-                  <div className="text-xs font-medium text-gray-700 mb-2">Last Clearing Tasks:</div>
-                  <div className="space-y-1">
-                    {(() => {
-                      const currentYear = new Date().getFullYear();
-                      const lastClearVegetationYear = vineyard.lastClearVegetationYear || 0;
-                      const lastRemoveDebrisYear = vineyard.lastRemoveDebrisYear || 0;
-                      
-                      const tasks = [];
-                      
-                      if (lastClearVegetationYear > 0) {
-                        const yearsAgo = currentYear - lastClearVegetationYear;
-                        const isThisYear = yearsAgo === 0;
-                        tasks.push({
-                          name: 'Clear Vegetation',
-                          year: lastClearVegetationYear,
-                          yearsAgo,
-                          isThisYear,
-                          canDoThisYear: !isThisYear
-                        });
-                      }
-                      
-                      if (lastRemoveDebrisYear > 0) {
-                        const yearsAgo = currentYear - lastRemoveDebrisYear;
-                        const isThisYear = yearsAgo === 0;
-                        tasks.push({
-                          name: 'Remove Debris',
-                          year: lastRemoveDebrisYear,
-                          yearsAgo,
-                          isThisYear,
-                          canDoThisYear: !isThisYear
-                        });
-                      }
-                      
-                      if (tasks.length === 0) {
-                        return (
-                          <div className="text-xs text-gray-500 italic">No clearing tasks completed yet</div>
-                        );
-                      }
-                      
-                      return tasks.map((task, index) => (
-                        <div key={index} className="flex items-center justify-between text-xs">
-                          <span className="text-gray-600">{task.name}:</span>
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium ${task.isThisYear ? 'text-red-600' : 'text-green-600'}`}>
-                              {task.isThisYear ? 'This year' : `${task.yearsAgo} year${task.yearsAgo === 1 ? '' : 's'} ago`}
-                            </span>
-                            {!task.canDoThisYear && (
-                              <span className="text-xs text-yellow-600 font-medium">(Blocked)</span>
-                            )}
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                </div>
 
-                <Separator />
-
-                {/* Overgrowth Modifier */}
+                {/* Overgrowth Status */}
                 <div className="space-y-2">
                   <div className="text-xs font-medium text-gray-700">Overgrowth Status:</div>
                   <div className="space-y-1">
                     {(() => {
-                      const yearsSinceLastClearing = vineyard.yearsSinceLastClearing || 0;
-                      const currentYear = new Date().getFullYear();
-                      const lastClearingYear = vineyard.lastClearingYear || 0;
+                      const overgrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+                      const hasAnyOvergrowth = Object.values(overgrowth).some(years => years > 0);
                       
-                      if (lastClearingYear === 0) {
+                      if (!hasAnyOvergrowth) {
                         return (
-                          <div className="text-xs text-gray-500 italic">No clearing ever completed</div>
+                          <div className="text-xs text-gray-500 italic">No overgrowth - all tasks recently completed</div>
                         );
                       }
                       
-                      const yearsAgo = currentYear - lastClearingYear;
-                      const overgrowthModifier = yearsSinceLastClearing > 0 ? 
-                        Math.min(2.0, 0.1 * (1 - Math.pow(0.5, yearsSinceLastClearing)) / 0.5) : 0;
-                      
                       return (
                         <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Last clearing:</span>
-                            <span className="font-medium text-gray-900">
-                              {yearsAgo === 0 ? 'This year' : `${yearsAgo} year${yearsAgo === 1 ? '' : 's'} ago`}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Overgrowth modifier:</span>
-                            <span className={`font-medium ${overgrowthModifier > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                              {overgrowthModifier > 0 ? `+${formatNumber(overgrowthModifier * 100, { decimals: 0 })}% work` : 'None'}
-                            </span>
-                          </div>
-                          {overgrowthModifier > 0 && (
-                            <div className="text-xs text-orange-600 italic">
-                              Clearing will require more work due to overgrowth
+                          {overgrowth.vegetation > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Vegetation:</span>
+                              <span className="font-medium text-orange-600">
+                                {overgrowth.vegetation} year{overgrowth.vegetation === 1 ? '' : 's'} since clearing
+                              </span>
                             </div>
                           )}
+                          {overgrowth.debris > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Debris:</span>
+                              <span className="font-medium text-orange-600">
+                                {overgrowth.debris} year{overgrowth.debris === 1 ? '' : 's'} since removal
+                              </span>
+                            </div>
+                          )}
+                          {overgrowth.uproot > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Uproot:</span>
+                              <span className="font-medium text-orange-600">
+                                {overgrowth.uproot} year{overgrowth.uproot === 1 ? '' : 's'} since uprooting
+                              </span>
+                            </div>
+                          )}
+                          {overgrowth.replant > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Replant:</span>
+                              <span className="font-medium text-orange-600">
+                                {overgrowth.replant} year{overgrowth.replant === 1 ? '' : 's'} since replanting
+                              </span>
+                            </div>
+                          )}
+                          <div className="text-xs text-orange-600 italic mt-2">
+                            Higher overgrowth increases work requirements for clearing and planting
+                          </div>
                         </div>
                       );
                     })()}

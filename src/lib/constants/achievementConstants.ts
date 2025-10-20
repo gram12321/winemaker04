@@ -44,6 +44,72 @@ export function getAchievementLevelInfo(level: AchievementLevel): {
 // ===== TIERED ACHIEVEMENT CONFIGURATIONS =====
 
 /**
+ * Create a short, human-friendly suffix for an achievement name
+ * based on the condition type and numeric threshold, e.g.:
+ *  - "100 Bottles", "€50,000", "25 Varieties", "10 Years", "95 Score"
+ */
+function getConditionSuffix(conditionType: string, threshold: number): string {
+  const num = formatNumberUtil(threshold);
+
+  switch (conditionType) {
+    // Currency based thresholds
+    case 'money_threshold':
+    case 'sales_value':
+    case 'single_contract_value':
+    case 'cellar_value':
+    case 'total_assets':
+    case 'vineyard_value':
+    case 'revenue_by_year':
+    case 'assets_by_year':
+    case 'average_hectare_value':
+    case 'wine_price_threshold':
+      return `€${num}`;
+
+    // Percentage thresholds
+    case 'achievement_completion':
+    case 'sales_price_percentage':
+      return `${num}%`;
+
+    // Time thresholds
+    case 'time_threshold':
+    case 'vineyard_time_same_grape':
+      return `${num} Years`;
+
+    // Count thresholds
+    case 'bottles_produced':
+    case 'single_contract_bottles':
+    case 'vineyard_bottles_produced':
+      return `${num} Bottles`;
+    case 'sales_count':
+    case 'vineyard_sales_count':
+      return `${num} Sales`;
+    case 'production_count':
+    case 'different_grapes':
+      return `${num} Varieties`;
+    case 'vineyard_count':
+      return `${num} Vineyards`;
+    case 'total_hectares':
+    case 'hectares_by_year':
+      return `${num} Hectares`;
+
+    // Rating/score thresholds
+    case 'wine_quality_threshold':
+      return `${num} Quality`;
+    case 'wine_balance_threshold':
+      return `${num} Balance`;
+    case 'wine_score_threshold':
+      return `${num} Score`;
+    case 'prestige_threshold':
+    case 'vineyard_prestige_threshold':
+    case 'prestige_by_year':
+      return `${num} Prestige`;
+
+    default:
+      return `${num}`;
+  }
+}
+
+/**
  * Generate tiered achievements for a specific type
  */
 function createTieredAchievements(
@@ -90,9 +156,11 @@ function createTieredAchievements(
       };
     }
     
+    const valueSuffix = getConditionSuffix(conditionType, threshold);
+
     return {
       id: `${baseId}_tier_${tier}`,
-      name: `${baseName} - Tier ${tier}`,
+      name: `${baseName} - ${valueSuffix}`,
       description: baseDescription.replace('{threshold}', formatNumberUtil(threshold)),
       icon,
       category,

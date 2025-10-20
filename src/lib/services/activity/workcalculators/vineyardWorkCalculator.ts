@@ -7,6 +7,7 @@ import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
 import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
 import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
 import { getGameState } from '../../core/gameState';
+import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
 
 /**
  * Vineyard Work Calculator
@@ -67,10 +68,16 @@ export function calculatePlantingWork(
   const altitudeModifier = getAltitudeModifier(vineyard);
   const soilModifier = getSoilTypeModifier(vineyard.soil);
   
-  // Get current season for seasonal modifiers
+  // Get current season
   const gameState = getGameState();
   const currentSeason = gameState.season || 'Spring';
   const seasonalModifier = getPlantingSeasonalModifier(currentSeason);
+
+  // Use shared overgrowth util focused on vegetation + debris for planting
+  const overgrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+  const combinedYears = combineOvergrowthYears(overgrowth, ['vegetation', 'debris'], { vegetation: 1, debris: 0.5 });
+  // Scale result to a reasonable cap for planting (e.g., cap 0.6)
+  const maintenancePenalty = Math.min(0.6, calculateOvergrowthModifier(combinedYears, 0.10, 0.5, 2.0));
 
   const category = WorkCategory.PLANTING;
   const rate = TASK_RATES[category];
@@ -81,7 +88,13 @@ export function calculatePlantingWork(
     initialWork,
     density: params.density > 0 ? params.density : undefined,
     useDensityAdjustment: isDensityBased(category),
-    workModifiers: [fragilityModifier, altitudeModifier, soilModifier, seasonalModifier]
+    workModifiers: [
+      fragilityModifier,
+      altitudeModifier,
+      soilModifier,
+      seasonalModifier,
+      maintenancePenalty
+    ]
   });
 
   const factors: WorkFactor[] = [
@@ -102,13 +115,30 @@ export function calculatePlantingWork(
     factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
   }
   
-  // Add seasonal modifier if applicable
   if (seasonalModifier > 0) {
     factors.push({ 
       label: 'Seasonal Effect', 
       value: `${currentSeason} season`, 
       modifier: seasonalModifier, 
       modifierLabel: 'planting difficulty' 
+    });
+  }
+
+  if (overgrowth.vegetation > 0) {
+    factors.push({
+      label: 'Vegetation Overgrowth Since Clearing',
+      value: `${overgrowth.vegetation} years`,
+      modifier: Math.min(0.6, calculateOvergrowthModifier(overgrowth.vegetation, 0.10, 0.5, 2.0)),
+      modifierLabel: 'overgrowth effect'
+    });
+  }
+
+  if (overgrowth.debris > 0) {
+    factors.push({
+      label: 'Debris Accumulation Since Removal',
+      value: `${overgrowth.debris} years`,
+      modifier: Math.min(0.6, calculateOvergrowthModifier(overgrowth.debris, 0.10, 0.5, 2.0) * 0.5),
+      modifierLabel: 'debris effect'
     });
   }
 
@@ -124,6 +154,11 @@ export function calculateHarvestWork(
   const altitudeModifier = getAltitudeModifier(vineyard);
   const soilModifier = getSoilTypeModifier(vineyard.soil);
 
+  // Overgrowth penalty for harvest: vegetation + debris only (weighted)
+  const overgrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
+  const combinedYears = combineOvergrowthYears(overgrowth, ['vegetation', 'debris'], { vegetation: 1, debris: 0.5 });
+  const overgrowthPenalty = Math.min(0.6, calculateOvergrowthModifier(combinedYears, 0.10, 0.5, 2.0));
+
   const category = WorkCategory.HARVESTING;
   const yieldRate = HARVEST_YIELD_RATE;
   const initialWork = INITIAL_WORK[category];
@@ -135,7 +170,7 @@ export function calculateHarvestWork(
   
   // Add initial work and apply modifiers
   const workWithInitial = baseWork + initialWork;
-  const totalWork = [fragilityModifier, altitudeModifier, soilModifier].reduce((work, modifier) => 
+  const totalWork = [fragilityModifier, altitudeModifier, soilModifier, overgrowthPenalty].reduce((work, modifier) => 
     work * (1 + modifier), workWithInitial);
 
   const factors: WorkFactor[] = [
@@ -153,8 +188,17 @@ export function calculateHarvestWork(
   if (altitudeModifier > 0) {
     factors.push({ label: 'Altitude Impact', value: 'Difficult conditions', modifier: altitudeModifier, modifierLabel: 'harvest difficulty' });
   }
-        if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
+  if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
     factors.push({ label: 'Soil Type', value: vineyard.soil.join(', '), modifier: soilModifier, modifierLabel: 'soil difficulty' });
+  }
+
+  if (overgrowth.vegetation > 0 || overgrowth.debris > 0) {
+    factors.push({
+      label: 'Harvest Overgrowth Penalty',
+      value: `${combinedYears.toFixed(1)} years (veg+debris)`,
+      modifier: overgrowthPenalty,
+      modifierLabel: 'overgrowth effect'
+    });
   }
 
   return { totalWork, expectedYield, factors };
