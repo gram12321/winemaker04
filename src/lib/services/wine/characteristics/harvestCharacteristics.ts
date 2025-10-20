@@ -1,4 +1,4 @@
-import { WineCharacteristics } from '../../../types/types';
+import { WineCharacteristics, Vineyard } from '../../../types/types';
 
 export interface HarvestInputs {
   baseCharacteristics: WineCharacteristics;
@@ -9,6 +9,7 @@ export interface HarvestInputs {
   medianAltitude: number; // meters
   maxAltitude: number; // meters
   grapeColor: 'red' | 'white';
+  overgrowth?: Vineyard['overgrowth'];
 }
 
 export interface HarvestEffect {
@@ -47,7 +48,7 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
   characteristics: WineCharacteristics;
   breakdown: HarvestBreakdown;
 } {
-  const { baseCharacteristics, ripeness, qualityFactor, suitability, altitude, medianAltitude, maxAltitude, grapeColor } = inputs;
+  const { baseCharacteristics, ripeness, qualityFactor, suitability, altitude, medianAltitude, maxAltitude, grapeColor, overgrowth } = inputs;
 
   // Normalize altitude effect to roughly [-1, 1]
   const denom = Math.max(1, maxAltitude - medianAltitude);
@@ -85,6 +86,47 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
     { characteristic: 'body', modifier: suit * 0.2, description: 'Regional Grape Suitability' },
     { characteristic: 'aroma', modifier: suit * 0.3, description: 'Regional Grape Suitability' }
   );
+
+  // Overgrowth-driven effects (diminishing-returns on years)
+  if (overgrowth) {
+    const yearsVegetation = Math.max(0, overgrowth.vegetation || 0);
+    const yearsDebris = Math.max(0, overgrowth.debris || 0);
+    const yearsReplant = Math.max(0, overgrowth.replant || overgrowth.uproot || 0);
+
+    const curve = (years: number, rate = 0.35, scale = 1) => (1 - Math.pow(1 - rate, years)) * scale; // concave
+
+    // Vegetation: +aroma, -body, slight +acidity for whites
+    const vegAroma = curve(yearsVegetation, 0.35, grapeColor === 'white' ? 0.06 : 0.04);
+    const vegBody = -curve(yearsVegetation, 0.35, 0.04);
+    const vegAcid = grapeColor === 'white' ? curve(yearsVegetation, 0.35, 0.02) : 0;
+    if (vegAroma) effects.push({ characteristic: 'aroma', modifier: vegAroma, description: 'Vegetation Overgrowth' });
+    if (vegBody) effects.push({ characteristic: 'body', modifier: vegBody, description: 'Vegetation Overgrowth' });
+    if (vegAcid) effects.push({ characteristic: 'acidity', modifier: vegAcid, description: 'Vegetation Overgrowth' });
+
+    // Debris: -body, +tannins (stronger for reds), small -aroma at high years
+    const debBody = -curve(yearsDebris, 0.4, 0.05);
+    const debTannins = curve(yearsDebris, 0.4, grapeColor === 'red' ? 0.05 : 0.03);
+    const debAroma = yearsDebris >= 3 ? -curve(yearsDebris - 2, 0.4, 0.02) : 0;
+    if (debBody) effects.push({ characteristic: 'body', modifier: debBody, description: 'Debris Accumulation' });
+    if (debTannins) effects.push({ characteristic: 'tannins', modifier: debTannins, description: 'Debris Accumulation' });
+    if (debAroma) effects.push({ characteristic: 'aroma', modifier: debAroma, description: 'Debris Accumulation' });
+
+    // Replant/Uproot axis: early shock then medium-term selection benefits
+    if (yearsReplant > 0) {
+      if (yearsReplant <= 2) {
+        // Short-term shock
+        effects.push({ characteristic: 'aroma', modifier: -curve(yearsReplant, 0.6, 0.04), description: 'Replant Shock' });
+        effects.push({ characteristic: 'body', modifier: -curve(yearsReplant, 0.6, 0.02), description: 'Replant Shock' });
+        effects.push({ characteristic: 'acidity', modifier: curve(yearsReplant, 0.6, 0.015), description: 'Replant Shock' });
+      } else if (yearsReplant <= 7) {
+        // Medium-term selection benefits
+        effects.push({ characteristic: 'body', modifier: curve(yearsReplant - 2, 0.35, 0.04), description: 'Selection Benefits' });
+        effects.push({ characteristic: 'tannins', modifier: -curve(yearsReplant - 2, 0.35, grapeColor === 'red' ? 0.035 : 0.02), description: 'Selection Benefits' });
+        effects.push({ characteristic: 'aroma', modifier: curve(yearsReplant - 2, 0.35, 0.025), description: 'Selection Benefits' });
+      }
+      // >7 years: neutral (age/quality systems handle the rest)
+    }
+  }
 
   // Apply all effects
   const finalCharacteristics = applyEffects(baseCharacteristics, effects);

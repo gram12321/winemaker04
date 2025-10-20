@@ -46,9 +46,12 @@ function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<V
     vineyardPrestige: 0,
     vineYield: 0.02,
     ripeness: 0,
-    lastClearingYear: 0, // Initialize to 0 (no clearing done yet)
-    lastClearVegetationYear: 0, // Initialize to 0 (no clear vegetation done yet)
-    lastRemoveDebrisYear: 0 // Initialize to 0 (no remove debris done yet)
+    overgrowth: {
+      vegetation: 0,
+      debris: 0,
+      uproot: 0,
+      replant: 0
+    }
   };
 }
 
@@ -139,7 +142,12 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     ripeness: 0, // No ripeness until planted and growing
     vineyardPrestige: 0, // Will be calculated after vineyard is created
     vineYield: 0.02, // Default vine yield factor
-    lastClearingYear: 0 // Initialize to 0 (no clearing done yet)
+    overgrowth: {
+      vegetation: 0,
+      debris: 0,
+      uproot: 0,
+      replant: 0
+    }
   };
 
 

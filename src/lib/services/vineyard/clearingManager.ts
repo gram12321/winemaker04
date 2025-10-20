@@ -5,6 +5,7 @@ import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { NotificationCategory } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
+import { getGameState } from '../core/gameState';
 import { calculateClearingWork } from '../activity/workcalculators/clearingWorkCalculator';
 
 export interface ClearingActivityOptions {
@@ -32,9 +33,11 @@ export async function createClearingActivity(
     }
     
     // Check yearly limits for individual clearing tasks
-    const currentYear = new Date().getFullYear();
-    const lastClearVegetationYear = vineyard.lastClearVegetationYear || 0;
-    const lastRemoveDebrisYear = vineyard.lastRemoveDebrisYear || 0;
+    const currentYear = getGameState().currentYear ?? 0;
+    const vegetationYears = vineyard.overgrowth?.vegetation ?? 0;
+    const debrisYears = vineyard.overgrowth?.debris ?? 0;
+    const lastClearVegetationYear = vegetationYears > 0 ? currentYear - vegetationYears : 0;
+    const lastRemoveDebrisYear = debrisYears > 0 ? currentYear - debrisYears : 0;
     
     // Check if clear vegetation was already done this year
     if (options.tasks['clear-vegetation'] && currentYear === lastClearVegetationYear) {

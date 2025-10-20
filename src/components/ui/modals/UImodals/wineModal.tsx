@@ -68,6 +68,15 @@ export const WineModal: React.FC<WineModalProps> = ({
   const qualityColorClass = getColorClass(effectiveQuality);
   const configs = getAllFeatureConfigs();
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
+  const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['body','aroma','spice','acidity','sweetness','tannins'] as any;
+  const characteristicIconSrc: Record<string,string> = {
+    body: '/assets/icons/characteristics/body.png',
+    aroma: '/assets/icons/characteristics/aroma.png',
+    spice: '/assets/icons/characteristics/spice.png',
+    acidity: '/assets/icons/characteristics/acidity.png',
+    sweetness: '/assets/icons/characteristics/sweetness.png',
+    tannins: '/assets/icons/characteristics/tannins.png'
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -112,7 +121,7 @@ export const WineModal: React.FC<WineModalProps> = ({
 
           {/* Tabbed Interface */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview" className="flex items-center gap-1">
                 <BarChart3 className="h-3 w-3" />
                 Overview
@@ -132,6 +141,10 @@ export const WineModal: React.FC<WineModalProps> = ({
               <TabsTrigger value="taste" className="flex items-center gap-1">
                 <Radar className="h-3 w-3" />
                 Taste
+              </TabsTrigger>
+              <TabsTrigger value="origins" className="flex items-center gap-1">
+                <BarChart3 className="h-3 w-3" />
+                Origins
               </TabsTrigger>
             </TabsList>
 
@@ -473,6 +486,54 @@ export const WineModal: React.FC<WineModalProps> = ({
                       title=""
                       showBalanceScore={false}
                     />
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Origins Tab */}
+            <TabsContent value="origins" className="mt-4">
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Characteristic Origins</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3 text-sm space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {characteristicOrder.map((key) => {
+                        const baseMap = ((wineBatch.breakdown as any)?.base) as Record<string, number> | undefined;
+                        const finalMap = ((wineBatch.breakdown as any)?.final) as Record<string, number> | undefined;
+                        const baseVal = baseMap ? baseMap[key as string] : undefined;
+                        const finalVal = (finalMap ? finalMap[key as string] : (wineBatch.characteristics as any)[key]) as number;
+                        const effects = (wineBatch.breakdown?.effects || []).filter(e => e.characteristic === (key as any));
+                        return (
+                          <div key={key as string} className="border rounded p-3 bg-white">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <img src={characteristicIconSrc[key as string]} alt={`${key} icon`} className="h-5 w-5 object-contain" />
+                                <span className="font-medium capitalize">{key}</span>
+                              </div>
+                              <span className={`text-xs px-2 py-0.5 rounded ${getColorClass(finalVal)} bg-gray-50`}>{formatNumber(finalVal,{decimals:2,forceDecimals:true})}</span>
+                            </div>
+                            {baseVal !== undefined && (
+                              <div className="text-xs text-muted-foreground mb-2">Base: {formatNumber(baseVal,{decimals:2,forceDecimals:true})}</div>
+                            )}
+                            <div className="space-y-1">
+                              {effects.length === 0 ? (
+                                <div className="text-xs text-muted-foreground">No harvest effects.</div>
+                              ) : effects.map((e, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded bg-gray-50">
+                                  <div className="text-xs">{e.description}</div>
+                                  <div className={`text-xs font-semibold ${e.modifier>=0?'text-green-700':'text-red-700'}`}>
+                                    {e.modifier>=0?'+':''}{formatNumber(e.modifier,{decimals:3,forceDecimals:true})}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </CardContent>
                 </Card>
               </div>

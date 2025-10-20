@@ -595,13 +595,9 @@ function generateMatchingVineyard(
   const countryAlts = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] as any;
   const regionAltRange = countryAlts ? (countryAlts[regionInfo.region] as [number, number]) : [0, 1000];
   const [regionAltMin, regionAltMax] = regionAltRange;
-  let altitudeRating = 0.5;
-  if (options.altitudeRange) {
-    const [minN, maxN] = options.altitudeRange; // 0-1
-    altitudeRating = Math.random() * (maxN - minN) + minN;
-  } else {
-    altitudeRating = 0.5;
-  }
+  const altitudeRating = options.altitudeRange 
+    ? Math.random() * (options.altitudeRange[1] - options.altitudeRange[0]) + options.altitudeRange[0]
+    : Math.random();
   const altitude = Math.round(regionAltMin + altitudeRating * (regionAltMax - regionAltMin));
   
   // Select aspect from preferences or pick randomly
