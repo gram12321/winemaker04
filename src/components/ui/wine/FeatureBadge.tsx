@@ -61,7 +61,11 @@ export function FeatureBadge({ feature, config, showSeverity = false, className 
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger 
+          asChild 
+          tooltipContent={tooltipContent}
+          tooltipTitle={config.name}
+        >
           <Badge variant={variant} className={`gap-1 cursor-help ${colorClass} ${className || ''}`}>
             <span>{config.icon}</span>
             <span>{config.name}</span>

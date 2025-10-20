@@ -30,8 +30,6 @@ export interface GameDate {
 }
 
 // ===== VINEYARD TYPES =====
-
-// Grape varieties - single source of truth
 export const GRAPE_VARIETIES = [
   'Barbera',
   'Chardonnay',

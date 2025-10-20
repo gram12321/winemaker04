@@ -611,7 +611,7 @@ const Vineyard: React.FC = () => {
           </div>
         ) : (
           vineyards.map((vineyard) => (
-            <div key={vineyard.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div key={vineyard.id} className="bg-white rounded-lg shadow overflow-hidden cursor-pointer" onClick={() => handleRowClick(vineyard)}>
               {/* Card Header */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 border-b">
                 <div className="flex justify-between items-start mb-2">
@@ -694,6 +694,36 @@ const Vineyard: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Vine Details Section */}
+                <div className="border-t pt-3">
+                  <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Details</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Age:</span>
+                      <span className="text-gray-900">
+                        {vineyard.vineAge === null ? (
+                          <span className="text-gray-400">Not planted</span>
+                        ) : vineyard.vineAge === 0 ? (
+                          <span className="text-green-600">Newly planted</span>
+                        ) : (
+                          <span>{vineyard.vineAge} years old</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Prestige:</span>
+                      <span className="text-gray-900">
+                        {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Density:</span>
+                      <span className="text-gray-900">
+                        {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
                 
                 {/* Vineyard Health Section - Always show */}
                 <div className="border-t pt-3">
@@ -810,7 +840,7 @@ const Vineyard: React.FC = () => {
               </div>
               
               {/* Card Footer - Actions */}
-              <div className="bg-gray-50 px-4 py-3 border-t">
+              <div className="bg-gray-50 px-4 py-3 border-t" onClick={(e) => e.stopPropagation()}>
                 {getActionButtons(vineyard)}
               </div>
             </div>
