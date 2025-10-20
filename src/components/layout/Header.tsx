@@ -5,7 +5,6 @@ import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/l
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
-import { notificationService } from '@/lib/services/core/notificationService';
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
 import PrestigeModal from '@/components/ui/modals/UImodals/prestigeModal';

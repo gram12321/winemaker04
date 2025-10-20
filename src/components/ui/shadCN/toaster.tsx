@@ -21,7 +21,7 @@ export function Toaster() {
 
   const handleBlockOrigin = (origin: string, userFriendlyOrigin?: string) => {
     // Import notification service dynamically to avoid circular dependency
-    import('@/components/layout/NotificationCenter').then(({ notificationService }) => {
+    import('@/lib/services/core/notificationService').then(({ notificationService }) => {
       notificationService.blockNotificationOrigin(origin);
       toast({
         title: "Filter Added",
@@ -33,7 +33,7 @@ export function Toaster() {
 
   const handleBlockCategory = (category: string) => {
     // Import notification service dynamically to avoid circular dependency
-    import('@/components/layout/NotificationCenter').then(({ notificationService }) => {
+    import('@/lib/services/core/notificationService').then(({ notificationService }) => {
       notificationService.blockNotificationCategory(category);
       const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
       toast({

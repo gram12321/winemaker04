@@ -3,7 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Label, Badge } from '../ui';
 import { Settings as SettingsIcon, Bell, Shield, Filter, Trash2, RotateCcw } from 'lucide-react';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-import { notificationService } from '../layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { toast } from '@/lib/utils/toast';
 
 interface SettingsProps extends PageProps, CompanyProps {
