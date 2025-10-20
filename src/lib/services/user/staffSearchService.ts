@@ -5,7 +5,7 @@ import { Staff, Activity, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createActivity } from '../activity/activitymanagers/activityManager';
 import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from './staffService';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { addTransaction } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';

@@ -1,5 +1,5 @@
 import { supabase } from '../../database/core/supabase';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { getUserById, updateUser, deleteUser, type AuthUser } from '@/lib/database';
 

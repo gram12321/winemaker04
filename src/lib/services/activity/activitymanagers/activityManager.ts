@@ -7,7 +7,7 @@ import { completePlanting } from '@/lib/services';
 import { createWineBatchFromHarvest } from '../../wine/winery/inventoryService';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { calculateVineyardYield } from '../../vineyard/vineyardManager';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
 import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';

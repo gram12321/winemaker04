@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Button, Badge, ScrollArea } from "../ui";
 import { InfoIcon, X, Trash2, Eye, Filter, Shield } from 'lucide-react';
-import { toast } from "@/lib/utils/toast";
 import { formatGameDate } from "@/lib/utils/utils";
-import { getGameState } from "@/lib/services/core/gameState";
-import { saveNotification, loadNotifications, clearNotifications as clearNotificationsFromDb, type NotificationFilter, saveNotificationFilter, loadNotificationFilters, deleteNotificationFilter, clearNotificationFilters } from "@/lib/database/core/notificationsDB";
 import { NotificationCategory } from "@/lib/types/types";
 import { getTailwindClasses } from "@/lib/utils/colorMapping";
 import { cn } from "@/lib/utils/utils";
+import { notificationService } from "@/lib/services/core/notificationService";
+import { getGameState } from "@/lib/services/core/gameState";
 
 // Removed NotificationType - using category as the meaningful identifier
 
@@ -29,255 +28,25 @@ interface NotificationCenterProps {
   isOpen?: boolean;
 }
 
-let notifications: PlayerNotification[] = [];
-let notificationFilters: NotificationFilter[] = [];
-let listeners: ((messages: PlayerNotification[]) => void)[] = [];
-let hasLoadedFromDb = false;
-let hasLoadedFiltersFromDb = false;
-
-function notifyListeners() {
-  listeners.forEach(listener => listener(notifications));
-}
-
 try {
   if (localStorage.getItem('showNotifications') === null) {
     localStorage.setItem('showNotifications', 'true');
   }
 } catch {}
 
-async function loadFromDbIfNeeded() {
-  if (hasLoadedFromDb) return;
-  try {
-    const records = await loadNotifications();
-    notifications = records.map(r => ({
-      id: r.id,
-      gameWeek: r.game_week,
-      gameSeason: r.game_season,
-      gameYear: r.game_year,
-      text: r.text,
-      origin: r.origin,
-      userFriendlyOrigin: r.userFriendlyOrigin,
-      category: r.category
-    }));
-    hasLoadedFromDb = true;
-    notifyListeners();
-  } catch {
-    // Non-critical
-  }
-}
-
-async function loadFiltersFromDbIfNeeded() {
-  if (hasLoadedFiltersFromDb) return;
-  try {
-    notificationFilters = await loadNotificationFilters();
-    hasLoadedFiltersFromDb = true;
-  } catch {
-    // Non-critical
-  }
-}
-
-function isNotificationBlocked(origin: string, category: NotificationCategory): boolean | 'history' {
-  // Check if notification should be blocked
-  // Returns true if blocked from history, 'history' if only blocked from toast
-  let shouldBlock = false;
-  let blockFromHistory = false;
-
-  notificationFilters.forEach(filter => {
-    let matches = false;
-    switch (filter.type) {
-      case 'origin':
-        matches = filter.value === origin;
-        break;
-      case 'category':
-        matches = filter.value === category;
-        break;
-    }
-    
-    if (matches) {
-      shouldBlock = true;
-      if (filter.blockFromHistory) {
-        blockFromHistory = true;
-      }
-    }
-  });
-
-  if (!shouldBlock) return false;
-  return blockFromHistory ? true : 'history';
-}
-
-export const notificationService = {
-  getMessages() {
-    return [...notifications];
-  },
-
-  async addMessage(text: string, origin: string, userFriendlyOrigin: string, category: NotificationCategory) {
-    // Load filters if not already loaded (await to ensure they're loaded before checking)
-    await loadFiltersFromDbIfNeeded();
-    
-    // Check if notification is blocked by filters
-    const blockStatus = isNotificationBlocked(origin, category);
-    
-    // If completely blocked (true), don't add to history at all
-    if (blockStatus === true) {
-      return null;
-    }
-    
-    const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-      ? (globalThis.crypto as any).randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    
-    // Get current game state for timestamp
-    const gameState = getGameState();
-    const gameWeek = gameState.week || 1;
-    const gameSeason = gameState.season || 'Spring';
-    const gameYear = gameState.currentYear || 2024;
-    
-    const message: PlayerNotification = {
-      id,
-      gameWeek,
-      gameSeason,
-      gameYear,
-      text,
-      origin,
-      userFriendlyOrigin,
-      category
-    };
-
-    // Add to history (even if toast is blocked)
-    notifications = [message, ...notifications];
-    notifyListeners();
-
-    // Persist to DB (best-effort)
-    saveNotification({
-      id,
-      game_week: gameWeek,
-      game_season: gameSeason,
-      game_year: gameYear,
-      text,
-      origin,
-      userFriendlyOrigin,
-      category
-    });
-
-    // Show toast only if not blocked and user has toasts enabled
-    const showToasts = localStorage.getItem('showNotifications') !== 'false';
-    const shouldShowToast = showToasts && blockStatus === false;
-    
-    if (shouldShowToast) {
-      toast({
-        title: userFriendlyOrigin,
-        description: text,
-        variant: 'default',
-        origin,
-        userFriendlyOrigin,
-        category,
-      });
-    }
-
-    return message;
-  },
-
-  clearMessages() {
-    notifications = [];
-    notifyListeners();
-    clearNotificationsFromDb();
-  },
-
-  dismissMessage(id: string) {
-    notifications = notifications.filter(n => n.id !== id);
-    notifyListeners();
-  },
-
-  markAsRead(id: string) {
-    notifications = notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    );
-    notifyListeners();
-  },
-
-  markAllAsRead() {
-    notifications = notifications.map(n => ({ ...n, isRead: true }));
-    notifyListeners();
-  },
-
-  // Simplified - just use addMessage directly
-  // For developer errors/warnings, use console.error() and console.warn() instead
-
-  // ===== NOTIFICATION FILTER MANAGEMENT =====
-  
-  getFilters() {
-    return [...notificationFilters];
-  },
-
-  addFilter(type: 'origin' | 'category', value: string, description?: string) {
-    const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-      ? (globalThis.crypto as any).randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    
-    const filter: NotificationFilter = {
-      id,
-      type,
-      value,
-      description,
-      createdAt: new Date().toISOString()
-    };
-    
-    notificationFilters = [filter, ...notificationFilters];
-    saveNotificationFilter(filter);
-    
-    return filter;
-  },
-
-  removeFilter(filterId: string) {
-    notificationFilters = notificationFilters.filter(f => f.id !== filterId);
-    deleteNotificationFilter(filterId);
-  },
-
-  clearFilters() {
-    notificationFilters = [];
-    clearNotificationFilters();
-  },
-
-  updateFilter(filterId: string, updates: Partial<Omit<NotificationFilter, 'id'>>) {
-    const filterIndex = notificationFilters.findIndex(f => f.id === filterId);
-    if (filterIndex === -1) return null;
-    
-    const updatedFilter = {
-      ...notificationFilters[filterIndex],
-      ...updates
-    };
-    
-    notificationFilters[filterIndex] = updatedFilter;
-    saveNotificationFilter(updatedFilter);
-    
-    return updatedFilter;
-  },
-
-  // Helper method to block notifications from specific origin
-  blockNotificationOrigin(origin: string) {
-    return this.addFilter('origin', origin, `Blocked origin: ${origin}`);
-  },
-
-  // Helper method to block notifications from specific category
-  blockNotificationCategory(category: string) {
-    const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    return this.addFilter('category', category, `Blocked category: ${capitalizedCategory}`);
-  }
-};
-
 export function NotificationCenter({ onClose, isOpen = false }: NotificationCenterProps) {
-  const [messages, setMessages] = useState<PlayerNotification[]>(notifications);
+  const [messages, setMessages] = useState<PlayerNotification[]>(notificationService.getMessages());
   const [isHistoryOpen, setIsHistoryOpen] = useState(isOpen);
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    loadFromDbIfNeeded();
+    notificationService.ensureInitialized();
     const listener = (updated: PlayerNotification[]) => {
       setMessages([...updated]);
     };
-    listeners.push(listener);
+    notificationService.addListener(listener);
     return () => {
-      listeners = listeners.filter(l => l !== listener);
+      notificationService.removeListener(listener);
     };
   }, []);
 
@@ -316,38 +85,21 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
     setShowAll(!showAll);
   };
 
-  const handleBlockThisOrigin = (origin?: string, userFriendlyOrigin?: string) => {
+  const handleBlockThisOrigin = (origin?: string) => {
     if (origin) {
       notificationService.blockNotificationOrigin(origin);
-      toast({
-        title: "Filter Added",
-        description: `Notifications from ${userFriendlyOrigin || origin} will be blocked`,
-        variant: "default"
-      });
+      // UI feedback handled by global toast inside service when messages are added
     } else {
-      toast({
-        title: "No Origin",
-        description: "This notification has no origin information to block",
-        variant: "destructive"
-      });
+      // No-op: insufficient data
     }
   };
 
   const handleBlockThisCategory = (category?: string) => {
     if (category) {
       notificationService.blockNotificationCategory(category);
-      const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-      toast({
-        title: "Filter Added",
-        description: `All ${capitalizedCategory} notifications will be blocked`,
-        variant: "default"
-      });
+      // UI feedback optional here
     } else {
-      toast({
-        title: "No Category",
-        description: "This notification has no category information to block",
-        variant: "destructive"
-      });
+      // No-op
     }
   };
 
@@ -476,7 +228,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleBlockThisOrigin(message.origin, message.userFriendlyOrigin)}
+                                      onClick={() => handleBlockThisOrigin(message.origin)}
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
                                       title={`Block notifications from ${message.origin}`}
                                     >
@@ -630,7 +382,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleBlockThisOrigin(message.origin, message.userFriendlyOrigin)}
+                                      onClick={() => handleBlockThisOrigin(message.origin)}
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
                                       title={`Block notifications from ${message.origin}`}
                                     >
@@ -705,17 +457,17 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
 }
 
 export function useNotifications() {
-  const [messages, setMessages] = useState<PlayerNotification[]>(notifications);
+  const [messages, setMessages] = useState<PlayerNotification[]>(notificationService.getMessages());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
-    loadFromDbIfNeeded();
+    notificationService.ensureInitialized();
     const listener = (updated: PlayerNotification[]) => {
       setMessages([...updated]);
     };
-    listeners.push(listener);
+    notificationService.addListener(listener);
     return () => {
-      listeners = listeners.filter(l => l !== listener);
+      notificationService.removeListener(listener);
     };
   }, []);
 

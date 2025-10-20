@@ -4,7 +4,7 @@ import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculateHarvestWork } from '@/lib/services/activity/workcalculators/vineyardWorkCalculator';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getHarvestRisks, getHarvestInfluences } from '@/lib/services/wine/features/featureRiskHelper';

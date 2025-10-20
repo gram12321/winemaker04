@@ -6,7 +6,7 @@ import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/char
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { FeatureBadges } from '@/components/ui/wine/FeatureBadge';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';

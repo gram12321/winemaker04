@@ -1,7 +1,7 @@
 import { Activity, WorkCategory, Aspect } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createActivity } from '../activity/activitymanagers/activityManager';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { addTransaction } from '../user/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';

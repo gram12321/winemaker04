@@ -6,7 +6,7 @@ import { calculateFermentationWork, validateFermentationBatch } from '@/lib/serv
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { formatCurrency, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import {

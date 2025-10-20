@@ -88,6 +88,7 @@ export {
   getAchievementStats
 } from './user/achievementService';
 export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './core/gameState';
+export { notificationService } from './core/notificationService';
 export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
 export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';
 export { generateSophisticatedWineOrders } from './sales/salesOrderService';

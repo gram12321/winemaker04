@@ -12,7 +12,7 @@ import {
   NATIONALITIES
 } from '@/lib/constants/staffConstants';
 import { calculateWage } from './wageService';
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 
 /**

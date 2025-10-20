@@ -1,4 +1,4 @@
-import { notificationService } from '@/components/layout/NotificationCenter';
+import { notificationService } from '@/lib/services/core/notificationService';
 import { Season, NotificationCategory } from '../../types/types';
 import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
 
