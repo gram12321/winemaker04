@@ -58,8 +58,6 @@ export async function updateVineyardHealth(
     // Ensure health stays within bounds
     newHealth = Math.max(0.1, Math.min(1.0, newHealth));
     
-    // Calculate health change for logging
-    const healthChange = newHealth - vineyard.vineyardHealth;
     
     // Handle vine age reduction for replanting and status reset for uprooting
     let newVineAge = vineyard.vineAge;
@@ -119,7 +117,8 @@ export async function updateVineyardHealth(
       // 100% replanting just means all vines are replaced with new ones of the same variety
     }
     
-    // Update vineyard with new health and adjusted vine properties
+    // Track individual clearing tasks for yearly limits
+    const currentYear = new Date().getFullYear();
     const updatedVineyard = {
       ...vineyard,
       vineyardHealth: newHealth,
@@ -129,30 +128,14 @@ export async function updateVineyardHealth(
       grape: newGrape,
       density: newDensity,
       yearsSinceLastClearing: 0, // Reset to 0 since clearing was just completed
+      lastClearingYear: currentYear, // Track the year when clearing was completed
+      lastClearVegetationYear: tasks['clear-vegetation'] ? currentYear : vineyard.lastClearVegetationYear || 0, // Track clear vegetation separately
+      lastRemoveDebrisYear: tasks['remove-debris'] ? currentYear : vineyard.lastRemoveDebrisYear || 0, // Track remove debris separately
       plantingHealthBonus: newPlantingHealthBonus // Set gradual health improvement for replanting
     };
 
     await saveVineyard(updatedVineyard);
     triggerGameUpdate();
-    
-    const changeSign = healthChange >= 0 ? '+' : '';
-    let logMessage = `Updated vineyard ${vineyard.name}: health ${(vineyard.vineyardHealth * 100).toFixed(0)}% → ${(newHealth * 100).toFixed(0)}% (${changeSign}${(healthChange * 100).toFixed(0)}%)`;
-    
-    // Log status changes if uprooting occurred
-    if (tasks['uproot-vines'] && newStatus !== vineyard.status) {
-      logMessage += `, status ${vineyard.status} → ${newStatus}`;
-      if (newGrape !== vineyard.grape) {
-        logMessage += `, grape ${vineyard.grape || 'none'} → ${newGrape || 'none'}`;
-      }
-    }
-    
-    // Log vine age and yield changes if replanting occurred
-    if (tasks['replant-vines'] && (newVineAge !== vineyard.vineAge || newVineYield !== vineyard.vineYield)) {
-      logMessage += `, vine age ${vineyard.vineAge} → ${newVineAge} years, yield ${(vineyard.vineYield * 100).toFixed(1)}% → ${(newVineYield * 100).toFixed(1)}%`;
-    }
-    
-    console.log(logMessage);
-    
   } catch (error) {
     console.error('Error updating vineyard health:', error);
     throw error;

@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Vineyard } from '@/lib/types/types';
-import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
 import { formatNumber } from '@/lib/utils/utils';
-import { calculateTotalWork } from '@/lib/services/activity/workcalculators/workCalculator';
 import { WorkCalculationTable } from '@/components/ui/activities/workCalculationTable';
-import { WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
-import { getAltitudeRating } from '@/lib/services/vineyard/vineyardValueCalc';
-import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
+import { calculateClearingWork } from '@/lib/services/activity/workcalculators/clearingWorkCalculator';
+import { getGameState } from '@/lib/services/core/gameState';
+import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
 
 interface ClearingOptionsModalProps {
   isOpen: boolean;
@@ -44,47 +41,14 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
   });
 
   const [projectedHealth, setProjectedHealth] = useState<number>(vineyard?.vineyardHealth || 1.0);
-  const [workFactors, setWorkFactors] = useState<WorkFactor[]>([]);
-
-  // Work modifier functions (same as in clearingManager.ts)
-  const getSoilTypeModifier = (soil: string[]): number => {
-    let totalModifier = 0;
-    let validSoils = 0;
-    
-    soil.forEach(soilType => {
-      const modifier = SOIL_DIFFICULTY_MODIFIERS[soilType as keyof typeof SOIL_DIFFICULTY_MODIFIERS];
-      if (modifier !== undefined) {
-        totalModifier += modifier;
-        validSoils++;
-      }
-    });
-    
-    return validSoils > 0 ? totalModifier / validSoils : 0;
-  };
-
-  const getOvergrowthModifier = (yearsSinceLastClearing: number): number => {
-    if (yearsSinceLastClearing <= 0) return 0;
-    
-    const baseIncrease = 0.10; // 10% base increase per year
-    const decayRate = 0.5; // Diminishing factor
-    
-    const maxModifier = baseIncrease / decayRate; // Theoretical maximum
-    const actualModifier = maxModifier * (1 - Math.pow(1 - decayRate, yearsSinceLastClearing));
-    
-    return Math.min(actualModifier, 2.0); // Cap at 200%
-  };
-
-  const getVineAgeModifier = (vineAge: number | null): number => {
-    if (!vineAge || vineAge <= 0) return 0;
-    
-    const maxAge = 100; // Practical maximum
-    const ageRatio = Math.min(vineAge / maxAge, 1); // Normalize to 0-1
-    
-    const baseModifier = 1.8; // Maximum 180% work increase
-    const actualModifier = baseModifier * (1 - Math.exp(-3 * ageRatio)); // Exponential decay function
-    
-    return actualModifier;
-  };
+  const [workFactors, setWorkFactors] = useState<Array<{
+    label: string;
+    value: string | number;
+    unit?: string;
+    modifier?: number;
+    modifierLabel?: string;
+    isPrimary?: boolean;
+  }>>([]);
 
   // Reset options when modal opens/closes or vineyard changes
   useEffect(() => {
@@ -106,145 +70,22 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
   useEffect(() => {
     if (!vineyard) return;
 
-    let totalClearingWork = 0;
+    // Calculate work using the dedicated clearing work calculator
+    const workResult = calculateClearingWork(vineyard, options);
+    
+    // Calculate health improvements for display
     let healthImprovement = 0;
-    const factors: WorkFactor[] = [];
-
-    // Calculate work modifiers for this vineyard
-    const soilModifier = getSoilTypeModifier(vineyard.soil);
-    const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
-    const terrainModifier = altitudeRating * 1.5; // Up to +150% work for very high altitude
-    const overgrowthModifier = getOvergrowthModifier(vineyard.yearsSinceLastClearing || 0);
-
-    // Add vineyard size factor
-    factors.push({
-      label: 'Vineyard Size',
-      value: vineyard.hectares,
-      unit: 'hectares',
-      isPrimary: true
-    });
-
-    // Add environmental factors
-    if (Math.abs(soilModifier) >= 0) { // Show all soil modifiers (including 0%)
-      factors.push({
-        label: 'Soil Type',
-        value: vineyard.soil.join(', '),
-        modifier: soilModifier,
-        modifierLabel: 'soil difficulty'
-      });
-    }
-
-    if (Math.abs(terrainModifier) > 0.01) {
-      factors.push({
-        label: 'Terrain Difficulty',
-        value: `${vineyard.altitude}m altitude`,
-        modifier: terrainModifier,
-        modifierLabel: 'altitude effect'
-      });
-    }
-
-    if (Math.abs(overgrowthModifier) > 0.01) {
-      factors.push({
-        label: 'Overgrowth',
-        value: `${vineyard.yearsSinceLastClearing || 0} years since last clearing`,
-        modifier: overgrowthModifier,
-        modifierLabel: 'overgrowth effect'
-      });
-    }
-
-    // Calculate work for each selected task
     Object.entries(options.tasks).forEach(([taskId, isSelected]) => {
       if (!isSelected) return;
-
+      
       const task = Object.values(CLEARING_TASKS).find(t => t.id === taskId);
       if (!task) return;
-
-      let taskAmount = vineyard.hectares;
       
-      // Handle uprooting and replanting with intensity scaling
-      if (taskId === 'uproot-vines' || taskId === 'replant-vines') {
-        taskAmount *= (options.replantingIntensity / 100);
-        
-        // Add replanting intensity factor
-        factors.push({
-          label: 'Replanting Intensity',
-          value: `${options.replantingIntensity}%`,
-          modifier: (options.replantingIntensity / 100) - 1, // -1 to 0 range
-          modifierLabel: 'work scaling'
-        });
-        
-        // Note: Health setting is handled separately in health calculation logic
-      } else {
-        // Additive health tasks use healthImprovement
-        if ('healthImprovement' in task && task.healthImprovement) {
-          healthImprovement += task.healthImprovement;
-        }
-      }
-
-      if (taskAmount <= 0) return;
-
-      // Get task-specific modifiers
-      let taskModifiers = [soilModifier, terrainModifier, overgrowthModifier];
-      
-      // Add vine age modifier for vine uprooting and replanting tasks
-      if (taskId === 'uproot-vines' || taskId === 'replant-vines') {
-        const vineAgeModifier = getVineAgeModifier(vineyard.vineAge);
-        taskModifiers.push(vineAgeModifier);
-        
-        if (Math.abs(vineAgeModifier) > 0.01) {
-          factors.push({
-            label: 'Vine Age',
-            value: `${vineyard.vineAge || 0} years`,
-            modifier: vineAgeModifier,
-            modifierLabel: 'removal difficulty'
-          });
-        }
-      }
-
-      // Use the proper work calculator
-      const taskWork = calculateTotalWork(taskAmount, {
-        rate: task.rate,
-        initialWork: task.initialWork,
-        useDensityAdjustment: taskId === 'uproot-vines' || taskId === 'replant-vines', // Vine uprooting and replanting use density adjustment
-        density: vineyard.density,
-        workModifiers: taskModifiers
-      });
-      
-      totalClearingWork += taskWork;
-
-      // Add task-specific factor
-      factors.push({
-        label: task.name,
-        value: taskAmount,
-        unit: 'hectares',
-        modifier: task.initialWork / (taskAmount * task.rate * 25), // Initial work as modifier
-        modifierLabel: 'setup work'
-      });
-
-      // Add density factor for vine uprooting and replanting
-      if ((taskId === 'uproot-vines' || taskId === 'replant-vines') && vineyard.density > 0) {
-        const densityModifier = (vineyard.density / DEFAULT_VINE_DENSITY) - 1; // Use correct constant
-        if (Math.abs(densityModifier) > 0.05) { // Only show if significant (>5%)
-          factors.push({
-            label: 'Vine Density',
-            value: `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha`,
-            modifier: densityModifier,
-            modifierLabel: 'density effect'
-          });
-        }
+      // Additive health tasks use healthImprovement
+      if ('healthImprovement' in task && task.healthImprovement) {
+        healthImprovement += task.healthImprovement;
       }
     });
-
-    // Add total tasks factor
-    const selectedTaskCount = Object.values(options.tasks).filter(Boolean).length;
-    if (selectedTaskCount > 0) {
-      factors.push({
-        label: 'Selected Tasks',
-        value: selectedTaskCount,
-        modifier: selectedTaskCount > 1 ? 0.1 : 0, // 10% efficiency bonus for multiple tasks
-        modifierLabel: 'task coordination'
-      });
-    }
 
     // Calculate projected health with mixed additive and setHealth logic
     let newHealth = vineyard.vineyardHealth + healthImprovement; // Start with current health + additive improvements
@@ -273,15 +114,15 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
     setProjectedHealth(newHealth);
 
     // Calculate time estimate
-    const weeks = totalClearingWork > 0 ? Math.ceil(totalClearingWork / 25) : 0; // 25 = BASE_WORK_UNITS
+    const weeks = workResult.totalWork > 0 ? Math.ceil(workResult.totalWork / 25) : 0; // 25 = BASE_WORK_UNITS
     const timeEstimate = `${weeks} week${weeks === 1 ? '' : 's'}`;
 
     setWorkEstimate({
-      totalWork: Math.round(totalClearingWork),
+      totalWork: workResult.totalWork,
       timeEstimate,
     });
 
-    setWorkFactors(factors);
+    setWorkFactors(workResult.workFactors);
   }, [options, vineyard]);
 
   const handleTaskChange = (taskId: string, checked: boolean) => {
@@ -331,6 +172,18 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
 
   if (!isOpen || !vineyard) return null;
 
+  // Check seasonal and yearly limits for individual tasks
+  const gameState = getGameState();
+  const currentSeason = gameState.season;
+  const currentYear = new Date().getFullYear();
+  const lastClearVegetationYear = vineyard.lastClearVegetationYear || 0;
+  const lastRemoveDebrisYear = vineyard.lastRemoveDebrisYear || 0;
+  const wasClearVegetationDoneThisYear = currentYear === lastClearVegetationYear;
+  const wasRemoveDebrisDoneThisYear = currentYear === lastRemoveDebrisYear;
+  
+  // Seasonal restrictions
+  const isClearVegetationBlockedBySeason = currentSeason === 'Winter';
+
   const healthImprovement = projectedHealth - vineyard.vineyardHealth;
 
   return (
@@ -354,6 +207,50 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
           <p className="text-gray-600">
             Select clearing tasks to improve the health of this {vineyard.hectares} hectare vineyard.
           </p>
+          
+          {/* Seasonal and yearly limit warnings */}
+          {(() => {
+            const warnings = [];
+            const seasonalWarnings = [];
+            
+            if (isClearVegetationBlockedBySeason) {
+              seasonalWarnings.push("Clear vegetation is not available in winter (vegetation is dormant)");
+            }
+            
+            if (wasClearVegetationDoneThisYear) {
+              warnings.push("Clear vegetation was already done this year");
+            }
+            if (wasRemoveDebrisDoneThisYear) {
+              warnings.push("Remove debris was already done this year");
+            }
+            
+            if (seasonalWarnings.length > 0) {
+              return (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center">
+                    <div className="text-blue-600 mr-2">❄️</div>
+                    <div className="text-sm text-blue-800">
+                      <strong>Seasonal Restrictions:</strong> {seasonalWarnings.join(", ")}. You can still perform vine uprooting and replanting tasks.
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            if (warnings.length > 0) {
+              return (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center">
+                    <div className="text-yellow-600 mr-2">⚠️</div>
+                    <div className="text-sm text-yellow-800">
+                      <strong>Yearly Limits:</strong> {warnings.join(", ")}. You can still perform vine uprooting and replanting tasks.
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Work Estimate */}
           <div className="bg-blue-50 p-4 rounded-lg">
@@ -387,11 +284,16 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                 id="clear-vegetation"
                 checked={options.tasks['clear-vegetation']}
                 onChange={(e) => handleTaskChange('clear-vegetation', e.target.checked)}
-                className="mr-3 h-4 w-4 rounded border-gray-300 text-wine focus:ring-wine"
+                disabled={wasClearVegetationDoneThisYear || isClearVegetationBlockedBySeason}
+                className={`mr-3 h-4 w-4 rounded border-gray-300 text-wine focus:ring-wine ${
+                  wasClearVegetationDoneThisYear || isClearVegetationBlockedBySeason ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               />
-              <label htmlFor="clear-vegetation" className="text-sm text-gray-700">
+              <label htmlFor="clear-vegetation" className={`text-sm ${wasClearVegetationDoneThisYear || isClearVegetationBlockedBySeason ? 'text-gray-400' : 'text-gray-700'}`}>
                 Clear vegetation
                 <span className="text-green-600 ml-2 font-medium">(+10% health)</span>
+                {wasClearVegetationDoneThisYear && <span className="text-yellow-600 ml-2 text-xs">(Yearly limit reached)</span>}
+                {isClearVegetationBlockedBySeason && <span className="text-blue-600 ml-2 text-xs">(Not available in winter)</span>}
               </label>
             </div>
             
@@ -402,11 +304,15 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                 id="remove-debris"
                 checked={options.tasks['remove-debris']}
                 onChange={(e) => handleTaskChange('remove-debris', e.target.checked)}
-                className="mr-3 h-4 w-4 rounded border-gray-300 text-wine focus:ring-wine"
+                disabled={wasRemoveDebrisDoneThisYear}
+                className={`mr-3 h-4 w-4 rounded border-gray-300 text-wine focus:ring-wine ${
+                  wasRemoveDebrisDoneThisYear ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               />
-              <label htmlFor="remove-debris" className="text-sm text-gray-700">
+              <label htmlFor="remove-debris" className={`text-sm ${wasRemoveDebrisDoneThisYear ? 'text-gray-400' : 'text-gray-700'}`}>
                 Remove debris
                 <span className="text-green-600 ml-2 font-medium">(+5% health)</span>
+                {wasRemoveDebrisDoneThisYear && <span className="text-yellow-600 ml-2 text-xs">(Yearly limit reached)</span>}
               </label>
             </div>
             
@@ -441,7 +347,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
               />
               <label htmlFor="replant-vines" className={`text-sm ${!vineyard.grape ? 'text-gray-400' : 'text-gray-700'}`}>
                 Replant vines
-                <span className="text-green-600 ml-2 font-medium">(Sets health to 70%)</span>
+                <span className="text-green-600 ml-2 font-medium">(Sets health to 50% + 20% gradual improvement)</span>
               </label>
             </div>
             
@@ -519,6 +425,17 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                     ></div>
                   )}
                   
+                  {/* Gradual improvement overlay for replanting (semi-transparent green) */}
+                  {options.tasks['replant-vines'] && (
+                    <div 
+                      className="absolute h-full bg-green-300 opacity-50" 
+                      style={{ 
+                        left: `${(vineyard.vineyardHealth + healthImprovement) * 100}%`,
+                        width: `${(0.2 * options.replantingIntensity / 100) * 100}%` // Scales with replanting intensity (20% max at 100% intensity)
+                      }}
+                    ></div>
+                  )}
+                  
                   {/* Health reduction (dark red) - for vine removal scenarios */}
                   {healthImprovement < 0 && (
                     <div 
@@ -541,6 +458,20 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                   </span>
                 </div>
               )}
+              
+              {/* Gradual improvement info for replanting */}
+              {options.tasks['replant-vines'] && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-300 opacity-50 rounded"></div>
+                    <span className="text-green-700 font-medium">Gradual Improvement:</span>
+                    <span className="text-green-600">+{Math.round(0.2 * options.replantingIntensity / 100 * 100)}% health over 5 years</span>
+                  </div>
+                  <div className="text-green-600 mt-1">
+                    The semi-transparent green bar shows the additional health that will gradually improve over time (scales with replanting intensity).
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -556,9 +487,9 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
           <button
             onClick={handleSubmit}
             disabled={!canSubmit()}
-            className={`px-4 py-2 rounded-md font-medium ${
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
               canSubmit()
-                ? 'bg-wine-600 hover:bg-wine-700 text-white'
+                ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >

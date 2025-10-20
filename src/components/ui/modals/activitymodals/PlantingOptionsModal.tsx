@@ -77,7 +77,16 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
     const grape = submittedOptions.grape as GrapeVariety;
     const density = submittedOptions.density as number;
     
-    // Create activity instead of directly planting
+    // Initialize planting immediately (set grape variety, status='Planting', density=0)
+    const { initializePlanting } = await import('@/lib/services');
+    const initialized = await initializePlanting(vineyard.id, grape);
+    
+    if (!initialized) {
+      await notificationService.addMessage('Failed to initialize planting.', 'plantingOptionsModal.handlePlant', 'Planting Error', NotificationCategory.SYSTEM);
+      return;
+    }
+    
+    // Create activity for progressive density increase
     const activityId = await createActivity({
       category: WorkCategory.PLANTING,
       title: `Planting ${vineyard.name}`,

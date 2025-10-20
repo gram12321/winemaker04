@@ -692,9 +692,12 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
     );
     
     // Create the search activity
+    const regionText = options.regions.length > 0 ? ` in ${options.regions.join(', ')}` : '';
+    const title = `Land Search${regionText}`;
+    
     const activityId = await createActivity({
       category: WorkCategory.LAND_SEARCH,
-      title: 'Search for Land',
+      title,
       totalWork,
       params: {
         searchOptions: options,

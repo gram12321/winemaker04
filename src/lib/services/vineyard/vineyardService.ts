@@ -45,7 +45,10 @@ function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<V
     status: 'Barren',
     vineyardPrestige: 0,
     vineYield: 0.02,
-    ripeness: 0
+    ripeness: 0,
+    lastClearingYear: 0, // Initialize to 0 (no clearing done yet)
+    lastClearVegetationYear: 0, // Initialize to 0 (no clear vegetation done yet)
+    lastRemoveDebrisYear: 0 // Initialize to 0 (no remove debris done yet)
   };
 }
 
@@ -135,7 +138,8 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     status: 'Barren',
     ripeness: 0, // No ripeness until planted and growing
     vineyardPrestige: 0, // Will be calculated after vineyard is created
-    vineYield: 0.02 // Default vine yield factor
+    vineYield: 0.02, // Default vine yield factor
+    lastClearingYear: 0 // Initialize to 0 (no clearing done yet)
   };
 
 
@@ -159,8 +163,8 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
   return vineyard;
 }
 
-// Plant a vineyard
-export async function plantVineyard(vineyardId: string, grape: GrapeVariety, density?: number): Promise<boolean> {
+// Initialize planting (called when planting activity starts)
+export async function initializePlanting(vineyardId: string, grape: GrapeVariety): Promise<boolean> {
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
   
@@ -168,24 +172,43 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
     return false;
   }
 
-  // Determine initial status based on current season
-  // If planting completes during a growing season, allow ripening immediately
-  const currentSeason = getGameState().season;
-  const isGrowingSeason = currentSeason === 'Spring' || currentSeason === 'Summer' || currentSeason === 'Fall';
-  const initialStatus = isGrowingSeason ? 'Growing' : 'Planted';
-  const initialRipeness = 0;
-
+  // Set initial planting state
   const updatedVineyard: Vineyard = {
     ...vineyard,
-    grape,
+    grape, // Set the grape variety
     vineAge: 0, // Newly planted vines
-    density: density || DEFAULT_VINE_DENSITY, // Use provided density or default
-    vineyardHealth: vineyard.vineyardHealth || DEFAULT_VINEYARD_HEALTH, // Ensure health is set
-    status: initialStatus,
-    ripeness: initialRipeness,
+    density: 0, // Start with 0 density, will increase during planting
+    vineyardHealth: vineyard.vineyardHealth || DEFAULT_VINEYARD_HEALTH,
+    status: 'Planting', // New status for active planting
+    ripeness: 0,
     plantingHealthBonus: 0.2 // Start with 20% gradual health improvement over 5 years
   };
 
+  await saveVineyard(updatedVineyard);
+  triggerGameUpdate();
+  return true;
+}
+
+// Complete planting (called when planting activity finishes)
+export async function completePlanting(vineyardId: string, targetDensity: number): Promise<boolean> {
+  const vineyards = await loadVineyards();
+  const vineyard = vineyards.find(v => v.id === vineyardId);
+  
+  if (!vineyard) {
+    return false;
+  }
+
+  // Determine final status based on current season
+  // If planting completes during a growing season, allow ripening immediately
+  const currentSeason = getGameState().season;
+  const isGrowingSeason = currentSeason === 'Spring' || currentSeason === 'Summer' || currentSeason === 'Fall';
+  const finalStatus = isGrowingSeason ? 'Growing' : 'Planted';
+
+  const updatedVineyard: Vineyard = {
+    ...vineyard,
+    density: targetDensity, // Ensure final density is set to target
+    status: finalStatus
+  };
 
   await saveVineyard(updatedVineyard);
   
@@ -206,6 +229,12 @@ export async function plantVineyard(vineyardId: string, grape: GrapeVariety, den
   
   triggerGameUpdate();
   return true;
+}
+
+// Legacy function for backward compatibility (now calls initializePlanting + completePlanting)
+export async function plantVineyard(vineyardId: string, grape: GrapeVariety, density?: number): Promise<boolean> {
+  await initializePlanting(vineyardId, grape);
+  return await completePlanting(vineyardId, density || DEFAULT_VINE_DENSITY);
 }
 
 // Get all vineyards with refreshed prestige values

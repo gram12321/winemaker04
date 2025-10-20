@@ -221,6 +221,77 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                   <span className="text-muted-foreground">Density</span>
                   <span className="font-medium">{vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}</span>
                 </div>
+                
+                {/* Vineyard Health */}
+                <div className="pt-2">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Vineyard Health</span>
+                    <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        (vineyard.vineyardHealth || 1.0) < 0.3
+                          ? 'bg-red-500'
+                          : (vineyard.vineyardHealth || 1.0) < 0.6
+                          ? 'bg-amber-500'
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
+                    />
+                    {/* Health Tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
+                      <div className="text-xs">
+                        <div className="font-medium text-gray-200 mb-2">Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</div>
+                        
+                        {vineyard.healthTrend && (vineyard.healthTrend.seasonalDecay > 0 || vineyard.healthTrend.plantingImprovement > 0) ? (
+                          <div className="space-y-1">
+                            <div className="font-medium text-gray-300 mb-1">Health Changes This Season:</div>
+                            
+                            {vineyard.healthTrend.seasonalDecay > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-300">Seasonal decay:</span>
+                                <span className="text-red-400 font-medium">
+                                  -{formatNumber(vineyard.healthTrend.seasonalDecay * 100, { decimals: 1 })}%
+                                </span>
+                              </div>
+                            )}
+                            
+                            {vineyard.healthTrend.plantingImprovement > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-300">Recent planting:</span>
+                                <span className="text-green-400 font-medium">
+                                  +{formatNumber(vineyard.healthTrend.plantingImprovement * 100, { decimals: 1 })}%
+                                </span>
+                              </div>
+                            )}
+                            
+                            {(vineyard.healthTrend.netChange > 0 || vineyard.healthTrend.netChange < 0) && (
+                              <div className="flex justify-between items-center pt-1 border-t border-gray-600">
+                                <span className="font-medium text-gray-200">Net change:</span>
+                                <span className={`font-medium ${vineyard.healthTrend.netChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {vineyard.healthTrend.netChange > 0 ? '+' : ''}{formatNumber(vineyard.healthTrend.netChange * 100, { decimals: 1 })}%
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-gray-400">No significant changes this season</div>
+                        )}
+                        
+                        {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-600">
+                            <div className="text-gray-400">
+                              Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+
                 {vineyard.grape && (
                   <div className="space-y-3 pt-1">
                     <div>
@@ -243,74 +314,6 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                     </div>
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Health</span>
-                        <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            (vineyard.vineyardHealth || 1.0) < 0.3
-                              ? 'bg-red-500'
-                              : (vineyard.vineyardHealth || 1.0) < 0.6
-                              ? 'bg-amber-500'
-                              : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
-                        />
-                        {/* Health Tooltip */}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
-                          <div className="text-xs">
-                            <div className="font-medium text-gray-200 mb-2">Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</div>
-                            
-                            {vineyard.healthTrend && (vineyard.healthTrend.seasonalDecay > 0 || vineyard.healthTrend.plantingImprovement > 0) ? (
-                              <div className="space-y-1">
-                                <div className="font-medium text-gray-300 mb-1">Health Changes This Season:</div>
-                                
-                                {vineyard.healthTrend.seasonalDecay > 0 && (
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-gray-300">Seasonal decay:</span>
-                                    <span className="text-red-400 font-medium">
-                                      -{formatNumber(vineyard.healthTrend.seasonalDecay * 100, { decimals: 1 })}%
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                {vineyard.healthTrend.plantingImprovement > 0 && (
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-gray-300">Recent planting:</span>
-                                    <span className="text-green-400 font-medium">
-                                      +{formatNumber(vineyard.healthTrend.plantingImprovement * 100, { decimals: 1 })}%
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                {(vineyard.healthTrend.netChange > 0 || vineyard.healthTrend.netChange < 0) && (
-                                  <div className="flex justify-between items-center pt-1 border-t border-gray-600">
-                                    <span className="font-medium text-gray-200">Net change:</span>
-                                    <span className={`font-medium ${vineyard.healthTrend.netChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                      {vineyard.healthTrend.netChange > 0 ? '+' : ''}{formatNumber(vineyard.healthTrend.netChange * 100, { decimals: 1 })}%
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-gray-400">No significant changes this season</div>
-                            )}
-                            
-                            {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
-                              <div className="mt-2 pt-2 border-t border-gray-600">
-                                <div className="text-gray-400">
-                                  Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Vine Yield</span>
                         <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
                       </div>
@@ -327,6 +330,137 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                           }`}
                           style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
                         />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-xs font-medium">Clearing Information</CardTitle>
+              </CardHeader>
+              <CardContent className="py-3 text-sm space-y-3">
+                {/* Last Clearing Tasks */}
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-gray-700 mb-2">Last Clearing Tasks:</div>
+                  <div className="space-y-1">
+                    {(() => {
+                      const currentYear = new Date().getFullYear();
+                      const lastClearVegetationYear = vineyard.lastClearVegetationYear || 0;
+                      const lastRemoveDebrisYear = vineyard.lastRemoveDebrisYear || 0;
+                      
+                      const tasks = [];
+                      
+                      if (lastClearVegetationYear > 0) {
+                        const yearsAgo = currentYear - lastClearVegetationYear;
+                        const isThisYear = yearsAgo === 0;
+                        tasks.push({
+                          name: 'Clear Vegetation',
+                          year: lastClearVegetationYear,
+                          yearsAgo,
+                          isThisYear,
+                          canDoThisYear: !isThisYear
+                        });
+                      }
+                      
+                      if (lastRemoveDebrisYear > 0) {
+                        const yearsAgo = currentYear - lastRemoveDebrisYear;
+                        const isThisYear = yearsAgo === 0;
+                        tasks.push({
+                          name: 'Remove Debris',
+                          year: lastRemoveDebrisYear,
+                          yearsAgo,
+                          isThisYear,
+                          canDoThisYear: !isThisYear
+                        });
+                      }
+                      
+                      if (tasks.length === 0) {
+                        return (
+                          <div className="text-xs text-gray-500 italic">No clearing tasks completed yet</div>
+                        );
+                      }
+                      
+                      return tasks.map((task, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">{task.name}:</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-medium ${task.isThisYear ? 'text-red-600' : 'text-green-600'}`}>
+                              {task.isThisYear ? 'This year' : `${task.yearsAgo} year${task.yearsAgo === 1 ? '' : 's'} ago`}
+                            </span>
+                            {!task.canDoThisYear && (
+                              <span className="text-xs text-yellow-600 font-medium">(Blocked)</span>
+                            )}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Overgrowth Modifier */}
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-gray-700">Overgrowth Status:</div>
+                  <div className="space-y-1">
+                    {(() => {
+                      const yearsSinceLastClearing = vineyard.yearsSinceLastClearing || 0;
+                      const currentYear = new Date().getFullYear();
+                      const lastClearingYear = vineyard.lastClearingYear || 0;
+                      
+                      if (lastClearingYear === 0) {
+                        return (
+                          <div className="text-xs text-gray-500 italic">No clearing ever completed</div>
+                        );
+                      }
+                      
+                      const yearsAgo = currentYear - lastClearingYear;
+                      const overgrowthModifier = yearsSinceLastClearing > 0 ? 
+                        Math.min(2.0, 0.1 * (1 - Math.pow(0.5, yearsSinceLastClearing)) / 0.5) : 0;
+                      
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Last clearing:</span>
+                            <span className="font-medium text-gray-900">
+                              {yearsAgo === 0 ? 'This year' : `${yearsAgo} year${yearsAgo === 1 ? '' : 's'} ago`}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Overgrowth modifier:</span>
+                            <span className={`font-medium ${overgrowthModifier > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                              {overgrowthModifier > 0 ? `+${formatNumber(overgrowthModifier * 100, { decimals: 0 })}% work` : 'None'}
+                            </span>
+                          </div>
+                          {overgrowthModifier > 0 && (
+                            <div className="text-xs text-orange-600 italic">
+                              Clearing will require more work due to overgrowth
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Incoming Health Improvements */}
+                {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-gray-700">Incoming Health Improvements:</div>
+                    <div className="bg-green-50 rounded-lg p-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-green-700 font-medium">Planting Health Bonus:</span>
+                        <span className="text-green-600 font-medium">
+                          +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}%
+                        </span>
+                      </div>
+                      <div className="text-xs text-green-600 mt-1">
+                        Gradual improvement over 5 years from recent planting/replanting
                       </div>
                     </div>
                   </div>

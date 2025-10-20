@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { Activity, WorkCategory } from '@/lib/types/types';
+import { Activity } from '@/lib/types/types';
 import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { Badge } from '@/components/ui/shadCN/badge';
@@ -145,7 +145,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
 
             {/* Activity title */}
             <h3 className="text-white font-medium mb-1">
-              {activity.category === WorkCategory.LAND_SEARCH ? 'Search for Land' : activity.title}
+              {activity.title}
             </h3>
 
             {/* Staff display and assign button */}

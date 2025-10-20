@@ -3,7 +3,7 @@ import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types
 import { WorkCategory } from '@/lib/services/activity';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
-import { plantVineyard } from '@/lib/services';
+import { completePlanting } from '@/lib/services';
 import { createWineBatchFromHarvest } from '../../wine/winery/inventoryService';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { calculateVineyardYield } from '../../vineyard/vineyardManager';
@@ -22,9 +22,18 @@ import { completeClearingActivity } from '../../vineyard/clearingManager';
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
   [WorkCategory.PLANTING]: async (activity: Activity) => {
-    if (activity.targetId && activity.params.grape && activity.params.density) {
-      await plantVineyard(activity.targetId, activity.params.grape, activity.params.density);
-      notificationService.addMessage(`Successfully planted ${activity.params.grape} in ${activity.params.targetName || 'vineyard'}!`, 'vineyard.planting', 'Vineyard Planting', NotificationCategory.VINEYARD_OPERATIONS);
+    if (activity.targetId && activity.params.density) {
+      // Complete the planting and finalize the status
+      await completePlanting(activity.targetId, activity.params.density);
+      
+      const targetDensity = activity.params.density;
+      const grape = activity.params.grape;
+      notificationService.addMessage(
+        `Successfully planted ${targetDensity} vines/ha of ${grape} in ${activity.params.targetName || 'vineyard'}!`, 
+        'vineyard.planting', 
+        'Vineyard Planting', 
+        NotificationCategory.VINEYARD_OPERATIONS
+      );
     }
   },
 
@@ -276,6 +285,11 @@ export async function progressActivities(): Promise<void> {
         activity.completedWork + workThisTick
       );
       
+      // Handle partial planting for PLANTING activities
+      if (activity.category === WorkCategory.PLANTING && activity.targetId) {
+        await handlePartialPlanting(activity, oldCompletedWork, newCompletedWork);
+      }
+      
       // Handle partial harvesting for HARVESTING activities
       if (activity.category === WorkCategory.HARVESTING && activity.targetId) {
         await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
@@ -319,6 +333,53 @@ export async function progressActivities(): Promise<void> {
     
   } catch (error) {
     console.error('Error progressing activities:', error);
+  }
+}
+
+/**
+ * Handle partial planting for planting activities
+ * Increases vine density incrementally based on work progress
+ */
+async function handlePartialPlanting(
+  activity: Activity,
+  oldCompletedWork: number,
+  newCompletedWork: number
+): Promise<void> {
+  try {
+    const workProgress = newCompletedWork / activity.totalWork;
+    const oldProgress = oldCompletedWork / activity.totalWork;
+    const progressThisTick = workProgress - oldProgress;
+    
+    if (progressThisTick <= 0) return; // No progress this tick
+    
+    const vineyards = await loadVineyards();
+    const vineyard = vineyards.find(v => v.id === activity.targetId);
+    
+    if (!vineyard) return;
+    
+    const targetDensity = activity.params.density || 0;
+    if (targetDensity <= 0) return;
+    
+    // Calculate current density based on work progress
+    const expectedDensityByNow = Math.round(targetDensity * workProgress);
+    const currentDensity = vineyard.density || 0;
+    
+    // Calculate density increase this tick
+    const densityIncrease = expectedDensityByNow - currentDensity;
+    
+    // Only update if there's a meaningful increase (at least 1 vine/ha)
+    if (densityIncrease >= 1) {
+      const newDensity = Math.min(targetDensity, currentDensity + densityIncrease);
+      
+      // Update vineyard density
+      const updatedVineyard = {
+        ...vineyard,
+        density: newDensity
+      };
+      await saveVineyard(updatedVineyard);
+    }
+  } catch (error) {
+    console.error(`Error in partial planting for activity ${activity.id}:`, error);
   }
 }
 

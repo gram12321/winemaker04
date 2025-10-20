@@ -116,7 +116,7 @@ CREATE TABLE vineyards (
     acres integer DEFAULT 1,
     grape_variety text,
     is_planted boolean DEFAULT false,
-    status text DEFAULT 'Barren' CHECK (status IN ('Barren', 'Planted', 'Growing', 'Harvested', 'Dormant')),
+    status text DEFAULT 'Barren' CHECK (status IN ('Barren', 'Planting', 'Planted', 'Growing', 'Harvested', 'Dormant')),
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now(),
     created_week integer DEFAULT 1,
@@ -136,11 +136,17 @@ CREATE TABLE vineyards (
     ripeness numeric DEFAULT 0.0,
     vine_yield numeric DEFAULT 0.02,
     years_since_last_clearing integer DEFAULT 0,
+    last_clearing_year integer DEFAULT 0,
+    last_clear_vegetation_year integer DEFAULT 0,
+    last_remove_debris_year integer DEFAULT 0,
     planting_health_bonus numeric DEFAULT 0,
     health_trend jsonb
 );
 
 COMMENT ON COLUMN vineyards.years_since_last_clearing IS 'Years since last clearing activity (affects overgrowth modifier for clearing work)';
+COMMENT ON COLUMN vineyards.last_clearing_year IS 'Year when clearing was last completed (for yearly limits on basic clearing tasks)';
+COMMENT ON COLUMN vineyards.last_clear_vegetation_year IS 'Year when clear vegetation was last completed (for yearly limits)';
+COMMENT ON COLUMN vineyards.last_remove_debris_year IS 'Year when remove debris was last completed (for yearly limits)';
 COMMENT ON COLUMN vineyards.planting_health_bonus IS 'Gradual health improvement from planting/replanting (0-0.2, increases over 5 years)';
 COMMENT ON COLUMN vineyards.health_trend IS 'Health trend tracking (seasonal decay, planting improvements, net change)';
 

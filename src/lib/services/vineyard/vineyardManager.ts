@@ -1,11 +1,54 @@
-// Vineyard Manager - Centralized vineyard calculations and operations
 import { Vineyard } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
+import { loadActivitiesFromDb, removeActivityFromDb } from '../../database/activities/activityDB';
+import { WorkCategory } from '../../services/activity';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { NotificationCategory } from '../../types/types';
+
+
+/**
+ * Terminate a planting activity due to winter and finalize vineyard with current density
+ */
+async function terminatePlantingActivity(vineyardId: string, vineyardName: string): Promise<void> {
+  try {
+    // Find the active planting activity
+    const activities = await loadActivitiesFromDb();
+    const plantingActivity = activities.find(
+      (a) => a.category === WorkCategory.PLANTING && 
+             a.status === 'active' && 
+             a.targetId === vineyardId
+    );
+    
+    if (plantingActivity) {
+      // Get current vineyard to get current density
+      const vineyards = await loadVineyards();
+      const vineyard = vineyards.find(v => v.id === vineyardId);
+      
+      if (vineyard) {
+        // Calculate planting progress
+        const targetDensity = plantingActivity.params.density || 0;
+        const currentDensity = vineyard.density || 0;
+        const plantingProgress = targetDensity > 0 ? Math.round((currentDensity / targetDensity) * 100) : 0;
+        
+        // Remove the planting activity
+        await removeActivityFromDb(plantingActivity.id);
+        
+        // Add notification about terminated planting
+        await notificationService.addMessage(
+          `Planting terminated due to winter! ${vineyardName} was ${plantingProgress}% planted (${currentDensity}/${targetDensity} vines/ha). Planting will resume in Spring.`,
+          'vineyardManager.terminatePlantingActivity',
+          'Planting Terminated',
+          NotificationCategory.VINEYARD_OPERATIONS
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error terminating planting activity:', error);
+  }
+}
 
 /**
  * Calculate yield for a vineyard based on all factors
@@ -16,7 +59,7 @@ export function calculateVineyardYield(vineyard: Vineyard): number {
     return 0;
   }
 
-  // Base yield: ~1.5 kg per vine (simplified calculation)
+  // Base yield: ~1.5 kg per vine (realistic baseline for mature vines)
   const baseYieldPerVine = 1.5; // kg per vine
   const totalVines = vineyard.hectares * vineyard.density;
   
@@ -74,6 +117,7 @@ export function calculateDynamicRipenessIncrease(vineyard: Vineyard, season: str
 export async function updateVineyardRipeness(season: string, week: number = 1): Promise<void> {
   try {
     const vineyards = await loadVineyards();
+    const activities = await loadActivitiesFromDb();
     
     for (const vineyard of vineyards) {
       if (!vineyard.grape) continue; // Skip vineyards without grapes
@@ -87,19 +131,47 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
         if (vineyard.status === 'Dormant' || vineyard.status === 'Planted') {
           newStatus = 'Growing';
         }
+        // If currently planting, keep Planting status but allow ripeness for planted portion
+        if (vineyard.status === 'Planting') {
+          newStatus = 'Planting'; // Keep planting status
+        }
       } else if (season === 'Winter' && week === 1) {
         // First week of Winter: Growing/Harvested -> Dormant, reset ripeness
         if (vineyard.status === 'Growing' || vineyard.status === 'Harvested') {
           newStatus = 'Dormant';
           newRipeness = 0; // Reset ripeness when going dormant
         }
+        // If still planting in winter, terminate planting and finalize density
+        if (vineyard.status === 'Planting') {
+          await terminatePlantingActivity(vineyard.id, vineyard.name);
+          newStatus = 'Dormant'; // Set to Dormant status with current density
+        }
       }
       
-      // Handle ripeness progression for growing vineyards
-      if (newStatus === 'Growing' || vineyard.status === 'Growing') {
+      // Handle ripeness progression for growing vineyards (including partial planting)
+      if (newStatus === 'Growing' || vineyard.status === 'Growing' || vineyard.status === 'Planting') {
         const ripenessIncrease = calculateDynamicRipenessIncrease(vineyard, season);
         if (ripenessIncrease > 0) {
-          newRipeness = Math.min(1.0, newRipeness + ripenessIncrease);
+          // Check if vineyard is currently being planted (partial planting)
+          const plantingActivity = activities.find(
+            (a) => a.category === WorkCategory.PLANTING && 
+                   a.status === 'active' && 
+                   a.targetId === vineyard.id
+          );
+          
+          let plantingProgressRatio = 1.0; // Default: fully planted
+          
+          if (plantingActivity && plantingActivity.params.density) {
+            // Calculate planting progress: current density / target density
+            const targetDensity = plantingActivity.params.density;
+            const currentDensity = vineyard.density || 0;
+            plantingProgressRatio = Math.min(1.0, currentDensity / targetDensity);
+          }
+          
+          // Scale ripeness increase by planting progress
+          // If only 50% planted, only 50% of the vineyard should ripen
+          const scaledRipenessIncrease = ripenessIncrease * plantingProgressRatio;
+          newRipeness = Math.min(1.0, newRipeness + scaledRipenessIncrease);
         }
       }
       
@@ -246,28 +318,7 @@ export async function updateVineyardHealthDegradation(season: string, _week: num
       }
     }
     
-    // Add notification for significant health degradations (only show first few to avoid spam)
-    if (healthDegradations.length > 0) {
-      const significantDegradations = healthDegradations.filter(d => d.degradation > 0.005); // >0.5% degradation
-      
-      if (significantDegradations.length > 0) {
-        const topDegradation = significantDegradations[0];
-        const additionalCount = significantDegradations.length - 1;
-        
-        let message = `Vineyard health declined: ${topDegradation.vineyard} health dropped from ${Math.round(topDegradation.oldHealth * 100)}% to ${Math.round(topDegradation.newHealth * 100)}%`;
-        
-        if (additionalCount > 0) {
-          message += ` (+${additionalCount} other vineyard${additionalCount === 1 ? '' : 's'})`;
-        }
-        
-        await notificationService.addMessage(
-          message,
-          'vineyardManager.updateVineyardHealthDegradation',
-          'Vineyard Health Decline',
-          NotificationCategory.VINEYARD_OPERATIONS
-        );
-      }
-    }
+
     
   } catch (error) {
     console.error('Error updating vineyard health degradation:', error);

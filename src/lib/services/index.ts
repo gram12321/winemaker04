@@ -99,7 +99,7 @@ export { getStaffRoleDisplayName } from '@/lib/constants/staffConstants';
 export { generateCustomer } from './sales/generateCustomer';
 export { generateOrder } from './sales/generateOrder';
 export { processGameTick } from './core/gameTick';
-export { createVineyard, plantVineyard, getAllVineyards, purchaseVineyard } from './vineyard/vineyardService';
+export { createVineyard, plantVineyard, initializePlanting, completePlanting, getAllVineyards, purchaseVineyard } from './vineyard/vineyardService';
 export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './vineyard/vineyardManager';
 export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating, getRegionalPriceRange } from './vineyard/vineyardValueCalc';

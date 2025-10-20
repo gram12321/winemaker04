@@ -4,75 +4,15 @@ import { createActivity } from '../activity/activitymanagers/activityManager';
 import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../../../components/layout/NotificationCenter';
 import { NotificationCategory } from '@/lib/types/types';
-import { calculateTotalWork } from '../activity/workcalculators/workCalculator';
 import { loadVineyards } from '../../database/activities/vineyardDB';
-import { getAltitudeRating } from '../vineyard/vineyardValueCalc';
-import { SOIL_DIFFICULTY_MODIFIERS } from '../../constants/vineyardConstants';
+import { calculateClearingWork } from '../activity/workcalculators/clearingWorkCalculator';
 
 export interface ClearingActivityOptions {
   tasks: { [key: string]: boolean };
   replantingIntensity: number;
 }
 
-// Work modifier functions for clearing activities
-
-/**
- * Get soil type modifier for clearing work using the proper soil difficulty system
- * Different soil types affect clearing difficulty based on predefined modifiers
- */
-function getSoilTypeModifier(soil: string[]): number {
-  let totalModifier = 0;
-  let validSoils = 0;
-  
-  soil.forEach(soilType => {
-    const modifier = SOIL_DIFFICULTY_MODIFIERS[soilType as keyof typeof SOIL_DIFFICULTY_MODIFIERS];
-    if (modifier !== undefined) {
-      totalModifier += modifier;
-      validSoils++;
-    }
-  });
-  
-  // Average the modifiers if multiple soil types
-  return validSoils > 0 ? totalModifier / validSoils : 0;
-}
-
-/**
- * Get overgrowth modifier based on years since last clearing
- * Uses diminishing returns: 1 year = 10%, 2 years = 15%, 3 years = 17.5%, etc.
- */
-function getOvergrowthModifier(yearsSinceLastClearing: number): number {
-  if (yearsSinceLastClearing <= 0) return 0;
-  
-  // Diminishing returns formula: base * (1 - (1 - decay)^years)
-  // This gives: 1 year = 10%, 2 years = 15%, 3 years = 17.5%, max ~200%
-  const baseIncrease = 0.10; // 10% base increase per year
-  const decayRate = 0.5; // Diminishing factor
-  
-  const maxModifier = baseIncrease / decayRate; // Theoretical maximum
-  const actualModifier = maxModifier * (1 - Math.pow(1 - decayRate, yearsSinceLastClearing));
-  
-  return Math.min(actualModifier, 2.0); // Cap at 200%
-}
-
-/**
- * Get vine age modifier for vine removal
- * Older vines are harder to remove, with diminishing returns
- * Theoretical max vine age: 200 years, practical max: 100 years
- */
-function getVineAgeModifier(vineAge: number | null): number {
-  if (!vineAge || vineAge <= 0) return 0;
-  
-  // Diminishing returns formula for vine age
-  // 10 years = 5%, 25 years = 10%, 50 years = 15%, 100 years = 180%
-  const maxAge = 100; // Practical maximum
-  const ageRatio = Math.min(vineAge / maxAge, 1); // Normalize to 0-1
-  
-  // Diminishing returns: more age = more work, but with diminishing effect
-  const baseModifier = 1.8; // Maximum 180% work increase
-  const actualModifier = baseModifier * (1 - Math.exp(-3 * ageRatio)); // Exponential decay function
-  
-  return actualModifier;
-}
+// Work calculation is now handled by clearingWorkCalculator.ts
 
 /**
  * Create a clearing activity for a vineyard
@@ -90,76 +30,54 @@ export async function createClearingActivity(
     if (!vineyard) {
       throw new Error(`Vineyard ${vineyardName} not found`);
     }
-
-    // Calculate work modifiers for this vineyard
-    const soilModifier = getSoilTypeModifier(vineyard.soil);
-    const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
-    const terrainModifier = altitudeRating * 1.5; // Up to +150% work for very high altitude
     
-    // Get overgrowth modifier based on years since last clearing
-    const overgrowthModifier = getOvergrowthModifier(vineyard.yearsSinceLastClearing || 0);
+    // Check yearly limits for individual clearing tasks
+    const currentYear = new Date().getFullYear();
+    const lastClearVegetationYear = vineyard.lastClearVegetationYear || 0;
+    const lastRemoveDebrisYear = vineyard.lastRemoveDebrisYear || 0;
     
-    // Calculate total work for all selected tasks using proper work calculator
-    let totalWork = 0;
-    const selectedTasks: string[] = [];
+    // Check if clear vegetation was already done this year
+    if (options.tasks['clear-vegetation'] && currentYear === lastClearVegetationYear) {
+      await notificationService.addMessage(
+        `Clear vegetation can only be performed once per year. This vineyard was already cleared of vegetation in ${currentYear}.`,
+        'clearingManager.createClearingActivity',
+        'Clearing Limit Reached',
+        NotificationCategory.VINEYARD_OPERATIONS
+      );
+      return false;
+    }
+    
+    // Check if remove debris was already done this year
+    if (options.tasks['remove-debris'] && currentYear === lastRemoveDebrisYear) {
+      await notificationService.addMessage(
+        `Remove debris can only be performed once per year. This vineyard was already cleared of debris in ${currentYear}.`,
+        'clearingManager.createClearingActivity',
+        'Clearing Limit Reached',
+        NotificationCategory.VINEYARD_OPERATIONS
+      );
+      return false;
+    }
 
-    Object.entries(options.tasks).forEach(([taskId, isSelected]) => {
-      if (!isSelected) return;
-
-      const task = Object.values(CLEARING_TASKS).find(t => t.id === taskId);
-      if (!task) return;
-
-      selectedTasks.push(task.name);
-      
-      // Calculate work for this task using the proper work calculator
-      let taskAmount = vineyard.hectares;
-      
-      // Handle uprooting and replanting with intensity scaling
-      if (taskId === 'uproot-vines' || taskId === 'replant-vines') {
-        taskAmount *= (options.replantingIntensity / 100);
-      }
-
-      if (taskAmount <= 0) return;
-
-      // Get task-specific modifiers
-      let taskModifiers = [soilModifier, terrainModifier, overgrowthModifier];
-      
-      // Add vine age modifier for vine uprooting and replanting tasks
-      if (taskId === 'uproot-vines' || taskId === 'replant-vines') {
-        const vineAgeModifier = getVineAgeModifier(vineyard.vineAge);
-        taskModifiers.push(vineAgeModifier);
-      }
-
-      // Use the proper work calculator
-      const taskWork = calculateTotalWork(taskAmount, {
-        rate: task.rate,
-        initialWork: task.initialWork,
-        useDensityAdjustment: taskId === 'uproot-vines' || taskId === 'replant-vines', // Vine uprooting and replanting use density adjustment
-        density: vineyard.density,
-        workModifiers: taskModifiers
-      });
-      
-      totalWork += taskWork;
-    });
-
-    if (selectedTasks.length === 0) {
+    // Calculate work using the dedicated clearing work calculator
+    const workResult = calculateClearingWork(vineyard, options);
+    
+    if (workResult.selectedTasks.length === 0) {
       throw new Error('No clearing tasks selected');
     }
 
-    // Create activity title
-    const taskNames = selectedTasks.join(', ');
-    const title = `Clear ${vineyardName}: ${taskNames}`;
+    // Create activity title - simplified for clearing activities
+    const title = `Clearing ${vineyardName}`;
 
     // Create the activity
     await createActivity({
       category: WorkCategory.CLEARING,
       title,
-      totalWork,
+      totalWork: workResult.totalWork,
       targetId: vineyardId,
       params: {
         tasks: options.tasks,
         replantingIntensity: options.replantingIntensity,
-        selectedTasks,
+        selectedTasks: workResult.selectedTasks,
         vineyardHectares: vineyard.hectares, // Store for reference
       },
       isCancellable: true,

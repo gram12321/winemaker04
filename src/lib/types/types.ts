@@ -41,7 +41,7 @@ export const GRAPE_VARIETIES = [
 export type GrapeVariety = typeof GRAPE_VARIETIES[number];
 
 // Vineyard status types
-export type VineyardStatus = 'Barren' | 'Planted' | 'Growing' | 'Harvested' | 'Dormant';
+export type VineyardStatus = 'Barren' | 'Planting' | 'Planted' | 'Growing' | 'Harvested' | 'Dormant';
 
 // New vineyard-related types for v3 expansion
 export const ASPECTS = [
@@ -77,6 +77,9 @@ export interface Vineyard {
   vineyardPrestige: number;
   vineYield: number; // Persistent vine yield factor (0-1+ scale, can exceed 1.0)
   yearsSinceLastClearing?: number; // Years since last clearing activity (affects overgrowth modifier)
+  lastClearingYear?: number; // Year when clearing was last completed (for yearly limits)
+  lastClearVegetationYear?: number; // Year when clear vegetation was last completed (for yearly limits)
+  lastRemoveDebrisYear?: number; // Year when remove debris was last completed (for yearly limits)
   plantingHealthBonus?: number; // Gradual health improvement from planting/replanting (0-0.2, increases over 5 years)
   healthTrend?: {
     seasonalDecay: number; // Health lost this season

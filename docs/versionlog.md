@@ -25,6 +25,16 @@
 
 ---
 
+## Version 0.0312 - Vineyard Schema Fix
+**Date:** 2025-01-27 | **Commit:** Schema Fix | **Stats:** Database schema synchronization
+- Fixed vineyard creation runtime error by adding missing fields to dev database
+- Added `planting_health_bonus` (numeric, default 0) - Gradual health improvement from planting/replanting
+- Added `health_trend` (jsonb) - Health trend tracking for seasonal decay and improvements
+- Dev database now matches Vercel schema exactly
+- Both databases synchronized for vineyard health system functionality
+
+---
+
 ## Version 0.0311 - Buyland Fixes & 1000→0-1 Scale Function
 **Date:** 2025-10-17 | **Commit:** daf1ea72 | **Stats:** 794 additions, 310 deletions
 - `src/lib/services/vineyard/landSearchService.ts` - Refined generation logic, affordability checks, and filtering (298 additions, 135 deletions)
