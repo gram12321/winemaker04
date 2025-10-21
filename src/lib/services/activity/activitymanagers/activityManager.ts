@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory } from '@/lib/types/types';
-import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeLandSearch, completeClearingActivity, getTeamForCategory } from '@/lib/services';
+import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, getTeamForCategory } from '@/lib/services';
+import { completeLandSearch } from './landSearchManager';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, WorkCategory } from '@/lib/services/activity';

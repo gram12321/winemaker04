@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { VineyardPurchaseOption } from '@/lib/services/vineyard/landSearchService';
+import { VineyardPurchaseOption } from '@/lib/services';
 import { formatCurrency, getFlagIcon, getBadgeColorClasses, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/shadCN/button';
 import { Badge } from '@/components/ui/shadCN/badge';
 import { X } from 'lucide-react';
-import { purchaseVineyard } from '@/lib/services/vineyard/vineyardService';
+import { purchaseVineyard } from '@/lib/services';
 import { getGameState } from '@/lib/services';
 
 interface LandSearchResultsModalProps {

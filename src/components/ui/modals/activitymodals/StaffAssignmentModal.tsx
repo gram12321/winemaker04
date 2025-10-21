@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
 import { updateActivityInDb } from '@/lib/database/activities/activityDB';
-import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity/workcalculators/workCalculator';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity';
+import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
@@ -13,7 +13,7 @@ import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConst
 import { Button } from '@/components/ui/shadCN/button';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
 import { useGameState } from '@/hooks';
-import { getTeamForCategory } from '@/lib/services/user/teamService';
+import { getTeamForCategory } from '@/lib/services';
 
 interface StaffAssignmentModalProps {
   isOpen: boolean;

@@ -1,15 +1,7 @@
-import { Activity, WorkCategory, Aspect } from '@/lib/types/types';
-import { getGameState, updateGameState } from '../core/gameState';
-import { createActivity } from '../activity/activitymanagers/activityManager';
-import { notificationService } from '@/lib/services/core/notificationService';
-import { NotificationCategory } from '@/lib/types/types';
-import { addTransaction } from '../user/financeService';
-import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
-import { calculateTotalWork } from '../activity/workcalculators/workCalculator';
-import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
+import { Aspect } from '@/lib/types/types';
 import { REGION_PRESTIGE_RANKINGS, COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
-import { NAMES } from '@/lib/constants/namesConstants';
 import { calculateLandValue } from './vineyardValueCalc';
+import { generateVineyardName } from './vineyardService';
 import { v4 as uuidv4 } from 'uuid';
 import { probabilityMassInRange, getRandomHectares, NormalizeScrewed1000To01WithTail, calculateInvertedSkewedMultiplier } from '@/lib/utils/calculator';
 
@@ -31,28 +23,7 @@ export interface VineyardPurchaseOption {
   altitudeRating: number; // Altitude rating normalized to regional range (0-1)
 }
 
-/**
- * Generate a vineyard name based on country and aspect
- */
-export function generateVineyardName(country: string, aspect: Aspect): string {
-  const isFemaleAspect = ["East", "Southeast", "South", "Southwest"].includes(aspect);
-  const nameData = NAMES[country as keyof typeof NAMES];
-  
-  if (!nameData) {
-    console.error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
-    throw new Error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
-  }
-  
-  // Select appropriate name list based on aspect gender
-  const names = isFemaleAspect ? nameData.firstNames.female : nameData.firstNames.male;
-  
-  // Select a random name
-  const randomIndex = Math.floor(Math.random() * names.length);
-  const selectedName = names[randomIndex];
-  
-  // Construct the name like "[Random Name]'s [Aspect] Vineyard"
-  return `${selectedName}'s ${aspect} Vineyard`;
-}
+// Note: generateVineyardName is imported from vineyardService to avoid duplication
 
 /**
  * Land search options interface
@@ -82,7 +53,7 @@ export interface LandSearchEstimate {
  * Calculate the cost of a land search based on parameters
  * Uses average-then-power scaling: Base * (Σ constraints / count)^count * (n-2)
  */
-export function calculateSearchCost(options: LandSearchOptions, _companyPrestige: number): number {
+export function calculateLandSearchCost(options: LandSearchOptions, _companyPrestige: number): number {
   const baseCost = 5000;
   
   // Track which constraints are active and their intensities
@@ -188,119 +159,6 @@ export function calculateSearchCost(options: LandSearchOptions, _companyPrestige
   return Math.round(finalCost);
 }
 
-/**
- * Calculate work required for land search activity
- * Uses multiplicative scaling similar to cost calculation - more constraints = more work
- */
-export function calculateSearchWork(options: LandSearchOptions, _companyPrestige: number): number {
-  const rate = TASK_RATES[WorkCategory.LAND_SEARCH];
-  const initialWork = INITIAL_WORK[WorkCategory.LAND_SEARCH];
-  
-  // Track which constraints are active and their intensities (similar to cost calculation)
-  const activeConstraints: number[] = [];
-  
-  // Region filtering constraint - penalize when regions are excluded (manually OR by soil filtering OR by grape suitability) - work calculation
-  const totalRegions = Object.values(COUNTRY_REGION_MAP).flat().length;
-  let excludedRegions = new Set(options.regions); // Start with manually excluded regions
-  
-  // Add regions excluded by soil filtering
-  if (options.soilTypes && options.soilTypes.length > 0 && options.soilTypes.length < ALL_SOIL_TYPES.length) {
-    for (const country of Object.keys(COUNTRY_REGION_MAP)) {
-      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
-      for (const region of regions as any) {
-        if (!meetsSoilRequirement(country, region, options.soilTypes)) {
-          excludedRegions.add(region);
-        }
-      }
-    }
-  }
-  
-  // Add regions excluded by grape suitability filtering
-  if (options.grapeVarieties && options.grapeVarieties.length > 0 && options.minGrapeSuitability && options.minGrapeSuitability > 0) {
-    for (const country of Object.keys(COUNTRY_REGION_MAP)) {
-      const regions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
-      for (const region of regions as any) {
-        if (!meetsGrapeSuitabilityRequirement(country, region, options.grapeVarieties, options.minGrapeSuitability)) {
-          excludedRegions.add(region);
-        }
-      }
-    }
-  }
-  
-  // Apply region constraint if any regions are excluded
-  if (excludedRegions.size > 0) {
-    const exclusionRatio = excludedRegions.size / totalRegions;
-    const regionModifier = 1.5; // Base multiplier for region constraint (lower than cost)
-    const regionIntensity = 1 + (exclusionRatio * 1.5); // 1.0-2.5 based on exclusion ratio
-    activeConstraints.push(regionModifier * regionIntensity);
-  }
-  
-  
-  // Hectare range constraint - use distribution mass removed as intensity (same approach as cost)
-  {
-    const [minHa, maxHa] = options.hectareRange;
-    const massKept = probabilityMassInRange(minHa, maxHa); // 0-1
-    const massRemoved = 1 - massKept; // 0-1
-    if (massRemoved > 0) {
-      const hectareModifier = 1.3; // milder than cost
-      const hectareIntensity = 1 + Math.pow(massRemoved, 0.8) * 2.0; // 1.0-3.0
-      activeConstraints.push(hectareModifier * hectareIntensity);
-    }
-  }
-  
-  // Altitude range constraint - normalized 0-1 width (work model)
-  if (options.altitudeRange) {
-    const width = Math.max(0, Math.min(1, (options.altitudeRange[1] - options.altitudeRange[0])));
-    if (width < 1) {
-      const removal = 1 - width;
-      const altitudeModifier = 1.2;
-      const altitudeIntensityValue = 1 + Math.pow(removal, 0.85) * 1.6; // 1.0-2.6
-      activeConstraints.push(altitudeModifier * altitudeIntensityValue);
-    }
-  }
-  
-  // Aspect preferences constraint - penalize when aspects are deselected (restricted)
-  if (options.aspectPreferences && options.aspectPreferences.length < 8) {
-    const deselectedAspects = 8 - options.aspectPreferences.length; // How many aspects deselected
-    const restrictionRatio = deselectedAspects / 8; // 0-1 based on how many aspects deselected
-    const aspectModifier = 1.15; // Base multiplier for aspect constraint
-    const aspectIntensityValue = 1 + (restrictionRatio * 2.0); // 1.0-3.0 based on how many aspects deselected
-    activeConstraints.push(aspectModifier * aspectIntensityValue);
-  }
-  
-  // Soil type constraint - penalize when soils are deselected (restricted)
-  if (options.soilTypes && options.soilTypes.length < ALL_SOIL_TYPES.length) {
-    const deselectedSoils = ALL_SOIL_TYPES.length - options.soilTypes.length; // How many soils deselected
-    const restrictionRatio = deselectedSoils / ALL_SOIL_TYPES.length; // 0-1 based on how many soils deselected
-    const soilModifier = 1.1; // Base multiplier for soil constraint
-    const soilIntensityValue = 1 + (restrictionRatio * 2.0); // 1.0-3.0 based on how many soils deselected
-    activeConstraints.push(soilModifier * soilIntensityValue);
-  }
-  
-  
-  // Average-then-power: Base × (Σ constraints / count)^count (less aggressive than cost)
-  const constraintCount = activeConstraints.length;
-  let totalMultiplier = 1;
-  
-  if (constraintCount > 0) {
-    const constraintSum = activeConstraints.reduce((sum, constraint) => sum + constraint, 0);
-    const constraintAverage = constraintSum / constraintCount;
-    totalMultiplier = Math.pow(constraintAverage, constraintCount);
-  }
-  
-  // Strong final multiplier for work (less aggressive than cost): (totalMultiplier^2) * (n - 2)
-  const n = Math.max(3, Math.min(10, options.numberOfOptions || 3));
-  const combinedMultiplier = Math.pow(totalMultiplier, 2) * (n - 2);
-  
-  // Convert to work modifiers format
-  const workModifiers = [combinedMultiplier - 1];
-  
-  return calculateTotalWork(1, {
-    rate,
-    initialWork,
-    workModifiers
-  });
-}
 
 /**
  * Check if a region meets the grape suitability requirements
@@ -658,115 +516,3 @@ function generateMatchingVineyard(
 }
 
 
-/**
- * Start a land search activity
- */
-export async function startLandSearch(options: LandSearchOptions): Promise<string | null> {
-  try {
-    const gameState = getGameState();
-    const searchCost = calculateSearchCost(options, gameState.prestige || 0);
-    const totalWork = calculateSearchWork(options, gameState.prestige || 0);
-    
-    // Check if we have enough money
-    const currentMoney = gameState.money || 0;
-    if (currentMoney < searchCost) {
-      await notificationService.addMessage(
-        `Insufficient funds for land search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
-        'landSearchService.startLandSearch',
-        'Insufficient Funds',
-        NotificationCategory.FINANCE
-      );
-      return null;
-    }
-    
-    // Deduct search cost immediately
-    await addTransaction(
-      -searchCost,
-      `Land search for ${options.numberOfOptions} propert${options.numberOfOptions > 1 ? 'ies' : 'y'} (${options.regions.length > 0 ? options.regions.join(', ') : 'all regions'})`,
-      TRANSACTION_CATEGORIES.LAND_SEARCH,
-      false
-    );
-    
-    // Create the search activity
-    const regionText = options.regions.length > 0 ? ` in ${options.regions.join(', ')}` : '';
-    const title = `Land Search${regionText}`;
-    
-    const activityId = await createActivity({
-      category: WorkCategory.LAND_SEARCH,
-      title,
-      totalWork,
-      params: {
-        searchOptions: options,
-        searchCost,
-        companyPrestige: gameState.prestige
-      },
-      isCancellable: true
-    });
-    
-    if (activityId) {
-      await notificationService.addMessage(
-        `Land search started! Cost: €${searchCost.toFixed(2)}`,
-        'landSearchService.startLandSearch',
-        'Land Search Started',
-        NotificationCategory.ACTIVITIES_TASKS
-      );
-    }
-    
-    return activityId;
-  } catch (error) {
-    console.error('Error starting land search:', error);
-    return null;
-  }
-}
-
-/**
- * Complete land search activity
- */
-export async function completeLandSearch(activity: Activity): Promise<void> {
-  try {
-    const searchOptions = activity.params.searchOptions as LandSearchOptions;
-    const companyPrestige = activity.params.companyPrestige as number;
-    
-    if (!searchOptions) {
-      console.error('No search options found in activity params');
-      return;
-    }
-    
-    // Generate results based on search parameters
-    const results = generateVineyardSearchResults(searchOptions, companyPrestige);
-    
-    // Store results in game state for modal to access
-    updateGameState({
-      pendingLandSearchResults: {
-        activityId: activity.id,
-        options: results,
-        searchOptions,
-        timestamp: Date.now()
-      }
-    });
-    
-    await notificationService.addMessage(
-      `Land search complete! Found ${results.length} propert${results.length > 1 ? 'ies' : 'y'} matching your criteria.`,
-      'landSearchService.completeLandSearch',
-      'Land Search Complete',
-      NotificationCategory.ACTIVITIES_TASKS
-    );
-  } catch (error) {
-    console.error('Error completing land search:', error);
-    await notificationService.addMessage(
-      `Land search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      'landSearchService.completeLandSearch',
-      'Land Search Failed',
-      NotificationCategory.ACTIVITIES_TASKS
-    );
-  }
-}
-
-/**
- * Clear pending land search results
- */
-export function clearPendingLandSearchResults(): void {
-  updateGameState({
-    pendingLandSearchResults: undefined
-  });
-}

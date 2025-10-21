@@ -1,18 +1,13 @@
 import { Transaction, Season, WorkCategory } from '@/lib/types/types';
-import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
+import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
-import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState';
-import { getTransactions } from '@/lib/services/user/financeService';
+import { getGameState, getCurrentPrestige, getTransactions, notificationService } from '@/lib/services';
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
-import { notificationService } from '@/lib/services/core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 
 /**
- * Bookkeeping Work Calculator
- * Calculates work required for bookkeeping based on transaction count from previous season
+ * Helper function to get previous season and year
  */
-
-// Helper function to get previous season and year
 function getPreviousSeasonAndYear(currentSeason: Season, currentYear: number): { season: Season, year: number } {
   const seasons: Season[] = ['Winter', 'Spring', 'Summer', 'Fall'];
   const currentIndex = seasons.indexOf(currentSeason);
@@ -25,7 +20,9 @@ function getPreviousSeasonAndYear(currentSeason: Season, currentYear: number): {
   return { season: prevSeason, year: prevYear };
 }
 
-// Helper function to filter transactions by season and year
+/**
+ * Helper function to filter transactions by season and year
+ */
 async function getTransactionsFromSeason(season: Season, year: number): Promise<Transaction[]> {
   const transactions = await getTransactions();
   return transactions.filter((transaction: Transaction) => {
@@ -35,7 +32,7 @@ async function getTransactionsFromSeason(season: Season, year: number): Promise<
 }
 
 /**
- * Calculate bookkeeping work based on transaction count from previous season
+ * Calculate work required for bookkeeping activity
  */
 export async function calculateBookkeepingWork(): Promise<{ 
   totalWork: number; 
@@ -130,7 +127,7 @@ export async function calculateBookkeepingSpillover(): Promise<{
 }
 
 /**
- * Calculate total bookkeeping work including spillover
+ * Calculate total bookkeeping work including spillover penalties
  */
 export async function calculateTotalBookkeepingWork(): Promise<{
   totalWork: number;

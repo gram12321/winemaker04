@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Butto
 import { Trophy, Medal, Lock, Calendar, Coins, Wine, Star } from 'lucide-react';
 import { formatNumber, formatCompact, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-import { getAllAchievementsWithStatus, getAchievementStats } from '@/lib/services/user/achievementService';
+import { getAllAchievementsWithStatus, getAchievementStats } from '@/lib/services';
 import { getAchievementLevelInfo } from '@/lib/constants/achievementConstants';
 import { AchievementLevel } from '@/lib/types/types';
 

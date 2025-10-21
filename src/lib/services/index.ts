@@ -1,123 +1,56 @@
-export { authService } from './user/authService';
-export { companyService } from './user/companyService';
-export { highscoreService } from './user/highscoreService';
-export { userSettingsService } from './user/userSettingsService';
-export { 
-  createStaff, 
-  addStaff, 
-  removeStaff, 
-  getAllStaff, 
-  getStaffById,
-  initializeStaffSystem,
-  createStartingStaff,
-  generateRandomSkills,
-  getRandomFirstName,
-  getRandomLastName,
-  getRandomNationality
-} from './user/staffService';
+// Core services
+export * from './core/gameState';
+export * from './core/notificationService';
+export * from './core/gameTick';
 
-// Wage services
-export {
-  calculateWage,
-  getMaxWage,
-  normalizeWage,
-  getWageColorClass,
-  getWageBadgeColorClasses,
-  calculateTotalWeeklyWages,
-  calculateTotalSeasonalWages,
-  calculateTotalYearlyWages,
-  formatWageWithColor,
-  getWageStatistics,
-  processSeasonalWages
-} from './user/wageService';
+// User services
+export * from './user/authService';
+export * from './user/companyService';
+export * from './user/highscoreService';
+export * from './user/userSettingsService';
+export * from './user/staffService';
+export * from './user/wageService';
+export * from './user/teamService';
+export * from './user/achievementService';
+export * from './user/financeService';
+export * from './user/wineLogService';
 
-// Staff search services
-export {
-  calculateSearchCost,
-  calculateSearchWork,
-  calculateHiringWorkRange,
-  generateStaffCandidates,
-  startStaffSearch,
-  completeStaffSearch,
-  startHiringProcess,
-  completeHiringProcess,
-  clearPendingCandidates
-} from './activity/activitymanagers/staffSearchManager';
+// Admin services
+export * from './admin/adminService';
 
-export type {
-  StaffSearchOptions,
-  SearchWorkEstimate,
-  HiringWorkEstimate
-} from './activity/activitymanagers/staffSearchManager';
+// Vineyard services
+export * from './vineyard/vineyardService';
+export * from './vineyard/vineyardManager';
+export * from './vineyard/clearingManager';
+export * from './vineyard/vineyardValueCalc';
 
 // Land search services
-export {
-  calculateSearchCost as calculateLandSearchCost,
-  calculateSearchWork as calculateLandSearchWork,
-  generateVineyardSearchResults,
-  startLandSearch,
-  completeLandSearch,
-  clearPendingLandSearchResults
-} from './vineyard/landSearchService';
+export * from './vineyard/landSearchService';
 
-export type {
-  LandSearchOptions,
-  LandSearchEstimate
-} from './vineyard/landSearchService';
-
-// Team management services
-export {
-  getDefaultTeams,
-  getTeamForCategory,
-  createTeam,
-  addTeam,
-  removeTeam,
-  updateTeam,
-  getAllTeams,
-  assignStaffToTeam,
-  removeStaffFromTeam,
-  initializeTeamsSystem,
-  resetTeamsToDefault
-} from './user/teamService';
-
-// Achievement services
-export {
-  checkAndUnlockAchievement,
-  checkAllAchievements,
-  getAllAchievementsWithStatus,
-  getAchievementStats
-} from './user/achievementService';
-export { getGameState, updateGameState, getCurrentCompany, getCurrentPrestige, createNewCompany, clearPrestigeCache } from './core/gameState';
-export { notificationService } from './core/notificationService';
-export { addTransaction, loadTransactions, calculateFinancialData } from './user/financeService';
-export { fulfillWineOrder, rejectWineOrder, getPendingOrders } from './sales/salesService';
-export { generateSophisticatedWineOrders } from './sales/salesOrderService';
-export { initializeCustomers, getAllCustomers } from './sales/createCustomer';
-
-// Re-export utility functions from constants
-export { getTaskTypeDisplayName, getWorkCategoryDisplayName, isDensityBased } from '@/lib/constants/activityConstants';
-export { getStaffRoleDisplayName } from '@/lib/constants/staffConstants';
-export { generateCustomer } from './sales/generateCustomer';
-export { generateOrder } from './sales/generateOrder';
-export { processGameTick } from './core/gameTick';
-export { createVineyard, plantVineyard, initializePlanting, completePlanting, getAllVineyards, purchaseVineyard } from './vineyard/vineyardService';
-export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './vineyard/vineyardManager';
-export { completeClearingActivity } from './vineyard/clearingManager';
-export { GRAPE_VARIETIES } from '../types/types';
-export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating, getRegionalPriceRange } from './vineyard/vineyardValueCalc';
-export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from './prestige/prestigeService';
-export { getAllWineBatches, formatCompletedWineName, createWineBatchFromHarvest } from './wine/winery/inventoryService';
-export { startFermentationActivity, bottleWine, isFermentationActionAvailable, processWeeklyFermentation } from './wine/winery/fermentationManager';
-export { getQualityBreakdown } from './wine/winescore/wineQualityCalculationService';
-export type { QualityBreakdown } from './wine/winescore/wineQualityCalculationService';
-export { isActionAvailable } from './wine/winery/wineryService';
-export { getBatchStatus } from './wine/winery/wineryService';
-export { startCrushingActivity, validateCrushingActivity } from './wine/winery/crushingManager';
-export { calculateEffectiveQuality, calculateFeaturePriceMultiplier, getPresentFeaturesSorted, hasAnyFaults, getFeature, hasFeature } from './wine/features/featureEffectsService';
-export { initializeBatchFeatures, processWeeklyFeatureRisks, processEventTrigger } from './wine/features/featureRiskService';
+// Wine services
+export * from './wine/winery/inventoryService';
+export * from './wine/winery/fermentationManager';
+export * from './wine/winery/wineryService';
+export * from './wine/winery/crushingManager';
+export * from './wine/winescore/wineQualityCalculationService';
+export * from './wine/features/featureEffectsService';
+export * from './wine/features/featureRiskService';
 export * from './wine/features/featureDisplayService';
 export * from './wine/features/agingService';
-export { recordBottledWine, getVineyardWineHistory, calculateVineyardStats } from './user/wineLogService';
-export type { VineyardStats } from './user/wineLogService';
-export type { VineyardPurchaseOption } from './vineyard/landSearchService';
+
+// Sales services
+export * from './sales/salesService';
+export * from './sales/salesOrderService';
+export * from './sales/createCustomer';
+export * from './sales/generateCustomer';
+export * from './sales/generateOrder';
+export * from './sales/relationshipService';
+
+// Prestige services
+export * from './prestige/prestigeService';
+
+// Activity system
 export * from './activity';
+
+// Constants
+export * from '@/lib/constants';

@@ -1,16 +1,18 @@
+// Fermentation Work Calculator
+// Calculates work required for starting fermentation and handles completion
+
 import { WineBatch, Activity } from '@/lib/types/types';
-import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
+import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { addTransaction } from '@/lib/services/user/financeService';
+import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureRiskService';
 
 /**
- * Fermentation Work Calculator
- * Calculates work required for starting fermentation and handles completion
+ * Calculate work required for fermentation setup
  */
 export function calculateFermentationWork(
   batch: WineBatch,

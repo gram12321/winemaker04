@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils';
-import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services/prestige/prestigeService';
+import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';

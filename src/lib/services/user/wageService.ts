@@ -7,7 +7,7 @@ import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER } from '@/lib/constants/staffCo
 import { getGameState } from '../core/gameState';
 import { addTransaction } from './financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 
 // ===== WAGE CALCULATION =====

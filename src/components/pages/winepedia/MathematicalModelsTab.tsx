@@ -11,7 +11,7 @@ import {
   calculateAsymmetricalScaler01,
   NormalizeScrewed1000To01WithTail
 } from '@/lib/utils/calculator';
-import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
+import { calculateVineyardYield } from '@/lib/services';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 

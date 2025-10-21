@@ -2,13 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { GrapeVariety, Vineyard, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
-import { calculatePlantingWork } from '@/lib/services/activity/workcalculators/vineyardWorkCalculator';
+import { calculatePlantingWork } from '@/lib/services/activity';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { notificationService } from '@/lib/services';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
-import { calculateGrapeSuitabilityContribution } from '@/lib/services/vineyard/vineyardValueCalc';
+import { calculateGrapeSuitabilityContribution } from '@/lib/services';
 import { getBadgeColorClasses } from '@/lib/utils';
 
 

@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
-import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
+import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, calculateVineyardYield } from '@/lib/services';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal } from '../ui';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
@@ -10,7 +9,7 @@ import { HarvestRisksDisplay } from '../ui/vineyard/HarvestFeatureRisksDisplay';
 import HealthTooltip from '../ui/vineyard/HealthTooltip';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
-import { clearPendingLandSearchResults } from '@/lib/services/vineyard/landSearchService';
+import { clearPendingLandSearchResults } from '@/lib/services';
 
 
 
@@ -385,7 +384,7 @@ const Vineyard: React.FC = () => {
       </div>
 
       {/* Summary Statistics - Mobile (shown below image) */}
-      <div className="lg:hidden grid grid-cols-1 gap-3">
+      <div className="lg:hidden grid grid-cols-2 gap-3">
         <div className="bg-white p-3 rounded-lg shadow">
           <div className="text-base font-bold text-gray-900">{vineyards.length}</div>
           <div className="text-xs text-gray-500">Total Vineyards</div>
@@ -615,7 +614,7 @@ const Vineyard: React.FC = () => {
               {/* Card Header */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 border-b">
                 <div className="flex justify-between items-start mb-2">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-900">{vineyard.name}</h3>
                     <div className="text-sm text-gray-600 mt-1">
                       {vineyard.grape ? (
@@ -632,208 +631,188 @@ const Vineyard: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Location */}
-                <div className="flex items-center text-sm text-gray-600 mt-2">
-                  <span className={`${getFlagIcon(vineyard.country)} mr-2`}></span>
-                  {vineyard.region}, {vineyard.country}
+                {/* Location and Size/Value */}
+                <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
+                  <div className="flex items-center">
+                    <span className={`${getFlagIcon(vineyard.country)} mr-2`}></span>
+                    {vineyard.region}, {vineyard.country}
+                  </div>
+                  <div className="flex items-center space-x-4 text-xs">
+                    <div className="text-right">
+                      <div className="text-gray-500 uppercase">Size</div>
+                      <div className="font-bold text-gray-900">{vineyard.hectares} ha</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-gray-500 uppercase">Value</div>
+                      <div className="font-bold text-blue-600">{formatCurrency(vineyard.vineyardTotalValue)}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
               {/* Card Body */}
               <div className="p-4 space-y-4">
-                {/* Size & Value Section */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase mb-1">Size</div>
-                    <div className="text-lg font-bold text-gray-900">{vineyard.hectares} ha</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase mb-1">Total Value</div>
-                    <div className="text-lg font-bold text-blue-600">{formatCurrency(vineyard.vineyardTotalValue)}</div>
-                  </div>
-                </div>
-                
-                {/* Characteristics Section */}
+                {/* Characteristics and Vine Details - 2 Column Grid */}
                 <div className="border-t pt-3">
-                  <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Characteristics</div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Soil:</span>
-                      <span className="text-gray-900">{vineyard.soil.join(', ')}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Altitude:</span>
-                      <div className="flex items-center">
-                        <span className="text-gray-900 mr-2">{vineyard.altitude}m</span>
-                        {(() => {
-                          const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
-                          const colors = getBadgeColorClasses(rating);
-                          return (
-                            <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
-                              {formatNumber(rating, { decimals: 2, forceDecimals: true })}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Aspect:</span>
-                      <div className="flex items-center">
-                        <span className="text-gray-900 mr-2">{vineyard.aspect}</span>
-                        {(() => {
-                          const rating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
-                          const colors = getBadgeColorClasses(rating);
-                          return (
-                            <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
-                              {formatNumber(rating, { decimals: 2, forceDecimals: true })}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vine Details Section */}
-                <div className="border-t pt-3">
-                  <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Details</div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Age:</span>
-                      <span className="text-gray-900">
-                        {vineyard.vineAge === null ? (
-                          <span className="text-gray-400">Not planted</span>
-                        ) : vineyard.vineAge === 0 ? (
-                          <span className="text-green-600">Newly planted</span>
-                        ) : (
-                          <span>{vineyard.vineAge} years old</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Prestige:</span>
-                      <span className="text-gray-900">
-                        {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Density:</span>
-                      <span className="text-gray-900">
-                        {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Vineyard Health Section - Always show */}
-                <div className="border-t pt-3">
-                  <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vineyard Health</div>
-                  <div className="space-y-3">
-                    {/* Vineyard Health Progress */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Characteristics Section */}
                     <div>
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Health</span>
-                        <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
+                      <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Characteristics</div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Soil:</span>
+                          <span className="text-gray-900">{vineyard.soil.join(', ')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Altitude:</span>
+                          <div className="flex items-center">
+                            <span className="text-gray-900 mr-2">{vineyard.altitude}m</span>
+                            {(() => {
+                              const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
+                              const colors = getBadgeColorClasses(rating);
+                              return (
+                                <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                                  {formatNumber(rating, { decimals: 2, forceDecimals: true })}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Aspect:</span>
+                          <div className="flex items-center">
+                            <span className="text-gray-900 mr-2">{vineyard.aspect}</span>
+                            {(() => {
+                              const rating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
+                              const colors = getBadgeColorClasses(rating);
+                              return (
+                                <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                                  {formatNumber(rating, { decimals: 2, forceDecimals: true })}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 relative group cursor-help">
-                        <div 
-                          className={`h-3 rounded-full transition-all duration-300 ${
-                            (vineyard.vineyardHealth || 1.0) < 0.3 ? 'bg-red-500' :
-                            (vineyard.vineyardHealth || 1.0) < 0.6 ? 'bg-amber-500' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
-                        ></div>
-                        {/* Health Tooltip */}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
-                          <HealthTooltip vineyard={vineyard} />
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+
+                    {/* Vine Details Section */}
+                    <div>
+                      <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Details</div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Age:</span>
+                          <span className="text-gray-900">
+                            {vineyard.vineAge === null ? (
+                              <span className="text-gray-400">Not planted</span>
+                            ) : vineyard.vineAge === 0 ? (
+                              <span className="text-green-600">Newly planted</span>
+                            ) : (
+                              <span>{vineyard.vineAge} years old</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Prestige:</span>
+                          <span className="text-gray-900">
+                            {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Density:</span>
+                          <span className="text-gray-900">
+                            {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Vine Info Section */}
+                {/* Vine Info Section with Health Integration */}
                 {vineyard.grape && (
                   <div className="border-t pt-3">
-                    <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Information</div>
+                    <div className="text-xs font-semibold text-gray-700 uppercase mb-2">Vine Information & Health</div>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Age:</span>
-                        <span className="text-gray-900">
-                          {vineyard.vineAge === null ? (
-                            <span className="text-gray-400">Not planted</span>
-                          ) : vineyard.vineAge === 0 ? (
-                            <span className="text-green-600">Newly planted</span>
-                          ) : (
-                            <span>{vineyard.vineAge} years</span>
-                          )}
-                        </span>
+                      {/* Progress Bars and Yield - 2 Column Grid */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Left Column - Progress Bars */}
+                        <div className="space-y-3">
+                          {/* Vineyard Health Progress */}
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>Health</span>
+                              <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-3 relative group cursor-help">
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-300 ${
+                                  (vineyard.vineyardHealth || 1.0) < 0.3 ? 'bg-red-500' :
+                                  (vineyard.vineyardHealth || 1.0) < 0.6 ? 'bg-amber-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
+                              ></div>
+                              {/* Health Tooltip */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
+                                <HealthTooltip vineyard={vineyard} />
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Ripeness Progress */}
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>Ripeness</span>
+                              <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-3">
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-300 ${
+                                  (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
+                                  (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          
+                          {/* Vine Yield Progress */}
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>Vine Yield</span>
+                              <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-3">
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-300 ${
+                                  (vineyard.vineYield || 0.02) < 0.3 ? 'bg-red-400' :
+                                  (vineyard.vineYield || 0.02) < 0.7 ? 'bg-amber-500' : 
+                                  (vineyard.vineYield || 0.02) < 1.0 ? 'bg-green-500' : 'bg-purple-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Right Column - Expected Yield and Harvest Risks */}
+                        <div className="flex flex-col justify-center space-y-3">
+                          <div className="bg-green-50 rounded-lg p-3 text-center">
+                            <div className="text-xs text-gray-600 mb-1">
+                              {vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield'}
+                            </div>
+                            <div className="text-lg font-bold text-green-600">
+                              {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
+                            </div>
+                          </div>
+                          
+                          {/* Harvest Risks */}
+                          <div>
+                            <HarvestRisksDisplay vineyard={vineyard} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Density:</span>
-                        <span className="text-gray-900">
-                          {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Prestige:</span>
-                        <span className="text-gray-900">
-                          {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
-                        </span>
-                      </div>
-                      
-                      {/* Ripeness Progress */}
-                      <div>
-                        <div className="flex justify-between text-xs text-gray-600 mb-1">
-                          <span>Ripeness</span>
-                          <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3">
-                          <div 
-                            className={`h-3 rounded-full transition-all duration-300 ${
-                              (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
-                              (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
-                            }`}
-                            style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      
-                      {/* Vine Yield Progress */}
-                      <div>
-                        <div className="flex justify-between text-xs text-gray-600 mb-1">
-                          <span>Vine Yield</span>
-                          <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3">
-                          <div 
-                            className={`h-3 rounded-full transition-all duration-300 ${
-                              (vineyard.vineYield || 0.02) < 0.3 ? 'bg-red-400' :
-                              (vineyard.vineYield || 0.02) < 0.7 ? 'bg-amber-500' : 
-                              (vineyard.vineYield || 0.02) < 1.0 ? 'bg-green-500' : 'bg-purple-500'
-                            }`}
-                            style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      
-                      {/* Expected/Remaining Yield */}
-                      <div className="bg-green-50 rounded-lg p-3 text-center">
-                        <div className="text-xs text-gray-600 mb-1">
-                          {vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield'}
-                        </div>
-                        <div className="text-lg font-bold text-green-600">
-                          {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
-                        </div>
-                      </div>
-                      
-                      {/* Harvest Risks */}
-                      {vineyard.grape && (
-                        <div className="border-t pt-3">
-                          <HarvestRisksDisplay vineyard={vineyard} />
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}

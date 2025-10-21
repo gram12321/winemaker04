@@ -1,5 +1,5 @@
 import { formatCurrency, getColorClass } from '@/lib/utils/utils';
-import { calculateFinancialData } from '@/lib/services/user/financeService';
+import { calculateFinancialData } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS } from '@/lib/constants';

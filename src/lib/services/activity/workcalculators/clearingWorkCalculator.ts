@@ -1,10 +1,12 @@
+// Clearing Work Calculator
+// Calculates work required for clearing activities on vineyards
+
 import { Vineyard } from '@/lib/types/types';
-import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
-import { calculateTotalWork } from './workCalculator';
+import { CLEARING_TASKS, DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
+import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { getAltitudeRating } from '../../vineyard/vineyardValueCalc';
 import { SOIL_DIFFICULTY_MODIFIERS } from '@/lib/constants/vineyardConstants';
 import { getGameState } from '../../core/gameState';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { calculateOvergrowthModifier, combineOvergrowthYears } from './overgrowthUtils';
 
 export interface ClearingWorkCalculationOptions {
@@ -15,19 +17,11 @@ export interface ClearingWorkCalculationOptions {
 export interface ClearingWorkResult {
   totalWork: number;
   selectedTasks: string[];
-  workFactors: Array<{
-    label: string;
-    value: string | number;
-    unit?: string;
-    modifier?: number;
-    modifierLabel?: string;
-    isPrimary?: boolean;
-  }>;
+  workFactors: WorkFactor[];
 }
 
 /**
- * Get soil type modifier for clearing work using the proper soil difficulty system
- * Different soil types affect clearing difficulty based on predefined modifiers
+ * Get soil type modifier for clearing work
  */
 function getSoilTypeModifier(soil: string[]): number {
   let totalModifier = 0;
@@ -92,10 +86,7 @@ function getSeasonalModifier(season: string, taskId: string): number {
 }
 
 /**
- * Calculate work for clearing activities on a vineyard
- * @param vineyard - The vineyard to calculate work for
- * @param options - Clearing task options and intensity
- * @returns Work calculation result with total work and factors
+ * Calculate work required for clearing activities
  */
 export function calculateClearingWork(
   vineyard: Vineyard, 
@@ -116,14 +107,7 @@ export function calculateClearingWork(
   const currentSeason = gameState.season || 'Spring';
   
   // Initialize work factors
-  const workFactors: Array<{
-    label: string;
-    value: string | number;
-    unit?: string;
-    modifier?: number;
-    modifierLabel?: string;
-    isPrimary?: boolean;
-  }> = [];
+  const workFactors: WorkFactor[] = [];
   
   // Add vineyard size factor
   workFactors.push({

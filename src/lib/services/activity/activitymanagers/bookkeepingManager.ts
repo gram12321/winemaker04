@@ -1,9 +1,9 @@
-import { getGameState } from '@/lib/services/core/gameState';
+import { getGameState } from '@/lib/services';
 import { WorkCategory, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { calculateTotalBookkeepingWork } from '../workcalculators/bookkeepingWorkCalculator';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { notificationService } from '@/lib/services';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { insertPrestigeEvent } from '@/lib/database';

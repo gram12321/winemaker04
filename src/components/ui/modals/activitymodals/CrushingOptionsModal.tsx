@@ -1,22 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
-import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity/workcalculators/crushingWorkCalculator';
+import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { FeatureBadges } from '@/components/ui/wine/FeatureBadge';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { notificationService } from '@/lib/services';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
-import {
-  previewFeatureRisks,
-  calculateCumulativeRisk,
-  getPresentFeaturesInfo,
-  getAtRiskFeaturesInfo
-} from '@/lib/services/wine/features/featureRiskHelper';
+import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/wine/features/featureRiskHelper';
 import { calculateYieldMultiplier, calculatePressingQualityPenalty, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 
 /**

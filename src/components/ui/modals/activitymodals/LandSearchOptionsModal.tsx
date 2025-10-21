@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LandSearchOptions, calculateSearchCost, calculateSearchWork, getAccessibleRegions, calculateRegionDistribution } from '@/lib/services/vineyard/landSearchService';
+import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork } from '@/lib/services';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatCurrency } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
@@ -82,8 +82,8 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
   // Calculate preview stats whenever options change
   useEffect(() => {
-    const totalCost = calculateSearchCost(options, gameState.prestige || 0);
-    const totalWork = calculateSearchWork(options, gameState.prestige || 0);
+    const totalCost = calculateLandSearchCost(options, gameState.prestige || 0);
+    const { totalWork } = calculateLandSearchWork(options, gameState.prestige || 0);
     const weeks = Math.ceil(totalWork / 100); // Assuming 100 work units per week
     const timeEstimate = `${weeks} week${weeks === 1 ? '' : 's'}`;
 
@@ -119,7 +119,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
   // Handle submit
   const handleSubmit = async () => {
-    const { startLandSearch } = await import('@/lib/services/vineyard/landSearchService');
+    const { startLandSearch } = await import('@/lib/services');
     const activityId = await startLandSearch(options);
     if (activityId) {
       onClose();

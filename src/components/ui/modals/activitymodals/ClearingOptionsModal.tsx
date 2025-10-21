@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
 import { WorkCalculationTable } from '@/components/ui/activities/workCalculationTable';
-import { calculateClearingWork } from '@/lib/services/activity/workcalculators/clearingWorkCalculator';
-import { getGameState } from '@/lib/services/core/gameState';
+import { calculateClearingWork } from '@/lib/services/activity';
+import { getGameState } from '@/lib/services';
 import { CLEARING_TASKS } from '@/lib/constants/activityConstants';
 
 interface ClearingOptionsModalProps {

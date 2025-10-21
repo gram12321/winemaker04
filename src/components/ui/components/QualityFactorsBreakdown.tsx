@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineQualityCategory, getColorCategory, getBadgeColorClasses } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
-import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services/prestige/prestigeService';
+import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { calculateEffectiveQuality } from '@/lib/services/wine/features/featureEffectsService';
 

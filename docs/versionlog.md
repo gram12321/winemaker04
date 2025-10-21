@@ -25,13 +25,91 @@
 
 ---
 
-## Version 0.0331a Mobilefix Deployment issue 2
+## Version 0.0351 - Service Reorganization & Optimization
+**Date:** 2025-10-21 | **Commit:** bbffb2c | **Stats:** 524 additions, 541 deletions
+- **NEW FILE:** `src/lib/services/activity/activitymanagers/staffSearchManager.ts` (267 lines) - Moved from user services
+- **NEW FILE:** `src/lib/services/activity/workcalculators/staffSearchWorkCalculator.ts` (208 lines) - Staff search work calculations
+- **REMOVED:** `src/lib/services/user/staffSearchService.ts` (450 lines) - Moved to activity services
+- `src/lib/constants/index.ts` - Enhanced barrel exports (12 additions, 1 deletion)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Streamlined activity management (4 additions, 16 deletions)
+- `src/lib/services/activity/index.ts` - Updated service exports (14 additions, 30 deletions)
+- Wine feature constants cleanup across 5 files (removed 3 lines each)
+- Service layer reorganization for better separation of concerns
 
-## Version 0.0332 - Achievements: Value-Based Names
-**Date:** 2025-10-20 | **Local change**
-- `src/lib/constants/achievementConstants.ts` - Added `getConditionSuffix()` and switched tiered achievement names from "Tier X" to target/value suffixes (e.g., "Big Deal - 100 Bottles").
-- Affects both Achievements page and Prestige Modal display; existing prestige events retain old names until new achievements unlock.
-- No functional logic changed; display names now reflect thresholds for better clarity.
+---
+
+## Version 0.035/0.035a - GameTick Optimization, Late Harvest Feature & Code Cleanup
+**Date:** 2025-10-21 | **Commits:** 495c6a8 (0.035), 652dd92 (0.035a) | **Stats:** 322 additions, 25 deletions
+- **NEW FILE:** `src/lib/constants/wineFeatures/lateHarvest.ts` (132 lines) - Late harvest wine feature configuration
+- `src/lib/database/activities/vineyardDB.ts` - Database enhancements (47 additions)
+- `src/lib/database/core/wineLogDB.ts` - Wine log database improvements (27 additions)
+- `src/lib/database/customers/salesDB.ts` - Sales database query and update improvements (33 additions, 3 deletions)
+- `src/lib/services/user/achievementService.ts` - Achievement service optimization and cleanup (25 additions, 19 deletions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard management improvements (55 additions, 3 deletions)
+- `src/lib/constants/wineFeatures/index.ts` - Wine features export updates (3 additions)
+- Minor linter fixes and code cleanup across multiple files
+- Improved code quality, consistency, and performance
+- GameTick performance optimization and late harvest feature integration
+
+---
+
+## Version 0.0342-0.034H - Mobile/UI Fixes & Improvements (Combined)
+**Date:** 2025-10-20 | **Commits:** 94a2ab5 (0.0342), 3e09fb7 (0.0341a), 2930ae7 (0.0341), be39605 (0.034H), 8a2db6c (0.034g), 3843134 (0.034f) | **Stats:** Combined 184 additions, 52 deletions
+**Scope:** Mobile UI fixes, tooltip improvements, responsive design enhancements
+- `src/components/ui/shadCN/tooltip.tsx` - Major tooltip improvements (84 additions, 1 deletion)
+- `src/components/pages/Vineyard.tsx` - Mobile vineyard fixes (33 additions, 11 deletions)
+- `src/components/ui/modals/activitymodals/StaffAssignmentModal.tsx` - Mobile staff assignment fixes (14 additions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates (15 additions, 8 deletions)
+- `src/lib/constants/activityConstants.ts` - Activity constants updates (9 additions, 1 deletion)
+- Multiple rounds of mobile UI fixes and improvements
+- Enhanced mobile user experience and navigation
+- Better responsive design across components
+
+---
+
+## Version 0.034e-0.034a - Bug Fixes & Code Quality (Combined)
+**Date:** 2025-10-20 | **Commits:** 311947a (0.034e), f61a731 (0.034c), 95da751 (0.034b), bf43343 (0.034a) | **Stats:** Combined 423 additions, 316 deletions
+**Scope:** Linter fixes, circular dependency fixes, bug fixes, deployment issues
+- **NEW FILE:** `src/lib/services/core/notificationService.ts` (242 lines) - Centralized notification service
+- `src/components/layout/NotificationCenter.tsx` - Major notification center refactor (17 additions, 265 deletions)
+- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal improvements (62 additions, 1 deletion)
+- `src/lib/services/wine/characteristics/harvestCharacteristics.ts` - Harvest characteristics enhancements (44 additions, 2 deletions)
+- `src/lib/services/vineyard/clearingManager.ts` - Clearing manager improvements (6 additions, 3 deletions)
+- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service updates (12 additions, 4 deletions)
+- `src/lib/services/landSearchService.ts` - Land search service fixes (3 additions, 7 deletions)
+- Linter fixes across 8 service files (8 additions, 8 deletions)
+- Fixed potential circular dependency issues in service layer architecture
+- Bug fixes for identified issues and improved system stability
+
+---
+
+## Version 0.034 - Harvest Enhancement & Overgrowth System
+**Date:** 2025-10-20 | **Commit:** 9bfe66e | **Stats:** 398 additions, 154 deletions
+- **NEW FILE:** `src/lib/services/activity/workcalculators/overgrowthUtils.ts` (44 lines) - Overgrowth utility functions
+- `src/lib/services/activity/workcalculators/vineyardWorkCalculator.ts` - Enhanced with overgrowth influences (49 additions, 5 deletions)
+- `src/lib/services/activity/workcalculators/clearingWorkCalculator.ts` - Streamlined clearing calculations (12 additions, 25 deletions)
+- `src/components/ui/modals/UImodals/vineyardModal.tsx` - Enhanced vineyard modal with overgrowth display (38 additions, 84 deletions)
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Achievement UI fixes (47 additions, 1 deletion)
+- `src/lib/constants/achievementConstants.ts` - Achievement system improvements (69 additions, 1 deletion)
+- `src/lib/services/wine/winescore/wineQualityCalculationService.ts` - Quality calculation enhancements (48 additions, 3 deletions)
+- `src/lib/services/vineyard/clearingService.ts` - Clearing service improvements (11 additions, 6 deletions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard management updates (20 additions, 3 deletions)
+- `src/lib/types/types.ts` - Type system updates (6 additions, 4 deletions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates (2 additions, 8 deletions)
+- **Key Feature:** Overgrowth system integration with harvest and clearing activities
+- **Achievement UI Fix:** Improved achievement display and prestige modal integration
+
+---
+
+## Version 0.0331 - Mobile Staff Assignment Fix
+**Date:** 2025-10-20 | **Commits:** f5abbfc + cd31f1a | **Stats:** Combined 170 additions, 79 deletions
+- `src/components/ui/modals/activitymodals/StaffAssignmentModal.tsx` - Major mobile staff assignment improvements (137 additions, 79 deletions)
+- `docs/versionlog.md` - Documentation updates (33 additions)
+- Fixed mobile staff assignment functionality across multiple commits
+- Improved mobile staff management interface
+- Enhanced mobile user experience for staff operations
+
+---
 
 ## Version 0.032 - Planting Enhancements & Bug Fixes
 **Date:** 2025-10-20 | **Commit:** d90b1cd | **Stats:** 1079 additions, 550 deletions

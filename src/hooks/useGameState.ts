@@ -1,6 +1,6 @@
 // Custom hook for reactive game state management with async data loading
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getGameState, getCurrentCompany } from '@/lib/services/core/gameState';
+import { getGameState, getCurrentCompany } from '@/lib/services';
 import { useGameUpdates } from './useGameUpdates';
 
 export const useGameState = () => {

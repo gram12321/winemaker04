@@ -7,7 +7,7 @@ import { formatNumber } from '@/lib/utils/utils';
 import { getSkillColor } from '@/lib/utils/colorMapping';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { StaffAssignmentModal } from '@/components/ui/modals/activitymodals/StaffAssignmentModal';
-import { getTeamForCategory } from '@/lib/services/user/teamService';
+import { getTeamForCategory } from '@/lib/services';
 
 interface ActivityCardProps {
   activity: Activity;

@@ -4,7 +4,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { StaffTeam, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { saveTeamToDb, loadTeamsFromDb, deleteTeamFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
 import { saveStaffToDb } from '@/lib/database/core/staffDB';

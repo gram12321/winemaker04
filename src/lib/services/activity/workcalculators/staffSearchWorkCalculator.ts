@@ -2,31 +2,22 @@
 // Calculates work required for staff search and hiring activities
 
 import { Staff, WorkCategory } from '@/lib/types/types';
-import { calculateTotalWork, WorkFactor } from './workCalculator';
+import { calculateTotalWork } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER, getSkillLevelInfo } from '@/lib/constants/staffConstants';
+import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER } from '@/lib/constants/staffConstants';
 
-/**
- * Staff search options interface
- */
 export interface StaffSearchOptions {
   numberOfCandidates: number;
   skillLevel: number;
   specializations: string[];
 }
 
-/**
- * Search work estimate with cost
- */
 export interface SearchWorkEstimate {
   totalWork: number;
   timeEstimate: string;
   cost: number;
 }
 
-/**
- * Hiring work estimate with min/max range
- */
 export interface HiringWorkEstimate {
   minWork: number;
   maxWork: number;
@@ -34,10 +25,9 @@ export interface HiringWorkEstimate {
 }
 
 /**
- * Calculate the cost of a staff search based on parameters
- * Based on v3 implementation
+ * Calculate the cost of a staff search
  */
-export function calculateSearchCost(options: StaffSearchOptions): number {
+export function calculateStaffSearchCost(options: StaffSearchOptions): number {
   const { numberOfCandidates, skillLevel, specializations } = options;
   const baseCost = 2000;
   

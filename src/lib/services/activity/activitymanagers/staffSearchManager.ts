@@ -1,25 +1,16 @@
-// Staff Search Manager
-// Business logic for searching and hiring staff through the activity system
-
 import { Staff, Activity, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../../core/gameState';
 import { createActivity } from './activityManager';
 import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from '../../user/staffService';
-import { notificationService } from '@/lib/services/core/notificationService';
+import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { addTransaction } from '../../user/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
-import { 
-  StaffSearchOptions,
-  SearchWorkEstimate,
-  HiringWorkEstimate,
-  SearchPreviewStats,
-  calculateSearchCost,
-  calculateSearchWork,
-  calculateHiringWorkRange,
-  calculateHiringWorkForCandidate,
-  calculateSearchPreview
+import {
+  StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats,
+  calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
+  calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
 
 /**
@@ -57,7 +48,7 @@ export function generateStaffCandidates(options: StaffSearchOptions): Staff[] {
 export async function startStaffSearch(options: StaffSearchOptions): Promise<string | null> {
   try {
     const gameState = getGameState();
-    const searchCost = calculateSearchCost(options);
+    const searchCost = calculateStaffSearchCost(options);
     const totalWork = calculateSearchWork(options);
     
     // Check if we have enough money
@@ -259,7 +250,7 @@ export function clearPendingCandidates(): void {
 // Re-export types and functions from calculator for convenience
 export type { StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats };
 export { 
-  calculateSearchCost,
+  calculateStaffSearchCost,
   calculateSearchWork,
   calculateHiringWorkRange,
   calculateHiringWorkForCandidate,

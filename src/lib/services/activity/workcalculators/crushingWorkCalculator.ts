@@ -1,16 +1,15 @@
 import { WineBatch, Activity } from '@/lib/types/types';
-import { calculateTotalWork, WorkFactor } from '@/lib/services/activity/workcalculators/workCalculator';
+import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { addTransaction } from '@/lib/services/user/financeService';
+import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureRiskService';
 
 /**
- * Crushing Work Calculator
- * Calculates work required for crushing wine batches and handles completion
+ * Calculate work required for crushing wine batches
  */
 export function calculateCrushingWork(
   batch: WineBatch,

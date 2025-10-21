@@ -4,10 +4,10 @@ import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrig
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { getGameState } from '@/lib/services';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
-import { VineyardPurchaseOption } from '@/lib/services/vineyard/landSearchService';
+import { VineyardPurchaseOption } from '@/lib/services';
 import {
   adminAddGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminQuickLandBuyGenerateOptions, adminQuickLandBuyPurchase, adminClearAllAchievements, adminFullDatabaseReset
-} from '@/lib/services/admin/adminService';
+} from '@/lib/services';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces

@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, Aspect, ASPECTS } from '../../types/types';
 import { calculateLandValue, getAltitudeRating as getAltitudeRatingFromCalc, getAspectRating } from '../vineyard/vineyardValueCalc';
-import { VineyardPurchaseOption, generateVineyardName } from '../vineyard/landSearchService';
+import { VineyardPurchaseOption } from '../vineyard/landSearchService';
+import { generateVineyardName } from '../vineyard/vineyardService';
 import { supabase } from '../../database/core/supabase';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, getAllVineyards, purchaseVineyard, highscoreService, initializeCustomers } from '../index';
 import { insertPrestigeEvent } from '../../database';

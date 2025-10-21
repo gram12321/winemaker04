@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
-import { getCurrentPrestige } from '@/lib/services/core/gameState';
-import { processGameTick } from '@/lib/services/core/gameTick';
+import { getCurrentPrestige, processGameTick } from '@/lib/services';
 import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
@@ -8,8 +7,7 @@ import { NotificationCenter, useNotifications } from '@/components/layout/Notifi
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
 import PrestigeModal from '@/components/ui/modals/UImodals/prestigeModal';
-import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeService';
-import { getCurrentCompany } from '@/lib/services/core/gameState';
+import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import versionLogRaw from '../../../docs/versionlog.md?raw';
 

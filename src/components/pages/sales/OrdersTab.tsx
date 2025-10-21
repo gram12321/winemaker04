@@ -5,11 +5,11 @@ import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject} 
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
-import { calculateRelationshipBreakdown } from '@/lib/services/sales/relationshipService';
+import { calculateRelationshipBreakdown } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
-import { getCurrentCompany } from '@/lib/services/core/gameState';
+import { getCurrentCompany } from '@/lib/services';
 
 /**
  * Create minimal customer object for relationship breakdown from order data

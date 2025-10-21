@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/shadCN/table";
 import { SimpleCard } from "@/components/ui";
 import { formatCurrency, formatGameDateFromObject, getColorClass } from '@/lib/utils/utils';
-import { loadTransactions } from '@/lib/services/user/financeService';
+import { loadTransactions } from '@/lib/services';
 import { Transaction } from '@/lib/types/types';
 import { useGameStateWithData } from '@/hooks';
 

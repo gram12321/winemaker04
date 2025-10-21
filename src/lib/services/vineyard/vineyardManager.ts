@@ -206,14 +206,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       if (season === 'Winter' && newRipeness <= 0 && vineyard.status !== 'Dormant') {
         newStatus = 'Dormant';
         newRipeness = 0; // Ensure ripeness is exactly 0
-        
-        // Add notification about forced dormancy
-        await notificationService.addMessage(
-          `${vineyard.name} has gone dormant due to winter conditions and zero ripeness.`,
-          'vineyardManager.forcedDormancy',
-          'Vineyard Dormant',
-          NotificationCategory.VINEYARD_OPERATIONS
-        );
+
       }
       
       // Only update if there are changes

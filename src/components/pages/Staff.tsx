@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
 import { getAllStaff, removeStaff, getAllTeams, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
-import { getGameState } from '@/lib/services/core/gameState';
+import { getGameState } from '@/lib/services';
 import type { Staff } from '@/lib/types/types';
 import { formatCurrency, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';

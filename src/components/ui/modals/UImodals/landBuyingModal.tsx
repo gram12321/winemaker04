@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DialogProps } from '@/lib/types/UItypes';
-import { VineyardPurchaseOption } from '@/lib/services/vineyard/landSearchService';
+import { VineyardPurchaseOption } from '@/lib/services';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils';
 import { getFlagIcon } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
