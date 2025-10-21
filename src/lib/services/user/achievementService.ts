@@ -8,8 +8,6 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineLogByVineyard } from '../../database';
 import { calculateFinancialData } from './financeService';
-import { loadWineOrders } from '../../database/customers/salesDB';
-import { loadWineLog } from '../../database/core/wineLogDB';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
@@ -95,6 +93,15 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     }
   }
   
+  // Create a wine log map for quick lookup by vineyard
+  const wineLogMap = new Map<string, any[]>();
+  for (const wine of allWineLogEntries) {
+    if (!wineLogMap.has(wine.vineyardId)) {
+      wineLogMap.set(wine.vineyardId, []);
+    }
+    wineLogMap.get(wine.vineyardId)!.push(wine);
+  }
+  
   // Get achievement completion data (excluding meta achievements from the count)
   const completedAchievements = await getAllAchievementUnlocks();
   
@@ -115,14 +122,14 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   // Build vineyard-specific data
   const vineyardData = vineyards.map(vineyard => {
     // Get wines produced from this vineyard
-    const vineyardWines = wineLog.filter(wine => wine.vineyardId === vineyard.id);
+    const vineyardWines = wineLogMap.get(vineyard.id) || [];
     const vineyardBottles = vineyardWines.reduce((sum: number, wine: any) => sum + wine.quantity, 0);
     
     // Get sales from wines produced in this vineyard (simplified - would need wine order tracking)
     const vineyardSales: any[] = []; // TODO: Implement proper vineyard sales tracking
     
     // Get unique grape varieties produced from this vineyard
-    const grapeVarietiesProduced = [...new Set(vineyardWines.map(wine => wine.grape))];
+    const grapeVarietiesProduced = [...new Set(vineyardWines.map((wine: any) => wine.grape))];
     
     // Calculate years with same grape (simplified - would need historical tracking)
     const yearsWithSameGrape = 1; // TODO: Implement proper grape change tracking
@@ -139,7 +146,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
       bottlesProduced: vineyardBottles,
       salesCount: vineyardSales.length,
       prestige: vineyardPrestige,
-      grapeVarietiesProduced,
+      grapeVarietiesProduced: grapeVarietiesProduced as string[],
       vineyardTotalValue: vineyard.vineyardTotalValue || 0,
       hectares: vineyard.hectares || 0
     };

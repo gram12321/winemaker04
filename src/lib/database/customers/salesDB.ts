@@ -104,12 +104,14 @@ export const getSalesSummary = async (): Promise<{
 }> => {
   try {
     const { data, error } = await getCompanyQuery(WINE_ORDERS_TABLE)
-      .select('status, total_value, fulfillable_value')
-      .in('status', ['fulfilled', 'partially_fulfilled']);
+      .select('status, total_value, fulfillable_value');
 
     if (error) throw error;
 
-    const fulfilledOrders = data || [];
+    const allOrders = data || [];
+    const fulfilledOrders = allOrders.filter((order: any) => 
+      order.status === 'fulfilled' || order.status === 'partially_fulfilled'
+    );
     const totalSalesCount = fulfilledOrders.length;
     const totalSalesValue = fulfilledOrders.reduce((sum: number, order: any) => {
       return sum + (order.fulfillable_value || order.total_value || 0);
