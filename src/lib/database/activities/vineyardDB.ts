@@ -79,3 +79,50 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
     return [];
   }
 };
+
+/**
+ * Bulk update multiple vineyards in a single database operation
+ * OPTIMIZATION: Reduces N individual database calls to 1 bulk operation
+ */
+export const bulkUpdateVineyards = async (vineyards: Vineyard[]): Promise<void> => {
+  if (vineyards.length === 0) return;
+  
+  try {
+    const companyId = getCurrentCompanyId();
+    
+    const upsertData = vineyards.map(vineyard => ({
+      id: vineyard.id,
+      company_id: companyId,
+      name: vineyard.name,
+      country: vineyard.country,
+      region: vineyard.region,
+      hectares: vineyard.hectares,
+      grape_variety: vineyard.grape,
+      vine_age: vineyard.vineAge,
+      soil: vineyard.soil,
+      altitude: vineyard.altitude,
+      aspect: vineyard.aspect,
+      density: vineyard.density,
+      vineyard_health: vineyard.vineyardHealth || 1.0,
+      land_value: vineyard.landValue,
+      vineyard_total_value: vineyard.vineyardTotalValue,
+      status: vineyard.status,
+      ripeness: vineyard.ripeness || 0,
+      vineyard_prestige: vineyard.vineyardPrestige,
+      vine_yield: vineyard.vineYield || 0.02,
+      overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
+      planting_health_bonus: vineyard.plantingHealthBonus || 0,
+      health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null,
+      updated_at: new Date().toISOString()
+    }));
+    
+    const { error } = await supabase
+      .from(VINEYARDS_TABLE)
+      .upsert(upsertData);
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error('Bulk update vineyards failed:', error);
+    throw error;
+  }
+};

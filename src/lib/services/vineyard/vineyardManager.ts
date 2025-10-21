@@ -2,7 +2,7 @@ import { Vineyard } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
-import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
+import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '../../database/activities/vineyardDB';
 import { loadActivitiesFromDb, removeActivityFromDb } from '../../database/activities/activityDB';
 import { WorkCategory } from '../../services/activity';
 import { notificationService } from '../core/notificationService';
@@ -118,6 +118,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
   try {
     const vineyards = await loadVineyards();
     const activities = await loadActivitiesFromDb();
+    const vineyardsToUpdate: Vineyard[] = [];
     
     for (const vineyard of vineyards) {
       if (!vineyard.grape) continue; // Skip vineyards without grapes
@@ -175,6 +176,46 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
         }
       }
       
+      // Handle winter ripeness penalties - drastic degradation with increasing speed
+      if (season === 'Winter' && newRipeness > 0) {
+        // Calculate winter ripeness degradation
+        // Base degradation: 15% per week, increasing by 5% each week
+        const weeksIntoWinter = week;
+        const baseDegradation = 0.15; // 15% base degradation
+        const accelerationFactor = 0.05; // 5% additional degradation per week
+        const weeklyDegradation = baseDegradation + (accelerationFactor * (weeksIntoWinter - 1));
+        
+        // Apply degradation (more severe as winter progresses)
+        newRipeness = Math.max(0, newRipeness - weeklyDegradation);
+        
+        // Add notification for significant ripeness loss
+        if (weeklyDegradation > 0.1 && newRipeness < vineyard.ripeness) {
+          const ripenessLoss = vineyard.ripeness - newRipeness;
+          if (ripenessLoss > 0.05) { // Only notify for significant loss
+            await notificationService.addMessage(
+              `Winter is taking its toll! ${vineyard.name} lost ${Math.round(ripenessLoss * 100)}% ripeness due to winter conditions.`,
+              'vineyardManager.winterRipenessLoss',
+              'Winter Ripeness Loss',
+              NotificationCategory.VINEYARD_OPERATIONS
+            );
+          }
+        }
+      }
+      
+      // Rule: When ripeness reaches 0 and season is winter, set status to dormant
+      if (season === 'Winter' && newRipeness <= 0 && vineyard.status !== 'Dormant') {
+        newStatus = 'Dormant';
+        newRipeness = 0; // Ensure ripeness is exactly 0
+        
+        // Add notification about forced dormancy
+        await notificationService.addMessage(
+          `${vineyard.name} has gone dormant due to winter conditions and zero ripeness.`,
+          'vineyardManager.forcedDormancy',
+          'Vineyard Dormant',
+          NotificationCategory.VINEYARD_OPERATIONS
+        );
+      }
+      
       // Only update if there are changes
       if (newStatus !== vineyard.status || newRipeness !== vineyard.ripeness) {
         const updatedVineyard = {
@@ -183,8 +224,13 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
           ripeness: newRipeness
         };
         
-        await saveVineyard(updatedVineyard);
+        vineyardsToUpdate.push(updatedVineyard);
       }
+    }
+    
+    // OPTIMIZATION: Bulk update all vineyards at once instead of individual saves
+    if (vineyardsToUpdate.length > 0) {
+      await bulkUpdateVineyards(vineyardsToUpdate);
     }
   } catch (error) {
     console.error('Error updating vineyard ripeness:', error);
@@ -274,6 +320,7 @@ export async function updateVineyardHealthDegradation(season: string, _week: num
   try {
     const vineyards = await loadVineyards();
     const healthDegradations: Array<{ vineyard: string; oldHealth: number; newHealth: number; degradation: number }> = [];
+    const vineyardsToUpdate: Vineyard[] = [];
     
     for (const vineyard of vineyards) {
       // Skip vineyards that are already at minimum health (0.1 = 10%)
@@ -324,7 +371,7 @@ export async function updateVineyardHealthDegradation(season: string, _week: num
           healthTrend: updatedTrend
         };
         
-        await saveVineyard(updatedVineyard);
+        vineyardsToUpdate.push(updatedVineyard);
         
         healthDegradations.push({
           vineyard: vineyard.name,
@@ -333,6 +380,11 @@ export async function updateVineyardHealthDegradation(season: string, _week: num
           degradation: actualDegradation
         });
       }
+    }
+    
+    // OPTIMIZATION: Bulk update all vineyards at once instead of individual saves
+    if (vineyardsToUpdate.length > 0) {
+      await bulkUpdateVineyards(vineyardsToUpdate);
     }
     
 

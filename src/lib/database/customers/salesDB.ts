@@ -94,6 +94,34 @@ export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
   }
 };
 
+/**
+ * Get sales summary for achievement context
+ * OPTIMIZATION: Lightweight query for achievement calculations
+ */
+export const getSalesSummary = async (): Promise<{
+  totalSalesCount: number;
+  totalSalesValue: number;
+}> => {
+  try {
+    const { data, error } = await getCompanyQuery(WINE_ORDERS_TABLE)
+      .select('status, total_value, fulfillable_value')
+      .in('status', ['fulfilled', 'partially_fulfilled']);
+
+    if (error) throw error;
+
+    const fulfilledOrders = data || [];
+    const totalSalesCount = fulfilledOrders.length;
+    const totalSalesValue = fulfilledOrders.reduce((sum: number, order: any) => {
+      return sum + (order.fulfillable_value || order.total_value || 0);
+    }, 0);
+
+    return { totalSalesCount, totalSalesValue };
+  } catch (error) {
+    console.error('Error getting sales summary:', error);
+    return { totalSalesCount: 0, totalSalesValue: 0 };
+  }
+};
+
 export const getOrderById = async (orderId: string): Promise<WineOrder | null> => {
   try {
     const orders = await loadWineOrders();

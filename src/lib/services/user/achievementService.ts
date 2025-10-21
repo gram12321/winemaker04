@@ -69,20 +69,19 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   // Load financial data
   const financialData = await calculateFinancialData('year');
   
-  // Load sales data
-  const orders = await loadWineOrders();
-  const fulfilledOrders = orders.filter(o => o.status === 'fulfilled' || o.status === 'partially_fulfilled');
+  // OPTIMIZATION: Use lightweight summary queries instead of loading full datasets
+  const { getSalesSummary } = await import('../../database/customers/salesDB');
+  const { getWineProductionSummary } = await import('../../database/core/wineLogDB');
   
-  const totalSalesCount = fulfilledOrders.length;
-  const totalSalesValue = fulfilledOrders.reduce((sum: number, order: any) => {
-    return sum + (order.fulfillableValue || order.totalValue);
-  }, 0);
+  const [salesSummary, productionSummary] = await Promise.all([
+    getSalesSummary(),
+    getWineProductionSummary()
+  ]);
   
-  // Load production data and wine log entries
-  const wineLog = await loadWineLog();
-
-  const totalWinesProduced = wineLog.length;
-  const totalBottlesProduced = wineLog.reduce((sum: number, wine: any) => sum + wine.quantity, 0);
+  const totalSalesCount = salesSummary.totalSalesCount;
+  const totalSalesValue = salesSummary.totalSalesValue;
+  const totalWinesProduced = productionSummary.totalWinesProduced;
+  const totalBottlesProduced = productionSummary.totalBottlesProduced;
   
   // Load wine log entries for quality/balance/price tracking
   const allWineLogEntries = [];

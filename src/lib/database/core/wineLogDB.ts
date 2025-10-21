@@ -111,3 +111,30 @@ export const loadWineLogByVineyard = async (vineyardId: string): Promise<WineLog
   }
 };
 
+/**
+ * Get wine production summary for achievement context
+ * OPTIMIZATION: Lightweight query for achievement calculations
+ */
+export const getWineProductionSummary = async (): Promise<{
+  totalWinesProduced: number;
+  totalBottlesProduced: number;
+}> => {
+  try {
+    const { data, error } = await supabase
+      .from(WINE_LOG_TABLE)
+      .select('quantity')
+      .eq('company_id', getCurrentCompanyId());
+
+    if (error) throw error;
+
+    const wineLog = data || [];
+    const totalWinesProduced = wineLog.length;
+    const totalBottlesProduced = wineLog.reduce((sum: number, wine: any) => sum + (wine.quantity || 0), 0);
+
+    return { totalWinesProduced, totalBottlesProduced };
+  } catch (error) {
+    console.error('Error getting wine production summary:', error);
+    return { totalWinesProduced: 0, totalBottlesProduced: 0 };
+  }
+};
+

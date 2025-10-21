@@ -7,6 +7,7 @@ import { GREEN_FLAVOR_FEATURE } from './greenFlavor';
 import { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';
 import { TERROIR_FEATURE } from './terroir';
 import { BOTTLE_AGING_FEATURE } from './bottleAging';
+import { LATE_HARVEST_FEATURE } from './lateHarvest';
 
 /**
  * Active features in the game
@@ -18,6 +19,7 @@ export const ACTIVE_FEATURES: FeatureConfig[] = [
   STUCK_FERMENTATION_FEATURE, // Event-triggered (fermentation)
   TERROIR_FEATURE,            // Positive graduated feature (harvest + time-based)
   BOTTLE_AGING_FEATURE,       // Positive graduated feature (bottling + time-based aging)
+  LATE_HARVEST_FEATURE,       // Positive graduated feature (harvest timing)
 ];
 
 /**
@@ -71,4 +73,5 @@ export { GREEN_FLAVOR_FEATURE } from './greenFlavor';
 export { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';
 export { TERROIR_FEATURE } from './terroir';
 export { BOTTLE_AGING_FEATURE } from './bottleAging';
+export { LATE_HARVEST_FEATURE } from './lateHarvest';
 
