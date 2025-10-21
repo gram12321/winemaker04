@@ -36,13 +36,11 @@ export async function createClearingActivity(
     const currentYear = getGameState().currentYear ?? 0;
     const vegetationYears = vineyard.overgrowth?.vegetation ?? 0;
     const debrisYears = vineyard.overgrowth?.debris ?? 0;
-    const lastClearVegetationYear = vegetationYears > 0 ? currentYear - vegetationYears : 0;
-    const lastRemoveDebrisYear = debrisYears > 0 ? currentYear - debrisYears : 0;
     
-    // Check if clear vegetation was already done this year
-    if (options.tasks['clear-vegetation'] && currentYear === lastClearVegetationYear) {
+    // Check if clear vegetation was already done this year (0 years since last completion)
+    if (options.tasks['clear-vegetation'] && vegetationYears === 0) {
       await notificationService.addMessage(
-        `Clear vegetation can only be performed once per year. This vineyard was already cleared of vegetation in ${currentYear}.`,
+        `Clear vegetation can only be performed once per year. This vineyard was already cleared of vegetation this year.`,
         'clearingManager.createClearingActivity',
         'Clearing Limit Reached',
         NotificationCategory.VINEYARD_OPERATIONS
@@ -50,10 +48,10 @@ export async function createClearingActivity(
       return false;
     }
     
-    // Check if remove debris was already done this year
-    if (options.tasks['remove-debris'] && currentYear === lastRemoveDebrisYear) {
+    // Check if remove debris was already done this year (0 years since last completion)
+    if (options.tasks['remove-debris'] && debrisYears === 0) {
       await notificationService.addMessage(
-        `Remove debris can only be performed once per year. This vineyard was already cleared of debris in ${currentYear}.`,
+        `Remove debris can only be performed once per year. This vineyard was already cleared of debris this year.`,
         'clearingManager.createClearingActivity',
         'Clearing Limit Reached',
         NotificationCategory.VINEYARD_OPERATIONS

@@ -175,11 +175,8 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
   // Check seasonal and yearly limits for individual tasks
   const gameState = getGameState();
   const currentSeason = gameState.season;
-  const currentYear = getGameState().currentYear ?? 0;
-  const lastClearVegetationYear = (vineyard.overgrowth?.vegetation ?? 0) > 0 ? currentYear - (vineyard.overgrowth?.vegetation ?? 0) : 0;
-  const lastRemoveDebrisYear = (vineyard.overgrowth?.debris ?? 0) > 0 ? currentYear - (vineyard.overgrowth?.debris ?? 0) : 0;
-  const wasClearVegetationDoneThisYear = lastClearVegetationYear === currentYear;
-  const wasRemoveDebrisDoneThisYear = lastRemoveDebrisYear === currentYear;
+  const wasClearVegetationDoneThisYear = (vineyard.overgrowth?.vegetation ?? 0) === 0;
+  const wasRemoveDebrisDoneThisYear = (vineyard.overgrowth?.debris ?? 0) === 0;
   
   // Seasonal restrictions
   const isClearVegetationBlockedBySeason = currentSeason === 'Winter';

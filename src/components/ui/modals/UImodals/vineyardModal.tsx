@@ -51,7 +51,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden">
+      <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[90vh] flex flex-col sm:max-h-[85vh]">
         {/* Top image bar */}
         <div
           className="h-36 bg-cover bg-center relative"
@@ -78,7 +78,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 pb-6 space-y-4 overflow-y-auto flex-1">
           <DialogHeader>
             <DialogTitle className="text-base">Vineyard Details</DialogTitle>
             <DialogDescription className="text-xs">
@@ -343,56 +343,41 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
               </CardHeader>
               <CardContent className="py-3 text-sm space-y-3">
 
-                {/* Overgrowth Status */}
+                {/* Clearing Task Status */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-gray-700">Overgrowth Status:</div>
+                  <div className="text-xs font-medium text-gray-700">Clearing Task Status:</div>
                   <div className="space-y-1">
                     {(() => {
                       const overgrowth = vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 };
-                      const hasAnyOvergrowth = Object.values(overgrowth).some(years => years > 0);
-                      
-                      if (!hasAnyOvergrowth) {
-                        return (
-                          <div className="text-xs text-gray-500 italic">No overgrowth - all tasks recently completed</div>
-                        );
-                      }
                       
                       return (
                         <div className="space-y-1">
-                          {overgrowth.vegetation > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-600">Vegetation:</span>
-                              <span className="font-medium text-orange-600">
-                                {overgrowth.vegetation} year{overgrowth.vegetation === 1 ? '' : 's'} since clearing
-                              </span>
-                            </div>
-                          )}
-                          {overgrowth.debris > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-600">Debris:</span>
-                              <span className="font-medium text-orange-600">
-                                {overgrowth.debris} year{overgrowth.debris === 1 ? '' : 's'} since removal
-                              </span>
-                            </div>
-                          )}
-                          {overgrowth.uproot > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-600">Uproot:</span>
-                              <span className="font-medium text-orange-600">
-                                {overgrowth.uproot} year{overgrowth.uproot === 1 ? '' : 's'} since uprooting
-                              </span>
-                            </div>
-                          )}
-                          {overgrowth.replant > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-600">Replant:</span>
-                              <span className="font-medium text-orange-600">
-                                {overgrowth.replant} year{overgrowth.replant === 1 ? '' : 's'} since replanting
-                              </span>
-                            </div>
-                          )}
-                          <div className="text-xs text-orange-600 italic mt-2">
-                            Higher overgrowth increases work requirements for clearing and planting
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Clear Vegetation:</span>
+                            <span className={`font-medium ${overgrowth.vegetation === 0 ? 'text-green-600' : overgrowth.vegetation === 1 ? 'text-amber-600' : 'text-orange-600'}`}>
+                              {overgrowth.vegetation === 0 ? 'Completed this year' : 
+                               overgrowth.vegetation === 1 ? '1 year ago' : 
+                               `${overgrowth.vegetation} years ago`}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Remove Debris:</span>
+                            <span className={`font-medium ${overgrowth.debris === 0 ? 'text-green-600' : overgrowth.debris === 1 ? 'text-amber-600' : 'text-orange-600'}`}>
+                              {overgrowth.debris === 0 ? 'Completed this year' : 
+                               overgrowth.debris === 1 ? '1 year ago' : 
+                               `${overgrowth.debris} years ago`}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Replant Vines:</span>
+                            <span className={`font-medium ${overgrowth.replant === 0 ? 'text-green-600' : overgrowth.replant === 1 ? 'text-amber-600' : 'text-orange-600'}`}>
+                              {overgrowth.replant === 0 ? 'Completed this year' : 
+                               overgrowth.replant === 1 ? '1 year ago' : 
+                               `${overgrowth.replant} years ago`}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 italic mt-2">
+                            Tasks can only be performed once per year. Green = done this year, Amber = 1 year ago, Orange = 2+ years ago
                           </div>
                         </div>
                       );
