@@ -1,6 +1,3 @@
-// Stuck Fermentation Feature Configuration
-// Event-triggered fault from fermentation stress conditions
-
 import { FeatureConfig } from '../../types/wineFeatures';
 import { WineBatch } from '../../types/types';
 

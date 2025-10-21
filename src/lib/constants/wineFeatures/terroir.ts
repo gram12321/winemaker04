@@ -1,6 +1,3 @@
-// Terroir Expression Feature Configuration
-// Positive graduated feature that develops over time with state-dependent growth
-
 import { FeatureConfig } from '../../types/wineFeatures';
 
 /**

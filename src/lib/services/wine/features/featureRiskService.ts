@@ -3,7 +3,7 @@
 
 import { WineBatch } from '../../../types/types';
 import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulationStrategy } from '../../../types/wineFeatures';
-import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../../constants/wineFeatures';
+import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { notificationService } from '../../core/notificationService';

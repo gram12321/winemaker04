@@ -289,7 +289,7 @@ winemaker04/
 │       │   │   ├── companyService.ts (137 lines) # Company management
 │       │   │   ├── financeService.ts (282 lines) # Finance service
 │       │   │   ├── highscoreService.ts (302 lines) # Highscore service
-│       │   │   ├── staffSearchService.ts (436 lines) # Staff search service
+│       │   │   ├── staffSearchManager.ts (436 lines) # Staff search manager
 │       │   │   ├── staffService.ts (224 lines) # Staff management
 │       │   │   ├── teamService.ts (365 lines) # Team management
 │       │   │   ├── userSettingsService.ts (195 lines) # User settings

@@ -1,6 +1,3 @@
-// Green Flavor Feature Configuration
-// Event-triggered fault from underripe grapes or rough processing
-
 import { FeatureConfig } from '../../types/wineFeatures';
 import { Vineyard } from '../../types/types';
 import { CrushingOptions } from '../../services/wine/characteristics/crushingCharacteristics';

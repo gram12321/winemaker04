@@ -1,6 +1,3 @@
-// Oxidation Feature Configuration
-// First implementation of the Wine Features Framework
-
 import { FeatureConfig } from '../../types/wineFeatures';
 
 /**

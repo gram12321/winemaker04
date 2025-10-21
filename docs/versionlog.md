@@ -370,7 +370,7 @@ Complete refactoring from standalone oxidation to extensible config-driven featu
 
 ## Version 0.0161 - Notification System Polish & Service Cleanup
 **Date:** 2025-10-09 | **Commit:** b1a9501a | **Stats:** 158 additions, 157 deletions
-- `src/lib/services/user/staffSearchService.ts` - Major refactor and cleanup (31 additions, 17 deletions)
+- `src/lib/services/activity/activitymanagers/staffSearchManager.ts` - Major refactor and cleanup (31 additions, 17 deletions)
 - `src/lib/services/user/teamService.ts` - Code consistency improvements (22 additions, 22 deletions)
 - `src/components/pages/AdminDashboard.tsx` - Simplified admin tools (21 additions, 37 deletions)
 - Notification consistency updates across 24 files (services, modals, managers)
@@ -418,7 +418,7 @@ Complete refactoring from standalone oxidation to extensible config-driven featu
 
 ## Version 0.0151 - Staff Search System & Teams Alpha
 **Date:** 2025-10-09 | **Commit:** 096ccaf6 | **Stats:** 3916 additions, 135 deletions
-- **NEW FILE:** `src/lib/services/user/staffSearchService.ts` (441 lines) - Activity-based staff search with skill targeting, specializations, cost calculation
+- **NEW FILE:** `src/lib/services/activity/activitymanagers/staffSearchManager.ts` (441 lines) - Activity-based staff search with skill targeting, specializations, cost calculation
 - **NEW FILE:** `src/components/ui/modals/activitymodals/StaffSearchOptionsModal.tsx` (294 lines) - Interactive search with live preview
 - **NEW FILE:** `src/components/ui/modals/activitymodals/StaffSearchResultsModal.tsx` (281 lines) - Candidate display and hiring
 - **NEW FILE:** `src/lib/services/user/teamService.ts` (267 lines) - Team CRUD, default teams (Admin, Maintenance, Vineyard, Winery, Sales)

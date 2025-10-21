@@ -66,12 +66,3 @@ export function getEventTriggeredFeatures(
     return false;
   });
 }
-
-// Re-export for convenience
-export { OXIDATION_FEATURE } from './oxidation';
-export { GREEN_FLAVOR_FEATURE } from './greenFlavor';
-export { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';
-export { TERROIR_FEATURE } from './terroir';
-export { BOTTLE_AGING_FEATURE } from './bottleAging';
-export { LATE_HARVEST_FEATURE } from './lateHarvest';
-

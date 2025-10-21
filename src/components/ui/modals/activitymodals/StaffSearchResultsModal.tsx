@@ -9,7 +9,7 @@ import { getWageColorClass } from '@/lib/services';
 import { Button } from '@/components/ui/shadCN/button';
 import { Badge } from '@/components/ui/shadCN/badge';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
-import { startHiringProcess, clearPendingCandidates } from '@/lib/services/user/staffSearchService';
+import { startHiringProcess, clearPendingCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
 import { X } from 'lucide-react';
 
 interface StaffSearchResultsModalProps {

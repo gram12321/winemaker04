@@ -7,7 +7,7 @@ import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { calculateAgingStatus } from '@/lib/services';
 
 

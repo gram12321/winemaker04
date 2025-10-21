@@ -3,7 +3,7 @@
 // Consolidates feature impact calculations used across UI components
 
 import { WineBatch, WineCharacteristics } from '../../../types/types';
-import { getAllFeatureConfigs } from '../../../constants/wineFeatures';
+import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { getBottleAgingSeverity } from './agingService';
 
 // ===== FEATURE IMPACT INTERFACE =====

@@ -42,13 +42,13 @@ export {
   startHiringProcess,
   completeHiringProcess,
   clearPendingCandidates
-} from './user/staffSearchService';
+} from './activity/activitymanagers/staffSearchManager';
 
 export type {
   StaffSearchOptions,
   SearchWorkEstimate,
   HiringWorkEstimate
-} from './user/staffSearchService';
+} from './activity/activitymanagers/staffSearchManager';
 
 // Land search services
 export {
@@ -102,6 +102,7 @@ export { generateOrder } from './sales/generateOrder';
 export { processGameTick } from './core/gameTick';
 export { createVineyard, plantVineyard, initializePlanting, completePlanting, getAllVineyards, purchaseVineyard } from './vineyard/vineyardService';
 export { calculateVineyardYield, updateVineyardRipeness, updateVineyardAges } from './vineyard/vineyardManager';
+export { completeClearingActivity } from './vineyard/clearingManager';
 export { GRAPE_VARIETIES } from '../types/types';
 export { calculateLandValue, normalizeAltitude, normalizePrestige, normalizeAspect, getAspectRating, getAltitudeRating, getRegionalPriceRange } from './vineyard/vineyardValueCalc';
 export { getVineyardPrestigeBreakdown, calculateVineyardPrestigeFromEvents } from './prestige/prestigeService';
@@ -120,4 +121,3 @@ export { recordBottledWine, getVineyardWineHistory, calculateVineyardStats } fro
 export type { VineyardStats } from './user/wineLogService';
 export type { VineyardPurchaseOption } from './vineyard/landSearchService';
 export * from './activity';
-export { initializeActivitySystem, createActivity, getAllActivities, getActivityById, cancelActivity, progressActivities, getActivityProgress } from './activity/activitymanagers/activityManager';

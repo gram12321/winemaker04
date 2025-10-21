@@ -9,7 +9,7 @@ import { createRelationshipBoost } from '../sales/relationshipService';
 import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige, addFeaturePrestigeEvent } from '../prestige/prestigeService';
 import { getCurrentPrestige } from '../core/gameState';
 import { SALES_CONSTANTS } from '../../constants/constants';
-import { getAllFeatureConfigs } from '../../constants/wineFeatures';
+import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeaturesUtil';
 
 // ===== ORDER MANAGEMENT =====
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StaffSearchOptions, calculateSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/user/staffSearchService';
+import { StaffSearchOptions, calculateSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity/activitymanagers/staffSearchManager';
 import { SPECIALIZED_ROLES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { formatCurrency, getSpecializationIcon } from '@/lib/utils';
 import { Button } from '@/components/ui/shadCN/button';

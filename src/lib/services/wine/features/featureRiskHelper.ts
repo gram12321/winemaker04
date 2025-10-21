@@ -4,7 +4,7 @@
 
 import { WineBatch } from '../../../types/types';
 import { getFeature } from './featureEffectsService';
-import { getFeatureConfig } from '../../../constants/wineFeatures';
+import { getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { previewEventRisks } from './featureRiskService';
 import { inferRiskAccumulationStrategy } from '../../../types/wineFeatures';
 

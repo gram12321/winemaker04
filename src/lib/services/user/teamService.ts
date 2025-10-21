@@ -258,7 +258,6 @@ export async function assignStaffToTeam(staffId: string, teamId: string): Promis
   
   updateGameState({ staff: updatedStaff, teams: updatedTeams });
   
-  await notificationService.addMessage(`${staff.name} assigned to ${team.name}`, 'teamService.assignStaff', 'Staff Assignment', NotificationCategory.STAFF_MANAGEMENT);
   return true;
 }
 

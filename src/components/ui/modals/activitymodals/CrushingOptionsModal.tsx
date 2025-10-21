@@ -9,7 +9,7 @@ import { FeatureBadges } from '@/components/ui/wine/FeatureBadge';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
 import {
   previewFeatureRisks,

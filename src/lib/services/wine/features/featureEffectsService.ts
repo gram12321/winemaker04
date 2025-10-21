@@ -3,7 +3,7 @@
 
 import { WineBatch, CustomerType, WineCharacteristics } from '../../../types/types';
 import { WineFeature, FeatureConfig } from '../../../types/wineFeatures';
-import { getAllFeatureConfigs } from '../../../constants/wineFeatures';
+import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
 
 /**
  * Calculate effective quality after applying all feature effects

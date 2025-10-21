@@ -15,7 +15,7 @@ import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureStatusGrid } from '../../wine/WineryFeatureStatusGrid';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import { calculateEffectiveQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { useWineBalance } from '@/hooks';
 
 interface WineModalProps extends DialogProps {

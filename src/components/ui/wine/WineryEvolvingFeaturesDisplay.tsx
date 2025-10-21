@@ -1,5 +1,5 @@
 import { WineBatch } from '@/lib/types/types';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 
 interface EvolvingFeaturesDisplayProps {

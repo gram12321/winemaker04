@@ -1,23 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Activity, ActivityCreationOptions, ActivityProgress } from '@/lib/types/types';
-import { WorkCategory } from '@/lib/services/activity';
-import { getGameState, updateGameState } from '@/lib/services/core/gameState';
+import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory } from '@/lib/types/types';
+import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeLandSearch, completeClearingActivity, getTeamForCategory } from '@/lib/services';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
-import { completePlanting } from '../../vineyard/vineyardService';
-import { createWineBatchFromHarvest } from '../../wine/winery/inventoryService';
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { calculateVineyardYield } from '../../vineyard/vineyardManager';
-import { notificationService } from '@/lib/services/core/notificationService';
-import { NotificationCategory } from '@/lib/types/types';
-import { completeCrushing } from '../workcalculators/crushingWorkCalculator';
-import { completeFermentationSetup } from '../workcalculators/fermentationWorkCalculator';
-import { completeBookkeeping } from '../workcalculators/bookkeepingWorkCalculator';
-import { calculateStaffWorkContribution } from '../workcalculators/workCalculator';
-import { completeStaffSearch, completeHiringProcess } from '../../user/staffSearchService';
-import { completeLandSearch } from '../../vineyard/landSearchService';
-import { getTeamForCategory } from '../../user/teamService';
+import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, WorkCategory } from '@/lib/services/activity';
+import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
-import { completeClearingActivity } from '../../vineyard/clearingManager';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {

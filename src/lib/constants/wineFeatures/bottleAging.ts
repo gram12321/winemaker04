@@ -1,6 +1,3 @@
-// Bottle Aging Feature Configuration
-// Positive graduated feature that develops as wine ages in the bottle
-
 import { FeatureConfig } from '../../types/wineFeatures';
 import { GRAPE_CONST } from '../grapeConstants';
 
