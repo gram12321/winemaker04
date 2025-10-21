@@ -23,7 +23,7 @@ winemaker04/
 │       ├── AIpromt_codecleaning.md        # Code cleaning prompts
 │       ├── AIpromt_docs.md               # Documentation prompts
 │       ├── AIpromt_newpromt.md           # New prompt guidelines
-│       ├── versionlog.md                 # Version history (566 lines)
+│       ├── versionlog.md                 # Version history (742 lines)
 │       └── old_iterations/               # Legacy versions
 │           ├── hackandslash/             # Hack and slash iteration
 │           ├── simulus/                  # Simulus version
@@ -56,7 +56,7 @@ winemaker04/
 │   │
 │   └── index.html                  # Root HTML template
 │
-├── 📄 Source Code (src/) - 44,412 total lines
+├── 📄 Source Code (src/) - 46,457 total lines
 │   ├── main.tsx (14 lines)                    # Application entry point
 │   ├── App.tsx (196 lines)                    # Main application component
 │   ├── index.css (106 lines)                  # Global styles
@@ -221,10 +221,12 @@ winemaker04/
 │       │   ├── namesConstants.ts (242 lines)  # Name generation constants
 │       │   ├── staffConstants.ts (97 lines)   # Staff system constants
 │       │   ├── vineyardConstants.ts (321 lines) # Vineyard constants
-│       │   ├── wineFeatures/ (873 lines total) # Wine feature configurations
+│       │   ├── wineFeatures/ (1,005 lines total) # Wine feature configurations
 │       │   │   ├── bottleAging.ts (138 lines) # Bottle aging features
+│       │   │   ├── commonFeaturesUtil.ts (9 lines) # Common wine feature utilities
 │       │   │   ├── greenFlavor.ts (187 lines) # Green flavor features
 │       │   │   ├── index.ts (66 lines)        # Wine features exports
+│       │   │   ├── lateHarvest.ts (132 lines) # Late harvest features
 │       │   │   ├── oxidation.ts (197 lines)   # Oxidation features
 │       │   │   ├── stuckFermentation.ts (168 lines) # Stuck fermentation features
 │       │   │   └── terroir.ts (117 lines)     # Terroir features
@@ -255,21 +257,30 @@ winemaker04/
 │       │   │   └── salesDB.ts (109 lines)     # Sales database
 │       │   └── index.ts (15 lines)            # Database barrel exports
 │       │
-│       ├── services/ (7,550 lines total)      # Business logic services
-│       │   ├── activity/ (1,249 lines total)  # Activity services
-│       │   │   ├── activitymanagers/ (549 lines total) # Activity managers
+│       ├── services/ (8,500+ lines total)     # Business logic services
+│       │   ├── activity/ (2,200+ lines total) # Activity services
+│       │   │   ├── activitymanagers/ (1,400+ lines total) # Activity managers
 │       │   │   │   ├── activityManager.ts (435 lines) # Main activity manager
-│       │   │   │   └── bookkeepingManager.ts (114 lines) # Bookkeeping manager
-│       │   │   ├── workcalculators/ (700 lines total) # Work calculators
+│       │   │   │   ├── bookkeepingManager.ts (114 lines) # Bookkeeping manager
+│       │   │   │   ├── landSearchManager.ts (267 lines) # Land search manager
+│       │   │   │   └── staffSearchManager.ts (267 lines) # Staff search manager
+│       │   │   ├── workcalculators/ (1,200+ lines total) # Work calculators
 │       │   │   │   ├── bookkeepingWorkCalculator.ts (187 lines) # Bookkeeping work
+│       │   │   │   ├── clearingWorkCalculator.ts (288 lines) # Clearing work calculator
 │       │   │   │   ├── crushingWorkCalculator.ts (187 lines) # Crushing work
 │       │   │   │   ├── fermentationWorkCalculator.ts (154 lines) # Fermentation work
-│       │   │   │   ├── vineyardWorkCalculator.ts (110 lines) # Vineyard work
+│       │   │   │   ├── harvestingWorkCalculator.ts (154 lines) # Harvesting work calculator
+│       │   │   │   ├── landSearchWorkCalculator.ts (154 lines) # Land search work calculator
+│       │   │   │   ├── overgrowthUtils.ts (44 lines) # Overgrowth utility functions
+│       │   │   │   ├── plantingWorkCalculator.ts (154 lines) # Planting work calculator
+│       │   │   │   ├── staffSearchWorkCalculator.ts (208 lines) # Staff search work
+│       │   │   │   ├── vineyardWorkCalculator.ts (164 lines) # Vineyard work
 │       │   │   │   └── workCalculator.ts (153 lines) # General work calculator
 │       │   │   └── index.ts (29 lines)        # Activity services exports
-│       │   ├── core/ (534 lines total)        # Core services
+│       │   ├── core/ (1,200+ lines total)    # Core services
 │       │   │   ├── gameState.ts (277 lines)   # Game state management
-│       │   │   ├── gameTick.ts (257 lines)    # Game tick system
+│       │   │   ├── gameTick.ts (269 lines)    # Game tick system
+│       │   │   ├── notificationService.ts (242 lines) # Centralized notification service
 │       │   │   └── index.ts (116 lines)       # Core services exports
 │       │   ├── prestige/ (1,180 lines total)  # Prestige system services
 │       │   │   ├── prestigeCalculator.ts (188 lines) # Prestige calculator
@@ -346,15 +357,14 @@ winemaker04/
 ## 📊 Code Statistics
 
 ### Line Count Summary (src/ directory only)
-- **Total Files**: 223 files
-- **Total Lines of Code**: 44,412 lines
+- **Total Files**: 231 files
+- **Total Lines of Code**: 46,457 lines
 
 ### Breakdown by File Type
-- **TypeScript Files** (.ts, .tsx): 222 files | 44,304 lines
+- **TypeScript Files** (.ts, .tsx): 230 files | 46,351 lines
 - **CSS Files** (.css): 1 file | 106 lines  
 
 ---
 
 **Last Updated**: 2025-01-27  
-**Project Version**: 0.4  
-**Documentation Version**: 1.0
+

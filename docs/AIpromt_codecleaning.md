@@ -32,3 +32,8 @@ We have implemented comprehensive systems across multiple files and may need cle
 3. **Implement Changes**: Refactor code with proper testing
 4. **Verify Functionality**: Ensure all systems continue to work
 5. **Update Documentation**: Reflect changes in documentation
+
+### **basic cleanups (Lowest priority)**
+1. Fix import/export to use barrel export
+2. Fix import one line per file
+3, Fix export use index.ts barrel export (use * wildcards) for all exports. 
