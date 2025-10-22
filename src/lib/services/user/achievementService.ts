@@ -1,5 +1,5 @@
-import { AchievementConfig, AchievementWithStatus, AchievementUnlock } from '../../types/types';
-import { ALL_ACHIEVEMENTS, getAchievementConfig } from '../../constants/achievementConstants';
+import { AchievementConfig, AchievementWithStatus, AchievementUnlock, AchievementCategory, AchievementLevel } from '../../types/types';
+import { ALL_ACHIEVEMENTS, achievementLevels } from '../../constants/achievementConstants';
 import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked } from '../../database/core/achievementsDB';
 import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
 import { getGameState, calculateFinancialData, calculateNetWorth } from '../index';
@@ -11,6 +11,164 @@ import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
+import { formatNumber as formatNumberUtil, getBadgeColorClasses } from '../../utils/utils';
+
+// ===== ACHIEVEMENT BUSINESS LOGIC FUNCTIONS =====
+
+/**
+ * Get achievement level info including colors
+ * Uses the existing badge color system from utils.ts
+ */
+export function getAchievementLevelInfo(level: AchievementLevel): {
+  name: string;
+  prestige: number;
+  decayYears: number;
+  color: string;
+} {
+  const levelData = achievementLevels[level];
+  // Map achievement levels 1-5 to quality values 0.2-1.0 for color progression
+  const qualityValue = (level - 1) / 4; // 0, 0.25, 0.5, 0.75, 1.0
+  const colors = getBadgeColorClasses(qualityValue);
+  
+  return {
+    name: levelData.name,
+    prestige: levelData.prestige,
+    decayYears: levelData.decayYears,
+    color: `${colors.bg} ${colors.text}`
+  };
+}
+
+/**
+ * Create a short, human-friendly suffix for an achievement name
+ * based on the condition type and numeric threshold, e.g.:
+ *  - "100 Bottles", "€50,000", "25 Varieties", "10 Years", "95 Score"
+ */
+export function getConditionSuffix(conditionType: string, threshold: number): string {
+  const num = formatNumberUtil(threshold);
+
+  switch (conditionType) {
+    // Currency based thresholds
+    case 'money_threshold':
+    case 'sales_value':
+    case 'single_contract_value':
+    case 'cellar_value':
+    case 'total_assets':
+    case 'vineyard_value':
+    case 'revenue_by_year':
+    case 'assets_by_year':
+    case 'average_hectare_value':
+    case 'wine_price_threshold':
+      return `€${num}`;
+
+    // Percentage thresholds
+    case 'achievement_completion':
+    case 'sales_price_percentage':
+      return `${num}%`;
+
+    // Time thresholds
+    case 'time_threshold':
+    case 'vineyard_time_same_grape':
+      return `${num} Years`;
+
+    // Count thresholds
+    case 'bottles_produced':
+    case 'single_contract_bottles':
+    case 'vineyard_bottles_produced':
+      return `${num} Bottles`;
+    case 'sales_count':
+    case 'vineyard_sales_count':
+      return `${num} Sales`;
+    case 'production_count':
+    case 'different_grapes':
+      return `${num} Varieties`;
+    case 'vineyard_count':
+      return `${num} Vineyards`;
+    case 'total_hectares':
+    case 'hectares_by_year':
+      return `${num} Hectares`;
+
+    // Rating/score thresholds
+    case 'wine_quality_threshold':
+      return `${num} Quality`;
+    case 'wine_balance_threshold':
+      return `${num} Balance`;
+    case 'wine_score_threshold':
+      return `${num} Score`;
+    case 'prestige_threshold':
+    case 'vineyard_prestige_threshold':
+    case 'prestige_by_year':
+      return `${num} Prestige`;
+
+    default:
+      return `${num}`;
+  }
+}
+
+/**
+ * Generate tiered achievements for a specific type
+ */
+export function createTieredAchievements(
+  baseId: string,
+  baseName: string,
+  baseDescription: string,
+  icon: string,
+  category: AchievementCategory,
+  conditionType: string,
+  thresholds: number[],
+  prerequisites: string[] = [],
+  options: {
+    includeVineyard?: boolean;
+    vineyardDecayMultiplier?: number; // Vineyard events decay faster (default 0.5 = half company decay time)
+  } = {}
+): AchievementConfig[] {
+  return thresholds.map((threshold, index) => {
+    const tier = index + 1;
+    const achievementLevel = Math.min(5, Math.max(1, tier)) as AchievementLevel;
+    const prevId = index > 0 ? `${baseId}_tier_${index}` : null;
+    const levelInfo = achievementLevels[achievementLevel];
+    
+    // Calculate weekly retention rates (0-1, where 1 = no decay, 0 = immediate decay)
+    // For yearly decay, we want the weekly retention rate that results in the desired yearly decay
+    // If we want 50% decay over X years, weekly retention = (0.5)^(1/(52*X))
+    const yearlyRetentionRate = 0.5; // 50% retention after the specified years
+    const companyDecayRate = Math.pow(yearlyRetentionRate, 1 / (levelInfo.decayYears * 52));
+    const vineyardDecayRate = options.includeVineyard 
+      ? Math.pow(yearlyRetentionRate, 1 / (levelInfo.decayYears * 52 * (options.vineyardDecayMultiplier || 0.5)))
+      : undefined;
+    
+    const prestigeConfig: any = {
+      company: {
+        baseAmount: levelInfo.prestige,
+        decayRate: companyDecayRate
+      }
+    };
+    
+    // Add vineyard prestige if requested
+    if (options.includeVineyard) {
+      prestigeConfig.vineyard = {
+        baseAmount: levelInfo.prestige,
+        decayRate: vineyardDecayRate
+      };
+    }
+    
+    const valueSuffix = getConditionSuffix(conditionType, threshold);
+
+    return {
+      id: `${baseId}_tier_${tier}`,
+      name: `${baseName} - ${valueSuffix}`,
+      description: baseDescription.replace('{threshold}', formatNumberUtil(threshold)),
+      icon,
+      category,
+      achievementLevel,
+      condition: {
+        type: conditionType as any,
+        threshold
+      },
+      prerequisites: prevId ? [prevId] : prerequisites,
+      prestige: prestigeConfig
+    };
+  });
+}
 
 /**
  * Achievement condition checker context
@@ -793,5 +951,28 @@ export async function getAchievementStats(companyId?: string): Promise<{
     byCategory,
     byRarity
   };
+}
+
+// ===== ACHIEVEMENT UTILITY FUNCTIONS =====
+
+/**
+ * Get achievement configuration by ID
+ */
+export function getAchievementConfig(achievementId: string): AchievementConfig | undefined {
+  return ALL_ACHIEVEMENTS.find(achievement => achievement.id === achievementId);
+}
+
+/**
+ * Get achievements by category
+ */
+export function getAchievementsByCategory(category: string): AchievementConfig[] {
+  return ALL_ACHIEVEMENTS.filter(achievement => achievement.category === category);
+}
+
+/**
+ * Get achievements by achievement level
+ */
+export function getAchievementsByLevel(level: number): AchievementConfig[] {
+  return ALL_ACHIEVEMENTS.filter(achievement => achievement.achievementLevel === level);
 }
 

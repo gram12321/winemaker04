@@ -481,12 +481,12 @@ CREATE TABLE loans (
     seasonal_payment decimal(10,2) NOT NULL,
     seasons_remaining integer NOT NULL,
     total_seasons integer NOT NULL,
-    start_date_week integer NOT NULL,
-    start_date_season text NOT NULL,
-    start_date_year integer NOT NULL,
-    next_payment_due_week integer NOT NULL,
-    next_payment_due_season text NOT NULL,
-    next_payment_due_year integer NOT NULL,
+    start_week integer NOT NULL,
+    start_season text NOT NULL,
+    start_year integer NOT NULL,
+    next_payment_week integer NOT NULL,
+    next_payment_season text NOT NULL,
+    next_payment_year integer NOT NULL,
     missed_payments integer DEFAULT 0,
     status text NOT NULL CHECK (status IN ('active', 'paid_off', 'defaulted')),
     created_at timestamptz DEFAULT NOW(),
@@ -548,6 +548,13 @@ ALTER TABLE wine_orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for staff table (matches dev database)
+-- Drop existing policies first to avoid conflicts
+DROP POLICY IF EXISTS "Allow read access to all users" ON staff;
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON staff;
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON staff;
+DROP POLICY IF EXISTS "Allow delete for authenticated users" ON staff;
+
+-- Create new policies
 CREATE POLICY "Allow read access to all users" ON staff
     FOR SELECT TO public USING (true);
 

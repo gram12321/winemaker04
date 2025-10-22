@@ -25,16 +25,47 @@
 
 ---
 
-## Version 0.4.16 - Comprehensive Credit Rating System (2024-12-19)
+## Version 0.041 - Finance & Loan System Fixes
+**Date:** 2025-10-22 | **Commit:** 28a6b6e | **Stats:** 3,495 additions, 204 deletions
 
-### 🏦 **NEW: Advanced Credit Rating Calculation**
-- **NEW FILE:** creditRatingService.ts (400+ lines) - Comprehensive credit rating calculation with asset health, payment history, and company stability factors
-- **MODIFIED:** loanService.ts - Updated to use comprehensive credit rating system, removed manual credit rating updates
-- **MODIFIED:** economyConstants.ts - Added CREDIT_RATING_PENALTIES with improved penalty system (first missed payment -10%, additional -5%, default -30%)
-- **MODIFIED:** LoansView.tsx - Added comprehensive credit rating breakdown display with asset health and company stability metrics
-- **FEATURES:** Debt-to-asset ratio, asset coverage, liquidity ratio, company age factor, profit consistency, expense efficiency
-- **IMPROVEMENTS:** More realistic credit rating based on financial health rather than just payment history
-- **FUTURE:** Added notes for outstanding shares & dividends system
+### 🏦 **Major Finance System Implementation**
+- **NEW FILE:** `src/components/finance/LoansView.tsx` (625 lines) - Complete loan management interface with active loans table, available lenders, and loan application flow
+- **NEW FILE:** `src/components/ui/modals/LoanApplicationModal.tsx` (243 lines) - Interactive loan application form with interest rate breakdown and affordability checks
+- **NEW FILE:** `src/components/pages/winepedia/LendersTab.tsx` (223 lines) - Lender information and education tab in Winepedia
+- **NEW FILE:** `src/lib/constants/economyConstants.ts` (158 lines) - Economy phase transitions, lender parameters, credit rating configuration
+- **NEW FILE:** `src/lib/database/core/lendersDB.ts` (126 lines) - Database operations for lenders (company-scoped)
+- **NEW FILE:** `src/lib/database/core/loansDB.ts` (171 lines) - Database operations for loans (company-scoped)
+
+### Database & Infrastructure
+- `migrations/sync_vercel_schema.sql` - DB: lenders, loans, credit_rating, economy_phase (66 additions, 1 deletion)
+
+### UI & Navigation Enhancements
+- `src/components/finance/FinanceView.tsx` - Added Loans tab integration (9 additions)
+- `src/components/layout/Header.tsx` - Added economy phase indicator with color-coded badges (20 additions, 1 deletion)
+- `src/components/finance/IncomeBalanceView.tsx` - Enhanced financial reporting (110 additions, 2 deletions)
+- `src/components/finance/index.ts` - Updated barrel exports for new LoansView component
+
+### System Features
+- 5-phase economy system (Crash → Recession → Recovery → Expansion → Boom) with semi-random transitions
+- 3 lender types (Bank, Investment Fund, Private Lender) with different characteristics and rates
+- Credit rating system (0-1) affecting loan availability and interest rates
+- Seasonal loan payments with automatic processing and default consequences
+- Interest rate calculation with economy phase, lender type, and credit rating modifiers
+
+## Version 0.04 - Documentation Updates & AI Guidelines
+**Date:** 2025-10-21 | **Commit:** 70a2add | **Stats:** 111 additions, 150 deletions
+
+### 📚 **Documentation & AI Guidelines Overhaul**
+- `docs/AIDescriptions_coregame.md` - Major documentation update (29 additions, 124 deletions)
+- `docs/AIpromt_newpromt.md` - Enhanced AI agent guidelines (50 additions, 9 deletions)
+- `docs/AIpromt_codecleaning.md` - Updated code cleaning prompts (6 additions, 1 deletion)
+- `docs/PROJECT_INFO.md` - Project information updates (26 additions, 16 deletions)
+
+### Key Documentation Improvements
+- Updated AI development guidelines for current implementation status
+- Enhanced AI agent prompts with comprehensive system overview
+- Streamlined documentation structure and removed outdated information
+- Improved AI agent guidance for development workflow
 
 ## Version 0.0353 - Code Organization & Credit Rating System Improvements
 

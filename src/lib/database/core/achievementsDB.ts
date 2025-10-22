@@ -85,7 +85,7 @@ function achievementUnlockToRow(unlock: Partial<AchievementUnlock> & { achieveme
  */
 export async function unlockAchievement(unlock: Omit<AchievementUnlock, 'id'>): Promise<AchievementUnlock> {
   // Get achievement config to fill in name and description
-  const { getAchievementConfig } = await import('../../constants/achievementConstants');
+  const { getAchievementConfig } = await import('../../services/user/achievementService');
   const config = getAchievementConfig(unlock.achievementId);
 
   const row = achievementUnlockToRow({
