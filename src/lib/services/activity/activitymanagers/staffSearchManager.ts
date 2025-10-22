@@ -4,7 +4,7 @@ import { createActivity } from './activityManager';
 import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from '../../user/staffService';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { addTransaction } from '../../user/financeService';
+import { addTransaction } from '../../finance/financeService';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import {
@@ -77,6 +77,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
       category: WorkCategory.STAFF_SEARCH,
       title: 'Search Staff',
       totalWork,
+      activityDetails: `Cost: €${searchCost.toFixed(2)}`,
       params: {
         searchOptions: options,
         searchCost,
@@ -84,15 +85,6 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
       },
       isCancellable: true
     });
-    
-    if (activityId) {
-      await notificationService.addMessage(
-        `Staff search started! Cost: €${searchCost.toFixed(2)}`,
-        'staffSearchManager.startStaffSearch',
-        'Staff Search Started',
-        NotificationCategory.ACTIVITIES_TASKS
-      );
-    }
     
     return activityId;
   } catch (error) {
@@ -168,21 +160,13 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
       category: WorkCategory.STAFF_HIRING,
       title: `Hiring: ${candidate.name}`,
       totalWork: hiringWork,
+      activityDetails: `First month's wage: €${candidate.wage.toFixed(2)}`,
       params: {
         candidateData: candidate,
         hiringCost: candidate.wage
       },
       isCancellable: true
     });
-    
-    if (activityId) {
-      await notificationService.addMessage(
-        `Started hiring process for ${candidate.name}. First month's wage will be €${candidate.wage.toFixed(2)}`,
-        'staffSearchManager.startHiringProcess',
-        'Hiring Process Started',
-        NotificationCategory.STAFF_MANAGEMENT
-      );
-    }
     
     return activityId;
   } catch (error) {

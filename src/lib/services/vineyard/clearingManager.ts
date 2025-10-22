@@ -5,7 +5,6 @@ import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
-import { getGameState } from '../core/gameState';
 import { calculateClearingWork } from '../activity/workcalculators/clearingWorkCalculator';
 
 export interface ClearingActivityOptions {
@@ -33,7 +32,6 @@ export async function createClearingActivity(
     }
     
     // Check yearly limits for individual clearing tasks
-    const currentYear = getGameState().currentYear ?? 0;
     const vegetationYears = vineyard.overgrowth?.vegetation ?? 0;
     const debrisYears = vineyard.overgrowth?.debris ?? 0;
     
@@ -74,6 +72,7 @@ export async function createClearingActivity(
       category: WorkCategory.CLEARING,
       title,
       totalWork: workResult.totalWork,
+      activityDetails: `Tasks: ${workResult.selectedTasks.join(', ')}`,
       targetId: vineyardId,
       params: {
         tasks: options.tasks,
@@ -83,14 +82,6 @@ export async function createClearingActivity(
       },
       isCancellable: true,
     });
-
-    // Add notification
-    await notificationService.addMessage(
-      `Started clearing activity on ${vineyardName}`,
-      'clearingManager.createClearingActivity',
-      'Clearing Started',
-      NotificationCategory.VINEYARD_OPERATIONS
-    );
 
     return true;
   } catch (error) {

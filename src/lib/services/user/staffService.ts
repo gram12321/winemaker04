@@ -1,6 +1,3 @@
-// Staff Service
-// Business logic for staff management
-
 import { v4 as uuidv4 } from 'uuid';
 import { Staff, StaffSkills, Nationality } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
@@ -11,7 +8,7 @@ import {
   getLastNamesForNationality,
   NATIONALITIES
 } from '@/lib/constants/staffConstants';
-import { calculateWage } from './wageService';
+import { calculateWage } from '../finance/wageService';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 

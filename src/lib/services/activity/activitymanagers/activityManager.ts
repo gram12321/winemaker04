@@ -172,9 +172,14 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
       triggerGameUpdateImmediate();
       
       const assignedCount = activity.params.assignedStaffIds?.length || 0;
-      const assignmentMessage = assignedCount > 0 
+      const baseAssignmentMessage = assignedCount > 0 
         ? `Started ${activity.title} - ${activity.totalWork} work units required (${assignedCount} staff auto-assigned)`
         : `Started ${activity.title} - ${activity.totalWork} work units required`;
+
+      // Optional activity details provided as a typed option
+      const assignmentMessage = options.activityDetails
+        ? `${baseAssignmentMessage} - ${options.activityDetails}`
+        : baseAssignmentMessage;
       
       notificationService.addMessage(assignmentMessage, 'activity.creation', 'Activity Creation', NotificationCategory.ACTIVITIES_TASKS);
       return activity.id;

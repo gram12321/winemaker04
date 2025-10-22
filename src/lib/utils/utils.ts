@@ -25,6 +25,17 @@ export function getRandomFromArray<T>(array: readonly T[]): T {
 }
 
 /**
+ * Generate random value within range
+ * @param min Minimum value (inclusive)
+ * @param max Maximum value (exclusive)
+ * @returns Random number between min and max
+ * @example randomInRange(0.1, 0.9) // Returns random value between 0.1 and 0.9
+ */
+export function randomInRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+/**
  * Clamp value to 0-1 range (used in wine characteristics and balance calculations)
  */
 export function clamp01(value: number): number {
@@ -466,6 +477,104 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
     9: { text: 'text-green-800', bg: 'bg-green-100' },
   };
   return colorMap[level] || { text: 'text-gray-500', bg: 'bg-gray-100' };
+}
+
+// ========================================
+// SECTION 9: CREDIT RATING SYSTEM
+// ========================================
+
+/**
+ * Credit rating categories based on 0-1 scale
+ * Maps credit rating values to standard credit rating categories
+ */
+export function getCreditRatingCategory(creditRating: number): string {
+  if (creditRating >= 0.95) return "AAA";
+  if (creditRating >= 0.90) return "AA+";
+  if (creditRating >= 0.85) return "AA";
+  if (creditRating >= 0.80) return "AA-";
+  if (creditRating >= 0.75) return "A+";
+  if (creditRating >= 0.70) return "A";
+  if (creditRating >= 0.65) return "A-";
+  if (creditRating >= 0.60) return "BBB+";
+  if (creditRating >= 0.55) return "BBB";
+  if (creditRating >= 0.50) return "BBB-";
+  if (creditRating >= 0.45) return "BB+";
+  if (creditRating >= 0.40) return "BB";
+  if (creditRating >= 0.35) return "BB-";
+  if (creditRating >= 0.30) return "B+";
+  if (creditRating >= 0.25) return "B";
+  if (creditRating >= 0.20) return "B-";
+  if (creditRating >= 0.15) return "CCC+";
+  if (creditRating >= 0.10) return "CCC";
+  if (creditRating >= 0.05) return "CC";
+  return "C";
+}
+
+/**
+ * Get credit rating description based on credit rating value (0-1)
+ * Provides detailed description of creditworthiness level
+ */
+export function getCreditRatingDescription(creditRating: number): string {
+  if (creditRating >= 0.95) return "Exceptional creditworthiness - AAA rating";
+  if (creditRating >= 0.90) return "Excellent creditworthiness - AA+ rating";
+  if (creditRating >= 0.85) return "Very good creditworthiness - AA rating";
+  if (creditRating >= 0.80) return "Good creditworthiness - AA- rating";
+  if (creditRating >= 0.75) return "Strong creditworthiness - A+ rating";
+  if (creditRating >= 0.70) return "Solid creditworthiness - A rating";
+  if (creditRating >= 0.65) return "Adequate creditworthiness - A- rating";
+  if (creditRating >= 0.60) return "Acceptable creditworthiness - BBB+ rating";
+  if (creditRating >= 0.55) return "Fair creditworthiness - BBB rating";
+  if (creditRating >= 0.50) return "Average creditworthiness - BBB- rating";
+  if (creditRating >= 0.45) return "Below average creditworthiness - BB+ rating";
+  if (creditRating >= 0.40) return "Poor creditworthiness - BB rating";
+  if (creditRating >= 0.35) return "Very poor creditworthiness - BB- rating";
+  if (creditRating >= 0.30) return "High risk creditworthiness - B+ rating";
+  if (creditRating >= 0.25) return "Very high risk creditworthiness - B rating";
+  if (creditRating >= 0.20) return "Extremely high risk creditworthiness - B- rating";
+  if (creditRating >= 0.15) return "Speculative creditworthiness - CCC+ rating";
+  if (creditRating >= 0.10) return "Highly speculative creditworthiness - CCC rating";
+  if (creditRating >= 0.05) return "Very highly speculative creditworthiness - CC rating";
+  return "Default risk creditworthiness - C rating";
+}
+
+/**
+ * Get economy phase abbreviation for compact display
+ */
+export function getEconomyPhaseAbbreviation(phase: string): string {
+  switch (phase) {
+    case 'Crash': return 'CR';
+    case 'Recession': return 'RE';
+    case 'Recovery': return 'RV';
+    case 'Expansion': return 'EX';
+    case 'Boom': return 'BM';
+    default: return 'RV';
+  }
+}
+
+/**
+ * Get color class for lender type
+ */
+export function getLenderTypeColorClass(type: string): string {
+  switch (type) {
+    case 'Bank': return 'bg-blue-100 text-blue-800';
+    case 'Investment Fund': return 'bg-green-100 text-green-800';
+    case 'Private Lender': return 'bg-purple-100 text-purple-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
+
+/**
+ * Get color class for economy phase
+ */
+export function getEconomyPhaseColorClass(phase: string): string {
+  switch (phase) {
+    case 'Crash': return 'bg-red-100 text-red-800';
+    case 'Recession': return 'bg-orange-100 text-orange-800';
+    case 'Recovery': return 'bg-yellow-100 text-yellow-800';
+    case 'Expansion': return 'bg-green-100 text-green-800';
+    case 'Boom': return 'bg-emerald-100 text-emerald-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
 }
 
 // ========================================

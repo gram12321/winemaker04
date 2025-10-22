@@ -25,6 +25,60 @@
 
 ---
 
+## Version 0.4.16 - Comprehensive Credit Rating System (2024-12-19)
+
+### 🏦 **NEW: Advanced Credit Rating Calculation**
+- **NEW FILE:** creditRatingService.ts (400+ lines) - Comprehensive credit rating calculation with asset health, payment history, and company stability factors
+- **MODIFIED:** loanService.ts - Updated to use comprehensive credit rating system, removed manual credit rating updates
+- **MODIFIED:** economyConstants.ts - Added CREDIT_RATING_PENALTIES with improved penalty system (first missed payment -10%, additional -5%, default -30%)
+- **MODIFIED:** LoansView.tsx - Added comprehensive credit rating breakdown display with asset health and company stability metrics
+- **FEATURES:** Debt-to-asset ratio, asset coverage, liquidity ratio, company age factor, profit consistency, expense efficiency
+- **IMPROVEMENTS:** More realistic credit rating based on financial health rather than just payment history
+- **FUTURE:** Added notes for outstanding shares & dividends system
+
+## Version 0.0353 - Code Organization & Credit Rating System Improvements
+
+### Code Organization & Credit Rating System Improvements
+- **MODIFIED:** utils.ts - Added randomInRange function, credit rating categories (AAA, AA+, BBB, etc), economy phase colors, lender type colors
+- **MODIFIED:** lenderService.ts - Moved randomInRange to utils, updated imports
+- **MODIFIED:** gameState.ts - Use CREDIT_RATING.DEFAULT_RATING constant instead of hardcoded 50
+- **MODIFIED:** economyConstants.ts - Updated credit rating to 0-1 scale (0.5 = BBB- rating)
+- **MODIFIED:** loanService.ts - Updated credit rating references to use 0-1 scale
+- **MODIFIED:** LoansView.tsx - Use centralized color utilities, formatNumber() for consistent formatting
+- **MODIFIED:** Header.tsx - Use centralized economy phase color utilities
+- **DATABASE:** Updated Vercel migration files with 0-1 credit rating scale and economy/loan system tables
+- **FEATURES:** Credit rating now uses 0-1 scale with standard credit rating categories (AAA, AA+, BBB, etc)
+- **FEATURES:** Centralized color utilities for consistent UI theming across economy phase, credit rating, and lender type badges
+- **FEATURES:** Improved number formatting with formatNumber() utility throughout UI components
+
+## Version 0.0352 - Economy Phase & Loan System Implementation
+
+### Economy Phase & Loan System Implementation
+- **NEW FILE:** economyConstants.ts (197 lines) - Economy phase transitions, lender parameters, credit rating config
+- **NEW FILE:** lenderService.ts (142 lines) - Lender generation following customer pattern, 15-25 lenders per company
+- **NEW FILE:** loanService.ts (287 lines) - Loan application, payment processing, default handling, interest calculations
+- **NEW FILE:** economyService.ts (67 lines) - Semi-random economy phase transitions, seasonal processing
+- **NEW FILE:** lendersDB.ts (114 lines) - Database operations for lenders (company-scoped)
+- **NEW FILE:** loansDB.ts (155 lines) - Database operations for loans (company-scoped)
+- **NEW FILE:** LoansView.tsx (245 lines) - Loan management UI with active loans table and available lenders
+- **NEW FILE:** LoanApplicationModal.tsx (285 lines) - Loan application form with interest rate breakdown
+- **MODIFIED:** types.ts - Added EconomyPhase, Lender, Loan interfaces, updated GameState with creditRating and economyPhase
+- **MODIFIED:** gameState.ts - Added creditRating (50) and economyPhase ('Recovery') to initial state
+- **MODIFIED:** gameTick.ts - Added economy phase transitions and seasonal loan payment processing
+- **MODIFIED:** companyService.ts - Added lender initialization for new companies
+- **MODIFIED:** financeConstants.ts - Added loan transaction categories (LOAN_RECEIVED, LOAN_PAYMENT, LOAN_DEFAULT_PENALTY)
+- **MODIFIED:** namesConstants.ts - Added LENDER_NAMES with banks, investment funds, private lender names
+- **MODIFIED:** FinanceView.tsx - Added Loans tab with LoansView component
+- **MODIFIED:** Header.tsx - Added economy phase indicator with color-coded badges
+- **DATABASE:** Created lenders table (company-scoped) with type, risk tolerance, flexibility, loan parameters
+- **DATABASE:** Created loans table (company-scoped) with payment tracking, interest calculations, status
+- **DATABASE:** Added credit_rating (0-100) and economy_phase columns to companies table
+- **FEATURES:** 5-phase economy system (Crash → Recession → Recovery → Expansion → Boom) with semi-random transitions
+- **FEATURES:** 3 lender types (Bank, Investment Fund, Private Lender) with different characteristics and rates
+- **FEATURES:** Credit rating system (0-100) affecting loan availability and interest rates
+- **FEATURES:** Seasonal loan payments with automatic processing and default consequences
+- **FEATURES:** Interest rate calculation with economy phase, lender type, and credit rating modifiers
+
 ## Version 0.0351 - Service Reorganization & Optimization
 **Date:** 2025-10-21 | **Commit:** bbffb2c | **Stats:** 524 additions, 541 deletions
 - **NEW FILE:** `src/lib/services/activity/activitymanagers/staffSearchManager.ts` (267 lines) - Moved from user services

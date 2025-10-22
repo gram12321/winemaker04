@@ -109,11 +109,22 @@ function adminQuickLandBuyBuildOptions(
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
 
 /**
- * Add gold/money to the active company
+ * Set gold/money for the active company
  */
-export async function adminAddGoldToCompany(amount: number): Promise<void> {
-  const parsedAmount = amount || 10000;
-  await addTransaction(parsedAmount, `Admin: Added ${formatCurrency(parsedAmount)}`, 'admin_cheat');
+export async function adminSetGoldToCompany(amount: number): Promise<void> {
+  const targetAmount = amount || 10000;
+  
+  // Get current money from game state
+  const gameState = getGameState();
+  const currentMoney = gameState.money || 0;
+  
+  // Calculate the difference needed to reach target amount
+  const difference = targetAmount - currentMoney;
+  
+  // Only add transaction if there's a difference
+  if (difference !== 0) {
+    await addTransaction(difference, `Admin: Set to ${formatCurrency(targetAmount)} (was ${formatCurrency(currentMoney)})`, 'admin_cheat');
+  }
 }
 
 /**

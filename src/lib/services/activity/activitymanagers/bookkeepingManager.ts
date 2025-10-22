@@ -26,10 +26,11 @@ export async function checkAndTriggerBookkeeping(): Promise<void> {
       await handleSpilloverPenalties(spilloverData);
     }
     
-    const activityId = await createActivity({
+    await createActivity({
       category: WorkCategory.ADMINISTRATION,
       title: `Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear}`,
       totalWork,
+      activityDetails: `Processing ${seasonData.transactionCount} transactions (${totalWork} work units).${spilloverData.incompleteTaskCount > 0 ? ' Spillover penalties applied.' : ''}`,
       params: {
         prevSeason: seasonData.prevSeason,
         prevYear: seasonData.prevYear,
@@ -40,9 +41,6 @@ export async function checkAndTriggerBookkeeping(): Promise<void> {
       isCancellable: true
     });
     
-    if (activityId) {
-      await notifyBookkeepingCreated(seasonData, totalWork, spilloverData.incompleteTaskCount > 0);
-    }
     
   } catch (error) {
     console.error('Error in checkAndTriggerBookkeeping:', error);
@@ -91,18 +89,6 @@ async function applyPrestigePenalty(penalty: number, taskCount: number): Promise
   });
 }
 
-// Notify about bookkeeping task creation
-async function notifyBookkeepingCreated(
-  seasonData: { prevSeason: string; prevYear: number; transactionCount: number },
-  totalWork: number,
-  hasSpillover: boolean
-): Promise<void> {
-  const baseMessage = `New bookkeeping task created for ${seasonData.prevSeason} ${seasonData.prevYear}`;
-  const spilloverText = hasSpillover ? ' with spillover penalties' : '';
-  const fullMessage = `${baseMessage}${spilloverText}. Processing ${seasonData.transactionCount} transactions (${totalWork} work units).`;
-  
-  await notificationService.addMessage(fullMessage, 'bookkeepingManager.createBookkeepingNotification', 'Bookkeeping Started', NotificationCategory.ADMINISTRATION);
-}
 
 // Clean up incomplete bookkeeping tasks
 async function cleanupIncompleteBookkeeping(): Promise<void> {

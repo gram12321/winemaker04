@@ -9,7 +9,7 @@ import { NotificationCategory } from '@/lib/types/types';
  * Helper function to get previous season and year
  */
 function getPreviousSeasonAndYear(currentSeason: Season, currentYear: number): { season: Season, year: number } {
-  const seasons: Season[] = ['Winter', 'Spring', 'Summer', 'Fall'];
+  const seasons: Season[] = ['Spring', 'Summer', 'Fall', 'Winter'];
   const currentIndex = seasons.indexOf(currentSeason);
   const prevIndex = (currentIndex - 1 + 4) % 4;
   const prevSeason = seasons[prevIndex];

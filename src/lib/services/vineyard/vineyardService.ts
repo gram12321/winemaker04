@@ -5,12 +5,10 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
 import { calculateLandValue } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
-import { getRandomFromArray } from '../../utils';
+import { getRandomFromArray, formatCurrency } from '../../utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY } from '../../constants';
-import { addTransaction } from '../user/financeService';
+import { addTransaction, getGameState } from '../index';
 import { VineyardPurchaseOption } from './landSearchService';
-import { getGameState } from '../core/gameState';
-import { formatCurrency } from '../../utils/utils';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 

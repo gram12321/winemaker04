@@ -42,6 +42,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
       category: WorkCategory.LAND_SEARCH,
       title,
       totalWork,
+      activityDetails: `Cost: €${searchCost.toFixed(2)}`,
       params: {
         searchOptions: options,
         searchCost,
@@ -49,15 +50,6 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
       },
       isCancellable: true
     });
-    
-    if (activityId) {
-      await notificationService.addMessage(
-        `Land search started! Cost: €${searchCost.toFixed(2)}`,
-        'landSearchManager.startLandSearch',
-        'Land Search Started',
-        NotificationCategory.ACTIVITIES_TASKS
-      );
-    }
     
     return activityId;
   } catch (error) {

@@ -1,11 +1,11 @@
 // Enhanced game state service that integrates with the new company system
 import { GameState } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
+import { CREDIT_RATING } from '../../constants/economyConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
 import { companyService } from '../user/companyService';
 import { Company } from '@/lib/database';
-import { highscoreService } from '../user/highscoreService';
-import { calculateFinancialData, initializeStartingCapital } from '../user/financeService';
+import { initializeStartingCapital } from '../finance/financeService';
 import { initializeStaffSystem, createStartingStaff } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
@@ -19,7 +19,9 @@ let gameState: Partial<GameState> = {
   companyName: '',
   foundedYear: GAME_INITIALIZATION.STARTING_YEAR,
   money: 0,
-  prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
+  prestige: GAME_INITIALIZATION.STARTING_PRESTIGE,
+  creditRating: CREDIT_RATING.DEFAULT_RATING,
+  economyPhase: 'Recovery'
 };
 
 // Persistence key
@@ -72,10 +74,7 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
         // Update our local company object
         currentCompany = { ...currentCompany, ...companyUpdates };
         
-        // Submit highscores if significant changes
-        if (updates.money !== undefined || updates.prestige !== undefined) {
-          await submitHighscores();
-        }
+
       } catch (error) {
         console.error('Failed to update company in database:', error);
         // Continue with local state even if database update fails
@@ -239,8 +238,6 @@ export async function getCurrentPrestige(): Promise<number> {
   }
 }
 
-// Update company value prestige event
-// removed local duplicate; centralised in prestigeService.updateCompanyValuePrestige
 
 // Initialize prestige system
 export async function initializePrestigeSystem(): Promise<void> {
@@ -255,41 +252,6 @@ export async function initializePrestigeSystem(): Promise<void> {
   }
 }
 
-// Submit highscores for current company
-async function submitHighscores(): Promise<void> {
-  if (!currentCompany || !gameState.money) return;
-  
-  try {
-    // Calculate company value using finance service
-    const financialData = await calculateFinancialData('year');
-    const companyValue = financialData.totalAssets;
-    
-    // Calculate per-week metrics
-    const weeksElapsed = Math.max(1, (gameState.currentYear! - currentCompany.foundedYear) * 52 + gameState.week!);
-    const startingValue = 60000; // Estimated starting company value
-    
-    const companyValuePerWeek = Math.max(0, companyValue - startingValue) / weeksElapsed;
-    
-    await highscoreService.submitAllCompanyScores(
-      currentCompany.id,
-      currentCompany.name,
-      gameState.week!,
-      gameState.season!,
-      gameState.currentYear!,
-      {
-        companyValue,
-        companyValuePerWeek
-      }
-    );
-  } catch (error) {
-    console.error('Failed to submit highscores:', error);
-  }
-}
-
-// Force highscore submission (for manual triggers)
-export const forceSubmitHighscores = async (): Promise<void> => {
-  await submitHighscores();
-};
 
 // Clear prestige cache (for admin functions)
 export const clearPrestigeCache = (): void => {

@@ -9,11 +9,17 @@ export * from './user/companyService';
 export * from './user/highscoreService';
 export * from './user/userSettingsService';
 export * from './user/staffService';
-export * from './user/wageService';
 export * from './user/teamService';
 export * from './user/achievementService';
-export * from './user/financeService';
 export * from './user/wineLogService';
+
+// Finance services
+export * from './finance/creditRatingService';
+export * from './finance/economyService';
+export * from './finance/financeService';
+export * from './finance/lenderService';
+export * from './finance/loanService';
+export * from './finance/wageService';
 
 // Admin services
 export * from './admin/adminService';

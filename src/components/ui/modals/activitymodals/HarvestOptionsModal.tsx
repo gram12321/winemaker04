@@ -65,6 +65,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       category: WorkCategory.HARVESTING,
       title: `Harvesting ${vineyard.name}`,
       totalWork: harvestCalculation.workEstimate.totalWork,
+      activityDetails: `Expected yield: ${harvestCalculation.expectedYield.toFixed(0)} kg`,
       targetId: vineyard.id,
       params: {
         grape: vineyard.grape,

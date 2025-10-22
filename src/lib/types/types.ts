@@ -266,7 +266,7 @@ export interface WineOrder {
 
 // Discriminated union payloads for prestige events
 export type PrestigeEventType =
-  | 'company_value'
+  | 'company_finance'
   | 'sale'
   | 'contract'
   | 'penalty'
@@ -281,10 +281,18 @@ export type PrestigeEventType =
 
 export interface PrestigePayloadBase { }
 
-export interface PrestigePayloadCompanyValue extends PrestigePayloadBase {
-  companyMoney: number;
-  maxLandValue: number;
-  prestigeBase01: number;
+export interface PrestigePayloadCompanyFinance extends PrestigePayloadBase {
+  // For company value events
+  companyNetWorth?: number;
+  maxLandValue?: number;
+  prestigeBase01?: number;
+  
+  // For loan default events
+  reason?: string;
+  lenderName?: string;
+  lenderType?: string;
+  loanAmount?: number;
+  missedPaymentAmount?: number;
 }
 
 export interface PrestigePayloadVineyardCommon extends PrestigePayloadBase {
@@ -319,7 +327,7 @@ export interface PrestigePayloadVineyardAchievement extends PrestigePayloadViney
 }
 
 export type PrestigeEventPayload =
-  | { type: 'company_value'; payload: PrestigePayloadCompanyValue }
+  | { type: 'company_finance'; payload: PrestigePayloadCompanyFinance }
   | { type: 'sale'; payload: { customerName: string; wineName: string; saleValue: number } }
   | { type: 'contract'; payload: Record<string, unknown> }
   | { type: 'penalty'; payload: Record<string, unknown> }
@@ -377,6 +385,68 @@ export interface Transaction {
   money: number; // Money amount after transaction
 }
 
+// ===== ECONOMY TYPES =====
+export type EconomyPhase = 'Crash' | 'Recession' | 'Recovery' | 'Expansion' | 'Boom';
+
+export type LenderType = 'Bank' | 'Investment Fund' | 'Private Lender';
+
+export interface Lender {
+  id: string;
+  name: string;
+  type: LenderType;
+  
+  // Financial characteristics (0-1 scale)
+  riskTolerance: number; // Higher = lends to lower credit ratings
+  flexibility: number; // Higher = better terms, longer durations
+  marketPresence: number; // Affects availability/visibility
+  
+  // Calculated multipliers
+  baseInterestRate: number; // Base rate (e.g., 0.05 = 5%)
+  
+  // Loan parameters
+  minLoanAmount: number;
+  maxLoanAmount: number;
+  minDurationSeasons: number;
+  maxDurationSeasons: number;
+  
+  // Origination fee configuration
+  originationFee: {
+    basePercent: number; // Base fee as percentage of loan amount (e.g., 0.015 = 1.5%)
+    minFee: number; // Minimum fee amount
+    maxFee: number; // Maximum fee amount
+    creditRatingModifier: number; // How much credit rating affects fees (0.7 = 30% discount for excellent credit)
+    durationModifier: number; // How much duration affects fees (1.2 = 20% premium for long-term)
+  };
+  
+  // Relationship tracking
+  blacklisted?: boolean; // If player defaulted on this lender
+}
+
+export interface Loan {
+  id: string;
+  lenderId: string;
+  lenderName: string;
+  lenderType: LenderType;
+  
+  principalAmount: number;
+  baseInterestRate: number; // Original base rate
+  economyPhaseAtCreation: EconomyPhase; // For display/reference
+  effectiveInterestRate: number; // Actual rate after all modifiers
+  
+  originationFee: number; // One-time fee paid when loan is taken
+  
+  remainingBalance: number;
+  seasonalPayment: number;
+  seasonsRemaining: number;
+  totalSeasons: number;
+  
+  startDate: GameDate;
+  nextPaymentDue: GameDate;
+  
+  missedPayments: number;
+  status: 'active' | 'paid_off' | 'defaulted';
+}
+
 // ===== ACTIVITY TYPES =====
 
 export interface Activity {
@@ -402,6 +472,8 @@ export interface ActivityCreationOptions {
   targetId?: string;
   params?: Record<string, any>;
   isCancellable?: boolean;
+  // Optional details appended to the generic start notification
+  activityDetails?: string;
 }
 
 export interface ActivityProgress {
@@ -647,6 +719,8 @@ export interface GameState {
   foundedYear: number; // Year the company was founded
   money: number;
   prestige: number; // Company prestige for order generation scaling
+  creditRating: number; // NEW: 0-100 scale, affects loan availability
+  economyPhase: EconomyPhase; // NEW: Current economy phase
   activities?: Activity[]; // Active activities
   staff?: Staff[]; // Active staff members
   teams?: StaffTeam[]; // Staff teams

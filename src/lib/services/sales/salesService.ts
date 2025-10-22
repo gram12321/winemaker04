@@ -4,7 +4,7 @@ import { loadWineOrders, updateWineOrderStatus, saveWineOrder, getOrderById } fr
 import { saveWineBatch, getWineBatchById } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { addTransaction } from '../user/financeService';
+import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from '../sales/relationshipService';
 import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige, addFeaturePrestigeEvent } from '../prestige/prestigeService';
 import { getCurrentPrestige } from '../core/gameState';

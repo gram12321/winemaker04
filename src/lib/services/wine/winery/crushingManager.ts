@@ -52,6 +52,7 @@ export async function startCrushingActivity(batch: WineBatch, options: CrushingO
       title: `Crushing ${batch.grape} from ${batch.vineyardName}`,
       targetId: batch.vineyardId,
       totalWork,
+      activityDetails: `Method: ${options.method}`,
       params: {
         batchId: batch.id,
         vineyardName: batch.vineyardName,

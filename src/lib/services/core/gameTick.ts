@@ -1,6 +1,5 @@
 // Game tick service - handles time progression and automatic game events
 import { getGameState, updateGameState } from './gameState';
-import { GAME_INITIALIZATION } from '../../constants/constants';
 import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
 import { notificationService } from './notificationService';
 import { NotificationCategory } from '../../../lib/types/types';
@@ -8,7 +7,7 @@ import { progressActivities } from '../activity/activitymanagers/activityManager
 import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation } from '../vineyard/vineyardManager';
 import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
 import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
-import { processSeasonalWages } from '../user/wageService';
+import { processSeasonalWages } from '../finance/wageService';
 import { getAllStaff } from '../user/staffService';
 import { processWeeklyFeatureRisks } from '../wine/features/featureRiskService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
@@ -16,6 +15,12 @@ import { updateCellarCollectionPrestige } from '../prestige/prestigeService';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
 import { checkAllAchievements } from '../user/achievementService';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
+import { processEconomyPhaseTransition } from '../finance/economyService';
+import { processSeasonalLoanPayments } from '../finance/loanService';
+import { highscoreService } from '../user/highscoreService';
+import { getCurrentCompany } from './gameState';
+import { calculateNetWorth } from '../finance/financeService';
+import { GAME_INITIALIZATION } from '../../constants/constants';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -100,7 +105,10 @@ const executeGameTick = async (): Promise<void> => {
   
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);
-  
+
+  // Submit highscores for company progress assessment (weekly)
+  await submitWeeklyHighscores();
+
   // Trigger final UI refresh after all weekly effects are processed
   // This ensures components reload data that was updated during processWeeklyEffects()
   // (e.g., wine batch feature risks, fermentation progress, etc.)
@@ -112,7 +120,11 @@ const executeGameTick = async (): Promise<void> => {
  */
 const onSeasonChange = async (_previousSeason: string, _newSeason: string): Promise<void> => {
   // Season change notification is handled in the main processGameTick function
-  // TODO: Add seasonal effects when vineyard system is ready
+  
+  // Process economy phase transition
+  await processEconomyPhaseTransition();
+  
+  // TODO: Add other seasonal effects when vineyard system is ready
 };
 
 /**
@@ -240,6 +252,17 @@ const processWeeklyEffects = async (): Promise<void> => {
         }
       })()
     );
+    
+    // Process seasonal loan payments (at the start of each season - week 1)
+    weeklyTasks.push(
+      (async () => {
+        try {
+          await processSeasonalLoanPayments();
+        } catch (error) {
+          console.warn('Error during seasonal loan payments:', error);
+        }
+      })()
+    );
   }
   
   // OPTIMIZATION: Wait for all tasks to complete in parallel
@@ -268,4 +291,32 @@ async function updateBottledWineAging(): Promise<void> {
   // OPTIMIZATION: Single bulk update instead of N individual saves
   await bulkUpdateWineBatches(updates);
 };
+
+/**
+ * Submit weekly highscores for company progress assessment
+ * This runs at the end of each game tick to assess company performance
+ */
+async function submitWeeklyHighscores(): Promise<void> {
+  try {
+    const currentCompany = getCurrentCompany();
+    if (!currentCompany) return;
+
+    // Calculate company value using centralized net worth calculation
+    const companyValue = await calculateNetWorth();
+
+    // Use the highscoreService method that handles business logic
+    await highscoreService.submitCompanyHighscores(
+      currentCompany.id,
+      currentCompany.name,
+      currentCompany.currentWeek || 1,
+      currentCompany.currentSeason || 'Spring',
+      currentCompany.currentYear || 2024,
+      currentCompany.foundedYear,
+      companyValue,
+      GAME_INITIALIZATION.STARTING_MONEY
+    );
+  } catch (error) {
+    console.error('Failed to submit weekly highscores:', error);
+  }
+}
 

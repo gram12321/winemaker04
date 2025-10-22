@@ -6,7 +6,7 @@ import { getGameState } from '@/lib/services';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import { VineyardPurchaseOption } from '@/lib/services';
 import {
-  adminAddGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminQuickLandBuyGenerateOptions, adminQuickLandBuyPurchase, adminClearAllAchievements, adminFullDatabaseReset
+  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminQuickLandBuyGenerateOptions, adminQuickLandBuyPurchase, adminClearAllAchievements, adminFullDatabaseReset
 } from '@/lib/services';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
@@ -21,9 +21,9 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const [quickLandOptions, setQuickLandOptions] = useState<VineyardPurchaseOption[]>([]);
 
   // Cheat functions (for development/testing)
-  const handleAddGold = () => withLoading(async () => {
+  const handleSetGold = () => withLoading(async () => {
     const amount = parseFloat(goldAmount) || 10000;
-    await adminAddGoldToCompany(amount);
+    await adminSetGoldToCompany(amount);
   });
 
   const handleAddPrestige = () => withLoading(async () => {
@@ -280,10 +280,10 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SimpleCard
                 title="Financial Cheats"
-                description="Add money and resources to the active company"
+                description="Set money and resources for the active company"
               >
                   <div className="space-y-2">
-                    <Label htmlFor="goldAmount">Gold Amount</Label>
+                    <Label htmlFor="goldAmount">Gold Amount to Set</Label>
                     <Input
                       id="goldAmount"
                       type="number"
@@ -292,11 +292,11 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                       placeholder="10000"
                     />
                     <Button
-                      onClick={handleAddGold}
+                      onClick={handleSetGold}
                       disabled={isLoading}
                       className="w-full"
                     >
-                      Add Gold to Active Company
+                      Set Gold for Active Company
                     </Button>
                   </div>
 

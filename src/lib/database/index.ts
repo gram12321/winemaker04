@@ -9,6 +9,8 @@ export * from './core/usersDB';
 export * from './core/transactionsDB';
 export * from './core/wineLogDB';
 export * from './core/userSettingsDB';
+export * from './core/lendersDB';
+export * from './core/loansDB';
 export * from './customers/customerDB';
 export * from './customers/relationshipBoostsDB';
 export * from './customers/prestigeEventsDB';

@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui';
-import { formatCurrency } from '@/lib/utils/utils';
+import { formatCurrency } from '@/lib/utils';
 import { getAllStaff, calculateTotalWeeklyWages, calculateTotalSeasonalWages, calculateTotalYearlyWages } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
 import { Users } from 'lucide-react';

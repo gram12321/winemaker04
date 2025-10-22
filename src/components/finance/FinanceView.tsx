@@ -4,6 +4,7 @@ import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { UpgradesPlaceholder } from './UpgradesPlaceholder';
 import { StaffWageSummary } from './StaffWageSummary';
+import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES } from '@/lib/constants';
 
 export default function FinanceView() {
@@ -47,6 +48,11 @@ export default function FinanceView() {
             Cash Flow
           </TabsTrigger>
           <TabsTrigger 
+            value="loans" 
+            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'loans' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
+            Loans
+          </TabsTrigger>
+          <TabsTrigger 
             value="upgrades" 
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'upgrades' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Research and Upgrades
@@ -83,6 +89,9 @@ export default function FinanceView() {
         </TabsContent>
         <TabsContent value="cashflow">
           <CashFlowView />
+        </TabsContent>
+        <TabsContent value="loans">
+          <LoansView />
         </TabsContent>
         <TabsContent value="upgrades">
           <UpgradesPlaceholder />

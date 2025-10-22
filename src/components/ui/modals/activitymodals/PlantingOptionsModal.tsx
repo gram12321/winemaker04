@@ -91,6 +91,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
       category: WorkCategory.PLANTING,
       title: `Planting ${vineyard.name}`,
       totalWork: workCalculation.workEstimate.totalWork,
+      activityDetails: `Grape: ${grape}, Density: ${density} vines/ha`,
       targetId: vineyard.id,
       params: {
         grape,

@@ -253,3 +253,28 @@ export const NAMES = {
     }
   }
 } as const;
+
+// Lender names for loan system
+export const LENDER_NAMES = {
+  banks: [
+    'First National', 'Capital Trust', 'Premier Banking', 'Heritage Financial',
+    'Vineyard Bank', 'Agricultural Savings', 'Rural Development Bank',
+    'Community First', 'Growers Credit', 'Estate Finance', 'Valley Bank'
+  ],
+  investmentFunds: [
+    'Growth Capital Partners', 'Vineyard Ventures', 'Agricultural Investment Fund',
+    'Premium Asset Management', 'Strategic Growth Fund', 'Heritage Capital',
+    'Land & Asset Partners', 'Rural Investment Group', 'Estate Development Fund',
+    'Harvest Capital', 'Terravest Partners', 'Vintage Growth Fund'
+  ],
+  privateLenderPrefixes: [
+    'Anderson', 'Bennett', 'Carter', 'Davis', 'Edwards', 'Fischer',
+    'Garcia', 'Hughes', 'Jenkins', 'Klein', 'Larson', 'Martinez',
+    'Nelson', 'O\'Brien', 'Parker', 'Quinn', 'Roberts', 'Sullivan',
+    'Thompson', 'Wagner', 'Williams', 'Young'
+  ],
+  privateLenderSuffixes: [
+    'Lending', 'Capital', 'Finance', 'Loans', 'Credit Services',
+    'Private Funding', 'Financial Solutions'
+  ]
+} as const;

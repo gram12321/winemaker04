@@ -86,6 +86,8 @@ CREATE TABLE companies (
     current_year integer DEFAULT 2024,
     money numeric DEFAULT 0,
     prestige numeric DEFAULT 0,
+    credit_rating decimal(3,2) DEFAULT 0.5 CHECK (credit_rating >= 0 AND credit_rating <= 1),
+    economy_phase text DEFAULT 'Recovery' CHECK (economy_phase IN ('Crash', 'Recession', 'Recovery', 'Expansion', 'Boom')),
     last_played timestamptz DEFAULT now(),
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
@@ -260,7 +262,7 @@ CREATE TABLE company_customers (
 -- Prestige events table
 CREATE TABLE prestige_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    type text NOT NULL CHECK (type IN ('sale', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region', 'company_value', 'wine_feature', 'cellar_collection', 'achievement')),
+    type text NOT NULL CHECK (type IN ('sale', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region', 'company_finance', 'wine_feature', 'cellar_collection', 'achievement', 'penalty')),
     amount_base numeric NOT NULL,
     decay_rate numeric DEFAULT 0,
     source_id text,
@@ -437,6 +439,60 @@ CREATE TABLE notification_filters (
     block_from_history boolean DEFAULT false
 );
 
+-- Lenders table (company-scoped)
+CREATE TABLE lenders (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name text NOT NULL,
+    type text NOT NULL CHECK (type IN ('Bank', 'Investment Fund', 'Private Lender')),
+    risk_tolerance decimal(3,2) NOT NULL,
+    flexibility decimal(3,2) NOT NULL,
+    market_presence decimal(3,2) NOT NULL,
+    base_interest_rate decimal(5,4) NOT NULL,
+    min_loan_amount integer NOT NULL,
+    max_loan_amount integer NOT NULL,
+    min_duration_seasons integer NOT NULL,
+    max_duration_seasons integer NOT NULL,
+    origination_fee jsonb NOT NULL DEFAULT '{
+        "basePercent": 0.02,
+        "minFee": 1000,
+        "maxFee": 15000,
+        "creditRatingModifier": 0.8,
+        "durationModifier": 1.1
+    }'::jsonb,
+    blacklisted boolean DEFAULT FALSE,
+    created_at timestamptz DEFAULT NOW(),
+    updated_at timestamptz DEFAULT NOW()
+);
+
+-- Loans table (company-scoped)
+CREATE TABLE loans (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    lender_id uuid NOT NULL REFERENCES lenders(id) ON DELETE RESTRICT,
+    lender_name text NOT NULL,
+    lender_type text NOT NULL,
+    principal_amount integer NOT NULL,
+    base_interest_rate decimal(5,4) NOT NULL,
+    economy_phase_at_creation text NOT NULL,
+    effective_interest_rate decimal(5,4) NOT NULL,
+    origination_fee integer NOT NULL DEFAULT 0,
+    remaining_balance decimal(10,2) NOT NULL,
+    seasonal_payment decimal(10,2) NOT NULL,
+    seasons_remaining integer NOT NULL,
+    total_seasons integer NOT NULL,
+    start_date_week integer NOT NULL,
+    start_date_season text NOT NULL,
+    start_date_year integer NOT NULL,
+    next_payment_due_week integer NOT NULL,
+    next_payment_due_season text NOT NULL,
+    next_payment_due_year integer NOT NULL,
+    missed_payments integer DEFAULT 0,
+    status text NOT NULL CHECK (status IN ('active', 'paid_off', 'defaulted')),
+    created_at timestamptz DEFAULT NOW(),
+    updated_at timestamptz DEFAULT NOW()
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY SETUP (matches dev database exactly)
 -- ============================================================
@@ -554,6 +610,15 @@ CREATE INDEX IF NOT EXISTS idx_notifications_timestamp ON notifications(timestam
 -- Transactions indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_company_id ON transactions(company_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
+
+-- Lenders indexes
+CREATE INDEX IF NOT EXISTS idx_lenders_company ON lenders(company_id);
+CREATE INDEX IF NOT EXISTS idx_lenders_type ON lenders(company_id, type);
+
+-- Loans indexes
+CREATE INDEX IF NOT EXISTS idx_loans_company ON loans(company_id);
+CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(company_id, status);
+CREATE INDEX IF NOT EXISTS idx_loans_lender ON loans(lender_id);
 
 -- ============================================================
 -- SCHEMA SYNC COMPLETE

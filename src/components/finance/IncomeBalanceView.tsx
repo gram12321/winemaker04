@@ -1,8 +1,11 @@
-import { formatCurrency, getColorClass } from '@/lib/utils/utils';
-import { calculateFinancialData } from '@/lib/services';
+import { formatCurrency, getColorClass } from '@/lib/utils';
+import { calculateFinancialData, calculateNetWorth } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS } from '@/lib/constants';
+import { loadActiveLoans } from '@/lib/database/core/loansDB';
+import { useState, useEffect } from 'react';
+import { Loan } from '@/lib/types/types';
 
 interface IncomeBalanceViewProps {
   period: 'weekly' | 'season' | 'year';
@@ -30,6 +33,51 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
     () => calculateFinancialData(period),
     DEFAULT_FINANCIAL_DATA
   );
+  
+  const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
+  const [loadingLoans, setLoadingLoans] = useState(true);
+
+  // Calculate net worth using centralized function
+  const netWorth = useGameStateWithData(
+    () => calculateNetWorth(),
+    0
+  );
+
+  useEffect(() => {
+    const loadLoans = async () => {
+      try {
+        setLoadingLoans(true);
+        const loans = await loadActiveLoans();
+        setActiveLoans(loans);
+      } catch (error) {
+        console.error('Error loading loans:', error);
+        setActiveLoans([]);
+      } finally {
+        setLoadingLoans(false);
+      }
+    };
+
+    loadLoans();
+  }, []);
+
+  // Calculate loan totals
+  const totalOutstandingLoans = activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
+  
+  // Calculate period-appropriate payment amounts
+  const getPeriodPaymentAmount = (seasonalPayment: number) => {
+    switch (period) {
+      case 'weekly':
+        return seasonalPayment / 13; // 13 weeks per season
+      case 'season':
+        return seasonalPayment;
+      case 'year':
+        return seasonalPayment * 4; // 4 seasons per year
+      default:
+        return seasonalPayment;
+    }
+  };
+  
+  const totalPeriodPayments = activeLoans.reduce((sum, loan) => sum + getPeriodPaymentAmount(loan.seasonalPayment), 0);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -54,6 +102,25 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
               ))
             ) : (
                 <DataRow label={`Total ${period} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
+            )}
+            
+            {/* Add loan payments if they exist */}
+            {activeLoans.length > 0 && (
+              <>
+                {activeLoans.map((loan) => (
+                  <DataRow 
+                    key={`loan-payment-${loan.id}`} 
+                    label={`Loan Payment: ${loan.lenderName}`} 
+                    value={getPeriodPaymentAmount(loan.seasonalPayment)} 
+                    valueClass="text-red-600" 
+                  />
+                ))}
+                <DataRow 
+                  label={`Total ${period.charAt(0).toUpperCase() + period.slice(1)} Loan Payments`} 
+                  value={totalPeriodPayments} 
+                  valueClass="text-red-600" 
+                />
+              </>
             )}
           </FinancialSection>
 
@@ -93,6 +160,47 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
             <DataRow label="Grape Inventory" value={financialData.grapesValue} />
              <hr className="my-1 border-gray-300" />
              <DataRow label="Total Current Assets" value={financialData.currentAssets} />
+          </FinancialSection>
+
+          <FinancialSection title="LIABILITIES (LOANS)">
+            {loadingLoans ? (
+              <div className="text-sm text-gray-500">Loading loan data...</div>
+            ) : activeLoans.length > 0 ? (
+              <>
+                {activeLoans.map((loan) => (
+                  <div key={loan.id} className="space-y-1 mb-2">
+                    <DataRow 
+                      label={`${loan.lenderName} (${loan.lenderType})`} 
+                      value={loan.remainingBalance} 
+                      valueClass="text-red-600" 
+                    />
+                    <div className="text-xs text-gray-500 ml-2">
+                      Payment: {formatCurrency(getPeriodPaymentAmount(loan.seasonalPayment))}/{period}
+                    </div>
+                  </div>
+                ))}
+                <hr className="my-2 border-gray-300" />
+                <DataRow label="Total Outstanding Loans" value={totalOutstandingLoans} valueClass="text-red-600" />
+                <DataRow 
+                  label={`Total ${period.charAt(0).toUpperCase() + period.slice(1)} Payments`} 
+                  value={totalPeriodPayments} 
+                  valueClass="text-orange-600" 
+                />
+              </>
+            ) : (
+              <DataRow label="No Active Loans" value="€0" valueClass="text-gray-500" />
+            )}
+          </FinancialSection>
+
+          <FinancialSection title="NET WORTH">
+            <DataRow label="Total Assets" value={financialData.totalAssets} />
+            <DataRow label="Total Liabilities" value={totalOutstandingLoans} valueClass="text-red-600" />
+            <hr className="my-1 border-gray-300" />
+            <DataRow
+              label="Net Worth"
+              value={netWorth}
+              valueClass={getColorClass(netWorth >= 0 ? 0.8 : 0.2)}
+            />
           </FinancialSection>
       </SimpleCard>
     </div>

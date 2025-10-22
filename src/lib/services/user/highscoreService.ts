@@ -324,6 +324,42 @@ class HighscoreService {
     };
     return units[scoreType] || '';
   }
+
+  /**
+   * Submit company highscores with business logic
+   * This method handles the calculation of company value metrics and submits them
+   */
+  public async submitCompanyHighscores(
+    companyId: string,
+    companyName: string,
+    gameWeek: number,
+    gameSeason: Season,
+    gameYear: number,
+    foundedYear: number,
+    currentCompanyValue: number,
+    startingValue: number = 100000 // Default starting value from GAME_INITIALIZATION.STARTING_MONEY
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Calculate per-week metrics
+      const weeksElapsed = Math.max(1, (gameYear - foundedYear) * 52 + gameWeek);
+      const companyValuePerWeek = Math.max(0, currentCompanyValue - startingValue) / weeksElapsed;
+      
+      return await this.submitAllCompanyScores(
+        companyId,
+        companyName,
+        gameWeek,
+        gameSeason,
+        gameYear,
+        {
+          companyValue: currentCompanyValue,
+          companyValuePerWeek
+        }
+      );
+    } catch (error) {
+      console.error('Error submitting company highscores:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
 }
 
 export const highscoreService = new HighscoreService();

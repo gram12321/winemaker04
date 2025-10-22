@@ -16,7 +16,8 @@ export async function decayPrestigeEventsOneWeek(): Promise<void> {
       const toDelete: string[] = [];
       for (const row of prestigeRows) {
         const newAmount = (row.amount_base || 0) * (row.decay_rate || 1);
-        if (newAmount < PRESTIGE_EVENT_MIN_AMOUNT) {
+        // For both positive and negative values, check if absolute value is below threshold
+        if (Math.abs(newAmount) < PRESTIGE_EVENT_MIN_AMOUNT) {
           toDelete.push(row.id);
         } else {
           await updatePrestigeEventAmount(row.id, newAmount);

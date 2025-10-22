@@ -2,6 +2,7 @@ import { authService } from './authService';
 import { Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { insertCompany, insertUser, getCompanyById, getCompanyByName, getUserCompanies, getAllCompanies as loadAllCompanies, updateCompany as updateCompanyInDB, deleteCompany as deleteCompanyFromDB, getCompanyStats as loadCompanyStats, checkCompanyNameExists, type Company, type CompanyData } from '@/lib/database';
+import { initializeLenders } from '../finance/lenderService';
 
 export interface CompanyCreateData {
   name: string;
@@ -85,6 +86,15 @@ class CompanyService {
         createdAt: new Date(result.data.created_at),
         updatedAt: new Date(result.data.updated_at)
       } as Company : undefined;
+
+      // Initialize lenders for the new company
+      if (company) {
+        try {
+          await initializeLenders(company.id);
+        } catch (error) {
+          console.warn('Failed to initialize lenders for new company:', error);
+        }
+      }
 
       return { success: true, company };
     } catch (error) {

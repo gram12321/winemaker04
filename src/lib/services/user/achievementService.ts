@@ -2,12 +2,11 @@ import { AchievementConfig, AchievementWithStatus, AchievementUnlock } from '../
 import { ALL_ACHIEVEMENTS, getAchievementConfig } from '../../constants/achievementConstants';
 import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked } from '../../database/core/achievementsDB';
 import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
-import { getGameState } from '../core/gameState';
-import { calculateAbsoluteWeeks } from '../../utils/utils';
+import { getGameState, calculateFinancialData, calculateNetWorth } from '../index';
+import { calculateAbsoluteWeeks } from '../../utils';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineLogByVineyard } from '../../database';
-import { calculateFinancialData } from './financeService';
 import { v4 as uuidv4 } from 'uuid';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
@@ -20,6 +19,7 @@ import { NotificationCategory } from '../../types/types';
 interface AchievementCheckContext {
   companyId: string;
   currentMoney: number;
+  netWorth: number;
   currentPrestige: number;
   companyAgeInYears: number;
   totalSalesCount: number;
@@ -65,7 +65,10 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   const companyAgeInYears = gameState.currentYear! - gameState.foundedYear!;
   
   // Load financial data
-  const financialData = await calculateFinancialData('year');
+  const [financialData, netWorth] = await Promise.all([
+    calculateFinancialData('year'),
+    calculateNetWorth()
+  ]);
   
   // OPTIMIZATION: Use lightweight summary queries instead of loading full datasets
   const { getSalesSummary } = await import('../../database/customers/salesDB');
@@ -155,6 +158,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   return {
     companyId,
     currentMoney: gameState.money || 0,
+    netWorth,
     currentPrestige: gameState.prestige || 0,
     companyAgeInYears,
     totalSalesCount,
@@ -216,9 +220,12 @@ function checkAchievementCondition(
   
   switch (condition.type) {
     case 'money_threshold':
+      // Cash reserves minus outstanding loan debt (net cash position)
+      const outstandingLoans = context.totalAssets - context.netWorth;
+      const netCashPosition = context.currentMoney - outstandingLoans;
       return {
-        isMet: context.currentMoney >= (condition.threshold || 0),
-        progress: context.currentMoney,
+        isMet: netCashPosition >= (condition.threshold || 0),
+        progress: netCashPosition,
         target: condition.threshold,
         unit: 'euros'
       };
@@ -359,10 +366,10 @@ function checkAchievementCondition(
       };
       
     case 'total_assets':
-      // Check if total company assets meet threshold
+      // Check if net worth meets threshold (assets minus liabilities)
       return {
-        isMet: context.totalAssets >= (condition.threshold || 0),
-        progress: context.totalAssets,
+        isMet: context.netWorth >= (condition.threshold || 0),
+        progress: context.netWorth,
         target: condition.threshold,
         unit: 'euros'
       };
@@ -465,9 +472,9 @@ function checkAchievementCondition(
       };
       
     case 'assets_by_year':
-      // Check if accumulated threshold assets before year 10
+      // Check if accumulated threshold net worth before year 10
       return checkYearBasedAchievement(
-        context.companyAgeInYears, 10, context.totalAssets, condition.threshold || 0, 'euros'
+        context.companyAgeInYears, 10, context.netWorth, condition.threshold || 0, 'euros'
       );
       
     case 'hectares_by_year':

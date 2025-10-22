@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
 import { getMaxLandValue } from '../wine/winescore/wineQualityCalculationService';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
+import { calculateNetWorth } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
 import { 
   calculateSalePrestigeWithAssets, 
@@ -36,16 +37,19 @@ type VineyardPrestigeFactors = {
 };
 
 export async function initializeBasePrestigeEvents(): Promise<void> {
-  const gameState = getGameState();
   const maxLandValue = getMaxLandValue();
-  const companyValuePrestige = Math.log((gameState.money || 0) / maxLandValue + 1);
+
+  // Calculate net worth using centralized function
+  const netWorth = await calculateNetWorth();
+
+  const companyValuePrestige = Math.log((netWorth || 0) / maxLandValue + 1);
   
   await updateBasePrestigeEvent(
-    'company_value',
-    'company_money',
+    'company_finance',
+    'company_net_worth',
     companyValuePrestige,
     {
-      companyMoney: gameState.money || 0,
+      companyNetWorth: netWorth,
       maxLandValue: maxLandValue,
       prestigeBase01: companyValuePrestige,
     }
@@ -232,7 +236,7 @@ export async function calculateCurrentPrestige(): Promise<{
     totalPrestige: Math.max(1, totalPrestige),
     companyPrestige: Math.max(1, companyPrestige),
     vineyardPrestige: Math.max(0, vineyardPrestige),
-    eventBreakdown: eventBreakdown.filter(event => (event.currentAmount ?? event.amount) > 0),
+    eventBreakdown: eventBreakdown.filter(event => Math.abs(event.currentAmount ?? event.amount) >= 0.01),
     vineyards: vineyardData
   };
 }
@@ -268,7 +272,7 @@ export async function getBaseVineyardPrestige(vineyardId: string): Promise<numbe
 }
 
 export async function updateBasePrestigeEvent(
-  type: 'company_value' | 'vineyard' | 'vineyard_base' | 'vineyard_age' | 'vineyard_land' | 'vineyard_region' | 'cellar_collection',
+  type: 'company_finance' | 'vineyard' | 'vineyard_base' | 'vineyard_age' | 'vineyard_land' | 'vineyard_region' | 'cellar_collection',
   sourceId: string,
   newAmount: number,
   metadata?: PrestigeEvent['metadata']
@@ -282,16 +286,20 @@ export async function updateBasePrestigeEvent(
   triggerGameUpdate();
 }
 
-export async function updateCompanyValuePrestige(money: number): Promise<void> {
+export async function updateCompanyValuePrestige(_money: number): Promise<void> {
   try {
     const maxLandValue = getMaxLandValue();
-    const companyValuePrestige = Math.log((money || 0) / maxLandValue + 1);
+
+    // Calculate net worth using centralized function
+    const netWorth = await calculateNetWorth();
+
+    const companyValuePrestige = Math.log((netWorth || 0) / maxLandValue + 1);
     await updateBasePrestigeEvent(
-      'company_value',
-      'company_money',
+      'company_finance',
+      'company_net_worth',
       companyValuePrestige,
       {
-        companyMoney: money,
+        companyNetWorth: netWorth,
         maxLandValue: maxLandValue,
         prestigeBase01: companyValuePrestige,
       }
@@ -753,12 +761,12 @@ export function getEventDisplayData(event: PrestigeEvent): {
       };
     }
 
-    if (event.type === 'company_value' && metadata.companyMoney !== undefined) {
+    if (event.type === 'company_finance' && metadata.companyNetWorth !== undefined) {
       return {
-        title: `Company Value: €${metadata.companyMoney.toLocaleString()}`,
+        title: `Company Value: €${metadata.companyNetWorth.toLocaleString()}`,
         titleBase: 'Company Value',
-        amountText: `€${metadata.companyMoney.toLocaleString()}`,
-        calc: `base=log(€${metadata.companyMoney.toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.prestigeBase01?.toFixed(2)} → scaled=${event.amount.toFixed(2)}`,
+        amountText: `€${metadata.companyNetWorth.toLocaleString()}`,
+        calc: `base=log(€${metadata.companyNetWorth.toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.prestigeBase01?.toFixed(2)} → scaled=${event.amount.toFixed(2)}`,
       };
     }
     
@@ -818,12 +826,36 @@ export function getEventDisplayData(event: PrestigeEvent): {
   }
 
 
+  // Handle company finance events (including loan defaults)
+  if (event.type === 'company_finance' && event.metadata) {
+    const metadata: any = event.metadata;
+    const reason = metadata.reason || 'Financial Event';
+    const lenderName = metadata.lenderName || '';
+    
+    if (reason === 'Loan Default') {
+      return {
+        title: `Loan Default: ${lenderName}`,
+        titleBase: 'Loan Default',
+        amountText: `${event.amount.toFixed(2)} prestige`,
+        displayInfo: metadata.loanAmount 
+          ? `Loan: ${metadata.loanAmount.toLocaleString()} | Missed Payment: ${metadata.missedPaymentAmount?.toLocaleString() || 'N/A'}`
+          : undefined
+      };
+    }
+    
+    return {
+      title: reason,
+      titleBase: 'Financial Event',
+      amountText: `${event.amount.toFixed(2)} prestige`,
+    };
+  }
+
   // Handle other event types with fallback display
   if (['contract', 'penalty', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement'].includes(event.type)) {
     return {
       title: event.description || event.type,
       titleBase: event.type,
-      amountText: `+${event.amount.toFixed(2)} prestige`,
+      amountText: `${event.amount >= 0 ? '+' : ''}${event.amount.toFixed(2)} prestige`,
     };
   }
 

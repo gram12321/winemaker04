@@ -42,7 +42,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const didInitAutoCollapse = useRef(false);
 
   const eventConfig = {
-    company_value: { icon: DollarSign, label: 'Company Value', color: 'bg-blue-100 text-blue-800' },
+    company_finance: { icon: DollarSign, label: 'Company Finance', color: 'bg-blue-100 text-blue-800' },
     vineyard: { icon: Grape, label: 'Vineyard (Legacy)', color: 'bg-green-100 text-green-800' },
     sale: { icon: TrendingUp, label: 'Company Sales', color: 'bg-emerald-100 text-emerald-800' },
     cellar_collection: { icon: TrendingUp, label: 'Cellar Collection', color: 'bg-amber-100 text-amber-800' },
@@ -90,10 +90,16 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     decayRate?: number
   ) => {
     if (!originalAmount || !currentAmount || !decayRate) return undefined;
-    if (originalAmount <= 0 || currentAmount <= 0) return undefined;
-    if (decayRate <= 0 || decayRate >= 1 && currentAmount > originalAmount) return undefined;
+    if (originalAmount === 0 || currentAmount === 0) return undefined;
+    if (decayRate <= 0 || decayRate >= 1) return undefined;
+    
+    // Handle both positive and negative values
     const ratio = currentAmount / originalAmount;
-    if (ratio <= 0 || ratio > 1) return undefined;
+    if (ratio <= 0 || !isFinite(ratio)) return undefined;
+    
+    // For negative values, we need to ensure the ratio is still valid
+    if (Math.abs(originalAmount) < 0.001 || Math.abs(currentAmount) < 0.001) return undefined;
+    
     const weeks = Math.log(ratio) / Math.log(decayRate);
     if (!isFinite(weeks) || weeks < 0) return undefined;
     return Math.round(weeks);
@@ -276,7 +282,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const consolidatedVineyardWineFeatures = consolidateWineFeatureEvents(vineyardWineFeatureEvents);
   
   // Group other company events by type
-  const otherCompanyEvents = eventBreakdown.filter(event => ['company_value', 'sale', 'contract', 'penalty', 'cellar_collection', 'achievement'].includes(event.type));
+  const otherCompanyEvents = eventBreakdown.filter(event => ['company_finance', 'sale', 'contract', 'penalty', 'cellar_collection', 'achievement'].includes(event.type));
   const groupedCompanyEvents = otherCompanyEvents.reduce((acc, event) => {
     if (!acc[event.type]) acc[event.type] = [];
     acc[event.type].push(event);

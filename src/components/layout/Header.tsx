@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { getCurrentPrestige, processGameTick } from '@/lib/services';
-import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils/utils';
+import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
@@ -9,7 +9,9 @@ import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-rea
 import PrestigeModal from '@/components/ui/modals/UImodals/prestigeModal';
 import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
+import { getEconomyPhaseColorClass, getEconomyPhaseAbbreviation } from '@/lib/utils';
 import versionLogRaw from '../../../docs/versionlog.md?raw';
+
 
 interface HeaderProps extends NavigationProps, CompanyProps {
   currentPage: string;
@@ -178,6 +180,23 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               onClick={handlePrestigeClick}
             >
               <span className="font-medium text-xs">⭐ {formatCompact(currentPrestige, 1)}</span>
+            </Badge>
+
+            {/* Economy Phase display - responsive */}
+            <Badge 
+              variant="outline" 
+              className={`px-2 py-0.5 flex items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Recovery')}`}
+              title={`Economy Phase: ${gameState.economyPhase || 'Recovery'}`}
+            >
+              <span className="font-medium text-xs">{gameState.economyPhase || 'Recovery'}</span>
+            </Badge>
+            
+            <Badge 
+              variant="outline" 
+              className={`px-1.5 py-0.5 flex items-center cursor-pointer transition-colors sm:hidden ${getEconomyPhaseColorClass(gameState.economyPhase || 'Recovery')}`}
+              title={`Economy Phase: ${gameState.economyPhase || 'Recovery'}`}
+            >
+              <span className="font-medium text-xs">{getEconomyPhaseAbbreviation(gameState.economyPhase || 'Recovery')}</span>
             </Badge>
             
             {/* Console button - responsive */}

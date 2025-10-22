@@ -6,9 +6,10 @@ import { GAME_INITIALIZATION } from '../../constants/constants';
 import { getCurrentCompany, updateGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { companyService } from './companyService';
+import { companyService } from '../user/companyService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
+import { calculateTotalOutstandingLoans } from './loanService';
 
 interface FinancialData {
   income: number;
@@ -166,6 +167,18 @@ export const getTransactions = (): Transaction[] => {
   return transactionsCache;
 };
 
+// Calculate company net worth (total assets - total liabilities)
+export const calculateNetWorth = async (): Promise<number> => {
+  try {
+    const financialData = await calculateFinancialData('year');
+    const totalOutstandingLoans = await calculateTotalOutstandingLoans();
+    return financialData.totalAssets - totalOutstandingLoans;
+  } catch (error) {
+    console.error('Error calculating net worth:', error);
+    return 0;
+  }
+};
+
 // Calculate financial data for income statement and balance sheet
 export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year'): Promise<FinancialData> => {
   const gameState = getGameState();
@@ -201,10 +214,17 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     categorizedTransactions[transaction.category].total += transaction.amount;
     categorizedTransactions[transaction.category].transactions.push(transaction);
     
-    if (transaction.amount >= 0) {
-      income += transaction.amount;
-    } else {
-      expenses += Math.abs(transaction.amount);
+    // Exclude loan-related transactions from revenue calculation
+    const isLoanTransaction = transaction.category === 'Loan Received' || 
+                             transaction.category === 'Loan Payment' ||
+                             transaction.category === 'Loan Origination Fee';
+    
+    if (!isLoanTransaction) {
+      if (transaction.amount >= 0) {
+        income += transaction.amount;
+      } else {
+        expenses += Math.abs(transaction.amount);
+      }
     }
   });
   

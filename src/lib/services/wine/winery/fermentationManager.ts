@@ -39,6 +39,7 @@ export async function startFermentationActivity(
       category: WorkCategory.FERMENTATION,
       title: `Fermentation Setup - ${batch.grape} from ${batch.vineyardName}`,
       totalWork,
+      activityDetails: `Method: ${options.method}, Temperature: ${options.temperature}`,
       targetId: batch.id,
       params: {
         batchId: batch.id,
