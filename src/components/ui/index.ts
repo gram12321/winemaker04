@@ -40,3 +40,5 @@ export { CharacteristicSlider, CharacteristicSliderGrid } from './components/Cha
 export { StaffSkillBar, StaffSkillBarsList } from './components/StaffSkillBar';
 export { FeatureBadge, FeatureBadges } from './wine/FeatureBadge';
 export { FeatureRiskDisplay } from './wine/WineryFeatureRiskDisplay';
+export { WarningModal } from './modals/UImodals/WarningModal';
+export type { WarningModalProps, WarningSeverity, WarningModalAction } from './modals/UImodals/WarningModal';

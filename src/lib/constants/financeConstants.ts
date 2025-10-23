@@ -23,6 +23,7 @@ export const TRANSACTION_CATEGORIES = {
   WINE_SALES: 'Wine Sales',
   GRAPE_SALES: 'Grape Sales',
   INITIAL_INVESTMENT: 'Initial Investment',
+  VINEYARD_SALE: 'Vineyard Sale', // Forced vineyard seizure/sale
   
   // Expense categories
   STAFF_WAGES: 'Staff Wages',

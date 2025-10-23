@@ -87,12 +87,21 @@ const Vineyard: React.FC = () => {
 
 
 
-  // Watch for pending land search results
+  // Check for pending land search results and auto-open results modal
   useEffect(() => {
-    if (gameState.pendingLandSearchResults) {
+    const gameState = getGameState();
+    if (gameState.pendingLandSearchResults?.options) {
       setShowLandResultsModal(true);
     }
-  }, [gameState.pendingLandSearchResults]);
+  }, []);
+
+  // Listen for new land search results using the existing game update system
+  useEffect(() => {
+    const gameState = getGameState();
+    if (gameState.pendingLandSearchResults?.options && !showLandResultsModal) {
+      setShowLandResultsModal(true);
+    }
+  }, [gameState.pendingLandSearchResults, showLandResultsModal]);
 
   const handleRowClick = useCallback((vineyard: VineyardType) => {
     setSelectedVineyard(vineyard);

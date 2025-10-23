@@ -124,6 +124,7 @@ export default function LoansView() {
                   <TableHead>Total Expenses</TableHead>
                   <TableHead>Remaining</TableHead>
                   <TableHead>Next Payment</TableHead>
+                  <TableHead>Warnings</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -132,9 +133,14 @@ export default function LoansView() {
                   const totalInterest = calculateTotalInterest(loan);
                   const totalExpenses = calculateTotalExpenses(loan);
                   const remainingInterest = calculateRemainingInterest(loan);
+                  const missedPayments = loan.missedPayments || 0;
+                  const hasWarnings = missedPayments > 0;
                   
                   return (
-                    <TableRow key={loan.id}>
+                    <TableRow 
+                      key={loan.id} 
+                      className={hasWarnings ? 'bg-red-50 border-l-4 border-l-red-400' : ''}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{loan.lenderName}</span>
@@ -189,6 +195,23 @@ export default function LoansView() {
                             {loan.nextPaymentDue.season} {loan.nextPaymentDue.year}
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {hasWarnings ? (
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-red-100 text-red-800 border-red-200">
+                              {missedPayments}
+                            </Badge>
+                            <span className="text-sm text-red-600 font-medium">
+                              {missedPayments === 1 ? 'Warning #1' : 
+                               missedPayments === 2 ? 'Warning #2' : 
+                               missedPayments === 3 ? 'Warning #3' : 
+                               'Critical'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-green-600 text-sm font-medium">✓ Good Standing</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Button

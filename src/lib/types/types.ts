@@ -709,6 +709,32 @@ export interface AchievementWithStatus extends AchievementConfig {
   };
 }
 
+// ===== LOAN WARNING TYPES =====
+
+/**
+ * Pending loan warning modal
+ * Queued when a loan payment fails, displayed on next render
+ */
+export interface PendingLoanWarning {
+  loanId: string;
+  lenderName: string;
+  missedPayments: number;
+  severity: 'warning' | 'error' | 'critical';
+  title: string;
+  message: string;
+  details: string;
+  penalties: {
+    lateFee?: number;
+    interestRateIncrease?: number;
+    balancePenalty?: number;
+    creditRatingLoss?: number;
+    prestigeLoss?: number;
+    bookkeepingWork?: number;
+    vineyardsSeized?: number;
+    vineyardNames?: string[];
+  };
+}
+
 // ===== GAME STATE =====
 
 export interface GameState {
@@ -726,4 +752,5 @@ export interface GameState {
   teams?: StaffTeam[]; // Staff teams
   pendingStaffCandidates?: PendingStaffCandidates;
   pendingLandSearchResults?: PendingLandSearchResults;
+  loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
 }

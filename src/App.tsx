@@ -16,6 +16,7 @@ import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
+import { LoanWarningModalDisplay } from './components/layout/LoanWarningModalDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from '@/lib/database';
@@ -201,6 +202,11 @@ function App() {
       {/* Activity Panel - only show when logged in */}
       {isGameInitialized && currentCompany && (
         <ActivityPanel />
+      )}
+
+      {/* Loan Warning Modal - displays critical loan warnings */}
+      {isGameInitialized && currentCompany && (
+        <LoanWarningModalDisplay />
       )}
 
       <Toaster />

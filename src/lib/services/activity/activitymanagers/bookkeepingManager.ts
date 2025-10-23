@@ -1,4 +1,4 @@
-import { getGameState } from '@/lib/services';
+import { getGameState, updateGameState } from '@/lib/services';
 import { WorkCategory, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
@@ -18,7 +18,7 @@ export async function checkAndTriggerBookkeeping(): Promise<void> {
     const calculation = await calculateTotalBookkeepingWork();
     const { totalWork, spilloverData, seasonData } = calculation;
     
-    if (seasonData.transactionCount === 0 && spilloverData.spilloverWork === 0) {
+    if (seasonData.transactionCount === 0 && spilloverData.spilloverWork === 0 && seasonData.loanPenaltyWork === 0) {
       return;
     }
     
@@ -26,21 +26,37 @@ export async function checkAndTriggerBookkeeping(): Promise<void> {
       await handleSpilloverPenalties(spilloverData);
     }
     
+    // Create activity details including loan penalty work
+    let activityDetails = `Processing ${seasonData.transactionCount} transactions (${totalWork} work units).`;
+    if (spilloverData.incompleteTaskCount > 0) {
+      activityDetails += ' Spillover penalties applied.';
+    }
+    if (seasonData.loanPenaltyWork > 0) {
+      activityDetails += ` Loan penalty work: ${seasonData.loanPenaltyWork} units.`;
+    }
+    
     await createActivity({
       category: WorkCategory.ADMINISTRATION,
       title: `Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear}`,
       totalWork,
-      activityDetails: `Processing ${seasonData.transactionCount} transactions (${totalWork} work units).${spilloverData.incompleteTaskCount > 0 ? ' Spillover penalties applied.' : ''}`,
+      activityDetails,
       params: {
         prevSeason: seasonData.prevSeason,
         prevYear: seasonData.prevYear,
         transactionCount: seasonData.transactionCount,
         spilloverWork: spilloverData.spilloverWork,
-        incompleteTaskCount: spilloverData.incompleteTaskCount
+        incompleteTaskCount: spilloverData.incompleteTaskCount,
+        loanPenaltyWork: seasonData.loanPenaltyWork
       },
       isCancellable: true
     });
     
+    // Clear loan penalty work from game state after creating the activity
+    if (seasonData.loanPenaltyWork > 0) {
+      const updatedGameState = { ...gameState, loanPenaltyWork: 0 };
+      updateGameState(updatedGameState);
+      console.log(`🔔 Cleared ${seasonData.loanPenaltyWork} loan penalty work units from game state`);
+    }
     
   } catch (error) {
     console.error('Error in checkAndTriggerBookkeeping:', error);

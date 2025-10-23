@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/shadCN/badge';
 import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
 import { startHiringProcess, clearPendingCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
 import { X } from 'lucide-react';
+import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 
 interface StaffSearchResultsModalProps {
   isOpen: boolean;
@@ -78,20 +79,20 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
   // If all candidates have been hired, show completion message
   if (availableCandidates.length === 0 && hiredCandidateIds.size > 0) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">All Candidates Hired!</h2>
-          <p className="text-gray-400 mb-6">
-            You've hired all {hiredCandidateIds.size} candidate{hiredCandidateIds.size !== 1 ? 's' : ''} from this search.
-          </p>
-          <Button 
-            onClick={handleClose}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Close
-          </Button>
-        </div>
-      </div>
+      <WarningModal
+        isOpen={true}
+        onClose={handleClose}
+        severity="info"
+        title="All Candidates Hired!"
+        message={`You've hired all ${hiredCandidateIds.size} candidate${hiredCandidateIds.size !== 1 ? 's' : ''} from this search.`}
+        actions={[
+          {
+            label: 'Close',
+            onClick: handleClose,
+            variant: 'default'
+          }
+        ]}
+      />
     );
   }
 

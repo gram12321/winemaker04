@@ -489,16 +489,45 @@ CREATE TABLE loans (
     next_payment_year integer NOT NULL,
     missed_payments integer DEFAULT 0,
     status text NOT NULL CHECK (status IN ('active', 'paid_off', 'defaulted')),
+    pending_warning_id uuid,
+    warning_severity varchar CHECK (warning_severity IN ('warning', 'error', 'critical')),
+    warning_title text,
+    warning_message text,
+    warning_details text,
+    warning_penalties jsonb DEFAULT '{}'::jsonb,
+    warning_acknowledged boolean DEFAULT false,
+    warning_created_at timestamptz,
+    warning_acknowledged_at timestamptz,
     created_at timestamptz DEFAULT NOW(),
     updated_at timestamptz DEFAULT NOW()
+);
+
+-- Loan warnings table
+CREATE TABLE loan_warnings (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
+    loan_id uuid REFERENCES loans(id) ON DELETE CASCADE,
+    lender_name text NOT NULL,
+    missed_payments integer DEFAULT 0,
+    severity varchar NOT NULL CHECK (severity IN ('warning', 'error', 'critical')),
+    title text NOT NULL,
+    message text NOT NULL,
+    details text,
+    penalties jsonb DEFAULT '{}'::jsonb,
+    acknowledged boolean DEFAULT false,
+    created_at timestamptz DEFAULT now(),
+    acknowledged_at timestamptz,
+    created_game_week integer,
+    created_game_season varchar,
+    created_game_year integer
 );
 
 -- ============================================================
 -- ROW LEVEL SECURITY SETUP (matches dev database exactly)
 -- ============================================================
 
--- Disable RLS on all tables except staff (matches dev database)
--- In dev database, only staff table has RLS enabled
+-- Disable RLS on all tables except staff and loan_warnings (matches dev database)
+-- In dev database, only staff and loan_warnings tables have RLS enabled
 
 -- First drop any existing RLS policies (critical for 406 error fix)
 DROP POLICY IF EXISTS "Anyone can view achievements" ON achievements;
@@ -544,8 +573,9 @@ ALTER TABLE wine_batches DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wine_log DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wine_orders DISABLE ROW LEVEL SECURITY;
 
--- Enable RLS only on staff table (matches dev database)
+-- Enable RLS only on staff and loan_warnings tables (matches dev database)
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loan_warnings ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for staff table (matches dev database)
 -- Drop existing policies first to avoid conflicts
@@ -565,6 +595,26 @@ CREATE POLICY "Allow update for authenticated users" ON staff
     FOR UPDATE TO public USING (true);
 
 CREATE POLICY "Allow delete for authenticated users" ON staff
+    FOR DELETE TO public USING (true);
+
+-- Create RLS policies for loan_warnings table (matches dev database)
+-- Drop existing policies first to avoid conflicts
+DROP POLICY IF EXISTS "Allow read access to all users" ON loan_warnings;
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON loan_warnings;
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON loan_warnings;
+DROP POLICY IF EXISTS "Allow delete for authenticated users" ON loan_warnings;
+
+-- Create new policies
+CREATE POLICY "Allow read access to all users" ON loan_warnings
+    FOR SELECT TO public USING (true);
+
+CREATE POLICY "Allow insert for authenticated users" ON loan_warnings
+    FOR INSERT TO public WITH CHECK (true);
+
+CREATE POLICY "Allow update for authenticated users" ON loan_warnings
+    FOR UPDATE TO public USING (true);
+
+CREATE POLICY "Allow delete for authenticated users" ON loan_warnings
     FOR DELETE TO public USING (true);
 
 -- ============================================================
@@ -626,6 +676,11 @@ CREATE INDEX IF NOT EXISTS idx_lenders_type ON lenders(company_id, type);
 CREATE INDEX IF NOT EXISTS idx_loans_company ON loans(company_id);
 CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(company_id, status);
 CREATE INDEX IF NOT EXISTS idx_loans_lender ON loans(lender_id);
+
+-- Loan warnings indexes
+CREATE INDEX IF NOT EXISTS idx_loan_warnings_company ON loan_warnings(company_id);
+CREATE INDEX IF NOT EXISTS idx_loan_warnings_loan ON loan_warnings(loan_id);
+CREATE INDEX IF NOT EXISTS idx_loan_warnings_severity ON loan_warnings(severity);
 
 -- ============================================================
 -- SCHEMA SYNC COMPLETE

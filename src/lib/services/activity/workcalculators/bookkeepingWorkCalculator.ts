@@ -40,6 +40,7 @@ export async function calculateBookkeepingWork(): Promise<{
   prevSeason: Season;
   prevYear: number;
   transactionCount: number;
+  loanPenaltyWork: number;
 }> {
   const gameState = getGameState();
   const currentSeason = gameState.season!;
@@ -57,11 +58,15 @@ export async function calculateBookkeepingWork(): Promise<{
   const initialWork = INITIAL_WORK[category];
   
   // Use generic calculator again
-  const totalWork = calculateTotalWork(transactionCount, {
+  const baseWork = calculateTotalWork(transactionCount, {
     rate,
     initialWork,
     workModifiers: []
   });
+  
+  // Add loan penalty work
+  const loanPenaltyWork = gameState.loanPenaltyWork || 0;
+  const totalWork = baseWork + loanPenaltyWork;
   
   const factors: WorkFactor[] = [
     { label: 'Previous Season', value: `${prevSeason} ${prevYear}`, isPrimary: true },
@@ -70,12 +75,23 @@ export async function calculateBookkeepingWork(): Promise<{
     { label: 'Initial Setup Work', value: initialWork, unit: 'work units' }
   ];
   
+  // Add loan penalty factor if applicable
+  if (loanPenaltyWork > 0) {
+    factors.push({
+      label: 'Loan Penalty Work',
+      value: loanPenaltyWork,
+      unit: 'work units',
+      isPrimary: true
+    });
+  }
+  
   return { 
     totalWork, 
     factors, 
     prevSeason, 
     prevYear, 
-    transactionCount 
+    transactionCount,
+    loanPenaltyWork
   };
 }
 
@@ -141,6 +157,7 @@ export async function calculateTotalBookkeepingWork(): Promise<{
     prevSeason: Season;
     prevYear: number;
     transactionCount: number;
+    loanPenaltyWork: number;
   };
 }> {
   const [baseCalculation, spilloverCalculation] = await Promise.all([
@@ -170,7 +187,8 @@ export async function calculateTotalBookkeepingWork(): Promise<{
     seasonData: {
       prevSeason: baseCalculation.prevSeason,
       prevYear: baseCalculation.prevYear,
-      transactionCount: baseCalculation.transactionCount
+      transactionCount: baseCalculation.transactionCount,
+      loanPenaltyWork: baseCalculation.loanPenaltyWork
     }
   };
 }

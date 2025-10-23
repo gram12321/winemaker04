@@ -150,6 +150,40 @@ export const LOAN_DEFAULT = {
   INTEREST_PENALTY_MULTIPLIER: 1.3 // 30% rate increase from other lenders
 } as const;
 
+// Loan missed payment warning penalties (3-strike system before full default)
+export const LOAN_MISSED_PAYMENT_PENALTIES = {
+  // Warning #1 (missedPayments = 1)
+  WARNING_1: {
+    LATE_FEE_PERCENT: 0.02, // 2% of seasonal payment added to balance
+    CREDIT_RATING_LOSS: -0.05, // -5% credit rating
+    BOOKKEEPING_WORK: 20, // +20 work units to next bookkeeping
+  },
+  
+  // Warning #2 (missedPayments = 2)
+  WARNING_2: {
+    INTEREST_RATE_INCREASE: 0.005, // +0.5% to effective interest rate
+    BALANCE_PENALTY_PERCENT: 0.05, // +5% of outstanding balance
+    CREDIT_RATING_LOSS: -0.05, // -5% credit rating (cumulative: -10% total)
+    PRESTIGE_PENALTY: -25, // Negative prestige event
+    PRESTIGE_DECAY_RATE: 0.95, // Slow decay
+    BOOKKEEPING_WORK: 50, // +50 work units to next bookkeeping
+  },
+  
+  // Warning #3 (missedPayments = 3)
+  WARNING_3: {
+    MAX_VINEYARD_SEIZURE_PERCENT: 0.50, // Max 50% of portfolio value can be seized
+    CREDIT_RATING_LOSS: -0.10, // -10% credit rating (cumulative: -20% total)
+    BOOKKEEPING_WORK: 100, // +100 work units to next bookkeeping
+  },
+  
+  // Full Default (missedPayments >= 4)
+  FULL_DEFAULT: {
+    // All Warning #3 penalties apply
+    // Plus lender blacklist
+    // Plus full LOAN_DEFAULT penalties above
+  }
+} as const;
+
 
 // Lender generation
 export const LENDER_GENERATION = {

@@ -72,17 +72,13 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     }
   }, []);
 
-  // Listen for new search results
+  // Listen for new search results using the existing game update system
   useEffect(() => {
-    const interval = setInterval(() => {
-      const gameState = getGameState();
-      if (gameState.pendingStaffCandidates?.candidates && !showResultsModal) {
-        setSearchCandidates(gameState.pendingStaffCandidates.candidates);
-        setShowResultsModal(true);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
+    const gameState = getGameState();
+    if (gameState.pendingStaffCandidates?.candidates && !showResultsModal) {
+      setSearchCandidates(gameState.pendingStaffCandidates.candidates);
+      setShowResultsModal(true);
+    }
   }, [showResultsModal]);
   
   const handleFireStaff = async (staffId: string) => {

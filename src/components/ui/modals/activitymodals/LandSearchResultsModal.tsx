@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/shadCN/badge';
 import { X } from 'lucide-react';
 import { purchaseVineyard } from '@/lib/services';
 import { getGameState } from '@/lib/services';
+import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 
 interface LandSearchResultsModalProps {
   isOpen: boolean;
@@ -75,20 +76,20 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
   // If all properties have been purchased, show completion message
   if (availableProperties.length === 0 && purchasedPropertyIds.size > 0) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">All Properties Purchased!</h2>
-          <p className="text-gray-400 mb-6">
-            You've purchased all {purchasedPropertyIds.size} propert{purchasedPropertyIds.size !== 1 ? 'ies' : 'y'} from this search.
-          </p>
-          <Button 
-            onClick={handleClose}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Close
-          </Button>
-        </div>
-      </div>
+      <WarningModal
+        isOpen={true}
+        onClose={handleClose}
+        severity="info"
+        title="All Properties Purchased!"
+        message={`You've purchased all ${purchasedPropertyIds.size} propert${purchasedPropertyIds.size !== 1 ? 'ies' : 'y'} from this search.`}
+        actions={[
+          {
+            label: 'Close',
+            onClick: handleClose,
+            variant: 'default'
+          }
+        ]}
+      />
     );
   }
 
