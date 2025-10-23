@@ -18,13 +18,14 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.CRUSHING]: 2.5,     // tons/week
   [WorkCategory.FERMENTATION]: 5.0,  // kL/week
   [WorkCategory.CLEARING]: 0.4,     // hectares/week (1.0 acres = ~0.4 hectares)
-  [WorkCategory.UPROOTING]: 0.23,   // hectares/week (0.56 acres = ~0.23 hectares)
   [WorkCategory.BUILDING]: 100000,  // €/week
   [WorkCategory.UPGRADING]: 100000, // €/week
   [WorkCategory.MAINTENANCE]: 500000, // €/week
   [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
   [WorkCategory.STAFF_HIRING]: 2.0,  // hires/week
   [WorkCategory.LAND_SEARCH]: 15,   // properties/week
+  [WorkCategory.LENDER_SEARCH]: 8.0, // lender offers/week
+  [WorkCategory.TAKE_LOAN]: 1.0,    // loans/week
   [WorkCategory.ADMINISTRATION]: 500 // tasks/week; with BASE_WORK_UNITS 50 => 0.1 work/tx
 };
 
@@ -72,13 +73,14 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.CRUSHING]: 10,
   [WorkCategory.FERMENTATION]: 100,
   [WorkCategory.CLEARING]: 5, // Base initial work for clearing category
-  [WorkCategory.UPROOTING]: 10,
   [WorkCategory.BUILDING]: 200,
   [WorkCategory.UPGRADING]: 150,
   [WorkCategory.MAINTENANCE]: 10,
   [WorkCategory.STAFF_SEARCH]: 25,
   [WorkCategory.STAFF_HIRING]: 25,
   [WorkCategory.LAND_SEARCH]: 75,
+  [WorkCategory.LENDER_SEARCH]: 50,
+  [WorkCategory.TAKE_LOAN]: 50,
   [WorkCategory.ADMINISTRATION]: 25
 };
 
@@ -111,12 +113,6 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
     displayName: 'Clearing',
     icon: 'icon_clearing.webp',
     isDensityBased: false,
-    skill: 'field'
-  },
-  [WorkCategory.UPROOTING]: {
-    displayName: 'Uprooting',
-    icon: 'icon_uprooting.webp',
-    isDensityBased: true,
     skill: 'field'
   },
   [WorkCategory.ADMINISTRATION]: {
@@ -170,6 +166,18 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
   [WorkCategory.LAND_SEARCH]: {
     displayName: 'Land Search',
     icon: 'icon_research.webp',
+    isDensityBased: false,
+    skill: 'administration'
+  },
+  [WorkCategory.LENDER_SEARCH]: {
+    displayName: 'Lender Search',
+    icon: 'icon_bookkeeping.webp',
+    isDensityBased: false,
+    skill: 'administration'
+  },
+  [WorkCategory.TAKE_LOAN]: {
+    displayName: 'Take Loan',
+    icon: 'icon_bookkeeping.webp',
     isDensityBased: false,
     skill: 'administration'
   }

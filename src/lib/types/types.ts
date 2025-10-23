@@ -9,13 +9,14 @@ export enum WorkCategory {
   CRUSHING = 'CRUSHING',
   FERMENTATION = 'FERMENTATION',
   CLEARING = 'CLEARING',
-  UPROOTING = 'UPROOTING',
   BUILDING = 'BUILDING',
   UPGRADING = 'UPGRADING',
   MAINTENANCE = 'MAINTENANCE',
   STAFF_SEARCH = 'STAFF_SEARCH',
   STAFF_HIRING = 'STAFF_HIRING',
   LAND_SEARCH = 'LAND_SEARCH',
+  LENDER_SEARCH = 'LENDER_SEARCH',
+  TAKE_LOAN = 'TAKE_LOAN',
   ADMINISTRATION = 'ADMINISTRATION'
 }
 
@@ -447,6 +448,29 @@ export interface Loan {
   status: 'active' | 'paid_off' | 'defaulted';
 }
 
+// Lender Search Options (for activity system)
+export interface LenderSearchOptions {
+  numberOfOffers: number; // How many loan offers to generate (default 3)
+  lenderTypes: LenderType[]; // Which types to search (default all)
+  searchCost: number; // Computed cost
+  searchWork: number; // Computed work units
+}
+
+// Loan Offer (result of lender search)
+export interface LoanOffer {
+  id: string; // Unique ID for this offer
+  lender: Lender; // The lender making the offer
+  principalAmount: number; // Fixed offer amount
+  durationSeasons: number; // Fixed offer duration
+  effectiveInterestRate: number; // Calculated rate
+  seasonalPayment: number; // Calculated payment
+  originationFee: number; // Calculated fee
+  totalInterest: number; // Total interest over life of loan
+  totalExpenses: number; // originationFee + totalInterest
+  isAvailable: boolean; // Whether lender is willing to offer (credit check)
+  unavailableReason?: string; // Why not available (if applicable)
+}
+
 // ===== ACTIVITY TYPES =====
 
 export interface Activity {
@@ -588,6 +612,17 @@ export interface PendingLandSearchResults {
     soilTypes?: string[];
     minGrapeSuitability?: number;
   };
+  timestamp: number;
+}
+
+/**
+ * Pending lender search results
+ * Temporary storage for loan offers generated from completed search activity
+ */
+export interface PendingLenderSearchResults {
+  activityId: string;
+  offers: LoanOffer[];
+  searchOptions: LenderSearchOptions;
   timestamp: number;
 }
 
@@ -752,5 +787,6 @@ export interface GameState {
   teams?: StaffTeam[]; // Staff teams
   pendingStaffCandidates?: PendingStaffCandidates;
   pendingLandSearchResults?: PendingLandSearchResults;
+  pendingLenderSearchResults?: PendingLenderSearchResults;
   loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
 }

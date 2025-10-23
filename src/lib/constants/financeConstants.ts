@@ -29,6 +29,7 @@ export const TRANSACTION_CATEGORIES = {
   STAFF_WAGES: 'Staff Wages',
   STAFF_SEARCH: 'Staff Search',
   LAND_SEARCH: 'Land Search',
+  LENDER_SEARCH: 'Lender Search',
   VINEYARD_PURCHASE: 'Vineyard Purchase',
   EQUIPMENT_PURCHASE: 'Equipment Purchase',
   BUILDING_CONSTRUCTION: 'Building Construction',

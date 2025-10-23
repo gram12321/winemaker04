@@ -6,6 +6,8 @@ import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActiv
 import { saveVineyard, loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, WorkCategory } from '@/lib/services/activity';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
+import { completeLenderSearch } from './lenderSearchManager';
+import { completeTakeLoan } from './takeLoanManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 
 // Completion handlers for each activity type
@@ -89,10 +91,6 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     await completeClearingActivity(activity);
   },
 
-  [WorkCategory.UPROOTING]: async (_activity: Activity) => {
-    // TODO: Implement uprooting completion
-  },
-
   [WorkCategory.BUILDING]: async (_activity: Activity) => {
     // TODO: Implement building completion
   },
@@ -115,6 +113,14 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
 
   [WorkCategory.LAND_SEARCH]: async (activity: Activity) => {
     await completeLandSearch(activity);
+  },
+
+  [WorkCategory.LENDER_SEARCH]: async (activity: Activity) => {
+    await completeLenderSearch(activity);
+  },
+
+  [WorkCategory.TAKE_LOAN]: async (activity: Activity) => {
+    await completeTakeLoan(activity);
   },
 
   [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {

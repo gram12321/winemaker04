@@ -10,9 +10,10 @@ interface LoanApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
+  isActivityMode?: boolean; // If true, creates activity instead of directly applying
 }
 
-export function LoanApplicationModal({ lender, isOpen, onClose, onComplete }: LoanApplicationModalProps) {
+export function LoanApplicationModal({ lender, isOpen, onClose, onComplete, isActivityMode = false }: LoanApplicationModalProps) {
   const [loanAmount, setLoanAmount] = useState(lender.minLoanAmount);
   const [durationSeasons, setDurationSeasons] = useState(lender.minDurationSeasons);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,9 +40,11 @@ export function LoanApplicationModal({ lender, isOpen, onClose, onComplete }: Lo
 
   const seasonalPayment = calculateSeasonalPayment(loanAmount, effectiveRate, durationSeasons);
   const totalRepayment = seasonalPayment * durationSeasons;
+  const totalInterest = totalRepayment - loanAmount;
   
   // Calculate origination fee
   const originationFee = calculateOriginationFee(loanAmount, lender, gameState.creditRating || 0.5, durationSeasons);
+  const totalExpenses = originationFee + totalInterest;
 
   // Calculate rate breakdown for tooltip
   const economyMultiplier = ECONOMY_INTEREST_MULTIPLIERS[gameState.economyPhase || 'Recovery'];
@@ -53,7 +56,29 @@ export function LoanApplicationModal({ lender, isOpen, onClose, onComplete }: Lo
       setIsSubmitting(true);
       setError(null);
 
-      await applyForLoan(lender.id, loanAmount, durationSeasons, lender);
+      if (isActivityMode) {
+        // Activity mode: create a LoanOffer and start take loan activity
+        const { v4: uuidv4 } = await import('uuid');
+        const { startTakeLoan } = await import('@/lib/services');
+        
+        const loanOffer = {
+          id: uuidv4(),
+          lender,
+          principalAmount: loanAmount,
+          durationSeasons,
+          effectiveInterestRate: effectiveRate,
+          seasonalPayment,
+          originationFee,
+          totalInterest,
+          totalExpenses,
+          isAvailable: true
+        };
+        
+        await startTakeLoan(loanOffer, true); // true = adjusted (work penalty)
+      } else {
+        // Direct mode: apply for loan immediately
+        await applyForLoan(lender.id, loanAmount, durationSeasons, lender);
+      }
       
       onComplete();
     } catch (error) {
@@ -233,7 +258,7 @@ export function LoanApplicationModal({ lender, isOpen, onClose, onComplete }: Lo
               disabled={isSubmitting}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isSubmitting ? 'Applying...' : 'Apply for Loan'}
+              {isSubmitting ? (isActivityMode ? 'Processing...' : 'Applying...') : (isActivityMode ? 'Accept Adjusted Offer (+50% Work)' : 'Apply for Loan')}
             </Button>
           </div>
         </div>
