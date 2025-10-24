@@ -1,20 +1,17 @@
-// Feature Effects Service
-// Calculates quality, price, and characteristic impacts from wine features
-
 import { WineBatch, CustomerType, WineCharacteristics } from '../../../types/types';
 import { WineFeature, FeatureConfig } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
 
 /**
- * Calculate effective quality after applying all feature effects
- * This is the main quality calculation used by pricing and display
+ * Calculate effective grape quality after applying all feature effects
+ * This is the main grape quality calculation used by pricing and display
  * 
  * @param batch - Wine batch to calculate for
- * @returns Effective quality (0-1 scale) after all feature penalties/bonuses
+ * @returns Effective grape quality (0-1 scale) after all feature penalties/bonuses
  */
-export function calculateEffectiveQuality(batch: WineBatch): number {
+export function calculateEffectiveGrapeQuality(batch: WineBatch): number {
   const configs = getAllFeatureConfigs();
-  let quality = batch.quality;
+  let grapeQuality = batch.grapeQuality;
   
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
   
@@ -22,18 +19,18 @@ export function calculateEffectiveQuality(batch: WineBatch): number {
     const config = configs.find(c => c.id === feature.id);
     if (!config) continue;
     
-    quality = applyQualityEffect(quality, batch, config, feature.severity);
+    grapeQuality = applyQualityEffect(grapeQuality, batch, config, feature.severity);
   }
   
   // Clamp to valid range
-  return Math.max(0, Math.min(1, quality));
+  return Math.max(0, Math.min(1, grapeQuality));
 }
 
 /**
  * Apply a single feature's quality effect
  */
 function applyQualityEffect(
-  quality: number,
+  grapeQuality: number,
   batch: WineBatch,
   config: FeatureConfig,
   severity: number
@@ -43,8 +40,8 @@ function applyQualityEffect(
   switch (effect.type) {
     case 'power': {
       // Premium wines hit harder (oxidation-style)
-      // Formula: quality × (1 - (basePenalty × (1 + quality^exponent)))
-      const penaltyFactor = Math.pow(quality, effect.exponent!);
+      // Formula: grapeQuality × (1 - (basePenalty × (1 + grapeQuality^exponent)))
+      const penaltyFactor = Math.pow(grapeQuality, effect.exponent!);
       const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
       
       // Also apply grape-specific severity for oxidation
@@ -54,7 +51,7 @@ function applyQualityEffect(
         severityMultiplier = 0.85 - (batch.proneToOxidation * 0.2);
       }
       
-      return quality * (1 - scaledPenalty) * severityMultiplier;
+      return grapeQuality * (1 - scaledPenalty) * severityMultiplier;
     }
       
     case 'linear': {
@@ -62,7 +59,7 @@ function applyQualityEffect(
       const amount = typeof effect.amount === 'function' 
         ? effect.amount(severity) 
         : (effect.amount! * severity);
-      return quality + amount;
+      return grapeQuality + amount;
     }
       
     case 'bonus': {
@@ -70,18 +67,18 @@ function applyQualityEffect(
       const bonus = typeof effect.amount === 'function' 
         ? effect.amount(severity) 
         : effect.amount!;
-      return quality + bonus;
+      return grapeQuality + bonus;
     }
       
     case 'custom': {
       if (effect.calculate) {
-        return effect.calculate(quality, severity, batch.proneToOxidation);
+        return effect.calculate(grapeQuality, severity, batch.proneToOxidation);
       }
-      return quality;
+      return grapeQuality;
     }
       
     default:
-      return quality;
+      return grapeQuality;
   }
 }
 

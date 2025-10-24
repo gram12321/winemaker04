@@ -1,10 +1,9 @@
-// Wine quality calculation service - handles all vineyard and regional factors that contribute to wine quality
 import { Vineyard, WineBatch } from '../../../types/types';
 import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSuitabilityContribution } from '../../vineyard/vineyardValueCalc';
 import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
-import { calculateEffectiveQuality } from '../features/featureEffectsService';
+import { calculateEffectiveGrapeQuality } from '../features/featureEffectsService';
 import { getFeatureImpacts } from '../features/featureDisplayService';
 import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
 
@@ -65,7 +64,7 @@ function calculateOvergrowthQualityPenalty(overgrowth: Vineyard['overgrowth']): 
   return qualityMultiplier;
 }
 
-export function calculateWineQuality(vineyard: Vineyard): number {
+export function calculateGrapeQuality(vineyard: Vineyard): number {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue || 50000);
   const boundedVineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
@@ -75,7 +74,7 @@ export function calculateWineQuality(vineyard: Vineyard): number {
   return Math.max(0, Math.min(1, wineQuality));
 }
 
-export function getVineyardQualityFactors(vineyard: Vineyard): {
+export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
   factors: {
     landValue: number;
     vineyardPrestige: number;
@@ -94,9 +93,9 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
     grapeSuitability: string;
     overgrowthPenalty: string;
   };
-  qualityScore: number;
+  grapeQualityScore: number;
 } {
-  const normalizedLandValue = normalizeLandValue(vineyard.landValue || 50000);
+  const normalizedLandValue = normalizeLandValue(vineyard.landValue );
   const vineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
 
   const countryData = REGION_PRESTIGE_RANKINGS[vineyard.country as keyof typeof REGION_PRESTIGE_RANKINGS];
@@ -109,7 +108,7 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
     calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country) : 0;
 
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
-  const qualityScore = calculateWineQuality(vineyard);
+  const grapeQualityScore = calculateGrapeQuality(vineyard);
 
   // Format overgrowth penalty for display
   const overgrowthDisplay = vineyard.overgrowth ? 
@@ -135,7 +134,7 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
       grapeSuitability: vineyard.grape || '',
       overgrowthPenalty: overgrowthDisplay
     },
-    qualityScore
+    grapeQualityScore
   };
 }
 
@@ -143,7 +142,7 @@ export function getVineyardQualityFactors(vineyard: Vineyard): {
 
 export interface QualityBreakdown {
   baseQuality: number;
-  effectiveQuality: number;
+  effectiveGrapeQuality: number;
   featureImpacts: Array<{
     featureId: string;
     featureName: string;
@@ -156,14 +155,14 @@ export interface QualityBreakdown {
 
 /**
  * Get detailed quality breakdown for UI display
- * Used by QualityFactorsBreakdown and WineModal components
+ * Used by GrapeQualityFactorsBreakdown and WineModal components
  * 
  * @param batch - Wine batch to analyze
  * @returns Comprehensive quality breakdown with feature impacts
  */
 export function getQualityBreakdown(batch: WineBatch): QualityBreakdown {
-  const baseQuality = batch.quality;
-  const effectiveQuality = calculateEffectiveQuality(batch);
+  const baseQuality = batch.grapeQuality;
+  const effectiveGrapeQuality = calculateEffectiveGrapeQuality(batch);
   const featureImpacts = getFeatureImpacts(batch);
   
   const qualityImpacts = featureImpacts.map(impact => ({
@@ -174,11 +173,11 @@ export function getQualityBreakdown(batch: WineBatch): QualityBreakdown {
     impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
   }));
   
-  const totalFeatureImpact = effectiveQuality - baseQuality;
+  const totalFeatureImpact = effectiveGrapeQuality - baseQuality;
   
   return {
     baseQuality,
-    effectiveQuality,
+    effectiveGrapeQuality,
     featureImpacts: qualityImpacts,
     totalFeatureImpact
   };

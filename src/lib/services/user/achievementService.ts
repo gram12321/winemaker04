@@ -88,8 +88,8 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
       return `${num} Hectares`;
 
     // Rating/score thresholds
-    case 'wine_quality_threshold':
-      return `${num} Quality`;
+    case 'wine_grape_quality_threshold':
+      return `${num} Grape Quality`;
     case 'wine_balance_threshold':
       return `${num} Balance`;
     case 'wine_score_threshold':
@@ -205,7 +205,7 @@ interface AchievementCheckContext {
     hectares: number;
   }>;
   wineLogEntries: Array<{
-    quality: number;
+    grapeQuality: number;
     balance: number;
     estimatedPrice: number;
     vintage: number;
@@ -332,7 +332,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     totalAchievementsCount,
     vineyards: vineyardData,
     wineLogEntries: allWineLogEntries.map(entry => ({
-      quality: entry.quality,
+      grapeQuality: entry.grapeQuality,
       balance: entry.balance,
       estimatedPrice: entry.estimatedPrice,
       vintage: entry.vintage
@@ -564,9 +564,9 @@ function checkAchievementCondition(
         unit: 'varieties'
       };
       
-    case 'wine_quality_threshold':
-      // Check if produced a wine with quality rating >= threshold
-      const maxQuality = Math.max(...context.wineLogEntries.map(e => e.quality), 0);
+    case 'wine_grape_quality_threshold':
+      // Check if produced a wine with grape quality rating >= threshold
+      const maxQuality = Math.max(...context.wineLogEntries.map(e => e.grapeQuality), 0);
       return {
         isMet: maxQuality >= (condition.threshold || 0),
         progress: maxQuality,
@@ -586,7 +586,7 @@ function checkAchievementCondition(
       
     case 'wine_score_threshold':
       // Check if produced a wine with wine score >= threshold
-      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.quality + e.balance) / 2), 0);
+      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.grapeQuality + e.balance) / 2), 0);
       return {
         isMet: maxWineScore >= (condition.threshold || 0),
         progress: maxWineScore,

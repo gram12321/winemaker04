@@ -1,12 +1,12 @@
 import { WineBatch, Vineyard } from '../../../types/types';
 import { SALES_CONSTANTS } from '../../../constants/constants';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../../utils/calculator';
-import { calculateEffectiveQuality } from '../features/featureEffectsService';
+import { calculateEffectiveGrapeQuality } from '../features/featureEffectsService';
 
 export function calculateWineScore(wineBatch: WineBatch): number {
-  // Use effective quality (applies feature penalties/bonuses)
-  const effectiveQuality = calculateEffectiveQuality(wineBatch);
-  const wineScore = (effectiveQuality + wineBatch.balance) / 2;
+  // Use effective grape quality (applies feature penalties/bonuses)
+  const effectiveGrapeQuality = calculateEffectiveGrapeQuality(wineBatch);
+  const wineScore = (effectiveGrapeQuality + wineBatch.balance) / 2;
   return wineScore;
 }
 
@@ -51,4 +51,4 @@ export function calculateEstimatedPrice(
 
 // TODO: Future implementations for when the game expands
 // - getGrapeQualityPotential(): Different grape varieties with specific ranges
-// - calculateVintageEffects(): Weather/year effects on wine quality
+// - calculateVintageEffects(): Weather/year effects on grape quality

@@ -275,7 +275,7 @@ export function MathematicalModelsTab() {
               <div>
                 <h4 className="font-semibold mb-2">Usage in Game:</h4>
                 <div className="space-y-1 text-sm">
-                  <div>• <strong>Wine Quality Index</strong> - Converts combined wine quality score to 0-1 index</div>
+                  <div>• <strong>Grape Quality Index</strong> - Converts grape quality score to 0-1 index</div>
                   <div>• <strong>Customer Market Share</strong> - Generates realistic market share distribution</div>
                   <div>• <strong>Order Rejection Probability</strong> - Calculates rejection probability based on price ratio</div>
                 </div>

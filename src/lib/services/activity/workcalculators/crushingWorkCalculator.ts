@@ -154,7 +154,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
     
     // Apply direct quality penalty (if any)
-    const finalQuality = Math.max(0, Math.min(1, batch.quality + qualityPenalty));
+    const finalQuality = Math.max(0, Math.min(1, batch.grapeQuality + qualityPenalty));
 
     // Note: Special features were removed for this iteration
 
@@ -167,21 +167,21 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     };
 
     // Process crushing event triggers (e.g., green flavor, oxidation from fragile grapes)
-    const updatedBatch = { ...batch, characteristics: modifiedCharacteristics, breakdown: combinedBreakdown, quality: finalQuality };
+    const updatedBatch = { ...batch, characteristics: modifiedCharacteristics, breakdown: combinedBreakdown, grapeQuality: finalQuality };
     const batchWithEventFeatures = await processEventTrigger(
       updatedBatch,
       'crushing',
       { options: crushingOptions, batch: updatedBatch }  // Pass context with options and batch for event triggers
     );
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and quality
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and grapeQuality
     await updateWineBatch(batchId, {
       state: 'must_ready',
       characteristics: modifiedCharacteristics,
       breakdown: combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      quality: finalQuality
+      grapeQuality: finalQuality
     });
 
     // Deduct costs if any

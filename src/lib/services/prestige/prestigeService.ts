@@ -7,7 +7,7 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
-import { getMaxLandValue } from '../wine/winescore/wineQualityCalculationService';
+import { getMaxLandValue } from '../wine/winescore/grapeQualityCalculation';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import { calculateNetWorth } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
@@ -941,7 +941,7 @@ export async function addFeaturePrestigeEvent(
             return calculateCompanyManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.quality,
+              batch.grapeQuality,
               eventContext.currentCompanyPrestige || 1,
               levelConfig.scalingFactors
             );
@@ -949,7 +949,7 @@ export async function addFeaturePrestigeEvent(
             return calculateVineyardManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.quality,
+              batch.grapeQuality,
               eventContext.vineyard?.vineyardPrestige || 1,
               levelConfig.scalingFactors
             );
@@ -1013,7 +1013,7 @@ export async function addFeaturePrestigeEvent(
         wineName: `${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         batchSize: batch.quantity,
-        wineQuality: batch.quality,
+        grapeQuality: batch.grapeQuality,
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,

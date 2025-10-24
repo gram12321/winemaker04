@@ -24,8 +24,8 @@ class HighscoreService {
       // Check if there's an existing highscore for this company and score type
       const existingScore = await getExistingScore(submission.companyId, submission.scoreType);
 
-      // For most scores, higher is better. For lowest_wine_price, lower is better.
-      const isLowerBetter = submission.scoreType === 'lowest_wine_price';
+      // For most scores, higher is better. For lowest_price, lower is better.
+      const isLowerBetter = submission.scoreType === 'lowest_price';
       const shouldUpdate = !existingScore || 
         (isLowerBetter ? 
           submission.scoreValue < existingScore.score_value : 
@@ -101,10 +101,11 @@ class HighscoreService {
       'company_value_per_week',
       'highest_vintage_quantity',
       'most_productive_vineyard',
-      'highest_wine_quality',
-      'highest_wine_balance',
-      'highest_wine_price',
-      'lowest_wine_price'
+      'highest_wine_score',
+      'highest_grape_quality',
+      'highest_balance',
+      'highest_price',
+      'lowest_price'
     ];
     const rankings: Record<ScoreType, { position: number; total: number }> = {} as any;
 
@@ -178,8 +179,9 @@ class HighscoreService {
       vintage: number;
       grape: string;
       quantity: number;
-      quality: number;
+      grapeQuality: number;
       balance: number;
+      wineScore: number;
       price: number;
     }
   ): Promise<{ success: boolean; error?: string }> {
@@ -196,6 +198,9 @@ class HighscoreService {
         grapeVariety: wineData.grape
       };
 
+      // Use the pre-calculated wine score from the database
+      const wineScore = wineData.wineScore;
+
       const submissions: HighscoreSubmission[] = [
         {
           ...baseSubmission,
@@ -204,22 +209,27 @@ class HighscoreService {
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_wine_quality',
-          scoreValue: wineData.quality
+          scoreType: 'highest_wine_score',
+          scoreValue: wineScore
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_wine_balance',
+          scoreType: 'highest_grape_quality',
+          scoreValue: wineData.grapeQuality
+        },
+        {
+          ...baseSubmission,
+          scoreType: 'highest_balance',
           scoreValue: wineData.balance
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_wine_price',
+          scoreType: 'highest_price',
           scoreValue: wineData.price
         },
         {
           ...baseSubmission,
-          scoreType: 'lowest_wine_price',
+          scoreType: 'lowest_price',
           scoreValue: wineData.price
         }
       ];
@@ -300,10 +310,11 @@ class HighscoreService {
       'company_value_per_week': 'Company Value per Week',
       'highest_vintage_quantity': 'Highest Single Vintage Quantity',
       'most_productive_vineyard': 'Most Productive Vineyard',
-      'highest_wine_quality': 'Highest Wine Quality',
-      'highest_wine_balance': 'Highest Wine Balance',
-      'highest_wine_price': 'Highest Wine Price',
-      'lowest_wine_price': 'Lowest Wine Price'
+      'highest_wine_score': 'Highest Wine Score',
+      'highest_grape_quality': 'Highest Grape Quality',
+      'highest_balance': 'Highest Balance',
+      'highest_price': 'Highest Price',
+      'lowest_price': 'Lowest Price'
     };
     return names[scoreType] || scoreType;
   }
@@ -317,10 +328,11 @@ class HighscoreService {
       'company_value_per_week': '€/week',
       'highest_vintage_quantity': 'bottles',
       'most_productive_vineyard': 'bottles',
-      'highest_wine_quality': '%',
-      'highest_wine_balance': '%',
-      'highest_wine_price': '€',
-      'lowest_wine_price': '€'
+      'highest_wine_score': '%',
+      'highest_grape_quality': '%',
+      'highest_balance': '%',
+      'highest_price': '€',
+      'lowest_price': '€'
     };
     return units[scoreType] || '';
   }

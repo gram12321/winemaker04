@@ -19,9 +19,10 @@ export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 export { Avatar, AvatarFallback, AvatarImage } from './shadCN/avatar';
 export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './shadCN/dropdown-menu';
 export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend } from './components/characteristicBar';
-export { QualityFactorBar, QualityFactorsDisplay, QualityFactorLegend } from './components/qualityFactorBar';
+export { GrapeQualityFactorBar, GrapeQualityFactorsDisplay, GrapeQualityFactorLegend } from './components/grapeQualityBar';
 export { BalanceScoreBreakdown } from './components/BalanceScoreBreakdown';
-export { QualityFactorsBreakdown } from './components/QualityFactorsBreakdown';
+export { GrapeQualityFactorsBreakdown } from './components/grapeQualityBreakdown';
+export { GrapeQualityBreakdownModal } from './modals/winebreakdownmodals/grapeQualityBreakdownModal';
 export { LandSearchOptionsModal } from './modals/activitymodals/LandSearchOptionsModal';
 export { LandSearchResultsModal } from './modals/activitymodals/LandSearchResultsModal';
 export { LenderSearchOptionsModal } from './modals/activitymodals/LenderSearchOptionsModal';
@@ -36,7 +37,6 @@ export { default as CrushingOptionsModal } from './modals/activitymodals/Crushin
 export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
 export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
 export { BalanceBreakdownModal } from './modals/winebreakdownmodals/BalanceBreakdownModal';
-export { QualityBreakdownModal } from './modals/winebreakdownmodals/QualityBreakdownModal';
 export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';
 export { StaffSkillBar, StaffSkillBarsList } from './components/StaffSkillBar';
 export { FeatureBadge, FeatureBadges } from './wine/FeatureBadge';

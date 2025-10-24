@@ -6,7 +6,7 @@ import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { WineLogEntry, WineBatch } from '@/lib/types/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineModal } from '../ui';
 import { Wine, Award, BarChart3 } from 'lucide-react';
-import { getWineQualityCategory, getColorClass, formatNumber } from '@/lib/utils/utils';
+import { getGrapeQualityCategory, getColorClass, formatNumber } from '@/lib/utils/utils';
 import { CompanyProps } from '@/lib/types/UItypes';
 import ProductionHistoryTab from './winelog/ProductionHistoryTab';
 import VineyardStatisticsTab from './winelog/VineyardStatisticsTab';
@@ -92,7 +92,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
     const totalBottles = wineLog.reduce((sum, entry) => sum + entry.quantity, 0);
     const totalVintages = wineLog.length;
     const averageQuality = wineLog.length > 0 
-      ? wineLog.reduce((sum, entry) => sum + entry.quality, 0) / wineLog.length 
+      ? wineLog.reduce((sum, entry) => sum + entry.grapeQuality, 0) / wineLog.length 
       : 0;
     return { totalBottles, totalVintages, averageQuality };
   }, [wineLog]);
@@ -130,7 +130,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
           <div className="flex items-start gap-2">
             <div className="text-blue-600 text-sm">ℹ️</div>
             <div className="text-sm text-blue-800">
-              <strong>Note:</strong> This log shows wine quality and characteristics <strong>at bottling time</strong>. 
+              <strong>Note:</strong> This log shows grape quality and characteristics <strong>at bottling time</strong>. 
               For wines still in your cellar, features may continue evolving until the last bottle is sold. 
               Use "View Details" to see current wine state.
             </div>
@@ -176,7 +176,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
               </div>
               <div>
                 <div className={`text-2xl font-bold ${getColorClass(statistics.averageQuality)}`}>
-                  {getWineQualityCategory(statistics.averageQuality)}
+                  {getGrapeQualityCategory(statistics.averageQuality)}
                 </div>
                 <div className="text-sm text-gray-500">Average Quality</div>
               </div>

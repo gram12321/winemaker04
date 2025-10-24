@@ -1,4 +1,4 @@
-// Wine inventory management service for winery operations
+
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics } from '../../../types/types';
 import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
@@ -9,7 +9,7 @@ import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
-import { calculateWineQuality } from '../winescore/wineQualityCalculationService';
+import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../../constants/vineyardConstants';
@@ -70,7 +70,7 @@ function combineWineBatches(
   const newWeight = newQuantity / totalQuantity;
   
   // Calculate weighted averages for quality properties
-  const combinedQuality = (existingBatch.quality * existingWeight) + (newQuality * newWeight);
+  const combinedQuality = (existingBatch.grapeQuality * existingWeight) + (newQuality * newWeight);
   const combinedBalance = (existingBatch.balance * existingWeight) + (newBalance * newWeight);
   
   // Combine characteristics using weighted averages
@@ -94,7 +94,7 @@ function combineWineBatches(
   return {
     ...existingBatch,
     quantity: totalQuantity,
-    quality: combinedQuality,
+    grapeQuality: combinedQuality,
     balance: combinedBalance,
     characteristics: combinedCharacteristics,
     breakdown: combinedBreakdown
@@ -134,7 +134,7 @@ export async function createWineBatchFromHarvest(
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,
-    qualityFactor: calculateWineQuality(vineyard), // Use actual vineyard quality instead of hardcoded 0.5
+    qualityFactor: calculateGrapeQuality(vineyard), // Use actual vineyard grape quality instead of hardcoded 0.5
     suitability,
     altitude,
     medianAltitude: (minAlt + maxAlt) / 2,
@@ -147,7 +147,7 @@ export async function createWineBatchFromHarvest(
   const balanceResult = calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   
   // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
-  const quality = calculateWineQuality(vineyard);
+  const quality = calculateGrapeQuality(vineyard);
   
   const harvestDate = {
     week: gameState.week || 1,
@@ -206,7 +206,7 @@ export async function createWineBatchFromHarvest(
       quantity,
       state: 'grapes',
       fermentationProgress: 0,
-      quality, // Use vineyard quality (land value, prestige, altitude, etc.)
+      grapeQuality: quality, // Use vineyard quality (land value, prestige, altitude, etc.)
       balance: balanceResult.score, // Use calculated balance from wine characteristics
       characteristics,
       breakdown, // Store breakdown data

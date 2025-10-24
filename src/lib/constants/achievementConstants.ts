@@ -214,15 +214,15 @@ export const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-// Wine Quality Threshold (realistic for 99.999 max)
-export const WINE_QUALITY_ACHIEVEMENTS = createTieredAchievements(
-  'wine_quality',
-  'Quality Master',
-  'Produce a wine with quality rating of {threshold}',
+// Wine Grape Quality Threshold (realistic for 99.999 max)
+export const WINE_GRAPE_QUALITY_ACHIEVEMENTS = createTieredAchievements(
+  'wine_grape_quality',
+  'Grape Quality Master',
+  'Produce a wine with grape quality rating of {threshold}',
   '⭐',
   'production',
-  'wine_quality_threshold',
-  [80, 85, 90, 95, 99], // Quality rating: 80, 85, 90, 95, 99 (max ~99.999)
+  'wine_grape_quality_threshold',
+  [80, 85, 90, 95, 99], // Grape quality rating: 80, 85, 90, 95, 99 (max ~99.999)
   []
 );
 
@@ -460,7 +460,7 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...WINE_VARIETY_ACHIEVEMENTS,
   ...BOTTLE_PRODUCTION_ACHIEVEMENTS,
   ...DIFFERENT_GRAPES_ACHIEVEMENTS,
-  ...WINE_QUALITY_ACHIEVEMENTS,
+  ...WINE_GRAPE_QUALITY_ACHIEVEMENTS,
   ...WINE_BALANCE_ACHIEVEMENTS,
   ...WINE_SCORE_ACHIEVEMENTS,
   ...WINE_PRICE_ACHIEVEMENTS,

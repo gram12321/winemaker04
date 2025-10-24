@@ -2,7 +2,7 @@ import React from 'react';
 import { WineLogEntry, WineBatch, Vineyard } from '@/lib/types/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from '../../ui';
 import { Wine, TrendingUp, Award, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
-import { getColorClass, formatCurrency, formatNumber, formatPercent, getWineQualityCategory } from '@/lib/utils/utils';
+import { getColorClass, formatCurrency, formatNumber, formatPercent, getGrapeQualityCategory } from '@/lib/utils/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/shadCN/tooltip';
 import { calculateVineyardAnalytics } from '@/lib/services';
 
@@ -328,10 +328,10 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                       <div className="text-xs text-gray-600 mt-0.5">{analytics.bestWine.quantity} bottles • {formatCurrency(analytics.bestWine.estimatedPrice, 0)}/btl</div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm font-bold ${getColorClass((analytics.bestWine.quality + analytics.bestWine.balance) / 2)}`}>
-                        {formatPercent((analytics.bestWine.quality + analytics.bestWine.balance) / 2, 0, true)}
+                      <div className={`text-sm font-bold ${getColorClass((analytics.bestWine.grapeQuality + analytics.bestWine.balance) / 2)}`}>
+                        {formatPercent((analytics.bestWine.grapeQuality + analytics.bestWine.balance) / 2, 0, true)}
                       </div>
-                      <div className="text-xs text-gray-500">{getWineQualityCategory((analytics.bestWine.quality + analytics.bestWine.balance) / 2)}</div>
+                      <div className="text-xs text-gray-500">{getGrapeQualityCategory((analytics.bestWine.grapeQuality + analytics.bestWine.balance) / 2)}</div>
                     </div>
                   </div>
                 </div>

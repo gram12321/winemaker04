@@ -376,7 +376,7 @@ MAX PRESSURE BY METHOD:
                 <div className="flex justify-between">
                   <span className="text-blue-700">Current Quality:</span>
                   <span className="font-mono text-blue-900">
-                    {((batch?.quality || 0) * 100).toFixed(1)}%
+                    {((batch?.grapeQuality || 0) * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -388,7 +388,7 @@ MAX PRESSURE BY METHOD:
                 <div className="flex justify-between border-t border-blue-300 pt-1">
                   <span className="text-blue-800 font-medium">After Crushing:</span>
                   <span className="font-mono text-blue-900 font-medium">
-                    {(Math.max(0, Math.min(1, (batch?.quality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100).toFixed(1)}%
+                    {(Math.max(0, Math.min(1, (batch?.grapeQuality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100).toFixed(1)}%
                   </span>
                 </div>
               </div>

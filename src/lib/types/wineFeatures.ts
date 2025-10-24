@@ -112,7 +112,7 @@ export function inferRiskAccumulationStrategy(config: RiskAccumulationConfig): R
 }
 
 /**
- * Feature effects on wine quality, price, characteristics, and prestige
+ * Feature effects on grape quality, price, characteristics, and prestige
  */
 export interface FeatureEffects {
   // Quality impact
@@ -183,7 +183,7 @@ export interface PrestigeImpactConfig {
     
     // For dynamic_manifestation (vineyard level)
     batchSizeWeight?: number;      // How much batch size matters (log scaling)
-    qualityWeight?: number;         // How much wine quality matters (linear)
+    qualityWeight?: number;         // How much grape quality matters (linear)
     vineyardPrestigeWeight?: number; // How much vineyard prestige matters (sqrt scaling)
   };
   

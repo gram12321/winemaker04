@@ -6,8 +6,8 @@ import { getRegionalPriceRange } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/vineyardConstants';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
 
-// Quality factor types for wine value calculation
-export type QualityFactorType =
+// Grape quality factor types for wine value calculation
+export type GrapeQualityFactorType =
   | 'landValue'
   | 'vineyardPrestige'
   | 'regionalPrestige'
@@ -16,8 +16,8 @@ export type QualityFactorType =
   | 'grapeSuitability'
   | 'overgrowthPenalty';
 
-interface QualityFactorBarProps {
-  factorType: QualityFactorType;
+interface GrapeQualityFactorBarProps {
+  factorType: GrapeQualityFactorType;
   label: string;
   value: number;
   vineyard?: Vineyard;
@@ -27,7 +27,7 @@ interface QualityFactorBarProps {
   showIcon?: boolean;
 }
 
-export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
+export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
   factorType,
   label,
   value,
@@ -37,7 +37,7 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
   rawValue,
   showIcon = true
 }) => {
-  const getIcon = (factorType: QualityFactorType): string => {
+  const getIcon = (factorType: GrapeQualityFactorType): string => {
     return (QUALITY_FACTOR_EMOJIS as any)[factorType] || '❓';
   };
 
@@ -71,7 +71,7 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
                 {/* Background bar */}
                 <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
 
-                {/* Quality range visualization - show as gradient from poor to excellent */}
+                {/* Grape quality range visualization - show as gradient from poor to excellent */}
                 <div className="absolute inset-0 bg-gradient-to-r from-red-200 via-yellow-200 to-green-200 rounded-full"></div>
 
                 {/* Value marker */}
@@ -103,7 +103,7 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
                 {factorType === 'landValue' && (
                   <div className="space-y-1">
                     <p className="font-medium text-sm">💰 Land Value Factor</p>
-                    <p className="text-xs text-blue-300 font-medium">DIRECT INFLUENCE - Weighted Calculation</p>
+                    <p className="text-xs text-blue-300 font-medium">DIRECT INFLUENCE</p>
                     <p className="text-xs text-gray-300">Normalized land value (logarithmic scale)</p>
                     <p className="text-xs text-blue-300">Weight: 60% of wine value index</p>
                     {vineyard && (
@@ -117,7 +117,7 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
                 {factorType === 'vineyardPrestige' && (
                   <div className="space-y-1">
                     <p className="font-medium text-sm">🌟 Vineyard Prestige</p>
-                    <p className="text-xs text-blue-300 font-medium">DIRECT INFLUENCE - Weighted Calculation</p>
+                    <p className="text-xs text-blue-300 font-medium">DIRECT INFLUENCE</p>
                     <p className="text-xs text-gray-300">Combined prestige from all sources</p>
                     <p className="text-xs text-purple-300">Weight: 40% of wine value index</p>
                   </div>
@@ -128,7 +128,7 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
                     <p className="font-medium text-sm">🏛️ Regional Prestige</p>
                     <p className="text-xs text-green-300 font-medium">INDIRECT INFLUENCE - Environmental Factor</p>
                     <p className="text-xs text-gray-300">Region: {vineyard.region}, {vineyard.country}</p>
-                    <p className="text-xs text-gray-300">Regional prestige factor for wine quality</p>
+                    <p className="text-xs text-gray-300">Regional prestige factor for grape quality</p>
                     <p className="text-xs text-gray-300 mt-2">
                       <strong>Impact:</strong> These factors are permanent and represent the natural advantages of your vineyard's location. Premium regions like Bordeaux, Tuscany, or Napa Valley have higher regional prestige.
                     </p>
@@ -199,9 +199,9 @@ export const QualityFactorBar: React.FC<QualityFactorBarProps> = ({
   );
 };
 
-// Component for displaying multiple quality factors
-interface QualityFactorsDisplayProps {
-  factors: Record<QualityFactorType, number>;
+// Component for displaying multiple grape quality factors
+interface GrapeQualityFactorsDisplayProps {
+  factors: Record<GrapeQualityFactorType, number>;
   vineyard?: Vineyard;
   showValues?: boolean;
   className?: string;
@@ -209,40 +209,40 @@ interface QualityFactorsDisplayProps {
   defaultExpanded?: boolean;
   title?: string;
   // Optional raw values for detailed tooltips
-  rawValues?: Partial<Record<QualityFactorType, string | number>>;
-  // Show quality score at the top
-  showQualityScore?: boolean;
-  // The final quality score (0-1)
-  qualityScore?: number;
+  rawValues?: Partial<Record<GrapeQualityFactorType, string | number>>;
+  // Show grape quality score at the top
+  showGrapeQualityScore?: boolean;
+  // The final grape quality score (0-1)
+  grapeQualityScore?: number;
 }
 
-export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
+export const GrapeQualityFactorsDisplay: React.FC<GrapeQualityFactorsDisplayProps> = ({
   factors,
   vineyard,
   showValues = true,
   className = "",
   collapsible = false,
   defaultExpanded = true,
-  title = "Quality Factors",
+  title = "Grape Quality Factors",
   rawValues,
-  showQualityScore = false,
-  qualityScore
+  showGrapeQualityScore = false,
+  grapeQualityScore
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
 
-  // Separate factors into direct, indirect, and quality modifiers
+  // Separate factors into direct, indirect, and grape quality modifiers
   const directFactors = ['landValue', 'vineyardPrestige'] as const;
   const indirectFactors = ['regionalPrestige', 'altitudeRating', 'aspectRating', 'grapeSuitability'] as const;
-  const qualityModifiers = ['overgrowthPenalty'] as const;
+  const grapeQualityModifiers = ['overgrowthPenalty'] as const;
 
   const content = (
     <div className="space-y-4">
-      {/* Quality Score Display */}
-      {showQualityScore && qualityScore !== undefined && (
+      {/* Grape Quality Score Display */}
+      {showGrapeQualityScore && grapeQualityScore !== undefined && (
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium">Current Quality Score:</span>
-          <span className={`text-2xl font-bold ${getColorClass(qualityScore)}`}>
-            {formatNumber(qualityScore, { decimals: 2, forceDecimals: true })}
+          <span className="text-sm font-medium">Current Grape Quality Score:</span>
+          <span className={`text-2xl font-bold ${getColorClass(grapeQualityScore)}`}>
+            {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
           </span>
         </div>
       )}
@@ -251,11 +251,11 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
       <div className="space-y-1">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          <h3 className="text-sm font-semibold text-gray-700">Direct Influence (Weighted Calculation)</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Direct Influence</h3>
         </div>
         <div className="bg-blue-50 rounded-lg p-2 space-y-1">
           {directFactors.map((key) => (
-            <QualityFactorBar
+            <GrapeQualityFactorBar
               key={key}
               factorType={key}
               label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -276,7 +276,7 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
         </div>
         <div className="bg-green-50 rounded-lg p-2 space-y-1">
           {indirectFactors.map((key) => (
-            <QualityFactorBar
+            <GrapeQualityFactorBar
               key={key}
               factorType={key}
               label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -289,15 +289,15 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
         </div>
       </div>
 
-      {/* Quality Modifiers */}
+      {/* Grape Quality Modifiers */}
       <div className="space-y-1">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-          <h3 className="text-sm font-semibold text-gray-700">Quality Modifiers (Final Adjustments)</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Grape Quality Modifiers</h3>
         </div>
         <div className="bg-orange-50 rounded-lg p-2 space-y-1">
-          {qualityModifiers.map((key) => (
-            <QualityFactorBar
+          {grapeQualityModifiers.map((key) => (
+            <GrapeQualityFactorBar
               key={key}
               factorType={key}
               label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -310,7 +310,7 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
         </div>
       </div>
 
-      <QualityFactorLegend />
+      <GrapeQualityFactorLegend />
     </div>
   );
 
@@ -339,8 +339,8 @@ export const QualityFactorsDisplay: React.FC<QualityFactorsDisplayProps> = ({
   );
 };
 
-// Legend component for explaining quality factor colors
-export const QualityFactorLegend: React.FC = () => {
+// Legend component for explaining grape quality factor colors
+export const GrapeQualityFactorLegend: React.FC = () => {
   return (
     <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
       <div className="flex items-center gap-1">

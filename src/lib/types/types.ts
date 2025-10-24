@@ -134,7 +134,7 @@ export interface WineBatch {
   fermentationProgress?: number; // 0-100% for fermentation tracking
   
   // Wine quality properties (0-1 scale)
-  quality: number; // Overall wine quality (0-1)
+  grapeQuality: number; // Overall grape quality (0-1)
   balance: number; // Wine balance/body (0-1)
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
@@ -180,8 +180,9 @@ export interface WineLogEntry {
   grape: GrapeVariety;
   vintage: number; // Year the grapes were harvested
   quantity: number; // Bottles produced
-  quality: number; // Overall wine quality (0-1)
+  grapeQuality: number; // Overall grape quality (0-1)
   balance: number; // Wine balance/body (0-1)
+  wineScore: number; // Overall wine score (grape quality + balance) / 2
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
@@ -206,7 +207,7 @@ export interface Customer {
   
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
-  wineTradition: number; // Affects wine quality preferences and price premiums
+  wineTradition: number; // Affects wine grape quality preferences and price premiums
   marketShare: number; // Affects order size multipliers (0-1 scale)
   
   // Behavioral multipliers (calculated from characteristics)
@@ -665,7 +666,7 @@ export type AchievementConditionType =
   | 'vineyard_value'                // Check if total vineyard value >= threshold
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
-  | 'wine_quality_threshold'        // Check if wine quality >= threshold
+  | 'wine_grape_quality_threshold'        // Check if wine grape quality >= threshold
   | 'wine_balance_threshold'        // Check if wine balance >= threshold
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold

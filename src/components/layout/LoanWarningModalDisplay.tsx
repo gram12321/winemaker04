@@ -34,6 +34,26 @@ export function LoanWarningModalDisplay() {
     loadWarnings();
   }, []);
 
+  // Listen for new loan warnings (check every 2 seconds)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      // Only check if we don't already have a warning showing
+      if (!warning) {
+        try {
+          const newWarning = await getFirstUnacknowledgedLoanWarning();
+          if (newWarning) {
+            setWarning(newWarning);
+            setWarningId(newWarning.loanId);
+          }
+        } catch (error) {
+          // Silently handle errors to avoid console spam
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [warning]);
+
   const handleClose = async () => {
     try {
       // Acknowledge warning in database if it has an ID

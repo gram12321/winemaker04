@@ -8,13 +8,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
-import { getWineQualityCategory, getWineQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
+import { getGrapeQualityCategory, getGrapeQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { QualityFactorsBreakdown } from '../../components/QualityFactorsBreakdown';
+import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreakdown';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureStatusGrid } from '../../wine/WineryFeatureStatusGrid';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { calculateEffectiveQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
+import { calculateEffectiveGrapeQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { useWineBalance } from '@/hooks';
 
@@ -26,7 +26,7 @@ interface WineModalProps extends DialogProps {
 /**
  * Unified Wine Modal
  * Comprehensive wine details in a tabbed interface
- * Replaces separate QualityBreakdownModal, BalanceBreakdownModal, and expand/collapse patterns
+ * Replaces separate GrapeQualityBreakdownModal, BalanceBreakdownModal, and expand/collapse patterns
  */
 export const WineModal: React.FC<WineModalProps> = ({ 
   isOpen, 
@@ -63,9 +63,9 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch) return null;
 
   const displayName = wineName || `${wineBatch.grape} - ${wineBatch.vineyardName}`;
-  const effectiveQuality: number = calculateEffectiveQuality(wineBatch) || 0;
-  const qualityCategory = getWineQualityCategory(effectiveQuality);
-  const qualityColorClass = getColorClass(effectiveQuality);
+  const effectiveGrapeQuality: number = calculateEffectiveGrapeQuality(wineBatch) || 0;
+  const grapeQualityCategory = getGrapeQualityCategory(effectiveGrapeQuality);
+  const grapeQualityColorClass = getColorClass(effectiveGrapeQuality);
   const configs = getAllFeatureConfigs();
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['body','aroma','spice','acidity','sweetness','tannins'] as any;
@@ -104,8 +104,8 @@ export const WineModal: React.FC<WineModalProps> = ({
               <Badge variant="outline" className="bg-white/90 text-gray-900">
                 {wineBatch.state.replace('_', ' ').toUpperCase()}
               </Badge>
-              <Badge variant="outline" className={`${qualityColorClass} bg-white/90`}>
-                {qualityCategory}
+              <Badge variant="outline" className={`${grapeQualityColorClass} bg-white/90`}>
+                {grapeQualityCategory}
               </Badge>
             </div>
           </div>
@@ -115,7 +115,7 @@ export const WineModal: React.FC<WineModalProps> = ({
           <DialogHeader>
             <DialogTitle className="text-base">Wine Details</DialogTitle>
             <DialogDescription className="text-xs">
-              Comprehensive analysis of wine quality, balance, features, and characteristics.
+              Comprehensive analysis of grape quality, balance, features, and characteristics.
             </DialogDescription>
           </DialogHeader>
 
@@ -128,7 +128,7 @@ export const WineModal: React.FC<WineModalProps> = ({
               </TabsTrigger>
               <TabsTrigger value="quality" className="flex items-center gap-1">
                 <Award className="h-3 w-3" />
-                Quality
+                Grape Quality
               </TabsTrigger>
               <TabsTrigger value="balance" className="flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
@@ -188,15 +188,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                             <div className="flex justify-between cursor-help">
                               <span className="text-muted-foreground">Wine Score:</span>
                               <div className="text-right">
-                                <div className={`font-medium ${getColorClass((effectiveQuality + currentBalance) / 2)}`}>
-                                  {formatNumber((effectiveQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
+                                <div className={`font-medium ${getColorClass((effectiveGrapeQuality + currentBalance) / 2)}`}>
+                                  {formatNumber((effectiveGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
                                 </div>
-                                <div className="text-xs text-gray-500">{getWineQualityCategory((effectiveQuality + currentBalance) / 2)}</div>
+                                <div className="text-xs text-gray-500">{getGrapeQualityCategory((effectiveGrapeQuality + currentBalance) / 2)}</div>
                               </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getWineQualityDescription((effectiveQuality + currentBalance) / 2)}</div>
+                            <div className="text-xs">{getGrapeQualityDescription((effectiveGrapeQuality + currentBalance) / 2)}</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -224,17 +224,17 @@ export const WineModal: React.FC<WineModalProps> = ({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="flex justify-between cursor-help">
-                              <span className="text-muted-foreground">Quality:</span>
+                              <span className="text-muted-foreground">Grape Quality:</span>
                               <div className="text-right">
-                                <div className={`font-medium ${getColorClass(effectiveQuality)}`}>
-                                  {formatNumber(effectiveQuality, { decimals: 2, forceDecimals: true })}
+                                <div className={`font-medium ${getColorClass(effectiveGrapeQuality)}`}>
+                                  {formatNumber(effectiveGrapeQuality, { decimals: 2, forceDecimals: true })}
                                 </div>
-                                <div className="text-xs text-gray-500">{getWineQualityCategory(effectiveQuality)}</div>
+                                <div className="text-xs text-gray-500">{getGrapeQualityCategory(effectiveGrapeQuality)}</div>
                               </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getWineQualityDescription(effectiveQuality)}</div>
+                            <div className="text-xs">{getGrapeQualityDescription(effectiveGrapeQuality)}</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -331,17 +331,17 @@ export const WineModal: React.FC<WineModalProps> = ({
               </div>
             </TabsContent>
 
-            {/* Quality Tab */}
+            {/* Grape Quality Tab */}
             <TabsContent value="quality" className="mt-4">
               {vineyard ? (
-                <QualityFactorsBreakdown
+                <GrapeQualityFactorsBreakdown
                   vineyard={vineyard}
                   wineBatch={wineBatch}
                   showFactorDetails={true}
                 />
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <p>Quality analysis unavailable - vineyard data not found for this wine batch.</p>
+                  <p>Grape quality analysis unavailable - vineyard data not found for this wine batch.</p>
                 </div>
               )}
             </TabsContent>
@@ -412,7 +412,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                           if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
                             impactText = `${(qualityEffect.amount * feature.severity * 100).toFixed(1)}%`;
                           } else if (qualityEffect.type === 'power') {
-                            const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(wineBatch.quality, qualityEffect.exponent!));
+                            const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(wineBatch.grapeQuality, qualityEffect.exponent!));
                             impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
                           }
 
@@ -433,7 +433,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                                       `${Math.round(feature.severity * 100)}%`}
                                 </div>
                                 {impactText && (
-                                  <div className="text-xs text-gray-600">Quality: {impactText}</div>
+                                  <div className="text-xs text-gray-600">Grape Quality: {impactText}</div>
                                 )}
                               </div>
                             </div>

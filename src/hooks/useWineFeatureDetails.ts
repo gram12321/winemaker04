@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { calculateEffectiveQuality, getPresentFeaturesSorted, getAllVineyards } from '@/lib/services';
+import { calculateEffectiveGrapeQuality, getPresentFeaturesSorted, getAllVineyards } from '@/lib/services';
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface FeatureDetails {
-  effectiveQuality: number;
+  effectiveGrapeQuality: number;
   qualityPenalty: number;
   presentFeatures: Array<{ feature: any; config: any }>;
   hasFaults: boolean;
@@ -31,8 +31,8 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
     const calculateFeatureDetails = async () => {
       try {
         // Calculate feature impact on quality (synchronous)
-        const effectiveQuality = calculateEffectiveQuality(wineBatch);
-        const qualityPenalty = wineBatch.quality - effectiveQuality;
+        const effectiveGrapeQuality = calculateEffectiveGrapeQuality(wineBatch);
+        const qualityPenalty = wineBatch.grapeQuality - effectiveGrapeQuality;
         const presentFeatures = getPresentFeaturesSorted(wineBatch);
         const hasFaults = presentFeatures.some((f: any) => f.config.type === 'fault');
 
@@ -68,7 +68,7 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
         }
 
         setFeatureDetails({
-          effectiveQuality,
+          effectiveGrapeQuality,
           qualityPenalty,
           presentFeatures,
           hasFaults,

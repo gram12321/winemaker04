@@ -1,12 +1,12 @@
 import { SimpleCard } from '@/components/ui';
-import { getWineQualityInfo, getColorClass, getColorCategory, formatNumber } from '@/lib/utils/utils';
+import { getGrapeQualityInfo, getColorClass, getColorCategory, formatNumber } from '@/lib/utils/utils';
 
 export function WineQualityTab() {
   return (
     <div className="space-y-6">
       <SimpleCard
-        title="Wine Quality Categories"
-        description="Understanding wine quality ratings and what they mean for your winery"
+        title="Grape Quality Categories"
+        description="Understanding grape quality ratings and what they mean for your winery"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -23,7 +23,7 @@ export function WineQualityTab() {
               { min: 0.0, max: 0.1 }
             ].map((quality, index) => {
               const sampleQuality = (quality.min + quality.max) / 2;
-              const qualityInfo = getWineQualityInfo(sampleQuality);
+              const qualityInfo = getGrapeQualityInfo(sampleQuality);
               const colorClass = getColorClass(sampleQuality);
               const qualityLabel = getColorCategory(sampleQuality);
               
@@ -48,7 +48,7 @@ export function WineQualityTab() {
       
       <SimpleCard
         title="Quality Factors"
-        description="What influences wine quality in your winery"
+        description="What influences grape quality in your winery"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

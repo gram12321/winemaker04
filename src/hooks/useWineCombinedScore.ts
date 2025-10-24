@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { calculateWineScore } from '@/lib/services/wine/winescore/wineScoreCalculation';
-import { getWineQualityCategory, getWineQualityDescription, getColorClass, getBadgeColorClasses, formatPercent } from '@/lib/utils/utils';
+import { getGrapeQualityCategory, getGrapeQualityDescription, getColorClass, getBadgeColorClasses, formatPercent } from '@/lib/utils/utils';
 
 /**
  * Hook to calculate and format wine score
@@ -21,10 +21,10 @@ export function useWineCombinedScore(wineBatch: WineBatch | null): {
 
     const score = calculateWineScore(wineBatch);
     const formattedScore = formatPercent(score, 1, true);
-    const category = getWineQualityCategory(score);
+    const category = getGrapeQualityCategory(score);
     const colorClass = getColorClass(score);
     const badgeClasses = getBadgeColorClasses(score);
-    const description = getWineQualityDescription(score);
+    const description = getGrapeQualityDescription(score);
 
     return {
       score,

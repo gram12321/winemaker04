@@ -1,16 +1,16 @@
 import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { QualityFactorsBreakdown } from '../../components/QualityFactorsBreakdown';
+import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreakdown';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
 import { DialogProps } from '@/lib/types/UItypes';
 
-interface QualityBreakdownModalProps extends DialogProps {
+interface GrapeQualityBreakdownModalProps extends DialogProps {
   batch?: WineBatch;
   vineyard?: Vineyard;
   wineName?: string;
 }
 
-export const QualityBreakdownModal: React.FC<QualityBreakdownModalProps> = ({
+export const GrapeQualityBreakdownModal: React.FC<GrapeQualityBreakdownModalProps> = ({
   isOpen,
   onClose,
   batch,
@@ -21,14 +21,14 @@ export const QualityBreakdownModal: React.FC<QualityBreakdownModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Quality Analysis - {wineName}</DialogTitle>
+          <DialogTitle>Grape Quality Analysis - {wineName}</DialogTitle>
           <DialogDescription>
-            Detailed breakdown of quality factors contributing to this wine's value and market positioning.
+            Detailed breakdown of grape quality factors contributing to this wine's value and market positioning.
           </DialogDescription>
         </DialogHeader>
 
         {vineyard && (
-          <QualityFactorsBreakdown
+          <GrapeQualityFactorsBreakdown
             vineyard={vineyard}
             wineBatch={batch}
             showFactorDetails={true}
@@ -37,13 +37,13 @@ export const QualityBreakdownModal: React.FC<QualityBreakdownModalProps> = ({
 
         {!vineyard && batch && (
           <div className="text-center py-8 text-gray-500">
-            <p>Quality factors unavailable - vineyard data not found for this wine batch.</p>
+            <p>Grape quality factors unavailable - vineyard data not found for this wine batch.</p>
           </div>
         )}
 
         {!vineyard && !batch && (
           <div className="text-center py-8 text-gray-500">
-            <p>No data available for quality analysis.</p>
+            <p>No data available for grape quality analysis.</p>
           </div>
         )}
       </DialogContent>

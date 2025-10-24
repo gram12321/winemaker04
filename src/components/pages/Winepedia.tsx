@@ -17,7 +17,7 @@ export default function Winepedia({ view }: WinepediaProps) {
 
   const tabs = [
     { id: 'grapeVarieties', label: 'Grape Varieties', component: GrapeVarietiesTab },
-    { id: 'wineQuality', label: 'Wine Quality', component: WineQualityTab },
+    { id: 'grapeQuality', label: 'Grape Quality', component: WineQualityTab },
     { id: 'dynamicRange', label: 'Dynamic Range', component: DynamicRangeTab },
     { id: 'crossTraitPenalty', label: 'Cross-Trait Penalty', component: CrossTraitPenaltyTab },
     { id: 'customerTypes', label: 'Customer Types', component: CustomerTypesTab },

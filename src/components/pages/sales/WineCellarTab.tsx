@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { formatCurrency, formatNumber, formatPercent, getWineQualityCategory, getColorClass } from '@/lib/utils/utils';
+import { formatCurrency, formatNumber, formatPercent, getGrapeQualityCategory, getColorClass } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
@@ -18,9 +18,9 @@ const BalanceAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => 
   const balanceQuality = useBalanceQuality(balanceResult);
   const balanceColorClass = getColorClass(batch.balance);
   
-  const qualityCategory = getWineQualityCategory(batch.quality);
-  const qualityColorClass = getColorClass(batch.quality);
-  const qualityPercentage = Math.round(batch.quality * 100);
+  const qualityCategory = getGrapeQualityCategory(batch.grapeQuality);
+  const qualityColorClass = getColorClass(batch.grapeQuality);
+  const qualityPercentage = Math.round(batch.grapeQuality * 100);
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
@@ -41,7 +41,7 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   
   if (!wineScoreData || !featureDetails) return null;
   
-  const { effectiveQuality, qualityPenalty, presentFeatures, hasFaults } = featureDetails;
+  const { effectiveGrapeQuality, qualityPenalty, presentFeatures, hasFaults } = featureDetails;
   
   return (
     <TooltipProvider>
@@ -54,7 +54,7 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Wine Score Calculation</div>
-            <div>Base Quality: <span className="font-medium">{formatPercent(wine.quality, 1, true)}</span></div>
+            <div>Base Grape Quality: <span className="font-medium">{formatPercent(wine.grapeQuality, 1, true)}</span></div>
             {hasFaults && qualityPenalty > 0.001 && (
               <>
                 <div className="text-red-600">
@@ -65,7 +65,7 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
                     <div key={idx}>• {f.feature.icon} {f.config.name}</div>
                   ))}
                 </div>
-                <div>Effective Quality: <span className="font-medium">{formatPercent(effectiveQuality, 1, true)}</span></div>
+                <div>Effective Grape Quality: <span className="font-medium">{formatPercent(effectiveGrapeQuality, 1, true)}</span></div>
               </>
             )}
             <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
@@ -300,7 +300,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       key: 'wineScore' as any, 
       label: 'Score', 
       sortable: true,
-      accessor: (wine) => (wine.quality + wine.balance) / 2
+      accessor: (wine) => (wine.grapeQuality + wine.balance) / 2
     },
     { key: 'estimatedPrice' as any, label: 'Est. Price', sortable: true },
     { 

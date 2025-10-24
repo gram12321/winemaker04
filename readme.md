@@ -54,13 +54,13 @@ return (
 - **ALWAYS use custom hooks**: `useLoadingState()`, `useGameStateWithData()`, `useGameState()`, `useGameUpdates()`, `usePrestigeUpdates()`, `useWineBalance()`, `useWineBatchBalance()`, `useFormattedBalance()`, `useBalanceQuality()`, `useTableSortWithAccessors()`
 - **ALWAYS use shared interfaces**: `PageProps`, `NavigationProps`, `CompanyProps`, `DialogProps`, `FormProps`, `TableProps`, `LoadingProps`, `CardProps`, `BaseComponentProps` from `@/components/UItypes`
 - **ALWAYS use service exports**: Game state (`getGameState`, `updateGameState`, `getCurrentCompany`, `getCurrentPrestige`), Finance (`addTransaction`, `loadTransactions`, `calculateFinancialData`), Sales (`fulfillWineOrder`, `rejectWineOrder`, `generateSophisticatedWineOrders`), Vineyard (`createVineyard`, `plantVineyard`, `getAllVineyards`, `purchaseVineyard`), Winery (`crushGrapes`, `startFermentation`, `stopFermentation`, `bottleWine`, `progressFermentation`)
-- **ALWAYS use utility exports**: Formatting (`formatNumber`, `formatCurrency`, `formatDate`, `formatGameDate`, `formatPercent`), Calculations (`calculateSkewedMultiplier`, `calculateAsymmetricalMultiplier`, `calculateBaseWinePrice`), Company utils (`getCurrentCompanyId`, `getCompanyQuery`), Wine utilities (`getWineQualityCategory`, `getColorClass`, `getBadgeColorClasses`)
+- **ALWAYS use utility exports**: Formatting (`formatNumber`, `formatCurrency`, `formatDate`, `formatGameDate`, `formatPercent`), Calculations (`calculateSkewedMultiplier`, `calculateAsymmetricalMultiplier`, `calculateBaseWinePrice`), Company utils (`getCurrentCompanyId`, `getCompanyQuery`), Wine utilities (`getGrapeQualityCategory`, `getColorClass`, `getBadgeColorClasses`)
 - **Business logic in services**: Never put calculations in components
 - **Reactive updates**: Services trigger global updates, components auto-refresh
 
 **Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
 - Import from `@/lib/constants` (barrel). It re-exports:
-  - `constants.ts` - Game initialization, sales constants, wine quality, customer regional data
+  - `constants.ts` - Game initialization, sales constants, grape quality, customer regional data
   - `vineyardConstants.ts` - Country-region mapping, soil types, altitude ranges, market data
   - `grapeConstants.ts` - Grape metadata and base wine characteristics
   - `namesConstants.ts` - Country-specific name databases for vineyards and customers

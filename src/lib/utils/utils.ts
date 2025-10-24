@@ -334,10 +334,10 @@ export function calculateCompanyWeeks(
 // ========================================
 
 /**
- * Get wine quality category based on quality value (0-1)
+ * Get grape quality category based on quality value (0-1)
  * Maps quality scores to readable tier names
  */
-export function getWineQualityCategory(quality: number): string {
+export function getGrapeQualityCategory(quality: number): string {
   if (quality < 0.1) return "Undrinkable";
   if (quality < 0.2) return "Vinegar Surprise";
   if (quality < 0.3) return "House Pour";
@@ -351,10 +351,10 @@ export function getWineQualityCategory(quality: number): string {
 }
 
 /**
- * Get wine quality description based on quality value (0-1)
+ * Get grape quality description based on quality value (0-1)
  * Provides detailed description of quality tier
  */
-export function getWineQualityDescription(quality: number): string {
+export function getGrapeQualityDescription(quality: number): string {
   if (quality < 0.1) return "Wines that are not suitable for consumption";
   if (quality < 0.2) return "Poor quality wines with significant flaws";
   if (quality < 0.3) return "Simple wines typically served in restaurants";
@@ -368,13 +368,13 @@ export function getWineQualityDescription(quality: number): string {
 }
 
 /**
- * Get wine quality info (category and description) based on quality value (0-1)
+ * Get grape quality info (category and description) based on quality value (0-1)
  * Convenience function combining both category and description
  */
-export function getWineQualityInfo(quality: number): { category: string; description: string } {
+export function getGrapeQualityInfo(quality: number): { category: string; description: string } {
   return {
-    category: getWineQualityCategory(quality),
-    description: getWineQualityDescription(quality)
+    category: getGrapeQualityCategory(quality),
+    description: getGrapeQualityDescription(quality)
   };
 }
 

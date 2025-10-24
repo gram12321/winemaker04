@@ -21,7 +21,7 @@ interface ProductionHistoryTabProps {
 // Component for combined balance and quality display (historical data)
 const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
   const balancePercentage = Math.round(entry.balance * 100);
-  const qualityPercentage = Math.round(entry.quality * 100);
+  const qualityPercentage = Math.round(entry.grapeQuality * 100);
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
@@ -37,7 +37,7 @@ const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) 
 
 // Component for wine score display with tooltip (historical data)
 const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
-  const wineScore = (entry.quality + entry.balance) / 2;
+  const wineScore = (entry.grapeQuality + entry.balance) / 2;
   
   return (
     <TooltipProvider>
@@ -50,7 +50,7 @@ const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Wine Score Calculation</div>
-            <div>Quality: <span className="font-medium">{formatPercent(entry.quality, 1, true)}</span></div>
+            <div>Grape Quality: <span className="font-medium">{formatPercent(entry.grapeQuality, 1, true)}</span></div>
             <div>Balance: <span className="font-medium">{formatPercent(entry.balance, 1, true)}</span></div>
             <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
           </div>

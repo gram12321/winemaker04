@@ -47,7 +47,7 @@ export function previewFeatureRisks(
     grape: context.grape,
     quantity: 0,
     state: 'grapes' as const,
-    quality: 0,
+    grapeQuality: 0,
     balance: 0,
     characteristics: { acidity: 0, aroma: 0, body: 0, spice: 0, sweetness: 0, tannins: 0 },
     estimatedPrice: 0,

@@ -10,7 +10,7 @@ import { calculateFermentationWork } from '../../activity/workcalculators/fermen
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
-import { calculateWineQuality } from '../winescore/wineQualityCalculationService';
+import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 
 /**
@@ -169,7 +169,7 @@ export async function processWeeklyFermentation(): Promise<void> {
       
       // Calculate quality from vineyard factors (using pre-loaded vineyards)
       const vineyard = vineyardMap.get(batch.vineyardId);
-      const newQuality = vineyard ? calculateWineQuality(vineyard) : batch.quality;
+      const newQuality = vineyard ? calculateGrapeQuality(vineyard) : batch.grapeQuality;
 
       // Combine existing breakdown with new fermentation breakdown
       const combinedBreakdown = {
@@ -184,7 +184,7 @@ export async function processWeeklyFermentation(): Promise<void> {
         id: batch.id,
         updates: {
           characteristics: newCharacteristics,
-          quality: newQuality,
+          grapeQuality: newQuality,
           balance: balanceResult.score,
           breakdown: combinedBreakdown
         }

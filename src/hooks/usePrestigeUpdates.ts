@@ -4,7 +4,7 @@ import { getGameState, getCurrentCompany } from '../lib/services/core/gameState'
 import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
 import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
-import { getMaxLandValue } from '@/lib/services/wine/winescore/wineQualityCalculationService';
+import { getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
 import { calculateNetWorth } from '../lib/services/finance/financeService';
 
 /**

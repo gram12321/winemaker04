@@ -469,7 +469,7 @@ export function CombinedFeatureEffectsBadges({ manifestedFeatures, batch }: Comb
       if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
         qualityImpact = qualityEffect.amount * feature.severity; // Don't use Math.abs() - preserve negative penalties
       } else if (qualityEffect.type === 'power') {
-        const penaltyFactor = Math.pow(batch.quality, qualityEffect.exponent!);
+        const penaltyFactor = Math.pow(batch.grapeQuality, qualityEffect.exponent!);
         qualityImpact = -qualityEffect.basePenalty! * (1 + penaltyFactor); // Negative for penalties
       } else if (qualityEffect.type === 'bonus') {
         qualityImpact = typeof qualityEffect.amount === 'function' 

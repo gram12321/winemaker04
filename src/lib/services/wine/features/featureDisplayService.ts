@@ -23,7 +23,7 @@ export interface FeatureImpact {
 /**
  * Get comprehensive feature impact information for display
  * Consolidates feature calculations used across multiple UI components
- * Used by QualityFactorsBreakdown, WineryFeatureStatusGrid, etc.
+ * Used by GrapeQualityFactorsBreakdown, WineryFeatureStatusGrid, etc.
  * 
  * @param batch - Wine batch to calculate for
  * @returns Array of feature impacts with quality and characteristic effects
@@ -43,7 +43,7 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
     if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
       qualityImpact = qualityEffect.amount * feature.severity;
     } else if (qualityEffect.type === 'power') {
-      const penaltyFactor = Math.pow(batch.quality, qualityEffect.exponent!);
+      const penaltyFactor = Math.pow(batch.grapeQuality, qualityEffect.exponent!);
       const scaledPenalty = qualityEffect.basePenalty! * (1 + penaltyFactor);
       qualityImpact = -scaledPenalty;
     } else if (qualityEffect.type === 'bonus') {

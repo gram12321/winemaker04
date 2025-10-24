@@ -18,10 +18,11 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     company_value_per_week: [],
     highest_vintage_quantity: [],
     most_productive_vineyard: [],
-    highest_wine_quality: [],
-    highest_wine_balance: [],
-    highest_wine_price: [],
-    lowest_wine_price: []
+    highest_wine_score: [],
+    highest_grape_quality: [],
+    highest_balance: [],
+    highest_price: [],
+    lowest_price: []
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -37,19 +38,21 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       companyValuePerWeekScores,
       highestVintageQuantityScores,
       mostProductiveVineyardScores,
-      highestWineQualityScores,
-      highestWineBalanceScores,
-      highestWinePriceScores,
-      lowestWinePriceScores
+      highestWineScoreScores,
+      highestGrapeQualityScores,
+      highestBalanceScores,
+      highestPriceScores,
+      lowestPriceScores
     ] = await Promise.all([
       highscoreService.getHighscores('company_value', 50),
       highscoreService.getHighscores('company_value_per_week', 50),
       highscoreService.getHighscores('highest_vintage_quantity', 50),
       highscoreService.getHighscores('most_productive_vineyard', 50),
-      highscoreService.getHighscores('highest_wine_quality', 50),
-      highscoreService.getHighscores('highest_wine_balance', 50),
-      highscoreService.getHighscores('highest_wine_price', 50),
-      highscoreService.getHighscores('lowest_wine_price', 50)
+      highscoreService.getHighscores('highest_wine_score', 50),
+      highscoreService.getHighscores('highest_grape_quality', 50),
+      highscoreService.getHighscores('highest_balance', 50),
+      highscoreService.getHighscores('highest_price', 50),
+      highscoreService.getHighscores('lowest_price', 50)
     ]);
 
     setHighscores({
@@ -57,10 +60,11 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       company_value_per_week: companyValuePerWeekScores,
       highest_vintage_quantity: highestVintageQuantityScores,
       most_productive_vineyard: mostProductiveVineyardScores,
-      highest_wine_quality: highestWineQualityScores,
-      highest_wine_balance: highestWineBalanceScores,
-      highest_wine_price: highestWinePriceScores,
-      lowest_wine_price: lowestWinePriceScores
+      highest_wine_score: highestWineScoreScores,
+      highest_grape_quality: highestGrapeQualityScores,
+      highest_balance: highestBalanceScores,
+      highest_price: highestPriceScores,
+      lowest_price: lowestPriceScores
     });
   });
 
@@ -99,13 +103,15 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         return 'Vintage Quantity';
       case 'most_productive_vineyard':
         return 'Vineyard Production';
-      case 'highest_wine_quality':
-        return 'Wine Quality';
-      case 'highest_wine_balance':
-        return 'Wine Balance';
-      case 'highest_wine_price':
+      case 'highest_wine_score':
+        return 'Wine Score';
+      case 'highest_grape_quality':
+        return 'Grape Quality';
+      case 'highest_balance':
+        return 'Balance';
+      case 'highest_price':
         return 'Highest Price';
-      case 'lowest_wine_price':
+      case 'lowest_price':
         return 'Lowest Price';
       default:
         return fullName;
@@ -122,13 +128,15 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         return '🍾';
       case 'most_productive_vineyard':
         return '🍇';
-      case 'highest_wine_quality':
+      case 'highest_wine_score':
+        return '🏆';
+      case 'highest_grape_quality':
         return '⭐';
-      case 'highest_wine_balance':
+      case 'highest_balance':
         return '⚖️';
-      case 'highest_wine_price':
+      case 'highest_price':
         return '💰';
-      case 'lowest_wine_price':
+      case 'lowest_price':
         return '💸';
       default:
         return '🏆';
@@ -140,7 +148,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   ), []);
 
   const secondTabGroup = useMemo(() => (
-    ['highest_wine_quality', 'highest_wine_balance', 'highest_wine_price', 'lowest_wine_price'] as ScoreType[]
+    ['highest_wine_score', 'highest_grape_quality', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
   ), []);
 
   const renderHighscoreTable = useCallback((scoreType: ScoreType) => {
@@ -421,45 +429,55 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                 {renderHighscoreTable('most_productive_vineyard')}
               </TabsContent>
 
-              <TabsContent value="highest_wine_quality" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Highest Wine Quality</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Best overall wine quality achieved
-                  </p>
-                </div>
-                {renderHighscoreTable('highest_wine_quality')}
-              </TabsContent>
+               <TabsContent value="highest_wine_score" className="space-y-4">
+                 <div className="text-center mb-4">
+                   <h3 className="text-lg font-semibold">Highest Wine Score</h3>
+                   <p className="text-sm text-muted-foreground">
+                     Best overall wine score achieved
+                   </p>
+                 </div>
+                 {renderHighscoreTable('highest_wine_score')}
+               </TabsContent>
 
-              <TabsContent value="highest_wine_balance" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Best Wine Balance</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Most perfectly balanced wines
-                  </p>
-                </div>
-                {renderHighscoreTable('highest_wine_balance')}
-              </TabsContent>
+               <TabsContent value="highest_grape_quality" className="space-y-4">
+                 <div className="text-center mb-4">
+                   <h3 className="text-lg font-semibold">Highest Grape Quality</h3>
+                   <p className="text-sm text-muted-foreground">
+                     Best grape quality achieved
+                   </p>
+                 </div>
+                 {renderHighscoreTable('highest_grape_quality')}
+               </TabsContent>
 
-              <TabsContent value="highest_wine_price" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Most Expensive Wines</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Highest price per bottle achieved
-                  </p>
-                </div>
-                {renderHighscoreTable('highest_wine_price')}
-              </TabsContent>
+               <TabsContent value="highest_balance" className="space-y-4">
+                 <div className="text-center mb-4">
+                   <h3 className="text-lg font-semibold">Best Balance</h3>
+                   <p className="text-sm text-muted-foreground">
+                     Most perfectly balanced wines
+                   </p>
+                 </div>
+                 {renderHighscoreTable('highest_balance')}
+               </TabsContent>
 
-              <TabsContent value="lowest_wine_price" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Most Affordable Wines</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Lowest price per bottle achieved
-                  </p>
-                </div>
-                {renderHighscoreTable('lowest_wine_price')}
-              </TabsContent>
+               <TabsContent value="highest_price" className="space-y-4">
+                 <div className="text-center mb-4">
+                   <h3 className="text-lg font-semibold">Most Expensive Wines</h3>
+                   <p className="text-sm text-muted-foreground">
+                     Highest price per bottle achieved
+                   </p>
+                 </div>
+                 {renderHighscoreTable('highest_price')}
+               </TabsContent>
+
+               <TabsContent value="lowest_price" className="space-y-4">
+                 <div className="text-center mb-4">
+                   <h3 className="text-lg font-semibold">Most Affordable Wines</h3>
+                   <p className="text-sm text-muted-foreground">
+                     Lowest price per bottle achieved
+                   </p>
+                 </div>
+                 {renderHighscoreTable('lowest_price')}
+               </TabsContent>
 
             </Tabs>
           </CardContent>

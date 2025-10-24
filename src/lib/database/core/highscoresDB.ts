@@ -12,10 +12,11 @@ export type ScoreType =
   | 'company_value_per_week'
   | 'highest_vintage_quantity'
   | 'most_productive_vineyard'
-  | 'highest_wine_quality'
-  | 'highest_wine_balance'
-  | 'highest_wine_price'
-  | 'lowest_wine_price';
+  | 'highest_wine_score'
+  | 'highest_grape_quality'
+  | 'highest_balance'
+  | 'highest_price'
+  | 'lowest_price';
 
 export interface HighscoreData {
   company_id: string;
@@ -109,7 +110,7 @@ function mapHighscoreFromDB(dbScore: any): HighscoreEntry {
 
 export const loadHighscores = async (scoreType: ScoreType, limit: number = 20): Promise<HighscoreEntry[]> => {
   try {
-    const ascending = scoreType === 'lowest_wine_price';
+    const ascending = scoreType === 'lowest_price';
     
     const { data, error } = await supabase
       .from(HIGHSCORES_TABLE)

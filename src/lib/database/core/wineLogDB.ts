@@ -17,8 +17,9 @@ export interface WineLogData {
   grape_variety: string;
   vintage: number;
   quantity: number;
-  quality: number;
+  grape_quality: number;
   balance: number;
+  wine_score: number;
   characteristics: any;
   estimated_price: number;
   harvest_week: number;
@@ -40,8 +41,9 @@ function mapWineLogFromDB(row: any): WineLogEntry {
     grape: row.grape_variety as GrapeVariety,
     vintage: row.vintage,
     quantity: row.quantity,
-    quality: row.quality,
+    grapeQuality: row.grape_quality,
     balance: row.balance,
+    wineScore: row.wine_score,
     characteristics: row.characteristics,
     estimatedPrice: row.estimated_price,
     harvestDate: {

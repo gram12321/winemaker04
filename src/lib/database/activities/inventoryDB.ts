@@ -23,11 +23,11 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         quantity: Math.round(batch.quantity),
         state: batch.state,
         fermentation_progress: Math.round(batch.fermentationProgress || 0),
-        fermentation_options: batch.fermentationOptions, // Store fermentation options as JSON
-        quality: batch.quality,
+        fermentation_options: batch.fermentationOptions, 
+        grape_quality: batch.grapeQuality,
         balance: batch.balance,
-        characteristics: batch.characteristics, // Store as JSON
-        breakdown: batch.breakdown, // Store breakdown as JSON
+        characteristics: batch.characteristics, 
+        breakdown: batch.breakdown, 
         estimated_price: batch.estimatedPrice,
         asking_price: batch.askingPrice,
         grape_color: batch.grapeColor,
@@ -76,8 +76,8 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         state: row.state,
         fermentationProgress: row.fermentation_progress || 0,
         fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
-        quality: row.quality || 0.7,
-        balance: row.balance || 0.6,
+        grapeQuality: row.grape_quality,
+        balance: row.balance,
         characteristics: row.characteristics || {
           acidity: 0.5,
           aroma: 0.5,
@@ -87,13 +87,13 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
           tannins: 0.5
         }, // Default characteristics if not set
         breakdown: row.breakdown || undefined, // Load breakdown data
-        estimatedPrice: row.estimated_price || 10.50,
-        askingPrice: row.asking_price, // Will default to undefined if not set
+        estimatedPrice: row.estimated_price,
+        askingPrice: row.asking_price, 
         grapeColor: row.grape_color || grapeData.grapeColor,
         naturalYield: row.natural_yield || grapeData.naturalYield,
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
-        features: row.features || [], // Load features array (JSONB)
+        features: row.features || [], 
         harvestStartDate: {
           week: row.harvest_start_week,
           season: row.harvest_start_season as Season,
@@ -181,7 +181,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           state: updatedBatch.state,
           fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
           fermentation_options: updatedBatch.fermentationOptions,
-          quality: updatedBatch.quality,
+          grape_quality: updatedBatch.grapeQuality,
           balance: updatedBatch.balance,
           characteristics: updatedBatch.characteristics,
           breakdown: updatedBatch.breakdown,

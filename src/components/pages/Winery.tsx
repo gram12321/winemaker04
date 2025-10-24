@@ -8,7 +8,7 @@ import { FeatureStatusGrid } from '../ui/wine/WineryFeatureStatusGrid';
 import { EvolvingFeaturesDisplay } from '../ui/wine/WineryEvolvingFeaturesDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
-import { getWineQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
+import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 
@@ -25,15 +25,15 @@ const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   );
 };
 
-// Component for wine quality category display
-const WineQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const qualityCategory = getWineQualityCategory(batch.quality);
-  const colorClass = getColorClass(batch.quality);
-  const qualityPercentage = Math.round(batch.quality * 100);
+// Component for grape quality category display
+const GrapeQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const qualityCategory = getGrapeQualityCategory(batch.grapeQuality);
+  const colorClass = getColorClass(batch.grapeQuality);
+  const qualityPercentage = Math.round(batch.grapeQuality * 100);
 
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Quality: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+      Grape Quality: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
     </div>
   );
 };
@@ -254,7 +254,7 @@ const Winery: React.FC = () => {
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
                       <WineBatchBalanceDisplay batch={batch} />
-                      <WineQualityDisplay batch={batch} />
+                      <GrapeQualityDisplay batch={batch} />
                     </div>
 
                     {/* Center Grid: Current Activity & Effects */}
