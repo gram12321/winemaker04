@@ -2,7 +2,7 @@
 // Centralized wage calculation, normalization, and color coding utilities
 
 import { Staff, StaffSkills } from '@/lib/types/types';
-import { getColorClass, getBadgeColorClasses } from '@/lib/utils/utils';
+import { getColorClass, getBadgeColorClasses, formatNumber } from '@/lib/utils/utils';
 import { BASE_WEEKLY_WAGE, SKILL_WAGE_MULTIPLIER } from '@/lib/constants/staffConstants';
 import { getGameState } from '../core/gameState';
 import { addTransaction } from './financeService';
@@ -239,7 +239,7 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
     
     // Notify about wage payment
     await notificationService.addMessage(
-      `Paid €${totalWages.toFixed(2)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`,
+      `Paid €${formatNumber(totalWages)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`,
       'staff.wages',
       'Staff Wages Paid',
       NotificationCategory.STAFF_MANAGEMENT

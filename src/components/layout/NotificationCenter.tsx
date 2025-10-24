@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Button, Badge, ScrollArea } from "../ui";
-import { InfoIcon, X, Trash2, Eye, Filter, Shield } from 'lucide-react';
+import { InfoIcon, X, Trash2, Eye, Filter, Shield, VolumeX } from 'lucide-react';
 import { formatGameDate } from "@/lib/utils/utils";
 import { NotificationCategory } from "@/lib/types/types";
 import { getTailwindClasses } from "@/lib/utils/colorMapping";
@@ -97,6 +97,24 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
   const handleBlockThisCategory = (category?: string) => {
     if (category) {
       notificationService.blockNotificationCategory(category);
+      // UI feedback optional here
+    } else {
+      // No-op
+    }
+  };
+
+  const handleBlockThisOriginFromHistory = (origin?: string) => {
+    if (origin) {
+      notificationService.blockNotificationOrigin(origin, true);
+      // UI feedback handled by global toast inside service when messages are added
+    } else {
+      // No-op: insufficient data
+    }
+  };
+
+  const handleBlockThisCategoryFromHistory = (category?: string) => {
+    if (category) {
+      notificationService.blockNotificationCategory(category, true);
       // UI feedback optional here
     } else {
       // No-op
@@ -230,7 +248,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                       size="sm"
                                       onClick={() => handleBlockThisOrigin(message.origin)}
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
-                                      title={`Block notifications from ${message.origin}`}
+                                      title={`Block notifications from ${message.origin} (save to history)`}
                                     >
                                       <Shield className="h-3 w-3" />
                                     </Button>
@@ -241,9 +259,31 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                       size="sm"
                                       onClick={() => handleBlockThisCategory(message.category)}
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
-                                      title={`Block all ${message.category} notifications`}
+                                      title={`Block all ${message.category} notifications (save to history)`}
                                     >
                                       <Filter className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.origin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisOriginFromHistory(message.origin)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                                      title={`Completely silence notifications from ${message.origin} (no history)`}
+                                    >
+                                      <VolumeX className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.category && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisCategoryFromHistory(message.category)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                                      title={`Completely silence all ${message.category} notifications (no history)`}
+                                    >
+                                      <VolumeX className="h-3 w-3" />
                                     </Button>
                                   )}
                                   <Button
@@ -384,7 +424,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                       size="sm"
                                       onClick={() => handleBlockThisOrigin(message.origin)}
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
-                                      title={`Block notifications from ${message.origin}`}
+                                      title={`Block notifications from ${message.origin} (save to history)`}
                                     >
                                       <Shield className="h-3 w-3" />
                                     </Button>
@@ -395,9 +435,31 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                       size="sm"
                                       onClick={() => handleBlockThisCategory(message.category)}
                                       className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
-                                      title={`Block all ${message.category} notifications`}
+                                      title={`Block all ${message.category} notifications (save to history)`}
                                     >
                                       <Filter className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.origin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisOriginFromHistory(message.origin)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                                      title={`Completely silence notifications from ${message.origin} (no history)`}
+                                    >
+                                      <VolumeX className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {message.category && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleBlockThisCategoryFromHistory(message.category)}
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                                      title={`Completely silence all ${message.category} notifications (no history)`}
+                                    >
+                                      <VolumeX className="h-3 w-3" />
                                     </Button>
                                   )}
                                   <Button
@@ -474,8 +536,12 @@ export function useNotifications() {
   const openHistory = () => setIsHistoryOpen(true);
   const closeHistory = () => setIsHistoryOpen(false);
 
+  // Calculate unread count
+  const unreadCount = messages.filter(msg => !msg.isRead && !msg.isDismissed).length;
+
   return {
     messages,
+    unreadCount,
     isHistoryOpen,
     openHistory,
     closeHistory,

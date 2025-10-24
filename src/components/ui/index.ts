@@ -22,7 +22,6 @@ export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend 
 export { QualityFactorBar, QualityFactorsDisplay, QualityFactorLegend } from './components/qualityFactorBar';
 export { BalanceScoreBreakdown } from './components/BalanceScoreBreakdown';
 export { QualityFactorsBreakdown } from './components/QualityFactorsBreakdown';
-export { default as LandBuyingModal } from './modals/UImodals/landBuyingModal';
 export { LandSearchOptionsModal } from './modals/activitymodals/LandSearchOptionsModal';
 export { LandSearchResultsModal } from './modals/activitymodals/LandSearchResultsModal';
 export { LenderSearchOptionsModal } from './modals/activitymodals/LenderSearchOptionsModal';

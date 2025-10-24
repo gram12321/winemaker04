@@ -66,13 +66,31 @@ export const loadTransactions = async (): Promise<Transaction[]> => {
     const { data, error } = await supabase
       .from(TRANSACTIONS_TABLE)
       .select('*')
-      .eq('company_id', getCurrentCompanyId())
-      .order('year', { ascending: false })
-      .order('season', { ascending: false })
-      .order('week', { ascending: false });
+      .eq('company_id', getCurrentCompanyId());
 
     if (error) throw error;
-    return (data || []).map(mapTransactionFromDB);
+    
+    // Map to Transaction objects first, preserving the created_at field
+    const transactions = (data || []).map(row => ({
+      ...mapTransactionFromDB(row),
+      created_at: row.created_at
+    }));
+    
+    // Sort in JavaScript to ensure proper ordering
+    return transactions.sort((a, b) => {
+      if (a.date.year !== b.date.year) return b.date.year - a.date.year;
+      if (a.date.season !== b.date.season) {
+        const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+        return seasons.indexOf(b.date.season) - seasons.indexOf(a.date.season);
+      }
+      if (a.date.week !== b.date.week) return b.date.week - a.date.week;
+      // For same week transactions, sort by created_at timestamp
+      if (a.created_at && b.created_at) {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      // Fallback to ID comparison if created_at is not available
+      return b.id.localeCompare(a.id);
+    });
   } catch (error) {
     console.error('Error loading transactions:', error);
     return [];

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useLoadingState } from '@/hooks';
-import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, LandBuyingModal } from '../ui';
+import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
-import { getGameState } from '@/lib/services';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
-import { VineyardPurchaseOption } from '@/lib/services';
 import {
-  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminQuickLandBuyGenerateOptions, adminQuickLandBuyPurchase, adminClearAllAchievements, adminFullDatabaseReset
+  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminClearAllAchievements, adminFullDatabaseReset
 } from '@/lib/services';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
@@ -17,8 +15,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const { isLoading, withLoading } = useLoadingState();
   const [goldAmount, setGoldAmount] = useState('10000');
   const [prestigeAmount, setPrestigeAmount] = useState('100');
-  const [showQuickLandBuy, setShowQuickLandBuy] = useState(false);
-  const [quickLandOptions, setQuickLandOptions] = useState<VineyardPurchaseOption[]>([]);
 
   // Cheat functions (for development/testing)
   const handleSetGold = () => withLoading(async () => {
@@ -88,15 +84,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     await adminGenerateTestOrders();
   });
 
-  const handleQuickLandBuy = () => withLoading(async () => {
-    const options = await adminQuickLandBuyGenerateOptions(5);
-    setQuickLandOptions(options);
-    setShowQuickLandBuy(true);
-  });
-
-  const handleQuickLandPurchase = (option: VineyardPurchaseOption) => withLoading(async () => {
-    await adminQuickLandBuyPurchase(option);
-  });
 
 
   const handleClearAllAchievements = () => withLoading(async () => {
@@ -342,31 +329,8 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                 </p>
               </SimpleCard>
 
-              <SimpleCard
-                title="Quick Land Buy (Legacy)"
-                description="Generate 5 random properties using the old instant system"
-              >
-                <Button
-                  onClick={handleQuickLandBuy}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  🏡 Generate 5 Random Properties
-                </Button>
-                <p className="text-xs text-gray-500 mt-2">
-                  Legacy system for testing/dev purposes. Uses the old instant generation method.
-                </p>
-              </SimpleCard>
             </div>
 
-            {/* Quick Land Buy Modal */}
-            <LandBuyingModal
-              isOpen={showQuickLandBuy}
-              onClose={() => setShowQuickLandBuy(false)}
-              options={quickLandOptions}
-              onPurchase={handleQuickLandPurchase}
-              currentMoney={getGameState().money || 0}
-            />
           </TabsContent>
         </Tabs>
     </div>

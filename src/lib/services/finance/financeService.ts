@@ -135,7 +135,9 @@ export const addTransaction = async (
         const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
         return seasons.indexOf(b.date.season) - seasons.indexOf(a.date.season);
       }
-      return b.date.week - a.date.week;
+      if (a.date.week !== b.date.week) return b.date.week - a.date.week;
+      // For same week transactions, sort by ID (newer transactions have higher IDs)
+      return b.id.localeCompare(a.id);
     });
     
     return result.data.id;

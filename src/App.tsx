@@ -17,6 +17,7 @@ import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
 import { LoanWarningModalDisplay } from './components/layout/LoanWarningModalDisplay';
+import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
 import { Company } from '@/lib/database';
@@ -207,6 +208,11 @@ function App() {
       {/* Loan Warning Modal - displays critical loan warnings */}
       {isGameInitialized && currentCompany && (
         <LoanWarningModalDisplay />
+      )}
+
+      {/* Global Search Results Modals - displays search results regardless of current page */}
+      {isGameInitialized && currentCompany && (
+        <GlobalSearchResultsDisplay />
       )}
 
       <Toaster />

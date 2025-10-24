@@ -146,8 +146,8 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-        {/* Main Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+        {/* Main Stats Grid - Desktop/Tablet (hidden on mobile) */}
+        <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           <Card>
             <CardContent className="p-2.5">
               <div className="flex items-center justify-between">
@@ -203,6 +203,26 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Main Stats Grid - Mobile (2x2 grid) */}
+        <div className="lg:hidden grid grid-cols-2 gap-3">
+          <div className="bg-white p-3 rounded-lg shadow">
+            <div className="text-base font-bold text-gray-900">{formatCurrency(gameState.money || 0, 0, (gameState.money || 0) >= 1000)}</div>
+            <div className="text-xs text-gray-500">Current Money</div>
+          </div>
+          <div className="bg-white p-3 rounded-lg shadow">
+            <div className="text-base font-bold text-purple-600">{formatCurrency(gameState.prestige || 1, 1, (gameState.prestige || 1) >= 1000).replace('€', '')}</div>
+            <div className="text-xs text-gray-500">Prestige</div>
+          </div>
+          <div className="bg-white p-3 rounded-lg shadow">
+            <div className="text-base font-bold text-blue-600">{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</div>
+            <div className="text-xs text-gray-500">Avg/Week</div>
+          </div>
+          <div className="bg-white p-3 rounded-lg shadow">
+            <div className="text-sm font-bold text-amber-600">{companyAge}</div>
+            <div className="text-xs text-gray-500">Company Age</div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

@@ -87,12 +87,7 @@ const Vineyard: React.FC = () => {
 
 
 
-  // Check for pending land search results and auto-open results modal
-  useEffect(() => {
-    if (gameState.pendingLandSearchResults?.options) {
-      setShowLandResultsModal(true);
-    }
-  }, [gameState.pendingLandSearchResults]);
+  // Note: Land search results are now handled globally by GlobalSearchResultsDisplay
 
   const handleRowClick = useCallback((vineyard: VineyardType) => {
     setSelectedVineyard(vineyard);

@@ -4,5 +4,4 @@ export { StaffSearchResultsModal } from '../activitymodals/StaffSearchResultsMod
 export { default as StaffModal } from './StaffModal';
 export { default as VineyardModal } from './vineyardModal';
 export { HireStaffModal } from '../activitymodals/HireStaffModal';
-export { default as LandBuyingModal } from './landBuyingModal';
 export { default as PrestigeModal } from './prestigeModal';

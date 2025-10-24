@@ -1,110 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Vineyard, Aspect, ASPECTS } from '../../types/types';
-import { calculateLandValue, getAltitudeRating as getAltitudeRatingFromCalc, getAspectRating } from '../vineyard/vineyardValueCalc';
-import { VineyardPurchaseOption } from '../vineyard/landSearchService';
-import { generateVineyardName } from '../vineyard/vineyardService';
 import { supabase } from '../../database/core/supabase';
-import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, getAllVineyards, purchaseVineyard, highscoreService, initializeCustomers } from '../index';
+import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, highscoreService, initializeCustomers } from '../index';
 import { insertPrestigeEvent } from '../../database';
-import { calculateAbsoluteWeeks, formatCurrency, getRandomFromArray, getRandomHectares } from '@/lib/utils';
-import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES } from '../../constants/vineyardConstants';
+import { calculateAbsoluteWeeks, formatCurrency } from '@/lib/utils';
 
-// Admin Quick Land Buy: constants
-export const ADMIN_QUICK_LAND_BUY = {
-  NUMBER_OF_OPTIONS: 5, // Number of vineyard options to generate
-} as const;
-
-// Admin Quick Land Buy: helper functions (admin-specific, not exported)
-function adminGetRandomFromObject<T>(obj: Record<string, T>): string {
-  const keys = Object.keys(obj);
-  return keys[Math.floor(Math.random() * keys.length)];
-}
-
-function adminGetRandomAspect(): Aspect {
-  return getRandomFromArray(ASPECTS);
-}
-
-function adminGetRandomSoils(country: string, region: string): string[] {
-  const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
-  const soils = countryData ? (countryData[region as keyof typeof countryData] as readonly string[] || []) : [];
-  
-  const numberOfSoils = Math.floor(Math.random() * 3) + 1; // 1-3 soil types
-  const selectedSoils = new Set<string>();
-
-  while (selectedSoils.size < numberOfSoils && selectedSoils.size < soils.length) {
-    selectedSoils.add(getRandomFromArray(soils));
-  }
-
-  return Array.from(selectedSoils);
-}
-
-function adminGetRandomAltitude(country: string, region: string): number {
-  const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
-  const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
-  const [min, max] = altitudeRange;
-  
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-/**
- * Admin Quick Land Buy: build option list for modal (internal)
- * @param numberOfOptions Number of options to generate (defaults to ADMIN_QUICK_LAND_BUY.NUMBER_OF_OPTIONS)
- * @param existingVineyards Array of existing vineyards to avoid duplicates
- * @returns Array of vineyard purchase options
- */
-function adminQuickLandBuyBuildOptions(
-  numberOfOptions: number = ADMIN_QUICK_LAND_BUY.NUMBER_OF_OPTIONS,
-  existingVineyards: Vineyard[] = []
-): VineyardPurchaseOption[] {
-  const options: VineyardPurchaseOption[] = [];
-  const existingNames = new Set(existingVineyards.map(v => v.name));
-
-  while (options.length < numberOfOptions) {
-    const country = adminGetRandomFromObject(COUNTRY_REGION_MAP);
-    const countryRegions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
-    const region = countryRegions ? getRandomFromArray(countryRegions) : "Bordeaux";
-    const aspect = adminGetRandomAspect();
-    const hectares = getRandomHectares();
-    const soil = adminGetRandomSoils(country, region);
-    const altitude = adminGetRandomAltitude(country, region);
-    
-    // Generate vineyard name using the function from landSearchService
-    const vineyardName = generateVineyardName(country, aspect);
-    
-    // Skip if name already exists
-    if (existingNames.has(vineyardName)) {
-      continue;
-    }
-    
-    // Calculate land value
-    const landValue = calculateLandValue(country, region, altitude, aspect);
-    const totalPrice = landValue * hectares;
-    
-    // Get ratings for display
-    const aspectRating = getAspectRating(country, region, aspect);
-    const altitudeRating = getAltitudeRatingFromCalc(country, region, altitude);
-    
-    const option: VineyardPurchaseOption = {
-      id: uuidv4(),
-      name: vineyardName,
-      country,
-      region,
-      hectares,
-      soil,
-      altitude,
-      aspect,
-      landValue,
-      totalPrice,
-      aspectRating,
-      altitudeRating
-    };
-    
-    options.push(option);
-    existingNames.add(vineyardName); // Prevent duplicates in the same generation
-  }
-  
-  return options;
-}
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
 
@@ -250,20 +149,6 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
   return result;
 }
 
-/**
- * Admin Quick Land Buy: generate options (public)
- */
-export async function adminQuickLandBuyGenerateOptions(numberOfOptions: number = 5): Promise<VineyardPurchaseOption[]> {
-  const existingVineyards = await getAllVineyards();
-  return adminQuickLandBuyBuildOptions(numberOfOptions, existingVineyards);
-}
-
-/**
- * Admin Quick Land Buy: purchase selected option (public)
- */
-export async function adminQuickLandBuyPurchase(option: VineyardPurchaseOption): Promise<void> {
-  await purchaseVineyard(option);
-}
 
 /**
  * Clear all achievements

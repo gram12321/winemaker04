@@ -192,7 +192,7 @@ export const notificationService = {
     return [...notificationFilters];
   },
 
-  addFilter(type: 'origin' | 'category', value: string, description?: string) {
+  addFilter(type: 'origin' | 'category', value: string, description?: string, blockFromHistory?: boolean) {
     const id = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
       ? (globalThis.crypto as any).randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -202,6 +202,7 @@ export const notificationService = {
       type,
       value,
       description,
+      blockFromHistory: blockFromHistory ?? false,
       createdAt: new Date().toISOString()
     };
 
@@ -229,13 +230,13 @@ export const notificationService = {
     return updatedFilter;
   },
 
-  blockNotificationOrigin(origin: string) {
-    return this.addFilter('origin', origin, `Blocked origin: ${origin}`);
+  blockNotificationOrigin(origin: string, blockFromHistory?: boolean) {
+    return this.addFilter('origin', origin, `Blocked origin: ${origin}`, blockFromHistory);
   },
 
-  blockNotificationCategory(category: string) {
+  blockNotificationCategory(category: string, blockFromHistory?: boolean) {
     const capitalizedCategory = category.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    return this.addFilter('category', category, `Blocked category: ${capitalizedCategory}`);
+    return this.addFilter('category', category, `Blocked category: ${capitalizedCategory}`, blockFromHistory);
   }
 };
 

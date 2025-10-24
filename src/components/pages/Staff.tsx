@@ -62,13 +62,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     ? allStaff 
     : allStaff.filter(staff => (staff.teamIds || []).includes(selectedTeamFilter));
 
-  // Check for pending staff candidates and auto-open results modal
-  useEffect(() => {
-    if (gameState.pendingStaffCandidates?.candidates) {
-      setSearchCandidates(gameState.pendingStaffCandidates.candidates);
-      setShowResultsModal(true);
-    }
-  }, [gameState.pendingStaffCandidates]);
+  // Note: Staff search results are now handled globally by GlobalSearchResultsDisplay
   
   const handleFireStaff = async (staffId: string) => {
     await removeStaff(staffId);
@@ -244,8 +238,8 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       </div>
 
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Stats - Desktop/Tablet (hidden on mobile) */}
+      <div className="hidden lg:grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-white rounded-lg shadow p-3">
           <div className="text-xs text-gray-600 mb-1">Total Staff</div>
           <div className="text-lg font-semibold text-gray-900">{allStaff.length}</div>
@@ -259,6 +253,28 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           <div className="text-lg font-semibold text-gray-900">
             {allStaff.length > 0 ? formatCurrency(totalWages / allStaff.length) : formatCurrency(0)}
           </div>
+        </div>
+      </div>
+
+      {/* Stats - Mobile (2x2 grid) */}
+      <div className="lg:hidden grid grid-cols-2 gap-3">
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-gray-900">{allStaff.length}</div>
+          <div className="text-xs text-gray-500">Total Staff</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-blue-600">{formatCurrency(totalWages * 4)}</div>
+          <div className="text-xs text-gray-500">Monthly Wages</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-green-600">
+            {allStaff.length > 0 ? formatCurrency(totalWages / allStaff.length) : formatCurrency(0)}
+          </div>
+          <div className="text-xs text-gray-500">Avg Wage</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-purple-600">{allTeams.length}</div>
+          <div className="text-xs text-gray-500">Teams</div>
         </div>
       </div>
 

@@ -384,6 +384,7 @@ export interface Transaction {
   category: string;
   recurring: boolean;
   money: number; // Money amount after transaction
+  created_at?: string; // Optional timestamp for sorting
 }
 
 // ===== ECONOMY TYPES =====

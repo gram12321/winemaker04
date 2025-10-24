@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Separator } from '@/components/ui';
 import { Loan } from '@/lib/types/types';
 import { loadActiveLoans } from '@/lib/database/core/loansDB';
-import { getGameState, clearPendingLenderSearchResults, getAvailableLenders, calculateLenderAvailability } from '@/lib/services';
+import { getGameState, getAvailableLenders, calculateLenderAvailability } from '@/lib/services';
 import { loadLenders } from '@/lib/database/core/lendersDB';
 import { formatCurrency, formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
 import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull } from '@/lib/services/finance/loanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
 import { LenderSearchOptionsModal } from '@/components/ui/modals/activitymodals/LenderSearchOptionsModal';
-import { LenderSearchResultsModal } from '@/components/ui/modals/activitymodals/LenderSearchResultsModal';
+// LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
 import { calculateCreditRating } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
 
@@ -31,7 +31,6 @@ const defaultLoansData: LoansData = {
 
 export default function LoansView() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
   const [isLenderAvailabilityExpanded, setIsLenderAvailabilityExpanded] = useState(false);
   const [isCreditRatingExpanded, setIsCreditRatingExpanded] = useState(false);
 
@@ -98,12 +97,7 @@ export default function LoansView() {
 
   const { loans: activeLoans, creditRatingBreakdown, comprehensiveCreditRating, lenderAvailabilityBreakdown } = loansData;
 
-  // Check for pending lender search results
-  useEffect(() => {
-    if (gameState.pendingLenderSearchResults) {
-      setIsResultsModalOpen(true);
-    }
-  }, [gameState.pendingLenderSearchResults]);
+  // Note: Lender search results are now handled globally by GlobalSearchResultsDisplay
 
   const handleSearchModalOpen = () => {
     setIsSearchModalOpen(true);
@@ -111,12 +105,7 @@ export default function LoansView() {
 
   const handleSearchComplete = () => {
     setIsSearchModalOpen(false);
-    // Results modal will open automatically via useEffect when pendingLenderSearchResults is set
-  };
-
-  const handleResultsModalClose = () => {
-    setIsResultsModalOpen(false);
-    clearPendingLenderSearchResults();
+    // Results modal will open automatically via global system
   };
 
   const handleRepayLoan = async (loanId: string) => {
@@ -794,14 +783,7 @@ export default function LoansView() {
         onSearchStarted={handleSearchComplete}
       />
 
-      {/* Lender Search Results Modal */}
-      {gameState.pendingLenderSearchResults && (
-        <LenderSearchResultsModal
-          isOpen={isResultsModalOpen}
-          onClose={handleResultsModalClose}
-          offers={gameState.pendingLenderSearchResults.offers}
-        />
-      )}
+      {/* Lender Search Results Modal is now handled globally by GlobalSearchResultsDisplay */}
     </div>
   );
 }

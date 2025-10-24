@@ -793,6 +793,15 @@ export function getEventDisplayData(event: PrestigeEvent): {
         displayInfo: `Category: ${metadata.achievementCategory} | Skill Level: ${metadata.achievementLevel || 'Unknown'} | Unlocked: ${metadata.unlockedAt ? new Date(metadata.unlockedAt).toLocaleDateString() : 'Unknown'}`
       };
     }
+
+    if (event.type === 'vineyard_achievement' && metadata.achievementName) {
+      return {
+        title: `${metadata.achievementIcon} ${metadata.achievementName}`,
+        titleBase: 'Vineyard Achievement',
+        amountText: `${metadata.achievementIcon} ${metadata.achievementName}`,
+        displayInfo: `Category: ${metadata.achievementCategory} | Skill Level: ${metadata.achievementLevel || 'Unknown'} | Unlocked: ${metadata.unlockedAt ? new Date(metadata.unlockedAt).toLocaleDateString() : 'Unknown'}`
+      };
+    }
   }
 
   // Handle wine feature events

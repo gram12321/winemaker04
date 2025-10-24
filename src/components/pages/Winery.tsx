@@ -157,8 +157,8 @@ const Winery: React.FC = () => {
         </div>
       </div>
       
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Summary Cards - Desktop/Tablet (hidden on mobile) */}
+      <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="bg-white rounded-lg shadow p-3">
           <div className="flex items-center justify-between">
             <div>
@@ -185,6 +185,18 @@ const Winery: React.FC = () => {
               <span className="text-base">🍷</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Summary Cards - Mobile (2x2 grid) */}
+      <div className="lg:hidden grid grid-cols-2 gap-3">
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-gray-900">{activeBatches.length}</div>
+          <div className="text-xs text-gray-500">Active Batches</div>
+        </div>
+        <div className="bg-white p-3 rounded-lg shadow">
+          <div className="text-base font-bold text-purple-600">{activeBatches.filter(batch => batch.state === 'must_fermenting').length}</div>
+          <div className="text-xs text-gray-500">Fermenting</div>
         </div>
       </div>
 

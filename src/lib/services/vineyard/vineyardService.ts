@@ -141,10 +141,10 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
     vineyardPrestige: 0, // Will be calculated after vineyard is created
     vineYield: 0.02, // Default vine yield factor
     overgrowth: {
-      vegetation: 0,
-      debris: 0,
-      uproot: 0,
-      replant: 0
+      vegetation: Math.floor(Math.random() * 11), // Random vegetation 0-10
+      debris: Math.floor(Math.random() * 11),     // Random debris 0-10
+      uproot: 0,     // No vines to uproot yet
+      replant: 0     // No vines to replant yet
     }
   };
 
