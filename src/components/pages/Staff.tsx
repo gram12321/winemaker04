@@ -1,8 +1,7 @@
 // Staff Management Page
 // Main page for viewing and managing staff members
 
-import React, { useState, useEffect } from 'react';
-import { useGameState } from '@/hooks';
+import React, { useState } from 'react';
 import { getAllStaff, removeStaff, getAllTeams, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
 import type { Staff } from '@/lib/types/types';
 import { formatCurrency, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
@@ -30,7 +29,6 @@ interface StaffPageProps {
  * Displays all staff members with their skills, wages, and management options
  */
 export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
-  const gameState = useGameState(); // Subscribe to game state updates for reactivity
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
