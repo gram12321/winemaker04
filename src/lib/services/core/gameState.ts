@@ -1,7 +1,7 @@
 // Enhanced game state service that integrates with the new company system
 import { GameState } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
-import { CREDIT_RATING } from '../../constants/economyConstants';
+import { CREDIT_RATING } from '../../constants/loanConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
 import { companyService } from '../user/companyService';
 import { Company } from '@/lib/database';

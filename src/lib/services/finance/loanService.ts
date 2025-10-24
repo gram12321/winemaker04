@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Loan, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning } from '../../types/types';
-import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, TRANSACTION_CATEGORIES, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES } from '../../constants';
+import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES } from '../../constants/loanConstants';
+import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getGameState, updateGameState } from '../core/gameState';
 import { addTransaction } from './financeService';
 import { insertLoan, loadActiveLoans, updateLoan } from '../../database/core/loansDB';
@@ -154,13 +155,62 @@ export async function applyForLoan(
 /**
  * Calculate seasonal payment using loan amortization
  */
-function calculateSeasonalPayment(principal: number, rate: number, seasons: number): number {
+export function calculateSeasonalPayment(principal: number, rate: number, seasons: number): number {
   if (rate === 0) {
     return principal / seasons;
   }
   
   const payment = principal * (rate * Math.pow(1 + rate, seasons)) / (Math.pow(1 + rate, seasons) - 1);
   return payment;
+}
+
+/**
+ * Calculate comprehensive loan terms for a given lender and parameters
+ */
+export function calculateLoanTerms(
+  lender: Lender,
+  principalAmount: number,
+  durationSeasons: number,
+  creditRating: number,
+  economyPhase: string
+): {
+  effectiveInterestRate: number;
+  seasonalPayment: number;
+  totalRepayment: number;
+  totalInterest: number;
+  originationFee: number;
+  totalExpenses: number;
+} {
+  // Calculate effective interest rate
+  const effectiveInterestRate = calculateEffectiveInterestRate(
+    lender.baseInterestRate,
+    economyPhase as any,
+    lender.type,
+    creditRating,
+    durationSeasons
+  );
+
+  // Calculate seasonal payment
+  const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveInterestRate, durationSeasons);
+
+  // Calculate total repayment and interest
+  const totalRepayment = seasonalPayment * durationSeasons;
+  const totalInterest = totalRepayment - principalAmount;
+
+  // Calculate origination fee
+  const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
+
+  // Calculate total expenses
+  const totalExpenses = originationFee + totalInterest;
+
+  return {
+    effectiveInterestRate,
+    seasonalPayment,
+    totalRepayment,
+    totalInterest,
+    originationFee,
+    totalExpenses
+  };
 }
 
 /**

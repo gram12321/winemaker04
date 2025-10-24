@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { LoanOffer } from '@/lib/types/types';
 import { formatCurrency, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
-import { Button } from '@/components/ui/shadCN/button';
-import { Badge } from '@/components/ui/shadCN/badge';
+import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
-import { startTakeLoan } from '@/lib/services';
+import { startTakeLoan, getGameState, calculateLoanTerms } from '@/lib/services';
+import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
-import { LoanApplicationModal } from '@/components/ui/modals/LoanApplicationModal';
 
 interface LenderSearchResultsModalProps {
   isOpen: boolean;
@@ -27,8 +26,26 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
   const [acceptedOfferIds, setAcceptedOfferIds] = useState<Set<string>>(new Set());
   // Track which offer is selected for preview
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
-  // Track if adjustment modal is open
-  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  
+  // Loan parameter state for third column
+  const [loanAmount, setLoanAmount] = useState(50000);
+  const [durationSeasons, setDurationSeasons] = useState(8);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Update loan parameters when selected offer changes
+  useEffect(() => {
+    if (selectedOfferId) {
+      const offer = offers.find(o => o.id === selectedOfferId);
+      if (offer) {
+        setLoanAmount(offer.principalAmount);
+        setDurationSeasons(offer.durationSeasons);
+      }
+    }
+  }, [selectedOfferId, offers]);
+  
+  // Get game state for calculations
+  const gameState = getGameState();
   
   // Filter out offers that have already been accepted
   const availableOffers = offers?.filter(o => !acceptedOfferIds.has(o.id)) || [];
@@ -48,35 +65,81 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
 
   if (!isOpen || !offers || offers.length === 0) return null;
 
-  const handleAcceptAsIs = async (offer: LoanOffer) => {
-    // Accept offer without adjustments (base work)
-    const success = await startTakeLoan(offer, false);
-    if (success) {
-      // Mark this offer as accepted (remove from available list)
-      setAcceptedOfferIds(prev => new Set([...prev, offer.id]));
-    }
+
+  // Loan calculations for third column
+  const selectedOffer = selectedOfferId 
+    ? offers.find(o => o.id === selectedOfferId)
+    : null;
+
+  const loanTerms = selectedOffer ? calculateLoanTerms(
+    selectedOffer.lender,
+    loanAmount,
+    durationSeasons,
+    gameState.creditRating || 0.5,
+    gameState.economyPhase || 'Recovery'
+  ) : {
+    effectiveInterestRate: 0,
+    seasonalPayment: 0,
+    totalRepayment: 0,
+    totalInterest: 0,
+    originationFee: 0,
+    totalExpenses: 0
   };
 
-  const handleAdjustOffer = (offer: LoanOffer) => {
-    // Open adjustment modal for this offer
-    setSelectedOfferId(offer.id);
-    setIsAdjustmentModalOpen(true);
-  };
+  const {
+    effectiveInterestRate: effectiveRate,
+    seasonalPayment,
+    totalInterest,
+    originationFee,
+    totalExpenses
+  } = loanTerms;
 
-  const handleAdjustedOfferAccept = async (offer: LoanOffer) => {
-    // Accept adjusted offer (increased work penalty)
-    const success = await startTakeLoan(offer, true);
-    if (success) {
-      // Mark this offer as accepted and close adjustment modal
-      setAcceptedOfferIds(prev => new Set([...prev, offer.id]));
-      setIsAdjustmentModalOpen(false);
+  // Calculate work based on adjustments from original offer
+  const workCalculation = selectedOffer ? calculateTakeLoanWork(
+    selectedOffer,
+    loanAmount,
+    durationSeasons
+  ) : { totalWork: 0, factors: [] };
+
+  const handleApplyForLoan = async () => {
+    if (!selectedOffer) return;
+    
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const { v4: uuidv4 } = await import('uuid');
+      
+      const loanOffer = {
+        id: uuidv4(),
+        lender: selectedOffer.lender,
+        principalAmount: loanAmount,
+        durationSeasons,
+        effectiveInterestRate: effectiveRate,
+        seasonalPayment,
+        originationFee,
+        totalInterest,
+        totalExpenses,
+        isAvailable: true
+      };
+      
+      const success = await startTakeLoan(loanOffer, true, loanAmount, durationSeasons); // true = adjusted (work penalty)
+      if (success) {
+        // Close modal after successful loan application
+        handleClose();
+      }
+    } catch (error) {
+      console.error('Error applying for loan:', error);
+      setError('Failed to apply for loan. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
     setAcceptedOfferIds(new Set()); // Reset accepted list
     setSelectedOfferId(null); // Reset selected offer
-    setIsAdjustmentModalOpen(false);
+    setError(null); // Reset error
     onClose();
   };
 
@@ -84,10 +147,6 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
     setSelectedOfferId(offerId);
   };
 
-  // Get the selected offer for preview
-  const selectedOffer = selectedOfferId 
-    ? offers.find(o => o.id === selectedOfferId)
-    : null;
 
   // If all offers have been accepted, show completion message
   if (availableOffers.length === 0 && acceptedOfferIds.size > 0) {
@@ -130,10 +189,10 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
             </button>
           </div>
 
-          {/* Two Column Layout */}
+          {/* Three Column Layout */}
           <div className="flex-1 flex overflow-hidden">
             {/* Left Column - Offer List */}
-            <div className="w-1/2 border-r border-gray-700 overflow-y-auto">
+            <div className="w-1/3 border-r border-gray-700 overflow-y-auto">
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-white mb-4">Available Offers</h3>
                 <div className="space-y-3">
@@ -188,48 +247,120 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
               </div>
             </div>
 
-            {/* Right Column - Offer Preview */}
-            <div className="w-1/2 overflow-y-auto">
-              {selectedOffer ? (
+            {/* Middle Column - Apply for Loan */}
+            <div className="w-1/3 border-r border-gray-700 overflow-y-auto">
+              {selectedOffer && selectedOffer.isAvailable ? (
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-6">Offer Preview</h3>
+                  <h3 className="text-lg font-semibold text-white mb-6">Apply for Loan</h3>
                   
                   <div className="space-y-6">
                     {/* Lender Information */}
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                      <h4 className="text-sm font-medium text-white mb-4">Lender Information</h4>
-                      <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-medium text-white">{selectedOffer.lender.name}</h4>
+                        <Badge className={getLenderTypeColorClass(selectedOffer.lender.type)}>
+                          {selectedOffer.lender.type}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Lender:</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">{selectedOffer.lender.name}</span>
-                            <Badge className={getLenderTypeColorClass(selectedOffer.lender.type)}>
-                              {selectedOffer.lender.type}
-                            </Badge>
+                          <span className="text-gray-400">Base Interest Rate:</span>
+                          <span className="text-white font-medium">{formatPercent(selectedOffer.lender.baseInterestRate)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Risk Tolerance:</span>
+                          <span className="text-white font-medium">{Math.round(selectedOffer.lender.riskTolerance * 100)}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Loan Parameters */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-base font-medium text-white">Loan Amount</Label>
+                        <div className="mt-2 space-y-2">
+                          <Slider
+                            value={[loanAmount]}
+                            onValueChange={(value) => setLoanAmount(value[0])}
+                            min={selectedOffer.lender.minLoanAmount}
+                            max={selectedOffer.lender.maxLoanAmount}
+                            step={1000}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-sm text-gray-400">
+                            <span>{formatCurrency(selectedOffer.lender.minLoanAmount)}</span>
+                            <span className="font-medium text-white">{formatCurrency(loanAmount)}</span>
+                            <span>{formatCurrency(selectedOffer.lender.maxLoanAmount)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-base font-medium text-white">Duration (Years)</Label>
+                        <div className="mt-2 space-y-2">
+                          <Slider
+                            value={[durationSeasons]}
+                            onValueChange={(value) => setDurationSeasons(value[0])}
+                            min={selectedOffer.lender.minDurationSeasons}
+                            max={selectedOffer.lender.maxDurationSeasons}
+                            step={1}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-sm text-gray-400">
+                            <span>{Math.round(selectedOffer.lender.minDurationSeasons / 4 * 10) / 10} years</span>
+                            <span className="font-medium text-white">{Math.round(durationSeasons / 4 * 10) / 10} years</span>
+                            <span>{Math.round(selectedOffer.lender.maxDurationSeasons / 4 * 10) / 10} years</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    <Separator className="bg-gray-700" />
+
+                    {/* Error Display */}
+                    {error && (
+                      <div className="p-3 bg-red-900 border border-red-700 rounded-lg">
+                        <p className="text-red-200 text-sm">{error}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 flex items-center justify-center h-full">
+                  <div className="text-center text-gray-400">
+                    <div className="text-lg mb-2">Select an offer</div>
+                    <div className="text-sm">Choose an offer from the list to view details</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Offer Preview */}
+            <div className="w-1/3 overflow-y-auto">
+              {selectedOffer ? (
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-6">Offer Preview</h3>
+                  
+                  <div className="space-y-6">
                     {/* Loan Terms */}
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                       <h4 className="text-sm font-medium text-white mb-4">Loan Terms</h4>
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-400">Principal Amount:</span>
-                          <span className="text-white font-medium">{formatCurrency(selectedOffer.principalAmount)}</span>
+                          <span className="text-white font-medium">{formatCurrency(loanAmount)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Duration:</span>
-                          <span className="text-white">{Math.round(selectedOffer.durationSeasons / 4)} years ({selectedOffer.durationSeasons} seasons)</span>
+                          <span className="text-white">{Math.round(durationSeasons / 4 * 10) / 10} years ({durationSeasons} seasons)</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Interest Rate:</span>
-                          <span className="text-white">{formatPercent(selectedOffer.effectiveInterestRate)}</span>
+                          <span className="text-white">{formatPercent(effectiveRate)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Seasonal Payment:</span>
-                          <span className="text-white">{formatCurrency(selectedOffer.seasonalPayment)}</span>
+                          <span className="text-white">{formatCurrency(seasonalPayment)}</span>
                         </div>
                       </div>
                     </div>
@@ -240,43 +371,45 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-400">Origination Fee:</span>
-                          <span className="text-orange-400 font-medium">{formatCurrency(selectedOffer.originationFee)}</span>
+                          <span className="text-orange-400 font-medium">{formatCurrency(originationFee)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Total Interest:</span>
-                          <span className="text-yellow-400">{formatCurrency(selectedOffer.totalInterest)}</span>
+                          <span className="text-yellow-400">{formatCurrency(totalInterest)}</span>
                         </div>
                         <div className="border-t border-gray-600 pt-2 flex justify-between">
                           <span className="text-white font-medium">Total Expenses:</span>
-                          <span className="text-red-400 font-bold">{formatCurrency(selectedOffer.totalExpenses)}</span>
+                          <span className="text-red-400 font-bold">{formatCurrency(totalExpenses)}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    {selectedOffer.isAvailable ? (
-                      <div className="space-y-3">
-                        <Button
-                          onClick={() => handleAcceptAsIs(selectedOffer)}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          Accept As-Is (Base Work)
-                        </Button>
-                        <Button
-                          onClick={() => handleAdjustOffer(selectedOffer)}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          Adjust Terms (+50% Work Penalty)
-                        </Button>
+                    {/* Work Information */}
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                      <h4 className="text-sm font-medium text-white mb-3">Work Required</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Total Work:</span>
+                          <span className="text-white font-medium">{Math.round(workCalculation.totalWork)} work units</span>
+                        </div>
+                        {workCalculation.factors.length > 3 && (
+                          <div className="text-xs text-gray-500">
+                            Includes adjustment complexity for parameter changes
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <p className="text-sm text-red-800">
-                          <strong>Not Available:</strong> {selectedOffer.unavailableReason}
-                        </p>
-                      </div>
-                    )}
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="space-y-3">
+                      <Button
+                        onClick={handleApplyForLoan}
+                        disabled={isSubmitting}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {isSubmitting ? 'Processing...' : `Apply for Loan (${Math.round(workCalculation.totalWork)} work)`}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -306,18 +439,6 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
         </div>
       </div>
 
-      {/* Loan Adjustment Modal */}
-      {isAdjustmentModalOpen && selectedOffer && (
-        <LoanApplicationModal
-          lender={selectedOffer.lender}
-          isOpen={isAdjustmentModalOpen}
-          onClose={() => setIsAdjustmentModalOpen(false)}
-          onComplete={() => {
-            handleAdjustedOfferAccept(selectedOffer);
-          }}
-          isActivityMode={true}
-        />
-      )}
     </>
   );
 };

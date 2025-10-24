@@ -65,21 +65,11 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
 
   // Check for pending staff candidates and auto-open results modal
   useEffect(() => {
-    const gameState = getGameState();
     if (gameState.pendingStaffCandidates?.candidates) {
       setSearchCandidates(gameState.pendingStaffCandidates.candidates);
       setShowResultsModal(true);
     }
-  }, []);
-
-  // Listen for new search results using the existing game update system
-  useEffect(() => {
-    const gameState = getGameState();
-    if (gameState.pendingStaffCandidates?.candidates && !showResultsModal) {
-      setSearchCandidates(gameState.pendingStaffCandidates.candidates);
-      setShowResultsModal(true);
-    }
-  }, [showResultsModal]);
+  }, [gameState.pendingStaffCandidates]);
   
   const handleFireStaff = async (staffId: string) => {
     await removeStaff(staffId);

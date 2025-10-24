@@ -316,27 +316,70 @@ export default function LoansView() {
                   <div className="px-4 pb-4 border-t border-gray-200">
                     <div className="pt-4 space-y-4">
                       {lenderAvailabilityBreakdown && lenderAvailabilityBreakdown.length > 0 ? (
-                        <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {lenderAvailabilityBreakdown.map((lender: any, index: number) => (
-                            <div key={lender.id || index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <div className="font-medium">{lender.name}</div>
-                                  <div className="text-sm text-gray-600">{lender.type}</div>
+                            <div key={lender.id || index} className={`p-4 rounded-lg border-2 ${
+                              lender.availability.isAvailable 
+                                ? 'bg-green-50 border-green-200' 
+                                : 'bg-red-50 border-red-200'
+                            }`}>
+                              <div className="space-y-3">
+                                {/* Lender Name and Type */}
+                    <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-semibold text-lg">{lender.name}</div>
+                                    <div className="text-sm text-gray-600">{lender.type}</div>
+                                  </div>
+                      <Badge className={getLenderTypeColorClass(lender.type)}>
+                        {lender.type}
+                      </Badge>
+                    </div>
+
+                                {/* Credit Requirements */}
+                    <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Base Required:</span>
+                                    <span className="font-medium">≥{formatPercent(lender.availability.baseRequirement / 100)}</span>
+                                  </div>
+                                  
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Prestige Bonus:</span>
+                                    <span className="font-medium text-green-600">
+                                      +{formatPercent(lender.availability.prestigeBonus / 100)}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Adjusted Required:</span>
+                                    <span className="font-medium">
+                                      ≥{formatPercent(lender.availability.adjustedRequirement / 100)}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Your Credit:</span>
+                                    <span className="font-medium text-blue-600">
+                                      {formatPercent(comprehensiveCreditRating)}
+                                    </span>
+                                  </div>
+                    </div>
+                    
+                                {/* Status */}
+                                <div className="pt-2 border-t border-gray-200">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Status:</span>
+                                    <div className={`text-sm font-semibold ${
+                                      lender.availability.isAvailable ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {lender.availability.isAvailable ? 'Available' : 'Not Available'}
+                                    </div>
+                                  </div>
+                                  {!lender.availability.isAvailable && (
+                                    <div className="text-xs text-red-500 mt-1">
+                                      {lender.availability.reason}
+                                    </div>
+                                  )}
                                 </div>
-                                <Badge className={getLenderTypeColorClass(lender.type)}>
-                                  {lender.type}
-                                </Badge>
-                              </div>
-                              <div className="text-right">
-                                <div className={`text-sm font-medium ${
-                                  lender.availability.isAvailable ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {lender.availability.isAvailable ? 'Available' : 'Not Available'}
-                                </div>
-                                {!lender.availability.isAvailable && (
-                                  <div className="text-xs text-gray-500">{lender.availability.reason}</div>
-                                )}
                               </div>
                             </div>
                           ))}
@@ -347,8 +390,8 @@ export default function LoansView() {
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
+            </div>
+          )}
               </div>
 
               {/* Credit Rating Breakdown */}
@@ -370,7 +413,7 @@ export default function LoansView() {
                   {isCreditRatingExpanded && (
                     <div className="px-4 pb-4 border-t border-blue-200">
                       <div className="pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
                             <TooltipProvider>
                               <Tooltip>
@@ -548,10 +591,10 @@ export default function LoansView() {
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                      </div>
-                    </div>
+            </div>
+            </div>
                   )}
-                </div>
+            </div>
               )}
             </div>
 

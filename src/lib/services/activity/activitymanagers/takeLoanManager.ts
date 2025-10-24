@@ -7,9 +7,13 @@ import { applyForLoan } from '../../finance/loanService';
 /**
  * Start a take loan activity
  */
-export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = false): Promise<string | null> {
+export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = false, adjustedAmount?: number, adjustedDurationSeasons?: number): Promise<string | null> {
   try {
-    const { totalWork } = calculateTakeLoanWork(isAdjusted);
+    // Use adjusted parameters if provided, otherwise use original offer values
+    const amount = adjustedAmount ?? offer.principalAmount;
+    const duration = adjustedDurationSeasons ?? offer.durationSeasons;
+    
+    const { totalWork } = calculateTakeLoanWork(offer, amount, duration);
     
     // Create the take loan activity
     const title = `Processing Loan from ${offer.lender.name}`;

@@ -1,7 +1,7 @@
 // Lender generation service - creates lenders with type-based characteristics
 import { v4 as uuidv4 } from 'uuid';
 import { Lender, LenderType } from '../../types/types';
-import { LENDER_TYPE_DISTRIBUTION, LENDER_PARAMS, LENDER_GENERATION } from '../../constants/economyConstants';
+import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION } from '../../constants/loanConstants';
 import { LENDER_NAMES } from '../../constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { randomInRange } from '../../utils/utils';

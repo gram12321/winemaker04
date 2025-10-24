@@ -19,7 +19,7 @@ export function getDefaultTeams(): StaffTeam[] {
       description: 'Handle company administration and paperwork',
       memberIds: [],
       icon: '📊',
-      defaultTaskTypes: ['administration', 'staff_search', 'staff_hiring', 'land_search']
+      defaultTaskTypes: ['administration', 'staff_search', 'staff_hiring', 'land_search', 'lender_search', 'take_loan']
     },
     {
       id: uuidv4(),

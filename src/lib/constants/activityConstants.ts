@@ -24,8 +24,8 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
   [WorkCategory.STAFF_HIRING]: 2.0,  // hires/week
   [WorkCategory.LAND_SEARCH]: 15,   // properties/week
-  [WorkCategory.LENDER_SEARCH]: 8.0, // lender offers/week
-  [WorkCategory.TAKE_LOAN]: 1.0,    // loans/week
+  [WorkCategory.LENDER_SEARCH]: 2.0, // lender offers/week
+  [WorkCategory.TAKE_LOAN]: 0.5,    // loans/week
   [WorkCategory.ADMINISTRATION]: 500 // tasks/week; with BASE_WORK_UNITS 50 => 0.1 work/tx
 };
 

@@ -452,6 +452,8 @@ export interface Loan {
 export interface LenderSearchOptions {
   numberOfOffers: number; // How many loan offers to generate (default 3)
   lenderTypes: LenderType[]; // Which types to search (default all)
+  loanAmountRange: [number, number]; // Min and max loan amounts to filter offers
+  durationRange: [number, number]; // Min and max durations to filter offers (in seasons)
   searchCost: number; // Computed cost
   searchWork: number; // Computed work units
 }

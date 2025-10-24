@@ -7,6 +7,7 @@ export * from './namesConstants';
 export * from './vineyardConstants';
 export * from './activityConstants';
 export * from './economyConstants';
+export * from './loanConstants';
 export * from './financeConstants';
 export * from './staffConstants';
 export * from './achievementConstants';

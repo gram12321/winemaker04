@@ -8,6 +8,7 @@ import { calculateLenderSearchWork, calculateLenderSearchCost } from '../workcal
 import { loadLenders } from '../../../database/core/lendersDB';
 import { calculateLenderAvailability } from '../../finance/lenderService';
 import { calculateEffectiveInterestRate, calculateOriginationFee, getCurrentCreditRating } from '../../finance/loanService';
+import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 
 /**
  * Start a lender search activity
@@ -89,6 +90,9 @@ export async function completeLenderSearch(activity: Activity): Promise<void> {
       }
     });
     
+    // Trigger UI update to open results modal
+    triggerGameUpdate();
+    
     const availableCount = offers.filter(o => o.isAvailable).length;
     
     await notificationService.addMessage(
@@ -136,13 +140,24 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
     // Check if lender is available (credit check)
     const availability = calculateLenderAvailability(lender, creditRating * 100, gameState.prestige || 0);
     
-    // Generate random loan parameters within lender's ranges
+    // Generate random loan parameters within lender's ranges AND user constraints
+    const minAmount = Math.max(lender.minLoanAmount, options.loanAmountRange[0]);
+    const maxAmount = Math.min(lender.maxLoanAmount, options.loanAmountRange[1]);
+    const minDuration = Math.max(lender.minDurationSeasons, options.durationRange[0]);
+    const maxDuration = Math.min(lender.maxDurationSeasons, options.durationRange[1]);
+    
+    // Check if there's any overlap between lender ranges and user constraints
+    if (minAmount > maxAmount || minDuration > maxDuration) {
+      // No overlap - skip this lender
+      continue;
+    }
+    
     const principalAmount = Math.round(
-      lender.minLoanAmount + Math.random() * (lender.maxLoanAmount - lender.minLoanAmount)
+      minAmount + Math.random() * (maxAmount - minAmount)
     );
     
     const durationSeasons = Math.round(
-      lender.minDurationSeasons + Math.random() * (lender.maxDurationSeasons - lender.minDurationSeasons)
+      minDuration + Math.random() * (maxDuration - minDuration)
     );
     
     // Calculate loan terms
