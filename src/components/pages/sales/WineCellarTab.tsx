@@ -41,7 +41,7 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   
   if (!wineScoreData || !featureDetails) return null;
   
-  const { effectiveGrapeQuality, qualityPenalty, presentFeatures, hasFaults } = featureDetails;
+  const { currentGrapeQuality, grapeQualityPenalty, presentFeatures, hasFaults } = featureDetails;
   
   return (
     <TooltipProvider>
@@ -55,17 +55,17 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Wine Score Calculation</div>
             <div>Base Grape Quality: <span className="font-medium">{formatPercent(wine.grapeQuality, 1, true)}</span></div>
-            {hasFaults && qualityPenalty > 0.001 && (
+            {hasFaults && grapeQualityPenalty > 0.001 && (
               <>
                 <div className="text-red-600">
-                  Feature Penalty: <span className="font-medium">-{formatPercent(qualityPenalty, 1, true)}</span>
+                  Feature Penalty: <span className="font-medium">-{formatPercent(grapeQualityPenalty, 1, true)}</span>
                 </div>
                 <div className="ml-2 text-xs text-gray-600">
                   {presentFeatures.map((f: any, idx: number) => (
                     <div key={idx}>• {f.feature.icon} {f.config.name}</div>
                   ))}
                 </div>
-                <div>Effective Grape Quality: <span className="font-medium">{formatPercent(effectiveGrapeQuality, 1, true)}</span></div>
+                <div>Current Grape Quality: <span className="font-medium">{formatPercent(currentGrapeQuality, 1, true)}</span></div>
               </>
             )}
             <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>

@@ -37,7 +37,7 @@ export async function startFermentationActivity(
     // Create the fermentation activity
     await createActivity({
       category: WorkCategory.FERMENTATION,
-      title: `Fermentation Setup - ${batch.grape} from ${batch.vineyardName}`,
+      title: `Fermentation Setup - ${batch.grape},  ${batch.harvestStartDate.year}, ${batch.vineyardName}`,
       totalWork,
       activityDetails: `Method: ${options.method}, Temperature: ${options.temperature}`,
       targetId: batch.id,
@@ -71,7 +71,10 @@ export async function bottleWine(batchId: string): Promise<boolean> {
 
   const gameState = getGameState();
   
-  // Preserve all wine batch values and only update necessary fields
+  // Calculate wine score at bottling for snapshot
+  const bottledWineScore = (batch.grapeQuality + batch.balance) / 2;
+  
+  // Preserve all wine batch values and update necessary fields + create bottling snapshots
   const success = await updateInventoryBatch(batchId, {
     state: 'bottled',
     quantity: Math.floor(batch.quantity / 1.5), // Convert kg to bottles (1.5kg per bottle)
@@ -79,7 +82,11 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024
-    }
+    },
+    // Create immutable snapshots at bottling for historical records (WineLog)
+    bottledGrapeQuality: batch.grapeQuality,
+    bottledBalance: batch.balance,
+    bottledWineScore: bottledWineScore
   });
 
   // Record the bottled wine in the production log and trigger bottling events

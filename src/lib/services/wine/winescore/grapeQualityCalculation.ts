@@ -3,7 +3,6 @@ import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSu
 import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
-import { calculateEffectiveGrapeQuality } from '@/lib/services/';
 import { getFeatureImpacts } from '../features/featureService';
 import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
 
@@ -140,9 +139,9 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
 
 // ===== QUALITY BREAKDOWN FOR UI =====
 
-export interface QualityBreakdown {
-  baseQuality: number;
-  effectiveGrapeQuality: number;
+export interface GrapeQualityBreakdown {
+  bornGrapeQuality: number; // Original quality at harvest
+  currentGrapeQuality: number; // Current quality (with feature effects)
   featureImpacts: Array<{
     featureId: string;
     featureName: string;
@@ -154,31 +153,31 @@ export interface QualityBreakdown {
 }
 
 /**
- * Get detailed quality breakdown for UI display
+ * Get detailed grape quality breakdown for UI display
  * Used by GrapeQualityFactorsBreakdown and WineModal components
  * 
  * @param batch - Wine batch to analyze
  * @returns Comprehensive quality breakdown with feature impacts
  */
-export function getQualityBreakdown(batch: WineBatch): QualityBreakdown {
-  const baseQuality = batch.grapeQuality;
-  const effectiveGrapeQuality = calculateEffectiveGrapeQuality(batch);
+export function getGrapeQualityBreakdown(batch: WineBatch): GrapeQualityBreakdown {
+  const bornGrapeQuality = batch.bornGrapeQuality; // Original quality at harvest
+  const currentGrapeQuality = batch.grapeQuality; // Current quality (with feature effects applied)
   const featureImpacts = getFeatureImpacts(batch);
   
-  const qualityImpacts = featureImpacts.map((impact: any) => ({
+  const grapeQualityImpacts = featureImpacts.map((impact: any) => ({
     featureId: impact.featureId,
     featureName: impact.featureName,
     icon: impact.icon,
-    impact: impact.qualityImpact,
-    impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
+    impact: impact.grapeQualityImpact,
+    impactType: impact.grapeQualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
   }));
   
-  const totalFeatureImpact = effectiveGrapeQuality - baseQuality;
+  const totalFeatureImpact = currentGrapeQuality - bornGrapeQuality;
   
   return {
-    baseQuality,
-    effectiveGrapeQuality,
-    featureImpacts: qualityImpacts,
+    bornGrapeQuality,
+    currentGrapeQuality,
+    featureImpacts: grapeQualityImpacts,
     totalFeatureImpact
   };
 }

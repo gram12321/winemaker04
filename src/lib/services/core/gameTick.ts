@@ -1,5 +1,6 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
+import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, calculateAbsoluteWeeks } from '@/lib/utils';
 import { GAME_INITIALIZATION } from '@/lib/constants';
@@ -183,6 +184,15 @@ const processWeeklyEffects = async (): Promise<void> => {
       }
     })(),
     
+    // Apply feature effects directly to wine batches (modify grapeQuality/balance)
+    (async () => {
+      try {
+        await applyWeeklyFeatureEffects();
+      } catch (error) {
+        console.warn('Error during weekly feature effect application:', error);
+      }
+    })(),
+    
     // Update aging progress for all bottled wines
     (async () => {
       try {
@@ -252,6 +262,38 @@ const processWeeklyEffects = async (): Promise<void> => {
   // OPTIMIZATION: Wait for all tasks to complete in parallel
   await Promise.all(weeklyTasks);
 };
+
+/**
+ * Apply feature effects directly to wine batches
+ * Updates grapeQuality and balance based on present features
+ * Called after processWeeklyFeatureRisks to ensure features are up-to-date
+ */
+async function applyWeeklyFeatureEffects(): Promise<void> {
+  const batches = await loadWineBatches();
+  
+  if (batches.length === 0) return;
+  
+  // Apply feature effects to each batch
+  const updates = batches
+    .map(batch => applyFeatureEffectsToBatch(batch))
+    .filter((updatedBatch, index) => {
+      // Only include batches that actually changed
+      const originalBatch = batches[index];
+      return updatedBatch.grapeQuality !== originalBatch.grapeQuality || 
+             updatedBatch.balance !== originalBatch.balance;
+    })
+    .map(updatedBatch => ({
+      id: updatedBatch.id,
+      updates: {
+        grapeQuality: updatedBatch.grapeQuality,
+        balance: updatedBatch.balance
+      }
+    }));
+  
+  if (updates.length > 0) {
+    await bulkUpdateWineBatches(updates);
+  }
+}
 
 /**
  * Update aging progress for all bottled wines

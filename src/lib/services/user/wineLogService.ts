@@ -4,7 +4,6 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from './highscoreService';
 import { getGameState, getCurrentCompany } from '../core/gameState';
 import { insertWineLogEntry, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
-import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -20,8 +19,12 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       throw new Error('Bottled wine must have a completed date');
     }
 
-    // Calculate wine score using the proper calculation function
-    const wineScore = calculateWineScore(wineBatch);
+    // Use bottled snapshots for historical records (immutable values at bottling time)
+    // This ensures WineLog reflects the wine's quality at the moment it was bottled,
+    // not its current quality which may continue evolving in the cellar
+    const grapeQuality = wineBatch.bottledGrapeQuality ?? wineBatch.grapeQuality;
+    const balance = wineBatch.bottledBalance ?? wineBatch.balance;
+    const wineScore = wineBatch.bottledWineScore ?? ((grapeQuality + balance) / 2);
 
     const wineLogData: WineLogData = {
       id: uuidv4(),
@@ -31,9 +34,9 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       grape_variety: wineBatch.grape,
       vintage: wineBatch.harvestStartDate.year,
       quantity: wineBatch.quantity,
-      grape_quality: wineBatch.grapeQuality,
-      balance: wineBatch.balance,
-      wine_score: wineScore,
+      grape_quality: grapeQuality, // Use bottled snapshot
+      balance: balance, // Use bottled snapshot
+      wine_score: wineScore, // Use bottled snapshot
       characteristics: wineBatch.characteristics,
       estimated_price: wineBatch.estimatedPrice,
       harvest_week: wineBatch.harvestStartDate.week,

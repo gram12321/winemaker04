@@ -14,7 +14,7 @@ import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreak
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { calculateEffectiveGrapeQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
+import { getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { useWineBalance } from '@/hooks';
 
@@ -63,9 +63,10 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch) return null;
 
   const displayName = wineName || `${wineBatch.grape} - ${wineBatch.vineyardName}`;
-  const effectiveGrapeQuality: number = calculateEffectiveGrapeQuality(wineBatch) || 0;
-  const grapeQualityCategory = getGrapeQualityCategory(effectiveGrapeQuality);
-  const grapeQualityColorClass = getColorClass(effectiveGrapeQuality);
+  // Use current grape quality (feature effects are already applied)
+  const currentGrapeQuality: number = wineBatch.grapeQuality || 0;
+  const grapeQualityCategory = getGrapeQualityCategory(currentGrapeQuality);
+  const grapeQualityColorClass = getColorClass(currentGrapeQuality);
   const configs = getAllFeatureConfigs();
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['body','aroma','spice','acidity','sweetness','tannins'] as any;
@@ -188,15 +189,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                             <div className="flex justify-between cursor-help">
                               <span className="text-muted-foreground">Wine Score:</span>
                               <div className="text-right">
-                                <div className={`font-medium ${getColorClass((effectiveGrapeQuality + currentBalance) / 2)}`}>
-                                  {formatNumber((effectiveGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
+                                <div className={`font-medium ${getColorClass((currentGrapeQuality + currentBalance) / 2)}`}>
+                                  {formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
                                 </div>
-                                <div className="text-xs text-gray-500">{getGrapeQualityCategory((effectiveGrapeQuality + currentBalance) / 2)}</div>
+                                <div className="text-xs text-gray-500">{getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}</div>
                               </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getGrapeQualityDescription((effectiveGrapeQuality + currentBalance) / 2)}</div>
+                            <div className="text-xs">{getGrapeQualityDescription((currentGrapeQuality + currentBalance) / 2)}</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -226,15 +227,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                             <div className="flex justify-between cursor-help">
                               <span className="text-muted-foreground">Grape Quality:</span>
                               <div className="text-right">
-                                <div className={`font-medium ${getColorClass(effectiveGrapeQuality)}`}>
-                                  {formatNumber(effectiveGrapeQuality, { decimals: 2, forceDecimals: true })}
+                                <div className={`font-medium ${getColorClass(currentGrapeQuality)}`}>
+                                  {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
                                 </div>
-                                <div className="text-xs text-gray-500">{getGrapeQualityCategory(effectiveGrapeQuality)}</div>
+                                <div className="text-xs text-gray-500">{getGrapeQualityCategory(currentGrapeQuality)}</div>
                               </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getGrapeQualityDescription(effectiveGrapeQuality)}</div>
+                            <div className="text-xs">{getGrapeQualityDescription(currentGrapeQuality)}</div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

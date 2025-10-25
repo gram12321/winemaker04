@@ -134,11 +134,19 @@ export interface WineBatch {
   fermentationProgress?: number; // 0-100% for fermentation tracking
   
   // Wine quality properties (0-1 scale)
-  grapeQuality: number; // Overall grape quality (0-1)
-  balance: number; // Wine balance/body (0-1)
+  // Quality lifecycle: born (harvest) → current (evolving) → bottled (snapshot)
+  bornGrapeQuality: number; // Original vineyard quality at harvest (immutable)
+  bornBalance: number; // Original balance at harvest (immutable)
+  grapeQuality: number; // Current grape quality (modified by features throughout lifecycle)
+  balance: number; // Current wine balance (modified by features throughout lifecycle)
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
+  
+  // Bottling snapshots (frozen values at bottling time for WineLog)
+  bottledGrapeQuality?: number; // Grape quality at bottling (snapshot for historical records)
+  bottledBalance?: number; // Balance at bottling (snapshot for historical records)
+  bottledWineScore?: number; // Wine score at bottling (snapshot for historical records)
   
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {

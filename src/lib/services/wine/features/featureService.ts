@@ -272,22 +272,32 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
 // ===== FEATURE EFFECTS CALCULATIONS =====
 
 /**
- * Calculate effective grape quality after applying all feature effects
+ * Apply feature effects directly to wine batch quality and balance
+ * This modifies the batch in-place and should be called during game ticks
+ * 
+ * @param batch - Wine batch to modify
+ * @returns Updated batch with feature effects applied
  */
-export function calculateEffectiveGrapeQuality(batch: WineBatch): number {
+export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   const configs = getAllFeatureConfigs();
-  let grapeQuality = batch.grapeQuality;
-  
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
   
+  // Start from born grape quality (baseline)
+  let currentGrapeQuality = batch.bornGrapeQuality;
+  
+  // Apply all feature quality effects
   for (const feature of presentFeatures) {
     const config = configs.find(c => c.id === feature.id);
     if (!config) continue;
     
-    grapeQuality = applyQualityEffect(grapeQuality, batch, config, feature.severity);
+    currentGrapeQuality = applyQualityEffect(currentGrapeQuality, batch, config, feature.severity);
   }
   
-  return Math.max(0, Math.min(1, grapeQuality));
+  // Update batch with new quality
+  return {
+    ...batch,
+    grapeQuality: Math.max(0, Math.min(1, currentGrapeQuality))
+  };
 }
 
 /**
@@ -412,6 +422,8 @@ export function previewFeatureRisks(
     grape: context.grape,
     quantity: 0,
     state: 'grapes' as const,
+    bornGrapeQuality: 0,
+    bornBalance: 0,
     grapeQuality: 0,
     balance: 0,
     characteristics: { acidity: 0, aroma: 0, body: 0, spice: 0, sweetness: 0, tannins: 0 },

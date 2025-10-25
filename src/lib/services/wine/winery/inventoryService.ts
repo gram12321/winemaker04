@@ -206,6 +206,10 @@ export async function createWineBatchFromHarvest(
       quantity,
       state: 'grapes',
       fermentationProgress: 0,
+      // Set born values (immutable snapshots at harvest)
+      bornGrapeQuality: quality, // Original vineyard quality
+      bornBalance: balanceResult.score, // Original balance
+      // Set current values (will be modified by features)
       grapeQuality: quality, // Use vineyard quality (land value, prestige, altitude, etc.)
       balance: balanceResult.score, // Use calculated balance from wine characteristics
       characteristics,

@@ -10,7 +10,6 @@ import { getGrapeQualityCategory, getColorCategory, getBadgeColorClasses } from 
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
-import { calculateEffectiveGrapeQuality } from '@/lib/services/';
 
 interface GrapeQualityFactorsBreakdownProps {
   vineyard?: Vineyard;
@@ -461,8 +460,9 @@ interface FeatureImpactsSectionProps {
 }
 
 function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSectionProps) {
-  const effectiveGrapeQuality = calculateEffectiveGrapeQuality(wineBatch);
-  const qualityDifference = effectiveGrapeQuality - baseQuality;
+  // Use current grape quality (feature effects are already applied)
+  const currentGrapeQuality = wineBatch.grapeQuality;
+  const qualityDifference = currentGrapeQuality - baseQuality;
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
   
   if (presentFeatures.length === 0) {
@@ -494,8 +494,8 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
         <div className="flex justify-between text-lg font-bold">
           <span>Final Grape Quality:</span>
           <span className="font-mono">
-            {formatNumber(effectiveGrapeQuality, { decimals: 2, forceDecimals: true })}
-            <span className="text-sm font-normal ml-2">({getGrapeQualityCategory(effectiveGrapeQuality)})</span>
+            {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
+            <span className="text-sm font-normal ml-2">({getGrapeQualityCategory(currentGrapeQuality)})</span>
           </span>
         </div>
         
