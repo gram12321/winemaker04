@@ -3,7 +3,7 @@ import { updateInventoryBatch } from './inventoryService';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
-import { processEventTrigger } from '../features/featureRiskService';
+import { processEventTrigger } from '../features/featureService';
 import { createActivity } from '../../activity/activitymanagers/activityManager';
 import { WorkCategory } from '../../activity';
 import { calculateFermentationWork } from '../../activity/workcalculators/fermentationWorkCalculator';

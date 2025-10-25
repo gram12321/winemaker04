@@ -3,8 +3,8 @@ import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSu
 import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
-import { calculateEffectiveGrapeQuality } from '../features/featureEffectsService';
-import { getFeatureImpacts } from '../features/featureDisplayService';
+import { calculateEffectiveGrapeQuality } from '@/lib/services/';
+import { getFeatureImpacts } from '../features/featureService';
 import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
 
 export function getMaxLandValue(): number {
@@ -165,7 +165,7 @@ export function getQualityBreakdown(batch: WineBatch): QualityBreakdown {
   const effectiveGrapeQuality = calculateEffectiveGrapeQuality(batch);
   const featureImpacts = getFeatureImpacts(batch);
   
-  const qualityImpacts = featureImpacts.map(impact => ({
+  const qualityImpacts = featureImpacts.map((impact: any) => ({
     featureId: impact.featureId,
     featureName: impact.featureName,
     icon: impact.icon,

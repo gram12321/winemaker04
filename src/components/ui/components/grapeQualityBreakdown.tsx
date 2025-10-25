@@ -10,7 +10,7 @@ import { getGrapeQualityCategory, getColorCategory, getBadgeColorClasses } from 
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
-import { calculateEffectiveGrapeQuality } from '@/lib/services/wine/features/featureEffectsService';
+import { calculateEffectiveGrapeQuality } from '@/lib/services/';
 
 interface GrapeQualityFactorsBreakdownProps {
   vineyard?: Vineyard;

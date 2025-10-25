@@ -39,9 +39,7 @@ export * from './wine/winery/fermentationManager';
 export * from './wine/winery/wineryService';
 export * from './wine/winery/crushingManager';
 export * from './wine/winescore/grapeQualityCalculation';
-export * from './wine/features/featureEffectsService';
-export * from './wine/features/featureRiskService';
-export * from './wine/features/featureDisplayService';
+export * from './wine/features/featureService';
 export * from './wine/features/agingService';
 
 // Sales services

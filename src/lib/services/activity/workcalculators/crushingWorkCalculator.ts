@@ -6,7 +6,7 @@ import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics }
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
-import { processEventTrigger } from '@/lib/services/wine/features/featureRiskService';
+import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 
 /**
  * Calculate work required for crushing wine batches

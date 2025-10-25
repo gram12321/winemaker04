@@ -12,11 +12,10 @@
 
 import React from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { getColorClass } from '@/lib/utils/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
-import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
+import { getFeatureDisplayData } from '@/lib/services/wine/features/featureService';
 
 interface FeatureDisplayProps {
   batch: WineBatch;
@@ -42,60 +41,14 @@ export function FeatureDisplay({
   showRisks = true,
   displayMode = 'detailed'
 }: FeatureDisplayProps) {
-  const configs = getAllFeatureConfigs();
-  const features = batch.features || [];
-  
-  // Get all relevant features
-  const relevantFeatures = configs
-    .map(config => {
-      const feature = features.find(f => f.id === config.id);
-      const strategy = inferRiskAccumulationStrategy(config.riskAccumulation);
-      
-      return {
-        feature: feature || { 
-          id: config.id, 
-          name: config.name, 
-          icon: config.icon, 
-          risk: 0, 
-          isPresent: false, 
-          severity: 0 
-        },
-        config,
-        strategy
-      };
-    })
-    .filter(({ feature }) => {
-      // Filter based on what we want to show
-      if (feature.isPresent && feature.severity > 0) return true; // Active features
-      if (feature.risk > 0) return true; // Risks
-      return false;
-    });
-
-  // Categorize features
-  const evolvingFeatures = relevantFeatures.filter(({ feature, config }) => {
-    if (!feature.isPresent || feature.severity === 0) return false;
-    
-    // Check if feature is actively evolving in current state
-    const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
-    const stateMultiplier = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
-    const weeklyGrowthRate = Number(baseGrowthRate) * Number(stateMultiplier);
-    
-    return weeklyGrowthRate > 0;
-  });
-
-  const activeFeatures = relevantFeatures.filter(({ feature }) => 
-    feature.isPresent && feature.severity > 0
-  );
-
-  const riskFeatures = relevantFeatures.filter(({ feature, strategy }) => 
-    !feature.isPresent && feature.risk > 0 && strategy !== 'independent'
-  );
+  // Use service layer for all business logic
+  const displayData = getFeatureDisplayData(batch);
 
   // Badge display mode
   if (displayMode === 'badges') {
     return (
       <div className={`flex flex-wrap gap-1 ${className}`}>
-        {activeFeatures.map(({ feature, config }) => (
+        {displayData.activeFeatures.map(({ feature, config }) => (
           <FeatureBadge
             key={feature.id}
             feature={feature}
@@ -110,60 +63,66 @@ export function FeatureDisplay({
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Evolving Features Section */}
-      {showEvolving && evolvingFeatures.length > 0 && (
+      {showEvolving && displayData.evolvingFeatures.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs font-medium text-gray-800">Evolving Features:</div>
           <div className="space-y-1">
-            {evolvingFeatures.map(({ feature, config }) => (
+            {displayData.evolvingFeatures.map(({ feature, config, weeklyGrowthRate }) => (
               <EvolvingFeatureItem
                 key={feature.id}
                 feature={feature}
                 config={config}
                 batch={batch}
+                weeklyGrowthRate={weeklyGrowthRate}
               />
             ))}
           </div>
           
           {/* Weekly Effects Display */}
           <WeeklyEffectsDisplay 
-            evolvingFeatures={evolvingFeatures}
+            combinedWeeklyEffects={displayData.combinedWeeklyEffects}
+            evolvingFeatures={displayData.evolvingFeatures}
           />
         </div>
       )}
 
       {/* Active Features Section */}
-      {showActive && activeFeatures.length > 0 && (
+      {showActive && displayData.activeFeatures.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs font-medium text-gray-800">Features:</div>
           <div className="space-y-1">
-            {activeFeatures.map(({ feature, config }) => (
+            {displayData.activeFeatures.map(({ feature, config, qualityImpact, characteristicEffects }) => (
               <ActiveFeatureItem
                 key={feature.id}
                 feature={feature}
                 config={config}
+                qualityImpact={qualityImpact}
+                characteristicEffects={characteristicEffects}
               />
             ))}
           </div>
           
           {/* Combined Effects Display */}
           <CombinedEffectsDisplay 
-            activeFeatures={activeFeatures}
-            batch={batch}
+            combinedActiveEffects={displayData.combinedActiveEffects}
+            totalQualityEffect={displayData.totalQualityEffect}
+            activeFeatures={displayData.activeFeatures}
           />
         </div>
       )}
 
       {/* Risks Section */}
-      {showRisks && riskFeatures.length > 0 && (
+      {showRisks && displayData.riskFeatures.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs font-medium text-gray-800">Risks:</div>
           <div className="space-y-1">
-            {riskFeatures.map(({ feature, config }) => (
+            {displayData.riskFeatures.map(({ feature, config, expectedWeeks }) => (
               <RiskFeatureItem
                 key={feature.id}
                 feature={feature}
                 config={config}
                 batch={batch}
+                expectedWeeks={expectedWeeks}
               />
             ))}
           </div>
@@ -178,16 +137,12 @@ interface EvolvingFeatureItemProps {
   feature: any;
   config: any;
   batch: WineBatch;
+  weeklyGrowthRate: number;
 }
 
-function EvolvingFeatureItem({ feature, config, batch }: EvolvingFeatureItemProps) {
+function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: EvolvingFeatureItemProps) {
   const severity = feature.severity || 0;
   const severityPercent = Math.round(severity * 100);
-  
-  // Calculate actual weekly growth rate
-  const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
-  const stateMultiplier = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
-  const weeklyGrowthRate = baseGrowthRate * stateMultiplier;
   const weeklyGrowthPercent = Math.round(weeklyGrowthRate * 100 * 10) / 10;
   
   const displayElement = (
@@ -231,10 +186,7 @@ function EvolvingFeatureItem({ feature, config, batch }: EvolvingFeatureItemProp
                 Current state: <span className="font-medium">{batch.state}</span>
               </p>
               <p className="text-xs text-gray-300">
-                State multiplier: {stateMultiplier}x
-              </p>
-              <p className="text-xs text-gray-300 font-mono">
-                Effective rate: {baseGrowthRate.toFixed(3)} × {stateMultiplier} = {weeklyGrowthRate.toFixed(3)}/week
+                Weekly growth: +{weeklyGrowthPercent}% per week
               </p>
             </div>
           </div>
@@ -248,6 +200,8 @@ function EvolvingFeatureItem({ feature, config, batch }: EvolvingFeatureItemProp
 interface ActiveFeatureItemProps {
   feature: any;
   config: any;
+  qualityImpact: number;
+  characteristicEffects: Record<string, number>;
 }
 
 function ActiveFeatureItem({ feature, config }: ActiveFeatureItemProps) {
@@ -317,14 +271,12 @@ interface RiskFeatureItemProps {
   feature: any;
   config: any;
   batch: WineBatch;
+  expectedWeeks?: number;
 }
 
-function RiskFeatureItem({ feature, config, batch }: RiskFeatureItemProps) {
+function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureItemProps) {
   const risk = feature.risk || 0;
   const riskPercent = (risk * 100).toFixed(1);
-  
-  // Calculate expected weeks for time-based features
-  const expectedWeeks = risk > 0 ? Math.ceil(1 / risk) : null;
   
   const displayElement = (
     <div className="text-xs">
@@ -332,7 +284,7 @@ function RiskFeatureItem({ feature, config, batch }: RiskFeatureItemProps) {
       <span className={getColorClass(1 - risk)}>
         {riskPercent}% risk
       </span>
-      {expectedWeeks !== null && expectedWeeks < 50 && (
+      {expectedWeeks !== undefined && expectedWeeks < 50 && (
         <span className="text-gray-400 ml-1">(~{expectedWeeks} weeks)</span>
       )}
     </div>
@@ -358,7 +310,7 @@ function RiskFeatureItem({ feature, config, batch }: RiskFeatureItemProps) {
                 {config.name} Risk: {riskPercent}%
               </p>
               <p>Chance this batch develops {config.name.toLowerCase()}.</p>
-              {expectedWeeks !== null && expectedWeeks < 50 && (
+              {expectedWeeks !== undefined && expectedWeeks < 50 && (
                 <p className="text-yellow-600 mt-1">
                   Expected ~{expectedWeeks} weeks (statistical average)
                 </p>
@@ -376,32 +328,18 @@ function RiskFeatureItem({ feature, config, batch }: RiskFeatureItemProps) {
 
 // Weekly Effects Display Component
 interface WeeklyEffectsDisplayProps {
-  evolvingFeatures: Array<{ feature: any; config: any }>;
+  combinedWeeklyEffects: Record<string, number>;
+  evolvingFeatures: Array<{ feature: any; config: any; weeklyEffects: Record<string, number> }>;
 }
 
-function WeeklyEffectsDisplay({ evolvingFeatures }: WeeklyEffectsDisplayProps) {
-  // Combine all characteristic effects from all evolving features
-  const combinedEffects: Record<string, number> = {};
-  
-  evolvingFeatures.forEach(({ feature, config }) => {
-    if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
-      config.effects.characteristics.forEach(({ characteristic, modifier }: { characteristic: string; modifier: number | ((severity: number) => number) }) => {
-        const effectValue = typeof modifier === 'function' 
-          ? modifier(feature.severity) 
-          : modifier * feature.severity;
-        
-        combinedEffects[characteristic] = (combinedEffects[characteristic] || 0) + effectValue;
-      });
-    }
-  });
-  
-  if (Object.keys(combinedEffects).length === 0) return null;
+function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures }: WeeklyEffectsDisplayProps) {
+  if (Object.keys(combinedWeeklyEffects).length === 0) return null;
   
   return (
     <div className="space-y-1">
       <div className="text-xs text-gray-600">Weekly Effects:</div>
       <div className="flex flex-wrap gap-1">
-        {Object.entries(combinedEffects).map(([characteristic, totalEffect]) => {
+        {Object.entries(combinedWeeklyEffects).map(([characteristic, totalEffect]) => {
           if (Math.abs(totalEffect) > 0.001) {
             const percentage = (totalEffect * 100).toFixed(1);
             const isPositive = totalEffect > 0;
@@ -439,57 +377,20 @@ function WeeklyEffectsDisplay({ evolvingFeatures }: WeeklyEffectsDisplayProps) {
 
 // Combined Effects Display Component
 interface CombinedEffectsDisplayProps {
-  activeFeatures: Array<{ feature: any; config: any }>;
-  batch: WineBatch;
+  combinedActiveEffects: Record<string, number>;
+  totalQualityEffect: number;
+  activeFeatures: Array<{ feature: any; config: any; qualityImpact: number; characteristicEffects: Record<string, number> }>;
 }
 
-function CombinedEffectsDisplay({ activeFeatures, batch }: CombinedEffectsDisplayProps) {
-  // batch parameter kept for potential future use
-  // Combine all characteristic effects from all active features
-  const combinedEffects: Record<string, number> = {};
-  
-  activeFeatures.forEach(({ feature, config }) => {
-    if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
-      config.effects.characteristics.forEach(({ characteristic, modifier }: { characteristic: string; modifier: number | ((severity: number) => number) }) => {
-        const effectValue = typeof modifier === 'function' 
-          ? modifier(feature.severity) 
-          : modifier * feature.severity;
-        
-        combinedEffects[characteristic] = (combinedEffects[characteristic] || 0) + effectValue;
-      });
-    }
-  });
-  
-  // Add combined quality effect
-  let totalQualityEffect = 0;
-  activeFeatures.forEach(({ feature, config }) => {
-    if (config.effects.quality) {
-      const qualityEffect = config.effects.quality;
-      let qualityImpact = 0;
-      
-      if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-        qualityImpact = qualityEffect.amount * feature.severity;
-      } else if (qualityEffect.type === 'power') {
-        const penaltyFactor = Math.pow(feature.severity, qualityEffect.exponent!);
-        qualityImpact = -qualityEffect.basePenalty! * (1 + penaltyFactor);
-      } else if (qualityEffect.type === 'bonus') {
-        qualityImpact = typeof qualityEffect.amount === 'function' 
-          ? qualityEffect.amount(feature.severity)
-          : qualityEffect.amount || 0;
-      }
-      
-      totalQualityEffect += qualityImpact;
-    }
-  });
-  
-  if (Object.keys(combinedEffects).length === 0 && Math.abs(totalQualityEffect) < 0.001) return null;
+function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, activeFeatures }: CombinedEffectsDisplayProps) {
+  if (Object.keys(combinedActiveEffects).length === 0 && Math.abs(totalQualityEffect) < 0.001) return null;
   
   return (
     <div className="space-y-1">
       <div className="text-xs text-gray-600">Effects:</div>
       <div className="flex flex-wrap gap-1">
         {/* Characteristic effects */}
-        {Object.entries(combinedEffects).map(([characteristic, totalEffect]) => {
+        {Object.entries(combinedActiveEffects).map(([characteristic, totalEffect]) => {
           if (Math.abs(totalEffect) > 0.001) {
             const percentage = (totalEffect * 100).toFixed(0);
             const isPositive = totalEffect > 0;
@@ -547,91 +448,57 @@ function CombinedEffectsDisplay({ activeFeatures, batch }: CombinedEffectsDispla
 }
 
 // Helper functions for tooltip breakdowns
-function getCharacteristicBreakdown(characteristic: string, evolvingFeatures: Array<{ feature: any; config: any }>): React.ReactNode[] {
+function getCharacteristicBreakdown(characteristic: string, evolvingFeatures: Array<{ feature: any; config: any; weeklyEffects: Record<string, number> }>): React.ReactNode[] {
   const contributions: React.ReactNode[] = [];
   
-  evolvingFeatures.forEach(({ feature, config }) => {
-    if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
-      const effect = config.effects.characteristics.find((e: any) => e.characteristic === characteristic);
-      if (effect) {
-        const effectValue = typeof effect.modifier === 'function' 
-          ? effect.modifier(feature.severity) 
-          : effect.modifier * feature.severity;
-        
-        if (Math.abs(effectValue) > 0.001) {
-          const percentage = (effectValue * 100).toFixed(1);
-          const sign = effectValue > 0 ? '+' : '';
-          contributions.push(
-            <p key={config.id} className="text-gray-300">
-              {config.name}: {sign}{percentage}%
-            </p>
-          );
-        }
-      }
+  evolvingFeatures.forEach(({ config, weeklyEffects }) => {
+    const effectValue = weeklyEffects[characteristic];
+    if (effectValue && Math.abs(effectValue) > 0.001) {
+      const percentage = (effectValue * 100).toFixed(1);
+      const sign = effectValue > 0 ? '+' : '';
+      contributions.push(
+        <p key={config.id} className="text-gray-300">
+          {config.name}: {sign}{percentage}%
+        </p>
+      );
     }
   });
   
   return contributions;
 }
 
-function getCombinedCharacteristicBreakdown(characteristic: string, activeFeatures: Array<{ feature: any; config: any }>): React.ReactNode[] {
+function getCombinedCharacteristicBreakdown(characteristic: string, activeFeatures: Array<{ feature: any; config: any; characteristicEffects: Record<string, number> }>): React.ReactNode[] {
   const contributions: React.ReactNode[] = [];
   
-  activeFeatures.forEach(({ feature, config }) => {
-    if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
-      const effect = config.effects.characteristics.find((e: any) => e.characteristic === characteristic);
-      if (effect) {
-        const effectValue = typeof effect.modifier === 'function' 
-          ? effect.modifier(feature.severity) 
-          : effect.modifier * feature.severity;
-        
-        if (Math.abs(effectValue) > 0.001) {
-          const percentage = (effectValue * 100).toFixed(1);
-          const sign = effectValue > 0 ? '+' : '';
-          contributions.push(
-            <p key={config.id} className="text-gray-300">
-              {config.name}: {sign}{percentage}%
-            </p>
-          );
-        }
-      }
+  activeFeatures.forEach(({ config, characteristicEffects }) => {
+    const effectValue = characteristicEffects[characteristic];
+    if (effectValue && Math.abs(effectValue) > 0.001) {
+      const percentage = (effectValue * 100).toFixed(1);
+      const sign = effectValue > 0 ? '+' : '';
+      contributions.push(
+        <p key={config.id} className="text-gray-300">
+          {config.name}: {sign}{percentage}%
+        </p>
+      );
     }
   });
   
   return contributions;
 }
 
-function getCombinedQualityBreakdown(activeFeatures: Array<{ feature: any; config: any }>): React.ReactNode[] {
+function getCombinedQualityBreakdown(activeFeatures: Array<{ feature: any; config: any; qualityImpact: number }>): React.ReactNode[] {
   const contributions: React.ReactNode[] = [];
   
-  activeFeatures.forEach(({ feature, config }) => {
-    if (config.effects.quality) {
-      const qualityEffect = config.effects.quality;
-      let qualityImpact = 0;
-      let impactText = '';
+  activeFeatures.forEach(({ config, qualityImpact }) => {
+    if (Math.abs(qualityImpact) > 0.001) {
+      const impactPercent = (qualityImpact * 100).toFixed(1);
+      const impactText = `${qualityImpact >= 0 ? '+' : ''}${impactPercent}%`;
       
-      if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-        qualityImpact = qualityEffect.amount * feature.severity;
-        const impactPercent = (qualityImpact * 100).toFixed(1);
-        impactText = `${qualityImpact >= 0 ? '+' : ''}${impactPercent}%`;
-      } else if (qualityEffect.type === 'power') {
-        const penaltyFactor = Math.pow(feature.severity, qualityEffect.exponent!);
-        qualityImpact = -qualityEffect.basePenalty! * (1 + penaltyFactor);
-        impactText = `${(qualityImpact * 100).toFixed(1)}%`;
-      } else if (qualityEffect.type === 'bonus') {
-        qualityImpact = typeof qualityEffect.amount === 'function' 
-          ? qualityEffect.amount(feature.severity)
-          : qualityEffect.amount || 0;
-        impactText = `+${(qualityImpact * 100).toFixed(1)}%`;
-      }
-      
-      if (Math.abs(qualityImpact) > 0.001) {
-        contributions.push(
-          <p key={config.id} className="text-gray-300">
-            {config.name}: {impactText}
-          </p>
-        );
-      }
+      contributions.push(
+        <p key={config.id} className="text-gray-300">
+          {config.name}: {impactText}
+        </p>
+      );
     }
   });
   

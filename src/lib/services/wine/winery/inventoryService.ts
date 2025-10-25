@@ -14,7 +14,7 @@ import { generateDefaultCharacteristics } from '../characteristics/defaultCharac
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../../constants/vineyardConstants';
 import { GRAPE_CONST } from '../../../constants/grapeConstants';
-import { initializeBatchFeatures, processEventTrigger } from '../features/featureRiskService';
+import { initializeBatchFeatures, processEventTrigger } from '../features/featureService';
 
 /**
  * Inventory Service

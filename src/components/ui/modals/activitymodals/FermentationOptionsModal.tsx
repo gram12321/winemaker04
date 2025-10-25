@@ -9,12 +9,7 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/lib/services';
 import { formatCurrency, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import {
-  previewFeatureRisks,
-  calculateCumulativeRisk,
-  getPresentFeaturesInfo,
-  getAtRiskFeaturesInfo
-} from '@/lib/services/wine/features/featureRiskHelper';
+import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 
 /**
  * Fermentation Options Modal
@@ -358,13 +353,13 @@ Note: These effects apply each week while fermentation is active.`
       </div>
       
       {/* Fermentation Risk Calculations */}
-      {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0) && (
+      {featureRiskData && (featureRiskData.presentFeatures.filter(f => f.qualityImpact && Math.abs(f.qualityImpact) > 0.001).length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0) && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
           <span>⚠️</span>
           <span>Fermentation Risks & Information</span>
         </h4>
-        <div className="text-sm text-amber-800 space-y-3">
+        <div className="text-xs text-amber-800 space-y-3">
           {/* Oxidation Risk Calculation */}
           <div className="bg-amber-100 border border-amber-200 rounded p-3">
             <div className="flex items-center justify-between mb-2">

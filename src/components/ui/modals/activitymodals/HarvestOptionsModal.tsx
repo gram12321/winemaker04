@@ -7,7 +7,7 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/lib/services';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import { getHarvestRisks, getHarvestInfluences } from '@/lib/services/wine/features/featureRiskHelper';
+import { getHarvestRisks, getHarvestInfluences } from '@/lib/services';
 
 /**
  * Harvest Options Modal
@@ -174,13 +174,13 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
         </div>
 
         {/* Organized Risk Warnings */}
-        {organizedWarnings && (
+        {organizedWarnings && organizedWarnings.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
             <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
               <span>⚠️</span>
               <span>Harvest Warnings & Information</span>
             </h4>
-            <div className="text-sm text-amber-800 space-y-2">
+            <div className="text-xs text-amber-800 space-y-2">
               {organizedWarnings.map((warning, index) => (
                 <div key={index} className="mb-1">
                   {warning}

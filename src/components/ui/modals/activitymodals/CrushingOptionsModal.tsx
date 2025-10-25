@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
-import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/wine/features/featureRiskHelper';
+import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 import { calculateYieldMultiplier, calculatePressingQualityPenalty, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 
 /**
@@ -437,7 +437,7 @@ MAX PRESSURE BY METHOD:
         </div>
         
         {/* Feature Badges (if present) */}
-        {featureRiskData && featureRiskData.presentFeatures.length > 0 && (
+        {featureRiskData && featureRiskData.presentFeatures.filter(f => f.qualityImpact && Math.abs(f.qualityImpact) > 0.001).length > 0 && (
           <div className="mb-4 flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Current Features:</span>
             <FeatureDisplay 
@@ -450,8 +450,8 @@ MAX PRESSURE BY METHOD:
           </div>
         )}
         
-        {/* Wine Features Status Panel - Consolidated Risk Information */}
-        {featureRiskData && (featureRiskData.presentFeatures.length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0 || organizedWarnings) && (
+        {/* Wine Features Status Panel - Using FeatureDisplay style */}
+        {featureRiskData && (featureRiskData.presentFeatures.filter(f => f.qualityImpact && Math.abs(f.qualityImpact) > 0.001).length > 0 || featureRiskData.atRiskFeatures.length > 0 || featureRiskData.eventRisks.length > 0 || organizedWarnings) && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
             <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
               <span>⚗️</span>
@@ -462,27 +462,29 @@ MAX PRESSURE BY METHOD:
             {organizedWarnings && (
               <div className="mb-3 p-2 bg-amber-100 rounded text-xs">
                 {organizedWarnings.map((warning, index) => (
-                  <div key={index} className="mb-1">
+                  <div key={index} className="mb-1 text-xs">
                     {warning}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Present Features */}
-            {featureRiskData.presentFeatures.length > 0 && (
+            {/* Present Features - Only show if they have actual impact */}
+            {featureRiskData.presentFeatures.filter(f => f.qualityImpact && Math.abs(f.qualityImpact) > 0.001).length > 0 && (
               <div className="mb-3">
-                <p className="text-xs font-medium text-amber-800 mb-2">Current Features:</p>
-                {featureRiskData.presentFeatures.map(feature => (
-                  <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
-                    <span className="font-medium">{feature.icon} {feature.featureName}</span>
-                    {feature.qualityImpact && (
-                      <span className="text-red-600 ml-2">
-                        (Quality: {feature.qualityImpact > 0 ? '+' : ''}{(feature.qualityImpact * 100).toFixed(0)}%)
-                      </span>
-                    )}
-                  </div>
-                ))}
+                <div className="text-xs font-medium text-amber-800 mb-2">Current Features:</div>
+                <div className="space-y-1">
+                  {featureRiskData.presentFeatures
+                    .filter(f => f.qualityImpact && Math.abs(f.qualityImpact) > 0.001)
+                    .map(feature => (
+                      <div key={feature.featureId} className="text-xs">
+                        <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
+                        <span className="text-red-600">
+                          {feature.featureName} (Quality: {feature.qualityImpact && feature.qualityImpact > 0 ? '+' : ''}{((feature.qualityImpact || 0) * 100).toFixed(0)}%)
+                        </span>
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
 
@@ -499,13 +501,17 @@ MAX PRESSURE BY METHOD:
 
               return (
                 <div className="mb-3">
-                  <p className="text-xs font-medium text-amber-800 mb-2">Previous Event Risks:</p>
-                  {cumulativeFeatures.map(feature => (
-                    <div key={feature.featureId} className="text-xs text-amber-900 ml-2 mb-1">
-                      <span className="font-medium">{feature.icon} {feature.featureName}:</span>
-                      <span className="ml-2">{(feature.currentRisk * 100).toFixed(1)}% (from harvest)</span>
-                    </div>
-                  ))}
+                  <div className="text-xs font-medium text-amber-800 mb-2">Previous Event Risks:</div>
+                  <div className="space-y-1">
+                    {cumulativeFeatures.map(feature => (
+                      <div key={feature.featureId} className="text-xs">
+                        <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
+                        <span className="text-amber-600">
+                          {(feature.currentRisk * 100).toFixed(1)}% risk (from harvest)
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })()}

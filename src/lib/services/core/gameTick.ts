@@ -1,26 +1,10 @@
-// Game tick service - handles time progression and automatic game events
-import { getGameState, updateGameState } from './gameState';
-import { generateSophisticatedWineOrders } from '../sales/salesOrderService';
-import { notificationService } from './notificationService';
-import { NotificationCategory } from '../../../lib/types/types';
-import { progressActivities } from '../activity/activitymanagers/activityManager';
-import { updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation } from '../vineyard/vineyardManager';
-import { checkAndTriggerBookkeeping } from '../activity/activitymanagers/bookkeepingManager';
-import { processWeeklyFermentation } from '../wine/winery/fermentationManager';
-import { processSeasonalWages } from '../finance/wageService';
-import { getAllStaff } from '../user/staffService';
-import { processWeeklyFeatureRisks } from '../wine/features/featureRiskService';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { updateCellarCollectionPrestige } from '../prestige/prestigeService';
-import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
-import { checkAllAchievements } from '../user/achievementService';
-import { calculateAbsoluteWeeks } from '../../utils/utils';
-import { processEconomyPhaseTransition } from '../finance/economyService';
-import { processSeasonalLoanPayments } from '../finance/loanService';
-import { highscoreService } from '../user/highscoreService';
-import { getCurrentCompany } from './gameState';
-import { calculateNetWorth } from '../finance/financeService';
-import { GAME_INITIALIZATION } from '../../constants/constants';
+import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
+import { triggerGameUpdate } from '@/hooks/useGameUpdates';
+import { NotificationCategory, calculateAbsoluteWeeks } from '@/lib/utils';
+import { GAME_INITIALIZATION } from '@/lib/constants';
+import { WineBatch } from '@/lib/types/types';
+import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -276,12 +260,12 @@ const processWeeklyEffects = async (): Promise<void> => {
  */
 async function updateBottledWineAging(): Promise<void> {
   const batches = await loadWineBatches();
-  const bottledWines = batches.filter(batch => batch.state === 'bottled');
+  const bottledWines = batches.filter((batch: WineBatch) => batch.state === 'bottled');
   
   if (bottledWines.length === 0) return;
   
   // OPTIMIZATION: Collect all updates for bulk operation
-  const updates = bottledWines.map(batch => ({
+  const updates = bottledWines.map((batch: WineBatch) => ({
     id: batch.id,
     updates: {
       agingProgress: (batch.agingProgress || 0) + 1
