@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Badge } from '../../shadCN/badge';
 import { Separator } from '../../shadCN/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
-import { Grape, MapPin, Ruler, Mountain, Compass } from 'lucide-react';
+import { Grape, MapPin, Ruler, Mountain, Compass, BarChart3 } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
-import { formatCurrency, formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory } from '@/lib/utils';
-import { getAltitudeRating, getAspectRating } from '@/lib/services';
+import { formatCurrency, formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory, getColorClass } from '@/lib/utils';
+import { getAltitudeRating, getAspectRating, calculateVineyardExpectedYield } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
 import { getRegionalPriceRange } from '@/lib/services';
 import { getVineyardGrapeQualityFactors } from '@/lib/services/wine/winescore/grapeQualityCalculation';
@@ -406,6 +406,107 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                 )}
               </CardContent>
             </Card>
+
+            {/* Expected Yield Breakdown */}
+            {vineyard.grape && (() => {
+              const yieldBreakdown = calculateVineyardExpectedYield(vineyard);
+              
+              return yieldBreakdown ? (
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" /> Expected Yield Calculation
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3">
+                    <div className="text-sm space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-muted-foreground">Final Yield:</span>
+                          <span className="font-medium ml-2">{formatNumber(yieldBreakdown.totalYield)} kg</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total Vines:</span>
+                          <span className="font-medium ml-2">{Math.round(yieldBreakdown.totalVines)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Density:</span>
+                        <span className="font-medium ml-2">{formatNumber(vineyard.density, { decimals: 0 })} vines/ha</span>
+                      </div>
+                      <div className="border-t pt-2 mt-2">
+                        <div className="text-xs text-muted-foreground mb-1">Calculation Formula:</div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-xs font-mono bg-gray-50 p-2 rounded cursor-help">
+                                {Math.round(yieldBreakdown.totalVines)} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(yieldBreakdown.breakdown.finalMultiplier, { decimals: 3, smartDecimals: true })} = {formatNumber(yieldBreakdown.totalYield)} kg
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs">
+                                <div className="font-medium mb-2">Combined Multiplier Formula:</div>
+                                <div className="font-mono">Suitability × Natural Yield × Ripeness × Vine Yield × Health</div>
+                                <div className="mt-2 space-y-1">
+                                  <div>Grape Suitability: {formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}</div>
+                                  <div>Natural Yield: {formatPercent(yieldBreakdown.breakdown.naturalYield, 1)}</div>
+                                  <div>Ripeness: {formatPercent(yieldBreakdown.breakdown.ripeness, 1)}</div>
+                                  <div>Vine Yield: {formatPercent(yieldBreakdown.breakdown.vineYield, 1)}</div>
+                                  <div>Health: {formatPercent(yieldBreakdown.breakdown.health, 1)}</div>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="border-t pt-2 mt-2">
+                        <div className="text-xs text-muted-foreground mb-1">Multiplier Factors:</div>
+                        <div className="space-y-1">
+                          <div className="text-xs flex justify-between">
+                            <span>Grape Suitability:</span>
+                            <span className={`font-medium ${getColorClass(yieldBreakdown.breakdown.grapeSuitability)}`}>
+                              {formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}
+                            </span>
+                          </div>
+                          <div className="text-xs flex justify-between">
+                            <span>Natural Yield:</span>
+                            <span className={`font-medium ${getColorClass(yieldBreakdown.breakdown.naturalYield)}`}>
+                              {formatPercent(yieldBreakdown.breakdown.naturalYield, 1)}
+                            </span>
+                          </div>
+                          <div className="text-xs flex justify-between">
+                            <span>Ripeness:</span>
+                            <span className={`font-medium ${getColorClass(yieldBreakdown.breakdown.ripeness)}`}>
+                              {formatPercent(yieldBreakdown.breakdown.ripeness, 1)}
+                            </span>
+                          </div>
+                          <div className="text-xs flex justify-between">
+                            <span>Vine Yield:</span>
+                            <span className={`font-medium ${getColorClass(yieldBreakdown.breakdown.vineYield)}`}>
+                              {formatPercent(yieldBreakdown.breakdown.vineYield, 1)}
+                            </span>
+                          </div>
+                          <div className="text-xs flex justify-between">
+                            <span>Health:</span>
+                            <span className={`font-medium ${getColorClass(yieldBreakdown.breakdown.health)}`}>
+                              {formatPercent(yieldBreakdown.breakdown.health, 1)}
+                            </span>
+                          </div>
+                          <div className="border-t pt-1 mt-1">
+                            <div className="text-xs flex justify-between font-medium">
+                              <span>Combined:</span>
+                              <span className={getColorClass(yieldBreakdown.breakdown.finalMultiplier)}>
+                                {formatNumber(yieldBreakdown.breakdown.finalMultiplier, { smartDecimals: true, decimals: 3 })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null;
+            })()}
           </div>
 
           {/* Land Value Factor (detailed) */}

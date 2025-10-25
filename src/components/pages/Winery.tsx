@@ -4,15 +4,13 @@ import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormatte
 import { getAllWineBatches, bottleWine, isActionAvailable } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
 import { Button, CrushingOptionsModal, WineModal } from '../ui';
-import { FeatureStatusGrid } from '../ui/wine/WineryFeatureStatusGrid';
-import { EvolvingFeaturesDisplay } from '../ui/wine/WineryEvolvingFeaturesDisplay';
+import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 
-// Component for wine batch balance display (needed to use hooks properly)
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const balanceResult = useWineBatchBalance(batch);
   const formattedBalance = useFormattedBalance(balanceResult);
@@ -246,20 +244,18 @@ const Winery: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3-Grid Layout */}
-                  <div className="grid grid-cols-3 gap-6">
-                    {/* Left Grid: Basic Wine Info */}
+                  {/* 4-Grid Layout */}
+                  <div className="grid grid-cols-4 gap-4">
+                    {/* Column 1: Overview */}
                     <div className="space-y-2">
+                      <div className="text-xs font-medium text-gray-800">Overview</div>
                       <div className="text-xs text-gray-600">
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
                       <WineBatchBalanceDisplay batch={batch} />
                       <GrapeQualityDisplay batch={batch} />
-                    </div>
-
-                    {/* Center Grid: Current Activity & Effects */}
-                    <div className="space-y-2">
-                      <div className="text-xs font-medium text-gray-800">
+                      
+                      <div className="text-xs font-medium text-gray-800 mt-3">
                         Current Activity: <span className="text-purple-600">
                           {batch.state
                             .split('_')
@@ -273,13 +269,40 @@ const Winery: React.FC = () => {
                       
                       {/* Fermentation Effects Display */}
                       <FermentationEffectsDisplay batch={batch} />
-                      
-                      {/* Evolving Features Display */}
-                      <EvolvingFeaturesDisplay batch={batch} />
                     </div>
 
-                    {/* Right Grid: Features */}
-                    <FeatureStatusGrid batch={batch} />
+                    {/* Column 2: Evolving Features */}
+                    <div className="space-y-2">
+                      <FeatureDisplay 
+                        batch={batch} 
+                        showEvolving={true}
+                        showActive={false}
+                        showRisks={false}
+                        expanded={false}
+                      />
+                    </div>
+
+                    {/* Column 3: Features */}
+                    <div className="space-y-2">
+                      <FeatureDisplay 
+                        batch={batch} 
+                        showEvolving={false}
+                        showActive={true}
+                        showRisks={false}
+                        expanded={false}
+                      />
+                    </div>
+
+                    {/* Column 4: Risks */}
+                    <div className="space-y-2">
+                      <FeatureDisplay 
+                        batch={batch} 
+                        showEvolving={false}
+                        showActive={false}
+                        showRisks={true}
+                        expanded={false}
+                      />
+                    </div>
                   </div>
 
                 </div>

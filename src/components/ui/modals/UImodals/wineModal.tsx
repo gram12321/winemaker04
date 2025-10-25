@@ -12,7 +12,7 @@ import { getGrapeQualityCategory, getGrapeQualityDescription, getWineBalanceCate
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreakdown';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
-import { FeatureStatusGrid } from '../../wine/WineryFeatureStatusGrid';
+import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import { calculateEffectiveGrapeQuality, getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
@@ -385,10 +385,12 @@ export const WineModal: React.FC<WineModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="py-3">
-                    <FeatureStatusGrid 
+                    <FeatureDisplay 
                       batch={wineBatch} 
-                      showImpact={true}
-                      showEvolution={true}
+                      showEvolving={true}
+                      showActive={true}
+                      showRisks={true}
+                      expanded={true}
                       className="text-sm"
                     />
                   </CardContent>

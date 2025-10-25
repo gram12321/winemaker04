@@ -5,7 +5,7 @@ import { calculateCrushingWork, validateCrushingBatch } from '@/lib/services/act
 import { getCrushingMethodInfo, CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
-import { FeatureBadges } from '@/components/ui/wine/FeatureBadge';
+import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
@@ -440,10 +440,12 @@ MAX PRESSURE BY METHOD:
         {featureRiskData && featureRiskData.presentFeatures.length > 0 && (
           <div className="mb-4 flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Current Features:</span>
-            <FeatureBadges 
-              features={batch.features || []} 
-              configs={getAllFeatureConfigs()} 
-              showSeverity 
+            <FeatureDisplay 
+              batch={batch}
+              displayMode="badges"
+              showActive={true}
+              showEvolving={false}
+              showRisks={false}
             />
           </div>
         )}

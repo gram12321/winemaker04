@@ -126,3 +126,26 @@ export const bulkUpdateVineyards = async (vineyards: Vineyard[]): Promise<void> 
     throw error;
   }
 };
+
+/**
+ * Delete vineyards by IDs
+ * Used for loan default vineyard seizure
+ */
+export const deleteVineyards = async (vineyardIds: string[]): Promise<void> => {
+  if (vineyardIds.length === 0) return;
+  
+  try {
+    const companyId = getCurrentCompanyId();
+    
+    const { error } = await supabase
+      .from(VINEYARDS_TABLE)
+      .delete()
+      .eq('company_id', companyId)
+      .in('id', vineyardIds);
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error('Delete vineyards failed:', error);
+    throw error;
+  }
+};

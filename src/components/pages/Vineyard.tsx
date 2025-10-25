@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, calculateVineyardYield } from '@/lib/services';
+import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal } from '../ui';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
@@ -9,9 +9,62 @@ import { HarvestRisksDisplay } from '../ui/vineyard/HarvestFeatureRisksDisplay';
 import HealthTooltip from '../ui/vineyard/HealthTooltip';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
-import { clearPendingLandSearchResults } from '@/lib/services';
+import { clearPendingLandSearchResults, calculateVineyardExpectedYield } from '@/lib/services';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 
+// Component for expected yield tooltip display
+const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }) => {
+  if (!vineyard.grape) {
+    return (
+      <div className="text-xs text-gray-500">
+        Expected Yield: <span className="font-medium">0 kg</span>
+      </div>
+    );
+  }
 
+  const yieldBreakdown = calculateVineyardExpectedYield(vineyard);
+
+  if (!yieldBreakdown) {
+    return (
+      <div className="text-xs text-gray-500">
+        Expected Yield: <span className="font-medium">Calculating...</span>
+      </div>
+    );
+  }
+
+  const { totalYield, totalVines, breakdown: details } = yieldBreakdown;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors">
+            Expected Yield: <span className="font-medium">{formatNumber(totalYield)} kg</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-sm">
+          <div className="text-xs space-y-2">
+            <div className="font-medium">Expected Yield Calculation</div>
+            <div className="border-t pt-2 space-y-1">
+              <div className="font-mono">
+                {Math.round(totalVines)} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(details.finalMultiplier, { decimals: 3, smartDecimals: true })}
+              </div>
+              <div className="text-muted-foreground mt-1">= {formatNumber(totalYield)} kg</div>
+            </div>
+            <div className="border-t pt-2 space-y-1">
+              <div className="text-muted-foreground text-xs">Combined Multiplier Breakdown:</div>
+              <div>Grape Suitability: {formatNumber(details.grapeSuitability * 100, { decimals: 1 })}%</div>
+              <div>Natural Yield: {formatNumber(details.naturalYield * 100, { decimals: 1 })}%</div>
+              <div>Ripeness: {formatNumber(details.ripeness * 100, { decimals: 1 })}%</div>
+              <div>Vine Yield: {formatNumber(details.vineYield * 100, { decimals: 1 })}%</div>
+              <div>Health: {formatNumber(details.health * 100, { decimals: 1 })}%</div>
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const Vineyard: React.FC = () => {
   const { withLoading } = useLoadingState();
@@ -22,7 +75,6 @@ const Vineyard: React.FC = () => {
   const [showVineyardModal, setShowVineyardModal] = useState(false);
   const [showClearingModal, setShowClearingModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
-  const [expectedYields, setExpectedYields] = useState<Record<string, number>>({});
   const vineyards = useGameStateWithData(getAllVineyards, []);
   const activities = useGameStateWithData(getAllActivities, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0 });
@@ -54,31 +106,6 @@ const Vineyard: React.FC = () => {
       clearing: activeClearingVineyards
     };
   }, [activities]);
-
-  // Calculate expected/remaining yields when vineyards or activities change
-  useEffect(() => {
-    const calculateYields = () => {
-      const yields: Record<string, number> = {};
-      for (const vineyard of vineyards) {
-        if (!vineyard.grape) continue;
-
-        const totalYield = calculateVineyardYield(vineyard);
-        // If harvesting is active for this vineyard, show remaining yield
-        const activeHarvest = activities.find(
-          (a) => a.category === WorkCategory.HARVESTING && a.status === 'active' && a.targetId === vineyard.id
-        );
-        if (activeHarvest) {
-          const harvestedSoFar = activeHarvest.params?.harvestedSoFar || 0;
-          yields[vineyard.id] = Math.max(0, Math.round(totalYield - harvestedSoFar));
-        } else {
-          yields[vineyard.id] = Math.round(totalYield);
-        }
-      }
-      setExpectedYields(yields);
-    };
-
-    calculateYields();
-  }, [vineyards, activities]);
 
   const handleShowHarvestDialog = useCallback((vineyard: VineyardType) => {
     setSelectedVineyard(vineyard);
@@ -556,13 +583,9 @@ const Vineyard: React.FC = () => {
                               </div>
                             </div>
                             
-                            {/* Expected/Remaining Yield */}
+                            {/* Expected Yield Tooltip */}
                             <div className="text-xs">
-                              <div className="text-gray-500">
-                                {(vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield')}: <span className="font-medium text-green-600">
-                                  {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
-                                </span>
-                              </div>
+                              <ExpectedYieldTooltip vineyard={vineyard} />
                             </div>
                           </>
                         ) : (
@@ -794,12 +817,7 @@ const Vineyard: React.FC = () => {
                         {/* Right Column - Expected Yield and Harvest Risks */}
                         <div className="flex flex-col justify-center space-y-3">
                           <div className="bg-green-50 rounded-lg p-3 text-center">
-                            <div className="text-xs text-gray-600 mb-1">
-                              {vineyardsWithActiveActivities.harvesting.has(vineyard.id) ? 'Remaining Yield' : 'Expected Yield'}
-                            </div>
-                            <div className="text-lg font-bold text-green-600">
-                              {formatNumber(expectedYields[vineyard.id] || 0, { decimals: 0 })} kg
-                            </div>
+                            <ExpectedYieldTooltip vineyard={vineyard} />
                           </div>
                           
                           {/* Harvest Risks */}

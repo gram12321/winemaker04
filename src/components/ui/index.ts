@@ -22,12 +22,11 @@ export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend 
 export { GrapeQualityFactorBar, GrapeQualityFactorsDisplay, GrapeQualityFactorLegend } from './components/grapeQualityBar';
 export { BalanceScoreBreakdown } from './components/BalanceScoreBreakdown';
 export { GrapeQualityFactorsBreakdown } from './components/grapeQualityBreakdown';
-export { GrapeQualityBreakdownModal } from './modals/winebreakdownmodals/grapeQualityBreakdownModal';
+export { GrapeQualityBreakdownModal } from './modals/UImodals/grapeQualityBreakdownModal';
 export { LandSearchOptionsModal } from './modals/activitymodals/LandSearchOptionsModal';
 export { LandSearchResultsModal } from './modals/activitymodals/LandSearchResultsModal';
 export { LenderSearchOptionsModal } from './modals/activitymodals/LenderSearchOptionsModal';
 export { LenderSearchResultsModal } from './modals/activitymodals/LenderSearchResultsModal';
-export { default as VineyardModal } from './modals/UImodals/vineyardModal';
 export { default as WineModal } from './modals/UImodals/wineModal';
 export { default as WorkCalculationTable } from './activities/workCalculationTable';
 export { default as ActivityOptionsModal, type ActivityOptionField, type ActivityWorkEstimate } from './activities/activityOptionsModal';
@@ -36,10 +35,16 @@ export { default as HarvestOptionsModal } from './modals/activitymodals/HarvestO
 export { default as CrushingOptionsModal } from './modals/activitymodals/CrushingOptionsModal';
 export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
 export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
-export { BalanceBreakdownModal } from './modals/winebreakdownmodals/BalanceBreakdownModal';
+export { BalanceBreakdownModal } from './modals/UImodals/BalanceBreakdownModal';
 export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';
 export { StaffSkillBar, StaffSkillBarsList } from './components/StaffSkillBar';
-export { FeatureBadge, FeatureBadges } from './wine/FeatureBadge';
-export { FeatureRiskDisplay } from './wine/WineryFeatureRiskDisplay';
+export { FeatureDisplay } from './components/FeatureDisplay';
 export { WarningModal } from './modals/UImodals/WarningModal';
 export type { WarningModalProps, WarningSeverity, WarningModalAction } from './modals/UImodals/WarningModal';
+// UI Modals exports
+export { StaffSearchOptionsModal } from './modals/activitymodals/StaffSearchOptionsModal';
+export { StaffSearchResultsModal } from './modals/activitymodals/StaffSearchResultsModal';
+export { default as StaffModal } from './modals/UImodals/StaffModal';
+export { default as VineyardModal } from './modals/UImodals/vineyardModal';
+export { HireStaffModal } from './modals/activitymodals/HireStaffModal';
+export { default as PrestigeModal } from './modals/UImodals/prestigeModal';

@@ -12,7 +12,7 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateCreditRating } from './creditRatingService';
 import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
 import { calculateAbsoluteWeeks, formatCurrency } from '../../utils/utils';
-import { loadVineyards } from '../../database/activities/vineyardDB';
+import { loadVineyards, deleteVineyards } from '../../database/activities/vineyardDB';
 import { setLoanWarning } from '../../database/core/loansDB';
 
 /**
@@ -307,7 +307,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
     const availableMoney = gameState.money || 0;
     
     if (availableMoney >= loan.seasonalPayment) {
-      // Sufficient funds - make payment
+      // Sufficient funds - make full payment
       await addTransaction(
         -loan.seasonalPayment,
         `Loan payment to ${loan.lenderName}`,
@@ -357,8 +357,50 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
           );
         }
       }
+    } else if (availableMoney > 0) {
+      // Partial payment - use all available funds
+      await addTransaction(
+        -availableMoney,
+        `Partial loan payment to ${loan.lenderName} (${formatCurrency(availableMoney)} of ${formatCurrency(loan.seasonalPayment)} due)`,
+        TRANSACTION_CATEGORIES.LOAN_PAYMENT,
+        false
+      );
+      
+      // Update loan with partial payment
+      const newBalance = loan.remainingBalance - availableMoney;
+      const newSeasonsRemaining = loan.seasonsRemaining - 1;
+      
+      // Still count as missed payment since not full amount
+      const newMissedPayments = (loan.missedPayments || 0) + 1;
+      
+      const nextPaymentDate = calculateNextPaymentDate(currentDate);
+      await updateLoan(loan.id, {
+        remainingBalance: newBalance,
+        seasonsRemaining: newSeasonsRemaining,
+        nextPaymentDue: nextPaymentDate,
+        missedPayments: newMissedPayments
+      });
+      
+      // Apply penalties based on warning level
+      if (newMissedPayments === 1) {
+        await applyWarning1Penalties(loan);
+      } else if (newMissedPayments === 2) {
+        await applyWarning2Penalties(loan);
+      } else if (newMissedPayments === 3) {
+        await applyWarning3Penalties(loan);
+      } else {
+        // missedPayments >= 4: Full default
+        await applyFullDefault(loan);
+      }
+      
+      await notificationService.addMessage(
+        `Partial loan payment made to ${loan.lenderName}. ${formatCurrency(loan.seasonalPayment - availableMoney)} still owed. Warning level: ${newMissedPayments}`,
+        'loan.partialPayment',
+        'Partial Loan Payment',
+        NotificationCategory.FINANCE
+      );
     } else {
-      // Insufficient funds - apply graduated penalties based on missed payments
+      // No funds available - apply graduated penalties based on missed payments
       const newMissedPayments = (loan.missedPayments || 0) + 1;
       
       // Update loan with incremented missed payments
@@ -646,8 +688,37 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
 async function applyWarning3Penalties(loan: Loan): Promise<void> {
   const penalties = LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3;
   
-  // Seize vineyards to cover debt
+  // Seize vineyards to cover debt (up to 50% of portfolio VALUE)
   const seizureResult = await seizeVineyardsForDebt(loan);
+  
+  // Now use ALL available money (including vineyard sale proceeds) to repay loan
+  const gameState = getGameState();
+  const availableMoney = gameState.money || 0;
+  
+  if (availableMoney > 0) {
+    // Use all available money to repay loan
+    const paymentAmount = Math.min(availableMoney, loan.remainingBalance);
+    
+    await addTransaction(
+      -paymentAmount,
+      `Emergency loan payment to ${loan.lenderName} using all available funds`,
+      TRANSACTION_CATEGORIES.LOAN_PAYMENT,
+      false
+    );
+    
+    // Update loan balance
+    const newBalance = Math.max(0, loan.remainingBalance - paymentAmount);
+    await updateLoan(loan.id, {
+      remainingBalance: newBalance
+    });
+    
+    await notificationService.addMessage(
+      `Emergency payment of ${formatCurrency(paymentAmount)} made to ${loan.lenderName} using all available funds.`,
+      'loan.emergencyPayment',
+      'Emergency Loan Payment',
+      NotificationCategory.FINANCE
+    );
+  }
   
   // Queue bookkeeping penalty work
   await queueLoanPenaltyWork(penalties.BOOKKEEPING_WORK, loan.lenderName, 3);
@@ -660,7 +731,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
     severity: 'critical',
     title: 'Missed Loan Payment - Warning #3: VINEYARD SEIZURE',
     message: `You have missed 3 consecutive payments to ${loan.lenderName}. Emergency measures are being taken.`,
-    details: `Penalties Applied:\n• ${seizureResult.vineyardsSeized > 0 ? `${seizureResult.vineyardsSeized} vineyard(s) forcibly sold` : 'Attempted to seize vineyards but none available'}\n• Value recovered: ${formatCurrency(seizureResult.valueRecovered)}\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\n${seizureResult.vineyardNames.length > 0 ? `Vineyards Sold:\n${seizureResult.vineyardNames.map(name => `• ${name}`).join('\n')}` : 'No vineyards available for seizure'}\n\nRemaining loan balance: ${formatCurrency(Math.max(0, loan.remainingBalance - seizureResult.valueRecovered))}\n\n🚨 FINAL WARNING: One more missed payment will result in FULL DEFAULT with permanent lender blacklist!`,
+    details: `Penalties Applied:\n• ${seizureResult.vineyardsSeized > 0 ? `${seizureResult.vineyardsSeized} vineyard(s) forcibly sold` : 'Attempted to seize vineyards but none available'}\n• Vineyard value seized: ${formatCurrency(seizureResult.valueRecovered)}\n• Sale proceeds (after 25% penalty): ${formatCurrency(seizureResult.saleProceeds)}\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\n${seizureResult.vineyardNames.length > 0 ? `Vineyards Sold:\n${seizureResult.vineyardNames.map(name => `• ${name}`).join('\n')}` : 'No vineyards available for seizure'}\n\nRemaining loan balance: ${formatCurrency(loan.remainingBalance)}\n\n🚨 FINAL WARNING: One more missed payment will result in FULL DEFAULT with permanent lender blacklist!`,
     penalties: {
       vineyardsSeized: seizureResult.vineyardsSeized,
       vineyardNames: seizureResult.vineyardNames,
@@ -698,25 +769,26 @@ async function applyFullDefault(loan: Loan): Promise<void> {
 
 /**
  * Seize vineyards to recover loan debt
- * Sells entire vineyards (lowest value first) until debt covered or 50% portfolio value reached
+ * Sells vineyards (lowest value first) until 50% of portfolio VALUE is reached
+ * Applies -25% penalty to sale proceeds and adds to user money
  * Returns details of seizure for modal display
  */
 async function seizeVineyardsForDebt(loan: Loan): Promise<{
   vineyardsSeized: number;
   valueRecovered: number;
   vineyardNames: string[];
+  saleProceeds: number;
 }> {
   try {
     const vineyards = await loadVineyards();
     
     if (vineyards.length === 0) {
-      return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [] };
+      return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [], saleProceeds: 0 };
     }
     
-    // Calculate total portfolio value and maximum seizure amount
+    // Calculate total portfolio value and maximum seizure amount (50% of VALUE)
     const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
     const maxSeizureValue = totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
-    const amountNeeded = Math.min(loan.remainingBalance, maxSeizureValue);
     
     // Sort vineyards by value (lowest first - take least valuable ones)
     const sortedVineyards = [...vineyards].sort((a, b) => a.vineyardTotalValue - b.vineyardTotalValue);
@@ -725,9 +797,9 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
     const vineyardsToRemove: string[] = [];
     const vineyardNames: string[] = [];
     
-    // Seize vineyards until debt covered or max seizure reached
+    // Seize vineyards until 50% of portfolio VALUE is reached
     for (const vineyard of sortedVineyards) {
-      if (valueRecovered >= amountNeeded) break;
+      if (valueRecovered >= maxSeizureValue) break;
       
       vineyardsToRemove.push(vineyard.id);
       vineyardNames.push(vineyard.name);
@@ -735,20 +807,18 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
     }
     
     // Remove seized vineyards from database
-    // Note: We should implement a proper vineyard deletion function, but for now we'll mark them as "seized"
-    // TODO: Implement proper vineyard deletion or transfer
+    if (vineyardsToRemove.length > 0) {
+      await deleteVineyards(vineyardsToRemove);
+    }
     
-    // Apply recovered value to loan balance
-    if (valueRecovered > 0) {
-      const newBalance = Math.max(0, loan.remainingBalance - valueRecovered);
-      await updateLoan(loan.id, {
-        remainingBalance: newBalance
-      });
-      
-      // Add transaction for seized assets
+    // Calculate sale proceeds with -25% penalty
+    const saleProceeds = valueRecovered * 0.75; // -25% penalty
+    
+    // Add sale proceeds to user money
+    if (saleProceeds > 0) {
       await addTransaction(
-        valueRecovered,
-        `Vineyard seizure by ${loan.lenderName} - ${vineyardsToRemove.length} vineyard(s) sold`,
+        saleProceeds,
+        `Forced vineyard sale by ${loan.lenderName} - ${vineyardsToRemove.length} vineyard(s) sold (${formatCurrency(valueRecovered)} value, ${formatCurrency(saleProceeds)} after 25% penalty)`,
         TRANSACTION_CATEGORIES.VINEYARD_SALE,
         false
       );
@@ -757,10 +827,11 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
     return {
       vineyardsSeized: vineyardsToRemove.length,
       valueRecovered,
-      vineyardNames
+      vineyardNames,
+      saleProceeds
     };
   } catch (error) {
-    return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [] };
+    return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [], saleProceeds: 0 };
   }
 }
 
