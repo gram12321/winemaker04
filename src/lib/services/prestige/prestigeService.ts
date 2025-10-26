@@ -921,7 +921,8 @@ export async function addFeaturePrestigeEvent(
       case 'fixed':
         return levelConfig.baseAmount;
         
-      case 'dynamic_sale':
+      case 'dynamic':
+        // Dynamic calculations vary by event type
         if (eventType === 'sale' && eventContext.order) {
           return isCompany
             ? calculateFeatureSalePrestigeWithReputation(
@@ -929,21 +930,19 @@ export async function addFeaturePrestigeEvent(
                 eventContext.order.totalValue || 0,
                 eventContext.order.requestedQuantity || 0,
                 eventContext.currentCompanyPrestige || 1,
-                levelConfig.scalingFactors
+                levelConfig.scalingFactors,
+                levelConfig.maxImpact
               )
             : levelConfig.baseAmount;
-        }
-        return levelConfig.baseAmount;
-        
-      case 'dynamic_manifestation':
-        if (eventType === 'manifestation') {
+        } else if (eventType === 'manifestation') {
           if (isCompany) {
             return calculateCompanyManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
               batch.grapeQuality,
               eventContext.currentCompanyPrestige || 1,
-              levelConfig.scalingFactors
+              levelConfig.scalingFactors,
+              levelConfig.maxImpact
             );
           } else {
             return calculateVineyardManifestationPrestige(
@@ -951,7 +950,8 @@ export async function addFeaturePrestigeEvent(
               batch.quantity,
               batch.grapeQuality,
               eventContext.vineyard?.vineyardPrestige || 1,
-              levelConfig.scalingFactors
+              levelConfig.scalingFactors,
+              levelConfig.maxImpact
             );
           }
         }
@@ -976,7 +976,7 @@ export async function addFeaturePrestigeEvent(
         level: 'company',
         featureId: config.id,
         featureName: config.name,
-        featureType: config.type,
+        featureType: config.behavior,
         vineyardId: batch.vineyardId,
         vineyardName: batch.vineyardName,
         grape: batch.grape,
@@ -1006,7 +1006,7 @@ export async function addFeaturePrestigeEvent(
         level: 'vineyard',
         featureId: config.id,
         featureName: config.name,
-        featureType: config.type,
+        featureType: config.behavior,
         vineyardId: batch.vineyardId,
         vineyardName: batch.vineyardName,
         grape: batch.grape,

@@ -412,11 +412,13 @@ export const WineModal: React.FC<WineModalProps> = ({
                           const qualityEffect = config.effects.quality;
                           let impactText = '';
                           
-                          if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-                            impactText = `${(qualityEffect.amount * feature.severity * 100).toFixed(1)}%`;
-                          } else if (qualityEffect.type === 'power') {
-                            const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(wineBatch.grapeQuality, qualityEffect.exponent!));
-                            impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
+                          if (qualityEffect) {
+                            if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+                              impactText = `${(qualityEffect.amount * feature.severity * 100).toFixed(1)}%`;
+                            } else if (qualityEffect.type === 'power') {
+                              const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(wineBatch.grapeQuality, qualityEffect.exponent!));
+                              impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
+                            }
                           }
 
                           return (
@@ -430,7 +432,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                               </div>
                               <div className="text-right">
                                 <div className="text-sm font-medium">
-                                  {config.manifestation === 'binary' ? 'Present' : 
+                                  {config.behavior === 'triggered' ? 'Present' : 
                                     config.id === 'bottle_aging' ? 
                                       `${formatNumber(getBottleAgingSeverity(wineBatch) * 100, { decimals: 1, adaptiveNearOne: true })}%` :
                                       `${Math.round(feature.severity * 100)}%`}

@@ -505,6 +505,8 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
             if (!config) return null;
             
             const qualityEffect = config.effects.quality;
+            if (!qualityEffect) return null;
+            
             let impactText = '';
             
             if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {

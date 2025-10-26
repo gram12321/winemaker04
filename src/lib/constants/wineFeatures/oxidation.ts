@@ -3,8 +3,8 @@ import { FeatureConfig } from '../../types/wineFeatures';
 /**
  * Oxidation Feature
  * - Type: Fault (negative)
- * - Manifestation: Binary (0% → 100% instant)
- * - Trigger: Hybrid (time-based + event-triggered)
+ * - Behavior: Accumulation (compound risk over time)
+ * - Trigger: Events add to accumulated risk
  * - Compound: Yes (risk accelerates with current risk)
  * 
  * Time-based accumulation:
@@ -23,15 +23,17 @@ import { FeatureConfig } from '../../types/wineFeatures';
 export const OXIDATION_FEATURE: FeatureConfig = {
   id: 'oxidation',
   name: 'Oxidation',
-  type: 'fault',
   icon: '⚠️',
   description: 'Wine exposed to oxygen, resulting in flavor degradation and browning. Risk influenced by fermentation method.',
   
-  manifestation: 'binary',  // Jumps from 0% to 100% severity
+  behavior: 'accumulation',
   
-  riskAccumulation: {
-    trigger: 'hybrid',  // Both time-based and event-triggered
+  behaviorConfig: {
     baseRate: 0.002,    // 0.2% per week base rate
+    compound: true,     // Risk accelerates: rate × (1 + currentRisk)
+    spawnActive: true,  // Starts accumulating from harvest
+    spawnEvent: 'harvest',  // Triggered by harvest event
+    
     stateMultipliers: {
       'grapes': 3.0,         // Fresh grapes highly exposed to air
       'must_ready': 1.5,     // Exposed must has moderate risk
@@ -54,19 +56,17 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       },
       'bottled': 0.3         // Sealed environment greatly reduces risk
     },
-    compoundEffect: true,    // Risk accelerates: rate × (1 + currentRisk)
     
-    // Event-triggered oxidation from crushing fragile grapes
-    eventTriggers: [
+    // Risk modifiers from crushing events
+    riskModifiers: [
       {
-        event: 'crushing',
-        condition: (context: { options: any; batch: any }) => {
-          // Trigger for fragile grapes - delicate grapes bruise easily during crushing
-          const { batch } = context;
-          return (batch.fragile || 0) > 0.3;  // Only for moderately fragile+ grapes
-        },
-        riskIncrease: (context: { options: any; batch: any }) => {
+        source: 'options',
+        parameter: 'pressingIntensity',
+        multiplier: (context: any) => {
           const { options, batch } = context;
+          
+          // Trigger for fragile grapes - delicate grapes bruise easily during crushing
+          if ((batch.fragile || 0) <= 0.3) return 1.0;  // No modifier for robust grapes
           
           // Base risk from crushing fragile grapes
           // fragile = 0.3 → 1.5% risk, fragile = 1.0 → 5% base risk
@@ -106,23 +106,23 @@ export const OXIDATION_FEATURE: FeatureConfig = {
     prestige: {
       onManifestation: {
         company: {
-          calculation: 'dynamic_manifestation',
+          calculation: 'dynamic',
           baseAmount: -0.05,  // Company scandal when oxidation manifests
           scalingFactors: {
             batchSizeWeight: 1.0,         // Larger batches hurt more
             qualityWeight: 1.0,            // Premium wine oxidizing is worse
-            companyPrestigeWeight: 1.0     // Higher prestige = bigger fall
+            prestigeWeight: 1.0     // Higher prestige = bigger fall
           },
           decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
           maxImpact: -5.0     // Cap for company manifestation events
         },
         vineyard: {
-          calculation: 'dynamic_manifestation',
+          calculation: 'dynamic',
           baseAmount: -0.5,  // Base scandal amount
           scalingFactors: {
             batchSizeWeight: 1.0,         // Larger batches hurt more
             qualityWeight: 1.0,            // Premium wine oxidizing is worse
-            vineyardPrestigeWeight: 1.0    // Premium vineyards held to higher standard
+            prestigeWeight: 1.0    // Premium vineyards held to higher standard
           },
           decayRate: 0.98,    // Decays over ~3 years (156 weeks)
           maxImpact: -10.0    // Cap at -10 prestige for massive batches
@@ -130,23 +130,23 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       },
       onSale: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: -0.1,  // Base scandal amount
           scalingFactors: {
             volumeWeight: 1.0,             // More bottles = bigger scandal
             valueWeight: 1.0,              // Higher value = bigger scandal
-            companyPrestigeWeight: 1.0     // Higher prestige = bigger fall
+            prestigeWeight: 1.0     // Higher prestige = bigger fall
           },
           decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
           maxImpact: -10.0    // Cap at -10 prestige for massive sales
         },
         vineyard: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: -0.2,  // Vineyard scandal when selling oxidized wine
           scalingFactors: {
             volumeWeight: 1.0,             // More bottles = bigger scandal
             valueWeight: 1.0,              // Higher value = bigger scandal
-            vineyardPrestigeWeight: 1.0    // Higher prestige = bigger fall
+            prestigeWeight: 1.0    // Higher prestige = bigger fall
           },
           decayRate: 0.98,    // Decays over ~3 years (156 weeks)
           maxImpact: -8.0     // Cap for vineyard sale events
@@ -162,27 +162,15 @@ export const OXIDATION_FEATURE: FeatureConfig = {
     'Chain Store': 0.90        // -10% extra penalty (bulk buyers less picky)
   },
   
-  ui: {
-    badgeColor: 'destructive',
-    warningThresholds: [0.10, 0.20, 0.40],  // 10%, 20%, 40% risk warnings
-    sortPriority: 1  // Show first (most serious fault)
-  },
+  displayPriority: 1, // Show first (most serious fault)
+  badgeColor: 'destructive',
   
-  harvestContext: {
-    isHarvestRisk: false,        // Oxidation is not a harvest risk (time-based)
-    isHarvestInfluence: false    // Not a harvest influence
-  },
-  
-  // Risk display options - only show pressure range for oxidation
-  riskDisplayOptions: {
-    crushing: {
-      optionCombinations: [
-        { options: { pressingIntensity: 0.0, _isMin: true }, label: 'Pressure: 0% pressure' },
-        { options: { pressingIntensity: 1.0, _isMax: true }, label: 'Pressure: 100% pressure' }
-      ],
-      groupBy: ['pressure-range']
+  tips: [
+    {
+      triggerEvent: 'crushing',
+      message: '💡 TIP: Fragile grapes (like Pinot Noir) with high pressing intensity increase oxidation risk.'
     }
-  }
+  ]
 };
 
 /**
@@ -208,4 +196,3 @@ export const OXIDATION_PRESTIGE_DECAY = {
   COMPANY: 0.995,  // ~20 years (1040 weeks)
   VINEYARD: 0.98   // ~3 years (156 weeks)
 } as const;
-

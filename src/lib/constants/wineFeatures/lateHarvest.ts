@@ -2,31 +2,27 @@ import { FeatureConfig } from '../../types/wineFeatures';
 
 /**
  * Late Harvest Feature
- * - Manifestation: Graduated (severity increases over time)
- * - Trigger: Event-triggered (harvest timing)
+ * - Behavior: Triggered (severity set at harvest timing)
  * - Effect: Sweetness boost, acidity reduction
  * 
  * Harvest timing effects:
  * - Late harvest = higher sugar content, lower acidity
  * - Severity based on how late the harvest was
- * - Graduated manifestation allows for different levels of late harvest
+ * - Graduated effect allows for different levels of late harvest
  * 
  * Wine characteristic modifications:
  * - Sweetness: +0.15 to +0.35 (15-35% increase)
  * - Acidity: -0.10 to -0.25 (10-25% decrease)
-
  */
 export const LATE_HARVEST_FEATURE: FeatureConfig = {
   id: 'late_harvest',
   name: 'Late Harvest',
-  type: 'feature',
   icon: '🍇',
   description: 'Grapes harvested late in the season, developing higher sugar content and lower acidity. Can be good for something, but eventually sugar will dominate without acidity.',
   
-  manifestation: 'graduated',  // Severity increases based on harvest timing
+  behavior: 'triggered',
   
-  riskAccumulation: {
-    trigger: 'event_triggered',  // Triggered during harvest
+  behaviorConfig: {
     eventTriggers: [
       {
         event: 'harvest',
@@ -56,19 +52,7 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
           return latenessFactor;
         }
       }
-    ],
-    
-    // Severity growth for graduated manifestation
-    severityGrowth: {
-      rate: 0.0,  // No time-based growth (set at harvest)
-      cap: 1.0,   // Maximum 100% severity
-      stateMultipliers: {
-        'grapes': 1.0,           // No change during grape storage
-        'must_ready': 1.0,       // No change during must preparation
-        'must_fermenting': 1.0,   // No change during fermentation
-        'bottled': 1.0           // No change after bottling
-      }
-    }
+    ]
   },
   
   effects: {
@@ -83,14 +67,14 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
       { 
         characteristic: 'sweetness', 
         modifier: (severity: number) => {
-          // Sweetness boost: 0-20% based on severity (no initial bonus)
+          // Sweetness boost: 0-90% based on severity
           return severity * 0.90;
         }
       },
       { 
         characteristic: 'acidity', 
         modifier: (severity: number) => {
-          // Acidity reduction: 0-15% based on severity (no initial reduction)
+          // Acidity reduction: 0-90% based on severity
           return -(severity * 0.90);
         }
       }
@@ -104,31 +88,8 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
     'Chain Store': 1.0          // No premium
   },
   
-  ui: {
-    badgeColor: 'destructive',
-    warningThresholds: [0.10, 0.20, 0.40],  // 10%, 20%, 40% risk warnings
-    sortPriority: 3  // Show after faults but before neutral features
-  },
-  
-  harvestContext: {
-    isHarvestRisk: true,        // Is a risk
-    isHarvestInfluence: false     // This is a harvest influence
-  },
-  
-  // Risk display options - show harvest timing for late harvest
-  riskDisplayOptions: {
-    harvest: {
-      optionCombinations: [
-        { options: { week: 7, season: 'Fall' }, label: 'Fall Week 7 (Early)' },
-        { options: { week: 9, season: 'Fall' }, label: 'Fall Week 9 (Mid)' },
-        { options: { week: 12, season: 'Fall' }, label: 'Fall Week 12 (Late)' },
-        { options: { week: 3, season: 'Winter' }, label: 'Winter Week 3 (Very Late)' },
-        { options: { week: 6, season: 'Winter' }, label: 'Winter Week 6 (Extremely Late)' },
-        { options: { week: 12, season: 'Winter' }, label: 'Winter Week 12 (Latest)' }
-      ],
-      groupBy: ['harvest-timing']
-    }
-  }
+  displayPriority: 3,  // Show after faults but before neutral features
+  badgeColor: 'destructive'
 };
 
 /**
@@ -141,7 +102,7 @@ export const LATE_HARVEST_CONSTANTS = {
   FALL_LATE_END: 12,         // Week 12 of Fall = maximum Fall lateness
   WINTER_LATE_END: 12,       // Week 12 of Winter = maximum Winter lateness
   
-  // Characteristic modifiers (no initial bonuses)
+  // Characteristic modifiers
   SWEETNESS_BOOST: { min: 0.0, max: 0.90 },   // 0-90% sweetness increase
   ACIDITY_REDUCTION: { min: 0.0, max: 0.90 },  // 0-90% acidity decrease
 } as const;

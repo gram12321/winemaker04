@@ -67,6 +67,9 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
       const grapeVariety = row.grape_variety as GrapeVariety;
       const grapeData = GRAPE_CONST[grapeVariety] || GRAPE_CONST['Chardonnay']; // Fallback to Chardonnay
       
+      const grapeQuality = row.grape_quality;
+      const balance = row.balance;
+      
       return {
         id: row.id,
         vineyardId: row.vineyard_id,
@@ -76,8 +79,10 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         state: row.state,
         fermentationProgress: row.fermentation_progress || 0,
         fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
-        grapeQuality: row.grape_quality,
-        balance: row.balance,
+        bornGrapeQuality: grapeQuality, // Original grape quality at harvest
+        bornBalance: balance, // Original balance at harvest
+        grapeQuality: grapeQuality,
+        balance: balance,
         characteristics: row.characteristics || {
           acidity: 0.5,
           aroma: 0.5,

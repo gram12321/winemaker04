@@ -41,7 +41,7 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   
   if (!wineScoreData || !featureDetails) return null;
   
-  const { currentGrapeQuality, grapeQualityPenalty, presentFeatures, hasFaults } = featureDetails;
+  const { currentGrapeQuality, grapeQualityPenalty, presentFeatures, hasQualityAffectingFeatures } = featureDetails;
   
   return (
     <TooltipProvider>
@@ -55,7 +55,7 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Wine Score Calculation</div>
             <div>Base Grape Quality: <span className="font-medium">{formatPercent(wine.grapeQuality, 1, true)}</span></div>
-            {hasFaults && grapeQualityPenalty > 0.001 && (
+            {hasQualityAffectingFeatures && grapeQualityPenalty > 0.001 && (
               <>
                 <div className="text-red-600">
                   Feature Penalty: <span className="font-medium">-{formatPercent(grapeQualityPenalty, 1, true)}</span>
@@ -92,7 +92,7 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   const basePrice = wineScoreData.score * baseRate;
   const multiplier = calculateAsymmetricalMultiplier(wineScoreData.score);
   
-  const { presentFeatures, hasFaults, priceImpact } = featureDetails;
+  const { presentFeatures, hasQualityAffectingFeatures, priceImpact } = featureDetails;
   
   return (
     <TooltipProvider>
@@ -104,7 +104,7 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           <div className="space-y-1 text-xs">
             <div className="font-semibold">Estimated Price Calculation</div>
             <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
-            {hasFaults && priceImpact && priceImpact.priceDifference > 0.01 && (
+            {hasQualityAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
               <>
                 <div className="text-red-600 text-[10px]">
                   ⚠️ Price reduced by {formatCurrency(priceImpact.priceDifference, 2)} due to:

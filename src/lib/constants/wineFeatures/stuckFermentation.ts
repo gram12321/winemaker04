@@ -23,18 +23,12 @@ import { WineBatch } from '../../types/types';
 export const STUCK_FERMENTATION_FEATURE: FeatureConfig = {
   id: 'stuck_fermentation',
   name: 'Stuck Fermentation',
-  type: 'fault',
   icon: '🧊',
   description: 'Incomplete fermentation where yeast stops working, leaving residual sugar and lower alcohol',
   
-  // Binary manifestation - either happens or not
-  manifestation: 'binary',
+  behavior: 'triggered',
   
-  riskAccumulation: {
-    trigger: 'event_triggered',
-    baseRate: 0,  // No weekly accumulation
-    compoundEffect: false,
-    
+  behaviorConfig: {
     eventTriggers: [
       {
         event: 'fermentation',
@@ -98,23 +92,23 @@ export const STUCK_FERMENTATION_FEATURE: FeatureConfig = {
     prestige: {
       onManifestation: {
         company: {
-          calculation: 'dynamic_manifestation',
+          calculation: 'dynamic',
           baseAmount: -0.08,  // Serious fault (worse than green flavor)
           scalingFactors: {
             batchSizeWeight: 1.0,
             qualityWeight: 1.0,
-            companyPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.995,
           maxImpact: -4.0
         },
         vineyard: {
-          calculation: 'dynamic_manifestation',
+          calculation: 'dynamic',
           baseAmount: -0.4,  // Vineyard scandal (technical failure)
           scalingFactors: {
             batchSizeWeight: 1.0,
             qualityWeight: 1.0,
-            vineyardPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.98,
           maxImpact: -9.0
@@ -122,23 +116,23 @@ export const STUCK_FERMENTATION_FEATURE: FeatureConfig = {
       },
       onSale: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: -0.08,
           scalingFactors: {
             volumeWeight: 1.0,
             valueWeight: 1.0,
-            companyPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.995,
           maxImpact: -9.0
         },
         vineyard: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: -0.15,
           scalingFactors: {
             volumeWeight: 1.0,
             valueWeight: 1.0,
-            vineyardPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.98,
           maxImpact: -6.0
@@ -155,33 +149,6 @@ export const STUCK_FERMENTATION_FEATURE: FeatureConfig = {
     'Chain Store': 0.85        // -15% penalty (less discriminating)
   },
   
-  ui: {
-    badgeColor: 'destructive',
-    warningThresholds: [0.10, 0.20],  // 10%, 20% risk warnings
-    sortPriority: 3  // Show after oxidation (1) and green flavor (2)
-  },
-
-  harvestContext: {
-    isHarvestRisk: false,        // Stuck fermentation is not a harvest risk
-    isHarvestInfluence: false    // Not a harvest influence
-  },
-  
-  // Risk display options - show all method + temperature combinations
-  riskDisplayOptions: {
-    fermentation: {
-      optionCombinations: [
-        { options: { method: 'Basic', temperature: 'Ambient', duration: 1 } },
-        { options: { method: 'Basic', temperature: 'Cool', duration: 1 } },
-        { options: { method: 'Basic', temperature: 'Warm', duration: 1 } },
-        { options: { method: 'Extended Maceration', temperature: 'Ambient', duration: 1 } },
-        { options: { method: 'Extended Maceration', temperature: 'Cool', duration: 1 } },
-        { options: { method: 'Extended Maceration', temperature: 'Warm', duration: 1 } },
-        { options: { method: 'Temperature Controlled', temperature: 'Ambient', duration: 1 } },
-        { options: { method: 'Temperature Controlled', temperature: 'Cool', duration: 1 } },
-        { options: { method: 'Temperature Controlled', temperature: 'Warm', duration: 1 } }
-      ],
-      groupBy: ['method', 'temperature']
-    }
-  }
+  displayPriority: 3, // Show after oxidation (1) and green flavor (2)
+  badgeColor: 'destructive'
 };
-

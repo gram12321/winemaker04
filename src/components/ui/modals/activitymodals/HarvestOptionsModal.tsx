@@ -7,7 +7,7 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from 
 import { notificationService } from '@/lib/services';
 import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import { getHarvestRisks, getHarvestInfluences } from '@/lib/services';
+import { previewFeatureRisks, getFeatureConfig } from '@/lib/services';
 
 /**
  * Harvest Options Modal
@@ -108,23 +108,17 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       riskMessages.push(`⚠️ Low ripeness (${Math.round(ripenessPercent)}%) - harvest will yield very little.`);
     }
 
-    // Check harvest risks only (not influences)
-    const harvestRisks = getHarvestRisks(undefined, 'harvest', vineyard);
-    for (const risk of harvestRisks) {
-      const riskPercent = (risk.newRisk * 100).toFixed(1);
-      riskMessages.push(`📊 ${riskPercent}% chance of ${risk.featureName} (${risk.description || ''})`);
+    // Check all harvest features
+    const harvestFeatures = previewFeatureRisks(undefined, 'harvest', vineyard);
+    for (const feature of harvestFeatures) {
+      const riskPercent = (feature.newRisk * 100).toFixed(1);
+      riskMessages.push(`📊 ${riskPercent}% chance of ${feature.featureName} (${feature.description || ''})`);
 
-      // Add tips based on feature
-      if (risk.config.id === 'green_flavor') {
-        riskMessages.push(`💡 TIP: Wait for ripeness ≥ 50% to avoid green flavor risk.`);
-      }
-    }
-
-    // Check harvest influences (positive features)
-    const harvestInfluences = getHarvestInfluences(undefined, 'harvest', vineyard);
-    for (const influence of harvestInfluences) {
-      if (influence.config.id === 'terroir') {
-        riskMessages.push(`🌿 Terroir Expression will develop in this wine over time, enhancing quality and characteristics.`);
+      // Pull tips from feature config
+      const config = getFeatureConfig(feature.featureId);
+      if (config?.tips) {
+        const harvestTips = config.tips.filter(tip => tip.triggerEvent === 'harvest');
+        harvestTips.forEach(tip => riskMessages.push(tip.message));
       }
     }
 

@@ -7,10 +7,10 @@ interface FeatureDetails {
   currentGrapeQuality: number;
   grapeQualityPenalty: number;
   presentFeatures: Array<{ feature: any; config: any }>;
-  hasFaults: boolean;
+  hasQualityAffectingFeatures: boolean;
   priceImpact: {
     currentPrice: number;
-    priceWithoutFaults: number;
+    priceWithoutFeatures: number;
     priceDifference: number;
   } | null;
 }
@@ -34,11 +34,11 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
         const currentGrapeQuality = wineBatch.grapeQuality;
         const grapeQualityPenalty = wineBatch.bornGrapeQuality - currentGrapeQuality;
         const presentFeatures = getPresentFeaturesSorted(wineBatch);
-        const hasFaults = presentFeatures.some((f: any) => f.config.type === 'fault');
+        const hasQualityAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);
 
         // Calculate price impact using complete service layer functions (async)
         let priceImpact = null;
-        if (hasFaults && grapeQualityPenalty > 0.001) {
+        if (hasQualityAffectingFeatures && grapeQualityPenalty > 0.001) {
           try {
             // Get vineyard data for accurate price calculation
             const vineyards = await getAllVineyards();
@@ -49,16 +49,16 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
               const currentPrice = calculateEstimatedPrice(wineBatch, vineyard);
               
               // Calculate price without features (remove all features temporarily)
-              const wineWithoutFaults: WineBatch = {
+              const wineWithoutFeatures: WineBatch = {
                 ...wineBatch,
                 features: [] // Remove all features for comparison
               };
-              const priceWithoutFaults = calculateEstimatedPrice(wineWithoutFaults, vineyard);
-              const priceDifference = priceWithoutFaults - currentPrice;
+              const priceWithoutFeatures = calculateEstimatedPrice(wineWithoutFeatures, vineyard);
+              const priceDifference = priceWithoutFeatures - currentPrice;
               
               priceImpact = {
                 currentPrice,
-                priceWithoutFaults,
+                priceWithoutFeatures,
                 priceDifference: Math.max(0, priceDifference) // Don't show negative differences
               };
             }
@@ -71,7 +71,7 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
           currentGrapeQuality,
           grapeQualityPenalty,
           presentFeatures,
-          hasFaults,
+          hasQualityAffectingFeatures,
           priceImpact
         });
       } catch (error) {

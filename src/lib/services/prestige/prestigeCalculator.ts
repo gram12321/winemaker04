@@ -67,7 +67,8 @@ export function calculateFeatureSalePrestigeWithReputation(
     volumeWeight?: number;
     valueWeight?: number;
     prestigeWeight?: number;
-  }
+  },
+  maxImpact?: number
 ): number {
   const { volumeWeight = 1, valueWeight = 1, prestigeWeight = 1 } = weights || {};
   
@@ -84,11 +85,11 @@ export function calculateFeatureSalePrestigeWithReputation(
   // Formula: baseAmount × (volume + value) × prestige
   const amount = baseAmount * (volumeFactor + valueFactor) * prestigeFactor;
   
-  // Cap based on positive/negative
-  const maxImpact = baseAmount < 0 ? -10.0 : 10.0;
+  // Cap using provided maxImpact or default
+  const cap = maxImpact !== undefined ? maxImpact : (baseAmount < 0 ? -10.0 : 10.0);
   return baseAmount < 0 
-    ? Math.max(maxImpact, amount)  // Negative: cap at max penalty
-    : Math.min(maxImpact, amount);  // Positive: cap at max bonus
+    ? Math.max(cap, amount)  // Negative: cap at max penalty
+    : Math.min(cap, amount);  // Positive: cap at max bonus
 }
 
 /**
@@ -111,7 +112,8 @@ export function calculateVineyardManifestationPrestige(
     batchSizeWeight?: number;
     qualityWeight?: number;
     vineyardPrestigeWeight?: number;
-  }
+  },
+  maxImpact?: number
 ): number {
   const { batchSizeWeight = 1, qualityWeight = 1, vineyardPrestigeWeight = 1 } = weights || {};
   
@@ -128,11 +130,11 @@ export function calculateVineyardManifestationPrestige(
   // Formula: baseAmount × size × quality × vineyardPrestige
   const amount = baseAmount * sizeFactor * qualityFactor * vineyardFactor;
   
-  // Cap based on positive/negative
-  const maxImpact = baseAmount < 0 ? -10.0 : 10.0;
+  // Cap using provided maxImpact or default
+  const cap = maxImpact !== undefined ? maxImpact : (baseAmount < 0 ? -10.0 : 10.0);
   return baseAmount < 0 
-    ? Math.max(maxImpact, amount)
-    : Math.min(maxImpact, amount);
+    ? Math.max(cap, amount)
+    : Math.min(cap, amount);
 }
 
 /**
@@ -155,7 +157,8 @@ export function calculateCompanyManifestationPrestige(
     batchSizeWeight?: number;
     qualityWeight?: number;
     companyPrestigeWeight?: number;
-  }
+  },
+  maxImpact?: number
 ): number {
   const { batchSizeWeight = 1, qualityWeight = 1, companyPrestigeWeight = 1 } = weights || {};
   
@@ -172,11 +175,11 @@ export function calculateCompanyManifestationPrestige(
   // Formula: baseAmount × size × quality × companyPrestige
   const amount = baseAmount * sizeFactor * qualityFactor * prestigeFactor;
   
-  // Cap based on positive/negative
-  const maxImpact = baseAmount < 0 ? -10.0 : 10.0;
+  // Cap using provided maxImpact or default
+  const cap = maxImpact !== undefined ? maxImpact : (baseAmount < 0 ? -10.0 : 10.0);
   return baseAmount < 0 
-    ? Math.max(maxImpact, amount)
-    : Math.min(maxImpact, amount);
+    ? Math.max(cap, amount)
+    : Math.min(cap, amount);
 }
 
 /**

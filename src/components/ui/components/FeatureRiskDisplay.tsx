@@ -42,11 +42,11 @@ export function FeatureRiskDisplay({
         nextAction: batch ? getNextWineryAction(batch) || undefined : undefined
       };
 
-  // Get risk data for display
-  const riskData = getFeatureRisksForDisplay(context);
+  // Get feature data for display
+  const featureData = getFeatureRisksForDisplay(context);
   
-  // Don't show if no risks or influences and not in compact mode
-  if (riskData.risks.length === 0 && riskData.influences.length === 0) {
+  // Don't show if no features and not in compact mode
+  if (featureData.features.length === 0) {
     if (compact) return null;
     
     return (
@@ -64,43 +64,22 @@ export function FeatureRiskDisplay({
       {!compact && (
         <div className="text-xs font-medium text-gray-800">
           {context.type === 'vineyard' ? 'Harvest Features' : 'Production Features'}
-          {showForNextAction && riskData.nextAction && (
+          {showForNextAction && featureData.nextAction && (
             <span className="text-gray-500 ml-1">
-              (Next: {riskData.nextAction})
+              (Next: {featureData.nextAction})
             </span>
           )}
         </div>
       )}
 
-      {/* Risks */}
-      {riskData.risks.length > 0 && (
+      {/* All Features */}
+      {featureData.features.length > 0 && (
         <div className="space-y-1">
-          {!compact && (
-            <div className="text-xs font-medium text-gray-800">Risks:</div>
-          )}
           <div className="space-y-1">
-            {riskData.risks.map((risk) => (
-              <RiskItem
-                key={risk.featureId}
-                risk={risk}
-                compact={compact}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Influences */}
-      {riskData.influences.length > 0 && (
-        <div className="space-y-1">
-          {!compact && (
-            <div className="text-xs font-medium text-green-700">Influences:</div>
-          )}
-          <div className="space-y-1">
-            {riskData.influences.map((influence) => (
-              <InfluenceItem
-                key={influence.featureId}
-                influence={influence}
+            {featureData.features.map((feature) => (
+              <FeatureItem
+                key={feature.featureId}
+                feature={feature}
                 compact={compact}
               />
             ))}
@@ -111,44 +90,41 @@ export function FeatureRiskDisplay({
   );
 }
 
-interface RiskItemProps {
-  risk: FeatureRiskDisplayData['risks'][0];
+interface FeatureItemProps {
+  feature: FeatureRiskDisplayData['features'][0];
   compact: boolean;
 }
 
-function RiskItem({ risk, compact }: RiskItemProps) {
+function FeatureItem({ feature, compact }: FeatureItemProps) {
   // For option-dependent features, show the range as the main risk instead of single value
   let displayText: string;
   let colorClass: string;
-  let icon: string;
   
-  if (risk.riskRanges && risk.riskRanges.length > 0) {
+  if (feature.riskRanges && feature.riskRanges.length > 0) {
     // Show range as main risk for option-dependent features
-    const minRisk = risk.riskRanges[0].minRisk;
-    const maxRisk = risk.riskRanges[0].maxRisk;
+    const minRisk = feature.riskRanges[0].minRisk;
+    const maxRisk = feature.riskRanges[0].maxRisk;
     const minPercent = (minRisk * 100).toFixed(1);
     const maxPercent = (maxRisk * 100).toFixed(1);
     
     displayText = minRisk === maxRisk 
-      ? `${maxPercent}% risk`
-      : `${minPercent}%-${maxPercent}% risk`;
+      ? `${maxPercent}%`
+      : `${minPercent}%-${maxPercent}%`;
     
     // Use the higher risk for color coding
     colorClass = getRiskColorClass(maxRisk);
-    icon = maxRisk > 0 ? '⚠️' : '✅';
   } else {
     // Fallback to single risk value for non-option-dependent features
-    const riskPercent = (risk.newRisk * 100).toFixed(1);
-    displayText = `${riskPercent}% risk`;
-    colorClass = getRiskColorClass(risk.newRisk);
-    icon = risk.newRisk > 0 ? '⚠️' : '✅';
+    const riskPercent = (feature.newRisk * 100).toFixed(1);
+    displayText = `${riskPercent}%`;
+    colorClass = getRiskColorClass(feature.newRisk);
   }
   
   const displayElement = (
     <div className="text-xs">
-      <span className="font-medium">{icon} {risk.featureName}:</span>{' '}
+      <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
       <span className={colorClass}>{displayText}</span>
-      {risk.contextInfo && <span className="text-gray-500"> {risk.contextInfo}</span>}
+      {feature.contextInfo && <span className="text-gray-500"> {feature.contextInfo}</span>}
     </div>
   );
   
@@ -162,7 +138,7 @@ function RiskItem({ risk, compact }: RiskItemProps) {
             </div>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-sm">
-            <RiskTooltipContent risk={risk} />
+            <FeatureTooltipContent feature={feature} />
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -178,81 +154,30 @@ function RiskItem({ risk, compact }: RiskItemProps) {
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm">
-          <RiskTooltipContent risk={risk} />
+          <FeatureTooltipContent feature={feature} />
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
-interface InfluenceItemProps {
-  influence: FeatureRiskDisplayData['influences'][0];
-  compact: boolean;
-}
-
-function InfluenceItem({ influence, compact }: InfluenceItemProps) {
-  const displayElement = (
-    <div className="flex items-center justify-between bg-green-50 px-2 py-1 rounded text-xs">
-      <div className="flex items-center">
-        <span className="mr-2">{influence.icon}</span>
-        <span className="font-medium text-green-700">{influence.featureName}</span>
-        {influence.contextInfo && (
-          <span className="text-green-600 ml-1">({influence.contextInfo})</span>
-        )}
-      </div>
-      <span className="text-green-600 font-medium">Positive</span>
-    </div>
-  );
-  
-  if (compact) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="cursor-help">
-              {displayElement}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-sm">
-            <InfluenceTooltipContent influence={influence} />
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-  
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="cursor-help">
-            {displayElement}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm">
-          <InfluenceTooltipContent influence={influence} />
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-function RiskTooltipContent({ risk }: { risk: RiskItemProps['risk'] }) {
+function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature'] }) {
+  const config = feature.config;
   
   return (
     <div className="text-xs space-y-2">
       <div>
-        <p className="font-semibold">{risk.featureName}</p>
-        <p className="text-gray-300">{risk.description}</p>
+        <p className="font-semibold">{feature.featureName}</p>
+        <p className="text-gray-300">{feature.description}</p>
       </div>
       
       <div>
         <p className="font-medium">
-          {risk.riskRanges && risk.riskRanges.length > 0 ? (
+          {feature.riskRanges && feature.riskRanges.length > 0 ? (
             // Show range for option-dependent features
             (() => {
-              const minRisk = risk.riskRanges[0].minRisk;
-              const maxRisk = risk.riskRanges[0].maxRisk;
+              const minRisk = feature.riskRanges[0].minRisk;
+              const maxRisk = feature.riskRanges[0].maxRisk;
               const minPercent = (minRisk * 100).toFixed(1);
               const maxPercent = (maxRisk * 100).toFixed(1);
               const riskText = minRisk === maxRisk 
@@ -262,34 +187,34 @@ function RiskTooltipContent({ risk }: { risk: RiskItemProps['risk'] }) {
             })()
           ) : (
             // Show single value for non-option-dependent features
-            `Risk: ${(risk.newRisk * 100).toFixed(1)}% (${getRiskSeverityLabel(risk.newRisk)})`
+            `Risk: ${(feature.newRisk * 100).toFixed(1)}% (${getRiskSeverityLabel(feature.newRisk)})`
           )}
         </p>
         
         {/* Show cumulative risk explanation for oxidation */}
-        {risk.featureId === 'oxidation' && (
+        {feature.featureId === 'oxidation' && (
           <div className="border-t border-gray-600 pt-2">
             <p className="font-medium text-yellow-400">Cumulative Risk</p>
             <p className="text-gray-300 text-xs">
               This risk accumulates over time. Each tick adds the calculated amount to your current risk level.
               Higher fragility and oxidation-prone grapes increase the risk faster.
             </p>
-            {risk.contextInfo && (
+            {feature.contextInfo && (
               <p className="text-gray-400 text-xs mt-1">
-                {risk.contextInfo}
+                {feature.contextInfo}
               </p>
             )}
           </div>
         )}
 
         {/* Show quality impact if the feature manifests */}
-        {risk.qualityImpact && risk.qualityImpact > 0 && (
+        {feature.qualityImpact && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium text-red-400">Quality Impact if Manifests</p>
+            <p className="font-medium">Quality Impact if Manifests</p>
             <p className="text-gray-300 text-xs">
-              -{(risk.qualityImpact * 100).toFixed(1)}% quality reduction
+              {feature.qualityImpact < 0 ? '-' : '+'}{Math.abs(feature.qualityImpact * 100).toFixed(1)}% quality change
             </p>
-            {risk.featureId === 'oxidation' && (
+            {feature.featureId === 'oxidation' && (
               <p className="text-gray-400 text-xs mt-1">
                 Higher quality wines are affected more severely. Also reduces aroma, acidity, and body.
               </p>
@@ -297,11 +222,108 @@ function RiskTooltipContent({ risk }: { risk: RiskItemProps['risk'] }) {
           </div>
         )}
         
-        {risk.riskRanges && risk.riskRanges.length > 0 && (
+        {/* Show characteristic effects */}
+        {config?.effects?.characteristics && config.effects.characteristics.length > 0 && (
+          <div className="border-t border-gray-600 pt-2">
+            <p className="font-medium">Characteristic Effects:</p>
+            <div className="text-xs text-gray-300 space-y-1">
+              {config.effects.characteristics.map((effect: any) => {
+                const baseModifier = typeof effect.modifier === 'function' 
+                  ? effect.modifier(1.0)  // Use max severity for range display
+                  : effect.modifier;
+                
+                // Calculate range for severity-based modifiers
+                let displayText: string;
+                if (typeof effect.modifier === 'function') {
+                  const minModifier = effect.modifier(0);
+                  const maxModifier = effect.modifier(1.0);
+                  const minPercent = (minModifier * 100).toFixed(0);
+                  const maxPercent = (maxModifier * 100).toFixed(0);
+                  displayText = minModifier === maxModifier 
+                    ? `${maxModifier > 0 ? '+' : ''}${maxPercent}%`
+                    : `${minModifier > 0 ? '+' : ''}${minPercent}% to ${maxModifier > 0 ? '+' : ''}${maxPercent}%`;
+                } else {
+                  const percent = (baseModifier * 100).toFixed(0);
+                  displayText = `${baseModifier > 0 ? '+' : ''}${percent}%`;
+                }
+                
+                return (
+                  <p key={effect.characteristic}>
+                    • {effect.characteristic}: {displayText}
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
+        {/* Show prestige effects summary */}
+        {config?.effects?.prestige && (
+          <div className="border-t border-gray-600 pt-2">
+            <p className="font-medium">Prestige Impact:</p>
+            <div className="text-xs text-gray-300 space-y-1">
+              {config.effects.prestige.onManifestation && (
+                <div>
+                  <p className="font-medium text-yellow-400">On Manifestation:</p>
+                  {config.effects.prestige.onManifestation.company && (
+                    <p className="ml-2">
+                      • Company: up to {config.effects.prestige.onManifestation.company.maxImpact && config.effects.prestige.onManifestation.company.maxImpact < 0 ? '-' : ''}{Math.abs(config.effects.prestige.onManifestation.company.maxImpact || 0).toFixed(1)} prestige
+                    </p>
+                  )}
+                  {config.effects.prestige.onManifestation.vineyard && (
+                    <p className="ml-2">
+                      • Vineyard: up to {config.effects.prestige.onManifestation.vineyard.maxImpact && config.effects.prestige.onManifestation.vineyard.maxImpact < 0 ? '-' : ''}{Math.abs(config.effects.prestige.onManifestation.vineyard.maxImpact || 0).toFixed(1)} prestige
+                    </p>
+                  )}
+                </div>
+              )}
+              {config.effects.prestige.onSale && (
+                <div>
+                  <p className="font-medium text-yellow-400">On Sale:</p>
+                  {config.effects.prestige.onSale.company && (
+                    <p className="ml-2">
+                      • Company: up to {config.effects.prestige.onSale.company.maxImpact && config.effects.prestige.onSale.company.maxImpact < 0 ? '-' : ''}{Math.abs(config.effects.prestige.onSale.company.maxImpact || 0).toFixed(1)} prestige
+                    </p>
+                  )}
+                  {config.effects.prestige.onSale.vineyard && (
+                    <p className="ml-2">
+                      • Vineyard: up to {config.effects.prestige.onSale.vineyard.maxImpact && config.effects.prestige.onSale.vineyard.maxImpact < 0 ? '-' : ''}{Math.abs(config.effects.prestige.onSale.vineyard.maxImpact || 0).toFixed(1)} prestige
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Show customer sensitivity */}
+        {config?.customerSensitivity && (
+          <div className="border-t border-gray-600 pt-2">
+            <p className="font-medium">Customer Price Sensitivity:</p>
+            <div className="text-xs text-gray-300 space-y-1">
+              {Object.entries(config.customerSensitivity).map(([customerType, sensitivity]: [string, any]) => {
+                const percentChange = (sensitivity - 1.0) * 100;
+                const percentChangeFixed = Math.abs(percentChange).toFixed(0);
+                const sensitivityText = sensitivity === 1.0 
+                  ? 'No change'
+                  : sensitivity < 1.0 
+                    ? `-${percentChangeFixed}%`
+                    : `+${percentChangeFixed}%`;
+                return (
+                  <p key={customerType}>
+                    • {customerType}: {sensitivityText}
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
+        {feature.riskRanges && feature.riskRanges.length > 0 && (
           <div className="border-t border-gray-600 pt-2">
             <p className="font-medium">Risk by Processing Options:</p>
             <div className="space-y-2 max-h-40 overflow-y-auto">
-              {risk.riskRanges.map((range, index) => (
+              {feature.riskRanges.map((range: any, index: number) => (
                 <div key={index} className="text-xs">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-gray-300 font-medium">{range.groupLabel}</span>
@@ -318,11 +340,11 @@ function RiskTooltipContent({ risk }: { risk: RiskItemProps['risk'] }) {
           </div>
         )}
         
-        {!risk.riskRanges && risk.riskCombinations && risk.riskCombinations.length > 0 && (
+        {!feature.riskRanges && feature.riskCombinations && feature.riskCombinations.length > 0 && (
           <div className="border-t border-gray-600 pt-2">
             <p className="font-medium">Risk by Processing Options:</p>
             <div className="space-y-1 max-h-32 overflow-y-auto">
-              {risk.riskCombinations.slice(0, 10).map((combination, index) => (
+              {feature.riskCombinations.slice(0, 10).map((combination: any, index: number) => (
                 <div key={index} className="flex justify-between text-xs">
                   <span className="text-gray-300 truncate mr-2">{combination.label}</span>
                   <span className={`font-mono ${getRiskColorClass(combination.risk)}`}>
@@ -330,51 +352,15 @@ function RiskTooltipContent({ risk }: { risk: RiskItemProps['risk'] }) {
                   </span>
                 </div>
               ))}
-              {risk.riskCombinations.length > 10 && (
+              {feature.riskCombinations.length > 10 && (
                 <div className="text-xs text-gray-400 italic">
-                  ... and {risk.riskCombinations.length - 10} more combinations
+                  ... and {feature.riskCombinations.length - 10} more combinations
                 </div>
               )}
             </div>
           </div>
         )}
-        
-        {risk.qualityImpact && (
-          <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium">Quality Impact:</p>
-            <p className="text-xs text-gray-300">
-              -{Math.abs(risk.qualityImpact * 100)}% quality reduction if manifests
-            </p>
-          </div>
-        )}
       </div>
-    </div>
-  );
-}
-
-function InfluenceTooltipContent({ influence }: { influence: InfluenceItemProps['influence'] }) {
-  return (
-    <div className="text-xs space-y-2">
-      <div>
-        <p className="font-semibold">{influence.featureName}</p>
-        <p className="text-gray-300">{influence.description}</p>
-      </div>
-      
-      <div>
-        <p className="font-medium">Effect:</p>
-        <p className="text-xs text-gray-300">
-          This positive feature will develop in wine over time.
-        </p>
-      </div>
-      
-      {influence.qualityImpact && (
-        <div className="border-t border-gray-600 pt-2">
-          <p className="font-medium">Quality Impact:</p>
-          <p className="text-xs text-gray-300">
-            +{Math.round((influence.qualityImpact * 100) * 10) / 10}% quality bonus when fully developed
-          </p>
-        </div>
-      )}
     </div>
   );
 }

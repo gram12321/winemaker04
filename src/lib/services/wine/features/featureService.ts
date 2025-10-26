@@ -7,8 +7,11 @@
 // - FeatureDisplay.tsx business logic
 
 import { WineBatch, WineCharacteristics, CustomerType } from '../../../types/types';
-import { WineFeature, FeatureConfig, CreateFeatureOptions, inferRiskAccumulationStrategy } from '../../../types/wineFeatures';
+import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
+
+// Re-export for convenience
+export type { FeatureRiskInfo, FeatureImpact };
 import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { notificationService } from '../../core/notificationService';
@@ -17,29 +20,7 @@ import { addFeaturePrestigeEvent } from '../../prestige/prestigeService';
 import { getBottleAgingSeverity } from './agingService';
 
 // ===== UNIFIED INTERFACES =====
-
-export interface FeatureImpact {
-  featureId: string;
-  featureName: string;
-  icon: string;
-  severity: number;
-  qualityImpact: number;
-  characteristicModifiers: Partial<Record<keyof WineCharacteristics, number>>;
-  description: string;
-}
-
-export interface FeatureRiskInfo {
-  featureId: string;
-  featureName: string;
-  icon: string;
-  currentRisk: number;
-  newRisk: number;
-  riskIncrease: number;
-  isPresent: boolean;
-  severity: number;
-  qualityImpact?: number;
-  description?: string;
-}
+// FeatureImpact and FeatureRiskInfo now imported from '../../../types/wineFeatures';
 
 export interface FeatureDisplayData {
   evolvingFeatures: Array<{
@@ -69,16 +50,21 @@ export interface FeatureDisplayData {
 /**
  * Create a new feature instance from config
  */
-export function createNewFeature(config: FeatureConfig, options?: Partial<CreateFeatureOptions>): WineFeature {
-  return {
+export function createNewFeature(config: FeatureConfig, options?: { isPresent?: boolean; severity?: number; risk?: number }): WineFeature {
+  const feature: WineFeature = {
     id: config.id,
-    risk: options?.initialRisk ?? 0,
     isPresent: options?.isPresent ?? false,
     severity: options?.severity ?? 0,
     name: config.name,
-    type: config.type,
     icon: config.icon
   };
+  
+  // Only add risk for accumulation features
+  if (config.behavior === 'accumulation') {
+    feature.risk = options?.risk ?? 0;
+  }
+  
+  return feature;
 }
 
 /**
@@ -87,12 +73,27 @@ export function createNewFeature(config: FeatureConfig, options?: Partial<Create
 export function initializeBatchFeatures(): WineFeature[] {
   const configs = getAllFeatureConfigs();
   return configs.map(config => {
-    const shouldStartPresent = config.type === 'feature' && config.manifestation === 'graduated';
+    let isPresent = false;
+    let severity = 0;
+    let risk: number | undefined = undefined;
+    
+    if (config.behavior === 'evolving') {
+      const behaviorConfig = config.behaviorConfig as any;
+      isPresent = behaviorConfig.spawnActive;
+      severity = behaviorConfig.spawnActive ? 0.001 : 0;
+    } else if (config.behavior === 'accumulation') {
+      const behaviorConfig = config.behaviorConfig as any;
+      // Accumulation features with spawnActive are initialized with risk 0
+      // They will start accumulating during the weekly tick
+      if (behaviorConfig.spawnActive) {
+        risk = 0;
+      }
+    }
     
     return createNewFeature(config, {
-      isPresent: shouldStartPresent,
-      severity: shouldStartPresent ? 0 : 0,
-      initialRisk: shouldStartPresent ? 0.001 : 0
+      isPresent,
+      severity,
+      risk
     });
   });
 }
@@ -111,43 +112,43 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
   const relevantFeatures = configs
     .map(config => {
       const feature = features.find(f => f.id === config.id);
-      const strategy = inferRiskAccumulationStrategy(config.riskAccumulation);
       
       return {
         feature: feature || { 
           id: config.id, 
           name: config.name, 
           icon: config.icon, 
-          risk: 0, 
+          risk: config.behavior === 'accumulation' ? 0 : undefined,
           isPresent: false, 
-          severity: 0,
-          type: config.type
+          severity: 0
         },
-        config,
-        strategy
+        config
       };
     })
     .filter(({ feature }) => {
       if (feature.isPresent && feature.severity > 0) return true;
-      if (feature.risk > 0) return true;
+      if (feature.risk && feature.risk > 0) return true;
       return false;
     });
 
-  // Categorize features
+  // Categorize features by behavior
   const evolvingFeatures = relevantFeatures
     .filter(({ feature, config }) => {
+      if (config.behavior !== 'evolving') return false;
       if (!feature.isPresent || feature.severity === 0) return false;
       
-      const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
-      const multiplierValue = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
+      const behaviorConfig = config.behaviorConfig as any;
+      const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
+      const multiplierValue = behaviorConfig.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
       const stateMultiplier = typeof multiplierValue === 'function' ? multiplierValue(batch) : multiplierValue;
       const weeklyGrowthRate = (baseGrowthRate || 0) * (stateMultiplier || 1.0);
       
       return weeklyGrowthRate > 0;
     })
     .map(({ feature, config }) => {
-      const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
-      const multiplierValue = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
+      const behaviorConfig = config.behaviorConfig as any;
+      const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
+      const multiplierValue = behaviorConfig.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
       const stateMultiplier = typeof multiplierValue === 'function' ? multiplierValue(batch) : multiplierValue;
       const weeklyGrowthRate = (baseGrowthRate || 0) * (stateMultiplier || 1.0);
       
@@ -196,9 +197,14 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
     });
 
   const riskFeatures = relevantFeatures
-    .filter(({ feature, strategy }) => !feature.isPresent && feature.risk > 0 && strategy !== 'independent')
+    .filter(({ feature, config }) => {
+      if (feature.isPresent) return false;
+      if (config.behavior === 'triggered') return false; // Triggered features don't show as risks
+      if (feature.risk && feature.risk > 0) return true;
+      return false;
+    })
     .map(({ feature, config }) => {
-      const expectedWeeks = feature.risk > 0 ? Math.ceil(1 / feature.risk) : undefined;
+      const expectedWeeks = feature.risk && feature.risk > 0 ? Math.ceil(1 / feature.risk) : undefined;
       return {
         feature,
         config,
@@ -239,6 +245,7 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
  */
 function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severity: number): number {
   const effect = config.effects.quality;
+  if (!effect) return 0;
   
   switch (effect.type) {
     case 'linear':
@@ -310,6 +317,7 @@ function applyQualityEffect(
   severity: number
 ): number {
   const effect = config.effects.quality;
+  if (!effect) return grapeQuality;
   
   switch (effect.type) {
     case 'power': {
@@ -368,7 +376,8 @@ export function calculateFeaturePriceMultiplier(
     
     const sensitivity = config.customerSensitivity[customerType];
     
-    if (config.manifestation === 'graduated') {
+    // For evolving features with severity scaling, adjust sensitivity by severity
+    if (config.behavior === 'evolving' && feature.severity > 0) {
       const adjustedSensitivity = 1.0 + (sensitivity - 1.0) * feature.severity;
       multiplier *= adjustedSensitivity;
     } else {
@@ -440,6 +449,13 @@ export function previewFeatureRisks(
   
   return risks.map(risk => {
     const config = getFeatureConfig(risk.featureId);
+    const qualityEffect = config?.effects.quality;
+    let qualityImpact: number | undefined = undefined;
+    
+    if (qualityEffect && qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+      qualityImpact = qualityEffect.amount;
+    }
+    
     return {
       featureId: risk.featureId,
       featureName: risk.featureName,
@@ -449,9 +465,7 @@ export function previewFeatureRisks(
       riskIncrease: risk.riskIncrease,
       isPresent: false,
       severity: 0,
-      qualityImpact: config?.effects.quality.type === 'linear'
-        ? (config.effects.quality.amount as number)
-        : undefined,
+      qualityImpact,
       description: config?.description
     };
   });
@@ -472,11 +486,20 @@ function previewEventRisksInternal(
     const feature = batch.features?.find(f => f.id === config.id);
     const currentRisk = feature?.risk || 0;
     
-    if (feature?.isPresent && config.manifestation === 'binary') {
+    // Skip if already present and triggered feature
+    if (feature?.isPresent && config.behavior === 'triggered') {
       continue;
     }
     
-    const triggers = config.riskAccumulation.eventTriggers || [];
+    // Get triggers based on behavior type
+    let triggers: any[] = [];
+    if (config.behavior === 'triggered') {
+      const behaviorConfig = config.behaviorConfig as any;
+      triggers = behaviorConfig.eventTriggers || [];
+    } else if (config.behavior === 'accumulation') {
+      // For accumulation features, check risk modifiers
+      triggers = []; // No triggers for accumulation (they accumulate weekly)
+    }
     
     for (const trigger of triggers) {
       if (trigger.event === event) {
@@ -491,9 +514,9 @@ function previewEventRisksInternal(
           : 0; // Show 0 risk if condition not met
         
         let newRisk: number;
-        const strategy = inferRiskAccumulationStrategy(config.riskAccumulation);
         
-        if (strategy === 'independent') {
+        // Triggered features are independent events
+        if (config.behavior === 'triggered') {
           newRisk = riskIncrease;
         } else {
           newRisk = Math.min(1.0, currentRisk + riskIncrease);
@@ -545,20 +568,21 @@ export function calculateCumulativeRisk(
   }
   
   const config = getFeatureConfig(featureId);
-  const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
   
   const sources: Array<{ source: string; risk: number }> = [];
   let total = 0;
   
-  if (strategy === 'independent') {
+  // Triggered features are independent events
+  if (config?.behavior === 'triggered') {
     if (newRiskIncrease > 0) {
       sources.push({ source: newSource, risk: newRiskIncrease });
       total = newRiskIncrease;
     }
   } else {
+    // Accumulation features are cumulative
     total = existingFeature?.risk || 0;
     
-    if (existingFeature && existingFeature.risk > 0) {
+    if (existingFeature && existingFeature.risk && existingFeature.risk > 0) {
       sources.push({ source: 'Previous events', risk: existingFeature.risk });
     }
     
@@ -588,19 +612,6 @@ export function hasFeature(batch: WineBatch, featureId: string): boolean {
 }
 
 /**
- * Check if batch has any faults
- */
-export function hasAnyFaults(batch: WineBatch): boolean {
-  const configs = getAllFeatureConfigs();
-  
-  return (batch.features || []).some(feature => {
-    if (!feature.isPresent) return false;
-    const config = configs.find(c => c.id === feature.id);
-    return config?.type === 'fault';
-  });
-}
-
-/**
  * Get all present features for a batch, sorted by priority
  */
 export function getPresentFeaturesSorted(batch: WineBatch): Array<{ feature: WineFeature; config: FeatureConfig }> {
@@ -613,7 +624,7 @@ export function getPresentFeaturesSorted(batch: WineBatch): Array<{ feature: Win
     }))
     .filter(item => item.config !== undefined);
   
-  return presentFeatures.sort((a, b) => a.config.ui.sortPriority - b.config.ui.sortPriority);
+  return presentFeatures.sort((a, b) => a.config.displayPriority - b.config.displayPriority);
 }
 
 /**
@@ -650,17 +661,19 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
     const qualityEffect = config.effects.quality;
     let qualityImpact = 0;
     
-    if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-      qualityImpact = qualityEffect.amount * feature.severity;
-    } else if (qualityEffect.type === 'power') {
-      const penaltyFactor = Math.pow(batch.grapeQuality, qualityEffect.exponent!);
-      const scaledPenalty = qualityEffect.basePenalty! * (1 + penaltyFactor);
-      qualityImpact = -scaledPenalty;
-    } else if (qualityEffect.type === 'bonus') {
-      const bonusAmount = typeof qualityEffect.amount === 'function' 
-        ? qualityEffect.amount(feature.severity)
-        : qualityEffect.amount;
-      qualityImpact = bonusAmount || 0;
+    if (qualityEffect) {
+      if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+        qualityImpact = qualityEffect.amount * feature.severity;
+      } else if (qualityEffect.type === 'power') {
+        const penaltyFactor = Math.pow(batch.grapeQuality, qualityEffect.exponent!);
+        const scaledPenalty = qualityEffect.basePenalty! * (1 + penaltyFactor);
+        qualityImpact = -scaledPenalty;
+      } else if (qualityEffect.type === 'bonus') {
+        const bonusAmount = typeof qualityEffect.amount === 'function' 
+          ? qualityEffect.amount(feature.severity)
+          : qualityEffect.amount;
+        qualityImpact = bonusAmount || 0;
+      }
     }
     
     // Calculate characteristic modifiers
@@ -727,35 +740,6 @@ export function formatFeatureRiskWarning(riskInfo: FeatureRiskInfo): string {
   return parts.join(' ');
 }
 
-/**
- * Get harvest risks (negative features that can occur during harvest)
- */
-export function getHarvestRisks(batch?: WineBatch, event: 'harvest' | 'crushing' | 'fermentation' | 'bottling' = 'harvest', context?: any): Array<FeatureRiskInfo & { config: any }> {
-  const risks = previewFeatureRisks(batch, event, context);
-  return risks
-    .map(risk => {
-      const config = getFeatureConfig(risk.featureId);
-      return { ...risk, config };
-    })
-    .filter(riskWithConfig => 
-      riskWithConfig.config?.harvestContext?.isHarvestRisk === true
-    );
-}
-
-/**
- * Get harvest influences (positive features that manifest during harvest)
- */
-export function getHarvestInfluences(batch?: WineBatch, event: 'harvest' | 'crushing' | 'fermentation' | 'bottling' = 'harvest', context?: any): Array<FeatureRiskInfo & { config: any }> {
-  const risks = previewFeatureRisks(batch, event, context);
-  return risks
-    .map(risk => {
-      const config = getFeatureConfig(risk.featureId);
-      return { ...risk, config };
-    })
-    .filter(riskWithConfig => 
-      riskWithConfig.config?.harvestContext?.isHarvestInfluence === true
-    );
-}
 
 /**
  * Get all present features on a batch with their details
@@ -766,18 +750,23 @@ export function getPresentFeaturesInfo(batch: WineBatch): FeatureRiskInfo[] {
     .filter(f => f.isPresent)
     .map(feature => {
       const config = getFeatureConfig(feature.id);
+      const qualityEffect = config?.effects.quality;
+      let qualityImpact: number | undefined = undefined;
+      
+      if (qualityEffect && qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+        qualityImpact = qualityEffect.amount;
+      }
+      
       return {
         featureId: feature.id,
         featureName: feature.name,
         icon: feature.icon,
-        currentRisk: feature.risk,
-        newRisk: feature.risk,
+        currentRisk: feature.risk || 0,
+        newRisk: feature.risk || 0,
         riskIncrease: 0,
         isPresent: true,
         severity: feature.severity,
-        qualityImpact: config?.effects.quality.type === 'linear' 
-          ? (config.effects.quality.amount as number)
-          : undefined,
+        qualityImpact,
         description: config?.description
       };
     });
@@ -789,21 +778,26 @@ export function getPresentFeaturesInfo(batch: WineBatch): FeatureRiskInfo[] {
  */
 export function getAtRiskFeaturesInfo(batch: WineBatch, threshold: number = 0.05): FeatureRiskInfo[] {
   return (batch.features || [])
-    .filter(f => !f.isPresent && f.risk >= threshold)
+    .filter(f => !f.isPresent && f.risk && f.risk >= threshold)
     .map(feature => {
       const config = getFeatureConfig(feature.id);
+      const qualityEffect = config?.effects.quality;
+      let qualityImpact: number | undefined = undefined;
+      
+      if (qualityEffect && qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+        qualityImpact = qualityEffect.amount;
+      }
+      
       return {
         featureId: feature.id,
         featureName: feature.name,
         icon: feature.icon,
-        currentRisk: feature.risk,
-        newRisk: feature.risk,
+        currentRisk: feature.risk || 0,
+        newRisk: feature.risk || 0,
         riskIncrease: 0,
         isPresent: false,
         severity: 0,
-        qualityImpact: config?.effects.quality.type === 'linear' 
-          ? (config.effects.quality.amount as number)
-          : undefined,
+        qualityImpact,
         description: config?.description
       };
     });
@@ -862,7 +856,12 @@ export async function processEventTrigger(
   const vineyard = event === 'harvest' ? context : undefined;
   
   for (const config of eventConfigs) {
-    const triggers = config.riskAccumulation.eventTriggers || [];
+    // Get triggers based on behavior type
+    let triggers: any[] = [];
+    if (config.behavior === 'triggered') {
+      const behaviorConfig = config.behaviorConfig as any;
+      triggers = behaviorConfig.eventTriggers || [];
+    }
     
     for (const trigger of triggers) {
       if (trigger.event === event) {
@@ -892,18 +891,21 @@ function getOrCreateFeature(features: WineFeature[], config: FeatureConfig): Win
 }
 
 function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature: WineFeature): number {
-  const baseRate = config.riskAccumulation.baseRate || 0;
+  if (config.behavior !== 'accumulation') return 0;
+  
+  const behaviorConfig = config.behaviorConfig as any;
+  const baseRate = behaviorConfig.baseRate || 0;
   
   let stateMultiplier = 1.0;
-  const multiplierValue = config.riskAccumulation.stateMultipliers?.[batch.state];
+  const multiplierValue = behaviorConfig.stateMultipliers?.[batch.state];
   if (typeof multiplierValue === 'function') {
     stateMultiplier = multiplierValue(batch);
   } else if (typeof multiplierValue === 'number') {
     stateMultiplier = multiplierValue;
   }
   
-  const compoundMultiplier = config.riskAccumulation.compoundEffect 
-    ? (1 + feature.risk)
+  const compoundMultiplier = behaviorConfig.compound 
+    ? (1 + (feature.risk || 0))
     : 1.0;
   
   const oxidationMultiplier = config.id === 'oxidation' 
@@ -947,26 +949,47 @@ async function processTimeBased(
 ): Promise<WineFeature[]> {
   const feature = getOrCreateFeature(features, config);
   
-  if (feature.isPresent && config.manifestation === 'binary') return features;
-  
-  const riskIncrease = calculateRiskIncrease(batch, config, feature);
-  const newRisk = Math.min(1.0, feature.risk + riskIncrease);
-  const previousRisk = feature.risk;
-  
-  let isPresent = feature.isPresent;
-  let severity = feature.severity;
-  
-  if (!isPresent) {
-    isPresent = checkManifestation(newRisk);
-    if (isPresent) {
-      severity = config.manifestation === 'binary' ? 1.0 : newRisk;
-      await handleManifestation(batch, config, vineyard);
+  // Handle accumulation features
+  if (config.behavior === 'accumulation') {
+    // Don't process if already present (binary manifestation)
+    if (feature.isPresent) return features;
+    
+    const riskIncrease = calculateRiskIncrease(batch, config, feature);
+    const newRisk = Math.min(1.0, (feature.risk || 0) + riskIncrease);
+    const previousRisk = feature.risk || 0;
+    
+    let isPresent: boolean = feature.isPresent;
+    let severity = feature.severity;
+    
+    if (!isPresent) {
+      isPresent = checkManifestation(newRisk);
+      if (isPresent) {
+        severity = 1.0; // Binary manifestation for accumulation
+        await handleManifestation(batch, config, vineyard);
+      }
     }
-  } else if (config.manifestation === 'graduated') {
-    const baseGrowthRate = config.riskAccumulation.severityGrowth?.rate || 0;
+    
+    if (!isPresent && shouldWarnAboutRisk(config, previousRisk, newRisk)) {
+      await sendRiskWarning(batch, config, newRisk);
+    }
+    
+    return updateFeatureInArray(features, {
+      ...feature,
+      risk: newRisk,
+      isPresent,
+      severity
+    });
+  }
+  
+  // Handle evolving features
+  if (config.behavior === 'evolving') {
+    if (!feature.isPresent) return features;
+    
+    const behaviorConfig = config.behaviorConfig as any;
+    const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
     
     let stateMultiplier = 1.0;
-    const multiplierValue = config.riskAccumulation.severityGrowth?.stateMultipliers?.[batch.state];
+    const multiplierValue = behaviorConfig.severityGrowth?.stateMultipliers?.[batch.state];
     if (typeof multiplierValue === 'function') {
       stateMultiplier = multiplierValue(batch);
     } else if (typeof multiplierValue === 'number') {
@@ -974,20 +997,16 @@ async function processTimeBased(
     }
     
     const effectiveGrowthRate = baseGrowthRate * stateMultiplier;
-    const cap = config.riskAccumulation.severityGrowth?.cap || 1.0;
-    severity = Math.min(cap, severity + effectiveGrowthRate);
+    const cap = behaviorConfig.severityGrowth?.cap || 1.0;
+    const newSeverity = Math.min(cap, feature.severity + effectiveGrowthRate);
+    
+    return updateFeatureInArray(features, {
+      ...feature,
+      severity: newSeverity
+    });
   }
   
-  if (!isPresent && shouldWarnAboutRisk(config, previousRisk, newRisk)) {
-    await sendRiskWarning(batch, config, newRisk);
-  }
-  
-  return updateFeatureInArray(features, {
-    ...feature,
-    risk: newRisk,
-    isPresent,
-    severity
-  });
+  return features;
 }
 
 async function applyRiskIncrease(
@@ -999,16 +1018,18 @@ async function applyRiskIncrease(
 ): Promise<WineFeature[]> {
   const feature = getOrCreateFeature(features, config);
   
-  if (feature.isPresent && config.manifestation === 'binary') return features;
+  // For triggered features, once present they stay present
+  if (feature.isPresent && config.behavior === 'triggered') return features;
   
-  const newRisk = Math.min(1.0, feature.risk + riskIncrease);
+  const newRisk = Math.min(1.0, (feature.risk || 0) + riskIncrease);
   let isPresent = feature.isPresent;
   let severity = feature.severity;
   
   if (!isPresent) {
     isPresent = checkManifestation(newRisk);
     if (isPresent) {
-      severity = config.manifestation === 'binary' ? 1.0 : newRisk;
+      // Triggered features always manifest at severity 1.0
+      severity = config.behavior === 'triggered' ? 1.0 : newRisk;
       await handleManifestation(batch, config, vineyard);
     }
   }
@@ -1021,22 +1042,17 @@ async function applyRiskIncrease(
   });
 }
 
-function shouldWarnAboutRisk(config: FeatureConfig, previousRisk: number, newRisk: number): boolean {
-  const thresholds = config.ui.warningThresholds || [];
-  
-  for (const threshold of thresholds) {
-    if (previousRisk < threshold && newRisk >= threshold) {
-      return true;
-    }
-  }
+function shouldWarnAboutRisk(_config: FeatureConfig, previousRisk: number, newRisk: number): boolean {
+  // No warning thresholds in new system - can be added back to config if needed
+  // For now, simple threshold checks
+  if (previousRisk < 0.10 && newRisk >= 0.10) return true;
+  if (previousRisk < 0.30 && newRisk >= 0.30) return true;
   
   return false;
 }
 
 async function sendManifestationNotification(batch: WineBatch, config: FeatureConfig): Promise<void> {
-  const message = config.type === 'fault'
-    ? `${config.name}! ${batch.vineyardName} ${batch.grape} (${batch.state}) has developed ${config.name.toLowerCase()}.`
-    : `${config.name}! ${batch.vineyardName} ${batch.grape} (${batch.state}) now shows ${config.name.toLowerCase()}.`;
+  const message = `${config.name}! ${batch.vineyardName} ${batch.grape} (${batch.state}) has developed ${config.name.toLowerCase()}.`;
   
   await notificationService.addMessage(
     message,
@@ -1048,19 +1064,17 @@ async function sendManifestationNotification(batch: WineBatch, config: FeatureCo
 
 async function sendRiskWarning(batch: WineBatch, config: FeatureConfig, risk: number): Promise<void> {
   const riskPercent = (risk * 100).toFixed(1);
-  const thresholds = config.ui.warningThresholds || [];
   
   let severity: 'info' | 'warning' | 'critical' = 'info';
   let title = `${config.name} Risk`;
   
-  if (thresholds.length >= 3) {
-    if (risk >= thresholds[2]) {
-      severity = 'critical';
-      title = `Critical ${config.name} Risk`;
-    } else if (risk >= thresholds[1]) {
-      severity = 'warning';
-      title = `High ${config.name} Risk`;
-    }
+  // Simple thresholds
+  if (risk >= 0.30) {
+    severity = 'critical';
+    title = `Critical ${config.name} Risk`;
+  } else if (risk >= 0.10) {
+    severity = 'warning';
+    title = `High ${config.name} Risk`;
   }
   
   const message = severity === 'critical'

@@ -604,7 +604,7 @@ const Vineyard: React.FC = () => {
                           {getActionButtons(vineyard)}
                         </div>
                         
-                        {/* Harvest Risks */}
+                        {/* Harvest features */}
                         {vineyard.grape && (
                           <div className="mt-3 pt-2 border-t border-gray-200">
                             <FeatureRiskDisplay vineyard={vineyard} />

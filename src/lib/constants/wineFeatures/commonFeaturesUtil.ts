@@ -14,12 +14,12 @@ import { LATE_HARVEST_FEATURE } from './lateHarvest';
  * Add new features here as they are implemented
  */
 export const ACTIVE_FEATURES: FeatureConfig[] = [
-  OXIDATION_FEATURE,          // Time-based + crushing event (hybrid)
-  GREEN_FLAVOR_FEATURE,       // Event-triggered (harvest + crushing)
-  STUCK_FERMENTATION_FEATURE, // Event-triggered (fermentation)
-  TERROIR_FEATURE,            // Positive graduated feature (harvest + time-based)
-  BOTTLE_AGING_FEATURE,       // Positive graduated feature (bottling + time-based aging)
-  LATE_HARVEST_FEATURE,       // Positive graduated feature (harvest timing)
+  OXIDATION_FEATURE,          // Accumulation behavior
+  GREEN_FLAVOR_FEATURE,       // Triggered behavior
+  STUCK_FERMENTATION_FEATURE, // Triggered behavior
+  TERROIR_FEATURE,            // Evolving behavior
+  BOTTLE_AGING_FEATURE,       // Evolving behavior
+  LATE_HARVEST_FEATURE,       // Triggered behavior
 ];
 
 /**
@@ -40,13 +40,12 @@ export function getFeatureConfig(featureId: string): FeatureConfig | undefined {
 }
 
 /**
- * Get features that use time-based risk accumulation
+ * Get features that use time-based behavior (evolving or accumulation)
  * Called by game tick system
  */
 export function getTimeBasedFeatures(): FeatureConfig[] {
   return ACTIVE_FEATURES.filter(
-    config => config.riskAccumulation.trigger === 'time_based' || 
-              config.riskAccumulation.trigger === 'hybrid'
+    config => config.behavior === 'evolving' || config.behavior === 'accumulation'
   );
 }
 
@@ -58,11 +57,24 @@ export function getEventTriggeredFeatures(
   event: 'harvest' | 'crushing' | 'fermentation' | 'bottling'
 ): FeatureConfig[] {
   return ACTIVE_FEATURES.filter(config => {
-    if (config.riskAccumulation.trigger === 'event_triggered' || 
-        config.riskAccumulation.trigger === 'hybrid') {
-      const triggers = config.riskAccumulation.eventTriggers || [];
-      return triggers.some(trigger => trigger.event === event);
+    if (config.behavior === 'triggered') {
+      const behaviorConfig = config.behaviorConfig as any;
+      const triggers = behaviorConfig.eventTriggers || [];
+      return triggers.some((trigger: any) => trigger.event === event);
     }
+    
+    // Also check accumulation features for event-based risk modifiers
+    if (config.behavior === 'accumulation') {
+      const behaviorConfig = config.behaviorConfig as any;
+      const riskModifiers = behaviorConfig.riskModifiers || [];
+      return riskModifiers.some(() => {
+        // Check if risk modifier is triggered by the event
+        // This would need to be determined by the parameter being modified
+        return true; // For now, include all accumulation features
+      });
+    }
+    
     return false;
   });
 }
+

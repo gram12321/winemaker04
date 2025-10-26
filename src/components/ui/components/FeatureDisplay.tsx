@@ -204,14 +204,18 @@ interface ActiveFeatureItemProps {
   characteristicEffects: Record<string, number>;
 }
 
-function ActiveFeatureItem({ feature, config }: ActiveFeatureItemProps) {
+function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItemProps) {
   const severity = feature.severity || 0;
   const severityPercent = Math.round(severity * 100);
+  
+  const colorClass = config.badgeColor === 'destructive' ? 'text-red-600' : 
+                     config.badgeColor === 'success' ? 'text-green-600' :
+                     config.badgeColor === 'warning' ? 'text-yellow-600' : 'text-blue-600';
   
   const displayElement = (
     <div className="text-xs">
       <span className="font-medium">{config.icon} {config.name}:</span>{' '}
-      <span className={config.type === 'fault' ? 'text-red-600' : 'text-green-600'}>
+      <span className={colorClass}>
         {config.name} ({severityPercent}%)
       </span>
     </div>
@@ -235,10 +239,20 @@ function ActiveFeatureItem({ feature, config }: ActiveFeatureItemProps) {
             <div>
               <p className="font-medium">{config.name} is present</p>
               <p>This batch has {config.name.toLowerCase()}.</p>
-              {config.manifestation === 'graduated' && (
+              {config.behavior === 'evolving' && (
                 <p>Severity: {Math.round(feature.severity * 100)}%</p>
               )}
             </div>
+            
+            {/* Quality impact */}
+            {Math.abs(qualityImpact) > 0.001 && (
+              <div className="border-t border-gray-600 pt-2">
+                <p className="font-medium">Quality Impact</p>
+                <p className="text-gray-300 text-xs">
+                  {qualityImpact < 0 ? '-' : '+'}{Math.abs(qualityImpact * 100).toFixed(1)}% quality change
+                </p>
+              </div>
+            )}
             
             {/* Characteristic effects */}
             {config.effects.characteristics && config.effects.characteristics.length > 0 && (
@@ -531,7 +545,7 @@ function getBadgeVariant(badgeColor: string): 'default' | 'destructive' | 'outli
 
 // Generate tooltip content for feature badges
 function getFeatureTooltipContent(feature: any, config: any): string {
-  if (config.manifestation === 'graduated' && feature.severity > 0) {
+  if (config.behavior === 'evolving' && feature.severity > 0) {
     const severityPercent = Math.round(feature.severity * 100);
     
     if (config.id === 'terroir') {
@@ -555,8 +569,8 @@ function getFeatureTooltipContent(feature: any, config: any): string {
 function FeatureBadge({ feature, config, showSeverity = false, className }: FeatureBadgeProps) {
   if (!feature.isPresent) return null;
   
-  const variant = getBadgeVariant(config.ui.badgeColor);
-  const colorClass = config.ui.badgeColor === 'success' ? 'bg-green-100 text-green-800' : '';
+  const variant = getBadgeVariant(config.badgeColor);
+  const colorClass = config.badgeColor === 'success' ? 'bg-green-100 text-green-800' : '';
   const tooltipContent = getFeatureTooltipContent(feature, config);
   
   return (
@@ -566,7 +580,7 @@ function FeatureBadge({ feature, config, showSeverity = false, className }: Feat
           <Badge variant={variant} className={`gap-1 cursor-help ${colorClass} ${className || ''}`}>
             <span>{config.icon}</span>
             <span>{config.name}</span>
-            {showSeverity && config.manifestation === 'graduated' && feature.severity > 0 && (
+            {showSeverity && config.behavior === 'evolving' && feature.severity > 0 && (
               <span className="text-xs opacity-90">
                 {Math.round(feature.severity * 100)}%
               </span>

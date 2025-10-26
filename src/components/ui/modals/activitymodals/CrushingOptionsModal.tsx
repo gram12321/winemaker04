@@ -9,8 +9,7 @@ import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
 import { formatCurrency } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
-import { inferRiskAccumulationStrategy } from '@/lib/types/wineFeatures';
+import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 import { calculateYieldMultiplier, calculatePressingQualityPenalty, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 
@@ -178,16 +177,16 @@ MAX PRESSURE BY METHOD:
     // Process each cumulative risk in organized format
     for (const cumulativeRisk of featureRiskData.cumulativeRisks) {
       const config = getAllFeatureConfigs().find(c => c.id === cumulativeRisk.featureId);
-      const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
+      const isTriggered = config?.behavior === 'triggered';
 
       // Format main risk message
       const riskPercent = (cumulativeRisk.cumulative.total * 100).toFixed(1);
 
-      if (strategy === 'independent') {
-        // For independent features, only show current event risk
+      if (isTriggered) {
+        // For triggered features, only show current event risk
         riskMessages.push(`📊 ${riskPercent}% chance of ${cumulativeRisk.featureName} (${config?.description || ''})`);
       } else {
-        // For cumulative features, show total risk with breakdown
+        // For accumulation features, show total risk with breakdown
         if (cumulativeRisk.cumulative.sources.length > 1) {
           const total = (cumulativeRisk.cumulative.total * 100).toFixed(1);
           const sources = cumulativeRisk.cumulative.sources
@@ -199,12 +198,11 @@ MAX PRESSURE BY METHOD:
         }
       }
 
-      // Add feature-specific tips
-      if (cumulativeRisk.featureId === 'green_flavor') {
-        riskMessages.push(`💡 TIP: Enable destemming or use Mechanical/Pneumatic Press to avoid this risk.`);
-      }
-      if (cumulativeRisk.featureId === 'oxidation') {
-        riskMessages.push(`💡 TIP: Fragile grapes (like Pinot Noir) with high pressing intensity increase oxidation risk.`);
+      // Pull tips from feature config
+      const featureConfig = getFeatureConfig(cumulativeRisk.featureId);
+      if (featureConfig?.tips) {
+        const crushingTips = featureConfig.tips.filter(tip => tip.triggerEvent === 'crushing');
+        crushingTips.forEach(tip => riskMessages.push(tip.message));
       }
     }
 
@@ -490,11 +488,10 @@ MAX PRESSURE BY METHOD:
 
             {/* Historical Event Risks (only for cumulative features) */}
             {(() => {
-              // Filter to only cumulative features with actual risks
+              // Filter to only accumulation features with actual risks
               const cumulativeFeatures = featureRiskData.atRiskFeatures.filter(feature => {
                 const config = getAllFeatureConfigs().find(c => c.id === feature.featureId);
-                const strategy = config?.riskAccumulation ? inferRiskAccumulationStrategy(config.riskAccumulation) : 'cumulative';
-                return strategy !== 'independent' && feature.currentRisk > 0;
+                return config?.behavior === 'accumulation' && feature.currentRisk > 0;
               });
 
               if (cumulativeFeatures.length === 0) return null;

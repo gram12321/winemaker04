@@ -25,19 +25,13 @@ import { CrushingOptions } from '../../services/wine/characteristics/crushingCha
  */
 export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
   id: 'green_flavor',
-  name: 'Green/Vegetal',
-  type: 'fault',
+  name: 'Green Flavors',
   icon: '🌿',
   description: 'Herbaceous, vegetal flavors from underripe grapes or rough handling during crushing',
   
-  // Binary manifestation - either present or not
-  manifestation: 'binary',
+  behavior: 'triggered',
   
-  riskAccumulation: {
-    trigger: 'event_triggered',
-    baseRate: 0,  // No weekly accumulation (inferred as independent)
-    compoundEffect: false,
-    
+  behaviorConfig: {
     eventTriggers: [
       {
         event: 'harvest',
@@ -116,23 +110,23 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
     prestige: {
       onManifestation: {
         company: {
-          calculation: 'dynamic_manifestation',
+          calculation: 'dynamic',
           baseAmount: -0.02,  // Company scandal when green flavor manifests (lighter than oxidation)
           scalingFactors: {
             batchSizeWeight: 1.0,         // Larger batches hurt more
             qualityWeight: 1.0,            // Premium wine with green flavor is worse
-            companyPrestigeWeight: 1.0     // Higher prestige = bigger fall
+            prestigeWeight: 1.0     // Higher prestige = bigger fall
           },
           decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
           maxImpact: -3.0     // Cap for company manifestation events (lighter than oxidation)
         },
         vineyard: {
-          calculation: 'dynamic_manifestation',
+          calculation: 'dynamic',
           baseAmount: -0.3,  // Base scandal (lighter than oxidation)
           scalingFactors: {
             batchSizeWeight: 1.0,         // Larger batches hurt more
             qualityWeight: 1.0,            // Premium wine with green flavor is worse
-            vineyardPrestigeWeight: 1.0    // Premium vineyards held to higher standard
+            prestigeWeight: 1.0    // Premium vineyards held to higher standard
           },
           decayRate: 0.98,    // Decays over ~3 years (156 weeks)
           maxImpact: -8.0     // Lower cap than oxidation
@@ -140,23 +134,23 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
       },
       onSale: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: -0.05,  // Lighter base than oxidation (green flavor less serious)
           scalingFactors: {
             volumeWeight: 1.0,
             valueWeight: 1.0,
-            companyPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
           maxImpact: -8.0     // Lower cap than oxidation
         },
         vineyard: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: -0.1,  // Vineyard scandal when selling wine with green flavor (lighter than oxidation)
           scalingFactors: {
             volumeWeight: 1.0,             // More bottles = bigger scandal
             valueWeight: 1.0,              // Higher value = bigger scandal
-            vineyardPrestigeWeight: 1.0    // Higher prestige = bigger fall
+            prestigeWeight: 1.0    // Higher prestige = bigger fall
           },
           decayRate: 0.98,    // Decays over ~3 years (156 weeks)
           maxImpact: -5.0     // Cap for vineyard sale events (lighter than oxidation)
@@ -174,30 +168,17 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
     'Chain Store': 0.95       // -5% penalty (chain stores don't care much)
   },
   
-  ui: {
-    badgeColor: 'warning',  // Orange/yellow vs red for oxidation
-    warningThresholds: [0.15, 0.30],  // Only 2 thresholds (less aggressive than oxidation)
-    sortPriority: 2  // Show after oxidation (priority 1)
-  },
-
-  harvestContext: {
-    isHarvestRisk: true,         // Green flavor is a harvest risk
-    isHarvestInfluence: false    // Not a positive influence
-  },
+  displayPriority: 2, // Show after oxidation (priority 1)
+  badgeColor: 'warning',  // Orange/yellow vs red for oxidation
   
-  // Risk display options - show ripeness levels for harvest
-  riskDisplayOptions: {
-    harvest: {
-      optionCombinations: [
-        { options: { ripeness: 0.0 }, label: 'Ripeness 0%' },
-        { options: { ripeness: 0.2 }, label: 'Ripeness 20%' },
-        { options: { ripeness: 0.4 }, label: 'Ripeness 40%' },
-        { options: { ripeness: 0.6 }, label: 'Ripeness 60%' },
-        { options: { ripeness: 0.8 }, label: 'Ripeness 80%' },
-        { options: { ripeness: 1.0 }, label: 'Ripeness 100%' }
-      ],
-      groupBy: ['ripeness-range']
+  tips: [
+    {
+      triggerEvent: 'harvest',
+      message: '💡 TIP: Wait for ripeness ≥ 50% to avoid green flavor risk.'
+    },
+    {
+      triggerEvent: 'crushing',
+      message: '💡 TIP: Enable destemming or use Mechanical/Pneumatic Press to avoid this risk.'
     }
-  }
+  ]
 };
-

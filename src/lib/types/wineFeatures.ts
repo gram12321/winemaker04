@@ -1,13 +1,11 @@
-// Wine Features Framework - Core Type Definitions
-// Generic system for managing wine faults (oxidation, green flavor) and positive features (terroir)
+// Wine Features Framework - Redesigned Type Definitions
+// Simplified system with three clear feature types: Evolving, Triggered, Accumulation
 
 import { WineBatchState, WineCharacteristics, CustomerType } from './types';
 
 // ===== CORE FEATURE TYPES =====
 
-export type FeatureType = 'fault' | 'feature';
-export type ManifestationType = 'binary' | 'graduated';
-export type TriggerType = 'time_based' | 'event_triggered' | 'hybrid';
+export type FeatureBehavior = 'evolving' | 'triggered' | 'accumulation';
 
 /**
  * Wine Feature - represents a single feature or fault on a wine batch
@@ -15,13 +13,12 @@ export type TriggerType = 'time_based' | 'event_triggered' | 'hybrid';
  */
 export interface WineFeature {
   id: string;              // 'oxidation', 'green_flavor', 'terroir', etc.
-  risk: number;            // 0-1 scale, probability of occurrence/growth
   isPresent: boolean;      // Has the feature manifested?
-  severity: number;        // 0-1 scale (1.0 for binary, variable for graduated)
+  severity: number;        // 0-1 scale (affects effects intensity)
+  risk?: number;           // 0-1 scale, probability (only for accumulation features)
   
   // Metadata (cached from config for performance)
   name: string;
-  type: FeatureType;
   icon: string;
 }
 
@@ -35,13 +32,14 @@ export interface FeatureConfig {
   // Identity
   id: string;
   name: string;
-  type: FeatureType;
   icon: string;
   description: string;
   
-  // Risk & Manifestation
-  manifestation: ManifestationType;
-  riskAccumulation: RiskAccumulationConfig;
+  // Behavior Type
+  behavior: FeatureBehavior;
+  
+  // Behavior-specific configuration
+  behaviorConfig: EvolvingConfig | TriggeredConfig | AccumulationConfig;
   
   // Effects
   effects: FeatureEffects;
@@ -49,202 +47,178 @@ export interface FeatureConfig {
   // Customer Perception
   customerSensitivity: Record<CustomerType, number>;
   
-  // UI
-  ui: FeatureUIConfig;
+  // UI Display
+  displayPriority: number;  // Display order (1 = most important)
+  badgeColor: 'destructive' | 'warning' | 'info' | 'success';
   
-  // Harvest context
-  harvestContext?: HarvestContextConfig;
-  
-  // Risk display options - defines what options to show in risk tooltips
-  riskDisplayOptions?: RiskDisplayOptions;
+  // Contextual Tips (optional)
+  tips?: Array<{
+    triggerEvent: 'harvest' | 'crushing' | 'fermentation' | 'bottling';
+    message: string;
+  }>;
 }
 
+// ===== BEHAVIOR CONFIGURATIONS =====
+
 /**
- * Risk accumulation configuration
- * Supports time-based (weekly), event-triggered, or hybrid accumulation
+ * Evolving features are always present (manifested) but may be passive (severity = 0)
+ * They grow severity over time and may spawn active (terroir) or passive (bottle aging before bottling)
  */
-export interface RiskAccumulationConfig {
-  trigger: TriggerType;
+export interface EvolvingConfig {
+  spawnActive: boolean;  // true = spawn with severity > 0 (terroir), false = spawn passive (bottle aging)
   
-  // For time-based accumulation (like oxidation)
-  baseRate?: number;               // Per game tick (week)
-  stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>;  // Can be number or function for activity-aware multipliers
-  compoundEffect?: boolean;        // Risk accelerates with current risk
-  
-  // For event-triggered (like green flavor from crushing)
-  eventTriggers?: Array<{
-    event: 'harvest' | 'crushing' | 'fermentation' | 'bottling';
-    condition: (context: any) => boolean;
-    riskIncrease: number | ((context: any) => number);
-  }>;
-  
-  // Severity progression (for graduated features)
-  severityGrowth?: {
-    rate: number;                  // Per game tick
-    cap: number;                   // Maximum severity (0-1)
-    stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>; // State-based growth rates (can be function for age-aware growth)
+  // Severity growth configuration
+  severityGrowth: {
+    rate: number;                                    // Base growth rate per week
+    cap: number;                                    // Maximum severity (0-1)
+    stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>;  // State-based growth rates
   };
 }
 
 /**
- * Risk accumulation strategy types - inferred from existing config parameters
+ * Triggered features only manifest when triggered by events
+ * Risk is calculated dynamically based on context parameters
  */
-export type RiskAccumulationStrategy = 'independent' | 'cumulative' | 'severity_growth';
-
-/**
- * Infer risk accumulation strategy from existing config parameters
- */
-export function inferRiskAccumulationStrategy(config: RiskAccumulationConfig): RiskAccumulationStrategy {
-  // If has severityGrowth, it's severity_growth pattern
-  if (config.severityGrowth) {
-    return 'severity_growth';
-  }
-  
-  // If has eventTriggers but no baseRate, it's independent events
-  if (config.eventTriggers && config.eventTriggers.length > 0 && !config.baseRate) {
-    return 'independent';
-  }
-  
-  // If has baseRate or compoundEffect, it's cumulative
-  if (config.baseRate || config.compoundEffect) {
-    return 'cumulative';
-  }
-  
-  // Default fallback
-  return 'cumulative';
+export interface TriggeredConfig {
+  eventTriggers: Array<{
+    event: 'harvest' | 'crushing' | 'fermentation' | 'bottling';
+    condition: (context: any) => boolean;           // When does this trigger?
+    riskIncrease: number | ((context: any) => number);  // Risk from this event
+  }>;
 }
 
 /**
- * Feature effects on grape quality, price, characteristics, and prestige
+ * Accumulation features accumulate compound risk over time
+ * Risk compounds weekly until manifesting
+ */
+export interface AccumulationConfig {
+  baseRate: number;  // Base weekly risk increase
+  
+  // When does accumulation start?
+  spawnActive: boolean;  // true = spawn active when triggered by event, false = spawn passive
+  spawnEvent?: 'harvest' | 'crushing' | 'fermentation' | 'bottling';  // Which event triggers the spawn
+  
+  // Risk multipliers and modifiers
+  stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>;
+  riskModifiers?: Array<{
+    source: 'vineyard' | 'batch' | 'options';
+    parameter: string;  // e.g., 'ripeness', 'fragile', 'pressingIntensity'
+    multiplier: number | ((context: any) => number);
+  }>;
+  
+  compound: boolean;  // If true, risk accelerates: rate × (1 + currentRisk)
+}
+
+// ===== EFFECTS CONFIGURATION =====
+
+/**
+ * Combined feature effects on quality, price, characteristics, and prestige
  */
 export interface FeatureEffects {
   // Quality impact
-  quality: QualityEffect;
+  quality?: {
+    type: 'linear' | 'power' | 'bonus' | 'custom';
+    amount?: number | ((severity: number) => number);
+    exponent?: number;  // For power function
+    basePenalty?: number;  // For power function
+    calculate?: (quality: number, severity: number, context?: any) => number;  // Custom calculation
+  };
   
-  // Price impact (via customer sensitivity)
-  price: PriceEffect;
+  // Price impact
+  price?: {
+    type: 'customer_sensitivity' | 'direct_multiplier' | 'premium';
+    multiplier?: number;
+    premiumPercentage?: number | ((severity: number) => number);
+  };
   
-  // Characteristic modifications (for future Wine Influences system)
+  // Characteristic modifications
   characteristics?: Array<{
     characteristic: keyof WineCharacteristics;
     modifier: number | ((severity: number) => number);
   }>;
   
   // Prestige impact
-  prestige?: {
-    onManifestation?: PrestigeImpact;  // When feature appears
-    onSale?: PrestigeImpact;            // When selling affected wine
+  prestige?: PrestigeEffects;
+}
+
+/**
+ * Prestige effects configuration
+ * Simplified from previous complex structure
+ */
+export interface PrestigeEffects {
+  // Prestige when feature manifests (appears)
+  onManifestation?: {
+    company?: PrestigeConfig;
+    vineyard?: PrestigeConfig;
+  };
+  
+  // Prestige when selling affected wine
+  onSale?: {
+    company?: PrestigeConfig;
+    vineyard?: PrestigeConfig;
   };
 }
 
 /**
- * Quality effect configuration
- * Supports multiple calculation types for flexibility
+ * Prestige calculation configuration
+ * Supports both fixed amounts and dynamic scaling
  */
-export interface QualityEffect {
-  type: 'power' | 'linear' | 'custom' | 'bonus';
-  
-  // For power function (premium wines hit harder)
-  exponent?: number;
-  basePenalty?: number;
-  amount?: number | ((severity: number) => number);
-  calculate?: (quality: number, severity: number, proneToOxidation?: number) => number;
-}
-
-/**
- * Price effect configuration
- * Customer sensitivity is primary mechanism
- */
-export interface PriceEffect {
-  type: 'customer_sensitivity' | 'direct_multiplier' | 'premium';
-  multiplier?: number;
-  premiumPercentage?: number | ((severity: number) => number);
-}
-
-/**
- * Prestige calculation types
- * - fixed: Static amount (simple)
- * - dynamic_sale: Scales with sale volume, value, and company prestige
- * - dynamic_manifestation: Scales with batch size, quality, and vineyard prestige
- */
-export type PrestigeCalculationType = 'fixed' | 'dynamic_sale' | 'dynamic_manifestation';
-
-/**
- * Prestige impact configuration for a single level (company or vineyard)
- * Supports both fixed amounts and dynamic calculations
- */
-export interface PrestigeImpactConfig {
-  calculation: PrestigeCalculationType;
-  baseAmount: number;  // Base scandal/achievement amount
+export interface PrestigeConfig {
+  calculation: 'fixed' | 'dynamic';
+  baseAmount: number;  // Base prestige amount
   
   // Scaling factors for dynamic calculations
   scalingFactors?: {
-    // For dynamic_sale (company level)
-    volumeWeight?: number;        // How much bottle count matters (log scaling)
-    valueWeight?: number;          // How much sale value matters (log scaling)
-    companyPrestigeWeight?: number; // How much current prestige matters (sqrt scaling)
+    // For company/vineyard level
+    volumeWeight?: number;        // Bottle count weight (log scaling)
+    valueWeight?: number;         // Sale value weight (log scaling)
+    prestigeWeight?: number;      // Current prestige weight (sqrt scaling)
     
-    // For dynamic_manifestation (vineyard level)
-    batchSizeWeight?: number;      // How much batch size matters (log scaling)
-    qualityWeight?: number;         // How much grape quality matters (linear)
-    vineyardPrestigeWeight?: number; // How much vineyard prestige matters (sqrt scaling)
+    // For batch/vineyard level
+    batchSizeWeight?: number;     // Batch size weight (log scaling)
+    qualityWeight?: number;       // Grape quality weight (linear)
   };
   
-  decayRate: number;
-  maxImpact?: number;  // Cap for very large scandals/achievements (default: -10 or +10)
-}
-
-/**
- * Prestige impact configuration
- * Separate company and vineyard impacts with dynamic calculation support
- */
-export interface PrestigeImpact {
-  company?: PrestigeImpactConfig;
-  vineyard?: PrestigeImpactConfig;
-}
-
-/**
- * UI configuration for feature display
- */
-export interface FeatureUIConfig {
-  badgeColor: 'destructive' | 'warning' | 'info' | 'success';
-  warningThresholds?: number[];    // Risk thresholds for warnings
-  sortPriority: number;             // Display order (1 = most important)
-}
-
-/**
- * Harvest context configuration for features
- */
-export interface HarvestContextConfig {
-  isHarvestRisk?: boolean;     // True if this is a risk during harvest (like green flavor)
-  isHarvestInfluence?: boolean; // True if this is an influence during harvest (like terroir)
-}
-
-/**
- * Risk display options - defines what processing options to show in risk tooltips
- * Each feature can define its own relevant options for each event
- */
-export interface RiskDisplayOptions {
-  [event: string]: {
-    optionCombinations: Array<{
-      options: Record<string, any>;
-      label?: string;  // Custom label, otherwise auto-generated
-    }>;
-    groupBy?: string[];  // Fields to group by for range display
-  };
+  decayRate: number;    // Weekly decay rate
+  maxImpact?: number;   // Cap for very large events
 }
 
 // ===== HELPER TYPES =====
 
 /**
- * Feature creation helper
- * Used when initializing new features on wine batches
+ * Risk modifier context for accumulation features
  */
-export interface CreateFeatureOptions {
-  id: string;
-  config: FeatureConfig;
-  initialRisk?: number;
-  isPresent?: boolean;
-  severity?: number;
+export interface RiskModifierContext {
+  vineyard?: any;
+  batch?: any;
+  options?: any;
 }
 
+/**
+ * Feature impact calculation result
+ */
+export interface FeatureImpact {
+  featureId: string;
+  featureName: string;
+  icon: string;
+  severity: number;
+  qualityImpact: number;
+  characteristicModifiers: Partial<Record<keyof WineCharacteristics, number>>;
+  description: string;
+}
+
+/**
+ * Feature risk info for display
+ */
+export interface FeatureRiskInfo {
+  featureId: string;
+  featureName: string;
+  icon: string;
+  currentRisk: number;
+  newRisk: number;
+  riskIncrease: number;
+  isPresent: boolean;
+  severity: number;
+  qualityImpact?: number;
+  description?: string;
+}

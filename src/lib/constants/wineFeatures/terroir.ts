@@ -8,8 +8,8 @@ import { FeatureConfig } from '../../types/wineFeatures';
  * 
  * Characteristics:
  * - Type: Feature (positive)
- * - Manifestation: Graduated (develops over time)
- * - Trigger: Hybrid (harvest event + time-based growth)
+ * - Behavior: Evolving (always present, grows over time)
+ * - Spawns active at harvest
  * - Effects: Quality bonus + characteristic modifications
  * 
  * Growth Pattern:
@@ -21,24 +21,14 @@ import { FeatureConfig } from '../../types/wineFeatures';
 export const TERROIR_FEATURE: FeatureConfig = {
   id: 'terroir',
   name: 'Terroir Expression',
-  type: 'feature',
   icon: '🏔️',
   description: 'Unique characteristics from vineyard environment, developing complexity over time',
   
-  manifestation: 'graduated',
+  behavior: 'evolving',
   
-  riskAccumulation: {
-    trigger: 'hybrid',
-    baseRate: 0, // No weekly risk accumulation before manifestation
+  behaviorConfig: {
+    spawnActive: true,  // Spawn active at harvest (severity starts > 0)
     
-    // Hybrid trigger: Always manifests on harvest (guaranteed)
-    eventTriggers: [{
-      event: 'harvest',
-      condition: () => true, // Always triggers
-      riskIncrease: 0.001 // Immediate manifestation at minimal severity
-    }],
-    
-    // Severity growth with state multipliers
     severityGrowth: {
       rate: 0.005, // 0.5% per week base rate
       cap: 1.0,    // Maximum 100% severity
@@ -71,23 +61,23 @@ export const TERROIR_FEATURE: FeatureConfig = {
     prestige: {
       onSale: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: 0.05, // Positive prestige for selling terroir-expressive wines
           scalingFactors: {
             volumeWeight: 1.0,
             valueWeight: 1.0,
-            companyPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.998, // Long-lasting positive reputation
           maxImpact: 8.0    // Cap for very large sales
         },
         vineyard: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: 0.08, // Vineyard gets credit for terroir expression
           scalingFactors: {
             volumeWeight: 1.0,
             valueWeight: 1.0,
-            vineyardPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.995, // Very long-lasting vineyard reputation
           maxImpact: 12.0   // Higher cap for vineyard reputation
@@ -103,14 +93,13 @@ export const TERROIR_FEATURE: FeatureConfig = {
     'Chain Store': 1.05        // +5% premium (chain stores less interested)
   },
   
-  ui: {
-    badgeColor: 'success',
-    warningThresholds: [], // No warnings for positive features
-    sortPriority: 3 // Show after faults (oxidation=1, green_flavor=2)
-  },
+  displayPriority: 3, // Show after faults (oxidation=1, green_flavor=2)
+  badgeColor: 'success',
   
-  harvestContext: {
-    isHarvestRisk: false,        // Terroir is not a harvest risk
-    isHarvestInfluence: true     // Terroir is a positive harvest influence
-  }
+  tips: [
+    {
+      triggerEvent: 'harvest',
+      message: '🌿 Terroir Expression will develop in this wine over time, enhancing quality and characteristics.'
+    }
+  ]
 };

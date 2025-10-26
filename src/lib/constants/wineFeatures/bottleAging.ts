@@ -9,43 +9,28 @@ import { GRAPE_CONST } from '../grapeConstants';
  * 
  * Characteristics:
  * - Type: Feature (positive)
- * - Manifestation: Graduated (develops over time)
- * - Trigger: Hybrid (starts on bottling + time-based growth)
+ * - Behavior: Evolving (spawns passive, becomes active when bottled)
  * - Effects: Quality bonus, characteristic smoothing, price premium
  * 
  * Growth Pattern:
- * - Starts present at 0% severity when bottled
+ * - Spawns passive before bottling (severity = 0, hidden from UI)
+ * - Becomes active when bottled (starts at 0% severity)
  * - Grows based on wine age with diminishing returns
  * - Early peak: Fast growth (years 0-3)
  * - Late peak: Moderate growth (years 3-7+, grape-dependent)
  * - Plateau: Minimal growth after late peak
- * 
- * Risk Balance:
- * - Oxidation continues during aging (separate feature)
- * - Longer aging = higher oxidation risk
- * - Optimal strategy: Age to peak window, sell before oxidation
  */
 export const BOTTLE_AGING_FEATURE: FeatureConfig = {
   id: 'bottle_aging',
   name: 'Bottle Aging',
-  type: 'feature',
   icon: '🕰️',
   description: 'Wine develops complexity and smoothness through aging in the bottle. Characteristics soften and flavors mature over time.',
   
-  manifestation: 'graduated',
+  behavior: 'evolving',
   
-  riskAccumulation: {
-    trigger: 'hybrid',
-    baseRate: 0, // No risk accumulation (this is a positive feature)
+  behaviorConfig: {
+    spawnActive: false,  // Spawn passive until bottled (severity stays 0)
     
-    // Starts on bottling (guaranteed manifestation)
-    eventTriggers: [{
-      event: 'bottling',
-      condition: () => true,
-      riskIncrease: 0.001 // Immediate manifestation at minimal severity
-    }],
-    
-    // Severity growth with age-based diminishing returns
     severityGrowth: {
       rate: 0.003, // Base rate (~7 years to 100% at 3x multiplier)
       cap: 1.0,    // Maximum 100% severity
@@ -86,7 +71,7 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
     
     price: {
       type: 'premium',
-      premiumPercentage: (severity: number) => severity * 2.20 // Up to +20% price premium //TODO make this dynamic/power/assymetrical something
+      premiumPercentage: (severity: number) => severity * 2.20 // Up to +220% price premium
     },
     
     // Age-specific characteristic changes
@@ -103,12 +88,12 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
       // Prestige events when selling aged wines
       onSale: {
         company: {
-          calculation: 'dynamic_sale',
+          calculation: 'dynamic',
           baseAmount: 0.05,  // Base prestige for aged wine sales
           scalingFactors: {
             volumeWeight: 1.0,
             valueWeight: 1.5,  // Aged wine value matters more
-            companyPrestigeWeight: 1.0
+            prestigeWeight: 1.0
           },
           decayRate: 0.998,  // Very long-lasting (aged wine reputation)
           maxImpact: 15.0
@@ -125,14 +110,6 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
     'Chain Store': 1.00        // No premium (chain stores don't care about age)
   },
   
-  ui: {
-    badgeColor: 'info',  // Blue for aging
-    sortPriority: 4      // Show after faults (oxidation=1, green_flavor=2) and terroir=3
-  },
-  
-  harvestContext: {
-    isHarvestRisk: false,
-    isHarvestInfluence: false
-  }
+  displayPriority: 4,      // Show after faults (oxidation=1, green_flavor=2) and terroir=3
+  badgeColor: 'info'  // Blue for aging
 };
-
