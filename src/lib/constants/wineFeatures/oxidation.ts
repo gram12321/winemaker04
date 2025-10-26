@@ -171,6 +171,17 @@ export const OXIDATION_FEATURE: FeatureConfig = {
   harvestContext: {
     isHarvestRisk: false,        // Oxidation is not a harvest risk (time-based)
     isHarvestInfluence: false    // Not a harvest influence
+  },
+  
+  // Risk display options - only show pressure range for oxidation
+  riskDisplayOptions: {
+    crushing: {
+      optionCombinations: [
+        { options: { pressingIntensity: 0.0, _isMin: true }, label: 'Pressure: 0% pressure' },
+        { options: { pressingIntensity: 1.0, _isMax: true }, label: 'Pressure: 100% pressure' }
+      ],
+      groupBy: ['pressure-range']
+    }
   }
 };
 

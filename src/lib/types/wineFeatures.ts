@@ -54,6 +54,9 @@ export interface FeatureConfig {
   
   // Harvest context
   harvestContext?: HarvestContextConfig;
+  
+  // Risk display options - defines what options to show in risk tooltips
+  riskDisplayOptions?: RiskDisplayOptions;
 }
 
 /**
@@ -215,6 +218,20 @@ export interface FeatureUIConfig {
 export interface HarvestContextConfig {
   isHarvestRisk?: boolean;     // True if this is a risk during harvest (like green flavor)
   isHarvestInfluence?: boolean; // True if this is an influence during harvest (like terroir)
+}
+
+/**
+ * Risk display options - defines what processing options to show in risk tooltips
+ * Each feature can define its own relevant options for each event
+ */
+export interface RiskDisplayOptions {
+  [event: string]: {
+    optionCombinations: Array<{
+      options: Record<string, any>;
+      label?: string;  // Custom label, otherwise auto-generated
+    }>;
+    groupBy?: string[];  // Fields to group by for range display
+  };
 }
 
 // ===== HELPER TYPES =====

@@ -113,6 +113,21 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
   harvestContext: {
     isHarvestRisk: true,        // Is a risk
     isHarvestInfluence: false     // This is a harvest influence
+  },
+  
+  // Risk display options - show harvest timing for late harvest
+  riskDisplayOptions: {
+    harvest: {
+      optionCombinations: [
+        { options: { week: 7, season: 'Fall' }, label: 'Fall Week 7 (Early)' },
+        { options: { week: 9, season: 'Fall' }, label: 'Fall Week 9 (Mid)' },
+        { options: { week: 12, season: 'Fall' }, label: 'Fall Week 12 (Late)' },
+        { options: { week: 3, season: 'Winter' }, label: 'Winter Week 3 (Very Late)' },
+        { options: { week: 6, season: 'Winter' }, label: 'Winter Week 6 (Extremely Late)' },
+        { options: { week: 12, season: 'Winter' }, label: 'Winter Week 12 (Latest)' }
+      ],
+      groupBy: ['harvest-timing']
+    }
   }
 };
 

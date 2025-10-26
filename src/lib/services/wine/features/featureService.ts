@@ -464,9 +464,9 @@ function previewEventRisksInternal(
   batch: WineBatch,
   event: 'harvest' | 'crushing' | 'fermentation' | 'bottling',
   context: any
-): Array<{ featureId: string; featureName: string; icon: string; riskIncrease: number; currentRisk: number; newRisk: number }> {
+): Array<{ featureId: string; featureName: string; icon: string; riskIncrease: number; currentRisk: number; newRisk: number; qualityImpact: number }> {
   const eventConfigs = getEventTriggeredFeatures(event);
-  const results: Array<{ featureId: string; featureName: string; icon: string; riskIncrease: number; currentRisk: number; newRisk: number }> = [];
+  const results: Array<{ featureId: string; featureName: string; icon: string; riskIncrease: number; currentRisk: number; newRisk: number; qualityImpact: number }> = [];
   
   for (const config of eventConfigs) {
     const feature = batch.features?.find(f => f.id === config.id);
@@ -483,29 +483,45 @@ function previewEventRisksInternal(
         const triggerContext = { options: context, batch };
         const conditionMet = trigger.condition(triggerContext);
 
-        if (conditionMet) {
-          const riskIncrease = typeof trigger.riskIncrease === 'function'
-            ? trigger.riskIncrease(triggerContext)
-            : trigger.riskIncrease;
-          
-          let newRisk: number;
-          const strategy = inferRiskAccumulationStrategy(config.riskAccumulation);
-          
-          if (strategy === 'independent') {
-            newRisk = riskIncrease;
-          } else {
-            newRisk = Math.min(1.0, currentRisk + riskIncrease);
-          }
-          
-          results.push({
-            featureId: config.id,
-            featureName: config.name,
-            icon: config.icon,
-            riskIncrease,
-            currentRisk,
-            newRisk
-          });
+        // Always calculate risk, even if condition is not met (for preview purposes)
+        const riskIncrease = conditionMet 
+          ? (typeof trigger.riskIncrease === 'function'
+              ? trigger.riskIncrease(triggerContext)
+              : trigger.riskIncrease)
+          : 0; // Show 0 risk if condition not met
+        
+        let newRisk: number;
+        const strategy = inferRiskAccumulationStrategy(config.riskAccumulation);
+        
+        if (strategy === 'independent') {
+          newRisk = riskIncrease;
+        } else {
+          newRisk = Math.min(1.0, currentRisk + riskIncrease);
         }
+        
+        // Calculate quality impact if the feature manifests
+        let qualityImpact = 0;
+        if (config.effects?.quality) {
+          const qualityEffect = config.effects.quality;
+          if (qualityEffect.type === 'power') {
+            // For power effects: basePenalty * (quality ^ exponent)
+            const basePenalty = qualityEffect.basePenalty || 0;
+            const exponent = qualityEffect.exponent || 1;
+            qualityImpact = basePenalty * Math.pow(batch.grapeQuality || 0.5, exponent);
+          } else {
+            qualityImpact = qualityEffect.basePenalty || 0;
+          }
+        }
+
+        results.push({
+          featureId: config.id,
+          featureName: config.name,
+          icon: config.icon,
+          riskIncrease,
+          currentRisk,
+          newRisk,
+          qualityImpact
+        });
       }
     }
   }

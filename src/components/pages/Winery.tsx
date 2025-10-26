@@ -5,6 +5,7 @@ import { getAllWineBatches, bottleWine, isActionAvailable } from '@/lib/services
 import { WineBatch } from '@/lib/types/types';
 import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
+import { FeatureRiskDisplay } from '../ui/components/FeatureRiskDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
@@ -302,6 +303,15 @@ const Winery: React.FC = () => {
                         showRisks={true}
                         expanded={false}
                       />
+                      
+                      {/* Next Action Risks */}
+                      <div className="mt-3 pt-2 border-t border-gray-200">
+                        <FeatureRiskDisplay 
+                          batch={batch} 
+                          showForNextAction={true}
+                          compact={true}
+                        />
+                      </div>
                     </div>
                   </div>
 

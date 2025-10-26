@@ -164,6 +164,24 @@ export const STUCK_FERMENTATION_FEATURE: FeatureConfig = {
   harvestContext: {
     isHarvestRisk: false,        // Stuck fermentation is not a harvest risk
     isHarvestInfluence: false    // Not a harvest influence
+  },
+  
+  // Risk display options - show all method + temperature combinations
+  riskDisplayOptions: {
+    fermentation: {
+      optionCombinations: [
+        { options: { method: 'Basic', temperature: 'Ambient', duration: 1 } },
+        { options: { method: 'Basic', temperature: 'Cool', duration: 1 } },
+        { options: { method: 'Basic', temperature: 'Warm', duration: 1 } },
+        { options: { method: 'Extended Maceration', temperature: 'Ambient', duration: 1 } },
+        { options: { method: 'Extended Maceration', temperature: 'Cool', duration: 1 } },
+        { options: { method: 'Extended Maceration', temperature: 'Warm', duration: 1 } },
+        { options: { method: 'Temperature Controlled', temperature: 'Ambient', duration: 1 } },
+        { options: { method: 'Temperature Controlled', temperature: 'Cool', duration: 1 } },
+        { options: { method: 'Temperature Controlled', temperature: 'Warm', duration: 1 } }
+      ],
+      groupBy: ['method', 'temperature']
+    }
   }
 };
 

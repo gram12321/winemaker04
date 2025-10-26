@@ -183,6 +183,21 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
   harvestContext: {
     isHarvestRisk: true,         // Green flavor is a harvest risk
     isHarvestInfluence: false    // Not a positive influence
+  },
+  
+  // Risk display options - show ripeness levels for harvest
+  riskDisplayOptions: {
+    harvest: {
+      optionCombinations: [
+        { options: { ripeness: 0.0 }, label: 'Ripeness 0%' },
+        { options: { ripeness: 0.2 }, label: 'Ripeness 20%' },
+        { options: { ripeness: 0.4 }, label: 'Ripeness 40%' },
+        { options: { ripeness: 0.6 }, label: 'Ripeness 60%' },
+        { options: { ripeness: 0.8 }, label: 'Ripeness 80%' },
+        { options: { ripeness: 1.0 }, label: 'Ripeness 100%' }
+      ],
+      groupBy: ['ripeness-range']
+    }
   }
 };
 
