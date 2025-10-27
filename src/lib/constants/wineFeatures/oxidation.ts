@@ -1,5 +1,6 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { formatNumber } from '../../utils/utils';
+import { createPrestigeConfig } from './commonFeaturesUtil';
 
 /**
  * Oxidation Feature
@@ -104,56 +105,13 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       { characteristic: 'body', modifier: -0.08 },     // Thinner structure
       { characteristic: 'sweetness', modifier: +0.08 } // Relative increase from acid loss
     ],
-    prestige: {
-      onManifestation: {
-        company: {
-          calculation: 'dynamic',
-          baseAmount: -0.05,  // Company scandal when oxidation manifests
-          scalingFactors: {
-            batchSizeWeight: 1.0,         // Larger batches hurt more
-            qualityWeight: 1.0,            // Premium wine oxidizing is worse
-            prestigeWeight: 1.0     // Higher prestige = bigger fall
-          },
-          decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
-          maxImpact: -5.0     // Cap for company manifestation events
-        },
-        vineyard: {
-          calculation: 'dynamic',
-          baseAmount: -0.5,  // Base scandal amount
-          scalingFactors: {
-            batchSizeWeight: 1.0,         // Larger batches hurt more
-            qualityWeight: 1.0,            // Premium wine oxidizing is worse
-            prestigeWeight: 1.0    // Premium vineyards held to higher standard
-          },
-          decayRate: 0.98,    // Decays over ~3 years (156 weeks)
-          maxImpact: -10.0    // Cap at -10 prestige for massive batches
-        }
-      },
-      onSale: {
-        company: {
-          calculation: 'dynamic',
-          baseAmount: -0.1,  // Base scandal amount
-          scalingFactors: {
-            volumeWeight: 1.0,             // More bottles = bigger scandal
-            valueWeight: 1.0,              // Higher value = bigger scandal
-            prestigeWeight: 1.0     // Higher prestige = bigger fall
-          },
-          decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
-          maxImpact: -10.0    // Cap at -10 prestige for massive sales
-        },
-        vineyard: {
-          calculation: 'dynamic',
-          baseAmount: -0.2,  // Vineyard scandal when selling oxidized wine
-          scalingFactors: {
-            volumeWeight: 1.0,             // More bottles = bigger scandal
-            valueWeight: 1.0,              // Higher value = bigger scandal
-            prestigeWeight: 1.0    // Higher prestige = bigger fall
-          },
-          decayRate: 0.98,    // Decays over ~3 years (156 weeks)
-          maxImpact: -8.0     // Cap for vineyard sale events
-        }
-      }
-    }
+    prestige: createPrestigeConfig({
+      manifestationCompany: { baseAmount: -0.05, maxImpact: -5.0 },
+      manifestationVineyard: { baseAmount: -0.5, maxImpact: -10.0 },
+      saleCompany: { baseAmount: -0.1, maxImpact: -10.0 },
+      saleVineyard: { baseAmount: -0.2, maxImpact: -8.0 },
+      decayRate: 0.995
+    })
   },
   
   customerSensitivity: {

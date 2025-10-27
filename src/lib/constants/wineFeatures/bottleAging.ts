@@ -1,6 +1,7 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { GRAPE_CONST } from '../grapeConstants';
 import { formatNumber } from '../../utils/utils';
+import { createPrestigeConfig } from './commonFeaturesUtil';
 
 /**
  * Bottle Aging Feature
@@ -85,22 +86,10 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
       { characteristic: 'body', modifier: (severity: number) => -severity * 0.04 }       // -4% (slight lightening with age)
     ],
     
-    prestige: {
-      // Prestige events when selling aged wines
-      onSale: {
-        company: {
-          calculation: 'dynamic',
-          baseAmount: 0.05,  // Base prestige for aged wine sales
-          scalingFactors: {
-            volumeWeight: 1.0,
-            valueWeight: 1.5,  // Aged wine value matters more
-            prestigeWeight: 1.0
-          },
-          decayRate: 0.998,  // Very long-lasting (aged wine reputation)
-          maxImpact: 15.0
-        }
-      }
-    }
+    prestige: createPrestigeConfig({
+      saleCompany: { baseAmount: 0.05, maxImpact: 15.0 },
+      decayRate: 0.998
+    })
   },
   
   // Customer appreciation for aged wines

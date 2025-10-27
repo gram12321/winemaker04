@@ -9,6 +9,96 @@ import { TERROIR_FEATURE } from './terroir';
 import { BOTTLE_AGING_FEATURE } from './bottleAging';
 import { LATE_HARVEST_FEATURE } from './lateHarvest';
 
+// ===== PRESTIGE CONFIGURATION HELPERS =====
+
+export interface PrestigeConfigOptions {
+  manifestationCompany?: { baseAmount: number; maxImpact: number };
+  manifestationVineyard?: { baseAmount: number; maxImpact: number };
+  saleCompany?: { baseAmount: number; maxImpact: number };
+  saleVineyard?: { baseAmount: number; maxImpact: number };
+  decayRate?: number;
+}
+
+export function createPrestigeConfig(options: PrestigeConfigOptions) {
+  const { 
+    manifestationCompany, 
+    manifestationVineyard, 
+    saleCompany, 
+    saleVineyard,
+    decayRate = 0.995 
+  } = options;
+
+  const prestige: FeatureConfig['effects']['prestige'] = {};
+
+  if (manifestationCompany || manifestationVineyard) {
+    prestige.onManifestation = {};
+    
+    if (manifestationCompany) {
+      prestige.onManifestation.company = {
+        calculation: 'dynamic',
+        baseAmount: manifestationCompany.baseAmount,
+        scalingFactors: {
+          batchSizeWeight: 1.0,
+          qualityWeight: 1.0,
+          prestigeWeight: 1.0
+        },
+        decayRate,
+        maxImpact: manifestationCompany.maxImpact
+      };
+    }
+    
+    if (manifestationVineyard) {
+      prestige.onManifestation.vineyard = {
+        calculation: 'dynamic',
+        baseAmount: manifestationVineyard.baseAmount,
+        scalingFactors: {
+          batchSizeWeight: 1.0,
+          qualityWeight: 1.0,
+          prestigeWeight: 1.0
+        },
+        decayRate,
+        maxImpact: manifestationVineyard.maxImpact
+      };
+    }
+  }
+
+  if (saleCompany || saleVineyard) {
+    prestige.onSale = {};
+    
+    if (saleCompany) {
+      prestige.onSale.company = {
+        calculation: 'dynamic',
+        baseAmount: saleCompany.baseAmount,
+        scalingFactors: {
+          volumeWeight: 1.0,
+          valueWeight: 1.0,
+          prestigeWeight: 1.0
+        },
+        decayRate,
+        maxImpact: saleCompany.maxImpact
+      };
+    }
+    
+    if (saleVineyard) {
+      prestige.onSale.vineyard = {
+        calculation: 'dynamic',
+        baseAmount: saleVineyard.baseAmount,
+        scalingFactors: {
+          volumeWeight: 1.0,
+          valueWeight: 1.0,
+          prestigeWeight: 1.0
+        },
+        decayRate,
+        maxImpact: saleVineyard.maxImpact
+      };
+    }
+  }
+
+  return prestige;
+}
+
+// ===== FEATURE REGISTRY FUNCTIONS =====
+
 /**
  * Active features in the game
  * Add new features here as they are implemented

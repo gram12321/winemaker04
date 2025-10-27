@@ -1,5 +1,6 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { WineBatch } from '../../types/types';
+import { createPrestigeConfig } from './commonFeaturesUtil';
 
 /**
  * Stuck Fermentation
@@ -89,56 +90,13 @@ export const STUCK_FERMENTATION_FEATURE: FeatureConfig = {
       { characteristic: 'body', modifier: -0.18 },       // Lower alcohol = less body
       { characteristic: 'aroma', modifier: -0.12 }       // Fermentation aromatics incomplete
     ],
-    prestige: {
-      onManifestation: {
-        company: {
-          calculation: 'dynamic',
-          baseAmount: -0.08,  // Serious fault (worse than green flavor)
-          scalingFactors: {
-            batchSizeWeight: 1.0,
-            qualityWeight: 1.0,
-            prestigeWeight: 1.0
-          },
-          decayRate: 0.995,
-          maxImpact: -4.0
-        },
-        vineyard: {
-          calculation: 'dynamic',
-          baseAmount: -0.4,  // Vineyard scandal (technical failure)
-          scalingFactors: {
-            batchSizeWeight: 1.0,
-            qualityWeight: 1.0,
-            prestigeWeight: 1.0
-          },
-          decayRate: 0.98,
-          maxImpact: -9.0
-        }
-      },
-      onSale: {
-        company: {
-          calculation: 'dynamic',
-          baseAmount: -0.08,
-          scalingFactors: {
-            volumeWeight: 1.0,
-            valueWeight: 1.0,
-            prestigeWeight: 1.0
-          },
-          decayRate: 0.995,
-          maxImpact: -9.0
-        },
-        vineyard: {
-          calculation: 'dynamic',
-          baseAmount: -0.15,
-          scalingFactors: {
-            volumeWeight: 1.0,
-            valueWeight: 1.0,
-            prestigeWeight: 1.0
-          },
-          decayRate: 0.98,
-          maxImpact: -6.0
-        }
-      }
-    }
+    prestige: createPrestigeConfig({
+      manifestationCompany: { baseAmount: -0.08, maxImpact: -4.0 },
+      manifestationVineyard: { baseAmount: -0.4, maxImpact: -9.0 },
+      saleCompany: { baseAmount: -0.08, maxImpact: -9.0 },
+      saleVineyard: { baseAmount: -0.15, maxImpact: -6.0 },
+      decayRate: 0.995
+    })
   },
   
   // Customers very sensitive - stuck fermentation is a serious fault
