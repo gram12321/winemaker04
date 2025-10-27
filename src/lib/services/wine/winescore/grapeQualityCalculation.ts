@@ -63,12 +63,36 @@ function calculateOvergrowthQualityPenalty(overgrowth: Vineyard['overgrowth']): 
   return qualityMultiplier;
 }
 
+/**
+ * Calculate density quality penalty based on vine density
+ * High density leads to competition for resources, reducing grape quality
+ * Progressive system: no penalty at 1500 vines/ha, max penalty at 15000 vines/ha
+ * @param density - Vine density (vines/hectare)
+ * @returns Quality multiplier (0-1, where 1 = no penalty, 0.5 = 50% penalty)
+ */
+function calculateDensityQualityPenalty(density: number): number {
+  if (!density || density <= 0) return 1.0; // No vines = no penalty
+  
+  const minDensity = 1500;  // No penalty at this density
+  const maxDensity = 15000; // Max penalty at this density
+  
+  // Clamp density to reasonable range
+  const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
+  
+  // Linear progression from 1.0 (no penalty) at 1500 to 0.5 (max penalty) at 15000
+  // Formula: penalty = 1.0 - (density - 1500) / (15000 - 1500) * 0.5
+  const penalty = 1.0 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 0.5;
+  
+  return Math.max(0.5, Math.min(1.0, penalty));
+}
+
 export function calculateGrapeQuality(vineyard: Vineyard): number {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue || 50000);
   const boundedVineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
+  const densityPenalty = calculateDensityQualityPenalty(vineyard.density || 0);
   
-  const wineQuality = ((normalizedLandValue * 0.6) + (boundedVineyardPrestige * 0.4)) * overgrowthPenalty;
+  const wineQuality = ((normalizedLandValue * 0.6) + (boundedVineyardPrestige * 0.4)) * overgrowthPenalty * densityPenalty;
   
   return Math.max(0, Math.min(1, wineQuality));
 }
@@ -82,6 +106,7 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
     aspectRating: number;
     grapeSuitability: number;
     overgrowthPenalty: number;
+    densityPenalty: number;
   };
   rawValues: {
     landValue: number;
@@ -91,6 +116,7 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
     aspectRating: string;
     grapeSuitability: string;
     overgrowthPenalty: string;
+    densityPenalty: string;
   };
   grapeQualityScore: number;
 } {
@@ -107,12 +133,18 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
     calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country) : 0;
 
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
+  const densityPenalty = calculateDensityQualityPenalty(vineyard.density || 0);
   const grapeQualityScore = calculateGrapeQuality(vineyard);
 
   // Format overgrowth penalty for display
   const overgrowthDisplay = vineyard.overgrowth ? 
     `Vegetation: ${vineyard.overgrowth.vegetation}y, Debris: ${vineyard.overgrowth.debris}y, Uproot: ${vineyard.overgrowth.uproot}y, Replant: ${vineyard.overgrowth.replant}y` :
     'No overgrowth';
+
+  // Format density penalty for display
+  const densityDisplay = vineyard.density > 0 ? 
+    `${vineyard.density} vines/ha` : 
+    'Not planted';
 
   return {
     factors: {
@@ -122,7 +154,8 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
       altitudeRating,
       aspectRating,
       grapeSuitability,
-      overgrowthPenalty
+      overgrowthPenalty,
+      densityPenalty
     },
     rawValues: {
       landValue: vineyard.landValue || 0,
@@ -131,7 +164,8 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
       altitudeRating: `${vineyard.altitude}m`,
       aspectRating: vineyard.aspect,
       grapeSuitability: vineyard.grape || '',
-      overgrowthPenalty: overgrowthDisplay
+      overgrowthPenalty: overgrowthDisplay,
+      densityPenalty: densityDisplay
     },
     grapeQualityScore
   };

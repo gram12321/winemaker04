@@ -23,7 +23,7 @@ winemaker04/
 │       ├── AIpromt_codecleaning.md        # Code cleaning prompts
 │       ├── AIpromt_docs.md               # Documentation prompts
 │       ├── AIpromt_newpromt.md           # New prompt guidelines
-│       ├── versionlog.md                 # Version history (742 lines)
+│       ├── versionlog.md                 # Version history (939 lines)
 │       └── old_iterations/               # Legacy versions
 │           ├── hackandslash/             # Hack and slash iteration
 │           ├── simulus/                  # Simulus version
@@ -63,10 +63,11 @@ winemaker04/
 │   ├── vite-env.d.ts (5 lines)                # Vite environment types
 │   │
 │   ├── components/ (22,555 lines total)       # React components
-│   │   ├── finance/ (394 lines total)         # Financial components
+│   │   ├── finance/ (1,000+ lines total)     # Financial components
 │   │   │   ├── CashFlowView.tsx (99 lines)    # Cash flow visualization
 │   │   │   ├── FinanceView.tsx (88 lines)     # Main finance view
-│   │   │   ├── IncomeBalanceView.tsx (89 lines) # Income/balance statements
+│   │   │   ├── IncomeBalanceView.tsx (203 lines) # Income/balance statements
+│   │   │   ├── LoansView.tsx (625 lines)      # Loan management interface
 │   │   │   ├── StaffWageSummary.tsx (87 lines) # Staff wage breakdown
 │   │   │   ├── UpgradesPlaceholder.tsx (26 lines) # Upgrades placeholder
 │   │   │   └── index.ts (5 lines)             # Barrel exports
@@ -117,22 +118,24 @@ winemaker04/
 │   │       │   ├── ActivityCard.tsx (195 lines) # Activity card component
 │   │       │   ├── activityOptionsModal.tsx (298 lines) # Activity options modal
 │   │       │   └── workCalculationTable.tsx (58 lines) # Work calculation table
-│   │       ├── components/ (1,979 lines total) # Generic components
+│   │       ├── components/ (2,500+ lines total) # Generic components
 │   │       │   ├── BalanceScoreBreakdown.tsx (735 lines) # Balance score breakdown
 │   │       │   ├── characteristicBar.tsx (270 lines) # Characteristic bar
 │   │       │   ├── CharacteristicSlider.tsx (76 lines) # Characteristic slider
-│   │       │   ├── qualityFactorBar.tsx (305 lines) # Quality factor bar
-│   │       │   ├── QualityFactorsBreakdown.tsx (504 lines) # Quality factors breakdown
+│   │       │   ├── FeatureDisplay.tsx (608 lines) # Unified wine feature display
+│   │       │   ├── grapeQualityBar.tsx (305 lines) # Grape quality bar
+│   │       │   ├── grapeQualityBreakdown.tsx (504 lines) # Grape quality breakdown
 │   │       │   └── StaffSkillBar.tsx (89 lines) # Staff skill bar
 │   │       ├── modals/ (6,602 lines total)    # Modal dialogs
-│   │       │   ├── UImodals/ (1,863 lines total) # UI modals
+│   │       │   ├── UImodals/ (1,500+ lines total) # UI modals
 │   │       │   │   ├── index.ts (8 lines)     # Barrel exports
-│   │       │   │   ├── landBuyingModal.tsx (188 lines) # Land buying modal
+│   │       │   │   ├── LoanApplicationModal.tsx (243 lines) # Loan application modal
 │   │       │   │   ├── prestigeModal.tsx (606 lines) # Prestige modal
 │   │       │   │   ├── StaffModal.tsx (176 lines) # Staff modal
 │   │       │   │   ├── vineyardModal.tsx (421 lines) # Vineyard modal
+│   │       │   │   ├── WarningModal.tsx (141 lines) # Warning modal
 │   │       │   │   └── wineModal.tsx (462 lines) # Wine modal
-│   │       │   ├── activitymodals/ (4,507 lines total) # Activity modals
+│   │       │   ├── activitymodals/ (5,000+ lines total) # Activity modals
 │   │       │   │   ├── ClearingOptionsModal.tsx (532 lines) # Clearing options
 │   │       │   │   ├── CrushingOptionsModal.tsx (484 lines) # Crushing options
 │   │       │   │   ├── FermentationOptionsModal.tsx (401 lines) # Fermentation options
@@ -140,6 +143,8 @@ winemaker04/
 │   │       │   │   ├── HireStaffModal.tsx (262 lines) # Hire staff modal
 │   │       │   │   ├── LandSearchOptionsModal.tsx (423 lines) # Land search options
 │   │       │   │   ├── LandSearchResultsModal.tsx (314 lines) # Land search results
+│   │       │   │   ├── LenderSearchOptionsModal.tsx (255 lines) # Lender search options
+│   │       │   │   ├── LenderSearchResultsModal.tsx (324 lines) # Lender search results
 │   │       │   │   ├── PlantingOptionsModal.tsx (147 lines) # Planting options
 │   │       │   │   ├── StaffAssignmentModal.tsx (313 lines) # Staff assignment
 │   │       │   │   ├── StaffSearchOptionsModal.tsx (269 lines) # Staff search options
@@ -210,14 +215,16 @@ winemaker04/
 │       │   │   └── balanceRulesTypes.ts (39 lines) # Rule types
 │       │   └── index.ts (8 lines)             # Barrel exports
 │       │
-│       ├── constants/ (1,785 lines total)     # Game constants and configuration
+│       ├── constants/ (2,000+ lines total)     # Game constants and configuration
 │       │   ├── achievementConstants.ts (540 lines) # Achievement definitions
-│       │   ├── activityConstants.ts (186 lines) # Activity system constants
+│       │   ├── activityConstants.ts (220 lines) # Activity system constants
 │       │   ├── activityConstants.dev.ts (10 lines) # Development activity constants
 │       │   ├── constants.ts (135 lines)       # Core game constants
 │       │   ├── constants.dev.ts (23 lines)    # Development constants
-│       │   ├── financeConstants.ts (65 lines) # Financial constants
+│       │   ├── economyConstants.ts (159 lines) # Economy phase and credit rating constants
+│       │   ├── financeConstants.ts (80 lines) # Financial constants
 │       │   ├── grapeConstants.ts (109 lines)  # Grape variety constants
+│       │   ├── loanConstants.ts (188 lines)   # Loan system constants
 │       │   ├── namesConstants.ts (242 lines)  # Name generation constants
 │       │   ├── staffConstants.ts (97 lines)   # Staff system constants
 │       │   ├── vineyardConstants.ts (321 lines) # Vineyard constants
@@ -237,11 +244,13 @@ winemaker04/
 │       │   │   ├── activityDB.ts (173 lines)  # Activity database operations
 │       │   │   ├── inventoryDB.ts (201 lines) # Inventory database operations
 │       │   │   └── vineyardDB.ts (74 lines)   # Vineyard database operations
-│       │   ├── core/ (1,031 lines total)      # Core database operations
+│       │   ├── core/ (1,400+ lines total)      # Core database operations
 │       │   │   ├── achievementsDB.ts (228 lines) # Achievements database
 │       │   │   ├── companiesDB.ts (186 lines) # Companies database
 │       │   │   ├── gamestateDB.ts (53 lines)  # Game state database
 │       │   │   ├── highscoresDB.ts (174 lines) # Highscores database
+│       │   │   ├── lendersDB.ts (126 lines)   # Lenders database
+│       │   │   ├── loansDB.ts (171 lines)     # Loans database
 │       │   │   ├── notificationsDB.ts (151 lines) # Notifications database
 │       │   │   ├── staffDB.ts (165 lines)     # Staff database
 │       │   │   ├── supabase.ts (7 lines)      # Supabase configuration
@@ -263,7 +272,9 @@ winemaker04/
 │       │   │   │   ├── activityManager.ts (435 lines) # Main activity manager
 │       │   │   │   ├── bookkeepingManager.ts (114 lines) # Bookkeeping manager
 │       │   │   │   ├── landSearchManager.ts (267 lines) # Land search manager
-│       │   │   │   └── staffSearchManager.ts (267 lines) # Staff search manager
+│       │   │   │   ├── lenderSearchManager.ts (207 lines) # Lender search manager
+│       │   │   │   ├── staffSearchManager.ts (267 lines) # Staff search manager
+│       │   │   │   └── takeLoanManager.ts (73 lines) # Take loan manager
 │       │   │   ├── workcalculators/ (1,200+ lines total) # Work calculators
 │       │   │   │   ├── bookkeepingWorkCalculator.ts (187 lines) # Bookkeeping work
 │       │   │   │   ├── clearingWorkCalculator.ts (288 lines) # Clearing work calculator
@@ -271,9 +282,11 @@ winemaker04/
 │       │   │   │   ├── fermentationWorkCalculator.ts (154 lines) # Fermentation work
 │       │   │   │   ├── harvestingWorkCalculator.ts (154 lines) # Harvesting work calculator
 │       │   │   │   ├── landSearchWorkCalculator.ts (154 lines) # Land search work calculator
+│       │   │   │   ├── lenderSearchWorkCalculator.ts (97 lines) # Lender search work calculator
 │       │   │   │   ├── overgrowthUtils.ts (44 lines) # Overgrowth utility functions
 │       │   │   │   ├── plantingWorkCalculator.ts (154 lines) # Planting work calculator
 │       │   │   │   ├── staffSearchWorkCalculator.ts (208 lines) # Staff search work
+│       │   │   │   ├── takeLoanWorkCalculator.ts (44 lines) # Take loan work calculator
 │       │   │   │   ├── vineyardWorkCalculator.ts (164 lines) # Vineyard work
 │       │   │   │   └── workCalculator.ts (153 lines) # General work calculator
 │       │   │   └── index.ts (29 lines)        # Activity services exports
@@ -282,6 +295,13 @@ winemaker04/
 │       │   │   ├── gameTick.ts (269 lines)    # Game tick system
 │       │   │   ├── notificationService.ts (242 lines) # Centralized notification service
 │       │   │   └── index.ts (116 lines)       # Core services exports
+│       │   ├── finance/ (1,000+ lines total) # Finance services
+│       │   │   ├── creditRatingService.ts (438 lines) # Credit rating calculation
+│       │   │   ├── economyService.ts (67 lines) # Economy phase transitions
+│       │   │   ├── financeService.ts (304 lines) # Finance operations
+│       │   │   ├── lenderService.ts (188 lines) # Lender generation
+│       │   │   ├── loanService.ts (844 lines) # Loan management
+│       │   │   └── wageService.ts (232 lines) # Wage calculations
 │       │   ├── prestige/ (1,180 lines total)  # Prestige system services
 │       │   │   ├── prestigeCalculator.ts (188 lines) # Prestige calculator
 │       │   │   ├── prestigeDecayService.ts (57 lines) # Prestige decay
@@ -321,12 +341,10 @@ winemaker04/
 │       │   │   │   ├── defaultCharacteristics.ts (18 lines) # Default characteristics
 │       │   │   │   ├── fermentationCharacteristics.ts (161 lines) # Fermentation characteristics
 │       │   │   │   └── harvestCharacteristics.ts (86 lines) # Harvest characteristics
-│       │   │   ├── features/ (1,133 lines total) # Wine features
+│       │   │   ├── features/ (1,500+ lines total) # Wine features
 │       │   │   │   ├── agingService.ts (171 lines) # Aging service
-│       │   │   │   ├── featureDisplayService.ts (91 lines) # Feature display
-│       │   │   │   ├── featureEffectsService.ts (199 lines) # Feature effects
-│       │   │   │   ├── featureRiskHelper.ts (242 lines) # Feature risk helper
-│       │   │   │   └── featureRiskService.ts (410 lines) # Feature risk service
+│       │   │   │   ├── featureRiskService.ts (605 lines) # Feature risk calculation
+│       │   │   │   └── featureService.ts (1,559 lines) # Unified feature service
 │       │   │   ├── winery/ (500 lines total)  # Winery operations
 │       │   │   │   ├── crushingManager.ts (72 lines) # Crushing management
 │       │   │   │   ├── fermentationManager.ts (180 lines) # Fermentation management
@@ -366,5 +384,5 @@ winemaker04/
 
 ---
 
-**Last Updated**: 2025-01-27  
+**Last Updated**: 2025-10-27  
 

@@ -212,6 +212,7 @@ return (
 - **Transaction Management**: Complete financial system with Supabase integration
 - **Financial Reporting**: Income statements, balance sheets, cash flow statements
 - **Asset Valuation**: Automatic calculation of vineyard, wine inventory, grape values
+- **Loan System**: Economy phases, lenders, credit rating, loan applications with activity integration
 - **Integration**: All money flows through transaction system
 
 ### 6. Player Interface ✅ **IMPLEMENTED**
@@ -235,13 +236,13 @@ return (
 - Advanced vineyard management with land buying, vine yield, and activity system
 - Sophisticated wine production with characteristics and balance system
 - Advanced sales system with regional customers and multi-factor pricing
-- Finance system with transaction tracking and asset valuation
+- Finance system with transaction tracking, loan system, and economy phases
+- Wine features framework with unified service architecture
 - Complete player interface with Winepedia, achievements, and admin tools
 - Staff management system with skill-based work calculation
-- Advanced staff features (teams, search, recruitment)
+- **Activity-based workflows** for land buying, staff search, and loan applications
 - **Dual database architecture** with development and staging environments
 - **MCP integration** for agentic database management
-- **Automated migration system** for Vercel database synchronization
 
 ❌ **NOT IMPLEMENTED:**
 

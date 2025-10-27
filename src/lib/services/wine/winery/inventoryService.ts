@@ -139,7 +139,8 @@ export async function createWineBatchFromHarvest(
     medianAltitude: (minAlt + maxAlt) / 2,
     maxAltitude: maxAlt,
     grapeColor: GRAPE_CONST[grape].grapeColor,
-    overgrowth: vineyard.overgrowth
+    overgrowth: vineyard.overgrowth,
+    density: vineyard.density || 0
   });
   
   // Calculate balance using the sophisticated balance system

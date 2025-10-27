@@ -528,6 +528,14 @@ export async function handlePartialPlanting(
         density: newDensity
       };
       await saveVineyard(updatedVineyard);
+      
+      // Update prestige events to reflect new density (affects prestige calculations)
+      try {
+        const { updateBaseVineyardPrestigeEvent } = await import('../prestige/prestigeService');
+        await updateBaseVineyardPrestigeEvent(vineyard.id);
+      } catch (error) {
+        console.error('Failed to update prestige during partial planting:', error);
+      }
     }
   } catch (error) {
     console.error(`Error in partial planting for activity ${activity.id}:`, error);

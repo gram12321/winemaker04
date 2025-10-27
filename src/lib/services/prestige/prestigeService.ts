@@ -67,6 +67,29 @@ export async function createBaseVineyardPrestigeEvents(): Promise<void> {
   }
 }
 
+/**
+ * Calculate density prestige modifier
+ * Lower density = higher prestige (premium approach)
+ * Progressive system: 1.5x bonus at 1500, 0.5x penalty at 15000
+ * @param density - Vine density (vines/hectare)
+ * @returns Prestige multiplier (0.5 to 1.5)
+ */
+function calculateDensityPrestigeModifier(density: number): number {
+  if (!density || density <= 0) return 1.0; // No vines = neutral
+  
+  const minDensity = 1500;  // Max bonus at this density
+  const maxDensity = 15000; // Max penalty at this density
+  
+  // Clamp density to reasonable range
+  const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
+  
+  // Linear progression from 1.5 (max bonus) at 1500 to 0.5 (max penalty) at 15000
+  // Formula: modifier = 1.5 - (density - 1500) / (15000 - 1500) * 1.0
+  const modifier = 1.5 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 1.0;
+  
+  return Math.max(0.5, Math.min(1.5, modifier));
+}
+
 export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPrestigeFactors {
   const grapeSuitability = calculateGrapeSuitabilityContribution(
     vineyard.grape as any,
@@ -76,7 +99,11 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
 
   const ageBase01 = vineyardAgePrestigeModifier(vineyard.vineAge || 0);
   const ageWithSuitability01 = ageBase01 * grapeSuitability;
-  const ageScaled = Math.max(0, calculateAsymmetricalMultiplier(ageWithSuitability01) - 1);
+  const ageScaledRaw = Math.max(0, calculateAsymmetricalMultiplier(ageWithSuitability01) - 1);
+  
+  // Apply density modifier to age prestige (lower density = higher prestige)
+  const densityModifier = calculateDensityPrestigeModifier(vineyard.density || 0);
+  const ageScaled = ageScaledRaw * densityModifier;
 
   const maxLandValue = getMaxLandValue();
   // Normalize per-hectare value against max per-hectare benchmark using vineyard.landValue directly (€/ha)
@@ -86,7 +113,10 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
   // Apply asym multiplier on per-hectare signal, then multiply by size factor (√hectares)
   const landScaledPerHa = Math.max(0, calculateAsymmetricalMultiplier(landWithSuitability01) - 1);
   const landSizeFactor = Math.sqrt(vineyard.hectares || 0);
-  const landScaled = landScaledPerHa * landSizeFactor;
+  const landScaledRaw = landScaledPerHa * landSizeFactor;
+  
+  // Apply density modifier to land prestige (lower density = higher prestige)
+  const landScaled = landScaledRaw * densityModifier;
 
   return {
     maxLandValue,

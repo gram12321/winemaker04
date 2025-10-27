@@ -25,6 +25,22 @@
 
 ---
 
+## Version 0.0454a-0.0454 - Code Cleanup & Reorganization
+**Date:** 2025-10-27 | **Commits:** 752c992 (0.0454a), 1ba4157 (0.0454) | **Stats:** Combined 2,484 additions, 3,137 deletions
+
+### 🧹 **Code Cleanup & Reorganization**
+- `src/components/ui/components/FeatureDisplay.tsx` - Major UI simplification and consolidation (759 additions, 757 deletions)
+- `src/lib/services/wine/features/featureService.ts` - Service simplification and reorganization (806 additions, 909 deletions)
+- `src/lib/constants/wineFeatures/commonFeaturesUtil.ts` - Enhanced utility functions (90 additions)
+- `src/components/ui/index.ts` - Barrel export cleanup and reorganization (47 additions, 40 deletions)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Manager simplification (22 additions, 121 deletions)
+
+### Component & Feature Refinements
+- **REMOVED:** `src/components/ui/components/FeatureRiskDisplay.tsx` (399 lines) - Consolidated into FeatureDisplay
+- Wine feature constants cleanup across all feature files (removed legacy configurations)
+- Activity manager streamlining for better maintainability
+- Minor UI fixes across ActivityPanel, ActivityCard, and various modals
+
 ## Version 0.0453-0.045 - Wine Features Framework Redesign & UI Consolidation (Combined)
 **Date:** 2025-10-25 to 2025-10-27 | **Commits:** 632ba19 (0.0453), 464895b (0.0452AB1), e7edec6 (0.0452AB), 144d51e (0.0452), 8f4b977 (0.0451), e221ded (0.045) | **Stats:** Combined 4,908 additions, 4,082 deletions
 

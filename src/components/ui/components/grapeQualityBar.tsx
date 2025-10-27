@@ -13,7 +13,8 @@ export type GrapeQualityFactorType =
   | 'altitudeRating'
   | 'aspectRating'
   | 'grapeSuitability'
-  | 'overgrowthPenalty';
+  | 'overgrowthPenalty'
+  | 'densityPenalty';
 
 interface GrapeQualityFactorBarProps {
   factorType: GrapeQualityFactorType;
@@ -182,6 +183,28 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
                     </p>
                   </div>
                 )}
+
+                {factorType === 'overgrowthPenalty' && (
+                  <div className="space-y-1">
+                    <p className="font-medium text-sm">🌿 Overgrowth Penalty</p>
+                    <p className="text-xs text-orange-300 font-medium">GRAPE QUALITY MODIFIER</p>
+                    <p className="text-xs text-gray-300">Penalty for vineyard neglect</p>
+                    <p className="text-xs text-gray-300">Values below 1.0 indicate quality reduction from overgrowth</p>
+                  </div>
+                )}
+
+                {factorType === 'densityPenalty' && vineyard && (
+                  <div className="space-y-1">
+                    <p className="font-medium text-sm">🌳 Density Penalty</p>
+                    <p className="text-xs text-orange-300 font-medium">GRAPE QUALITY MODIFIER</p>
+                    <p className="text-xs text-gray-300">Vine Density: {vineyard.density || 0} vines/ha</p>
+                    <p className="text-xs text-gray-300">Optimal: 1500 vines/ha (no penalty)</p>
+                    <p className="text-xs text-gray-300">Max Penalty: 15000 vines/ha (50% reduction)</p>
+                    <p className="text-xs text-gray-300 mt-2">
+                      <strong>Density Impact:</strong> Lower density means higher grape quality (more resources per vine). Progressively reduces quality as density increases. Also affects vineyard prestige.
+                    </p>
+                  </div>
+                )}
               </div>
             </TooltipContent>
           </Tooltip>
@@ -232,7 +255,7 @@ export const GrapeQualityFactorsDisplay: React.FC<GrapeQualityFactorsDisplayProp
   // Separate factors into direct, indirect, and grape quality modifiers
   const directFactors = ['landValue', 'vineyardPrestige'] as const;
   const indirectFactors = ['regionalPrestige', 'altitudeRating', 'aspectRating', 'grapeSuitability'] as const;
-  const grapeQualityModifiers = ['overgrowthPenalty'] as const;
+  const grapeQualityModifiers = ['overgrowthPenalty', 'densityPenalty'] as const;
 
   const content = (
     <div className="space-y-4">

@@ -10,6 +10,7 @@ export interface HarvestInputs {
   maxAltitude: number; // meters
   grapeColor: 'red' | 'white';
   overgrowth?: Vineyard['overgrowth'];
+  density?: number; // Vine density (vines/hectare)
 }
 
 export interface HarvestEffect {
@@ -48,7 +49,7 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
   characteristics: WineCharacteristics;
   breakdown: HarvestBreakdown;
 } {
-  const { baseCharacteristics, ripeness, qualityFactor, suitability, altitude, medianAltitude, maxAltitude, grapeColor, overgrowth } = inputs;
+  const { baseCharacteristics, ripeness, qualityFactor, suitability, altitude, medianAltitude, maxAltitude, grapeColor, overgrowth, density } = inputs;
 
   // Normalize altitude effect to roughly [-1, 1]
   const denom = Math.max(1, maxAltitude - medianAltitude);
@@ -126,6 +127,29 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
       }
       // >7 years: neutral (age/quality systems handle the rest)
     }
+  }
+
+  // Density effects: Progressive system - no penalty at 1500, max penalty at 15000
+  // High density reduces body, aroma, spice, and sweetness due to competition for resources
+  if (density && density > 0) {
+    const minDensity = 1500;  // No penalty at this density
+    const maxDensity = 15000; // Max penalty at this density
+    
+    // Clamp density to reasonable range
+    const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
+    
+    // Calculate density multiplier: 1.0 at 1500, 0.5 at 15000
+    const densityMultiplier = 1.0 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 0.5;
+    
+    // Apply characteristic reductions proportionally
+    // At max density (15000), max reduction is about 30% for body
+    const maxReduction = 0.3;
+    const reductionScale = (1.0 - densityMultiplier) * maxReduction;
+    
+    effects.push({ characteristic: 'body', modifier: -reductionScale, description: 'Vine Density' });
+    effects.push({ characteristic: 'aroma', modifier: -reductionScale * 0.8, description: 'Vine Density' });
+    effects.push({ characteristic: 'spice', modifier: -reductionScale * 0.6, description: 'Vine Density' });
+    effects.push({ characteristic: 'sweetness', modifier: -reductionScale * 0.5, description: 'Vine Density' });
   }
 
   // Apply all effects

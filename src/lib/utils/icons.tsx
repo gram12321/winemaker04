@@ -122,6 +122,7 @@ export const QUALITY_FACTOR_EMOJIS = {
   altitudeRating: '⛰️',
   aspectRating: '🧭',
   grapeSuitability: '🍇',
-  overgrowthPenalty: '🌿'
+  overgrowthPenalty: '🌿',
+  densityPenalty: '🌳'
 } as const;
 
