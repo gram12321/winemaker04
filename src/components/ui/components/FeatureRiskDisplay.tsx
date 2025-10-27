@@ -4,6 +4,7 @@
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction } from '@/lib/services/wine/features/featureRiskService';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
+import { formatNumber } from '@/lib/utils/utils';
 
 interface FeatureRiskDisplayProps {
   // Vineyard context
@@ -80,7 +81,6 @@ export function FeatureRiskDisplay({
               <FeatureItem
                 key={feature.featureId}
                 feature={feature}
-                compact={compact}
               />
             ))}
           </div>
@@ -92,65 +92,16 @@ export function FeatureRiskDisplay({
 
 interface FeatureItemProps {
   feature: FeatureRiskDisplayData['features'][0];
-  compact: boolean;
 }
 
-function FeatureItem({ feature, compact }: FeatureItemProps) {
-  // For option-dependent features, show the range as the main risk instead of single value
-  let displayText: string;
-  let colorClass: string;
-  
-  if (feature.riskRanges && feature.riskRanges.length > 0) {
-    // Show range as main risk for option-dependent features
-    const minRisk = feature.riskRanges[0].minRisk;
-    const maxRisk = feature.riskRanges[0].maxRisk;
-    const minPercent = (minRisk * 100).toFixed(1);
-    const maxPercent = (maxRisk * 100).toFixed(1);
-    
-    displayText = minRisk === maxRisk 
-      ? `${maxPercent}%`
-      : `${minPercent}%-${maxPercent}%`;
-    
-    // Use the higher risk for color coding
-    colorClass = getRiskColorClass(maxRisk);
-  } else {
-    // Fallback to single risk value for non-option-dependent features
-    const riskPercent = (feature.newRisk * 100).toFixed(1);
-    displayText = `${riskPercent}%`;
-    colorClass = getRiskColorClass(feature.newRisk);
-  }
-  
-  const displayElement = (
-    <div className="text-xs">
-      <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
-      <span className={colorClass}>{displayText}</span>
-      {feature.contextInfo && <span className="text-gray-500"> {feature.contextInfo}</span>}
-    </div>
-  );
-  
-  if (compact) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="cursor-help">
-              {displayElement}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-sm">
-            <FeatureTooltipContent feature={feature} />
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-  
+// Helper function to wrap display elements with tooltips
+function wrapWithTooltip(element: React.ReactNode, feature: FeatureItemProps['feature']) {
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="cursor-help">
-            {displayElement}
+            {element}
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm">
@@ -159,6 +110,74 @@ function FeatureItem({ feature, compact }: FeatureItemProps) {
       </Tooltip>
     </TooltipProvider>
   );
+}
+
+function FeatureItem({ feature }: FeatureItemProps) {
+  // For option-dependent features, show the range as the main risk instead of single value
+  let displayText: string;
+  let colorClass: string;
+  let additionalInfo: React.ReactNode = null;
+  
+  if (feature.riskRanges && feature.riskRanges.length > 0) {
+    // Show range as main risk for option-dependent features
+    const minRisk = feature.riskRanges[0].minRisk;
+    const maxRisk = feature.riskRanges[0].maxRisk;
+    const minPercent = formatNumber(minRisk * 100, { smartDecimals: true });
+    const maxPercent = formatNumber(maxRisk * 100, { smartDecimals: true });
+    
+    displayText = minRisk === maxRisk 
+      ? `${maxPercent}%`
+      : `${minPercent}%-${maxPercent}%`;
+    
+    colorClass = getRiskColorClass(maxRisk);
+  } else if (feature.riskCombinations && feature.riskCombinations.length > 0) {
+    // For features with discrete option combinations, calculate min/max from all combinations
+    const risks = feature.riskCombinations.map((c: any) => c.risk);
+    const minRisk = Math.min(...risks);
+    const maxRisk = Math.max(...risks);
+    const minPercent = formatNumber(minRisk * 100, { smartDecimals: true });
+    const maxPercent = formatNumber(maxRisk * 100, { smartDecimals: true });
+    
+    displayText = minRisk === maxRisk 
+      ? `${maxPercent}%`
+      : `${minPercent}%-${maxPercent}%`;
+    
+    colorClass = getRiskColorClass(maxRisk);
+  } else if (feature.config?.behavior === 'accumulation') {
+    // Accumulation features: show current risk + weekly increase
+    const currentRiskPercent = formatNumber(feature.currentRisk * 100, { smartDecimals: true });
+    
+    if (feature.weeklyRiskIncrease !== undefined && feature.weeklyRiskIncrease > 0) {
+      const weeklyIncreasePercent = formatNumber(feature.weeklyRiskIncrease * 100, { smartDecimals: true });
+      const estimatedWeeks = Math.ceil((1.0 - feature.currentRisk) / feature.weeklyRiskIncrease);
+      
+      displayText = `${currentRiskPercent}% (+${weeklyIncreasePercent}%/week)`;
+      colorClass = getRiskColorClass(feature.currentRisk);
+      
+      if (estimatedWeeks < 50) {
+        additionalInfo = <span className="text-gray-400 ml-1">(~{estimatedWeeks} weeks)</span>;
+      }
+    } else {
+      displayText = `${currentRiskPercent}%`;
+      colorClass = getRiskColorClass(feature.currentRisk);
+    }
+  } else {
+    // Non-accumulation features: show new risk
+    const riskPercent = formatNumber(feature.newRisk * 100, { smartDecimals: true });
+    displayText = `${riskPercent}%`;
+    colorClass = getRiskColorClass(feature.newRisk);
+  }
+  
+  const displayElement = (
+    <div className="text-xs">
+      <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
+      <span className={colorClass}>{displayText}</span>
+      {additionalInfo}
+      {feature.contextInfo && <span className="text-gray-500"> {feature.contextInfo}</span>}
+    </div>
+  );
+  
+  return wrapWithTooltip(displayElement, feature);
 }
 
 function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature'] }) {
@@ -174,12 +193,25 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
       <div>
         <p className="font-medium">
           {feature.riskRanges && feature.riskRanges.length > 0 ? (
-            // Show range for option-dependent features
+            // Show range for grouped option-dependent features
             (() => {
               const minRisk = feature.riskRanges[0].minRisk;
               const maxRisk = feature.riskRanges[0].maxRisk;
-              const minPercent = (minRisk * 100).toFixed(1);
-              const maxPercent = (maxRisk * 100).toFixed(1);
+              const minPercent = formatNumber(minRisk * 100, { smartDecimals: true });
+              const maxPercent = formatNumber(maxRisk * 100, { smartDecimals: true });
+              const riskText = minRisk === maxRisk 
+                ? `${maxPercent}%`
+                : `${minPercent}%-${maxPercent}%`;
+              return `Risk: ${riskText} (${getRiskSeverityLabel(maxRisk)})`;
+            })()
+          ) : feature.riskCombinations && feature.riskCombinations.length > 0 ? (
+            // Show range for discrete option combinations
+            (() => {
+              const risks = feature.riskCombinations.map((c: any) => c.risk);
+              const minRisk = Math.min(...risks);
+              const maxRisk = Math.max(...risks);
+              const minPercent = formatNumber(minRisk * 100, { smartDecimals: true });
+              const maxPercent = formatNumber(maxRisk * 100, { smartDecimals: true });
               const riskText = minRisk === maxRisk 
                 ? `${maxPercent}%`
                 : `${minPercent}%-${maxPercent}%`;
@@ -187,17 +219,22 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
             })()
           ) : (
             // Show single value for non-option-dependent features
-            `Risk: ${(feature.newRisk * 100).toFixed(1)}% (${getRiskSeverityLabel(feature.newRisk)})`
+            `Risk: ${formatNumber(feature.newRisk * 100, { smartDecimals: true })}% (${getRiskSeverityLabel(feature.newRisk)})`
           )}
         </p>
         
-        {/* Show cumulative risk explanation for oxidation */}
-        {feature.featureId === 'oxidation' && (
+        {/* Show cumulative risk explanation for accumulation features */}
+        {feature.config?.behavior === 'accumulation' && feature.weeklyRiskIncrease !== undefined && feature.weeklyRiskIncrease > 0 && (
           <div className="border-t border-gray-600 pt-2">
             <p className="font-medium text-yellow-400">Cumulative Risk</p>
             <p className="text-gray-300 text-xs">
+              Current risk: {formatNumber(feature.currentRisk * 100, { smartDecimals: true })}%
+            </p>
+            <p className="text-gray-300 text-xs">
+              Weekly increase: +{formatNumber(feature.weeklyRiskIncrease * 100, { smartDecimals: true })}%
+            </p>
+            <p className="text-gray-300 text-xs mt-1">
               This risk accumulates over time. Each tick adds the calculated amount to your current risk level.
-              Higher fragility and oxidation-prone grapes increase the risk faster.
             </p>
             {feature.contextInfo && (
               <p className="text-gray-400 text-xs mt-1">
@@ -212,13 +249,8 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
           <div className="border-t border-gray-600 pt-2">
             <p className="font-medium">Quality Impact if Manifests</p>
             <p className="text-gray-300 text-xs">
-              {feature.qualityImpact < 0 ? '-' : '+'}{Math.abs(feature.qualityImpact * 100).toFixed(1)}% quality change
+              {feature.qualityImpact < 0 ? '-' : '+'}{formatNumber(Math.abs(feature.qualityImpact * 100), { smartDecimals: true })}% quality change
             </p>
-            {feature.featureId === 'oxidation' && (
-              <p className="text-gray-400 text-xs mt-1">
-                Higher quality wines are affected more severely. Also reduces aroma, acidity, and body.
-              </p>
-            )}
           </div>
         )}
         
@@ -237,13 +269,13 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
                 if (typeof effect.modifier === 'function') {
                   const minModifier = effect.modifier(0);
                   const maxModifier = effect.modifier(1.0);
-                  const minPercent = (minModifier * 100).toFixed(0);
-                  const maxPercent = (maxModifier * 100).toFixed(0);
+                  const minPercent = formatNumber(minModifier * 100, { smartDecimals: true });
+                  const maxPercent = formatNumber(maxModifier * 100, { smartDecimals: true });
                   displayText = minModifier === maxModifier 
                     ? `${maxModifier > 0 ? '+' : ''}${maxPercent}%`
                     : `${minModifier > 0 ? '+' : ''}${minPercent}% to ${maxModifier > 0 ? '+' : ''}${maxPercent}%`;
                 } else {
-                  const percent = (baseModifier * 100).toFixed(0);
+                  const percent = formatNumber(baseModifier * 100, { smartDecimals: true });
                   displayText = `${baseModifier > 0 ? '+' : ''}${percent}%`;
                 }
                 
@@ -303,7 +335,7 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
             <div className="text-xs text-gray-300 space-y-1">
               {Object.entries(config.customerSensitivity).map(([customerType, sensitivity]: [string, any]) => {
                 const percentChange = (sensitivity - 1.0) * 100;
-                const percentChangeFixed = Math.abs(percentChange).toFixed(0);
+                const percentChangeFixed = formatNumber(Math.abs(percentChange), { smartDecimals: true });
                 const sensitivityText = sensitivity === 1.0 
                   ? 'No change'
                   : sensitivity < 1.0 
@@ -329,8 +361,8 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
                     <span className="text-gray-300 font-medium">{range.groupLabel}</span>
                     <span className={`font-mono ${getRiskColorClass(range.maxRisk)}`}>
                       {range.minRisk === range.maxRisk 
-                        ? `${(range.maxRisk * 100).toFixed(1)}%`
-                        : `${(range.minRisk * 100).toFixed(1)}% - ${(range.maxRisk * 100).toFixed(1)}%`
+                        ? `${formatNumber(range.maxRisk * 100, { smartDecimals: true })}%`
+                        : `${formatNumber(range.minRisk * 100, { smartDecimals: true })}% - ${formatNumber(range.maxRisk * 100, { smartDecimals: true })}%`
                       }
                     </span>
                   </div>
@@ -348,7 +380,7 @@ function FeatureTooltipContent({ feature }: { feature: FeatureItemProps['feature
                 <div key={index} className="flex justify-between text-xs">
                   <span className="text-gray-300 truncate mr-2">{combination.label}</span>
                   <span className={`font-mono ${getRiskColorClass(combination.risk)}`}>
-                    {(combination.risk * 100).toFixed(1)}%
+                    {formatNumber(combination.risk * 100, { smartDecimals: true })}%
                   </span>
                 </div>
               ))}

@@ -154,6 +154,8 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
       
       // Calculate weekly effects
       const weeklyEffects: Record<string, number> = {};
+      
+      // Calculate weekly characteristic effects
       if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
         config.effects.characteristics.forEach(({ characteristic, modifier }) => {
           const effectValue = typeof modifier === 'function' 
@@ -161,6 +163,31 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
             : modifier * feature.severity;
           weeklyEffects[characteristic] = effectValue;
         });
+      }
+      
+      // Calculate weekly quality effect (quality change per unit of severity * weekly growth rate)
+      if (config.effects.quality) {
+        const qualityEffect = config.effects.quality;
+        let weeklyQualityEffect = 0;
+        
+        if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+          // For linear effects: weekly change = amount per severity * weekly growth rate
+          weeklyQualityEffect = qualityEffect.amount * weeklyGrowthRate;
+        } else if (qualityEffect.type === 'bonus') {
+          // For bonus effects: calculate the change between current and next severity
+          const nextSeverity = Math.min(1.0, feature.severity + weeklyGrowthRate);
+          const currentBonus = typeof qualityEffect.amount === 'function' 
+            ? qualityEffect.amount(feature.severity)
+            : (qualityEffect.amount || 0);
+          const nextBonus = typeof qualityEffect.amount === 'function'
+            ? qualityEffect.amount(nextSeverity)
+            : (qualityEffect.amount || 0);
+          weeklyQualityEffect = nextBonus - currentBonus;
+        }
+        
+        if (Math.abs(weeklyQualityEffect) > 0.001) {
+          weeklyEffects['quality'] = weeklyQualityEffect;
+        }
       }
       
       return {
@@ -411,6 +438,50 @@ export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Parti
   }
 
   return modifiers;
+}
+
+/**
+ * Apply feature characteristic effects to wine batch characteristics
+ * Modifies characteristics and adds effects to breakdown for UI display
+ * Only applies effects for the specified feature (to avoid duplicates)
+ */
+export function applyFeatureCharacteristicEffects(batch: WineBatch, featureConfig: FeatureConfig): WineBatch {
+  if (!featureConfig.effects.characteristics) {
+    return batch;
+  }
+  
+  const feature = (batch.features || []).find(f => f.id === featureConfig.id);
+  if (!feature || !feature.isPresent) {
+    return batch;
+  }
+  
+  let modifiedCharacteristics = { ...batch.characteristics };
+  const breakdownEffects = [...(batch.breakdown?.effects || [])];
+  
+  for (const effect of featureConfig.effects.characteristics) {
+    const modifier = typeof effect.modifier === 'function'
+      ? effect.modifier(feature.severity)
+      : effect.modifier * feature.severity;
+    
+    // Apply modifier to characteristic
+    const currentValue = modifiedCharacteristics[effect.characteristic];
+    modifiedCharacteristics[effect.characteristic] = Math.max(0, Math.min(1, currentValue + modifier));
+    
+    // Add to breakdown for UI display
+    breakdownEffects.push({
+      characteristic: effect.characteristic,
+      modifier,
+      description: featureConfig.name
+    });
+  }
+  
+  return {
+    ...batch,
+    characteristics: modifiedCharacteristics,
+    breakdown: {
+      effects: breakdownEffects
+    }
+  };
 }
 
 // ===== FEATURE RISK CALCULATIONS =====
@@ -852,6 +923,7 @@ export async function processEventTrigger(
 ): Promise<WineBatch> {
   const eventConfigs = getEventTriggeredFeatures(event);
   let updatedFeatures = [...(batch.features || [])];
+  let updatedBatch = { ...batch };
   
   const vineyard = event === 'harvest' ? context : undefined;
   
@@ -873,13 +945,26 @@ export async function processEventTrigger(
             ? trigger.riskIncrease(triggerContext)
             : trigger.riskIncrease;
           
-          updatedFeatures = await applyRiskIncrease(batch, config, updatedFeatures, riskIncrease, vineyard);
+          const { features: newFeatures, manifested } = await applyRiskIncrease(
+            updatedBatch, 
+            config, 
+            updatedFeatures, 
+            riskIncrease, 
+            vineyard
+          );
+          updatedFeatures = newFeatures;
+          
+          // If feature manifested, apply its effects immediately
+          if (manifested) {
+            updatedBatch = applyFeatureEffectsToBatch({ ...updatedBatch, features: updatedFeatures });
+            updatedBatch = applyFeatureCharacteristicEffects({ ...updatedBatch, features: updatedFeatures }, config);
+          }
         }
       }
     }
   }
   
-  return { ...batch, features: updatedFeatures };
+  return { ...updatedBatch, features: updatedFeatures };
 }
 
 // ===== INTERNAL HELPER FUNCTIONS =====
@@ -1015,15 +1100,18 @@ async function applyRiskIncrease(
   features: WineFeature[],
   riskIncrease: number,
   vineyard?: any
-): Promise<WineFeature[]> {
+): Promise<{ features: WineFeature[]; manifested: boolean }> {
   const feature = getOrCreateFeature(features, config);
   
   // For triggered features, once present they stay present
-  if (feature.isPresent && config.behavior === 'triggered') return features;
+  if (feature.isPresent && config.behavior === 'triggered') {
+    return { features, manifested: false };
+  }
   
   const newRisk = Math.min(1.0, (feature.risk || 0) + riskIncrease);
   let isPresent = feature.isPresent;
   let severity = feature.severity;
+  let manifested = false;
   
   if (!isPresent) {
     isPresent = checkManifestation(newRisk);
@@ -1031,15 +1119,19 @@ async function applyRiskIncrease(
       // Triggered features always manifest at severity 1.0
       severity = config.behavior === 'triggered' ? 1.0 : newRisk;
       await handleManifestation(batch, config, vineyard);
+      manifested = true;
     }
   }
   
-  return updateFeatureInArray(features, {
-    ...feature,
-    risk: newRisk,
-    isPresent,
-    severity
-  });
+  return {
+    features: updateFeatureInArray(features, {
+      ...feature,
+      risk: newRisk,
+      isPresent,
+      severity
+    }),
+    manifested
+  };
 }
 
 function shouldWarnAboutRisk(_config: FeatureConfig, previousRisk: number, newRisk: number): boolean {

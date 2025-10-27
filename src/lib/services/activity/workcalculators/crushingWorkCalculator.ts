@@ -175,13 +175,14 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     );
 
     // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and grapeQuality
+    // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
     await updateWineBatch(batchId, {
       state: 'must_ready',
-      characteristics: modifiedCharacteristics,
-      breakdown: combinedBreakdown,
+      characteristics: batchWithEventFeatures.characteristics || modifiedCharacteristics,
+      breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      grapeQuality: finalQuality
+      grapeQuality: batchWithEventFeatures.grapeQuality || finalQuality
     });
 
     // Deduct costs if any

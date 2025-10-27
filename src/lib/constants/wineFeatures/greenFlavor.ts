@@ -1,6 +1,7 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { Vineyard } from '../../types/types';
 import { CrushingOptions } from '../../services/wine/characteristics/crushingCharacteristics';
+import { formatNumber } from '../../utils/utils';
 
 /**
  * Green Flavor/Vegetal Character
@@ -180,5 +181,20 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
       triggerEvent: 'crushing',
       message: '💡 TIP: Enable destemming or use Mechanical/Pneumatic Press to avoid this risk.'
     }
-  ]
+  ],
+  
+  tooltip: (severity: number) => {
+    const severityPercent = severity * 100;
+    const severityPercentFormatted = formatNumber(severityPercent, { smartDecimals: true });
+    
+    const description = severityPercent < 25 
+      ? 'Subtle green notes'
+      : severityPercent < 50 
+      ? 'Noticeable unripe character'
+      : severityPercent < 75 
+      ? 'Strong green flavors'
+      : 'Severe green, harsh taste';
+    
+    return `Green Flavor: ${severityPercentFormatted}% severity\n\nThis indicates the intensity of green, unripe flavors:\n• ${severityPercentFormatted}% = ${description}\n\nGreen flavors reduce grape quality and marketability.`;
+  }
 };

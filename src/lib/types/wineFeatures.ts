@@ -56,6 +56,21 @@ export interface FeatureConfig {
     triggerEvent: 'harvest' | 'crushing' | 'fermentation' | 'bottling';
     message: string;
   }>;
+  
+  // Custom Tooltip Content (optional)
+  // If provided, generates dynamic tooltip content based on feature state
+  // If not provided, uses default tooltip (name + description)
+  tooltip?: (severity: number) => string;
+  
+  // Risk Display Configuration (optional)
+  riskDisplay?: {
+    // How to display risk in main UI (vineyard/winery views)
+    showAsRange?: boolean;  // true = show min-max range, false = show single current value
+    
+    // Custom function to generate option combinations for tooltip display
+    // If not provided, uses default behavior based on event type
+    customOptionCombinations?: (event: 'harvest' | 'crushing' | 'fermentation' | 'bottling') => any[];
+  };
 }
 
 // ===== BEHAVIOR CONFIGURATIONS =====

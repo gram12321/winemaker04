@@ -1,5 +1,6 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { GRAPE_CONST } from '../grapeConstants';
+import { formatNumber } from '../../utils/utils';
 
 /**
  * Bottle Aging Feature
@@ -111,5 +112,20 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
   },
   
   displayPriority: 4,      // Show after faults (oxidation=1, green_flavor=2) and terroir=3
-  badgeColor: 'info'  // Blue for aging
+  badgeColor: 'info',  // Blue for aging
+  
+  tooltip: (severity: number) => {
+    const severityPercent = severity * 100;
+    const severityPercentFormatted = formatNumber(severityPercent, { smartDecimals: true });
+    
+    const description = severityPercent < 25 
+      ? 'Early development - subtle complexity emerging'
+      : severityPercent < 50 
+      ? 'Moderate aging - noticeable smoothness'
+      : severityPercent < 75 
+      ? 'Well-aged - pronounced complexity'
+      : 'Fully matured - maximum aging benefits';
+    
+    return `Bottle Aging: ${severityPercentFormatted}% developed\n\nThis shows how much complexity and smoothness has developed through aging:\n• ${severityPercentFormatted}% = ${description}\n\nAging improves grape quality, characteristics, and increases value.`;
+  }
 };

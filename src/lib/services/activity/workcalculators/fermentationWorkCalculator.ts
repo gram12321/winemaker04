@@ -144,10 +144,14 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
     );
 
     // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
+    // Also update characteristics and breakdown if they were modified by feature effects
     await updateWineBatch(batchId, {
       state: 'must_fermenting',
       fermentationOptions: fermentationOptions as FermentationOptions,
-      features: batchWithEventFeatures.features
+      features: batchWithEventFeatures.features,
+      characteristics: batchWithEventFeatures.characteristics,
+      breakdown: batchWithEventFeatures.breakdown,
+      grapeQuality: batchWithEventFeatures.grapeQuality
     });
 
     // Deduct costs if any

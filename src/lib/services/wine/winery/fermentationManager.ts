@@ -1,6 +1,6 @@
 import { WineBatch } from '../../../types/types';
 import { updateInventoryBatch } from './inventoryService';
-import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
+import { loadWineBatches, bulkUpdateWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
 import { processEventTrigger } from '../features/featureService';
@@ -100,7 +100,19 @@ export async function bottleWine(batchId: string): Promise<boolean> {
         await recordBottledWine(bottledBatch);
         
         // Trigger bottling event for wine features (e.g., bottle aging)
-        await processEventTrigger(bottledBatch, 'bottling', {});
+        const batchWithEventFeatures = await processEventTrigger(bottledBatch, 'bottling', {});
+        
+        // Update batch if features modified characteristics or breakdown
+        if (batchWithEventFeatures.characteristics !== bottledBatch.characteristics ||
+            batchWithEventFeatures.breakdown !== bottledBatch.breakdown ||
+            batchWithEventFeatures.grapeQuality !== bottledBatch.grapeQuality) {
+          await updateWineBatch(batchId, {
+            characteristics: batchWithEventFeatures.characteristics,
+            breakdown: batchWithEventFeatures.breakdown,
+            grapeQuality: batchWithEventFeatures.grapeQuality,
+            features: batchWithEventFeatures.features
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to record bottled wine in production log:', error);

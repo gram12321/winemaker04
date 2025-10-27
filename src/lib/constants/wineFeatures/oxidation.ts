@@ -1,4 +1,5 @@
 import { FeatureConfig } from '../../types/wineFeatures';
+import { formatNumber } from '../../utils/utils';
 
 /**
  * Oxidation Feature
@@ -170,7 +171,22 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       triggerEvent: 'crushing',
       message: '💡 TIP: Fragile grapes (like Pinot Noir) with high pressing intensity increase oxidation risk.'
     }
-  ]
+  ],
+  
+  tooltip: (severity: number) => {
+    const severityPercent = severity * 100;
+    const severityPercentFormatted = formatNumber(severityPercent, { smartDecimals: true });
+    
+    const description = severityPercent < 25 
+      ? 'Minor oxidation - barely noticeable'
+      : severityPercent < 50 
+      ? 'Moderate oxidation - some off-flavors'
+      : severityPercent < 75 
+      ? 'Significant oxidation - clearly affected'
+      : 'Severe oxidation - wine may be undrinkable';
+    
+    return `Oxidation: ${severityPercentFormatted}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercentFormatted}% = ${description}\n\nOxidation reduces grape quality and can make it unsellable.`;
+  }
 };
 
 /**

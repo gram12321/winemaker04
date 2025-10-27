@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { getColorClass } from '@/lib/utils/utils';
+import { getColorClass, formatNumber } from '@/lib/utils/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData } from '@/lib/services/wine/features/featureService';
@@ -142,8 +142,8 @@ interface EvolvingFeatureItemProps {
 
 function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: EvolvingFeatureItemProps) {
   const severity = feature.severity || 0;
-  const severityPercent = Math.round(severity * 100);
-  const weeklyGrowthPercent = Math.round(weeklyGrowthRate * 100 * 10) / 10;
+  const severityPercent = formatNumber(severity * 100, { smartDecimals: true });
+  const weeklyGrowthPercent = formatNumber(weeklyGrowthRate * 100, { smartDecimals: true });
   
   const displayElement = (
     <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
@@ -173,7 +173,7 @@ function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: Evolv
             <div>
               <p className="font-medium">Current Status:</p>
               <p className="text-xs text-gray-300">
-                Severity: {severityPercent}% ({severity.toFixed(3)})
+                Severity: {severityPercent}% ({formatNumber(severity, { smartDecimals: true })})
               </p>
               <p className="text-xs text-gray-300">
                 Weekly growth: +{weeklyGrowthPercent}% per week
@@ -206,7 +206,7 @@ interface ActiveFeatureItemProps {
 
 function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItemProps) {
   const severity = feature.severity || 0;
-  const severityPercent = Math.round(severity * 100);
+  const severityPercent = formatNumber(severity * 100, { smartDecimals: true });
   
   const colorClass = config.badgeColor === 'destructive' ? 'text-red-600' : 
                      config.badgeColor === 'success' ? 'text-green-600' :
@@ -240,7 +240,7 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
               <p className="font-medium">{config.name} is present</p>
               <p>This batch has {config.name.toLowerCase()}.</p>
               {config.behavior === 'evolving' && (
-                <p>Severity: {Math.round(feature.severity * 100)}%</p>
+                <p>Severity: {formatNumber(feature.severity * 100, { smartDecimals: true })}%</p>
               )}
             </div>
             
@@ -249,7 +249,7 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
               <div className="border-t border-gray-600 pt-2">
                 <p className="font-medium">Quality Impact</p>
                 <p className="text-gray-300 text-xs">
-                  {qualityImpact < 0 ? '-' : '+'}{Math.abs(qualityImpact * 100).toFixed(1)}% quality change
+                  {qualityImpact < 0 ? '-' : '+'}{formatNumber(Math.abs(qualityImpact * 100), { smartDecimals: true })}% quality change
                 </p>
               </div>
             )}
@@ -263,7 +263,7 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
                     const modifier = typeof effect.modifier === 'function' 
                       ? effect.modifier(feature.severity) 
                       : effect.modifier;
-                    const modifierPercent = Math.round((modifier || 0) * 100 * 10) / 10;
+                    const modifierPercent = formatNumber((modifier || 0) * 100, { smartDecimals: true });
                     return (
                       <p key={effect.characteristic}>
                         • {effect.characteristic}: {modifier > 0 ? '+' : ''}{modifierPercent}%
@@ -290,7 +290,7 @@ interface RiskFeatureItemProps {
 
 function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureItemProps) {
   const risk = feature.risk || 0;
-  const riskPercent = (risk * 100).toFixed(1);
+  const riskPercent = formatNumber(risk * 100, { smartDecimals: true });
   
   const displayElement = (
     <div className="text-xs">
@@ -353,28 +353,39 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures }: Weekl
     <div className="space-y-1">
       <div className="text-xs text-gray-600">Weekly Effects:</div>
       <div className="flex flex-wrap gap-1">
-        {Object.entries(combinedWeeklyEffects).map(([characteristic, totalEffect]) => {
+        {Object.entries(combinedWeeklyEffects).map(([key, totalEffect]) => {
           if (Math.abs(totalEffect) > 0.001) {
-            const percentage = (totalEffect * 100).toFixed(1);
+            const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
             const isPositive = totalEffect > 0;
             const colorClass = isPositive ? 'text-green-700' : 'text-red-600';
             const bgClass = isPositive ? 'bg-green-100' : 'bg-red-100';
             const sign = isPositive ? '+' : '';
             
+            // Special handling for quality vs characteristics
+            const isQuality = key === 'quality';
+            
             return (
-              <TooltipProvider key={characteristic}>
+              <TooltipProvider key={key}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className={`text-xs px-2 py-1 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
-                      <img src={`/assets/icons/characteristics/${characteristic}.png`} alt={`${characteristic} icon`} className="w-3 h-3" />
+                      {isQuality ? (
+                        <span>⭐</span>
+                      ) : (
+                        <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-3 h-3" />
+                      )}
                       <span className="font-medium">{sign}{percentage}%</span>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
                     <div className="text-xs space-y-1">
-                      <p className="font-semibold capitalize">{characteristic}</p>
+                      <p className="font-semibold capitalize">{isQuality ? 'Quality' : key}</p>
                       <div className="space-y-1">
-                        {getCharacteristicBreakdown(characteristic, evolvingFeatures)}
+                        {isQuality ? (
+                          <p className="text-gray-300">Weekly quality change from evolving features</p>
+                        ) : (
+                          getCharacteristicBreakdown(key, evolvingFeatures)
+                        )}
                       </div>
                     </div>
                   </TooltipContent>
@@ -406,7 +417,7 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
         {/* Characteristic effects */}
         {Object.entries(combinedActiveEffects).map(([characteristic, totalEffect]) => {
           if (Math.abs(totalEffect) > 0.001) {
-            const percentage = (totalEffect * 100).toFixed(0);
+            const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
             const isPositive = totalEffect > 0;
             const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
             const sign = isPositive ? '+' : '';
@@ -442,7 +453,7 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
               <TooltipTrigger asChild>
                 <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${totalQualityEffect > 0 ? 'text-green-600' : 'text-red-600'} flex items-center gap-1 cursor-help`}>
                   <span>⭐</span>
-                  <span>Quality {totalQualityEffect > 0 ? '+' : ''}{Math.round(totalQualityEffect * 100)}%</span>
+                  <span>Quality {totalQualityEffect > 0 ? '+' : ''}{formatNumber(totalQualityEffect * 100, { smartDecimals: true })}%</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs">
@@ -468,7 +479,7 @@ function getCharacteristicBreakdown(characteristic: string, evolvingFeatures: Ar
   evolvingFeatures.forEach(({ config, weeklyEffects }) => {
     const effectValue = weeklyEffects[characteristic];
     if (effectValue && Math.abs(effectValue) > 0.001) {
-      const percentage = (effectValue * 100).toFixed(1);
+      const percentage = formatNumber(effectValue * 100, { smartDecimals: true });
       const sign = effectValue > 0 ? '+' : '';
       contributions.push(
         <p key={config.id} className="text-gray-300">
@@ -487,7 +498,7 @@ function getCombinedCharacteristicBreakdown(characteristic: string, activeFeatur
   activeFeatures.forEach(({ config, characteristicEffects }) => {
     const effectValue = characteristicEffects[characteristic];
     if (effectValue && Math.abs(effectValue) > 0.001) {
-      const percentage = (effectValue * 100).toFixed(1);
+      const percentage = formatNumber(effectValue * 100, { smartDecimals: true });
       const sign = effectValue > 0 ? '+' : '';
       contributions.push(
         <p key={config.id} className="text-gray-300">
@@ -505,7 +516,7 @@ function getCombinedQualityBreakdown(activeFeatures: Array<{ feature: any; confi
   
   activeFeatures.forEach(({ config, qualityImpact }) => {
     if (Math.abs(qualityImpact) > 0.001) {
-      const impactPercent = (qualityImpact * 100).toFixed(1);
+      const impactPercent = formatNumber(qualityImpact * 100, { smartDecimals: true });
       const impactText = `${qualityImpact >= 0 ? '+' : ''}${impactPercent}%`;
       
       contributions.push(
@@ -545,21 +556,18 @@ function getBadgeVariant(badgeColor: string): 'default' | 'destructive' | 'outli
 
 // Generate tooltip content for feature badges
 function getFeatureTooltipContent(feature: any, config: any): string {
+  // Use custom tooltip from config if available
+  if (config.tooltip && feature.severity > 0) {
+    return config.tooltip(feature.severity);
+  }
+  
+  // Fallback for evolving features with severity
   if (config.behavior === 'evolving' && feature.severity > 0) {
-    const severityPercent = Math.round(feature.severity * 100);
-    
-    if (config.id === 'terroir') {
-      return `Terroir Expression: ${severityPercent}% developed\n\nThis represents how much vineyard character has developed in this wine:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Early development - subtle characteristics emerging' : severityPercent < 50 ? 'Moderate development - noticeable vineyard influence' : severityPercent < 75 ? 'Strong development - pronounced terroir' : 'Full development - maximum vineyard character'}\n\nTerroir grows over time and affects grape quality and characteristics.`;
-    } else if (config.id === 'oxidation') {
-      return `Oxidation: ${severityPercent}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Minor oxidation - barely noticeable' : severityPercent < 50 ? 'Moderate oxidation - some off-flavors' : severityPercent < 75 ? 'Significant oxidation - clearly affected' : 'Severe oxidation - wine may be undrinkable'}\n\nOxidation reduces grape quality and can make it unsellable.`;
-    } else if (config.id === 'green_flavor') {
-      return `Green Flavor: ${severityPercent}% severity\n\nThis indicates the intensity of green, unripe flavors:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Subtle green notes' : severityPercent < 50 ? 'Noticeable unripe character' : severityPercent < 75 ? 'Strong green flavors' : 'Severe green, harsh taste'}\n\nGreen flavors reduce grape quality and marketability.`;
-    } else if (config.id === 'bottle_aging') {
-      return `Bottle Aging: ${severityPercent}% developed\n\nThis shows how much complexity and smoothness has developed through aging:\n• ${severityPercent}% = ${severityPercent < 25 ? 'Early development - subtle complexity emerging' : severityPercent < 50 ? 'Moderate aging - noticeable smoothness' : severityPercent < 75 ? 'Well-aged - pronounced complexity' : 'Fully matured - maximum aging benefits'}\n\nAging improves grape quality, characteristics, and increases value.`;
-    }
+    const severityPercent = feature.severity * 100;
+    const severityPercentFormatted = formatNumber(severityPercent, { smartDecimals: true });
     
     // Generic graduated feature tooltip
-    return `${config.name}: ${severityPercent}% severity\n\nThis feature develops over time and affects wine characteristics.`;
+    return `${config.name}: ${severityPercentFormatted}% severity\n\nThis feature develops over time and affects wine characteristics.`;
   }
   
   // Binary feature tooltip
@@ -582,7 +590,7 @@ function FeatureBadge({ feature, config, showSeverity = false, className }: Feat
             <span>{config.name}</span>
             {showSeverity && config.behavior === 'evolving' && feature.severity > 0 && (
               <span className="text-xs opacity-90">
-                {Math.round(feature.severity * 100)}%
+                {formatNumber(feature.severity * 100, { smartDecimals: true })}%
               </span>
             )}
           </Badge>

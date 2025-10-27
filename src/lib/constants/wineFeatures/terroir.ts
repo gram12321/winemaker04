@@ -1,4 +1,5 @@
 import { FeatureConfig } from '../../types/wineFeatures';
+import { formatNumber } from '../../utils/utils';
 
 /**
  * Terroir Expression Feature
@@ -101,5 +102,20 @@ export const TERROIR_FEATURE: FeatureConfig = {
       triggerEvent: 'harvest',
       message: '🌿 Terroir Expression will develop in this wine over time, enhancing quality and characteristics.'
     }
-  ]
+  ],
+  
+  tooltip: (severity: number) => {
+    const severityPercent = severity * 100;
+    const severityPercentFormatted = formatNumber(severityPercent, { smartDecimals: true });
+    
+    const description = severityPercent < 25 
+      ? 'Early development - subtle characteristics emerging'
+      : severityPercent < 50 
+      ? 'Moderate development - noticeable vineyard influence'
+      : severityPercent < 75 
+      ? 'Strong development - pronounced terroir'
+      : 'Full development - maximum vineyard character';
+    
+    return `Terroir Expression: ${severityPercentFormatted}% developed\n\nThis represents how much vineyard character has developed in this wine:\n• ${severityPercentFormatted}% = ${description}\n\nTerroir grows over time and affects grape quality and characteristics.`;
+  }
 };

@@ -40,16 +40,19 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
           if (season === 'Fall') {
             // Fall weeks 7-12: increasing lateness
             // Week 7 = 0.0, Week 12 = 0.5 (halfway through harvest period)
-            latenessFactor = Math.max(0, (week - 6) / 12); // Scale to 0-0.5
+            // Scale from 0 to 0.5 over 6 weeks (weeks 7-12)
+            latenessFactor = (week - 7) / 5 * 0.5; // Scale to 0-0.5
           } else if (season === 'Winter') {
             // Winter weeks 1-12: continuing lateness progression
             // Week 1 = 0.5, Week 12 = 1.0 (completing harvest period)
-            latenessFactor = 0.5 + (week / 12); // Scale from 0.5 to 1.0
+            // Use (week - 1) / 11 to scale from 0 to 1 across 12 weeks, then add 0.5
+            latenessFactor = 0.5 + ((week - 1) / 11) * 0.5; // Scale from 0.5 to 1.0
           }
           
           // Base risk increase (becomes severity for features)
           // 0.0 lateness = 0% feature, 1.0 lateness = 100% feature
-          return latenessFactor;
+          // Cap at 1.0 to prevent exceeding 100%
+          return Math.min(1.0, latenessFactor);
         }
       }
     ]
@@ -89,7 +92,23 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
   },
   
   displayPriority: 3,  // Show after faults but before neutral features
-  badgeColor: 'destructive'
+  badgeColor: 'destructive',
+  
+  // Risk Display Configuration
+  riskDisplay: {
+    showAsRange: false,  // Show single current value instead of range
+    customOptionCombinations: (event: 'harvest' | 'crushing' | 'fermentation' | 'bottling') => {
+      if (event !== 'harvest') return [];
+      
+      // Generate min/max combinations for Fall and Winter ranges
+      return [
+        { season: 'Fall', week: 7, _isMin: true, _label: 'Fall Week 7' },
+        { season: 'Fall', week: 12, _isMax: true, _label: 'Fall Week 12' },
+        { season: 'Winter', week: 1, _isMin: true, _label: 'Winter Week 1' },
+        { season: 'Winter', week: 12, _isMax: true, _label: 'Winter Week 12' }
+      ];
+    }
+  }
 };
 
 /**
