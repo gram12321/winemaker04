@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { VineyardPurchaseOption } from '@/lib/services';
 import { formatCurrency, getFlagIcon, getBadgeColorClasses, formatNumber } from '@/lib/utils';
-import { Button } from '@/components/ui/shadCN/button';
-import { Badge } from '@/components/ui/shadCN/badge';
+import { Button, Badge } from '@/components/ui';
 import { X } from 'lucide-react';
 import { purchaseVineyard } from '@/lib/services';
 import { getGameState } from '@/lib/services';
-import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
+import { WarningModal } from '@/components/ui';
 
 interface LandSearchResultsModalProps {
   isOpen: boolean;

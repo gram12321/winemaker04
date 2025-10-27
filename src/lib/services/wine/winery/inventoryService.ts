@@ -1,10 +1,9 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { WineBatch, GrapeVariety, WineCharacteristics } from '../../../types/types';
+import { WineBatch, GrapeVariety, WineCharacteristics, GameDate } from '../../../types/types';
 import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
-import { getGameState } from '../../core/gameState';
 import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
@@ -107,10 +106,10 @@ export async function createWineBatchFromHarvest(
   vineyardId: string,
   vineyardName: string,
   grape: GrapeVariety,
-  quantity: number
+  quantity: number,
+  harvestStartDate: GameDate,  // Required: activity start date
+  harvestEndDate: GameDate     // Required: current harvest date for this batch
 ): Promise<WineBatch> {
-  const gameState = getGameState();
-  
   // Get vineyard data for pricing calculations
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
@@ -149,14 +148,8 @@ export async function createWineBatchFromHarvest(
   // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
   const quality = calculateGrapeQuality(vineyard);
   
-  const harvestDate = {
-    week: gameState.week || 1,
-    season: gameState.season || 'Spring',
-    year: gameState.currentYear || 2024
-  };
-  
   // Check for existing compatible wine batch
-  const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestDate.year);
+  const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestStartDate.year);
   
   if (existingBatch) {
     // Combine with existing batch
@@ -188,8 +181,8 @@ export async function createWineBatchFromHarvest(
       const idx = seasons.indexOf(d.season);
       return (d.year - 2024) * 52 + idx * 13 + (d.week - 1);
     };
-    const newStart = toAbs(harvestDate) < toAbs(startCandidate) ? harvestDate : startCandidate;
-    const newEnd = toAbs(harvestDate) > toAbs(endCandidate) ? harvestDate : endCandidate;
+    const newStart = toAbs(harvestStartDate) < toAbs(startCandidate) ? harvestStartDate : startCandidate;
+    const newEnd = toAbs(harvestEndDate) > toAbs(endCandidate) ? harvestEndDate : endCandidate;
     combinedBatch.harvestStartDate = newStart as any;
     combinedBatch.harvestEndDate = newEnd as any;
     
@@ -220,8 +213,8 @@ export async function createWineBatchFromHarvest(
       fragile: grapeMetadata.fragile,
       proneToOxidation: grapeMetadata.proneToOxidation,
       features: initializeBatchFeatures(), // Initialize features array
-      harvestStartDate: harvestDate,
-      harvestEndDate: harvestDate
+      harvestStartDate: harvestStartDate,
+      harvestEndDate: harvestEndDate
     };
 
     // Calculate estimated price using the pricing service with prestige multipliers

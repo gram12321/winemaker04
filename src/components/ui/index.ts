@@ -1,50 +1,57 @@
-export { Button } from './shadCN/button';
-export { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, SimpleCard, GridCard } from './shadCN/card';
-export { Badge } from './shadCN/badge';
-export { Separator } from './shadCN/separator';
-export { Input } from './shadCN/input';
-export { Label } from './shadCN/label';
-export { Switch } from './shadCN/switch';
-export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './shadCN/select';
-export { Slider } from './shadCN/slider';
-export { Tabs, TabsContent, TabsList, TabsTrigger } from './shadCN/tabs';
-export { NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, NavigationMenuViewport } from './shadCN/navigation-menu';
-export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './shadCN/dialog';
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './shadCN/tooltip';
-export { Toast, ToastAction, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from './shadCN/toast';
-export { Toaster } from './shadCN/toaster';
-export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './shadCN/table';
-export { ScrollArea } from './shadCN/scroll-area';
-export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './shadCN/accordion';
-export { Avatar, AvatarFallback, AvatarImage } from './shadCN/avatar';
-export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './shadCN/dropdown-menu';
-export { CharacteristicBar, WineCharacteristicsDisplay, CharacteristicBarLegend } from './components/characteristicBar';
-export { GrapeQualityFactorBar, GrapeQualityFactorsDisplay, GrapeQualityFactorLegend } from './components/grapeQualityBar';
-export { BalanceScoreBreakdown } from './components/BalanceScoreBreakdown';
-export { GrapeQualityFactorsBreakdown } from './components/grapeQualityBreakdown';
-export { GrapeQualityBreakdownModal } from './modals/UImodals/grapeQualityBreakdownModal';
-export { LandSearchOptionsModal } from './modals/activitymodals/LandSearchOptionsModal';
-export { LandSearchResultsModal } from './modals/activitymodals/LandSearchResultsModal';
-export { LenderSearchOptionsModal } from './modals/activitymodals/LenderSearchOptionsModal';
-export { LenderSearchResultsModal } from './modals/activitymodals/LenderSearchResultsModal';
+// ShadCN Component exports (wildcard exports)
+export * from './shadCN/button';
+export * from './shadCN/card';
+export * from './shadCN/badge';
+export * from './shadCN/separator';
+export * from './shadCN/input';
+export * from './shadCN/label';
+export * from './shadCN/switch';
+export * from './shadCN/select';
+export * from './shadCN/slider';
+export * from './shadCN/tabs';
+export * from './shadCN/navigation-menu';
+export * from './shadCN/dialog';
+export * from './shadCN/tooltip';
+export * from './shadCN/toast';
+export * from './shadCN/toaster';
+export * from './shadCN/table';
+export * from './shadCN/scroll-area';
+export * from './shadCN/accordion';
+export * from './shadCN/avatar';
+export * from './shadCN/dropdown-menu';
+// Component exports (wildcard exports)
+export * from './components/characteristicBar';
+export * from './components/grapeQualityBar';
+export * from './components/BalanceScoreBreakdown';
+export * from './components/grapeQualityBreakdown';
+export * from './components/CharacteristicSlider';
+export * from './components/StaffSkillBar';
+export * from './components/FeatureDisplay';
+
+// Modal exports (wildcard exports where possible)
+export * from './modals/UImodals/grapeQualityBreakdownModal';
+export * from './modals/activitymodals/LandSearchOptionsModal';
+export * from './modals/activitymodals/LandSearchResultsModal';
+export * from './modals/activitymodals/LenderSearchOptionsModal';
+export * from './modals/activitymodals/LenderSearchResultsModal';
+export * from './modals/UImodals/BalanceBreakdownModal';
+export * from './modals/UImodals/WarningModal';
+export * from './modals/activitymodals/StaffSearchOptionsModal';
+export * from './modals/activitymodals/StaffSearchResultsModal';
+export * from './modals/activitymodals/HireStaffModal';
+
+// Default exports (must use named export syntax)
 export { default as WineModal } from './modals/UImodals/wineModal';
 export { default as WorkCalculationTable } from './activities/workCalculationTable';
-export { default as ActivityOptionsModal, type ActivityOptionField, type ActivityWorkEstimate } from './activities/activityOptionsModal';
+export { default as ActivityOptionsModal } from './activities/activityOptionsModal';
 export { default as PlantingOptionsModal } from './modals/activitymodals/PlantingOptionsModal';
 export { default as HarvestOptionsModal } from './modals/activitymodals/HarvestOptionsModal';
 export { default as CrushingOptionsModal } from './modals/activitymodals/CrushingOptionsModal';
 export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
 export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
-export { BalanceBreakdownModal } from './modals/UImodals/BalanceBreakdownModal';
-export { CharacteristicSlider, CharacteristicSliderGrid } from './components/CharacteristicSlider';
-export { StaffSkillBar, StaffSkillBarsList } from './components/StaffSkillBar';
-export { FeatureDisplay } from './components/FeatureDisplay';
-export { WarningModal } from './modals/UImodals/WarningModal';
-export type { WarningModalProps, WarningSeverity, WarningModalAction } from './modals/UImodals/WarningModal';
-// UI Modals exports
-export { StaffSearchOptionsModal } from './modals/activitymodals/StaffSearchOptionsModal';
-export { StaffSearchResultsModal } from './modals/activitymodals/StaffSearchResultsModal';
 export { default as StaffModal } from './modals/UImodals/StaffModal';
 export { default as VineyardModal } from './modals/UImodals/vineyardModal';
-export { HireStaffModal } from './modals/activitymodals/HireStaffModal';
 export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
+
+// Type exports (for default exports that also export types)
+export type { ActivityOptionField, ActivityWorkEstimate } from './activities/activityOptionsModal';

@@ -6,12 +6,9 @@ import { Staff } from '@/lib/types/types';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { formatCurrency, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
-import { Button } from '@/components/ui/shadCN/button';
-import { Badge } from '@/components/ui/shadCN/badge';
-import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
+import { Button, Badge, StaffSkillBarsList, WarningModal } from '@/components/ui';
 import { startHiringProcess, clearPendingCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
 import { X } from 'lucide-react';
-import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 
 interface StaffSearchResultsModalProps {
   isOpen: boolean;

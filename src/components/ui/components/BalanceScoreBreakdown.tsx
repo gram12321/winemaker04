@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineBalanceCategory } from '@/lib/utils/utils';
 

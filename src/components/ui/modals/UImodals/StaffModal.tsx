@@ -4,9 +4,7 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { formatCurrency, formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
 import { getWageColorClass, getAllTeams } from '@/lib/services';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
-import { Button } from '@/components/ui/shadCN/button';
-import { Badge } from '@/components/ui/shadCN/badge';
+import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
 
 interface StaffModalProps extends DialogProps {
   staff: Staff | null;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StaffSearchOptions, calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity/activitymanagers/staffSearchManager';
 import { SPECIALIZED_ROLES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { formatCurrency, getSpecializationIcon } from '@/lib/utils';
-import { Button } from '@/components/ui/shadCN/button';
+import { Button } from '@/components/ui';
 import { X } from 'lucide-react';
 
 interface StaffSearchOptionsModalProps {

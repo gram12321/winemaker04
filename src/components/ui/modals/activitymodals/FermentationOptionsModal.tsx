@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/shadCN/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { calculateFermentationWork, validateFermentationBatch } from '@/lib/services/activity';

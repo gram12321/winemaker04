@@ -3,7 +3,7 @@ import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calcu
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatCurrency } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
-import { Button } from '@/components/ui/shadCN/button';
+import { Button } from '@/components/ui';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 // Two-thumb slider built on Radix Slider primitives

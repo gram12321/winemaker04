@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { WineCharacteristicsDisplay, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
 import { RANGE_ADJUSTMENTS } from '@/lib/balance';
 import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
 

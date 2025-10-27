@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/shadCN/button';
+import { Button, ActivityCard } from '@/components/ui';
 import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
-import { ActivityCard } from '@/components/ui/activities/ActivityCard';
 import { Activity } from '@/lib/types/types';
 import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { useGameStateWithData } from '@/hooks';

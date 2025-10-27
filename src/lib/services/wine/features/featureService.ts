@@ -6,9 +6,11 @@
 // - featureRiskService.ts
 // - FeatureDisplay.tsx business logic
 
-import { WineBatch, WineCharacteristics, CustomerType } from '../../../types/types';
+import { WineBatch, WineCharacteristics, CustomerType, Vineyard } from '../../../types/types';
 import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
+import { isActionAvailable } from '../winery/wineryService';
+import { getColorClass, getColorCategory } from '../../../utils/utils';
 
 // Re-export for convenience
 export type { FeatureRiskInfo, FeatureImpact };
@@ -774,13 +776,18 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
 
 /**
  * Get risk severity label based on risk value
+ * Uses color category system (inverted: higher risk = worse color)
  */
 export function getRiskSeverityLabel(risk: number): string {
-  if (risk < 0.05) return 'Minimal Risk';
-  if (risk < 0.08) return 'Low Risk';
-  if (risk < 0.15) return 'Moderate Risk';
-  if (risk < 0.30) return 'High Risk';
-  return 'Critical Risk';
+  return getColorCategory(1 - risk);
+}
+
+/**
+ * Get color class for risk level
+ * Uses color class system (inverted: higher risk = worse color)
+ */
+export function getRiskColorClass(risk: number): string {
+  return getColorClass(1 - risk);
 }
 
 /**
@@ -874,7 +881,480 @@ export function getAtRiskFeaturesInfo(batch: WineBatch, threshold: number = 0.05
     });
 }
 
-// ===== FEATURE PROCESSING (from featureRiskService.ts) =====
+// ===== FEATURE RISK DISPLAY LOGIC =====
+
+export interface FeatureRiskContext {
+  type: 'vineyard' | 'winery';
+  event: 'harvest' | 'crushing' | 'fermentation' | 'bottling';
+  batch?: WineBatch;
+  vineyard?: Vineyard;
+  nextAction?: 'crush' | 'ferment' | 'bottle';
+}
+
+export interface FeatureRiskDisplayData {
+  features: Array<FeatureRiskInfo & { 
+    config: any; 
+    contextInfo?: string; 
+    riskCombinations?: Array<{ options: any; risk: number; label: string }> | null;
+    riskRanges?: Array<{ groupLabel: string; minRisk: number; maxRisk: number; combinations: Array<{ options: any; risk: number; label: string }> }> | null;
+    weeklyRiskIncrease?: number;
+  }>;
+  showForNextAction: boolean;
+  nextAction?: string;
+}
+
+/**
+ * Get feature risks and influences for display
+ * Works for both vineyard (harvest) and winery (crushing/fermentation/bottling) contexts
+ */
+export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureRiskDisplayData {
+  const { type, event, batch, vineyard, nextAction } = context;
+  
+  const showForNextAction = type === 'winery' && nextAction !== undefined;
+  
+  const targetEvent = showForNextAction && nextAction 
+    ? (nextAction === 'crush' ? 'crushing' : 
+       nextAction === 'ferment' ? 'fermentation' : 
+       nextAction === 'bottle' ? 'bottling' : event)
+    : event;
+  
+  const contextForEvent = type === 'winery' ? batch : vineyard;
+  const eventContext = type === 'winery' ? batch : contextForEvent;
+  
+  const triggeredFeatures = previewFeatureRisks(batch, targetEvent, eventContext);
+  
+  const allConfigs = getAllFeatureConfigs();
+  
+  const evolvingFeatures = allConfigs
+    .filter((config: any) => {
+      if (config.behavior !== 'evolving') return false;
+      const behaviorConfig = config.behaviorConfig as any;
+      return behaviorConfig.spawnActive === true;
+    })
+    .map((config: any) => {
+      const existingFeature = batch?.features?.find((f: any) => f.id === config.id);
+      
+      return {
+        featureId: config.id,
+        featureName: config.name,
+        icon: config.icon,
+        currentRisk: 0,
+        newRisk: 0,
+        riskIncrease: 0,
+        isPresent: existingFeature?.isPresent || false,
+        severity: existingFeature?.severity || 0,
+        qualityImpact: config.effects.quality ? 
+          (typeof config.effects.quality.amount === 'number' ? config.effects.quality.amount : 0) : 
+          undefined,
+        description: config.description,
+        config
+      };
+    });
+  
+  const accumulationFeatures = allConfigs
+    .filter((config: any) => {
+      if (config.behavior !== 'accumulation') return false;
+      const behaviorConfig = config.behaviorConfig as any;
+      
+      const spawnsAtCurrentEvent = behaviorConfig.spawnActive === true && behaviorConfig.spawnEvent === targetEvent;
+      const existingFeature = batch?.features?.find((f: any) => f.id === config.id);
+      const alreadySpawned = existingFeature !== undefined;
+      
+      return spawnsAtCurrentEvent || alreadySpawned;
+    })
+    .map((config: any) => {
+      const existingFeature = batch?.features?.find((f: any) => f.id === config.id);
+      const currentRisk = existingFeature?.risk || 0;
+      
+      return {
+        featureId: config.id,
+        featureName: config.name,
+        icon: config.icon,
+        currentRisk,
+        newRisk: currentRisk,
+        riskIncrease: 0,
+        isPresent: existingFeature?.isPresent || false,
+        severity: existingFeature?.severity || 0,
+        qualityImpact: config.effects.quality ? 
+          (typeof config.effects.quality.amount === 'number' ? config.effects.quality.amount : 0) : 
+          undefined,
+        description: config.description,
+        config
+      };
+    });
+  
+  const allFeatures = [...triggeredFeatures, ...evolvingFeatures, ...accumulationFeatures];
+  
+  const featuresWithConfig = allFeatures.map((feature: any) => {
+    const config = feature.config || getFeatureConfig(feature.featureId);
+    return { ...feature, config };
+  });
+  
+  const featuresNotManifested = featuresWithConfig.filter(feature => !feature.isPresent);
+  
+  const filteredFeatures = showForNextAction 
+    ? featuresNotManifested.filter(feature => {
+        if (feature.config?.behavior === 'triggered') {
+          const behaviorConfig = feature.config.behaviorConfig as any;
+          return behaviorConfig.eventTriggers?.some((trigger: any) => trigger.event === targetEvent);
+        }
+        if (feature.config?.behavior === 'evolving' || feature.config?.behavior === 'accumulation') {
+          return true;
+        }
+        return false;
+      })
+    : featuresNotManifested;
+  
+  const shouldUseRanges = targetEvent === 'crushing' || targetEvent === 'harvest';
+  
+  const featuresWithContext = filteredFeatures.map(feature => {
+    const combinations = getFeatureRiskCombinations(feature, context, targetEvent);
+    
+    const config = feature.config || getFeatureConfig(feature.featureId);
+    const showAsRange = config?.riskDisplay?.showAsRange ?? true;
+    const useRangesForDisplay = shouldUseRanges && showAsRange;
+    
+    const weeklyRiskIncrease = calculateWeeklyRiskIncrease(batch, feature);
+    
+    return {
+      ...feature,
+      contextInfo: getContextInfo(feature, context),
+      riskCombinations: useRangesForDisplay ? null : combinations,
+      riskRanges: useRangesForDisplay ? calculateRiskRangesForCombinations(feature, context, targetEvent) : null,
+      weeklyRiskIncrease
+    };
+  });
+  
+  return {
+    features: featuresWithContext,
+    showForNextAction,
+    nextAction: showForNextAction ? nextAction : undefined
+  };
+}
+
+function getContextInfo(risk: FeatureRiskInfo, context: FeatureRiskContext): string {
+  const { type, vineyard, batch } = context;
+  
+  if (type === 'vineyard' && vineyard) {
+    const ripeness = vineyard.ripeness || 0;
+    
+    if (risk.featureId === 'green_flavor') {
+      return ripeness < 0.5 
+        ? `(Ripeness ${Math.round(ripeness * 100)}% - Underripe)`
+        : `(Ripeness ${Math.round(ripeness * 100)}% - Good level)`;
+    }
+    
+    return '';
+  }
+  
+  if (type === 'winery' && batch) {
+    switch (risk.featureId) {
+      case 'oxidation':
+        const fragile = batch.fragile || 0;
+        const proneToOxidation = batch.proneToOxidation || 0;
+        const currentRisk = risk.currentRisk || 0;
+        return `(Current: ${(currentRisk * 100).toFixed(1)}%, Fragile: ${Math.round(fragile * 100)}%, Prone: ${Math.round(proneToOxidation * 100)}%)`;
+      
+      case 'volatile_acidity':
+        const proneToOxidationVA = batch.proneToOxidation || 0;
+        return `(Oxidation prone: ${Math.round(proneToOxidationVA * 100)}%)`;
+      
+      default:
+        return '';
+    }
+  }
+  
+  return '';
+}
+
+function calculateWeeklyRiskIncrease(batch: WineBatch | undefined, feature: FeatureRiskInfo): number | undefined {
+  if (!batch) {
+    return undefined;
+  }
+  
+  const config = getFeatureConfig(feature.featureId);
+  if (!config || config.behavior !== 'accumulation') {
+    return undefined;
+  }
+  
+  const behaviorConfig = config.behaviorConfig as any;
+  const baseRate = behaviorConfig.baseRate || 0;
+  
+  let stateMultiplier = 1.0;
+  const multiplierValue = behaviorConfig.stateMultipliers?.[batch.state];
+  if (typeof multiplierValue === 'function') {
+    stateMultiplier = multiplierValue(batch);
+  } else if (typeof multiplierValue === 'number') {
+    stateMultiplier = multiplierValue;
+  }
+  
+  const compoundMultiplier = behaviorConfig.compound 
+    ? (1 + (feature.currentRisk || 0))
+    : 1.0;
+  
+  let featureMultiplier = 1.0;
+  if (config.id === 'oxidation') {
+    featureMultiplier = batch.proneToOxidation || 1.0;
+  }
+  
+  return baseRate * stateMultiplier * compoundMultiplier * featureMultiplier;
+}
+
+function generateGroupLabel(combinations: Array<{ options: any; risk: number; label: string }>, event: string): string {
+  const firstCombo = combinations[0];
+  
+  if (firstCombo.options.season && firstCombo.options.week !== undefined) {
+    const season = firstCombo.options.season;
+    const weeks = combinations.map(c => c.options.week).sort((a, b) => a - b);
+    const minWeek = weeks[0];
+    const maxWeek = weeks[weeks.length - 1];
+    return `${season} Harvest (Weeks ${minWeek}-${maxWeek})`;
+  }
+  
+  if (firstCombo.options.ripeness !== undefined) {
+    return 'Risk (varies with ripeness)';
+  }
+  
+  if (event === 'crushing' && firstCombo.options.method) {
+    const destemmingText = firstCombo.options.destemming ? 'Destemmed' : 'Stems';
+    const coldSoakText = firstCombo.options.coldSoak ? 'Cold Soak' : 'No Cold Soak';
+    return `${firstCombo.options.method} (${destemmingText}, ${coldSoakText}, 0-100% pressure)`;
+  }
+  
+  if (event === 'fermentation' && firstCombo.options.method && firstCombo.options.temperature) {
+    return `${firstCombo.options.method} + ${firstCombo.options.temperature}`;
+  }
+  
+  return firstCombo.label || 'Risk';
+}
+
+function calculateRiskRangesForCombinations(
+  risk: FeatureRiskInfo, 
+  context: FeatureRiskContext, 
+  event: 'harvest' | 'crushing' | 'fermentation' | 'bottling'
+): Array<{ groupLabel: string; minRisk: number; maxRisk: number; combinations: Array<{ options: any; risk: number; label: string }> }> | null {
+  const combinations = getFeatureRiskCombinations(risk, context, event);
+  if (!combinations || combinations.length === 0) {
+    return null;
+  }
+
+  const groups = new Map<string, Array<{ options: any; risk: number; label: string }>>();
+  
+  for (const combination of combinations) {
+    let groupKey: string;
+    
+    switch (event) {
+      case 'harvest':
+        if (combination.options.season) {
+          groupKey = `${risk.featureId}-${combination.options.season}`;
+        } else {
+          groupKey = `${risk.featureId}-ripeness-range`;
+        }
+        break;
+      case 'crushing':
+        const destemmingKey = combination.options.destemming ? 'destemmed' : 'stems';
+        const coldSoakKey = combination.options.coldSoak ? 'coldsoak' : 'nocoldsoak';
+        groupKey = `${combination.options.method}-${destemmingKey}-${coldSoakKey}`;
+        break;
+      case 'fermentation':
+        groupKey = `${combination.options.method}-${combination.options.temperature}`;
+        break;
+      case 'bottling':
+        groupKey = combination.options.method;
+        break;
+      default:
+        groupKey = 'default';
+    }
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+    }
+    groups.get(groupKey)!.push(combination);
+  }
+
+  const ranges: Array<{ groupLabel: string; minRisk: number; maxRisk: number; combinations: Array<{ options: any; risk: number; label: string }> }> = [];
+
+  for (const [, groupCombinations] of groups) {
+    const risks = groupCombinations.map(c => c.risk);
+    const minRisk = Math.min(...risks);
+    const maxRisk = Math.max(...risks);
+    
+    const groupLabel = generateGroupLabel(groupCombinations, event);
+
+    ranges.push({
+      groupLabel,
+      minRisk,
+      maxRisk,
+      combinations: groupCombinations
+    });
+  }
+
+  ranges.sort((a, b) => b.maxRisk - a.maxRisk);
+
+  return ranges;
+}
+
+function getFeatureRiskCombinations(
+  risk: FeatureRiskInfo, 
+  context: FeatureRiskContext, 
+  event: 'harvest' | 'crushing' | 'fermentation' | 'bottling'
+): Array<{ options: any; risk: number; label: string }> | null {
+  if (!context.batch && !context.vineyard) {
+    return null;
+  }
+
+  const config = (risk as any).config;
+  if (!config?.behaviorConfig) {
+    return null;
+  }
+
+  const behaviorConfig = config.behaviorConfig as any;
+  const triggers = behaviorConfig.eventTriggers || [];
+  const trigger = triggers.find((t: any) => t.event === event);
+  if (!trigger || typeof trigger.riskIncrease !== 'function') {
+    return null;
+  }
+
+  const batch = context.batch;
+  const vineyard = context.vineyard;
+  const combinations: Array<{ options: any; risk: number; label: string }> = [];
+
+  const allOptionCombinations = getFeatureSpecificOptions(risk.featureId, event);
+  
+  for (const optionSet of allOptionCombinations) {
+    try {
+      let contextForRisk: any;
+      if (event === 'harvest') {
+        if (optionSet.season && optionSet.week !== undefined) {
+          contextForRisk = { 
+            vineyard: vineyard || batch, 
+            season: optionSet.season, 
+            week: optionSet.week 
+          };
+        } else {
+          contextForRisk = { options: vineyard || batch, batch: batch || vineyard };
+        }
+      } else {
+        contextForRisk = { options: optionSet, batch: batch || vineyard };
+      }
+      
+      const riskValue = trigger.riskIncrease(contextForRisk);
+      const label = generateOptionLabel(optionSet, event);
+      
+      combinations.push({
+        options: optionSet,
+        risk: riskValue,
+        label
+      });
+    } catch (error) {
+      console.warn(`Error calculating risk for ${risk.featureId} with options:`, optionSet, error);
+    }
+  }
+
+  return combinations.length > 0 ? combinations : null;
+}
+
+function getFeatureSpecificOptions(featureId: string, event: 'harvest' | 'crushing' | 'fermentation' | 'bottling'): any[] {
+  const config = getFeatureConfig(featureId);
+  
+  if (config?.riskDisplay?.customOptionCombinations) {
+    return config.riskDisplay.customOptionCombinations(event);
+  }
+  
+  const combinations: any[] = [];
+  
+  switch (event) {
+    case 'fermentation':
+      const methods = ['Basic', 'Temperature Controlled', 'Extended Maceration'];
+      const temperatures = ['Ambient', 'Cool', 'Warm'];
+      
+      for (const method of methods) {
+        for (const temperature of temperatures) {
+          combinations.push({ method, temperature });
+        }
+      }
+      break;
+      
+    case 'crushing':
+      const crushingMethods = ['Hand Press', 'Mechanical Press', 'Pneumatic Press'];
+      const destemmingOptions = [true, false];
+      const coldSoakOptions = [true, false];
+      
+      for (const method of crushingMethods) {
+        for (const destemming of destemmingOptions) {
+          for (const coldSoak of coldSoakOptions) {
+            combinations.push({ 
+              method, 
+              destemming, 
+              coldSoak, 
+              pressingIntensity: 0,
+              _isMin: true 
+            });
+            combinations.push({ 
+              method, 
+              destemming, 
+              coldSoak, 
+              pressingIntensity: 1,
+              _isMax: true 
+            });
+          }
+        }
+      }
+      break;
+      
+    case 'harvest':
+      if (featureId === 'green_flavor') {
+        combinations.push({ ripeness: 0, _isMin: true });
+        combinations.push({ ripeness: 1, _isMax: true });
+      }
+      break;
+      
+    case 'bottling':
+      break;
+  }
+  
+  return combinations;
+}
+
+function generateOptionLabel(options: any, event: 'harvest' | 'crushing' | 'fermentation' | 'bottling'): string {
+  switch (event) {
+    case 'harvest':
+      if (options._label) {
+        return options._label;
+      }
+      if (options.ripeness !== undefined) {
+        return `Ripeness ${Math.round(options.ripeness * 100)}%`;
+      }
+      return 'Default Harvest';
+    case 'fermentation':
+      return `${options.method} + ${options.temperature}`;
+    case 'crushing':
+      if (options._isMin || options._isMax) {
+        const pressureText = options._isMin ? '0% pressure' : '100% pressure';
+        return `Pressure: ${pressureText}`;
+      }
+      const destemmingText = options.destemming ? 'Destemmed' : 'Stems';
+      const coldSoakText = options.coldSoak ? 'Cold Soak' : 'No Cold Soak';
+      const pressureText = `${Math.round(options.pressingIntensity * 100)}% pressure`;
+      return `${options.method} (${destemmingText}, ${coldSoakText}, ${pressureText})`;
+    case 'bottling':
+      return `${options.method} + ${options.corkType}`;
+    default:
+      return 'Default';
+  }
+}
+
+/**
+ * Get the next available action for a wine batch
+ */
+export function getNextWineryAction(batch: WineBatch): 'crush' | 'ferment' | 'bottle' | null {
+  if (isActionAvailable(batch, 'crush')) return 'crush';
+  if (isActionAvailable(batch, 'ferment')) return 'ferment';
+  if (isActionAvailable(batch, 'bottle')) return 'bottle';
+  return null;
+}
+
+// ===== FEATURE PROCESSING =====
 
 /**
  * Process weekly risk accumulation for all time-based features

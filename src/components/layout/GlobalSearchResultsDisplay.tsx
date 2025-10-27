@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
-import { LandSearchResultsModal } from '@/components/ui/modals/activitymodals/LandSearchResultsModal';
-import { StaffSearchResultsModal } from '@/components/ui/modals/activitymodals/StaffSearchResultsModal';
-import { LenderSearchResultsModal } from '@/components/ui/modals/activitymodals/LenderSearchResultsModal';
+import { LandSearchResultsModal, StaffSearchResultsModal, LenderSearchResultsModal } from '@/components/ui';
 import { clearPendingLandSearchResults, clearPendingCandidates, clearPendingLenderSearchResults } from '@/lib/services';
 
 /**

@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { BalanceScoreBreakdown, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
 import { useWineBalance } from '@/hooks';
-import { WineCharacteristicsDisplay } from '@/components/ui/components/characteristicBar';
+import { WineCharacteristicsDisplay, TooltipProvider } from '@/components/ui';
 import { calculateMidpointCharacteristics, RESET_BUTTON_CLASSES } from '@/lib/utils';
-import { TooltipProvider } from '@/components/ui/shadCN/tooltip';
 
 export function CrossTraitPenaltyTab() {
   const [characteristics, setCharacteristics] = useState<WineCharacteristics>(calculateMidpointCharacteristics());

@@ -1,10 +1,9 @@
 import React from 'react';
 import { Vineyard } from '@/lib/types/types';
-import { getColorClass, formatNumber, getColorCategory, getBadgeColorClasses } from '@/lib/utils/utils';
-import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS } from '@/lib/utils';
+import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory, getBadgeColorClasses } from '@/lib/utils';
 import { getRegionalPriceRange } from '@/lib/services';
-import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/vineyardConstants';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadCN/tooltip';
+import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
 
 // Grape quality factor types for wine value calculation
 export type GrapeQualityFactorType =

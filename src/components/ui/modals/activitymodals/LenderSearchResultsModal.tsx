@@ -5,7 +5,7 @@ import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
 import { startTakeLoan, getGameState, calculateLoanTerms } from '@/lib/services';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
-import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
+import { WarningModal } from '@/components/ui';
 
 interface LenderSearchResultsModalProps {
   isOpen: boolean;

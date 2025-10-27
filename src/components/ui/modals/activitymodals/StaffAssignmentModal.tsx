@@ -10,8 +10,7 @@ import { NotificationCategory } from '@/lib/types/types';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import { Button } from '@/components/ui/shadCN/button';
-import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
+import { Button, StaffSkillBarsList } from '@/components/ui';
 import { useGameState } from '@/hooks';
 import { getTeamForCategory } from '@/lib/services';
 

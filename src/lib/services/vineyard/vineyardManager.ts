@@ -1,12 +1,14 @@
-import { Vineyard } from '../../types/types';
+import { Vineyard, Activity, GameDate } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
 import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '../../database/activities/vineyardDB';
-import { loadActivitiesFromDb, removeActivityFromDb } from '../../database/activities/activityDB';
+import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '../../database/activities/activityDB';
 import { WorkCategory } from '../../services/activity';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
+import { getGameState } from '../core/gameState';
+import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
 
 
 /**
@@ -482,6 +484,137 @@ export async function updateVineyardVineYields(): Promise<void> {
     }
   } catch (error) {
     console.error('Error updating vineyard vine yields:', error);
+  }
+}
+
+/**
+ * Handle partial planting for planting activities
+ * Increases vine density incrementally based on work progress
+ */
+export async function handlePartialPlanting(
+  activity: Activity,
+  oldCompletedWork: number,
+  newCompletedWork: number
+): Promise<void> {
+  try {
+    const workProgress = newCompletedWork / activity.totalWork;
+    const oldProgress = oldCompletedWork / activity.totalWork;
+    const progressThisTick = workProgress - oldProgress;
+    
+    if (progressThisTick <= 0) return; // No progress this tick
+    
+    const vineyards = await loadVineyards();
+    const vineyard = vineyards.find(v => v.id === activity.targetId);
+    
+    if (!vineyard) return;
+    
+    const targetDensity = activity.params.density || 0;
+    if (targetDensity <= 0) return;
+    
+    // Calculate current density based on work progress
+    const expectedDensityByNow = Math.round(targetDensity * workProgress);
+    const currentDensity = vineyard.density || 0;
+    
+    // Calculate density increase this tick
+    const densityIncrease = expectedDensityByNow - currentDensity;
+    
+    // Only update if there's a meaningful increase (at least 1 vine/ha)
+    if (densityIncrease >= 1) {
+      const newDensity = Math.min(targetDensity, currentDensity + densityIncrease);
+      
+      // Update vineyard density
+      const updatedVineyard = {
+        ...vineyard,
+        density: newDensity
+      };
+      await saveVineyard(updatedVineyard);
+    }
+  } catch (error) {
+    console.error(`Error in partial planting for activity ${activity.id}:`, error);
+  }
+}
+
+/**
+ * Handle partial harvesting for harvesting activities
+ * Creates wine batches incrementally based on work progress
+ */
+export async function handlePartialHarvesting(
+  activity: Activity, 
+  oldCompletedWork: number, 
+  newCompletedWork: number
+): Promise<void> {
+  try {
+    const workProgress = newCompletedWork / activity.totalWork;
+    const oldProgress = oldCompletedWork / activity.totalWork;
+    const progressThisTick = workProgress - oldProgress;
+    
+    if (progressThisTick <= 0) return; // No progress this tick
+    
+    const vineyards = await loadVineyards();
+    const vineyard = vineyards.find(v => v.id === activity.targetId);
+    
+    if (!vineyard || !vineyard.grape) return;
+    
+    // Calculate current total yield based on current ripeness
+    const currentTotalYield = calculateVineyardYield(vineyard);
+    
+    // Get the harvest progress as a percentage (0-1)
+    const harvestProgress = workProgress;
+    
+    // Calculate how much should be harvested by now based on current yield
+    const expectedHarvestedByNow = currentTotalYield * harvestProgress;
+    const previouslyHarvested = activity.params.harvestedSoFar || 0;
+    
+    // Calculate how much to harvest this tick
+    const yieldThisTick = Math.max(0, expectedHarvestedByNow - previouslyHarvested);
+    
+    // Only create wine batch if we're harvesting at least 5kg this tick
+    if (yieldThisTick >= 5) {
+      const gameState = getGameState();
+      
+      // Create harvest dates: start is activity start, end is current date
+      const harvestStartDate: GameDate = {
+        week: activity.gameWeek,
+        season: activity.gameSeason as any,
+        year: activity.gameYear
+      };
+      
+      const harvestEndDate: GameDate = {
+        week: gameState.week || 1,
+        season: gameState.season || 'Spring',
+        year: gameState.currentYear || 2024
+      };
+      
+      // Create wine batch for this tick's harvest
+      await createWineBatchFromHarvest(
+        vineyard.id,
+        vineyard.name,
+        vineyard.grape,
+        Math.round(yieldThisTick),
+        harvestStartDate,
+        harvestEndDate
+      );
+      
+      // Update the harvested amount in activity params
+      const newHarvestedSoFar = previouslyHarvested + yieldThisTick;
+      await updateActivityInDb(activity.id, {
+        params: {
+          ...activity.params,
+          harvestedSoFar: newHarvestedSoFar,
+          // Store current total yield for completion handler
+          currentTotalYield: currentTotalYield
+        }
+      });
+      
+      // Update vineyard status to show progress
+      const updatedVineyard = {
+        ...vineyard,
+        status: 'Growing'
+      };
+      await saveVineyard(updatedVineyard);
+    }
+  } catch (error) {
+    console.error(`Error in partial harvesting for activity ${activity.id}:`, error);
   }
 }
 

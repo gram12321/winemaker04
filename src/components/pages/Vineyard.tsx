@@ -5,7 +5,7 @@ import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getA
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal } from '../ui';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
-import { FeatureRiskDisplay } from '../ui/components/FeatureRiskDisplay';
+import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import HealthTooltip from '../ui/vineyard/HealthTooltip';
 import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
@@ -607,7 +607,7 @@ const Vineyard: React.FC = () => {
                         {/* Harvest features */}
                         {vineyard.grape && (
                           <div className="mt-3 pt-2 border-t border-gray-200">
-                            <FeatureRiskDisplay vineyard={vineyard} />
+                            <FeatureDisplay vineyard={vineyard} showPreviewRisks={true} />
                           </div>
                         )}
                       </div>
@@ -822,7 +822,7 @@ const Vineyard: React.FC = () => {
                           
                           {/* Harvest Risks */}
                           <div>
-                            <FeatureRiskDisplay vineyard={vineyard} />
+                            <FeatureDisplay vineyard={vineyard} showPreviewRisks={true} />
                           </div>
                         </div>
                       </div>

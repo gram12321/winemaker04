@@ -7,11 +7,7 @@ import { Nationality, StaffSkills } from '@/lib/types/types';
 import { formatCurrency, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
-import { Button } from '@/components/ui/shadCN/button';
-import { Input } from '@/components/ui/shadCN/input';
-import { Label } from '@/components/ui/shadCN/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/shadCN/select';
-import { Slider } from '@/components/ui/shadCN/slider';
+import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
 
 interface HireStaffModalProps {
   isOpen: boolean;

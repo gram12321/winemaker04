@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@/components/ui/shadCN/button';
+import { Button } from '@/components/ui';
 import { AlertTriangle, AlertCircle, XCircle, Info } from 'lucide-react';
 
 export type WarningSeverity = 'info' | 'warning' | 'error' | 'critical';

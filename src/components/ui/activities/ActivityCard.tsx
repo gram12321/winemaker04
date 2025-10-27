@@ -1,12 +1,9 @@
 import React, { memo, useState } from 'react';
 import { Activity } from '@/lib/types/types';
-import { Button } from '@/components/ui/shadCN/button';
-import { Progress } from '@/components/ui/shadCN/progress';
-import { Badge } from '@/components/ui/shadCN/badge';
+import { Button, Progress, Badge, StaffAssignmentModal } from '@/components/ui';
 import { formatNumber } from '@/lib/utils/utils';
 import { getSkillColor } from '@/lib/utils/colorMapping';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { StaffAssignmentModal } from '@/components/ui/modals/activitymodals/StaffAssignmentModal';
 import { getTeamForCategory } from '@/lib/services';
 
 interface ActivityCardProps {

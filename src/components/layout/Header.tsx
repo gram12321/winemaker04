@@ -6,7 +6,7 @@ import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, Dropd
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
-import PrestigeModal from '@/components/ui/modals/UImodals/prestigeModal';
+import { PrestigeModal } from '@/components/ui';
 import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass, getEconomyPhaseAbbreviation } from '@/lib/utils';

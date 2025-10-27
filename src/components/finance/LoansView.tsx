@@ -7,7 +7,7 @@ import { loadLenders } from '@/lib/database/core/lendersDB';
 import { formatCurrency, formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
 import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull } from '@/lib/services/finance/loanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
-import { LenderSearchOptionsModal } from '@/components/ui/modals/activitymodals/LenderSearchOptionsModal';
+import { LenderSearchOptionsModal } from '@/components/ui';
 // LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
 import { calculateCreditRating } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';

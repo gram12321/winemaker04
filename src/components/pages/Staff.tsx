@@ -7,16 +7,8 @@ import type { Staff } from '@/lib/types/types';
 import { formatCurrency, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import { Button } from '@/components/ui/shadCN/button';
-import { Badge } from '@/components/ui/shadCN/badge';
-import { StaffSearchOptionsModal } from '@/components/ui/modals/activitymodals/StaffSearchOptionsModal';
-import { StaffSearchResultsModal } from '@/components/ui/modals/activitymodals/StaffSearchResultsModal';
-import StaffModal from '@/components/ui/modals/UImodals/StaffModal';
-import { StaffSkillBarsList } from '@/components/ui/components/StaffSkillBar';
+import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffSearchOptionsModal, StaffSearchResultsModal, StaffModal, StaffSkillBarsList } from '@/components/ui';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/shadCN/dialog';
-import { Label } from '@/components/ui/shadCN/label';
-import { Input } from '@/components/ui/shadCN/input';
 import { getTaskTypeDisplayName } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/types/types';
 

@@ -86,7 +86,7 @@ CREATE TABLE companies (
     current_year integer DEFAULT 2024,
     money numeric DEFAULT 0,
     prestige numeric DEFAULT 0,
-    credit_rating decimal(3,2) DEFAULT 0.5 CHECK (credit_rating >= 0 AND credit_rating <= 1),
+    credit_rating integer DEFAULT 50 CHECK (credit_rating >= 0 AND credit_rating <= 100),
     economy_phase text DEFAULT 'Recovery' CHECK (economy_phase IN ('Crash', 'Recession', 'Recovery', 'Expansion', 'Boom')),
     last_played timestamptz DEFAULT now(),
     created_at timestamptz DEFAULT now(),
@@ -161,7 +161,7 @@ CREATE TABLE wine_batches (
     grape_variety text NOT NULL,
     quantity integer NOT NULL,
     fermentation_progress integer DEFAULT 0 CHECK (fermentation_progress >= 0 AND fermentation_progress <= 100),
-    quality numeric DEFAULT 0.7 CHECK (quality >= 0 AND quality <= 1),
+    grape_quality numeric DEFAULT 0.7 CHECK (grape_quality >= 0 AND grape_quality <= 1),
     balance numeric DEFAULT 0.6 CHECK (balance >= 0 AND balance <= 1),
     asking_price numeric,
     characteristics jsonb DEFAULT '{"body": 0.5, "aroma": 0.5, "spice": 0.5, "acidity": 0.5, "tannins": 0.5, "sweetness": 0.5}'::jsonb,
@@ -187,6 +187,7 @@ CREATE TABLE wine_batches (
 );
 
 COMMENT ON COLUMN wine_batches.features IS 'JSONB array of wine features and faults (oxidation, green flavor, terroir, etc). Each feature has id, risk, isPresent, severity, name, type, and icon fields.';
+COMMENT ON COLUMN wine_batches.grape_quality IS 'Overall grape quality (0-1 scale)';
 
 -- Wine orders table
 CREATE TABLE wine_orders (
