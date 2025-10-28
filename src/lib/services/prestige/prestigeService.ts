@@ -758,6 +758,10 @@ export function getEventDisplayData(event: PrestigeEvent): {
   amountText?: string;
   calc?: string;
   displayInfo?: string;
+  calculationData?: {
+    type: 'company_value' | 'vineyard_land' | 'vineyard_age' | 'wine_feature';
+    [key: string]: any;
+  };
 } {
   if (event.metadata) {
     const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
@@ -770,7 +774,16 @@ export function getEventDisplayData(event: PrestigeEvent): {
         title: `Vine Age: ${metadata.vineyardName} (${metadata.vineAge} years)`,
         titleBase: 'Vine Age',
         amountText: `(${metadata.vineAge} years)`,
-        calc: `Age                                      ${formatNumber(ageBase, { decimals: 0, forceDecimals: true })}\nGrape Suitability                  ${formatNumber(ageSuitAdj, { decimals: 0, forceDecimals: true })}\nAsym Scaling × Density       ${formatNumber(densityMod, { decimals: 2, forceDecimals: true })}\n=                                          ${formatNumber(event.amount, { decimals: 0, forceDecimals: true })}`,
+        calculationData: {
+          type: 'vineyard_age',
+          vineyardName: metadata.vineyardName,
+          vineAge: metadata.vineAge,
+          ageBase: ageBase,
+          grapeSuitability: ageSuitAdj,
+          densityModifier: densityMod,
+          density: metadata.density,
+          finalPrestige: event.amount
+        },
         displayInfo: metadata.density !== undefined 
           ? `Density: ${formatNumber(Number(metadata.density) || 0, { decimals: 0 })} vines/ha (modifier ×${formatNumber(densityMod, { decimals: 2, forceDecimals: true })})`
           : undefined,
@@ -789,7 +802,18 @@ export function getEventDisplayData(event: PrestigeEvent): {
         title: `Land Value: ${metadata.vineyardName} (${lvh}/ha)`,
         titleBase: 'Land Value',
         amountText: `(Total ${formatCurrency(totalValue)})`,
-        calc: `Land Value per ha              ${formatNumber(basePerHa, { decimals: 2, forceDecimals: true })}\nWith Suitability                ${formatNumber(suitAdj, { decimals: 2, forceDecimals: true })}\nAsym Scaling                   ${formatNumber(perHaAsym, { decimals: 2, forceDecimals: true })}\nSize Factor (√ha)              ${formatNumber(sizeFactor, { decimals: 2, forceDecimals: true })}\nDensity Modifier               ${formatNumber(densityMod, { decimals: 2, forceDecimals: true })}\n=                                          ${formatNumber(event.amount, { decimals: 0, forceDecimals: true })}`,
+        calculationData: {
+          type: 'vineyard_land',
+          vineyardName: metadata.vineyardName,
+          landValuePerHa: basePerHa,
+          hectares: metadata.hectares,
+          density: metadata.density,
+          densityModifier: densityMod,
+          suitability: suitAdj,
+          sizeFactor: sizeFactor,
+          asymScaling: perHaAsym,
+          finalPrestige: event.amount
+        },
         displayInfo: `${lvh}/ha × ${formatNumber(Number(metadata.hectares ?? 0), { decimals: 2, forceDecimals: true })} ha • Density: ${formatNumber(Number(metadata.density ?? 0), { decimals: 0 })} vines/ha (modifier ×${formatNumber(densityMod, { decimals: 2, forceDecimals: true })})`,
       };
     }
@@ -807,7 +831,13 @@ export function getEventDisplayData(event: PrestigeEvent): {
         title: `Company Value: €${metadata.companyNetWorth.toLocaleString()}`,
         titleBase: 'Company Value',
         amountText: `€${metadata.companyNetWorth.toLocaleString()}`,
-        calc: `base=log(€${metadata.companyNetWorth.toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.prestigeBase01?.toFixed(2)} → scaled=${event.amount.toFixed(2)}`,
+        calculationData: {
+          type: 'company_value',
+          companyValue: metadata.companyNetWorth,
+          maxLandValue: metadata.maxLandValue,
+          baseValue: metadata.prestigeBase01,
+          finalPrestige: event.amount
+        },
       };
     }
     
@@ -871,7 +901,15 @@ export function getEventDisplayData(event: PrestigeEvent): {
       title,
       titleBase: `${featureName} (${level})`,
       amountText,
-      calc: `Base: ${metadata.calculatedAmount?.toFixed(4)} | Event: ${eventType} | Level: ${level}`
+      calculationData: {
+        type: 'wine_feature',
+        featureName: featureName,
+        wineName: wineName,
+        eventType: eventType,
+        level: level,
+        baseAmount: metadata.calculatedAmount,
+        finalPrestige: event.amount
+      }
     };
   }
 

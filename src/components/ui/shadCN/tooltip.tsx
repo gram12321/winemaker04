@@ -269,6 +269,8 @@ export function TooltipRow({
       <span className={cn(
         colorClass,
         badge ? badgeClasses.bg : '',
+        badge && valueRating !== undefined ? badgeClasses.text : '',
+        badge && 'px-1.5 py-0.5 rounded text-xs',
         monospaced && 'font-mono'
       )}>
         {icon ? <span className="inline-flex items-center gap-1">{icon}{value}</span> : value}

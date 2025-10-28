@@ -3,6 +3,7 @@ import { twMerge } from "tailwind-merge"
 import { Customer, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
+import { NormalizeScrewed1000To01WithTail } from './calculator';
 
 // ========================================
 // SECTION 1: CORE UTILITIES
@@ -477,6 +478,135 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
     9: { text: 'text-green-800', bg: 'bg-green-100' },
   };
   return colorMap[level] || { text: 'text-gray-500', bg: 'bg-gray-100' };
+}
+
+/**
+ * Get color class for values with flexible range normalization and interpretation strategies
+ * Handles different value ranges, normalization, and interpretation strategies
+ * 
+ * @param value The actual value to color-code
+ * @param normalizeMin Minimum value of the actual range (e.g., 0, 1500, 0)
+ * @param normalizeMax Maximum value of the actual range (e.g., 10000, 15000, 1)
+ * @param strategy How to interpret the normalized value: 'higher_better', 'lower_better', 'balanced', or 'exponential'
+ * @param balanceMin Optional: minimum of ideal range for 'balanced' strategy (e.g., 0.5)
+ * @param balanceMax Optional: maximum of ideal range for 'balanced' strategy (e.g., 0.7)
+ * @returns Tailwind color class string
+ * 
+ * @example
+ * // Company Value: 0-10000 range, higher is better
+ * getColorClassForRange(7500, 0, 10000, 'higher_better') // "text-green-700"
+ * 
+ * // Density: 1500-15000 range, lower is better  
+ * getColorClassForRange(8000, 1500, 15000, 'lower_better') // "text-amber-500"
+ * 
+ * // Wine Body: 0-1 range, balanced at 0.5-0.7
+ * getColorClassForRange(0.3, 0, 1, 'balanced', 0.5, 0.7) // "text-red-600"
+ * 
+ * // Wine Tannins: 0-1 range, balanced at 0.4-0.6
+ * getColorClassForRange(0.5, 0, 1, 'balanced', 0.4, 0.6) // "text-green-700"
+ * 
+ * // Prestige: 0-1000 range, exponential scaling (quick out of red, slow to deep green)
+ * getColorClassForRange(50, 0, 1000, 'exponential') // "text-lime-600" (out of red quickly)
+ * getColorClassForRange(500, 0, 1000, 'exponential') // "text-green-800" (takes long to reach deep green)
+ */
+export function getColorClassForRange(
+  value: number,
+  normalizeMin: number,
+  normalizeMax: number,
+  strategy: 'higher_better' | 'lower_better' | 'balanced' | 'exponential',
+  balanceMin?: number,
+  balanceMax?: number
+): string {
+  const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
+  return getColorClass(rating);
+}
+
+/**
+ * Get rating (0-1) for values with flexible range normalization and interpretation strategies
+ * This is the internal calculation used by getColorClassForRange, but can be used directly
+ * when you need the rating value instead of the color class
+ * 
+ * @param value The actual value to rate
+ * @param normalizeMin Minimum value of the actual range (e.g., 0, 1500, 0)
+ * @param normalizeMax Maximum value of the actual range (e.g., 10000, 15000, 1)
+ * @param strategy How to interpret the normalized value: 'higher_better', 'lower_better', 'balanced', or 'exponential'
+ * @param balanceMin Optional: minimum of ideal range for 'balanced' strategy (e.g., 0.5)
+ * @param balanceMax Optional: maximum of ideal range for 'balanced' strategy (e.g., 0.7)
+ * @returns Rating value (0-1) where higher values are better
+ * 
+ * @example
+ * // Company Value: 0-10000 range, higher is better
+ * getRatingForRange(7500, 0, 10000, 'higher_better') // 0.75
+ * 
+ * // Density: 1500-15000 range, lower is better  
+ * getRatingForRange(8000, 1500, 15000, 'lower_better') // 0.52
+ * 
+ * // Wine Body: 0-1 range, balanced at 0.5-0.7
+ * getRatingForRange(0.3, 0, 1, 'balanced', 0.5, 0.7) // 0.33
+ * 
+ * // Wine Tannins: 0-1 range, balanced at 0.4-0.6
+ * getRatingForRange(0.5, 0, 1, 'balanced', 0.4, 0.6) // 1.0
+ * 
+ * // Prestige: 0-1000 range, exponential scaling (quick out of red, slow to deep green)
+ * getRatingForRange(50, 0, 1000, 'exponential') // ~0.7 (out of red quickly)
+ * getRatingForRange(500, 0, 1000, 'exponential') // ~0.95 (takes long to reach deep green)
+ */
+export function getRatingForRange(
+  value: number,
+  normalizeMin: number,
+  normalizeMax: number,
+  strategy: 'higher_better' | 'lower_better' | 'balanced' | 'exponential',
+  balanceMin?: number,
+  balanceMax?: number
+): number {
+  let rating: number;
+  
+  switch (strategy) {
+    case 'higher_better':
+      // Normalize value to 0-1 range
+      const normalized = Math.max(0, Math.min(1, (value - normalizeMin) / (normalizeMax - normalizeMin)));
+      // Higher normalized value = better rating
+      rating = normalized;
+      break;
+      
+    case 'lower_better':
+      // Normalize value to 0-1 range
+      const normalizedLower = Math.max(0, Math.min(1, (value - normalizeMin) / (normalizeMax - normalizeMin)));
+      // Lower normalized value = better rating
+      rating = 1 - normalizedLower;
+      break;
+      
+    case 'balanced':
+      if (balanceMin === undefined || balanceMax === undefined) {
+        throw new Error('balanceMin and balanceMax are required for balanced strategy');
+      }
+      
+      // Normalize value to 0-1 range
+      const normalizedBalanced = Math.max(0, Math.min(1, (value - normalizeMin) / (normalizeMax - normalizeMin)));
+      
+      // Calculate distance from ideal range
+      const idealCenter = (balanceMin + balanceMax) / 2;
+      const idealRange = balanceMax - balanceMin;
+      
+      // Distance from ideal range (0 = perfect, 1 = worst possible)
+      const distanceFromIdeal = Math.abs(normalizedBalanced - idealCenter) / (idealRange / 2);
+      
+      // Convert distance to rating (closer to ideal = higher rating)
+      rating = Math.max(0, 1 - distanceFromIdeal);
+      break;
+      
+    case 'exponential':
+      // Use the existing exponential normalization function
+      // Map the value from normalizeMin-normalizeMax range to 0-1000 range for the function
+      const mappedValue = Math.max(0, (value - normalizeMin) / (normalizeMax - normalizeMin)) * 1000;
+      rating = NormalizeScrewed1000To01WithTail(mappedValue);
+      break;
+      
+    default:
+      throw new Error(`Unknown strategy: ${strategy}`);
+  }
+  
+  return rating;
 }
 
 // ========================================

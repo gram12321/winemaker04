@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, getRatingForRange } from '@/lib/utils';
 import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
@@ -38,6 +38,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 }) => {
   // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
+  const [selectedWine, setSelectedWine] = useState<string>('all');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const didInitAutoCollapse = useRef(false);
 
@@ -73,11 +74,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     
     // For very small decay rates, show more precision
     if (weeklyDecayPercent < 0.1) {
-      return `${weeklyDecayPercent.toFixed(3)}% weekly decay (${annualDecayPercent.toFixed(1)}% annually)`;
+      return `${formatNumber(weeklyDecayPercent, { decimals: 3 })}% weekly decay (${formatNumber(annualDecayPercent, { decimals: 1 })}% annually)`;
     } else if (weeklyDecayPercent < 1) {
-      return `${weeklyDecayPercent.toFixed(2)}% weekly decay (${annualDecayPercent.toFixed(1)}% annually)`;
+      return `${formatNumber(weeklyDecayPercent, { decimals: 2 })}% weekly decay (${formatNumber(annualDecayPercent, { decimals: 1 })}% annually)`;
     } else {
-      return `${weeklyDecayPercent.toFixed(1)}% weekly decay (${annualDecayPercent.toFixed(1)}% annually)`;
+      return `${formatNumber(weeklyDecayPercent, { decimals: 1 })}% weekly decay (${formatNumber(annualDecayPercent, { decimals: 1 })}% annually)`;
     }
   };
 
@@ -109,26 +110,154 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     const displayData = getEventDisplayData(event);
     const isAchievement = event.type === 'achievement' || event.type === 'vineyard_achievement';
 
-    // Custom tooltip component for calculations using standardized building blocks
-    const CalculationTooltip = ({ children, calc }: { children: React.ReactNode; calc: string }) => {
-      // Parse the calculation string into structured data
-      const parseCalculation = (calcString: string) => {
-        const lines = calcString.split('\n');
-        const parsedLines = lines.map(line => {
-          // Split by multiple spaces to separate label and value
-          const parts = line.trim().split(/\s{2,}/);
-          if (parts.length >= 2) {
-            return {
-              label: parts[0],
-              value: parts[parts.length - 1]
-            };
-          }
-          return { label: line.trim(), value: '' };
-        });
-        return parsedLines;
-      };
+    // Custom tooltip component for calculations using structured data
+    const CalculationTooltip = ({ children, calculationData }: { children: React.ReactNode; calculationData: any }) => {
+      const renderCalculationData = () => {
+        if (!calculationData) return null;
 
-      const calculationData = parseCalculation(calc);
+        switch (calculationData.type) {
+          case 'company_value':
+            return (
+              <div className="space-y-2">
+                <TooltipRow 
+                  label="Company Value:" 
+                  value={`€${formatNumber(calculationData.companyValue, { smartDecimals: true })}`}
+                  valueRating={getRatingForRange(calculationData.companyValue / 1000000, 0, 1000, 'exponential')}
+                />
+                <TooltipRow 
+                  label="Company Scaling Value:" 
+                  value={`€${formatNumber(calculationData.maxLandValue, { smartDecimals: true })}`}
+                  valueRating={getRatingForRange(calculationData.maxLandValue / 1000000, 0, 1000, 'exponential')}
+                />
+                <TooltipRow 
+                  label="Company Prestige Base:" 
+                  value={`${formatNumber(calculationData.companyValue, { smartDecimals: true })} ÷ ${formatNumber(calculationData.maxLandValue, { smartDecimals: true })} = ${formatNumber(calculationData.baseValue, { smartDecimals: true })}`}
+                  monospaced={true}
+                />
+                <TooltipRow 
+                  label="Final Prestige:" 
+                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 1, 'higher_better')}
+                />
+              </div>
+            );
+
+          case 'vineyard_land':
+            return (
+              <div className="space-y-2">
+                <TooltipRow 
+                  label="Vineyard:" 
+                  value={calculationData.vineyardName}
+                />
+                <TooltipRow 
+                  label="Land Value per Hectare:" 
+                  value={`€${formatNumber(calculationData.landValuePerHa, { smartDecimals: true })}/ha`}
+                  valueRating={getRatingForRange(calculationData.landValuePerHa, 0, 100000, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Total Hectares:" 
+                  value={`${formatNumber(calculationData.hectares, { smartDecimals: true })} ha`}
+                  valueRating={getRatingForRange(calculationData.hectares, 0, 50, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Vine Density:" 
+                  value={`${formatNumber(calculationData.density, { smartDecimals: true })} vines/ha`}
+                  valueRating={getRatingForRange(calculationData.density, 1500, 15000, 'lower_better')}
+                />
+                <TooltipRow 
+                  label="Density Modifier:" 
+                  value={`×${formatNumber(calculationData.densityModifier, { smartDecimals: true })}`}
+                  valueRating={getRatingForRange(calculationData.densityModifier, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Suitability Factor:" 
+                  value={formatNumber(calculationData.suitability, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.suitability, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Size Factor:" 
+                  value={formatNumber(calculationData.sizeFactor, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.sizeFactor, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Final Prestige:" 
+                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 1, 'higher_better')}
+                />
+              </div>
+            );
+
+          case 'vineyard_age':
+            return (
+              <div className="space-y-2">
+                <TooltipRow 
+                  label="Vineyard:" 
+                  value={calculationData.vineyardName}
+                />
+                <TooltipRow 
+                  label="Vine Age:" 
+                  value={`${calculationData.vineAge} years`}
+                  valueRating={getRatingForRange(calculationData.vineAge, 0, 50, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Age Base:" 
+                  value={formatNumber(calculationData.ageBase, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.ageBase, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Grape Suitability:" 
+                  value={formatNumber(calculationData.grapeSuitability, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.grapeSuitability, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Density Modifier:" 
+                  value={`×${formatNumber(calculationData.densityModifier, { smartDecimals: true })}`}
+                  valueRating={getRatingForRange(calculationData.densityModifier, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Final Prestige:" 
+                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 1, 'higher_better')}
+                />
+              </div>
+            );
+
+          case 'wine_feature':
+            return (
+              <div className="space-y-2">
+                <TooltipRow 
+                  label="Feature:" 
+                  value={calculationData.featureName}
+                />
+                <TooltipRow 
+                  label="Wine:" 
+                  value={calculationData.wineName}
+                />
+                <TooltipRow 
+                  label="Event Type:" 
+                  value={calculationData.eventType}
+                />
+                <TooltipRow 
+                  label="Level:" 
+                  value={calculationData.level}
+                />
+                <TooltipRow 
+                  label="Base Amount:" 
+                  value={formatNumber(calculationData.baseAmount, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.baseAmount, 0, 1, 'higher_better')}
+                />
+                <TooltipRow 
+                  label="Final Prestige:" 
+                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 1, 'higher_better')}
+                />
+              </div>
+            );
+
+          default:
+            return null;
+        }
+      };
 
       return (
         <TooltipProvider>
@@ -136,18 +265,14 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             <TooltipTrigger asChild>
               {children}
             </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
+            <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
               <div className={tooltipStyles.text}>
-                <TooltipSection>
-                  {calculationData.map((item, index) => (
-                    <TooltipRow 
-                      key={index}
-                      label={item.label}
-                      value={item.value}
-                      monospaced={true}
-                    />
-                  ))}
+                <TooltipSection title="Calculation Breakdown">
+                  {renderCalculationData()}
                 </TooltipSection>
+                <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                  {`Formula:\n- Company value is log-normalized against Company Scaling Value`}
+                </div>
               </div>
             </TooltipContent>
           </Tooltip>
@@ -162,8 +287,8 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             {isAchievement ? (
               <p className={`text-sm ${tooltipStyles.subtitle}`}>{displayData.title}</p>
             ) : (
-              displayData.calc ? (
-                <CalculationTooltip calc={displayData.calc}>
+              displayData.calculationData ? (
+                <CalculationTooltip calculationData={displayData.calculationData}>
                   <p className={`text-sm ${tooltipStyles.subtitle} cursor-help`}>{displayData.title}</p>
                 </CalculationTooltip>
               ) : (
@@ -184,6 +309,9 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           description={displayData.displayInfo || 'Additional information'}
                         />
                       </TooltipSection>
+                      <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                        {`Additional Info:\n- This prestige source contributes to your total company prestige\n- Some sources decay over time, others remain permanent`}
+                      </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -211,17 +339,16 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           value={formatAmount(original)}
                           monospaced={true}
                         />
-                        <TooltipRow 
-                          label="Retention:" 
-                          value={event.decayRate === 0 
-                            ? 'No decay' 
-                            : `${(event.decayRate * 100).toFixed(2)}% weekly`
-                          }
+                        <TooltipRow
+                          label="Weekly decay:"
+                          value={event.decayRate === 0 ? 'No decay' : `${formatNumber((1 - event.decayRate) * 100, { smartDecimals: true })}%`}
+                          // Less decay is better → use retention rate as rating (higher = better)
+                          valueRating={event.decayRate === 0 ? getRatingForRange(1, 0, 1, 'higher_better') : getRatingForRange(event.decayRate, 0, 1, 'higher_better')}
                         />
                         {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
                           <TooltipRow 
                             label="Estimation:" 
-                            value={`${formatAmount(original)} × ${event.decayRate.toFixed(4)}^${weeks} ≈ ${formatAmount(current)}`}
+                            value={`${formatAmount(original)} × ${formatNumber(event.decayRate, { decimals: 4 })}^${weeks} ≈ ${formatAmount(current)}`}
                             monospaced={true}
                           />
                         ) : (
@@ -232,6 +359,9 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           />
                         )}
                       </TooltipSection>
+                      <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                        {`Notes:\n- Weekly decay shows how much prestige is lost each week.\n- Lower decay means prestige lasts longer.`}
+                      </div>
                     </div>
                   );
                 })()}
@@ -290,9 +420,34 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 <span className="text-gray-600">
                   {feature.featureName} ({getEventTypeLabel(feature.eventType)})
                 </span>
-                <Badge variant="outline" className="text-[10px]">
-                  {feature.eventCount} {feature.eventCount === 1 ? 'event' : 'events'}
-                </Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-[10px] cursor-help">
+                        {feature.eventCount} {feature.eventCount === 1 ? 'event' : 'events'}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title={`${feature.featureName} Events`}>
+                          <div className="space-y-1">
+                            {feature.recentEvents.map((event, eventIdx) => (
+                              <TooltipRow
+                                key={eventIdx}
+                                label={`Event ${eventIdx + 1}:`}
+                                value={`${formatAmount(event.amount)} prestige`}
+                                monospaced={true}
+                              />
+                            ))}
+                          </div>
+                        </TooltipSection>
+                        <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                          {`Total: ${formatAmount(feature.totalAmount)} prestige\nDecay: ${formatDecayRate(feature.decayRate)}`}
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="text-right">
                 <span className="font-medium">{formatAmount(feature.totalAmount)}</span>
@@ -308,6 +463,15 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   const getFilteredVineyards = () => 
     selectedVineyard === 'all' ? vineyards : vineyards.filter(vineyard => vineyard.id === selectedVineyard);
 
+  const getFilteredWines = () => {
+    if (selectedWine === 'all') {
+      return consolidatedCompanyWineFeatures;
+    }
+    return consolidatedCompanyWineFeatures.filter(wine => 
+      `${wine.vineyardName}_${wine.grape}_${wine.vintage}` === selectedWine
+    );
+  };
+
   // Collapsible section helpers
   const toggleSection = (sectionId: string) => {
     const newCollapsed = new Set(collapsedSections);
@@ -321,9 +485,9 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 
   const isSectionCollapsed = (sectionId: string) => collapsedSections.has(sectionId);
 
-  // Auto-collapse sections with more than 3 achievements
-  const shouldAutoCollapse = (events: PrestigeEvent[]) => {
-    return events.length > 3;
+  // Auto-collapse sections with more than 3 items
+  const shouldAutoCollapse = (items: any[]) => {
+    return items.length > 3;
   };
 
 
@@ -357,6 +521,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 
     const initialCollapsed = new Set<string>();
 
+    // Auto-collapse all wines summary if it has more than 3 wines
+    if (shouldAutoCollapse(consolidatedCompanyWineFeatures)) {
+      initialCollapsed.add('all_wines_summary');
+    }
+
     // Auto-collapse company event sections with more than 3 items
     Object.entries(groupedCompanyEvents).forEach(([type, events]) => {
       const sectionId = `company_${type}`;
@@ -368,6 +537,11 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     // Always start the Achievements section collapsed by default
     initialCollapsed.add('company_achievement');
 
+    // Auto-collapse all vineyards summary if it has more than 3 vineyards
+    if (shouldAutoCollapse(vineyards)) {
+      initialCollapsed.add('all_vineyards_summary');
+    }
+
     // Auto-collapse vineyard sections with more than 3 items
     vineyards.forEach((vineyard) => {
       const sectionId = `vineyard_${vineyard.id}`;
@@ -376,11 +550,24 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
       }
     });
 
+    // Auto-collapse vineyard wine features sections with more than 3 items
+    vineyards.forEach((vineyard) => {
+      const vineyardWineFeatures = consolidatedVineyardWineFeatures.filter(
+        wine => wine.vineyardId === vineyard.id || wine.vineyardName === vineyard.name
+      );
+      if (shouldAutoCollapse(vineyardWineFeatures)) {
+        initialCollapsed.add(`vineyard_wine_features_${vineyard.id}`);
+      }
+    });
+
+    // Start with legend collapsed by default
+    initialCollapsed.add('prestige_legend');
+
     if (initialCollapsed.size > 0) {
       setCollapsedSections(initialCollapsed);
     }
     didInitAutoCollapse.current = true;
-  }, [groupedCompanyEvents, vineyards]);
+  }, [groupedCompanyEvents, vineyards, consolidatedCompanyWineFeatures, consolidatedVineyardWineFeatures]);
 
   // Render
   return (
@@ -448,27 +635,148 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               Company Prestige Sources
             </h3>
             
-            {/* Company Wine Feature Events (Consolidated) */}
+            {/* Wine Features Section */}
             {consolidatedCompanyWineFeatures.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Star className="h-4 w-4 text-purple-600" />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Star className="h-5 w-5 text-purple-600" />
                     Wine Features (Company Level)
-                    <Badge className="bg-purple-100 text-purple-800">
-                      {consolidatedCompanyWineFeatures.length} {consolidatedCompanyWineFeatures.length === 1 ? 'wine' : 'wines'}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {consolidatedCompanyWineFeatures.map((consolidatedEvent, index) => (
-                    <div key={`${consolidatedEvent.vineyardId}_${consolidatedEvent.grape}_${consolidatedEvent.vintage}`}>
-                      <ConsolidatedWineFeatureDisplay consolidatedEvent={consolidatedEvent} />
-                      {index < consolidatedCompanyWineFeatures.length - 1 && <Separator className="mt-3" />}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                  </h3>
+                  
+                  {/* Wine Filter */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedWine('all')}
+                      className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
+                        selectedWine === 'all'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      All Wines
+                    </button>
+                    {consolidatedCompanyWineFeatures.map((wine) => (
+                      <button
+                        key={`${wine.vineyardName}_${wine.grape}_${wine.vintage}`}
+                        onClick={() => setSelectedWine(`${wine.vineyardName}_${wine.grape}_${wine.vintage}`)}
+                        className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium ${
+                          selectedWine === `${wine.vineyardName}_${wine.grape}_${wine.vintage}`
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {wine.vineyardName} - {wine.grape} ({wine.vintage})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {getFilteredWines().length === 0 ? (
+                  <Card>
+                    <CardContent className="py-6 text-center text-muted-foreground">
+                      No wine features found.
+                    </CardContent>
+                  </Card>
+                ) : selectedWine === 'all' ? (
+                  // Summary view for "All Wines"
+                  <Card>
+                    <CardHeader>
+                      <CardTitle 
+                        className="flex items-center gap-2 text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                        onClick={() => toggleSection('all_wines_summary')}
+                      >
+                        <Star className="h-4 w-4 text-purple-600" />
+                        All Wines Summary
+                        <Badge className="bg-purple-100 text-purple-800">
+                          {consolidatedCompanyWineFeatures.length} {consolidatedCompanyWineFeatures.length === 1 ? 'wine' : 'wines'}
+                        </Badge>
+                        {consolidatedCompanyWineFeatures.length > 1 && (
+                          <>
+                            {isSectionCollapsed('all_wines_summary') ? (
+                              <ChevronRight className="h-4 w-4 ml-auto" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 ml-auto" />
+                            )}
+                          </>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    {!isSectionCollapsed('all_wines_summary') && (
+                      <CardContent>
+                        <div className="space-y-2">
+                          {consolidatedCompanyWineFeatures.map((wine) => (
+                            <div key={`${wine.vineyardId}_${wine.grape}_${wine.vintage}`} className="flex items-center justify-between py-2 px-3 bg-purple-50 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <Star className="h-4 w-4 text-purple-600" />
+                                <span className="font-medium text-purple-800">{wine.vineyardName} - {wine.grape} ({wine.vintage})</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {wine.features.length} {wine.features.length === 1 ? 'feature' : 'features'}
+                                </Badge>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-bold text-purple-900">
+                                  {formatAmount(wine.totalAmount)} prestige
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ) : (
+                  // Detailed view for selected wine
+                  <Card>
+                    <CardHeader>
+                      <CardTitle 
+                        className="flex items-center gap-2 text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                        onClick={() => toggleSection(`wine_${selectedWine}`)}
+                      >
+                        <Star className="h-4 w-4 text-purple-600" />
+                        {(() => {
+                          const wine = consolidatedCompanyWineFeatures.find(w => 
+                            `${w.vineyardName}_${w.grape}_${w.vintage}` === selectedWine
+                          );
+                          return wine ? `${wine.vineyardName} - ${wine.grape} (${wine.vintage})` : 'Selected Wine';
+                        })()}
+                        <Badge className="bg-purple-100 text-purple-800">
+                          {(() => {
+                            const wine = consolidatedCompanyWineFeatures.find(w => 
+                              `${w.vineyardName}_${w.grape}_${w.vintage}` === selectedWine
+                            );
+                            return wine ? `${wine.features.length} ${wine.features.length === 1 ? 'feature' : 'features'}` : '0 features';
+                          })()}
+                        </Badge>
+                        {(() => {
+                          const wine = consolidatedCompanyWineFeatures.find(w => 
+                            `${w.vineyardName}_${w.grape}_${w.vintage}` === selectedWine
+                          );
+                          return wine && wine.features.length > 1;
+                        })() && (
+                          <>
+                            {isSectionCollapsed(`wine_${selectedWine}`) ? (
+                              <ChevronRight className="h-4 w-4 ml-auto" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 ml-auto" />
+                            )}
+                          </>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    {!isSectionCollapsed(`wine_${selectedWine}`) && (
+                      <CardContent className="space-y-3">
+                        {getFilteredWines().map((consolidatedEvent, index) => (
+                          <div key={`${consolidatedEvent.vineyardId}_${consolidatedEvent.grape}_${consolidatedEvent.vintage}`}>
+                            <ConsolidatedWineFeatureDisplay consolidatedEvent={consolidatedEvent} />
+                            {index < getFilteredWines().length - 1 && <Separator className="mt-3" />}
+                          </div>
+                        ))}
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
+              </div>
             )}
 
             {/* Other Company Events */}
@@ -609,34 +917,48 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               // Summary view for "All Vineyards"
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
+                  <CardTitle 
+                    className="flex items-center gap-2 text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                    onClick={() => toggleSection('all_vineyards_summary')}
+                  >
                     <Grape className="h-4 w-4 text-green-600" />
                     All Vineyards Summary
                     <Badge className="bg-green-100 text-green-800">
                       {vineyards.length} {vineyards.length === 1 ? 'vineyard' : 'vineyards'}
                     </Badge>
+                    {vineyards.length > 1 && (
+                      <>
+                        {isSectionCollapsed('all_vineyards_summary') ? (
+                          <ChevronRight className="h-4 w-4 ml-auto" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 ml-auto" />
+                        )}
+                      </>
+                    )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {vineyards.map((vineyard) => (
-                      <div key={vineyard.id} className="flex items-center justify-between py-2 px-3 bg-green-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Grape className="h-4 w-4 text-green-600" />
-                          <span className="font-medium text-green-800">{vineyard.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
-                          </Badge>
+                {!isSectionCollapsed('all_vineyards_summary') && (
+                  <CardContent>
+                    <div className="space-y-2">
+                      {vineyards.map((vineyard) => (
+                        <div key={vineyard.id} className="flex items-center justify-between py-2 px-3 bg-green-50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Grape className="h-4 w-4 text-green-600" />
+                            <span className="font-medium text-green-800">{vineyard.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
+                            </Badge>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-green-900">
+                              {formatAmount(vineyard.prestige)} prestige
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-bold text-green-900">
-                            {formatAmount(vineyard.prestige)} prestige
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             ) : (
               // Detailed view for selected vineyard
@@ -653,22 +975,36 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                       {vineyardWineFeatures.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
+                            <CardTitle 
+                              className="flex items-center gap-2 text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                              onClick={() => toggleSection(`vineyard_wine_features_${vineyard.id}`)}
+                            >
                               <Star className="h-4 w-4 text-purple-600" />
                               Wine Features - {vineyard.name}
                               <Badge className="bg-purple-100 text-purple-800">
                                 {vineyardWineFeatures.length} {vineyardWineFeatures.length === 1 ? 'wine' : 'wines'}
                               </Badge>
+                              {vineyardWineFeatures.length > 1 && (
+                                <>
+                                  {isSectionCollapsed(`vineyard_wine_features_${vineyard.id}`) ? (
+                                    <ChevronRight className="h-4 w-4 ml-auto" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 ml-auto" />
+                                  )}
+                                </>
+                              )}
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="space-y-3">
-                            {vineyardWineFeatures.map((consolidatedEvent, index) => (
-                              <div key={`${consolidatedEvent.vineyardId}_${consolidatedEvent.grape}_${consolidatedEvent.vintage}`}>
-                                <ConsolidatedWineFeatureDisplay consolidatedEvent={consolidatedEvent} />
-                                {index < vineyardWineFeatures.length - 1 && <Separator className="mt-3" />}
-                              </div>
-                            ))}
-                          </CardContent>
+                          {!isSectionCollapsed(`vineyard_wine_features_${vineyard.id}`) && (
+                            <CardContent className="space-y-3">
+                              {vineyardWineFeatures.map((consolidatedEvent, index) => (
+                                <div key={`${consolidatedEvent.vineyardId}_${consolidatedEvent.grape}_${consolidatedEvent.vintage}`}>
+                                  <ConsolidatedWineFeatureDisplay consolidatedEvent={consolidatedEvent} />
+                                  {index < vineyardWineFeatures.length - 1 && <Separator className="mt-3" />}
+                                </div>
+                              ))}
+                            </CardContent>
+                          )}
                         </Card>
                       )}
                       
@@ -719,30 +1055,42 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
           {/* Legend */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">How Prestige Works</CardTitle>
+              <CardTitle 
+                className="text-base cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
+                onClick={() => toggleSection('prestige_legend')}
+              >
+                How Prestige Works
+                {isSectionCollapsed('prestige_legend') ? (
+                  <ChevronRight className="h-4 w-4 ml-auto" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 ml-auto" />
+                )}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-blue-500" />
-                <span><strong>Company Value:</strong> Log-normalized by max land value; adds a steady, non-decaying base.</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Grape className="h-4 w-4 text-green-500" />
-                <span><strong>Vineyard (Base):</strong> Two permanent sources per vineyard — Land Value and Vine Age.</span>
-              </div>
-              <div className="ml-6 text-xs text-muted-foreground space-y-1">
-                <div>• Land Value: log(totalValue/max + 1) → × suitability → asym(0–1) − 1</div>
-                <div>• Vine Age: ageModifier(0–1) → × suitability → asym(0–1) − 1</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span><strong>Sales:</strong> Add temporary prestige that decays weekly (e.g., 5%).</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-yellow-500" />
-                <span><strong>Achievements:</strong> Special events; amounts and decay may vary.</span>
-              </div>
-            </CardContent>
+            {!isSectionCollapsed('prestige_legend') && (
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-blue-500" />
+                  <span><strong>Company Value:</strong> Log-normalized by max land value; provides natural diminishing returns without additional scaling.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Grape className="h-4 w-4 text-green-500" />
+                  <span><strong>Vineyard (Base):</strong> Two permanent sources per vineyard — Land Value and Vine Age.</span>
+                </div>
+                <div className="ml-6 text-xs text-muted-foreground space-y-1">
+                  <div>• Land Value: log(totalValue/max + 1) → × suitability → asym(0–1) − 1</div>
+                  <div>• Vine Age: ageModifier(0–1) → × suitability → asym(0–1) − 1</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span><strong>Sales:</strong> Add temporary prestige that decays weekly (e.g., 5%).</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span><strong>Achievements:</strong> Special events; amounts and decay may vary.</span>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </div>
       </DialogContent>
