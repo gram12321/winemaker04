@@ -1096,6 +1096,8 @@ export async function addFeaturePrestigeEvent(
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,
+        saleVolume: eventContext.order?.requestedQuantity,
+        saleValue: eventContext.order?.totalValue,
         eventType
       }
     });

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
-import { formatNumber, getRatingForRange } from '@/lib/utils';
+import { formatNumber, getRatingForRange, getColorClassForRange } from '@/lib/utils';
 import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Badge } from '../../shadCN/badge';
@@ -323,7 +323,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className={`text-sm ${tooltipStyles.subtitle} cursor-help`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
+                <p className={`text-sm ${tooltipStyles.subtitle} cursor-help ${getColorClassForRange(event.currentAmount ?? event.amount, 0, 10, 'higher_better')}`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
                 {(() => {
