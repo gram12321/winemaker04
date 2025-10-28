@@ -14,8 +14,7 @@ import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreak
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { getBottleAgingSeverity, getWineAgeFromHarvest } from '@/lib/services';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
+import { getWineAgeFromHarvest } from '@/lib/services';
 import { useWineBalance } from '@/hooks';
 
 interface WineModalProps extends DialogProps {
@@ -67,9 +66,7 @@ export const WineModal: React.FC<WineModalProps> = ({
   const currentGrapeQuality: number = wineBatch.grapeQuality || 0;
   const grapeQualityCategory = getGrapeQualityCategory(currentGrapeQuality);
   const grapeQualityColorClass = getColorClass(currentGrapeQuality);
-  const configs = getAllFeatureConfigs();
-  const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
-  const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['body','aroma','spice','acidity','sweetness','tannins'] as any;
+  const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
   const characteristicIconSrc: Record<string,string> = {
     body: '/assets/icons/characteristics/body.png',
     aroma: '/assets/icons/characteristics/aroma.png',
@@ -379,75 +376,83 @@ export const WineModal: React.FC<WineModalProps> = ({
             {/* Features Tab */}
             <TabsContent value="features" className="mt-4">
               <div className="space-y-4">
+                {/* 3-Column Horizontal Grid */}
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Column 1: Evolving Features */}
+                  <Card>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" /> Evolving Features
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-3">
+                      <FeatureDisplay 
+                        batch={wineBatch} 
+                        showEvolving={true}
+                        showActive={false}
+                        showRisks={false}
+                        expanded={true}
+                        className="text-sm"
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Column 2: Active Features */}
+                  <Card>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" /> Active Features
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-3">
+                      <FeatureDisplay 
+                        batch={wineBatch} 
+                        showEvolving={false}
+                        showActive={true}
+                        showRisks={false}
+                        expanded={true}
+                        className="text-sm"
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Column 3: Risks */}
+                  <Card>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" /> Risks
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-3">
+                      <FeatureDisplay 
+                        batch={wineBatch} 
+                        showEvolving={false}
+                        showActive={false}
+                        showRisks={true}
+                        expanded={true}
+                        className="text-sm"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Preview Risks for Next Actions */}
                 <Card>
                   <CardHeader className="py-3">
                     <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" /> Feature Status
+                      <AlertTriangle className="h-4 w-4" /> Upcoming Risks
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="py-3">
                     <FeatureDisplay 
                       batch={wineBatch} 
-                      showEvolving={true}
-                      showActive={true}
-                      showRisks={true}
+                      showPreviewRisks={true}
+                      showForNextAction={true}
                       expanded={true}
                       className="text-sm"
                     />
                   </CardContent>
                 </Card>
-
-                {/* Feature Details */}
-                {presentFeatures.length > 0 && (
-                  <Card>
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-xs font-medium">Active Features</CardTitle>
-                    </CardHeader>
-                    <CardContent className="py-3">
-                      <div className="space-y-3">
-                        {presentFeatures.map(feature => {
-                          const config = configs.find(c => c.id === feature.id);
-                          if (!config) return null;
-
-                          const qualityEffect = config.effects.quality;
-                          let impactText = '';
-                          
-                          if (qualityEffect) {
-                            if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-                              impactText = `${(qualityEffect.amount * feature.severity * 100).toFixed(1)}%`;
-                            } else if (qualityEffect.type === 'power') {
-                              const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(wineBatch.grapeQuality, qualityEffect.exponent!));
-                              impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
-                            }
-                          }
-
-                          return (
-                            <div key={config.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">{config.icon}</span>
-                                <div>
-                                  <div className="font-medium text-sm">{config.name}</div>
-                                  <div className="text-xs text-gray-600">{config.description}</div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-medium">
-                                  {config.behavior === 'triggered' ? 'Present' : 
-                                    config.id === 'bottle_aging' ? 
-                                      `${formatNumber(getBottleAgingSeverity(wineBatch) * 100, { decimals: 1, adaptiveNearOne: true })}%` :
-                                      `${Math.round(feature.severity * 100)}%`}
-                                </div>
-                                {impactText && (
-                                  <div className="text-xs text-gray-600">Grape Quality: {impactText}</div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
             </TabsContent>
 
@@ -506,11 +511,12 @@ export const WineModal: React.FC<WineModalProps> = ({
                   <CardContent className="py-3 text-sm space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {characteristicOrder.map((key) => {
-                        const baseMap = ((wineBatch.breakdown as any)?.base) as Record<string, number> | undefined;
-                        const finalMap = ((wineBatch.breakdown as any)?.final) as Record<string, number> | undefined;
-                        const baseVal = baseMap ? baseMap[key as string] : undefined;
-                        const finalVal = (finalMap ? finalMap[key as string] : (wineBatch.characteristics as any)[key]) as number;
+                        // Calculate base by subtracting all effects from current characteristics
+                        const currentVal = (wineBatch.characteristics as any)[key] as number;
                         const effects = (wineBatch.breakdown?.effects || []).filter(e => e.characteristic === (key as any));
+                        const totalEffect = effects.reduce((sum, effect) => sum + effect.modifier, 0);
+                        const baseVal = currentVal - totalEffect;
+                        
                         return (
                           <div key={key as string} className="border rounded p-3 bg-white">
                             <div className="flex items-center justify-between mb-2">
@@ -518,22 +524,30 @@ export const WineModal: React.FC<WineModalProps> = ({
                                 <img src={characteristicIconSrc[key as string]} alt={`${key} icon`} className="h-5 w-5 object-contain" />
                                 <span className="font-medium capitalize">{key}</span>
                               </div>
-                              <span className={`text-xs px-2 py-0.5 rounded ${getColorClass(finalVal)} bg-gray-50`}>{formatNumber(finalVal,{decimals:2,forceDecimals:true})}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded ${getColorClass(currentVal)} bg-gray-50`}>{formatNumber(currentVal,{decimals:2,forceDecimals:true})}</span>
                             </div>
-                            {baseVal !== undefined && (
-                              <div className="text-xs text-muted-foreground mb-2">Base: {formatNumber(baseVal,{decimals:2,forceDecimals:true})}</div>
-                            )}
+                            <div className="text-xs text-muted-foreground mb-2">{wineBatch.grape} Base: {formatNumber(baseVal,{decimals:2,forceDecimals:true})}</div>
                             <div className="space-y-1">
                               {effects.length === 0 ? (
                                 <div className="text-xs text-muted-foreground">No harvest effects.</div>
-                              ) : effects.map((e, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-2 rounded bg-gray-50">
-                                  <div className="text-xs">{e.description}</div>
-                                  <div className={`text-xs font-semibold ${e.modifier>=0?'text-green-700':'text-red-700'}`}>
-                                    {e.modifier>=0?'+':''}{formatNumber(e.modifier,{decimals:3,forceDecimals:true})}
+                              ) : (
+                                <>
+                                  {effects.map((e, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 rounded bg-gray-50">
+                                      <div className="text-xs">{e.description}</div>
+                                      <div className={`text-xs font-semibold ${e.modifier>=0?'text-green-700':'text-red-700'}`}>
+                                        {e.modifier>=0?'+':''}{formatNumber(e.modifier,{decimals:3,forceDecimals:true})}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <div className="flex items-center justify-between p-2 rounded bg-blue-50 border border-blue-200">
+                                    <div className="text-xs font-medium text-blue-800">Total effects</div>
+                                    <div className={`text-xs font-semibold ${totalEffect>=0?'text-green-700':'text-red-700'}`}>
+                                      {totalEffect>=0?'+':''}{formatNumber(totalEffect,{decimals:3,forceDecimals:true})}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                </>
+                              )}
                             </div>
                           </div>
                         );

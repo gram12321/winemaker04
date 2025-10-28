@@ -2,7 +2,6 @@ import { FeatureConfig } from '../../types/wineFeatures';
 import { Vineyard } from '../../types/types';
 import { CrushingOptions } from '../../services/wine/characteristics/crushingCharacteristics';
 import { formatNumber } from '../../utils/utils';
-import { createPrestigeConfig } from './commonFeaturesUtil';
 
 /**
  * Green Flavor/Vegetal Character
@@ -109,13 +108,56 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
       { characteristic: 'sweetness', modifier: -0.10 }, // Underripe = less sweet
       { characteristic: 'tannins', modifier: +0.12 }    // Green/harsh tannins
     ],
-    prestige: createPrestigeConfig({
-      manifestationCompany: { baseAmount: -0.02, maxImpact: -3.0 },
-      manifestationVineyard: { baseAmount: -0.3, maxImpact: -8.0 },
-      saleCompany: { baseAmount: -0.05, maxImpact: -8.0 },
-      saleVineyard: { baseAmount: -0.1, maxImpact: -5.0 },
-      decayRate: 0.995
-    })
+    prestige: {
+      onManifestation: {
+        company: {
+          calculation: 'dynamic',
+          baseAmount: -0.02,  // Company scandal when green flavor manifests (lighter than oxidation)
+          scalingFactors: {
+            batchSizeWeight: 1.0,         // Larger batches hurt more
+            qualityWeight: 1.0,            // Premium wine with green flavor is worse
+            prestigeWeight: 1.0     // Higher prestige = bigger fall
+          },
+          decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
+          maxImpact: -3.0     // Cap for company manifestation events (lighter than oxidation)
+        },
+        vineyard: {
+          calculation: 'dynamic',
+          baseAmount: -0.3,  // Base scandal (lighter than oxidation)
+          scalingFactors: {
+            batchSizeWeight: 1.0,         // Larger batches hurt more
+            qualityWeight: 1.0,            // Premium wine with green flavor is worse
+            prestigeWeight: 1.0    // Premium vineyards held to higher standard
+          },
+          decayRate: 0.98,    // Decays over ~3 years (156 weeks)
+          maxImpact: -8.0     // Lower cap than oxidation
+        }
+      },
+      onSale: {
+        company: {
+          calculation: 'dynamic',
+          baseAmount: -0.05,  // Lighter base than oxidation (green flavor less serious)
+          scalingFactors: {
+            volumeWeight: 1.0,
+            valueWeight: 1.0,
+            prestigeWeight: 1.0
+          },
+          decayRate: 0.995,   // Decays over ~20 years (1040 weeks)
+          maxImpact: -8.0     // Lower cap than oxidation
+        },
+        vineyard: {
+          calculation: 'dynamic',
+          baseAmount: -0.1,  // Vineyard scandal when selling wine with green flavor (lighter than oxidation)
+          scalingFactors: {
+            volumeWeight: 1.0,             // More bottles = bigger scandal
+            valueWeight: 1.0,              // Higher value = bigger scandal
+            prestigeWeight: 1.0    // Higher prestige = bigger fall
+          },
+          decayRate: 0.98,    // Decays over ~3 years (156 weeks)
+          maxImpact: -5.0     // Cap for vineyard sale events (lighter than oxidation)
+        }
+      }
+    }
   },
   
   // Customers less sensitive to green flavor than oxidation

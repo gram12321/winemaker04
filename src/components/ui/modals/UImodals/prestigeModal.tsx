@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Separator } from '../../shadCN/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipSection, TooltipRow, TooltipHeader, tooltipStyles } from '../../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 
@@ -109,67 +109,129 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     const displayData = getEventDisplayData(event);
     const isAchievement = event.type === 'achievement' || event.type === 'vineyard_achievement';
 
+    // Custom tooltip component for calculations using standardized building blocks
+    const CalculationTooltip = ({ children, calc }: { children: React.ReactNode; calc: string }) => {
+      // Parse the calculation string into structured data
+      const parseCalculation = (calcString: string) => {
+        const lines = calcString.split('\n');
+        const parsedLines = lines.map(line => {
+          // Split by multiple spaces to separate label and value
+          const parts = line.trim().split(/\s{2,}/);
+          if (parts.length >= 2) {
+            return {
+              label: parts[0],
+              value: parts[parts.length - 1]
+            };
+          }
+          return { label: line.trim(), value: '' };
+        });
+        return parsedLines;
+      };
+
+      const calculationData = parseCalculation(calc);
+
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {children}
+            </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
+              <div className={tooltipStyles.text}>
+                <TooltipSection>
+                  {calculationData.map((item, index) => (
+                    <TooltipRow 
+                      key={index}
+                      label={item.label}
+                      value={item.value}
+                      monospaced={true}
+                    />
+                  ))}
+                </TooltipSection>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    };
+
     return (
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             {isAchievement ? (
-              <p className="text-sm font-medium">{displayData.title}</p>
+              <p className={`text-sm ${tooltipStyles.subtitle}`}>{displayData.title}</p>
             ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="text-sm font-medium cursor-help">{displayData.title}</p>
-                  </TooltipTrigger>
-                  {displayData.calc && (
-                    <TooltipContent>
-                      <p className="text-xs whitespace-pre-wrap">{displayData.calc}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
+              displayData.calc ? (
+                <CalculationTooltip calc={displayData.calc}>
+                  <p className={`text-sm ${tooltipStyles.subtitle} cursor-help`}>{displayData.title}</p>
+                </CalculationTooltip>
+              ) : (
+                <p className={`text-sm ${tooltipStyles.subtitle}`}>{displayData.title}</p>
+              )
             )}
             {!isAchievement && displayData.displayInfo && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="text-xs text-muted-foreground cursor-help">(details)</span>
+                    <span className={`${tooltipStyles.text} text-muted-foreground cursor-help`}>(details)</span>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs whitespace-pre-wrap">{displayData.displayInfo}</p>
+                  <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
+                    <div className={tooltipStyles.text}>
+                      <TooltipSection>
+                        <TooltipHeader 
+                          title={displayData.title || 'Details'}
+                          description={displayData.displayInfo || 'Additional information'}
+                        />
+                      </TooltipSection>
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">{formatDecayRate(event.decayRate)}</p>
+          <p className={`${tooltipStyles.text} text-muted-foreground`}>{formatDecayRate(event.decayRate)}</p>
         </div>
         <div className="text-right">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-sm font-medium cursor-help">{formatAmount(event.currentAmount ?? event.amount)}</p>
+                <p className={`text-sm ${tooltipStyles.subtitle} cursor-help`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
                 {(() => {
                   const original = event.originalAmount ?? event.amount;
                   const current = event.currentAmount ?? event.amount;
                   const weeks = estimateWeeksFromDecay(original, current, event.decayRate);
                   return (
-                    <div className="space-y-1">
-                      <p>Original: {formatAmount(original)}</p>
-                      <p>
-                        {event.decayRate === 0
-                          ? 'No decay'
-                          : `Weekly retention: ${(event.decayRate * 100).toFixed(2)}%`}
-                      </p>
-                      {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
-                        <p>
-                          Est.: {formatAmount(original)} × {event.decayRate.toFixed(4)}^{weeks} ≈ {formatAmount(current)}
-                        </p>
-                      ) : (
-                        <p>Current ≈ Original × retention^weeks</p>
-                      )}
+                    <div className={tooltipStyles.text}>
+                      <TooltipSection title="Prestige Details">
+                        <TooltipRow 
+                          label="Original:" 
+                          value={formatAmount(original)}
+                          monospaced={true}
+                        />
+                        <TooltipRow 
+                          label="Retention:" 
+                          value={event.decayRate === 0 
+                            ? 'No decay' 
+                            : `${(event.decayRate * 100).toFixed(2)}% weekly`
+                          }
+                        />
+                        {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
+                          <TooltipRow 
+                            label="Estimation:" 
+                            value={`${formatAmount(original)} × ${event.decayRate.toFixed(4)}^${weeks} ≈ ${formatAmount(current)}`}
+                            monospaced={true}
+                          />
+                        ) : (
+                          <TooltipRow 
+                            label="Formula:" 
+                            value="Current ≈ Original × retention^weeks"
+                            monospaced={true}
+                          />
+                        )}
+                      </TooltipSection>
                     </div>
                   );
                 })()}
@@ -177,7 +239,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             </Tooltip>
           </TooltipProvider>
           {event.originalAmount !== event.currentAmount && (
-            <p className="text-xs text-muted-foreground">
+            <p className={`${tooltipStyles.text} text-muted-foreground`}>
               (was {formatAmount(event.originalAmount ?? event.amount)})
             </p>
           )}

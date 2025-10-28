@@ -463,8 +463,34 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
   const currentGrapeQuality = wineBatch.grapeQuality;
   const qualityDifference = currentGrapeQuality - baseQuality;
   const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
+  const configs = getAllFeatureConfigs();
   
-  if (presentFeatures.length === 0) {
+  // Calculate which features have non-zero impact
+  const featuresWithImpact = presentFeatures.filter(feature => {
+    const config = configs.find(c => c.id === feature.id);
+    if (!config?.effects.quality) return false;
+    
+    const qualityEffect = config.effects.quality;
+    let impactValue = 0;
+    
+    if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
+      impactValue = qualityEffect.amount * feature.severity;
+    } else if (qualityEffect.type === 'power') {
+      const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
+      impactValue = -scaledPenalty;
+    } else if (qualityEffect.type === 'bonus') {
+      const bonusAmount = typeof qualityEffect.amount === 'function' 
+        ? qualityEffect.amount(feature.severity)
+        : qualityEffect.amount;
+      if (bonusAmount !== undefined) {
+        impactValue = bonusAmount;
+      }
+    }
+    
+    return Math.abs(impactValue) >= 0.001;
+  });
+  
+  if (featuresWithImpact.length === 0) {
     return (
       <div className="p-3 bg-white rounded border border-gray-300">
         <div className="text-sm">
@@ -477,8 +503,6 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
       </div>
     );
   }
-  
-  const configs = getAllFeatureConfigs();
   
   return (
     <div className="p-3 bg-white rounded border border-purple-300">
@@ -499,7 +523,7 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
         </div>
         
         <div className="space-y-2">
-          {presentFeatures.map(feature => {
+          {featuresWithImpact.map(feature => {
             const config = configs.find(c => c.id === feature.id);
             if (!config) return null;
             
@@ -507,17 +531,21 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
             if (!qualityEffect) return null;
             
             let impactText = '';
+            let impactValue = 0;
             
             if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-              impactText = `${(qualityEffect.amount * feature.severity * 100).toFixed(1)}%`;
+              impactValue = qualityEffect.amount * feature.severity;
+              impactText = `${(impactValue * 100).toFixed(1)}%`;
             } else if (qualityEffect.type === 'power') {
               const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
+              impactValue = -scaledPenalty;
               impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
             } else if (qualityEffect.type === 'bonus') {
               const bonusAmount = typeof qualityEffect.amount === 'function' 
                 ? qualityEffect.amount(feature.severity)
                 : qualityEffect.amount;
               if (bonusAmount !== undefined) {
+                impactValue = bonusAmount;
                 impactText = `+${(bonusAmount * 100).toFixed(1)}%`;
               }
             }

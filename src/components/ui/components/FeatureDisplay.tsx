@@ -15,7 +15,7 @@
 import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { getColorClass, formatNumber } from '@/lib/utils/utils';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction } from '@/lib/services/wine/features/featureService';
 
@@ -202,7 +202,8 @@ export function FeatureDisplay({
   );
 }
 
-// Evolving Feature Item Component
+// ===== EVOLVING FEATURE COMPONENT =====
+
 interface EvolvingFeatureItemProps {
   feature: any;
   config: any;
@@ -233,32 +234,20 @@ function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: Evolv
         <TooltipTrigger asChild>
           {displayElement}
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm">
-          <div className="text-xs space-y-2">
-            <div>
-              <p className="font-semibold">{config.name}</p>
-              <p className="text-gray-300">{config.description}</p>
-            </div>
-            
-            <div>
-              <p className="font-medium">Current Status:</p>
-              <p className="text-xs text-gray-300">
-                Severity: {severityPercent}% ({formatNumber(severity, { smartDecimals: true })})
-              </p>
-              <p className="text-xs text-gray-300">
-                Weekly growth: +{weeklyGrowthPercent}% per week
-              </p>
-            </div>
-            
-            <div>
-              <p className="font-medium">State Effects:</p>
-              <p className="text-xs text-gray-300">
-                Current state: <span className="font-medium">{batch.state}</span>
-              </p>
-              <p className="text-xs text-gray-300">
-                Weekly growth: +{weeklyGrowthPercent}% per week
-              </p>
-            </div>
+        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+          <div className={`${tooltipStyles.text} space-y-2`}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>{config.name}</p>
+              <p className={tooltipStyles.muted}>{config.description}</p>
+            </TooltipSection>
+            <TooltipSection title="Current Status">
+              <TooltipRow label="Severity" value={`${severityPercent}% (${formatNumber(severity, { smartDecimals: true })})`} monospaced={true} />
+              <TooltipRow label="Weekly growth" value={`+${weeklyGrowthPercent}% per week`} monospaced={true} />
+            </TooltipSection>
+            <TooltipSection title="State Effects">
+              <div className={`${tooltipStyles.text} ${tooltipStyles.muted}`}>Current state: <span className={tooltipStyles.subtitle}>{batch.state}</span></div>
+              <TooltipRow label="Weekly growth" value={`+${weeklyGrowthPercent}% per week`} monospaced={true} />
+            </TooltipSection>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -266,7 +255,8 @@ function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: Evolv
   );
 }
 
-// Active Feature Item Component
+// ===== ACTIVE FEATURE COMPONENT =====
+
 interface ActiveFeatureItemProps {
   feature: any;
   config: any;
@@ -299,36 +289,29 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
             {displayElement}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm">
-          <div className="text-xs space-y-2">
-            <div>
-              <p className="font-semibold">{config.name}</p>
-              <p className="text-gray-300">{config.description}</p>
-            </div>
-            
-            <div>
-              <p className="font-medium">{config.name} is present</p>
+        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+          <div className={`${tooltipStyles.text} space-y-2`}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>{config.name}</p>
+              <p className={tooltipStyles.muted}>{config.description}</p>
+            </TooltipSection>
+            <TooltipSection>
+              <p className={tooltipStyles.subtitle}>{config.name} is present</p>
               <p>This batch has {config.name.toLowerCase()}.</p>
               {config.behavior === 'evolving' && (
-                <p>Severity: {formatNumber(feature.severity * 100, { smartDecimals: true })}%</p>
+                <TooltipRow label="Severity" value={`${formatNumber(feature.severity * 100, { smartDecimals: true })}%`} monospaced={true} />
               )}
-            </div>
-            
-            {/* Quality impact */}
+            </TooltipSection>
             {Math.abs(qualityImpact) > 0.001 && (
-              <div className="border-t border-gray-600 pt-2">
-                <p className="font-medium">Quality Impact</p>
-                <p className="text-gray-300 text-xs">
+              <TooltipSection title="Quality Impact">
+                <div className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
                   {qualityImpact < 0 ? '-' : '+'}{formatNumber(Math.abs(qualityImpact * 100), { smartDecimals: true })}% quality change
-                </p>
-              </div>
+                </div>
+              </TooltipSection>
             )}
-            
-            {/* Characteristic effects */}
             {config.effects.characteristics && config.effects.characteristics.length > 0 && (
-              <div className="border-t border-gray-600 pt-2">
-                <p className="font-medium">Effects:</p>
-                <div className="text-xs text-gray-300 space-y-1">
+              <TooltipSection title="Effects">
+                <div className={`${tooltipStyles.text} ${tooltipStyles.muted} space-y-1`}>
                   {config.effects.characteristics.map((effect: any) => {
                     const modifier = typeof effect.modifier === 'function' 
                       ? effect.modifier(feature.severity) 
@@ -341,7 +324,7 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
                     );
                   })}
                 </div>
-              </div>
+              </TooltipSection>
             )}
           </div>
         </TooltipContent>
@@ -350,7 +333,8 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
   );
 }
 
-// Risk Feature Item Component
+// ===== RISK FEATURE COMPONENT =====
+
 interface RiskFeatureItemProps {
   feature: any;
   config: any;
@@ -382,27 +366,22 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
             {displayElement}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm">
-          <div className="text-xs space-y-2">
-            <div>
-              <p className="font-semibold">{config.name}</p>
-              <p className="text-gray-300">{config.description}</p>
-            </div>
-            
-            <div>
-              <p className="font-medium">
-                {config.name} Risk: {riskPercent}%
-              </p>
+        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+          <div className={`${tooltipStyles.text} space-y-2`}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>{config.name}</p>
+              <p className={tooltipStyles.muted}>{config.description}</p>
+            </TooltipSection>
+            <TooltipSection>
+              <p className={tooltipStyles.subtitle}>{config.name} Risk: {riskPercent}%</p>
               <p>Chance this batch develops {config.name.toLowerCase()}.</p>
               {expectedWeeks !== undefined && expectedWeeks < 50 && (
-                <p className="text-yellow-600 mt-1">
-                  Expected ~{expectedWeeks} weeks (statistical average)
-                </p>
+                <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
               )}
-              <p className="text-gray-500 mt-2">
-                Current state: <span className="font-medium">{batch.state}</span>
+              <p className="mt-2">
+                <span className={tooltipStyles.muted}>Current state:</span> <span className={tooltipStyles.subtitle}>{batch.state}</span>
               </p>
-            </div>
+            </TooltipSection>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -410,7 +389,8 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
   );
 }
 
-// Weekly Effects Display Component
+// ===== EFFECTS DISPLAY COMPONENTS =====
+
 interface WeeklyEffectsDisplayProps {
   combinedWeeklyEffects: Record<string, number>;
   evolvingFeatures: Array<{ feature: any; config: any; weeklyEffects: Record<string, number> }>;
@@ -447,18 +427,22 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures }: Weekl
                       <span className="font-medium">{sign}{percentage}%</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <div className="text-xs space-y-1">
-                      <p className="font-semibold capitalize">{isQuality ? 'Quality' : key}</p>
-                      <div className="space-y-1">
-                        {isQuality ? (
-                          <p className="text-gray-300">Weekly quality change from evolving features</p>
-                        ) : (
-                          getCharacteristicBreakdown(key, evolvingFeatures)
-                        )}
-                      </div>
-                    </div>
-                  </TooltipContent>
+                <TooltipContent side="top" className="max-w-xs" variant="panel" density="compact">
+                  <div className={`${tooltipStyles.text} space-y-1`}>
+                    <TooltipSection>
+                      <p className={`${tooltipStyles.title} capitalize`}>{isQuality ? 'Quality' : key}</p>
+                      {isQuality ? (
+                        <p className={tooltipStyles.muted}>Weekly quality change from evolving features</p>
+                      ) : (
+                        <TooltipScrollableContent maxHeight="max-h-60">
+                          <div className="space-y-1">
+                            {getCharacteristicBreakdown(key, evolvingFeatures)}
+                          </div>
+                        </TooltipScrollableContent>
+                      )}
+                    </TooltipSection>
+                  </div>
+                </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             );
@@ -501,12 +485,16 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
                       <span>{characteristic}: {sign}{percentage}%</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <div className="text-xs space-y-1">
-                      <p className="font-semibold capitalize">{characteristic}</p>
-                      <div className="space-y-1">
-                        {getCombinedCharacteristicBreakdown(characteristic, activeFeatures)}
-                      </div>
+                  <TooltipContent side="top" className="max-w-xs" variant="panel" density="compact">
+                    <div className={`${tooltipStyles.text} space-y-1`}>
+                      <TooltipSection>
+                        <p className={`${tooltipStyles.title} capitalize`}>{characteristic}</p>
+                        <TooltipScrollableContent maxHeight="max-h-60">
+                          <div className="space-y-1">
+                            {getCombinedCharacteristicBreakdown(characteristic, activeFeatures)}
+                          </div>
+                        </TooltipScrollableContent>
+                      </TooltipSection>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -526,12 +514,14 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
                   <span>Quality {totalQualityEffect > 0 ? '+' : ''}{formatNumber(totalQualityEffect * 100, { smartDecimals: true })}%</span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <div className="text-xs space-y-1">
-                  <p className="font-semibold">Quality Impact</p>
-                  <div className="space-y-1">
-                    {getCombinedQualityBreakdown(activeFeatures)}
-                  </div>
+              <TooltipContent side="top" className="max-w-xs" variant="panel" density="compact">
+                <div className={`${tooltipStyles.text} space-y-1`}>
+                  <TooltipSection>
+                    <p className={tooltipStyles.title}>Quality Impact</p>
+                    <div className="space-y-1">
+                      {getCombinedQualityBreakdown(activeFeatures)}
+                    </div>
+                  </TooltipSection>
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -542,7 +532,8 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
   );
 }
 
-// Helper functions for tooltip breakdowns
+// ===== UTILITY FUNCTIONS =====
+
 function getCharacteristicBreakdown(characteristic: string, evolvingFeatures: Array<{ feature: any; config: any; weeklyEffects: Record<string, number> }>): React.ReactNode[] {
   const contributions: React.ReactNode[] = [];
   
@@ -600,7 +591,8 @@ function getCombinedQualityBreakdown(activeFeatures: Array<{ feature: any; confi
   return contributions;
 }
 
-// Feature Badge Component (consolidated from FeatureBadge.tsx)
+// ===== FEATURE BADGE COMPONENT =====
+
 interface FeatureBadgeProps {
   feature: any;
   config: any;
@@ -675,7 +667,7 @@ function FeatureBadge({ feature, config, showSeverity = false, className }: Feat
   );
 }
 
-// ===== PREVIEW RISK DISPLAY COMPONENTS =====
+// ===== PREVIEW RISK COMPONENTS =====
 
 interface PreviewRiskFeatureItemProps {
   feature: FeatureRiskDisplayData['features'][0];
@@ -753,7 +745,7 @@ function wrapPreviewWithTooltip(element: React.ReactNode, feature: PreviewRiskFe
             {element}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm">
+        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
           <PreviewRiskTooltipContent feature={feature} />
         </TooltipContent>
       </Tooltip>
@@ -765,10 +757,11 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
   const config = feature.config;
   
   return (
-    <div className="text-xs space-y-2">
+    <div className={`${tooltipStyles.text} space-y-2`}>
+      {/* TEMP: Visual marker to verify new tooltip implementation */}
       <div>
-        <p className="font-semibold">{feature.featureName}</p>
-        <p className="text-gray-300">{feature.description}</p>
+        <p className={tooltipStyles.title}>{feature.featureName}</p>
+        <p className={tooltipStyles.muted}>{feature.description}</p>
       </div>
       
       <div>
@@ -801,20 +794,20 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
           )}
         </p>
         
-        {feature.config?.behavior === 'accumulation' && feature.weeklyRiskIncrease !== undefined && feature.weeklyRiskIncrease > 0 && (
+          {feature.config?.behavior === 'accumulation' && feature.weeklyRiskIncrease !== undefined && feature.weeklyRiskIncrease > 0 && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium text-yellow-400">Cumulative Risk</p>
-            <p className="text-gray-300 text-xs">
+            <p className={`${tooltipStyles.subtitle} ${tooltipStyles.warning}`}>Cumulative Risk</p>
+            <p className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
               Current risk: {formatNumber(feature.currentRisk * 100, { smartDecimals: true })}%
             </p>
-            <p className="text-gray-300 text-xs">
+            <p className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
               Weekly increase: +{formatNumber(feature.weeklyRiskIncrease * 100, { smartDecimals: true })}%
             </p>
-            <p className="text-gray-300 text-xs mt-1">
+            <p className={`${tooltipStyles.muted} ${tooltipStyles.text} mt-1`}>
               This risk accumulates over time. Each tick adds the calculated amount to your current risk level.
             </p>
             {feature.contextInfo && (
-              <p className="text-gray-400 text-xs mt-1">
+              <p className={`${tooltipStyles.text} text-gray-400 mt-1`}>
                 {feature.contextInfo}
               </p>
             )}
@@ -823,8 +816,8 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
 
         {feature.qualityImpact && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium">Quality Impact if Manifests</p>
-            <p className="text-gray-300 text-xs">
+            <p className={tooltipStyles.subtitle}>Quality Impact if Manifests</p>
+            <p className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
               {feature.qualityImpact < 0 ? '-' : '+'}{formatNumber(Math.abs(feature.qualityImpact * 100), { smartDecimals: true })}% quality change
             </p>
           </div>
@@ -832,8 +825,8 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
         
         {config?.effects?.characteristics && config.effects.characteristics.length > 0 && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium">Characteristic Effects:</p>
-            <div className="text-xs text-gray-300 space-y-1">
+            <p className={tooltipStyles.subtitle}>Characteristic Effects:</p>
+            <div className={`${tooltipStyles.text} ${tooltipStyles.muted} space-y-1`}>
               {config.effects.characteristics.map((effect: any) => {
                 const baseModifier = typeof effect.modifier === 'function' 
                   ? effect.modifier(1.0)
@@ -865,11 +858,11 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
         
         {config?.effects?.prestige && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium">Prestige Impact:</p>
-            <div className="text-xs text-gray-300 space-y-1">
+            <p className={tooltipStyles.subtitle}>Prestige Impact:</p>
+            <div className={`${tooltipStyles.text} ${tooltipStyles.muted} space-y-1`}>
               {config.effects.prestige.onManifestation && (
                 <div>
-                  <p className="font-medium text-yellow-400">On Manifestation:</p>
+                  <p className={`${tooltipStyles.subtitle} ${tooltipStyles.warning}`}>On Manifestation:</p>
                   {config.effects.prestige.onManifestation.company && (
                     <p className="ml-2">
                       • Company: up to {config.effects.prestige.onManifestation.company.maxImpact && config.effects.prestige.onManifestation.company.maxImpact < 0 ? '-' : ''}{Math.abs(config.effects.prestige.onManifestation.company.maxImpact || 0).toFixed(1)} prestige
@@ -884,7 +877,7 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
               )}
               {config.effects.prestige.onSale && (
                 <div>
-                  <p className="font-medium text-yellow-400">On Sale:</p>
+                  <p className={`${tooltipStyles.subtitle} ${tooltipStyles.warning}`}>On Sale:</p>
                   {config.effects.prestige.onSale.company && (
                     <p className="ml-2">
                       • Company: up to {config.effects.prestige.onSale.company.maxImpact && config.effects.prestige.onSale.company.maxImpact < 0 ? '-' : ''}{Math.abs(config.effects.prestige.onSale.company.maxImpact || 0).toFixed(1)} prestige
@@ -925,12 +918,12 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
         
         {feature.riskRanges && feature.riskRanges.length > 0 && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium">Risk by Processing Options:</p>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
+            <p className={tooltipStyles.subtitle}>Risk by Processing Options:</p>
+            <div className="space-y-2">
               {feature.riskRanges.map((range: any, index: number) => (
                 <div key={index} className="text-xs">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-gray-300 font-medium">{range.groupLabel}</span>
+                    <span className={`${tooltipStyles.muted} ${tooltipStyles.subtitle}`}>{range.groupLabel}</span>
                     <span className={`font-mono ${getRiskColorClass(range.maxRisk)}`}>
                       {range.minRisk === range.maxRisk 
                         ? `${formatNumber(range.maxRisk * 100, { smartDecimals: true })}%`
@@ -946,18 +939,18 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
         
         {!feature.riskRanges && feature.riskCombinations && feature.riskCombinations.length > 0 && (
           <div className="border-t border-gray-600 pt-2">
-            <p className="font-medium">Risk by Processing Options:</p>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
+            <p className={tooltipStyles.subtitle}>Risk by Processing Options:</p>
+            <div className="space-y-1">
               {feature.riskCombinations.slice(0, 10).map((combination: any, index: number) => (
                 <div key={index} className="flex justify-between text-xs">
-                  <span className="text-gray-300 truncate mr-2">{combination.label}</span>
+                  <span className={`${tooltipStyles.muted} truncate mr-2`}>{combination.label}</span>
                   <span className={`font-mono ${getRiskColorClass(combination.risk)}`}>
                     {formatNumber(combination.risk * 100, { smartDecimals: true })}%
                   </span>
                 </div>
               ))}
               {feature.riskCombinations.length > 10 && (
-                <div className="text-xs text-gray-400 italic">
+                <div className={`${tooltipStyles.text} text-gray-400 italic`}>
                   ... and {feature.riskCombinations.length - 10} more combinations
                 </div>
               )}

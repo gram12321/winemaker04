@@ -1,6 +1,7 @@
 import React from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
+import { TooltipSection, TooltipRow } from '@/components/ui/shadCN/tooltip';
 
 interface HealthTooltipProps {
   vineyard: Vineyard;
@@ -25,44 +26,23 @@ const HealthTooltip: React.FC<HealthTooltipProps> = ({ vineyard }) => {
   return (
     <div className="text-xs">
       <div className="font-medium text-gray-700 mb-2">Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</div>
-      
-      <div className="space-y-1">
-        <div className="font-medium text-gray-600 mb-1">Health Changes This Season:</div>
-        
+      <TooltipSection title="Health Changes This Season:">
         {healthTrend.seasonalDecay > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Seasonal decay:</span>
-            <span className="text-red-600 font-medium">
-              -{formatNumber(healthTrend.seasonalDecay * 100, { decimals: 1 })}%
-            </span>
-          </div>
+          <TooltipRow label="Seasonal decay:" value={`-${formatNumber(healthTrend.seasonalDecay * 100, { decimals: 1 })}%`} valueRating={0.1} />
         )}
-        
         {healthTrend.plantingImprovement > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Recent planting:</span>
-            <span className="text-green-600 font-medium">
-              +{formatNumber(healthTrend.plantingImprovement * 100, { decimals: 1 })}%
-            </span>
-          </div>
+          <TooltipRow label="Recent planting:" value={`+${formatNumber(healthTrend.plantingImprovement * 100, { decimals: 1 })}%`} valueRating={0.9} />
         )}
-        
         {(hasPositiveChange || hasNegativeChange) && (
-          <div className="flex justify-between items-center pt-1 border-t border-gray-200">
-            <span className="font-medium text-gray-700">Net change:</span>
-            <span className={`font-medium ${hasPositiveChange ? 'text-green-600' : 'text-red-600'}`}>
-              {hasPositiveChange ? '+' : ''}{formatNumber(netChange * 100, { decimals: 1 })}%
-            </span>
-          </div>
+          <TooltipRow label="Net change:" value={`${hasPositiveChange ? '+' : ''}${formatNumber(netChange * 100, { decimals: 1 })}%`} valueRating={hasPositiveChange ? 0.9 : 0.1} />
         )}
-      </div>
-      
+      </TooltipSection>
       {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200">
+        <TooltipSection>
           <div className="text-gray-500">
             Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining
           </div>
-        </div>
+        </TooltipSection>
       )}
     </div>
   );

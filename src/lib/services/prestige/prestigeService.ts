@@ -1,23 +1,16 @@
-// Prestige service - handles prestige business logic
 import { getGameState } from '../core/gameState';
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail } from '../../utils/calculator';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { calculateAbsoluteWeeks } from '../../utils/utils';
+import { calculateAbsoluteWeeks, formatCurrency, formatNumber } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
 import { getMaxLandValue } from '../wine/winescore/grapeQualityCalculation';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import { calculateNetWorth } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
-import { 
-  calculateSalePrestigeWithAssets, 
-  calculateVineyardSalePrestige,
-  calculateFeatureSalePrestigeWithReputation,
-  calculateVineyardManifestationPrestige,
-  calculateCompanyManifestationPrestige
-} from './prestigeCalculator';
+import { calculateSalePrestigeWithAssets, calculateVineyardSalePrestige, calculateFeatureSalePrestigeWithReputation, calculateVineyardManifestationPrestige, calculateCompanyManifestationPrestige } from './prestigeCalculator';
 
 // Internal calculation output for creating prestige events
 type VineyardPrestigeFactors = {
@@ -28,12 +21,11 @@ type VineyardPrestigeFactors = {
   ageWithSuitability01: number;
   landWithSuitability01: number;
   ageScaled: number;
-  // Prestige from land per hectare before size multiplier
   landScaledPerHa: number;
-  // Size multiplier applied to land prestige (hectares squared as requested)
   landSizeFactor: number;
-  // Final land prestige after applying size multiplier
   landScaled: number;
+  density: number;
+  densityModifier: number;
 };
 
 export async function initializeBasePrestigeEvents(): Promise<void> {
@@ -129,6 +121,8 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
     landSizeFactor,
     ageScaled,
     landScaled,
+    density: vineyard.density || 0,
+    densityModifier,
   };
 }
 
@@ -355,6 +349,8 @@ export async function createVineyardFactorPrestigeEvents(vineyard: any): Promise
           vineAge: vineyard.vineAge || 0,
           ageBase01: factors.ageBase01,
           ageWithSuitability01: factors.ageWithSuitability01,
+          density: factors.density,
+          densityModifier: factors.densityModifier,
         }
       } as any
     );
@@ -376,6 +372,8 @@ export async function createVineyardFactorPrestigeEvents(vineyard: any): Promise
           landWithSuitability01: factors.landWithSuitability01,
           landScaledPerHa: factors.landScaledPerHa,
           landSizeFactor: factors.landSizeFactor,
+          density: factors.density,
+          densityModifier: factors.densityModifier,
         }
       } as any
     );
@@ -765,21 +763,34 @@ export function getEventDisplayData(event: PrestigeEvent): {
     const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
     
     if (event.type === 'vineyard_age' && metadata.vineyardName && metadata.vineAge !== undefined) {
+      const ageBase = Number(metadata.ageBase01 ?? 0);
+      const ageSuitAdj = Number(metadata.ageWithSuitability01 ?? 0);
+      const densityMod = Number(metadata.densityModifier ?? 1);
       return {
         title: `Vine Age: ${metadata.vineyardName} (${metadata.vineAge} years)`,
         titleBase: 'Vine Age',
         amountText: `(${metadata.vineAge} years)`,
-        calc: `base=${metadata.ageBase01?.toFixed(2)} × suitability → scaled=(asym(${metadata.ageWithSuitability01?.toFixed(2)})−1)=${event.amount.toFixed(2)}`,
+        calc: `Age                                      ${formatNumber(ageBase, { decimals: 0, forceDecimals: true })}\nGrape Suitability                  ${formatNumber(ageSuitAdj, { decimals: 0, forceDecimals: true })}\nAsym Scaling × Density       ${formatNumber(densityMod, { decimals: 2, forceDecimals: true })}\n=                                          ${formatNumber(event.amount, { decimals: 0, forceDecimals: true })}`,
+        displayInfo: metadata.density !== undefined 
+          ? `Density: ${formatNumber(Number(metadata.density) || 0, { decimals: 0 })} vines/ha (modifier ×${formatNumber(densityMod, { decimals: 2, forceDecimals: true })})`
+          : undefined,
       };
     }
     
     if (event.type === 'vineyard_land' && metadata.vineyardName && (metadata.totalValue !== undefined || metadata.landValuePerHectare !== undefined)) {
+      const lvh = formatCurrency(Number(metadata.landValuePerHectare ?? 0));
+      const basePerHa = Number(metadata.landBase01 ?? 0);
+      const suitAdj = Number(metadata.landWithSuitability01 ?? 0);
+      const perHaAsym = Number(metadata.landScaledPerHa ?? 0);
+      const sizeFactor = Number(metadata.landSizeFactor ?? 0);
+      const densityMod = Number(metadata.densityModifier ?? 1);
+      const totalValue = Number(metadata.totalValue ?? ((Number(metadata.landValuePerHectare ?? 0)) * (Number(metadata.hectares ?? 0))));
       return {
-        title: `Land Value: ${metadata.vineyardName} (€${(metadata.totalValue ?? 0).toLocaleString()})`,
+        title: `Land Value: ${metadata.vineyardName} (${lvh}/ha)`,
         titleBase: 'Land Value',
-        amountText: `(€${(metadata.totalValue ?? (metadata.landValuePerHectare ?? 0) * (metadata.hectares ?? 0)).toLocaleString()})`,
-        calc: `base_per_ha=log(€${(metadata.landValuePerHectare ?? 0).toLocaleString()}/€${metadata.maxLandValue?.toLocaleString()}+1)=${metadata.landBase01?.toFixed(2)} → per_ha=(asym(${metadata.landWithSuitability01?.toFixed(2)})−1)=${metadata.landScaledPerHa?.toFixed(2)} → size=sqrt(hectares)=${metadata.landSizeFactor?.toFixed?.(2) ?? String(metadata.landSizeFactor)} → scaled=per_ha×size=${event.amount.toFixed(2)}`,
-        displayInfo: `€${metadata.landValuePerHectare?.toLocaleString()}/ha × ${metadata.hectares?.toFixed(2)}ha (size factor: √ha = ${(metadata.landSizeFactor ?? 0).toLocaleString()})`,
+        amountText: `(Total ${formatCurrency(totalValue)})`,
+        calc: `Land Value per ha              ${formatNumber(basePerHa, { decimals: 2, forceDecimals: true })}\nWith Suitability                ${formatNumber(suitAdj, { decimals: 2, forceDecimals: true })}\nAsym Scaling                   ${formatNumber(perHaAsym, { decimals: 2, forceDecimals: true })}\nSize Factor (√ha)              ${formatNumber(sizeFactor, { decimals: 2, forceDecimals: true })}\nDensity Modifier               ${formatNumber(densityMod, { decimals: 2, forceDecimals: true })}\n=                                          ${formatNumber(event.amount, { decimals: 0, forceDecimals: true })}`,
+        displayInfo: `${lvh}/ha × ${formatNumber(Number(metadata.hectares ?? 0), { decimals: 2, forceDecimals: true })} ha • Density: ${formatNumber(Number(metadata.density ?? 0), { decimals: 0 })} vines/ha (modifier ×${formatNumber(densityMod, { decimals: 2, forceDecimals: true })})`,
       };
     }
     

@@ -1,6 +1,5 @@
 import { FeatureConfig } from '../../types/wineFeatures';
 import { formatNumber } from '../../utils/utils';
-import { createPrestigeConfig } from './commonFeaturesUtil';
 
 /**
  * Terroir Expression Feature
@@ -60,11 +59,32 @@ export const TERROIR_FEATURE: FeatureConfig = {
       { characteristic: 'spice', modifier: (severity: number) => severity * 0.06 },      // +6% max
       { characteristic: 'acidity', modifier: (severity: number) => -severity * 0.04 }    // -4% max (terroir can soften acidity)
     ],
-    prestige: createPrestigeConfig({
-      saleCompany: { baseAmount: 0.05, maxImpact: 8.0 },
-      saleVineyard: { baseAmount: 0.08, maxImpact: 12.0 },
-      decayRate: 0.998
-    })
+    prestige: {
+      onSale: {
+        company: {
+          calculation: 'dynamic',
+          baseAmount: 0.05, // Positive prestige for selling terroir-expressive wines
+          scalingFactors: {
+            volumeWeight: 1.0,
+            valueWeight: 1.0,
+            prestigeWeight: 1.0
+          },
+          decayRate: 0.998, // Long-lasting positive reputation
+          maxImpact: 8.0    // Cap for very large sales
+        },
+        vineyard: {
+          calculation: 'dynamic',
+          baseAmount: 0.08, // Vineyard gets credit for terroir expression
+          scalingFactors: {
+            volumeWeight: 1.0,
+            valueWeight: 1.0,
+            prestigeWeight: 1.0
+          },
+          decayRate: 0.995, // Very long-lasting vineyard reputation
+          maxImpact: 12.0   // Higher cap for vineyard reputation
+        }
+      }
+    }
   },
   
   customerSensitivity: {

@@ -7,12 +7,11 @@ import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
-import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
+import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConstants';
 import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../../constants/vineyardConstants';
-import { GRAPE_CONST } from '../../../constants/grapeConstants';
 import { initializeBatchFeatures, processEventTrigger } from '../features/featureService';
 
 /**
@@ -82,11 +81,27 @@ function combineWineBatches(
     tannins: (existingBatch.characteristics.tannins * existingWeight) + (newCharacteristics.tannins * newWeight)
   };
   
-  // Combine breakdown effects (append new effects to existing ones)
+  // Replace partial harvest effects with combined harvest effects
+  // Get the grape base characteristics for calculating net harvest effects
+  const grapeBase = GRAPE_CONST[existingBatch.grape].baseCharacteristics;
+  
+  // Calculate the net harvest effects (combined characteristics - grape base)
+  const harvestEffects = Object.keys(combinedCharacteristics).map(characteristic => {
+    const baseValue = grapeBase[characteristic as keyof WineCharacteristics];
+    const finalValue = combinedCharacteristics[characteristic as keyof WineCharacteristics];
+    const netEffect = finalValue - baseValue;
+    
+    return {
+      characteristic: characteristic as keyof WineCharacteristics,
+      modifier: netEffect,
+      description: getHarvestEffectDescription(characteristic)
+    };
+  });
+  
+  // Create new breakdown with only the combined harvest effects
+  // This replaces all individual partial harvest effects
   const combinedBreakdown = {
-    effects: [
-      ...(existingBatch.breakdown?.effects || [])
-    ]
+    effects: harvestEffects
   };
 
   // Return updated batch with combined properties
@@ -257,4 +272,27 @@ export function formatCompletedWineName(batch: WineBatch): string {
     return `${batch.grape}, ${batch.vineyardName}, ${batch.harvestStartDate.year}`;
   }
   return `${batch.grape} (${batch.state})`;
+}
+
+/**
+ * Get harvest effect description for a characteristic
+ * Maps characteristic names to their vineyard parameter descriptions
+ */
+function getHarvestEffectDescription(characteristic: string): string {
+  switch (characteristic) {
+    case 'acidity':
+      return 'Grape Ripeness';
+    case 'aroma':
+      return 'Grape Quality';
+    case 'body':
+      return 'Vineyard Altitude';
+    case 'spice':
+      return 'Regional Grape Suitability';
+    case 'sweetness':
+      return 'Vegetation Overgrowth';
+    case 'tannins':
+      return 'Debris Accumulation';
+    default:
+      return 'Harvest Effects';
+  }
 }
