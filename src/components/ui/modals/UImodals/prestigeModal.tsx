@@ -430,15 +430,31 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                     <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
                       <div className={tooltipStyles.text}>
                         <TooltipSection title={`${feature.featureName} Events`}>
-                          <div className="space-y-1">
-                            {feature.recentEvents.map((event, eventIdx) => (
-                              <TooltipRow
-                                key={eventIdx}
-                                label={`Event ${eventIdx + 1}:`}
-                                value={`${formatAmount(event.amount)} prestige`}
-                                monospaced={true}
-                              />
-                            ))}
+                          <div className="space-y-2">
+                            {feature.recentEvents.map((event, eventIdx) => {
+                              const metadata: any = event.metadata ?? {};
+                              const customerName = metadata.customerName || 'Unknown Customer';
+                              const saleValue = metadata.saleValue || 0;
+                              const saleVolume = metadata.saleVolume || 0;
+                              const wineName = metadata.wineName || 'Unknown Wine';
+                              
+                              return (
+                                <div key={eventIdx} className="space-y-1">
+                                  <TooltipRow
+                                    label={`Event ${eventIdx + 1}:`}
+                                    value={`${formatAmount(event.amount)} prestige`}
+                                    monospaced={true}
+                                  />
+                                  <div className="ml-4 text-xs text-gray-400 space-y-0.5">
+                                    <div>Customer: {customerName}</div>
+                                    <div>Wine: {wineName}</div>
+                                    {saleValue > 0 && (
+                                      <div>Sale: €{formatNumber(saleValue, { smartDecimals: true })} ({saleVolume} bottles)</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </TooltipSection>
                         <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
