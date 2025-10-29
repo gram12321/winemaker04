@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { PrestigeEvent } from '@/lib/types/types';
 import { formatNumber, getRatingForRange, getColorClassForRange } from '@/lib/utils';
 import { getEventDisplayData, consolidateWineFeatureEvents, ConsolidatedWineFeatureEvent } from '@/lib/services';
@@ -6,9 +6,60 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Separator } from '../../shadCN/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipSection, TooltipRow, TooltipHeader, tooltipStyles } from '../../shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipSection, TooltipRow, TooltipHeader, tooltipStyles, MobileDialogWrapper } from '../../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
+
+// Type definitions for calculation data
+type CompanyValueCalculationData = {
+  type: 'company_value';
+  companyValue: number;
+  maxLandValue: number;
+  baseValue: number;
+  finalPrestige: number;
+};
+
+type VineyardLandCalculationData = {
+  type: 'vineyard_land';
+  vineyardName: string;
+  landValuePerHa: number;
+  landNormalized01: number;
+  landWithSuitability01: number;
+  hectares: number;
+  density: number;
+  densityModifier: number;
+  sizeFactor: number;
+  asymScaling: number;
+  suitability: number;
+  finalPrestige: number;
+};
+
+type VineyardAgeCalculationData = {
+  type: 'vineyard_age';
+  vineyardName: string;
+  vineAge: number;
+  ageBase: number;
+  grapeSuitability: number;
+  densityModifier: number;
+  finalPrestige: number;
+};
+
+type WineFeatureCalculationData = {
+  type: 'wine_feature';
+  featureName: string;
+  wineName: string;
+  eventType: string;
+  level: string;
+  baseAmount: number;
+  finalPrestige: number;
+};
+
+type CalculationData = 
+  | CompanyValueCalculationData
+  | VineyardLandCalculationData
+  | VineyardAgeCalculationData
+  | WineFeatureCalculationData
+  | { [key: string]: any; type: string }; // Fallback for dynamic data
 
 /**
  * Prestige Modal
@@ -84,6 +135,282 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
 
   const formatAmount = (amount: number) => formatNumber(amount, { decimals: 2, forceDecimals: true });
 
+  // Memoized CalculationTooltip component
+  const CalculationTooltip = useCallback(({ children, calculationData }: { children: React.ReactNode; calculationData: CalculationData }) => {
+    const getFormulaText = (type: string) => {
+      switch (type) {
+        case 'company_value':
+          return `Formula:\n- Company value is log-normalized against Company Scaling Value`;
+        case 'vineyard_land':
+          return `Formula:\n1. Land Value: log(€value / €max + 1) = normalized (0-1)\n2. Suitability: normalized × grape suitability\n3. Asymmetric Scaling: smooth curve for diminishing returns\n4. Size Bonus: ×√hectares (larger vineyards worth more)\n5. Density Modifier: premium approach (lower density = ×1.5, higher density = ×0.5)\n6. Final Prestige: all factors combined`;
+        case 'vineyard_age':
+          return `Formula:\n- Vine age is converted to a 0-1 scale with diminishing returns\n- Multiplied by grape suitability factor\n- Then scaled with asymmetric scaling and density modifier`;
+        case 'wine_feature':
+          return `Formula:\n- Base prestige amount varies by feature type and event\n- May include dynamic scaling based on company/vineyard prestige`;
+        default:
+          return '';
+      }
+    };
+
+    const renderCalculationData = () => {
+      if (!calculationData) return null;
+
+      switch (calculationData.type) {
+        case 'company_value':
+          return (
+            <div className="space-y-2">
+              <TooltipRow 
+                label="Company Value:" 
+                value={`€${formatNumber(calculationData.companyValue, { smartDecimals: true })}`}
+                valueRating={getRatingForRange(calculationData.companyValue / 1000000, 0, 1000, 'exponential')}
+              />
+              <TooltipRow 
+                label="Company Scaling Value:" 
+                value={`€${formatNumber(calculationData.maxLandValue, { smartDecimals: true })}`}
+              />
+              <TooltipRow 
+                label="Company Prestige Base:" 
+                value={`${formatNumber(calculationData.companyValue, { smartDecimals: true })} ÷ ${formatNumber(calculationData.maxLandValue, { smartDecimals: true })} = ${formatNumber(calculationData.baseValue, { smartDecimals: true })}`}
+                monospaced={true}
+              />
+              <TooltipRow 
+                label="Final Prestige:" 
+                value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
+              />
+            </div>
+          );
+
+        case 'vineyard_land':
+          return (
+            <div className="space-y-2">
+              <TooltipRow 
+                label="Vineyard:" 
+                value={calculationData.vineyardName}
+              />
+              <TooltipRow 
+                label="Land Value:" 
+                value={`€${formatNumber(calculationData.landValuePerHa, { smartDecimals: true })}/ha`}
+                valueRating={getRatingForRange(calculationData.landValuePerHa, 0, 1000000, 'exponential')}
+              />
+              <TooltipRow 
+                label="Land Value (Normalized):" 
+                value={formatNumber(calculationData.landNormalized01, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.landNormalized01, 0, 1, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Land with Suitability:" 
+                value={formatNumber(calculationData.landWithSuitability01, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.landWithSuitability01, 0, 1, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Total Hectares:" 
+                value={`${formatNumber(calculationData.hectares, { smartDecimals: true })} ha`}
+                valueRating={getRatingForRange(calculationData.hectares, 0, 100, 'exponential')}
+              />
+              <TooltipRow 
+                label="Vine Density:" 
+                value={`${formatNumber(calculationData.density, { smartDecimals: true })} vines/ha`}
+                valueRating={getRatingForRange(calculationData.density, 1500, 15000, 'lower_better')}
+              />
+              <TooltipRow 
+                label="Density Modifier:" 
+                value={`×${formatNumber(calculationData.densityModifier, { smartDecimals: true })}`}
+              />
+              <TooltipRow 
+                label="Size Factor:" 
+                value={formatNumber(calculationData.sizeFactor, { smartDecimals: true })}
+              />
+              <TooltipRow 
+                label="Asymmetric Scaling:" 
+                value={formatNumber(calculationData.asymScaling, { smartDecimals: true })}
+              />
+              <TooltipRow 
+                label="Final Prestige:" 
+                value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
+              />
+              {/* Human-readable formula with explanations */}
+              <div className="mt-2 border-t border-gray-600 pt-2 space-y-2 text-xs text-gray-400">
+                <div>
+                  <div className="mb-1">Formula:</div>
+                  <div className="whitespace-pre-line">
+{`Prestige = (AsymmetricScale( [Min/Max 0-1]( log(€[Land Value/ha] / [Global Max Land Value/ha] + 1) × [Grape Suitability] ) ) − 1) × [√hectares] × [Density Modifier]`}
+                  </div>
+                </div>
+                <div>
+                  <div>Density Modifier: [Vineyard Density / Default Density]</div>
+                </div>
+                {(() => {
+                  const normalized = formatNumber(calculationData.landNormalized01, { smartDecimals: true });
+                  const suitability = formatNumber(calculationData.suitability, { smartDecimals: true });
+                  const withSuitability = formatNumber(calculationData.landWithSuitability01, { smartDecimals: true });
+                  const perHaAsym = formatNumber(calculationData.asymScaling, { smartDecimals: true });
+                  const size = formatNumber(calculationData.sizeFactor, { smartDecimals: true });
+                  const densityMod = formatNumber(calculationData.densityModifier, { smartDecimals: true });
+                  const final = formatNumber(calculationData.finalPrestige, { smartDecimals: true });
+                  return (
+                    <div>
+                      <div className="mb-1">With values:</div>
+                      <div className="whitespace-pre-line">
+{`Prestige = (AsymmetricScale( clamp01( ${normalized} × ${suitability} ) = ${withSuitability} ) − 1) × ${size} × ${densityMod} = ${perHaAsym} × ${size} × ${densityMod} = ${final}`}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+
+        case 'vineyard_age':
+          return (
+            <div className="space-y-2">
+              <TooltipRow 
+                label="Vineyard:" 
+                value={calculationData.vineyardName}
+              />
+              <TooltipRow 
+                label="Vine Age:" 
+                value={`${calculationData.vineAge} years`}
+                valueRating={getRatingForRange(calculationData.vineAge, 0, 50, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Age Base:" 
+                value={formatNumber(calculationData.ageBase, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.ageBase, 0, 1, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Grape Suitability:" 
+                value={formatNumber(calculationData.grapeSuitability, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.grapeSuitability, 0, 1, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Density Modifier:" 
+                value={`×${formatNumber(calculationData.densityModifier, { smartDecimals: true })}`}
+                valueRating={getRatingForRange(calculationData.densityModifier, 0, 1, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Final Prestige:" 
+                value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
+              />
+              {/* Human-readable formula with explanations */}
+              <div className="mt-2 border-t border-gray-600 pt-2 space-y-2 text-xs text-gray-400">
+                <div>
+                  <div className="mb-1">Formula:</div>
+                  <div className="whitespace-pre-line">
+{`Prestige = (AsymmetricScale( [Age Modifier]( [Vine Age] → [0-1 Scale] ) × [Grape Suitability] ) ) − 1) × [Density Modifier]`}
+                  </div>
+                </div>
+                <div>
+                  <div>Age Modifier: Converts vine age to 0-1 scale with diminishing returns</div>
+                </div>
+                {(() => {
+                  const ageBase = formatNumber(calculationData.ageBase, { smartDecimals: true });
+                  const suitability = formatNumber(calculationData.grapeSuitability, { smartDecimals: true });
+                  const densityMod = formatNumber(calculationData.densityModifier, { smartDecimals: true });
+                  const final = formatNumber(calculationData.finalPrestige, { smartDecimals: true });
+                  return (
+                    <div>
+                      <div className="mb-1">With values:</div>
+                      <div className="whitespace-pre-line">
+{`Prestige = (AsymmetricScale( ${ageBase} × ${suitability} ) ) − 1) × ${densityMod} = ${final}`}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+
+        case 'wine_feature':
+          return (
+            <div className="space-y-2">
+              <TooltipRow 
+                label="Feature:" 
+                value={calculationData.featureName}
+              />
+              <TooltipRow 
+                label="Wine:" 
+                value={calculationData.wineName}
+              />
+              <TooltipRow 
+                label="Event Type:" 
+                value={calculationData.eventType}
+              />
+              <TooltipRow 
+                label="Level:" 
+                value={calculationData.level}
+              />
+              <TooltipRow 
+                label="Base Amount:" 
+                value={formatNumber(calculationData.baseAmount, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.baseAmount, 0, 1, 'higher_better')}
+              />
+              <TooltipRow 
+                label="Final Prestige:" 
+                value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
+                valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
+              />
+              {/* Human-readable formula with explanations */}
+              <div className="mt-2 border-t border-gray-600 pt-2 space-y-2 text-xs text-gray-400">
+                <div>
+                  <div className="mb-1">Formula:</div>
+                  <div className="whitespace-pre-line">
+{`Prestige = [Base Amount] × [Dynamic Scaling Factors]`}
+                  </div>
+                </div>
+                <div>
+                  <div>Dynamic Scaling: May include company/vineyard prestige, batch size, quality, and sale value factors</div>
+                </div>
+                {(() => {
+                  const baseAmount = formatNumber(calculationData.baseAmount, { smartDecimals: true });
+                  const final = formatNumber(calculationData.finalPrestige, { smartDecimals: true });
+                  return (
+                    <div>
+                      <div className="mb-1">With values:</div>
+                      <div className="whitespace-pre-line">
+{`Prestige = ${baseAmount} × [Dynamic Factors] = ${final}`}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+
+        default:
+          return null;
+      }
+    };
+
+    const tooltipBody = (
+      <div className={tooltipStyles.text}>
+        <TooltipSection title="Calculation Breakdown">
+          {renderCalculationData()}
+        </TooltipSection>
+        <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-xs text-gray-300">
+          {getFormulaText(calculationData?.type || '')}
+        </div>
+      </div>
+    );
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <MobileDialogWrapper content={tooltipBody} title="Calculation Details" triggerClassName="inline-block">
+              {children}
+            </MobileDialogWrapper>
+          </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
+            {tooltipBody}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }, []);
+
   // Estimate elapsed weeks based on decay retention and original/current amounts
   const estimateWeeksFromDecay = (
     originalAmount?: number,
@@ -110,276 +437,6 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     const displayData = getEventDisplayData(event);
     const isAchievement = event.type === 'achievement' || event.type === 'vineyard_achievement';
 
-    // Custom tooltip component for calculations using structured data
-    const CalculationTooltip = ({ children, calculationData }: { children: React.ReactNode; calculationData: any }) => {
-      const getFormulaText = (type: string) => {
-        switch (type) {
-          case 'company_value':
-            return `Formula:\n- Company value is log-normalized against Company Scaling Value`;
-          case 'vineyard_land':
-            return `Formula:\n1. Land Value: log(€value / €max + 1) = normalized (0-1)\n2. Suitability: normalized × grape suitability\n3. Asymmetric Scaling: smooth curve for diminishing returns\n4. Size Bonus: ×√hectares (larger vineyards worth more)\n5. Density Modifier: premium approach (lower density = ×1.5, higher density = ×0.5)\n6. Final Prestige: all factors combined`;
-          case 'vineyard_age':
-            return `Formula:\n- Vine age is converted to a 0-1 scale with diminishing returns\n- Multiplied by grape suitability factor\n- Then scaled with asymmetric scaling and density modifier`;
-          case 'wine_feature':
-            return `Formula:\n- Base prestige amount varies by feature type and event\n- May include dynamic scaling based on company/vineyard prestige`;
-          default:
-            return '';
-        }
-      };
-
-      const renderCalculationData = () => {
-        if (!calculationData) return null;
-
-        switch (calculationData.type) {
-          case 'company_value':
-            return (
-              <div className="space-y-2">
-                <TooltipRow 
-                  label="Company Value:" 
-                  value={`€${formatNumber(calculationData.companyValue, { smartDecimals: true })}`}
-                  valueRating={getRatingForRange(calculationData.companyValue / 1000000, 0, 1000, 'exponential')}
-                />
-                <TooltipRow 
-                  label="Company Scaling Value:" 
-                  value={`€${formatNumber(calculationData.maxLandValue, { smartDecimals: true })}`}
-                />
-                <TooltipRow 
-                  label="Company Prestige Base:" 
-                  value={`${formatNumber(calculationData.companyValue, { smartDecimals: true })} ÷ ${formatNumber(calculationData.maxLandValue, { smartDecimals: true })} = ${formatNumber(calculationData.baseValue, { smartDecimals: true })}`}
-                  monospaced={true}
-                />
-                <TooltipRow 
-                  label="Final Prestige:" 
-                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
-                />
-              </div>
-            );
-
-          case 'vineyard_land':
-            return (
-              <div className="space-y-2">
-                <TooltipRow 
-                  label="Vineyard:" 
-                  value={calculationData.vineyardName}
-                />
-                <TooltipRow 
-                  label="Land Value:" 
-                  value={`€${formatNumber(calculationData.landValuePerHa, { smartDecimals: true })}/ha`}
-                  valueRating={getRatingForRange(calculationData.landValuePerHa, 0, 1000000, 'exponential')}
-                />
-                <TooltipRow 
-                  label="Land Value (Normalized):" 
-                  value={formatNumber(calculationData.landNormalized01, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.landNormalized01, 0, 1, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Land with Suitability:" 
-                  value={formatNumber(calculationData.landWithSuitability01, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.landWithSuitability01, 0, 1, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Total Hectares:" 
-                  value={`${formatNumber(calculationData.hectares, { smartDecimals: true })} ha`}
-                  valueRating={getRatingForRange(calculationData.hectares, 0, 100, 'exponential')}
-                />
-                <TooltipRow 
-                  label="Vine Density:" 
-                  value={`${formatNumber(calculationData.density, { smartDecimals: true })} vines/ha`}
-                  valueRating={getRatingForRange(calculationData.density, 1500, 15000, 'lower_better')}
-                />
-                <TooltipRow 
-                  label="Density Modifier:" 
-                  value={`×${formatNumber(calculationData.densityModifier, { smartDecimals: true })}`}
-                />
-                <TooltipRow 
-                  label="Size Factor:" 
-                  value={formatNumber(calculationData.sizeFactor, { smartDecimals: true })}
-                />
-                <TooltipRow 
-                  label="Asymmetric Scaling:" 
-                  value={formatNumber(calculationData.asymScaling, { smartDecimals: true })}
-                />
-                <TooltipRow 
-                  label="Final Prestige:" 
-                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
-                />
-                {/* Human-readable formula with explanations */}
-                <div className="mt-2 border-t border-gray-600 pt-2 space-y-2 text-xs text-gray-400">
-                  <div>
-                    <div className="mb-1">Formula:</div>
-                    <div className="whitespace-pre-line">
-{`Prestige = (AsymmetricScale( [Min/Max 0-1]( log(€[Land Value/ha] / [Global Max Land Value/ha] + 1) × [Grape Suitability] ) ) − 1) × [√hectares] × [Density Modifier]`}
-                    </div>
-                  </div>
-                  <div>
-                    <div>Density Modifier: [Vineyard Density / Default Density]</div>
-                  </div>
-                  {(() => {
-                    const normalized = formatNumber(calculationData.landNormalized01, { smartDecimals: true });
-                    const suitability = formatNumber(calculationData.suitability, { smartDecimals: true });
-                    const withSuitability = formatNumber(calculationData.landWithSuitability01, { smartDecimals: true });
-                    const perHaAsym = formatNumber(calculationData.asymScaling, { smartDecimals: true });
-                    const size = formatNumber(calculationData.sizeFactor, { smartDecimals: true });
-                    const densityMod = formatNumber(calculationData.densityModifier, { smartDecimals: true });
-                    const final = formatNumber(calculationData.finalPrestige, { smartDecimals: true });
-                    return (
-                      <div>
-                        <div className="mb-1">With values:</div>
-                        <div className="whitespace-pre-line">
-{`Prestige = (AsymmetricScale( clamp01( ${normalized} × ${suitability} ) = ${withSuitability} ) − 1) × ${size} × ${densityMod} = ${perHaAsym} × ${size} × ${densityMod} = ${final}`}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            );
-
-          case 'vineyard_age':
-            return (
-              <div className="space-y-2">
-                <TooltipRow 
-                  label="Vineyard:" 
-                  value={calculationData.vineyardName}
-                />
-                <TooltipRow 
-                  label="Vine Age:" 
-                  value={`${calculationData.vineAge} years`}
-                  valueRating={getRatingForRange(calculationData.vineAge, 0, 50, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Age Base:" 
-                  value={formatNumber(calculationData.ageBase, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.ageBase, 0, 1, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Grape Suitability:" 
-                  value={formatNumber(calculationData.grapeSuitability, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.grapeSuitability, 0, 1, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Density Modifier:" 
-                  value={`×${formatNumber(calculationData.densityModifier, { smartDecimals: true })}`}
-                  valueRating={getRatingForRange(calculationData.densityModifier, 0, 1, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Final Prestige:" 
-                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
-                />
-                {/* Human-readable formula with explanations */}
-                <div className="mt-2 border-t border-gray-600 pt-2 space-y-2 text-xs text-gray-400">
-                  <div>
-                    <div className="mb-1">Formula:</div>
-                    <div className="whitespace-pre-line">
-{`Prestige = (AsymmetricScale( [Age Modifier]( [Vine Age] → [0-1 Scale] ) × [Grape Suitability] ) ) − 1) × [Density Modifier]`}
-                    </div>
-                  </div>
-                  <div>
-                    <div>Age Modifier: Converts vine age to 0-1 scale with diminishing returns</div>
-                  </div>
-                  {(() => {
-                    const ageBase = formatNumber(calculationData.ageBase, { smartDecimals: true });
-                    const suitability = formatNumber(calculationData.grapeSuitability, { smartDecimals: true });
-                    const densityMod = formatNumber(calculationData.densityModifier, { smartDecimals: true });
-                    const final = formatNumber(calculationData.finalPrestige, { smartDecimals: true });
-                    return (
-                      <div>
-                        <div className="mb-1">With values:</div>
-                        <div className="whitespace-pre-line">
-{`Prestige = (AsymmetricScale( ${ageBase} × ${suitability} ) ) − 1) × ${densityMod} = ${final}`}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            );
-
-          case 'wine_feature':
-            return (
-              <div className="space-y-2">
-                <TooltipRow 
-                  label="Feature:" 
-                  value={calculationData.featureName}
-                />
-                <TooltipRow 
-                  label="Wine:" 
-                  value={calculationData.wineName}
-                />
-                <TooltipRow 
-                  label="Event Type:" 
-                  value={calculationData.eventType}
-                />
-                <TooltipRow 
-                  label="Level:" 
-                  value={calculationData.level}
-                />
-                <TooltipRow 
-                  label="Base Amount:" 
-                  value={formatNumber(calculationData.baseAmount, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.baseAmount, 0, 1, 'higher_better')}
-                />
-                <TooltipRow 
-                  label="Final Prestige:" 
-                  value={formatNumber(calculationData.finalPrestige, { smartDecimals: true })}
-                  valueRating={getRatingForRange(calculationData.finalPrestige, 0, 10, 'higher_better')}
-                />
-                {/* Human-readable formula with explanations */}
-                <div className="mt-2 border-t border-gray-600 pt-2 space-y-2 text-xs text-gray-400">
-                  <div>
-                    <div className="mb-1">Formula:</div>
-                    <div className="whitespace-pre-line">
-{`Prestige = [Base Amount] × [Dynamic Scaling Factors]`}
-                    </div>
-                  </div>
-                  <div>
-                    <div>Dynamic Scaling: May include company/vineyard prestige, batch size, quality, and sale value factors</div>
-                  </div>
-                  {(() => {
-                    const baseAmount = formatNumber(calculationData.baseAmount, { smartDecimals: true });
-                    const final = formatNumber(calculationData.finalPrestige, { smartDecimals: true });
-                    return (
-                      <div>
-                        <div className="mb-1">With values:</div>
-                        <div className="whitespace-pre-line">
-{`Prestige = ${baseAmount} × [Dynamic Factors] = ${final}`}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            );
-
-          default:
-            return null;
-        }
-      };
-
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {children}
-            </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
-              <div className={tooltipStyles.text}>
-                <TooltipSection title="Calculation Breakdown">
-                  {renderCalculationData()}
-                </TooltipSection>
-                <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-xs text-gray-300">
-                  {getFormulaText(calculationData?.type || '')}
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    };
-
     return (
       <div className="flex items-center justify-between">
         <div className="flex-1">
@@ -399,7 +456,25 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={`${tooltipStyles.text} text-muted-foreground cursor-help`}>(details)</span>
+                    <MobileDialogWrapper 
+                      content={
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection>
+                            <TooltipHeader 
+                              title={displayData.title || 'Details'}
+                              description={displayData.displayInfo || 'Additional information'}
+                            />
+                          </TooltipSection>
+                          <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                            {`Additional Info:\n- This prestige source contributes to your total company prestige\n- Some sources decay over time, others remain permanent`}
+                          </div>
+                        </div>
+                      } 
+                      title={displayData.title || 'Details'} 
+                      triggerClassName="inline-block"
+                    >
+                      <span className={`${tooltipStyles.text} text-muted-foreground cursor-help`}>(details)</span>
+                    </MobileDialogWrapper>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
                     <div className={tooltipStyles.text}>
@@ -424,7 +499,52 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className={`text-sm ${tooltipStyles.subtitle} cursor-help ${getColorClassForRange(event.currentAmount ?? event.amount, 0, 10, 'higher_better')}`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
+                <MobileDialogWrapper 
+                  content={(() => {
+                    const original = event.originalAmount ?? event.amount;
+                    const current = event.currentAmount ?? event.amount;
+                    const weeks = estimateWeeksFromDecay(original, current, event.decayRate);
+                    return (
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title="Prestige Details">
+                          <TooltipRow 
+                            label="Original:" 
+                            value={formatAmount(original)}
+                            monospaced={true}
+                          />
+                          <TooltipRow 
+                            label="Weekly decay:"
+                            value={event.decayRate === 0 ? 'No decay' : `${formatNumber((1 - event.decayRate) * 100, { smartDecimals: true })}%`}
+                            // Use logarithmic scale: 0.90-1.0 retention rate maps to 0-1 rating
+                            // 0.90 retention (10% decay) = 0 rating (red)
+                            // 1.0 retention (0% decay) = 1 rating (green)
+                            valueRating={event.decayRate === 0 ? 1 : Math.max(0, Math.min(1, (event.decayRate - 0.90) / 0.10))}
+                          />
+                          {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
+                            <TooltipRow 
+                              label="Estimation:" 
+                              value={`${formatAmount(original)} × ${formatNumber(event.decayRate, { decimals: 4 })}^${weeks} ≈ ${formatAmount(current)}`}
+                              monospaced={true}
+                            />
+                          ) : (
+                            <TooltipRow 
+                              label="Formula:" 
+                              value="Current ≈ Original × retention^weeks"
+                              monospaced={true}
+                            />
+                          )}
+                        </TooltipSection>
+                        <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                          {`Notes:\n- Weekly decay shows how much prestige is lost each week.\n- Lower decay means prestige lasts longer.`}
+                        </div>
+                      </div>
+                    );
+                  })()} 
+                  title="Prestige Details" 
+                  triggerClassName="inline-block"
+                >
+                  <p className={`text-sm ${tooltipStyles.subtitle} cursor-help ${getColorClassForRange(event.currentAmount ?? event.amount, 0, 10, 'higher_better')}`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
+                </MobileDialogWrapper>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
                 {(() => {
@@ -525,9 +645,46 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge variant="outline" className="text-[10px] cursor-help">
-                  {feature.eventCount} {feature.eventCount === 1 ? 'event' : 'events'}
-                </Badge>
+                      <MobileDialogWrapper 
+                        content={
+                          <div className={tooltipStyles.text}>
+                            <TooltipSection title={`${feature.featureName} Events`}>
+                              <div className="space-y-2">
+                                {feature.recentEvents.map((event, eventIdx) => {
+                                  const metadata: any = event.metadata ?? {};
+                                  const customerName = metadata.customerName || 'Unknown Customer';
+                                  const saleValue = metadata.saleValue || 0;
+                                  const saleVolume = metadata.saleVolume || 0;
+                                  
+                                  return (
+                                    <div key={eventIdx} className="space-y-1">
+                                      <TooltipRow
+                                        label={`${customerName}:`}
+                                        value={`${formatAmount(event.amount)} prestige`}
+                                        monospaced={true}
+                                      />
+                                      {saleValue > 0 && (
+                                        <div className="ml-4 text-xs text-gray-400">
+                                          Sale: €{formatNumber(saleValue, { smartDecimals: true })} ({saleVolume} bottles)
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </TooltipSection>
+                            <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                              {`Total: ${formatAmount(feature.totalAmount)} prestige\nDecay: ${formatDecayRate(feature.decayRate)}`}
+                            </div>
+                          </div>
+                        } 
+                        title={`${feature.featureName} Events`} 
+                        triggerClassName="inline-block"
+                      >
+                        <Badge variant="outline" className="text-[10px] cursor-help">
+                    {feature.eventCount} {feature.eventCount === 1 ? 'event' : 'events'}
+                  </Badge>
+                      </MobileDialogWrapper>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
                       <div className={tooltipStyles.text}>
@@ -585,6 +742,30 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     return consolidatedCompanyWineFeatures.filter(wine => 
       `${wine.vineyardName}_${wine.grape}_${wine.vintage}` === selectedWine
     );
+  };
+
+  // Helper function to group events by type and feature name
+  const groupEventsByTypeAndFeature = (events: PrestigeEvent[]) => {
+    const groups = new Map<string, number>();
+    
+    for (const event of events) {
+      if (event.type === 'wine_feature' && event.metadata) {
+        const metadata: any = event.metadata;
+        const featureName = metadata.featureName || 'Unknown Feature';
+        const eventType = metadata.eventType || 'unknown';
+        
+        const key = `${eventType} ${featureName}`;
+        groups.set(key, (groups.get(key) || 0) + 1);
+      } else {
+        // Handle other event types
+        const eventType = event.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        groups.set(eventType, (groups.get(eventType) || 0) + 1);
+      }
+    }
+    
+    return Array.from(groups.entries())
+      .map(([key, count]) => ({ type: key, count }))
+      .sort((a, b) => b.count - a.count);
   };
 
   // Collapsible section helpers
@@ -829,9 +1010,52 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                               <div className="flex items-center gap-2">
                                 <Star className="h-4 w-4 text-purple-600" />
                                 <span className="font-medium text-purple-800">{wine.vineyardName} - {wine.grape} ({wine.vintage})</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {wine.features.length} {wine.features.length === 1 ? 'feature' : 'features'}
-                                </Badge>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <MobileDialogWrapper 
+                                        content={
+                                          <div className={tooltipStyles.text}>
+                                            <TooltipSection title="Feature Events">
+                                              <div className="space-y-1">
+                                                {groupEventsByTypeAndFeature(
+                                                  wine.features.flatMap(f => f.recentEvents)
+                                                ).map((group, idx) => (
+                                                  <div key={idx} className="flex justify-between">
+                                                    <span className="capitalize">{group.type}</span>
+                                                    <span className="font-mono">×{group.count}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </TooltipSection>
+                                          </div>
+                                        } 
+                                        title="Feature Events" 
+                                        triggerClassName="inline-block"
+                                      >
+                                        <Badge variant="outline" className="text-xs cursor-help">
+                                          {wine.features.length} {wine.features.length === 1 ? 'feature' : 'features'}
+                                        </Badge>
+                                      </MobileDialogWrapper>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm" variant="panel" density="compact">
+                                      <div className={tooltipStyles.text}>
+                                        <TooltipSection title="Feature Events">
+                                          <div className="space-y-1">
+                                            {groupEventsByTypeAndFeature(
+                                              wine.features.flatMap(f => f.recentEvents)
+                                            ).map((group, idx) => (
+                                              <div key={idx} className="flex justify-between">
+                                                <span className="capitalize">{group.type}</span>
+                                                <span className="font-mono">×{group.count}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </TooltipSection>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                               <div className="text-right">
                                 <span className="font-bold text-purple-900">
@@ -1097,9 +1321,48 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                         <div className="flex items-center gap-2">
                           <Grape className="h-4 w-4 text-green-600" />
                           <span className="font-medium text-green-800">{vineyard.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
-                          </Badge>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <MobileDialogWrapper 
+                                  content={
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title="Prestige Sources">
+                                        <div className="space-y-1">
+                                          {groupEventsByTypeAndFeature(vineyard.events).map((group, idx) => (
+                                            <div key={idx} className="flex justify-between">
+                                              <span className="capitalize">{group.type}</span>
+                                              <span className="font-mono">×{group.count}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </TooltipSection>
+                                    </div>
+                                  } 
+                                  title="Prestige Sources" 
+                                  triggerClassName="inline-block"
+                                >
+                                  <Badge variant="outline" className="text-xs cursor-help">
+                                    {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
+                                  </Badge>
+                                </MobileDialogWrapper>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm" variant="panel" density="compact">
+                                <div className={tooltipStyles.text}>
+                                  <TooltipSection title="Prestige Sources">
+                                    <div className="space-y-1">
+                                      {groupEventsByTypeAndFeature(vineyard.events).map((group, idx) => (
+                                        <div key={idx} className="flex justify-between">
+                                          <span className="capitalize">{group.type}</span>
+                                          <span className="font-mono">×{group.count}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </TooltipSection>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                         <div className="text-right">
                           <span className="font-bold text-green-900">
@@ -1293,26 +1556,100 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               </CardTitle>
             </CardHeader>
             {!isSectionCollapsed('prestige_legend') && (
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-blue-500" />
-                  <span><strong>Company Value:</strong> Log-normalized by max land value; provides natural diminishing returns without additional scaling.</span>
+            <CardContent className="space-y-3 text-sm">
+              {/* Company Prestige Sources */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-blue-700 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Company Prestige Sources
+                </h4>
+                <div className="ml-4 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Company Value:</strong> Based on net worth vs. max land value. Uses logarithmic scaling for natural diminishing returns.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Sales:</strong> Temporary prestige from wine sales. Decays at 5% weekly (95% retention rate).
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Wine Features (Company):</strong> Prestige from wine features at company level. Can be positive (terroir, bottle aging) or negative (oxidation, stuck fermentation).
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Cellar Collection:</strong> Prestige from aged wines (5+ years) in your cellar. Permanent source.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Achievements:</strong> Special milestone rewards. Decay rates vary by achievement type.
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Grape className="h-4 w-4 text-green-500" />
-                <span><strong>Vineyard (Base):</strong> Two permanent sources per vineyard — Land Value and Vine Age.</span>
+
+              {/* Vineyard Prestige Sources */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-green-700 flex items-center gap-2">
+                  <Grape className="h-4 w-4" />
+                  Vineyard Prestige Sources
+                </h4>
+                <div className="ml-4 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Land Value:</strong> Permanent prestige based on vineyard land value per hectare, adjusted for grape suitability and density.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Vine Age:</strong> Permanent prestige from vine maturity, enhanced by grape suitability and density modifiers.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Wine Features (Vineyard):</strong> Prestige from wine features at vineyard level. Same features as company level but calculated separately.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Vineyard Sales:</strong> Temporary prestige from sales of wines from this specific vineyard. Decays at 5% weekly.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Vineyard Achievements:</strong> Milestone rewards specific to vineyard activities (planting, aging, improvement, harvest).
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="ml-6 text-xs text-muted-foreground space-y-1">
-                <div>• Land Value: log(totalValue/max + 1) → × suitability → asym(0–1) − 1</div>
-                <div>• Vine Age: ageModifier(0–1) → × suitability → asym(0–1) − 1</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span><strong>Sales:</strong> Add temporary prestige that decays weekly (e.g., 5%).</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-yellow-500" />
-                <span><strong>Achievements:</strong> Special events; amounts and decay may vary.</span>
+
+              {/* Key Mechanics */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Key Mechanics
+                </h4>
+                <div className="ml-4 space-y-1 text-xs text-muted-foreground">
+                  <div>• <strong>Density Modifier:</strong> Lower vine density (1500 vines/ha) = higher prestige (1.5×), higher density (15000 vines/ha) = lower prestige (0.5×)</div>
+                  <div>• <strong>Grape Suitability:</strong> Regional grape suitability multiplies both land and age prestige</div>
+                  <div>• <strong>Decay Rates:</strong> Sales decay at 5% weekly (95% retention), some features decay at 2% weekly (98% retention)</div>
+                  <div>• <strong>Permanent Sources:</strong> Company value, vineyard land/age, cellar collection, and achievements don't decay</div>
+                  <div>• <strong>Wine Features:</strong> Can be positive (terroir, bottle aging) or negative (oxidation, stuck fermentation) prestige</div>
+                </div>
               </div>
             </CardContent>
             )}

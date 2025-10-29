@@ -9,14 +9,29 @@ export function CustomersTab() {
   const [countryFilter, setCountryFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{key: keyof Customer; direction: 'asc' | 'desc'} | null>(null);
   const [page, setPage] = useState<number>(1);
+  const [showAllCustomers, setShowAllCustomers] = useState<boolean>(false);
   const pageSize = 25;
 
-  const { customers, relationshipBreakdowns, computedRelationships, getCustomerKey, loadRelationshipBreakdown } = useCustomerData();
+  const { 
+    customers, 
+    activeCustomers, 
+    allCustomers,
+    relationshipBreakdowns, 
+    computedRelationships, 
+    getCustomerKey, 
+    loadRelationshipBreakdown,
+    loadAllCustomersWithRelationships,
+    isLoadingAllCustomers
+  } = useCustomerData(false); // Always start with active customers only
+
+  // Determine which customers to show based on toggle
+  const displayCustomers = showAllCustomers ? allCustomers : activeCustomers;
+
   const filteredCustomers = React.useMemo(() => {
-    let filtered = customers;
+    let filtered = displayCustomers;
     
     if (countryFilter) {
-      filtered = customers.filter(customer => customer.country === countryFilter);
+      filtered = displayCustomers.filter(customer => customer.country === countryFilter);
     }
     
     // Apply sorting
@@ -42,9 +57,9 @@ export function CustomersTab() {
     }
     
     return filtered;
-  }, [customers, countryFilter, sortConfig]);
+  }, [displayCustomers, countryFilter, sortConfig]);
 
-  useEffect(() => { setPage(1); }, [countryFilter, sortConfig, customers.length]);
+  useEffect(() => { setPage(1); }, [countryFilter, sortConfig, displayCustomers.length]);
   const pagedCustomers = React.useMemo(() => {
     const start = (page - 1) * pageSize;
     return filteredCustomers.slice(start, start + pageSize);
@@ -58,21 +73,22 @@ export function CustomersTab() {
     setSortConfig({ key, direction });
   };
 
-  const formatRelationship = (value: number) => {
+  const formatRelationship = (value: number, isCached: boolean = false) => {
     const normalizedValue = Math.min(value / 100, 1);
     const colorClass = getColorClass(normalizedValue);
     
     return (
-      <span className={colorClass}>
+      <span className={`${colorClass} ${isCached ? 'opacity-100' : 'opacity-75'}`}>
         {formatNumber(value, { decimals: 1, forceDecimals: true })}
+        {isCached && <span className="ml-1 text-xs">✓</span>}
       </span>
     );
   };
 
 
   const availableCountries = React.useMemo(() => (
-    [...new Set(customers.map(customer => customer.country))]
-  ), [customers]);
+    [...new Set(displayCustomers.map(customer => customer.country))]
+  ), [displayCustomers]);
   const getSortIndicator = (key: keyof Customer) => {
     if (!sortConfig || sortConfig.key !== key) return ' ↕️';
     return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
@@ -80,29 +96,55 @@ export function CustomersTab() {
 
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
 
+  // Handle toggle between active and all customers
+  const handleToggleCustomers = async () => {
+    if (!showAllCustomers) {
+      // Switching to all customers - load them
+      await loadAllCustomersWithRelationships();
+    }
+    setShowAllCustomers(!showAllCustomers);
+  };
+
   return (
     <SimpleCard
       title="Wine Customers Directory"
-      description={`Global wine customers and their market relationships. Showing ${pagedCustomers.length} of ${filteredCustomers.length} (Total: ${customers.length})`}
+      description={`${showAllCustomers ? 'All' : 'Active'} wine customers and their market relationships. Showing ${pagedCustomers.length} of ${filteredCustomers.length} (Active: ${activeCustomers.length}, Total: ${allCustomers.length})`}
     >
       <div className="space-y-6">
         {/* Filter controls */}
         <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <label htmlFor="country-filter" className="text-sm font-medium text-gray-700">
-              Filter by Country:
-            </label>
-            <select
-              id="country-filter"
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-            >
-              <option value="">All Countries</option>
-              {availableCountries.map(country => (
-                <option key={country} value={country}>{country}</option>
-              ))}
-            </select>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="country-filter" className="text-sm font-medium text-gray-700">
+                Filter by Country:
+              </label>
+              <select
+                id="country-filter"
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+              >
+                <option value="">All Countries</option>
+                {availableCountries.map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Customer type toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleCustomers}
+                disabled={isLoadingAllCustomers}
+                className={`px-3 py-1 text-sm rounded transition-colors ${
+                  showAllCustomers 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                } ${isLoadingAllCustomers ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoadingAllCustomers ? 'Loading...' : showAllCustomers ? 'Show Active Only' : 'Show All Customers'}
+              </button>
+            </div>
           </div>
 
           {/* Pagination controls */}
@@ -204,7 +246,10 @@ export function CustomersTab() {
                               }}
                               className="cursor-help"
                             >
-                              {formatRelationship(computedRelationships[getCustomerKey(customer.id)] ?? 0)}
+                              {formatRelationship(
+                                computedRelationships[getCustomerKey(customer.id)] ?? 0,
+                                !!relationshipBreakdowns[getCustomerKey(customer.id)]
+                              )}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-md">
@@ -220,7 +265,10 @@ export function CustomersTab() {
                                 </div>
                               ) : (
                                 <div className="text-xs text-gray-500">
-                                  Hover to load detailed breakdown...
+                                  {computedRelationships[getCustomerKey(customer.id)] ? 
+                                    'Hover to load detailed breakdown...' : 
+                                    'Loading relationship data...'
+                                  }
                                 </div>
                               )}
                             </div>

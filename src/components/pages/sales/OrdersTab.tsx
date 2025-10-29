@@ -5,7 +5,7 @@ import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject} 
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
-import { calculateRelationshipBreakdown } from '@/lib/services';
+import { calculateRelationshipBreakdown, clearRelationshipBreakdownCache } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
@@ -62,6 +62,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   } | null>(null);
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
   const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
+  const [isLoadingRelationships, setIsLoadingRelationships] = useState<boolean>(false);
   const [ordersPage, setOrdersPage] = useState<number>(1);
   const ordersPageSize = 20;
 
@@ -193,41 +194,82 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     }
   };
 
-  // Memoize relationship breakdown loading to prevent duplicate calls
-  const loadRelationshipBreakdown = useCallback(async (customerId: string, customer: Customer) => {
+  // Pre-load all relationship breakdowns for orders on component mount
+  const loadAllRelationshipBreakdowns = useCallback(async () => {
+    if (isLoadingRelationships || allOrders.length === 0) return;
+    
+    // Check if we already have relationships loaded for all orders
+    const hasAllRelationships = allOrders.every(order => 
+      computedRelationships[getCustomerKey(order.customerId)] !== undefined
+    );
+    if (hasAllRelationships) return;
+    
+    setIsLoadingRelationships(true);
     try {
-      const breakdown = await calculateRelationshipBreakdown(customer);
-      const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
-      const customerKey = getCustomerKey(customerId);
-      
-      setRelationshipBreakdowns(prev => ({
-        ...prev,
-        [customerKey]: formattedBreakdown
-      }));
-      
-      setComputedRelationships(prev => ({
-        ...prev,
-        [customerKey]: breakdown.totalRelationship
-      }));
-    } catch (error) {
-      console.error('Error loading relationship breakdown:', error);
-    }
-  }, []);
+      // Get unique customers from orders
+      const uniqueCustomers = new Map<string, Customer>();
+      allOrders.forEach(order => {
+        if (order.customerId && !uniqueCustomers.has(order.customerId)) {
+          uniqueCustomers.set(order.customerId, createCustomerFromOrderData(
+            order.customerId,
+            order.customerName,
+            order.customerCountry,
+            order.customerType,
+            order.customerRelationship
+          ));
+        }
+      });
 
-  // Load customer chance info on component mount
+      const customers = Array.from(uniqueCustomers.values());
+      if (customers.length === 0) {
+        setIsLoadingRelationships(false);
+        return;
+      }
+
+      // Calculate relationship breakdowns for each customer (with caching)
+      const formattedBreakdowns: {[key: string]: string} = {};
+      const computedRels: {[key: string]: number} = {};
+      
+      for (const customer of customers) {
+        const customerKey = getCustomerKey(customer.id);
+        const breakdown = await calculateRelationshipBreakdown(customer);
+        const formattedBreakdown = await loadFormattedRelationshipBreakdown(customer);
+        
+        formattedBreakdowns[customerKey] = formattedBreakdown;
+        computedRels[customerKey] = breakdown.totalRelationship;
+      }
+      
+      setRelationshipBreakdowns(formattedBreakdowns);
+      setComputedRelationships(computedRels);
+    } catch (error) {
+      console.error('Error loading relationship breakdowns:', error);
+    } finally {
+      setIsLoadingRelationships(false);
+    }
+  }, [allOrders, getCustomerKey]);
+
+  // Load customer chance info and relationship breakdowns on component mount
   useEffect(() => {
     loadCustomerChance();
-  }, []);
+    if (allOrders.length > 0) {
+      loadAllRelationshipBreakdowns();
+    }
+  }, [allOrders.length]); // Only depend on allOrders.length, not the function
 
   // Refresh relationship breakdown caches when game updates (e.g., order fulfilled)
   const { subscribe } = useGameUpdates();
   useEffect(() => {
     const unsubscribe = subscribe(() => {
+      clearRelationshipBreakdownCache();
       setRelationshipBreakdowns({});
       setComputedRelationships({});
+      // Only reload if we have orders and not currently loading
+      if (allOrders.length > 0 && !isLoadingRelationships) {
+        loadAllRelationshipBreakdowns();
+      }
     });
     return () => { unsubscribe(); };
-  }, [subscribe]);
+  }, [subscribe, allOrders.length, isLoadingRelationships]);
 
   // Handle order fulfillment
   const handleFulfillOrder = (orderId: string) => withLoading(async () => {
@@ -497,7 +539,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                 className="cursor-pointer hover:text-blue-600 hover:underline decoration-dotted flex items-center space-x-1.5 text-left"
                                 title="Click to view customer details in Winepedia"
                               >
-                                <span className={getFlagIcon(order.customerCountry || '')}></span>
+                                <span className={`${getFlagIcon(order.customerCountry || '')} text-lg`}></span>
                                 <span>{order.customerName || 'Unknown Customer'}</span>
                               </button>
                           </TooltipTrigger>
@@ -517,27 +559,17 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span 
-                              onMouseEnter={() => {
-                                const customerKey = getCustomerKey(order.customerId);
-                                if (!relationshipBreakdowns[customerKey]) {
-                                  // Create a minimal customer object for the breakdown calculation
-                                  const customer = createCustomerFromOrderData(
-                                    order.customerId,
-                                    order.customerName,
-                                    order.customerCountry,
-                                    order.customerType,
-                                    order.customerRelationship
-                                  );
-                                  loadRelationshipBreakdown(order.customerId, customer);
-                                }
-                              }}
                               className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${
                                 (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
                                 (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
                                 (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
                                 'bg-red-100 text-red-800'
                               }`}>
-                              {formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)}
+                              {isLoadingRelationships ? (
+                                <span className="text-xs text-gray-500">Loading...</span>
+                              ) : (
+                                formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)
+                              )}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
@@ -553,10 +585,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                 </div>
                               ) : (
                                 <div className="text-[10px] text-gray-500">
-                                  Loading relationship breakdown...
-                                  <div className="mt-2 text-blue-500">
-                                    Hover to load detailed breakdown...
-                                  </div>
+                                  {isLoadingRelationships ? 'Loading relationship breakdown...' : 'Relationship data not available'}
                                 </div>
                               )}
                             </div>
@@ -790,7 +819,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={getFlagIcon(order.customerCountry || '')}></span>
+                          <span className={`${getFlagIcon(order.customerCountry || '')} text-lg`}></span>
                           <h3 className="text-base font-bold text-gray-900">{order.customerName}</h3>
                         </div>
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -815,25 +844,17 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       <div>
                         <div className="text-xs text-gray-500 uppercase mb-1">Relationship</div>
                         <span 
-                          onTouchStart={() => {
-                            if (!relationshipBreakdowns[customerKey]) {
-                              const customer = createCustomerFromOrderData(
-                                order.customerId,
-                                order.customerName,
-                                order.customerCountry,
-                                order.customerType,
-                                order.customerRelationship
-                              );
-                              loadRelationshipBreakdown(order.customerId, customer);
-                            }
-                          }}
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             (computedRelationships[customerKey] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
                             (computedRelationships[customerKey] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
                             (computedRelationships[customerKey] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
                             'bg-red-100 text-red-800'
                           }`}>
-                          {formatPercent((computedRelationships[customerKey] ?? 0) / 100, 0, true)}
+                          {isLoadingRelationships ? (
+                            <span className="text-xs text-gray-500">Loading...</span>
+                          ) : (
+                            formatPercent((computedRelationships[customerKey] ?? 0) / 100, 0, true)
+                          )}
                         </span>
                       </div>
                       <div>

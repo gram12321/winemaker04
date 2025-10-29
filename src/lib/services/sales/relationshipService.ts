@@ -40,6 +40,7 @@ export async function calculateCustomerRelationshipBoosts(customerId: string): P
   return boosts.reduce((sum, row) => sum + (row.amount || 0), 0);
 }
 
+
 export interface RelationshipBreakdown {
   totalRelationship: number;
   prestigeContribution: number;
@@ -60,29 +61,48 @@ export interface RelationshipBreakdown {
   };
 }
 
+// Simple cache for relationship breakdowns
+const relationshipBreakdownCache = new Map<string, RelationshipBreakdown>();
+let cachedPrestige: number | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL = 30000; // 30 seconds cache
+
 /**
  * Calculate detailed relationship breakdown for a customer
+ * Optimized with simple caching
  */
 export async function calculateRelationshipBreakdown(customer: Customer): Promise<RelationshipBreakdown> {
-  const { totalPrestige: companyPrestige } = await calculateCurrentPrestige();
+  const customerKey = customer.id;
+  const now = Date.now();
+  
+  // Check cache first
+  if (relationshipBreakdownCache.has(customerKey) && (now - cacheTimestamp) < CACHE_TTL) {
+    return relationshipBreakdownCache.get(customerKey)!;
+  }
 
-  const prestigeContribution = Math.log(companyPrestige + 1);
+  // Get company prestige (cached)
+  if (!cachedPrestige || (now - cacheTimestamp) > CACHE_TTL) {
+    const { totalPrestige: companyPrestige } = await calculateCurrentPrestige();
+    cachedPrestige = companyPrestige;
+    cacheTimestamp = now;
+  }
+
+  const prestigeContribution = Math.log(cachedPrestige + 1);
   const marketShareModifier = 1 - calculateInvertedSkewedMultiplier(customer.marketShare);
   const relationshipBoosts = await calculateCustomerRelationshipBoosts(customer.id);
-
   const boostDetails = await getRelationshipBoostDetails(customer.id);
 
   const totalRelationship =
     prestigeContribution * marketShareModifier +
     relationshipBoosts * marketShareModifier;
 
-  return {
+  const breakdown: RelationshipBreakdown = {
     totalRelationship,
     prestigeContribution,
     marketShareModifier,
     relationshipBoosts,
     factors: {
-      companyPrestige,
+      companyPrestige: cachedPrestige,
       customerMarketShare: customer.marketShare,
       prestigeFactor: prestigeContribution,
       marketShareModifier,
@@ -90,6 +110,19 @@ export async function calculateRelationshipBreakdown(customer: Customer): Promis
       boostDetails,
     },
   };
+
+  // Cache the result
+  relationshipBreakdownCache.set(customerKey, breakdown);
+  return breakdown;
+}
+
+/**
+ * Clear relationship breakdown cache
+ */
+export function clearRelationshipBreakdownCache(): void {
+  relationshipBreakdownCache.clear();
+  cachedPrestige = null;
+  cacheTimestamp = 0;
 }
 
 /**
@@ -152,5 +185,6 @@ export function formatRelationshipBreakdown(breakdown: RelationshipBreakdown): s
 
   return lines.join('\n');
 }
+
 
 

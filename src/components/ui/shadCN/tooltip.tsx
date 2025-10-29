@@ -5,25 +5,7 @@ import { cn, getColorClass, getBadgeColorClasses, formatNumber } from "@/lib/uti
 import { Button } from "./button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./dialog"
 import { Info } from "lucide-react"
-
-/**
- * Utility function to detect mobile devices
- */
-function isMobileDevice(): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  // Check for touch capability
-  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  
-  // Check screen width
-  const screenWidth = window.innerWidth;
-  
-  // Check user agent for mobile devices
-  const userAgent = navigator.userAgent.toLowerCase();
-  const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-  
-  return hasTouch && (screenWidth < 768 || isMobileUA);
-}
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const TooltipProvider = TooltipPrimitive.Provider
 const Tooltip = TooltipPrimitive.Root
@@ -38,60 +20,45 @@ const TooltipTrigger = React.forwardRef<
     iconClassName?: string;
   }
 >(({ children, tooltipContent, tooltipTitle, iconSize = 14, iconClassName, ...props }, ref) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const isMobile = isMobileDevice();
+  const isMobile = useIsMobile();
 
   if (isMobile && tooltipContent) {
-    // Mobile: Show info icon next to child, tap opens dialog
     return (
       <div className="inline-flex items-center">
         <TooltipPrimitive.Trigger {...props} ref={ref}>
           {children}
         </TooltipPrimitive.Trigger>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-auto p-1 ml-1 hover:bg-gray-100",
-                iconClassName
-              )}
-              onClick={() => setIsDialogOpen(true)}
-            >
-              <Info 
-                size={iconSize} 
-                className="text-gray-500" 
-              />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              {tooltipTitle && <DialogTitle>{tooltipTitle}</DialogTitle>}
-            </DialogHeader>
-            <div className="text-sm whitespace-pre-line">
-              {tooltipContent}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <MobileDialogWrapper 
+          content={tooltipContent} 
+          title={tooltipTitle}
+          triggerClassName="inline-block"
+          contentClassName="max-w-sm"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-auto p-1 ml-1 hover:bg-gray-100", iconClassName)}
+          >
+            <Info size={iconSize} className="text-gray-500" />
+          </Button>
+        </MobileDialogWrapper>
       </div>
     );
-  } else {
-    // Desktop: Use native tooltip trigger
-    return (
-      <TooltipPrimitive.Trigger {...props} ref={ref}>
-        {children}
-      </TooltipPrimitive.Trigger>
-    );
   }
+
+  return (
+    <TooltipPrimitive.Trigger {...props} ref={ref}>
+      {children}
+    </TooltipPrimitive.Trigger>
+  );
 });
 TooltipTrigger.displayName = TooltipPrimitive.Trigger.displayName;
 
 type TooltipContentProps = React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
   variant?: 'default' | 'panel';
   density?: 'normal' | 'compact';
-  scrollable?: boolean; // add overflow + maxHeight styling
-  maxHeight?: string; // tailwind max-h-* class, default sensible
+  scrollable?: boolean;
+  maxHeight?: string;
 };
 
 const TooltipContent = React.forwardRef<
@@ -103,15 +70,11 @@ const TooltipContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        // base
         "z-50 rounded-md text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]",
-        // density
         density === 'compact' ? 'px-2 py-1' : 'px-3 py-1.5',
-        // variant styles
         variant === 'panel' 
           ? 'bg-gray-900 text-white border border-gray-700 shadow-lg'
           : 'bg-primary text-primary-foreground',
-        // scrollable option
         scrollable && cn('overflow-y-auto', maxHeight, 'scrollbar-styled'),
         className
       )}
@@ -122,29 +85,25 @@ const TooltipContent = React.forwardRef<
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
 // =============================
-// Enhanced TooltipContent with building blocks
-// =============================
-
-// =============================
-// Design Tokens (generic, reusable)
+// DESIGN TOKENS & STYLES
 // =============================
 
 export const tooltipStyles = {
-  // Typography
   text: 'text-xs',
   title: 'font-semibold',
   subtitle: 'font-medium',
   muted: 'text-gray-300',
   warning: 'text-yellow-400',
-  // Spacing & separators
   sectionDivider: 'border-t border-gray-600 pt-2',
-  // Badges (paired with getBadgeColorClasses when rating is available)
   pillBase: 'px-1.5 py-0.5 rounded text-xs',
   pillPositive: 'bg-green-100 text-green-700',
   pillNegative: 'bg-red-100 text-red-600'
 } as const;
 
-// Building blocks for consistent tooltip content
+// =============================
+// TOOLTIP BUILDING BLOCKS
+// =============================
+
 export function TooltipSection({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <div className="text-xs space-y-1 border-t first:border-t-0 border-gray-600 pt-2 first:pt-0">
@@ -154,7 +113,6 @@ export function TooltipSection({ title, children }: { title?: string; children: 
   );
 }
 
-// Generic building blocks for consistent tooltip content
 export function TooltipHeader({ title, description }: { title: string; description: string }) {
   return (
     <div>
@@ -164,7 +122,6 @@ export function TooltipHeader({ title, description }: { title: string; descripti
   );
 }
 
-// Optional convenience: Scrollable content wrapper
 export function TooltipScrollableContent({ 
   children, 
   maxHeight = 'max-h-60',
@@ -188,7 +145,6 @@ export function TooltipScrollableContent({
   );
 }
 
-// Optional convenience: Key/value list with optional color coding via rating (0-1)
 export function TooltipKeyValueList({
   items,
   title,
@@ -200,7 +156,7 @@ export function TooltipKeyValueList({
   showColors?: boolean
   className?: string
 }) {
-  if (!items || items.length === 0) return null;
+  if (!items?.length) return null;
   return (
     <div className={cn(title ? 'border-t border-gray-600 pt-2' : undefined, className)}>
       {title && <p className={tooltipStyles.subtitle}>{title}</p>}
@@ -218,7 +174,6 @@ export function TooltipKeyValueList({
   );
 }
 
-// Optional convenience: Percentage value with color coding via rating (0-1) or sign
 export function TooltipPercentage({
   value,
   label,
@@ -248,17 +203,17 @@ export function TooltipPercentage({
 export function TooltipRow({ 
   label, 
   value, 
-  valueRating, // 0-1 rating for color class
+  valueRating,
   icon, 
   monospaced = false,
   badge = false
 }: { 
   label?: string; 
   value: React.ReactNode; 
-  valueRating?: number; // Use this with getColorClass for consistent colors
+  valueRating?: number;
   icon?: React.ReactNode; 
   monospaced?: boolean;
-  badge?: boolean; // Use badge styling
+  badge?: boolean;
 }) {
   const colorClass = valueRating !== undefined ? getColorClass(valueRating) : '';
   const badgeClasses = badge && valueRating !== undefined ? getBadgeColorClasses(valueRating) : { bg: '', text: '' };
@@ -280,7 +235,7 @@ export function TooltipRow({
 }
 
 // =============================
-// Generic, reusable helpers for consistent formatting
+// UTILITY COMPONENTS
 // =============================
 
 export function TooltipTitle({ children }: { children: React.ReactNode }) {
@@ -307,34 +262,124 @@ export function TooltipPill({ value, positive }: { value: React.ReactNode; posit
   );
 }
 
-// Info icon that shows tooltip/dialog content. Useful when no trigger child exists.
-export function InfoTooltip({ title, content, size = 14, className }: { title?: string; content: React.ReactNode; size?: number; className?: string }) {
-  const isMobile = isMobileDevice();
+// =============================
+// MOBILE DIALOG WRAPPER
+// =============================
+
+type MobileDialogWrapperProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'content'> & {
+  children: React.ReactNode;
+  content: React.ReactNode;
+  title?: string;
+  triggerClassName?: string;
+  contentClassName?: string;
+};
+
+export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialogWrapperProps>(function MobileDialogWrapper(
+  {
+    children,
+    content,
+    title,
+    triggerClassName,
+    contentClassName = "max-w-sm",
+    className,
+    onClick,
+    ...rest
+  },
+  ref
+) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const combinedClassName = cn(triggerClassName, className);
+
   if (isMobile) {
+    const handleMobileClick = (event: React.MouseEvent<HTMLDivElement>) => {
+      onClick?.(event);
+      if (!event.defaultPrevented) {
+        setOpen(true);
+      }
+    };
+
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn('h-auto p-1 hover:bg-gray-100', className)} onClick={() => setOpen(true)}>
-            <Info size={size} className="text-gray-500" />
-          </Button>
+          <div
+            ref={ref}
+            className={combinedClassName}
+            onClick={handleMobileClick}
+            {...rest}
+          >
+            {children}
+          </div>
         </DialogTrigger>
-        <DialogContent className="max-w-sm">
+        <DialogContent className={contentClassName} aria-describedby={title ? undefined : "dialog-description"}>
           <DialogHeader>
             {title && <DialogTitle>{title}</DialogTitle>}
           </DialogHeader>
-          <div className="text-sm">{content}</div>
+          <div className="text-sm" id={title ? undefined : "dialog-description"}>{content}</div>
         </DialogContent>
       </Dialog>
     );
   }
+
+  if (React.isValidElement(children)) {
+    const child = children as React.ReactElement<any>;
+    const existingOnClick = child.props?.onClick as ((event: React.MouseEvent<any>) => void) | undefined;
+
+    const handleDesktopClick = (event: React.MouseEvent<any>) => {
+      existingOnClick?.(event);
+      if (!event.defaultPrevented) {
+        onClick?.(event);
+      }
+    };
+
+    const mergedProps: Record<string, any> = {
+      ...rest,
+      ref,
+      className: cn(child.props?.className, combinedClassName),
+    };
+
+    if (existingOnClick || onClick) {
+      mergedProps.onClick = handleDesktopClick;
+    }
+
+    return React.cloneElement(child, mergedProps);
+  }
+
+  return (
+    <div ref={ref} className={combinedClassName} onClick={onClick} {...rest}>
+      {children}
+    </div>
+  );
+});
+
+// Info icon that shows tooltip/dialog content. Useful when no trigger child exists.
+export function InfoTooltip({ title, content, size = 14, className }: { title?: string; content: React.ReactNode; size?: number; className?: string }) {
+  const isMobile = useIsMobile();
+  
+  const triggerButton = (
+    <Button variant="ghost" size="sm" className={cn('h-auto p-1 hover:bg-gray-100', className)}>
+      <Info size={size} className="text-gray-500" />
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <MobileDialogWrapper 
+        content={content} 
+        title={title}
+        triggerClassName="inline-block"
+        contentClassName="max-w-sm"
+      >
+        {triggerButton}
+      </MobileDialogWrapper>
+    );
+  }
+  
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="sm" className={cn('h-auto p-1 hover:bg-gray-100', className)}>
-            <Info size={size} className="text-gray-500" />
-          </Button>
+          {triggerButton}
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
           <div className={tooltipStyles.text}>
@@ -346,7 +391,6 @@ export function InfoTooltip({ title, content, size = 14, className }: { title?: 
     </TooltipProvider>
   );
 }
-
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
 
 

@@ -5,7 +5,7 @@ import { getAllWineBatches, bottleWine, isActionAvailable } from '@/lib/services
 import { WineBatch } from '@/lib/types/types';
 import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, MobileDialogWrapper, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
@@ -70,27 +70,36 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
       <div className="text-xs text-gray-600 mb-1">Weekly Effects:</div>
       <TooltipProvider>
         <div className="flex flex-wrap gap-1">
-          {effects.map((effect, index) => (
-            <Tooltip key={index}>
-              <TooltipTrigger asChild>
-                <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
-                  <img 
-                    src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                    alt={effect.characteristic}
-                    className="w-3 h-3 mr-1"
-                  />
-                  <span className={`font-medium ${effect.modifier >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                    {effect.modifier > 0 ? '+' : ''}{(effect.modifier * 100).toFixed(1)}%
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <div className="text-xs">
-                  {getCharacteristicDisplayName(effect.characteristic)}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+          {effects.map((effect, index) => {
+            const content = (
+              <div className={tooltipStyles.text}>
+                <TooltipSection>
+                  <p className={"capitalize"}>{getCharacteristicDisplayName(effect.characteristic)}</p>
+                </TooltipSection>
+              </div>
+            );
+            return (
+              <Tooltip key={index}>
+                <TooltipTrigger asChild>
+                  <MobileDialogWrapper content={content} title={getCharacteristicDisplayName(effect.characteristic)} triggerClassName="inline-block">
+                    <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
+                      <img 
+                        src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
+                        alt={effect.characteristic}
+                        className="w-3 h-3 mr-1"
+                      />
+                      <span className={`font-medium ${effect.modifier >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                        {effect.modifier > 0 ? '+' : ''}{(effect.modifier * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </MobileDialogWrapper>
+                </TooltipTrigger>
+                <TooltipContent side="top" variant="panel" density="compact">
+                  {content}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </div>
       </TooltipProvider>
     </div>

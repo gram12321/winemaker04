@@ -76,4 +76,32 @@ export async function deleteRelationshipBoosts(ids: string[]): Promise<void> {
   }
 }
 
+/**
+ * Batch load relationship boosts for multiple customers efficiently
+ */
+export async function getRelationshipBoostsByCustomerBatch(customerIds: string[]): Promise<Map<string, RelationshipBoostRow[]>> {
+  if (customerIds.length === 0) return new Map();
+  
+  const { data, error } = await supabase
+    .from('relationship_boosts')
+    .select('*')
+    .eq('company_id', getCurrentCompanyId())
+    .in('customer_id', customerIds);
+  
+  if (error) {
+    throw error;
+  }
+  
+  // Group by customer ID
+  const result = new Map<string, RelationshipBoostRow[]>();
+  for (const boost of data || []) {
+    if (!result.has(boost.customer_id)) {
+      result.set(boost.customer_id, []);
+    }
+    result.get(boost.customer_id)!.push(boost as RelationshipBoostRow);
+  }
+  
+  return result;
+}
+
 

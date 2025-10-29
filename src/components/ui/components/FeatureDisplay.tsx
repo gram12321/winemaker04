@@ -14,8 +14,8 @@
 
 import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { getColorClass, formatNumber } from '@/lib/utils/utils';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
+import { formatNumber, getColorClassForRange, getRatingForRange } from '@/lib/utils/utils';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles, MobileDialogWrapper } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction } from '@/lib/services/wine/features/featureService';
 
@@ -216,39 +216,63 @@ function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: Evolv
   const severityPercent = formatNumber(severity * 100, { smartDecimals: true });
   const weeklyGrowthPercent = formatNumber(weeklyGrowthRate * 100, { smartDecimals: true });
   
+  // Use intelligent color coding for severity
+  const growthColorClass = getColorClassForRange(weeklyGrowthRate, 0, 0.05, 'higher_better'); // 0-5% weekly growth range
+  
   const displayElement = (
     <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
       <span className="mr-1">{config.icon}</span>
       <span className="font-medium text-green-700">
         {config.name}: {severityPercent}%
       </span>
-      <span className="ml-1 text-green-600">
+      <span className={`ml-1 ${growthColorClass}`}>
         (+{weeklyGrowthPercent}%/week)
       </span>
     </div>
   );
   
+  const tooltipBody = (
+    <div className={`${tooltipStyles.text} space-y-2`}>
+      <TooltipSection>
+        <p className={tooltipStyles.title}>{config.name}</p>
+        <p className={tooltipStyles.muted}>{config.description}</p>
+      </TooltipSection>
+      <TooltipSection title="Current Status">
+        <TooltipRow 
+          label="Severity" 
+          value={`${severityPercent}% (${formatNumber(severity, { smartDecimals: true })})`} 
+          valueRating={getRatingForRange(severity, 0, 1, 'higher_better')}
+          monospaced={true} 
+        />
+        <TooltipRow 
+          label="Weekly growth" 
+          value={`+${weeklyGrowthPercent}% per week`} 
+          valueRating={getRatingForRange(weeklyGrowthRate, 0, 0.1, 'higher_better')}
+          monospaced={true} 
+        />
+      </TooltipSection>
+      <TooltipSection title="State Effects">
+        <div className={`${tooltipStyles.text} ${tooltipStyles.muted}`}>Current state: <span className={tooltipStyles.subtitle}>{batch.state}</span></div>
+        <TooltipRow 
+          label="Weekly growth" 
+          value={`+${weeklyGrowthPercent}% per week`} 
+          valueRating={getRatingForRange(weeklyGrowthRate, 0, 0.1, 'higher_better')}
+          monospaced={true} 
+        />
+      </TooltipSection>
+    </div>
+  );
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          {displayElement}
+          <MobileDialogWrapper content={tooltipBody} title={`${config.name} Details`} triggerClassName="inline-block">
+            {displayElement}
+          </MobileDialogWrapper>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          <div className={`${tooltipStyles.text} space-y-2`}>
-            <TooltipSection>
-              <p className={tooltipStyles.title}>{config.name}</p>
-              <p className={tooltipStyles.muted}>{config.description}</p>
-            </TooltipSection>
-            <TooltipSection title="Current Status">
-              <TooltipRow label="Severity" value={`${severityPercent}% (${formatNumber(severity, { smartDecimals: true })})`} monospaced={true} />
-              <TooltipRow label="Weekly growth" value={`+${weeklyGrowthPercent}% per week`} monospaced={true} />
-            </TooltipSection>
-            <TooltipSection title="State Effects">
-              <div className={`${tooltipStyles.text} ${tooltipStyles.muted}`}>Current state: <span className={tooltipStyles.subtitle}>{batch.state}</span></div>
-              <TooltipRow label="Weekly growth" value={`+${weeklyGrowthPercent}% per week`} monospaced={true} />
-            </TooltipSection>
-          </div>
+          {tooltipBody}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -268,9 +292,21 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
   const severity = feature.severity || 0;
   const severityPercent = formatNumber(severity * 100, { smartDecimals: true });
   
-  const colorClass = config.badgeColor === 'destructive' ? 'text-red-600' : 
-                     config.badgeColor === 'success' ? 'text-green-600' :
-                     config.badgeColor === 'warning' ? 'text-yellow-600' : 'text-blue-600';
+  // Use intelligent color coding based on feature type and severity
+  let colorClass: string;
+  if (config.badgeColor === 'destructive') {
+    // For destructive features, higher severity = worse (redder)
+    colorClass = getColorClassForRange(1 - severity, 0, 1, 'higher_better');
+  } else if (config.badgeColor === 'success') {
+    // For success features, higher severity = better (greener)
+    colorClass = getColorClassForRange(severity, 0, 1, 'higher_better');
+  } else if (config.badgeColor === 'warning') {
+    // For warning features, use amber colors
+    colorClass = getColorClassForRange(severity, 0, 1, 'higher_better');
+  } else {
+    // Default to blue for info features
+    colorClass = getColorClassForRange(severity, 0, 1, 'higher_better');
+  }
   
   const displayElement = (
     <div className="text-xs">
@@ -281,52 +317,61 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
     </div>
   );
   
+  const tooltipBody = (
+    <div className={`${tooltipStyles.text} space-y-2`}>
+      <TooltipSection>
+        <p className={tooltipStyles.title}>{config.name}</p>
+        <p className={tooltipStyles.muted}>{config.description}</p>
+      </TooltipSection>
+      <TooltipSection>
+        <p className={tooltipStyles.subtitle}>{config.name} is present</p>
+        <p>This batch has {config.name.toLowerCase()}.</p>
+        {config.behavior === 'evolving' && (
+          <TooltipRow label="Severity" value={`${formatNumber(feature.severity * 100, { smartDecimals: true })}%`} monospaced={true} />
+        )}
+      </TooltipSection>
+      {Math.abs(qualityImpact) > 0.001 && (
+        <TooltipSection title="Quality Impact">
+          <TooltipRow 
+            label="Quality change" 
+            value={`${qualityImpact < 0 ? '-' : '+'}${formatNumber(Math.abs(qualityImpact * 100), { smartDecimals: true })}%`}
+            valueRating={getRatingForRange(qualityImpact, -0.5, 0.5, 'higher_better')}
+            monospaced={true}
+          />
+        </TooltipSection>
+      )}
+      {config.effects.characteristics && config.effects.characteristics.length > 0 && (
+        <TooltipSection title="Effects">
+          <div className={`${tooltipStyles.text} ${tooltipStyles.muted} space-y-1`}>
+            {config.effects.characteristics.map((effect: any) => {
+              const modifier = typeof effect.modifier === 'function' 
+                ? effect.modifier(feature.severity) 
+                : effect.modifier;
+              const modifierPercent = formatNumber((modifier || 0) * 100, { smartDecimals: true });
+              return (
+                <p key={effect.characteristic}>
+                  • {effect.characteristic}: {modifier > 0 ? '+' : ''}{modifierPercent}%
+                </p>
+              );
+            })}
+          </div>
+        </TooltipSection>
+      )}
+    </div>
+  );
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="cursor-help">
-            {displayElement}
-          </div>
+          <MobileDialogWrapper content={tooltipBody} title={`${config.name} Details`} triggerClassName="inline-block">
+            <div className="cursor-help">
+              {displayElement}
+            </div>
+          </MobileDialogWrapper>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          <div className={`${tooltipStyles.text} space-y-2`}>
-            <TooltipSection>
-              <p className={tooltipStyles.title}>{config.name}</p>
-              <p className={tooltipStyles.muted}>{config.description}</p>
-            </TooltipSection>
-            <TooltipSection>
-              <p className={tooltipStyles.subtitle}>{config.name} is present</p>
-              <p>This batch has {config.name.toLowerCase()}.</p>
-              {config.behavior === 'evolving' && (
-                <TooltipRow label="Severity" value={`${formatNumber(feature.severity * 100, { smartDecimals: true })}%`} monospaced={true} />
-              )}
-            </TooltipSection>
-            {Math.abs(qualityImpact) > 0.001 && (
-              <TooltipSection title="Quality Impact">
-                <div className={`${tooltipStyles.muted} ${tooltipStyles.text}`}>
-                  {qualityImpact < 0 ? '-' : '+'}{formatNumber(Math.abs(qualityImpact * 100), { smartDecimals: true })}% quality change
-                </div>
-              </TooltipSection>
-            )}
-            {config.effects.characteristics && config.effects.characteristics.length > 0 && (
-              <TooltipSection title="Effects">
-                <div className={`${tooltipStyles.text} ${tooltipStyles.muted} space-y-1`}>
-                  {config.effects.characteristics.map((effect: any) => {
-                    const modifier = typeof effect.modifier === 'function' 
-                      ? effect.modifier(feature.severity) 
-                      : effect.modifier;
-                    const modifierPercent = formatNumber((modifier || 0) * 100, { smartDecimals: true });
-                    return (
-                      <p key={effect.characteristic}>
-                        • {effect.characteristic}: {modifier > 0 ? '+' : ''}{modifierPercent}%
-                      </p>
-                    );
-                  })}
-                </div>
-              </TooltipSection>
-            )}
-          </div>
+          {tooltipBody}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -346,10 +391,13 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
   const risk = feature.risk || 0;
   const riskPercent = formatNumber(risk * 100, { smartDecimals: true });
   
+  // Use intelligent color coding for risk (lower risk = better colors)
+  const riskColorClass = getColorClassForRange(1 - risk, 0, 1, 'higher_better');
+  
   const displayElement = (
     <div className="text-xs">
       <span className="font-medium">{config.icon} {config.name}:</span>{' '}
-      <span className={getColorClass(1 - risk)}>
+      <span className={riskColorClass}>
         {riskPercent}% risk
       </span>
       {expectedWeeks !== undefined && expectedWeeks < 50 && (
@@ -358,31 +406,42 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
     </div>
   );
   
+  const tooltipBody = (
+    <div className={`${tooltipStyles.text} space-y-2`}>
+      <TooltipSection>
+        <p className={tooltipStyles.title}>{config.name}</p>
+        <p className={tooltipStyles.muted}>{config.description}</p>
+      </TooltipSection>
+      <TooltipSection>
+        <TooltipRow 
+          label={`${config.name} Risk`} 
+          value={`${riskPercent}%`}
+          valueRating={getRatingForRange(1 - risk, 0, 1, 'higher_better')}
+          monospaced={true}
+        />
+        <p className={tooltipStyles.muted}>Chance this batch develops {config.name.toLowerCase()}.</p>
+        {expectedWeeks !== undefined && expectedWeeks < 50 && (
+          <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
+        )}
+        <p className="mt-2">
+          <span className={tooltipStyles.muted}>Current state:</span> <span className={tooltipStyles.subtitle}>{batch.state}</span>
+        </p>
+      </TooltipSection>
+    </div>
+  );
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="cursor-help">
-            {displayElement}
-          </div>
+          <MobileDialogWrapper content={tooltipBody} title={`${config.name} Risk Details`} triggerClassName="inline-block">
+            <div className="cursor-help">
+              {displayElement}
+            </div>
+          </MobileDialogWrapper>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          <div className={`${tooltipStyles.text} space-y-2`}>
-            <TooltipSection>
-              <p className={tooltipStyles.title}>{config.name}</p>
-              <p className={tooltipStyles.muted}>{config.description}</p>
-            </TooltipSection>
-            <TooltipSection>
-              <p className={tooltipStyles.subtitle}>{config.name} Risk: {riskPercent}%</p>
-              <p>Chance this batch develops {config.name.toLowerCase()}.</p>
-              {expectedWeeks !== undefined && expectedWeeks < 50 && (
-                <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
-              )}
-              <p className="mt-2">
-                <span className={tooltipStyles.muted}>Current state:</span> <span className={tooltipStyles.subtitle}>{batch.state}</span>
-              </p>
-            </TooltipSection>
-          </div>
+          {tooltipBody}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -407,18 +466,20 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures }: Weekl
           if (Math.abs(totalEffect) > 0.001) {
             const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
             const isPositive = totalEffect > 0;
-            const colorClass = isPositive ? 'text-green-700' : 'text-red-600';
             const bgClass = isPositive ? 'bg-green-100' : 'bg-red-100';
             const sign = isPositive ? '+' : '';
             
             // Special handling for quality vs characteristics
             const isQuality = key === 'quality';
             
+            // Use intelligent color coding for effects
+            const intelligentColorClass = getColorClassForRange(Math.abs(totalEffect), 0, 0.1, 'higher_better');
+            
             return (
               <TooltipProvider key={key}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className={`text-xs px-2 py-1 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
+                    <div className={`text-xs px-2 py-1 rounded ${bgClass} ${intelligentColorClass} flex items-center gap-1 cursor-help`}>
                       {isQuality ? (
                         <span>⭐</span>
                       ) : (
@@ -473,14 +534,16 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
           if (Math.abs(totalEffect) > 0.001) {
             const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
             const isPositive = totalEffect > 0;
-            const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
             const sign = isPositive ? '+' : '';
+            
+            // Use intelligent color coding for characteristic effects
+            const intelligentColorClass = getColorClassForRange(Math.abs(totalEffect), 0, 0.1, 'higher_better');
             
             return (
               <TooltipProvider key={characteristic}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className={`text-xs px-1.5 py-0.5 rounded bg-gray-100 ${colorClass} flex items-center gap-1 cursor-help`}>
+                    <div className={`text-xs px-1.5 py-0.5 rounded bg-gray-100 ${intelligentColorClass} flex items-center gap-1 cursor-help`}>
                       <img src={`/assets/icons/characteristics/${characteristic}.png`} alt={`${characteristic} icon`} className="w-3 h-3 opacity-80" />
                       <span>{characteristic}: {sign}{percentage}%</span>
                     </div>
@@ -509,7 +572,7 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
           <TooltipProvider key="quality">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${totalQualityEffect > 0 ? 'text-green-600' : 'text-red-600'} flex items-center gap-1 cursor-help`}>
+                <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${getColorClassForRange(totalQualityEffect, -0.5, 0.5, 'higher_better')} flex items-center gap-1 cursor-help`}>
                   <span>⭐</span>
                   <span>Quality {totalQualityEffect > 0 ? '+' : ''}{formatNumber(totalQualityEffect * 100, { smartDecimals: true })}%</span>
                 </div>
@@ -688,7 +751,7 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
       ? `${maxPercent}%`
       : `${minPercent}%-${maxPercent}%`;
     
-    colorClass = getRiskColorClass(maxRisk);
+    colorClass = getColorClassForRange(1 - maxRisk, 0, 1, 'higher_better'); // Lower risk = better colors
   } else if (feature.riskCombinations && feature.riskCombinations.length > 0) {
     const risks = feature.riskCombinations.map((c: any) => c.risk);
     const minRisk = Math.min(...risks);
@@ -700,7 +763,7 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
       ? `${maxPercent}%`
       : `${minPercent}%-${maxPercent}%`;
     
-    colorClass = getRiskColorClass(maxRisk);
+    colorClass = getColorClassForRange(1 - maxRisk, 0, 1, 'higher_better'); // Lower risk = better colors
   } else if (feature.config?.behavior === 'accumulation') {
     const currentRiskPercent = formatNumber(feature.currentRisk * 100, { smartDecimals: true });
     
@@ -709,19 +772,19 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
       const estimatedWeeks = Math.ceil((1.0 - feature.currentRisk) / feature.weeklyRiskIncrease);
       
       displayText = `${currentRiskPercent}% (+${weeklyIncreasePercent}%/week)`;
-      colorClass = getRiskColorClass(feature.currentRisk);
+      colorClass = getColorClassForRange(1 - feature.currentRisk, 0, 1, 'higher_better'); // Lower risk = better colors
       
       if (estimatedWeeks < 50) {
         additionalInfo = <span className="text-gray-400 ml-1">(~{estimatedWeeks} weeks)</span>;
       }
     } else {
       displayText = `${currentRiskPercent}%`;
-      colorClass = getRiskColorClass(feature.currentRisk);
+      colorClass = getColorClassForRange(1 - feature.currentRisk, 0, 1, 'higher_better'); // Lower risk = better colors
     }
   } else {
     const riskPercent = formatNumber(feature.newRisk * 100, { smartDecimals: true });
     displayText = `${riskPercent}%`;
-    colorClass = getRiskColorClass(feature.newRisk);
+    colorClass = getColorClassForRange(1 - feature.newRisk, 0, 1, 'higher_better'); // Lower risk = better colors
   }
   
   const displayElement = (
