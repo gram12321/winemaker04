@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety, Aspect, ASPECTS } from '../../types/types';
 import { saveVineyard, loadVineyards } from '../../database/activities/vineyardDB';
+import { deleteVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
 import { calculateLandValue, calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
@@ -11,6 +12,9 @@ import { addTransaction, getGameState } from '../index';
 import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
+import { TRANSACTION_CATEGORIES } from '../../constants';
+import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
+import { updateGameState } from '@/lib/services/core/gameState';
 
 
 // Helper functions for random vineyard generation
@@ -194,6 +198,72 @@ export async function initializePlanting(vineyardId: string, grape: GrapeVariety
   triggerGameUpdate();
   return true;
 }
+
+/**
+ * Voluntary sale of a single vineyard by the player
+ * Applies a smaller penalty than forced seizure (default 10% vs 25%)
+ */
+export async function sellVineyard(
+  vineyardId: string,
+  options?: { penaltyRate?: number }
+): Promise<{ success: boolean; proceeds?: number; error?: string }> {
+  try {
+    const penaltyRate = options?.penaltyRate ?? 0.10; // 10% default penalty on voluntary sale
+
+    const vineyards = await loadVineyards();
+    const vineyard = vineyards.find(v => v.id === vineyardId);
+    if (!vineyard) {
+      return { success: false, error: 'Vineyard not found' };
+    }
+
+    const grossValue = vineyard.vineyardTotalValue || 0;
+    const proceeds = Math.max(0, Math.round(grossValue * (1 - penaltyRate)));
+
+    // Auto-cancel/remove any active activities on this vineyard
+    const activeOnTarget = await getActivitiesByTarget(vineyardId);
+    if (activeOnTarget.length > 0) {
+      for (const act of activeOnTarget) {
+        await removeActivityFromDb(act.id);
+      }
+      // Refresh activities in game state after removals
+      const remaining = await loadActivitiesFromDb();
+      updateGameState({ activities: remaining.filter(a => a.status === 'active') });
+    }
+
+    // Remove vineyard from portfolio
+    await deleteVineyards([vineyardId]);
+
+    // Add proceeds to company money
+    if (proceeds > 0) {
+      await addTransaction(
+        proceeds,
+        `Voluntary sale of ${vineyard.name} (${formatCurrency(grossValue)} value, ${Math.round(penaltyRate * 100)}% fee)`,
+        TRANSACTION_CATEGORIES.VINEYARD_SALE,
+        false
+      );
+    }
+
+    await notificationService.addMessage(
+      `Sold ${vineyard.name} for ${formatCurrency(proceeds)} (after ${Math.round(penaltyRate * 100)}% fee).`,
+      'vineyardService.sellVineyard',
+      'Vineyard Sale',
+      NotificationCategory.FINANCE
+    );
+
+    triggerGameUpdate();
+    return { success: true, proceeds };
+  } catch (error) {
+    console.error('Error selling vineyard:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * Annual vineyard value refresh
+ * Recalculate vineyardTotalValue based on adjusted per-hectare value once per year
+ */
+// recalculateAnnualVineyardValues moved to vineyardManager
 
 // Complete planting (called when planting activity finishes)
 export async function completePlanting(vineyardId: string, targetDensity: number): Promise<boolean> {

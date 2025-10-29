@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { Grape, MapPin, Ruler, Mountain, Compass, BarChart3 } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatCurrency, formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory, getColorClass } from '@/lib/utils';
-import { getAltitudeRating, getAspectRating, calculateVineyardExpectedYield } from '@/lib/services';
+import { getAltitudeRating, getAspectRating, calculateVineyardExpectedYield, calculateAdjustedLandValueBreakdown } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
 import { getRegionalPriceRange } from '@/lib/services';
 import { getVineyardGrapeQualityFactors } from '@/lib/services/wine/winescore/grapeQualityCalculation';
@@ -97,10 +97,28 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
               <CardContent className="py-3 text-sm">
                 <div className="font-semibold">{vineyard.hectares} ha</div>
                 <div className="text-muted-foreground text-xs">
-                  {formatCurrency(vineyard.landValue)}/ha
+                  Base: {formatCurrency(vineyard.landValue)}/ha
                 </div>
                 <Separator className="my-2" />
                 <div className="text-xs font-medium">Total {formatCurrency(vineyard.vineyardTotalValue)}</div>
+                {vineyard.hectares > 0 && (
+                  <div className="text-xs text-muted-foreground">Adj. per ha: {formatCurrency((vineyard.vineyardTotalValue || 0) / vineyard.hectares)}</div>
+                )}
+                {(() => {
+                  const b = calculateAdjustedLandValueBreakdown(vineyard);
+                  return (
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      Stored total; updated annually at New Year.
+                      <div className="mt-1 space-y-0.5 font-mono">
+                        <div>Base: €{formatNumber(b.basePerHa, { decimals: 0 })}/ha</div>
+                        <div>Planted: +{formatNumber(b.plantedBonusPct * 100, { decimals: 2 })}%</div>
+                        <div>Vine age×prestige: +{formatNumber(b.ageBonusPct * 100, { decimals: 2 })}%</div>
+                        <div>Prestige: +{formatNumber(b.prestigeBonusPct * 100, { decimals: 2 })}%</div>
+                        <div>Projected next New Year: ×{formatNumber(b.totalMultiplier, { decimals: 3, forceDecimals: true })} → €{formatNumber(b.adjustedPerHa, { decimals: 0 })}/ha</div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -568,6 +586,9 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Annual adjustments to total value: planted grape suitability (up to ~5%), vine age × prestige (up to ~3%), vineyard prestige (up to ~2%).
                       </div>
                       <div className="space-y-1">
                         <div className="font-medium text-gray-700 mb-1">Regional Price Range ({vineyard.region}):</div>

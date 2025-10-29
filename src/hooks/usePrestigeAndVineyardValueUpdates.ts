@@ -6,6 +6,7 @@ import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../l
 import { useGameUpdates } from './useGameUpdates';
 import { getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
 import { calculateNetWorth } from '../lib/services/finance/financeService';
+import { recalculateVineyardValues } from '@/lib/services/vineyard/vineyardManager';
 
 /**
  * Unified hook that monitors all prestige-affecting changes and updates prestige events accordingly
@@ -24,6 +25,7 @@ export function usePrestigeUpdates() {
   const lastSeasonRef = useRef<string | null>(null);
   const lastYearRef = useRef<number | null>(null);
   const isUpdatingRef = useRef(false);
+  const lastRecalcStampRef = useRef<string | null>(null);
   const { subscribe } = useGameUpdates();
 
   useEffect(() => {
@@ -68,6 +70,13 @@ export function usePrestigeUpdates() {
           );
 
           lastCompanyNetWorthRef.current = currentNetWorth;
+
+          // Recalculate vineyard values on material net worth changes (event-driven refresh)
+          try {
+            await recalculateVineyardValues();
+          } catch (err) {
+            console.warn('Vineyard value refresh failed after net worth change:', err);
+          }
         }
 
         // Check for week changes (triggers weekly decay)
@@ -89,6 +98,17 @@ export function usePrestigeUpdates() {
           lastWeekRef.current = currentWeek;
           lastSeasonRef.current = currentSeason;
           lastYearRef.current = currentYear;
+
+          // Throttled weekly refresh to capture prestige-driven changes (e.g., vineyard age increment triggers prestige)
+          const stamp = `${currentYear}-${currentSeason}-${currentWeek}`;
+          if (lastRecalcStampRef.current !== stamp) {
+            try {
+              await recalculateVineyardValues();
+              lastRecalcStampRef.current = stamp;
+            } catch (err) {
+              console.warn('Vineyard value weekly refresh failed:', err);
+            }
+          }
         }
 
         // Sales prestige events are handled by direct calls in salesService.ts

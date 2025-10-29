@@ -509,16 +509,40 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
  * getColorClassForRange(50, 0, 1000, 'exponential') // "text-lime-600" (out of red quickly)
  * getColorClassForRange(500, 0, 1000, 'exponential') // "text-green-800" (takes long to reach deep green)
  */
+/**
+ * Unified helper: return color class with desired prefix ('text' or 'bg').
+ */
 export function getColorClassForRange(
+  value: number,
+  normalizeMin: number,
+  normalizeMax: number,
+  strategy: 'higher_better' | 'lower_better' | 'balanced' | 'exponential',
+  prefix: 'text' | 'bg' = 'text',
+  balanceMin?: number,
+  balanceMax?: number
+): string {
+  const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
+  const textClass = getColorClass(rating);
+  if (prefix === 'text') return textClass;
+  return textClass.replace('text-', 'bg-');
+}
+
+/**
+ * All-in-one: compute text color, background color, and badge classes for a range-based value.
+ */
+export function getRangeColorClasses(
   value: number,
   normalizeMin: number,
   normalizeMax: number,
   strategy: 'higher_better' | 'lower_better' | 'balanced' | 'exponential',
   balanceMin?: number,
   balanceMax?: number
-): string {
+): { text: string; bg: string; badge: { text: string; bg: string } } {
   const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
-  return getColorClass(rating);
+  const text = getColorClass(rating);
+  const bg = text.replace('text-', 'bg-');
+  const badge = getBadgeColorClasses(rating);
+  return { text, bg, badge };
 }
 
 /**

@@ -19,7 +19,7 @@ import { ActivityPanel } from './components/layout/ActivityPanel';
 import { LoanWarningModalDisplay } from './components/layout/LoanWarningModalDisplay';
 import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
-import { usePrestigeUpdates } from './hooks/usePrestigeUpdates';
+import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem } from './lib/services';

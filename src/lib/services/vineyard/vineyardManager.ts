@@ -9,6 +9,7 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
+import { calculateAdjustedLandValue } from './vineyardValueCalc';
 
 
 /**
@@ -40,7 +41,7 @@ async function terminatePlantingActivity(vineyardId: string, vineyardName: strin
         
         // Add notification about terminated planting
         await notificationService.addMessage(
-          `Planting terminated due to winter! ${vineyardName} was ${plantingProgress}% planted (${currentDensity}/${targetDensity} vines/ha). Planting will resume in Spring.`,
+          `Planting terminated due to winter! ${vineyardName} was ${plantingProgress}% planted (${currentDensity}/${targetDensity} vines/ha). The planting activity has been canceled, density will reflect the amount planted; you can start a new planting in Spring.`,
           'vineyardManager.terminatePlantingActivity',
           'Planting Terminated',
           NotificationCategory.VINEYARD_OPERATIONS
@@ -484,6 +485,33 @@ export async function updateVineyardVineYields(): Promise<void> {
     }
   } catch (error) {
     console.error('Error updating vineyard vine yields:', error);
+  }
+}
+
+/**
+ * Recalculate vineyard total values annually
+ * Applies adjusted per-hectare calculation using planted state, vine age, and prestige
+ */
+export async function recalculateVineyardValues(): Promise<void> {
+  try {
+    const vineyards = await loadVineyards();
+    if (vineyards.length === 0) return;
+
+    const updated = vineyards.map(v => {
+      const adjustedPerHa = calculateAdjustedLandValue(
+        v.country,
+        v.region,
+        v.altitude,
+        v.aspect,
+        { grape: v.grape, vineAge: v.vineAge ?? 0, vineyardPrestige: v.vineyardPrestige ?? 0 }
+      );
+      const adjustedTotal = Math.round(adjustedPerHa * v.hectares);
+      return { ...v, vineyardTotalValue: adjustedTotal } as Vineyard;
+    });
+
+    await bulkUpdateVineyards(updated);
+  } catch (error) {
+    console.error('Failed to recalculate vineyard values:', error);
   }
 }
 

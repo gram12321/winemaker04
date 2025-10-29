@@ -1,16 +1,218 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities } from '@/lib/services';
+import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
 import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal } from '../ui';
+import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
-import HealthTooltip from '../ui/vineyard/HealthTooltip';
-import { formatCurrency, formatNumber, getBadgeColorClasses } from '@/lib/utils/utils';
+import { formatCurrency, formatNumber, getBadgeColorClasses, getRatingForRange, getColorClassForRange, getRangeColorClasses } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
 import { clearPendingLandSearchResults, calculateVineyardExpectedYield } from '@/lib/services';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../ui/shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, MobileDialogWrapper, tooltipStyles } from '../ui/shadCN/tooltip';
+
+// Progress bar color helpers via global utils
+const getHealthProgressColor = (health: number): string => getColorClassForRange(health, 0, 1, 'higher_better', 'bg');
+const getRipenessProgressColor = (ripeness: number): string => getColorClassForRange(ripeness, 0, 1, 'higher_better', 'bg');
+const getVineYieldProgressColor = (vineYield: number): string => {
+  if (vineYield >= 1.0) return 'bg-purple-500';
+  const normalizedYield = Math.max(0.02, Math.min(1.0, vineYield));
+  return getColorClassForRange(normalizedYield, 0.02, 1.0, 'higher_better', 'bg');
+};
+
+// Consolidated tooltip content builder
+const buildTooltipContent = (type: string, data: any) => {
+  const { vineyard, value, label, description } = data;
+  
+  switch (type) {
+    case 'health':
+      const healthTrend = vineyard.healthTrend;
+      if (!healthTrend || (healthTrend.seasonalDecay === 0 && healthTrend.plantingImprovement === 0)) {
+        return (
+          <div className={tooltipStyles.text}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</p>
+              <p className={tooltipStyles.muted}>No significant changes this season</p>
+            </TooltipSection>
+          </div>
+        );
+      }
+      const netChange = healthTrend.netChange;
+      const hasPositiveChange = netChange > 0;
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</p>
+          </TooltipSection>
+          <TooltipSection title="Health Changes This Season:">
+            {healthTrend.seasonalDecay > 0 && (
+              <TooltipRow label="Seasonal decay:" value={`-${formatNumber(healthTrend.seasonalDecay * 100, { decimals: 1 })}%`} valueRating={0.1} />
+            )}
+            {healthTrend.plantingImprovement > 0 && (
+              <TooltipRow label="Recent planting:" value={`+${formatNumber(healthTrend.plantingImprovement * 100, { decimals: 1 })}%`} valueRating={0.9} />
+            )}
+            {(netChange !== 0) && (
+              <TooltipRow label="Net change:" value={`${hasPositiveChange ? '+' : ''}${formatNumber(netChange * 100, { decimals: 1 })}%`} valueRating={hasPositiveChange ? 0.9 : 0.1} />
+            )}
+          </TooltipSection>
+          {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
+            <TooltipSection>
+              <p className={tooltipStyles.muted}>Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining</p>
+            </TooltipSection>
+          )}
+        </div>
+      );
+
+    case 'ripeness':
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>Ripeness: {formatNumber(value * 100, { decimals: 1 })}%</p>
+            <p className={tooltipStyles.muted}>Ripeness affects grape quality and harvest yield. Higher ripeness produces better grapes.</p>
+          </TooltipSection>
+          <TooltipSection title="Quality Impact">
+            <TooltipRow label="Current Level:" value={value < 0.3 ? 'Very Low' : value < 0.7 ? 'Moderate' : 'Good'} valueRating={value} />
+            <p className={tooltipStyles.muted}>
+              {value < 0.3 ? 'Very low ripeness will yield very little and poor quality grapes.'
+               : value < 0.7 ? 'Moderate ripeness provides decent yield and quality.'
+               : 'Good ripeness provides optimal yield and quality grapes.'}
+            </p>
+          </TooltipSection>
+        </div>
+      );
+
+    case 'vineYield':
+      const isExceptional = value >= 1.0;
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>Vine Yield: {formatNumber(value * 100, { decimals: 1 })}%</p>
+            <p className={tooltipStyles.muted}>
+              {isExceptional ? 'Exceptional yield! This vineyard is producing above normal capacity.'
+               : 'Vine yield represents the productivity of individual vines. Higher yield means more grapes per vine.'}
+            </p>
+          </TooltipSection>
+          <TooltipSection title="Impact">
+            <TooltipRow label="Yield Level:" value={value < 0.3 ? 'Low' : value < 0.7 ? 'Moderate' : value < 1.0 ? 'Good' : 'Exceptional'} valueRating={isExceptional ? 1.0 : getRatingForRange(value, 0.02, 1.0, 'higher_better')} />
+            <p className={tooltipStyles.muted}>
+              {value < 0.3 ? 'Low vine yield reduces overall harvest amount.'
+               : value < 0.7 ? 'Moderate vine yield provides decent harvest amounts.'
+               : value < 1.0 ? 'Good vine yield provides optimal harvest amounts.'
+               : 'Exceptional yield provides bonus harvest amounts!'}
+            </p>
+          </TooltipSection>
+        </div>
+      );
+
+    case 'rating':
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>{label}: {formatNumber(value, { decimals: 2, forceDecimals: true })}</p>
+            <p className={tooltipStyles.muted}>{description}</p>
+          </TooltipSection>
+          <TooltipSection title="Rating Scale">
+            <TooltipRow label="Rating:" value={value < 0.3 ? 'Poor' : value < 0.5 ? 'Below Average' : value < 0.7 ? 'Good' : value < 0.9 ? 'Excellent' : 'Perfect'} valueRating={value} />
+            <p className={tooltipStyles.muted}>
+              {value < 0.3 ? 'Poor rating significantly reduces grape quality.'
+               : value < 0.5 ? 'Below average rating reduces grape quality.'
+               : value < 0.7 ? 'Good rating provides decent grape quality.'
+               : value < 0.9 ? 'Excellent rating provides high grape quality.'
+               : 'Perfect rating provides maximum grape quality.'}
+            </p>
+          </TooltipSection>
+        </div>
+      );
+
+    case 'prestige':
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>Vineyard Prestige: {formatNumber(value, { decimals: 2, forceDecimals: true })}</p>
+            <p className={tooltipStyles.muted}>Prestige is earned from vineyard quality, land value, vine age, and wine features.</p>
+          </TooltipSection>
+          <TooltipSection title="Impact">
+            <TooltipRow label="Prestige Level:" value={value < 1 ? 'Low' : value < 5 ? 'Moderate' : value < 10 ? 'High' : 'Very High'} valueRating={getRatingForRange(value, 0, 10, 'higher_better')} />
+            <p className={tooltipStyles.muted}>Higher prestige improves customer relationships and wine sales prices. Prestige can come from land value, vine age, and wine features.</p>
+          </TooltipSection>
+        </div>
+      );
+
+    case 'density':
+      if (value === 0) {
+        return (
+          <div className={tooltipStyles.text}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>Vine Density: Not planted</p>
+              <p className={tooltipStyles.muted}>No vines have been planted yet. Plant vines to start producing grapes.</p>
+            </TooltipSection>
+          </div>
+        );
+      }
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>Vine Density: {formatNumber(value, { decimals: 0 })} vines/ha</p>
+            <p className={tooltipStyles.muted}>Vine density affects yield, quality, and prestige. Lower density (premium) increases prestige but may reduce yield.</p>
+          </TooltipSection>
+          <TooltipSection title="Impact">
+            <TooltipRow label="Density Level:" value={value < 3000 ? 'Very Low (Premium)' : value < 5000 ? 'Low (Premium)' : value < 10000 ? 'Normal' : 'High'} valueRating={getRatingForRange(value, 1500, 15000, 'lower_better')} />
+            <p className={tooltipStyles.muted}>
+              {value < 3000 ? 'Very low density (premium approach) maximizes prestige but reduces yield.'
+               : value < 5000 ? 'Low density (premium approach) increases prestige with moderate yield.'
+               : value < 10000 ? 'Normal density provides balanced yield and prestige.'
+               : 'High density maximizes yield but reduces prestige.'}
+            </p>
+          </TooltipSection>
+        </div>
+      );
+
+    case 'expectedYield':
+      if (!vineyard.grape) {
+        return (
+          <div className={tooltipStyles.text}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>Expected Yield: 0 kg</p>
+              <p className={tooltipStyles.muted}>No grape planted</p>
+            </TooltipSection>
+          </div>
+        );
+      }
+      const yieldBreakdown = calculateVineyardExpectedYield(vineyard);
+      if (!yieldBreakdown) {
+        return (
+          <div className={tooltipStyles.text}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>Expected Yield: Calculating...</p>
+            </TooltipSection>
+          </div>
+        );
+      }
+      const { totalYield, totalVines, breakdown: details } = yieldBreakdown;
+      return (
+        <div className={tooltipStyles.text}>
+          <TooltipSection>
+            <p className={tooltipStyles.title}>Expected Yield: {formatNumber(totalYield)} kg</p>
+          </TooltipSection>
+          <TooltipSection title="Calculation">
+            <TooltipRow label="Formula:" value={`${Math.round(totalVines)} vines × ${yieldBreakdown.baseYieldPerVine} kg/vine × ${formatNumber(details.finalMultiplier, { decimals: 3, smartDecimals: true })}`} monospaced={true} />
+            <TooltipRow label="Result:" value={`${formatNumber(totalYield)} kg`} valueRating={getRatingForRange(totalYield, 0, 10000, 'higher_better')} />
+          </TooltipSection>
+          <TooltipSection title="Multiplier Breakdown">
+            <TooltipRow label="Grape Suitability:" value={`${formatNumber(details.grapeSuitability * 100, { decimals: 1 })}%`} valueRating={details.grapeSuitability} />
+            <TooltipRow label="Natural Yield:" value={`${formatNumber(details.naturalYield * 100, { decimals: 1 })}%`} valueRating={details.naturalYield} />
+            <TooltipRow label="Ripeness:" value={`${formatNumber(details.ripeness * 100, { decimals: 1 })}%`} valueRating={details.ripeness} />
+            <TooltipRow label="Vine Yield:" value={`${formatNumber(details.vineYield * 100, { decimals: 1 })}%`} valueRating={details.vineYield} />
+            <TooltipRow label="Health:" value={`${formatNumber(details.health * 100, { decimals: 1 })}%`} valueRating={details.health} />
+          </TooltipSection>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+};
 
 // Component for expected yield tooltip display
 const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }) => {
@@ -32,34 +234,24 @@ const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }
     );
   }
 
-  const { totalYield, totalVines, breakdown: details } = yieldBreakdown;
+  const { totalYield } = yieldBreakdown;
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
+          <MobileDialogWrapper 
+            content={buildTooltipContent('expectedYield', { vineyard })} 
+            title="Expected Yield Details"
+            triggerClassName="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors"
+          >
           <div className="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors">
             Expected Yield: <span className="font-medium">{formatNumber(totalYield)} kg</span>
           </div>
+          </MobileDialogWrapper>
         </TooltipTrigger>
-        <TooltipContent side="right" className="max-w-sm">
-          <div className="text-xs space-y-2">
-            <div className="font-medium">Expected Yield Calculation</div>
-            <div className="border-t pt-2 space-y-1">
-              <div className="font-mono">
-                {Math.round(totalVines)} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(details.finalMultiplier, { decimals: 3, smartDecimals: true })}
-              </div>
-              <div className="text-muted-foreground mt-1">= {formatNumber(totalYield)} kg</div>
-            </div>
-            <div className="border-t pt-2 space-y-1">
-              <div className="text-muted-foreground text-xs">Combined Multiplier Breakdown:</div>
-              <div>Grape Suitability: {formatNumber(details.grapeSuitability * 100, { decimals: 1 })}%</div>
-              <div>Natural Yield: {formatNumber(details.naturalYield * 100, { decimals: 1 })}%</div>
-              <div>Ripeness: {formatNumber(details.ripeness * 100, { decimals: 1 })}%</div>
-              <div>Vine Yield: {formatNumber(details.vineYield * 100, { decimals: 1 })}%</div>
-              <div>Health: {formatNumber(details.health * 100, { decimals: 1 })}%</div>
-            </div>
-          </div>
+        <TooltipContent side="right" className="max-w-sm" variant="panel" density="compact">
+          {buildTooltipContent('expectedYield', { vineyard })}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -74,6 +266,7 @@ const Vineyard: React.FC = () => {
   const [showLandResultsModal, setShowLandResultsModal] = useState(false);
   const [showVineyardModal, setShowVineyardModal] = useState(false);
   const [showClearingModal, setShowClearingModal] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
   const [selectedVineyard, setSelectedVineyard] = useState<VineyardType | null>(null);
   const vineyards = useGameStateWithData(getAllVineyards, []);
   const activities = useGameStateWithData(getAllActivities, []);
@@ -126,6 +319,23 @@ const Vineyard: React.FC = () => {
     setShowClearingModal(true);
   }, []);
 
+  const handleSellVineyard = useCallback(async (vineyard: VineyardType) => {
+    setSelectedVineyard(vineyard);
+    setShowSellModal(true);
+  }, []);
+
+  const confirmSellVineyard = useCallback(async () => {
+    if (!selectedVineyard) return;
+    const vineyard = selectedVineyard;
+    setShowSellModal(false);
+    await withLoading(async () => {
+      const result = await sellVineyard(vineyard.id, { penaltyRate: 0.10 });
+      if (result.success) {
+        setSelectedVineyard(null);
+      }
+    });
+  }, [withLoading, selectedVineyard]);
+
   const handleClearingSubmit = useCallback(async (options: {
     tasks: { [key: string]: boolean };
     replantingIntensity: number;
@@ -149,192 +359,153 @@ const Vineyard: React.FC = () => {
     });
   }, [selectedVineyard, withLoading]);
 
+  const renderActionButton = (
+    {
+      label,
+      disabled,
+      onClick,
+      primary,
+      title,
+      fullWidth
+    }: { label: string; disabled?: boolean; onClick: (e: React.MouseEvent) => void; primary: 'plant' | 'harvest' | 'clear'; title?: string; fullWidth?: boolean }
+  ) => {
+    const base = `${fullWidth ? 'w-full' : ''} px-2 py-1 rounded text-xs font-medium`;
+    const classes = disabled
+      ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+      : primary === 'plant'
+        ? 'bg-green-600 hover:bg-green-700 text-white'
+        : primary === 'harvest'
+          ? 'bg-purple-600 hover:bg-purple-700 text-white'
+          : 'bg-orange-600 hover:bg-orange-700 text-white';
+    return (
+      <button onClick={onClick} disabled={disabled} className={`${base} ${classes}`} title={title}>
+        {label}
+      </button>
+    );
+  };
+
   const getActionButtons = useCallback((vineyard: VineyardType) => {
+    // Barren / No grape
     if (!vineyard.grape) {
       const hasActivePlanting = vineyardsWithActiveActivities.planting.has(vineyard.id);
       const hasActiveClearing = vineyardsWithActiveActivities.clearing.has(vineyard.id);
       return (
         <div className="flex flex-col space-y-1">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedVineyard(vineyard);
-              setShowPlantDialog(true);
-            }}
-            disabled={hasActivePlanting}
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              hasActivePlanting 
-                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
-          >
-            {hasActivePlanting ? 'Planting...' : 'Plant'}
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShowClearingModal(vineyard);
-            }}
-            disabled={hasActiveClearing}
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              hasActiveClearing 
-                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                : 'bg-orange-600 hover:bg-orange-700 text-white'
-            }`}
-            title={hasActiveClearing ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health'}
-          >
-            {hasActiveClearing ? 'Clearing...' : 'Clear'}
-          </button>
+          {renderActionButton({
+            label: hasActivePlanting ? 'Planting...' : 'Plant',
+            disabled: hasActivePlanting,
+            primary: 'plant',
+            onClick: (e) => { e.stopPropagation(); setSelectedVineyard(vineyard); setShowPlantDialog(true); }
+          })}
+          {renderActionButton({
+            label: hasActiveClearing ? 'Clearing...' : 'Clear',
+            disabled: hasActiveClearing,
+            primary: 'clear',
+            title: hasActiveClearing ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health',
+            onClick: (e) => { e.stopPropagation(); handleShowClearingModal(vineyard); }
+          })}
         </div>
       );
     }
 
-    switch (vineyard.status) {
-      case 'Planting':
-        // Show that planting is in progress
+    // Status-specific
+    if (vineyard.status === 'Planting') {
         const plantingActivity = activities.find(
           (a) => a.category === WorkCategory.PLANTING && a.status === 'active' && a.targetId === vineyard.id
         );
         const targetDensity = plantingActivity?.params?.density || vineyard.density || 1;
         const currentDensity = vineyard.density || 0;
         const plantingProgress = targetDensity > 0 ? Math.round((currentDensity / targetDensity) * 100) : 0;
-        
         return (
           <div className="space-y-1">
-            <div className="text-xs text-emerald-600 font-medium">
-              Planting in progress... ({plantingProgress}% complete)
-            </div>
-            <div className="text-xs text-gray-500">
-              {currentDensity}/{targetDensity} vines/ha
-            </div>
+          <div className="text-xs text-emerald-600 font-medium">Planting in progress... ({plantingProgress}% complete)</div>
+          <div className="text-xs text-gray-500">{currentDensity}/{targetDensity} vines/ha</div>
           </div>
         );
-      case 'Planted':
-        const hasActiveClearingPlanted = vineyardsWithActiveActivities.clearing.has(vineyard.id);
+    }
+
+    if (vineyard.status === 'Planted') {
+      const disabled = vineyardsWithActiveActivities.clearing.has(vineyard.id);
         return (
           <div className="space-y-1">
-            <div className="text-xs text-gray-500">
-              Planted (will grow in Spring)
-            </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShowClearingModal(vineyard);
-              }}
-              disabled={hasActiveClearingPlanted}
-              className={`px-2 py-1 rounded text-xs font-medium ${
-                hasActiveClearingPlanted 
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'
-              }`}
-              title={hasActiveClearingPlanted ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health'}
-            >
-              {hasActiveClearingPlanted ? 'Clearing...' : 'Clear'}
-            </button>
+          <div className="text-xs text-gray-500">Planted (will grow in Spring)</div>
+          {renderActionButton({
+            label: disabled ? 'Clearing...' : 'Clear',
+            disabled,
+            primary: 'clear',
+            title: disabled ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health',
+            onClick: (e) => { e.stopPropagation(); handleShowClearingModal(vineyard); }
+          })}
           </div>
         );
-      case 'Growing':
+    }
+
+    if (vineyard.status === 'Growing') {
         const hasActiveHarvesting = vineyardsWithActiveActivities.harvesting.has(vineyard.id);
         const hasActiveClearingGrowing = vineyardsWithActiveActivities.clearing.has(vineyard.id);
         return (
           <div className="space-y-1">
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }}
-              disabled={hasActiveHarvesting}
-              className={`w-full px-2 py-1 rounded text-xs font-medium ${
-                hasActiveHarvesting 
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : (vineyard.ripeness || 0) < 0.3 
-                    ? 'bg-gray-400 hover:bg-gray-500 text-white' 
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
-              }`}
-              title={
-                hasActiveHarvesting 
+          {renderActionButton({
+            label: hasActiveHarvesting ? 'Harvesting...' : 'Harvest',
+            disabled: hasActiveHarvesting,
+            primary: 'harvest',
+            fullWidth: true,
+            title: hasActiveHarvesting
                   ? 'Harvesting in progress...'
                   : (vineyard.ripeness || 0) < 0.3 
                     ? 'Low ripeness - will yield very little' 
-                    : 'Ready to harvest'
-              }
-            >
-              {hasActiveHarvesting ? 'Harvesting...' : 'Harvest'}
-            </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShowClearingModal(vineyard);
-              }}
-              disabled={hasActiveClearingGrowing}
-              className={`w-full px-2 py-1 rounded text-xs font-medium ${
-                hasActiveClearingGrowing 
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'
-              }`}
-              title={hasActiveClearingGrowing ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health'}
-            >
-              {hasActiveClearingGrowing ? 'Clearing...' : 'Clear'}
-            </button>
+                : 'Ready to harvest',
+            onClick: (e) => { e.stopPropagation(); handleShowHarvestDialog(vineyard); }
+          })}
+          {renderActionButton({
+            label: hasActiveClearingGrowing ? 'Clearing...' : 'Clear',
+            disabled: hasActiveClearingGrowing,
+            primary: 'clear',
+            fullWidth: true,
+            title: hasActiveClearingGrowing ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health',
+            onClick: (e) => { e.stopPropagation(); handleShowClearingModal(vineyard); }
+          })}
           </div>
         );
-      case 'Harvested':
-        const hasActiveClearingHarvested = vineyardsWithActiveActivities.clearing.has(vineyard.id);
+    }
+
+    if (vineyard.status === 'Harvested') {
+      const disabled = vineyardsWithActiveActivities.clearing.has(vineyard.id);
         return (
           <div className="space-y-1">
-            <div className="text-xs text-gray-500">
-              Harvested (will go dormant in Winter)
-            </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShowClearingModal(vineyard);
-              }}
-              disabled={hasActiveClearingHarvested}
-              className={`px-2 py-1 rounded text-xs font-medium ${
-                hasActiveClearingHarvested 
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'
-              }`}
-              title={hasActiveClearingHarvested ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health'}
-            >
-              {hasActiveClearingHarvested ? 'Clearing...' : 'Clear'}
-            </button>
+          <div className="text-xs text-gray-500">Harvested (will go dormant in Winter)</div>
+          {renderActionButton({
+            label: disabled ? 'Clearing...' : 'Clear',
+            disabled,
+            primary: 'clear',
+            title: disabled ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health',
+            onClick: (e) => { e.stopPropagation(); handleShowClearingModal(vineyard); }
+          })}
           </div>
         );
-      case 'Dormant':
-        const hasActiveClearingDormant = vineyardsWithActiveActivities.clearing.has(vineyard.id);
+    }
+
+    if (vineyard.status === 'Dormant') {
+      const disabled = vineyardsWithActiveActivities.clearing.has(vineyard.id);
         return (
           <div className="space-y-1">
-            <div className="text-xs text-gray-500">
-              Dormant
-            </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShowClearingModal(vineyard);
-              }}
-              disabled={hasActiveClearingDormant}
-              className={`px-2 py-1 rounded text-xs font-medium ${
-                hasActiveClearingDormant 
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'
-              }`}
-              title={hasActiveClearingDormant ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health'}
-            >
-              {hasActiveClearingDormant ? 'Clearing...' : 'Clear'}
-            </button>
+          <div className="text-xs text-gray-500">Dormant</div>
+          {renderActionButton({
+            label: disabled ? 'Clearing...' : 'Clear',
+            disabled,
+            primary: 'clear',
+            title: disabled ? 'Clearing in progress...' : 'Clear vegetation and debris to improve vineyard health',
+            onClick: (e) => { e.stopPropagation(); handleShowClearingModal(vineyard); }
+          })}
           </div>
         );
-      default:
-        // Handle "Harvesting (X%)" status
+    }
+
         if (typeof vineyard.status === 'string' && vineyard.status.startsWith('Harvesting')) {
-          return (
-            <div className="text-xs text-purple-600 font-medium">
-              {vineyard.status}
-            </div>
-          );
+      return <div className="text-xs text-purple-600 font-medium">{vineyard.status}</div>;
         }
         return null;
-    }
-  }, [handleShowHarvestDialog, vineyardsWithActiveActivities]);
+  }, [activities, handleShowHarvestDialog, vineyardsWithActiveActivities]);
 
   // Memoize summary statistics
   const { totalHectares, totalValue, plantedVineyards, activeVineyards } = useMemo(() => {
@@ -464,14 +635,88 @@ const Vineyard: React.FC = () => {
                         {vineyard.region}, {vineyard.country}
                         <span className={`${getFlagIcon(vineyard.country)} ml-1`}></span>
                       </div>
+                      <div className="mt-2">
+                        <button
+                          className="px-2 py-1 rounded text-xs font-semibold bg-red-600 hover:bg-red-700 text-white"
+                          title="Sell this vineyard for cash (10% fee)"
+                          onClick={(e) => { e.stopPropagation(); handleSellVineyard(vineyard); }}
+                        >
+                          Sell
+                        </button>
+                      </div>
                     </td>
 
                     {/* Details & Characteristics */}
                     <td className="px-4 py-4">
                       <div className="text-xs text-gray-900 space-y-1">
                         <div>
-                          <span className="font-medium">Size:</span> {vineyard.hectares} ha | 
-                          <span className="font-medium ml-1">Value:</span> {formatCurrency(vineyard.vineyardTotalValue)}
+                          <div>
+                            <span className="font-medium">Size:</span> {vineyard.hectares} ha
+                          </div>
+                          <div className="mt-0.5">
+                            <span className="font-medium">Value:</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <MobileDialogWrapper
+                                  content={(
+                                    (() => {
+                                      const b = calculateAdjustedLandValueBreakdown(vineyard);
+                                  return (
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection>
+                                            <p className={tooltipStyles.title}>Vineyard Value</p>
+                                            <p className={tooltipStyles.muted}>Stored total: €{formatNumber(vineyard.vineyardTotalValue || 0, { decimals: 0 })}</p>
+                                          </TooltipSection>
+                                          <TooltipSection>
+                                            <TooltipRow label="Base (per ha)" value={`€${formatNumber(b.basePerHa, { decimals: 0 })}`} monospaced={true} />
+                                            <TooltipRow label="Planted" value={`+${formatNumber(b.plantedBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                            <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                            <TooltipRow label="Prestige" value={`+${formatNumber(b.prestigeBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                            <TooltipRow label="Total multiplier" value={`×${formatNumber(b.totalMultiplier, { decimals: 3, forceDecimals: true })}`} monospaced={true} />
+                                            <TooltipRow label="Adjusted (per ha)" value={`€${formatNumber(b.adjustedPerHa, { decimals: 0 })}`} monospaced={true} />
+                                            <TooltipRow label="Projected Total" value={`€${formatNumber(b.adjustedTotal, { decimals: 0 })}`} monospaced={true} />
+                                          </TooltipSection>
+                                        </div>
+                                      );
+                                    })()
+                                  )}
+                                  title="Vineyard Value Adjustments"
+                                  triggerClassName="inline-block ml-1 cursor-help"
+                                >
+                                  <span className="ml-1 underline decoration-dotted">
+                                    {formatCurrency(vineyard.vineyardTotalValue)}
+                                  </span>
+                                </MobileDialogWrapper>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                {(() => {
+                                  const b = calculateAdjustedLandValueBreakdown(vineyard);
+                                  return (
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection>
+                                        <p className={tooltipStyles.title}>Vineyard Value</p>
+                                        <p className={tooltipStyles.muted}>Stored total: €{formatNumber(vineyard.vineyardTotalValue || 0, { decimals: 0 })}</p>
+                                      </TooltipSection>
+                                      <TooltipSection>
+                                        <TooltipRow label="Base (per ha)" value={`€${formatNumber(b.basePerHa, { decimals: 0 })}`} monospaced={true} />
+                                        <TooltipRow label="Planted" value={`+${formatNumber(b.plantedBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                        <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                        <TooltipRow label="Prestige" value={`+${formatNumber(b.prestigeBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                        <TooltipRow label="Total multiplier" value={`×${formatNumber(b.totalMultiplier, { decimals: 3, forceDecimals: true })}`} monospaced={true} />
+                                        <TooltipRow label="Adjusted (per ha)" value={`€${formatNumber(b.adjustedPerHa, { decimals: 0 })}`} monospaced={true} />
+                                        <TooltipRow label="Projected Total" value={`€${formatNumber(b.adjustedTotal, { decimals: 0 })}`} monospaced={true} />
+                                      </TooltipSection>
+                                    </div>
+                                  );
+                                })()}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {vineyard.hectares > 0 && (
+                            <span className="text-xs text-gray-500 ml-1">(per ha: {formatCurrency((vineyard.vineyardTotalValue || 0) / vineyard.hectares)})</span>
+                          )}
+                          </div>
                         </div>
                         <div>
                           <span className="font-medium">Soil:</span> {vineyard.soil.join(', ')}
@@ -483,9 +728,24 @@ const Vineyard: React.FC = () => {
                             const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
                             const colors = getBadgeColorClasses(rating);
                             return (
-                              <span className={`ml-1 px-1 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper 
+                                      content={buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects grape quality. Each region has an optimal altitude range for grape growing.' })} 
+                                      title="Altitude Rating Details"
+                                      triggerClassName="inline-block ml-1 cursor-help"
+                                    >
+                                      <span className={`ml-1 px-1 py-0.5 rounded text-xs cursor-help ${colors.text} ${colors.bg}`}>
                                 {formatNumber(rating, { decimals: 2, forceDecimals: true })}
                               </span>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                    {buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects grape quality. Each region has an optimal altitude range for grape growing.' })}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             );
                           })()}
                         </div>
@@ -496,9 +756,24 @@ const Vineyard: React.FC = () => {
                             const rating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
                             const colors = getBadgeColorClasses(rating);
                             return (
-                              <span className={`ml-1 px-1 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper 
+                                      content={buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and grape quality.' })} 
+                                      title="Aspect Rating Details"
+                                      triggerClassName="inline-block ml-1 cursor-help"
+                                    >
+                                      <span className={`ml-1 px-1 py-0.5 rounded text-xs cursor-help ${colors.text} ${colors.bg}`}>
                                 {formatNumber(rating, { decimals: 2, forceDecimals: true })}
                               </span>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                    {buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and grape quality.' })}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             );
                           })()}
                         </div>
@@ -517,10 +792,54 @@ const Vineyard: React.FC = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Prestige: {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
+                        <span className="font-medium">Prestige:</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <MobileDialogWrapper 
+                                content={buildTooltipContent('prestige', { value: vineyard.vineyardPrestige ?? 0 })} 
+                                title="Prestige Details"
+                                triggerClassName="inline-block ml-1 cursor-help"
+                              >
+                                {(() => { const { badge } = getRangeColorClasses(vineyard.vineyardPrestige ?? 0, 0, 10, 'higher_better'); return (
+                                <span className={`ml-1 px-1 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
+                                  {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
+                                </span>
+                                ); })()}
+                              </MobileDialogWrapper>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                              {buildTooltipContent('prestige', { value: vineyard.vineyardPrestige ?? 0 })}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                       <div className="text-xs text-gray-500">
-                        Density: {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
+                        <span className="font-medium">Density:</span>
+                        {vineyard.density > 0 ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <MobileDialogWrapper 
+                                  content={buildTooltipContent('density', { value: vineyard.density })} 
+                                  title="Density Details"
+                                  triggerClassName="inline-block ml-1 cursor-help"
+                                >
+                                  {(() => { const { badge } = getRangeColorClasses(vineyard.density, 1500, 15000, 'lower_better'); return (
+                                  <span className={`ml-1 px-1 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
+                                    {formatNumber(vineyard.density, { decimals: 0 })} vines/ha
+                                  </span>
+                                  ); })()}
+                                </MobileDialogWrapper>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                {buildTooltipContent('density', { value: vineyard.density })}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-gray-400 ml-1">Not planted</span>
+                        )}
                       </div>
                     </td>
 
@@ -532,20 +851,27 @@ const Vineyard: React.FC = () => {
                           <div className="text-xs text-gray-500 mb-1">
                             Health: {Math.round((vineyard.vineyardHealth || 1.0) * 100)}%
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
-                            <div 
-                              className={`h-2 rounded-full transition-all duration-300 ${
-                                (vineyard.vineyardHealth || 1.0) < 0.3 ? 'bg-red-500' :
-                                (vineyard.vineyardHealth || 1.0) < 0.6 ? 'bg-amber-500' : 'bg-green-500'
-                              }`}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <MobileDialogWrapper 
+                                  content={buildTooltipContent('health', { vineyard })} 
+                                  title="Vineyard Health Details"
+                                  triggerClassName="w-full bg-gray-200 rounded-full h-2 relative cursor-help"
+                                >
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`h-2 rounded-full transition-all duration-300 ${getHealthProgressColor(vineyard.vineyardHealth || 1.0)}`}
                               style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
                             ></div>
-                            {/* Health Tooltip */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
-                              <HealthTooltip vineyard={vineyard} />
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                             </div>
-                          </div>
+                                </MobileDialogWrapper>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                {buildTooltipContent('health', { vineyard })}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
 
                         {vineyard.grape ? (
@@ -555,32 +881,58 @@ const Vineyard: React.FC = () => {
                               <div className="text-xs text-gray-500 mb-1">
                                 Ripeness: {Math.round((vineyard.ripeness || 0) * 100)}%
                               </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper 
+                                      content={buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })} 
+                                      title="Ripeness Details"
+                                      triggerClassName="w-full bg-gray-200 rounded-full h-2 relative cursor-help"
+                                    >
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div 
-                                  className={`h-2 rounded-full transition-all duration-300 ${
-                                    (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
-                                    (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
-                                  }`}
+                                          className={`h-2 rounded-full transition-all duration-300 ${getRipenessProgressColor(vineyard.ripeness || 0)}`}
                                   style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
                                 ></div>
                               </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                    {buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                             
                             {/* Vine Yield Progress Bar */}
                             <div>
                               <div className="text-xs text-gray-500 mb-1">
-                                Vine Yield: {Math.round((vineyard.vineYield || 0.02) * 100)}%
+                                Vine Yield: {(() => {
+                                  const yieldValue = (vineyard.vineYield || 0.02) * 100;
+                                  return yieldValue >= 100 ? `${Math.round(yieldValue)}%` : `${Math.round(yieldValue)}%`;
+                                })()}
                               </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper 
+                                      content={buildTooltipContent('vineYield', { value: vineyard.vineYield || 0.02 })} 
+                                      title="Vine Yield Details"
+                                      triggerClassName="w-full bg-gray-200 rounded-full h-2 relative cursor-help"
+                                    >
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div 
-                                  className={`h-2 rounded-full transition-all duration-300 ${
-                                    (vineyard.vineYield || 0.02) < 0.3 ? 'bg-red-400' :
-                                    (vineyard.vineYield || 0.02) < 0.7 ? 'bg-amber-500' : 
-                                    (vineyard.vineYield || 0.02) < 1.0 ? 'bg-green-500' : 'bg-purple-500'
-                                  }`}
-                                  style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
+                                          className={`h-2 rounded-full transition-all duration-300 ${getVineYieldProgressColor(vineyard.vineYield || 0.02)}`}
+                                          style={{ width: `${Math.min(100, Math.max(0, (vineyard.vineYield || 0.02) * 100))}%` }}
                                 ></div>
                               </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                    {buildTooltipContent('vineYield', { value: vineyard.vineYield || 0.02 })}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                             
                             {/* Expected Yield Tooltip */}
@@ -689,9 +1041,24 @@ const Vineyard: React.FC = () => {
                               const rating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
                               const colors = getBadgeColorClasses(rating);
                               return (
-                                <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <MobileDialogWrapper 
+                                        content={buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects grape quality. Each region has an optimal altitude range for grape growing.' })} 
+                                        title="Altitude Rating Details"
+                                        triggerClassName="inline-block cursor-help"
+                                      >
+                                        <span className={`px-2 py-0.5 rounded text-xs cursor-help ${colors.text} ${colors.bg}`}>
                                   {formatNumber(rating, { decimals: 2, forceDecimals: true })}
                                 </span>
+                                      </MobileDialogWrapper>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                      {buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects grape quality. Each region has an optimal altitude range for grape growing.' })}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               );
                             })()}
                           </div>
@@ -704,9 +1071,24 @@ const Vineyard: React.FC = () => {
                               const rating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
                               const colors = getBadgeColorClasses(rating);
                               return (
-                                <span className={`px-2 py-0.5 rounded text-xs ${colors.text} ${colors.bg}`}>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <MobileDialogWrapper 
+                                        content={buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and grape quality.' })} 
+                                        title="Aspect Rating Details"
+                                        triggerClassName="inline-block cursor-help"
+                                      >
+                                        <span className={`px-2 py-0.5 rounded text-xs cursor-help ${colors.text} ${colors.bg}`}>
                                   {formatNumber(rating, { decimals: 2, forceDecimals: true })}
                                 </span>
+                                      </MobileDialogWrapper>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                      {buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and grape quality.' })}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               );
                             })()}
                           </div>
@@ -732,15 +1114,53 @@ const Vineyard: React.FC = () => {
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Prestige:</span>
-                          <span className="text-gray-900">
-                            {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
-                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <MobileDialogWrapper 
+                                  content={buildTooltipContent('prestige', { value: vineyard.vineyardPrestige ?? 0 })} 
+                                  title="Prestige Details"
+                                  triggerClassName="inline-block cursor-help"
+                                >
+                                  {(() => { const { badge } = getRangeColorClasses(vineyard.vineyardPrestige ?? 0, 0, 10, 'higher_better'); return (
+                                  <span className={`px-2 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
+                                    {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
+                                  </span>
+                                  ); })()}
+                                </MobileDialogWrapper>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                {buildTooltipContent('prestige', { value: vineyard.vineyardPrestige ?? 0 })}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Density:</span>
-                          <span className="text-gray-900">
-                            {vineyard.density > 0 ? `${formatNumber(vineyard.density, { decimals: 0 })} vines/ha` : 'Not planted'}
-                          </span>
+                          {vineyard.density > 0 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <MobileDialogWrapper 
+                                    content={buildTooltipContent('density', { value: vineyard.density })} 
+                                    title="Density Details"
+                                    triggerClassName="inline-block cursor-help"
+                                  >
+                                    {(() => { const { badge } = getRangeColorClasses(vineyard.density, 1500, 15000, 'lower_better'); return (
+                                    <span className={`px-2 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
+                                      {formatNumber(vineyard.density, { decimals: 0 })} vines/ha
+                                    </span>
+                                    ); })()}
+                                  </MobileDialogWrapper>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                  {buildTooltipContent('density', { value: vineyard.density })}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-gray-400">Not planted</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -762,20 +1182,27 @@ const Vineyard: React.FC = () => {
                               <span>Health</span>
                               <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-3 relative group cursor-help">
-                              <div 
-                                className={`h-3 rounded-full transition-all duration-300 ${
-                                  (vineyard.vineyardHealth || 1.0) < 0.3 ? 'bg-red-500' :
-                                  (vineyard.vineyardHealth || 1.0) < 0.6 ? 'bg-amber-500' : 'bg-green-500'
-                                }`}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <MobileDialogWrapper 
+                                    content={buildTooltipContent('health', { vineyard })} 
+                                    title="Vineyard Health Details"
+                                    triggerClassName="w-full bg-gray-200 rounded-full h-3 relative cursor-help"
+                                  >
+                                    <div className="w-full bg-gray-200 rounded-full h-3">
+                                      <div 
+                                        className={`h-3 rounded-full transition-all duration-300 ${getHealthProgressColor(vineyard.vineyardHealth || 1.0)}`}
                                 style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
                               ></div>
-                              {/* Health Tooltip */}
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64">
-                                <HealthTooltip vineyard={vineyard} />
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                               </div>
-                            </div>
+                                  </MobileDialogWrapper>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                  {buildTooltipContent('health', { vineyard })}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                           
                           {/* Ripeness Progress */}
@@ -784,33 +1211,59 @@ const Vineyard: React.FC = () => {
                               <span>Ripeness</span>
                               <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
                             </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <MobileDialogWrapper 
+                                    content={buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })} 
+                                    title="Ripeness Details"
+                                    triggerClassName="w-full bg-gray-200 rounded-full h-3 relative cursor-help"
+                                  >
                             <div className="w-full bg-gray-200 rounded-full h-3">
                               <div 
-                                className={`h-3 rounded-full transition-all duration-300 ${
-                                  (vineyard.ripeness || 0) < 0.3 ? 'bg-red-400' :
-                                  (vineyard.ripeness || 0) < 0.7 ? 'bg-amber-500' : 'bg-green-500'
-                                }`}
+                                        className={`h-3 rounded-full transition-all duration-300 ${getRipenessProgressColor(vineyard.ripeness || 0)}`}
                                 style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
                               ></div>
                             </div>
+                                  </MobileDialogWrapper>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                  {buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                           
                           {/* Vine Yield Progress */}
                           <div>
                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                               <span>Vine Yield</span>
-                              <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
+                              <span>{(() => {
+                                const yieldValue = (vineyard.vineYield || 0.02) * 100;
+                                return yieldValue >= 100 ? `${Math.round(yieldValue)}%` : `${Math.round(yieldValue)}%`;
+                              })()}</span>
                             </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <MobileDialogWrapper 
+                                    content={buildTooltipContent('vineYield', { value: vineyard.vineYield || 0.02 })} 
+                                    title="Vine Yield Details"
+                                    triggerClassName="w-full bg-gray-200 rounded-full h-3 relative cursor-help"
+                                  >
                             <div className="w-full bg-gray-200 rounded-full h-3">
                               <div 
-                                className={`h-3 rounded-full transition-all duration-300 ${
-                                  (vineyard.vineYield || 0.02) < 0.3 ? 'bg-red-400' :
-                                  (vineyard.vineYield || 0.02) < 0.7 ? 'bg-amber-500' : 
-                                  (vineyard.vineYield || 0.02) < 1.0 ? 'bg-green-500' : 'bg-purple-500'
-                                }`}
-                                style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
+                                        className={`h-3 rounded-full transition-all duration-300 ${getVineYieldProgressColor(vineyard.vineYield || 0.02)}`}
+                                        style={{ width: `${Math.min(100, Math.max(0, (vineyard.vineYield || 0.02) * 100))}%` }}
                               ></div>
                             </div>
+                                  </MobileDialogWrapper>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                                  {buildTooltipContent('vineYield', { value: vineyard.vineYield || 0.02 })}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                         
@@ -888,6 +1341,20 @@ const Vineyard: React.FC = () => {
         }}
         onSubmit={handleClearingSubmit}
       />
+      {showSellModal && selectedVineyard && (
+        <WarningModal
+          isOpen={showSellModal}
+          onClose={() => setShowSellModal(false)}
+          severity={'warning'}
+          title={'Confirm Vineyard Sale'}
+          message={`Are you sure you want to sell "${selectedVineyard.name}"? This action cannot be undone.`}
+          details={`You will receive 90% of its current value after a 10% fee.\n\nEstimated proceeds: ${formatCurrency((selectedVineyard.vineyardTotalValue || 0) * 0.9)}\nCurrent value: ${formatCurrency(selectedVineyard.vineyardTotalValue || 0)}`}
+          actions={[
+            { label: 'Cancel', onClick: () => {}, variant: 'outline' },
+            { label: 'Sell Vineyard', onClick: () => { confirmSellVineyard(); }, variant: 'destructive' }
+          ]}
+        />
+      )}
     </div>
   );
 };

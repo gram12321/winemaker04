@@ -1,7 +1,7 @@
 export { useGameState, useGameStateWithData } from './useGameState';
 export { useWineFeatureDetails } from './useWineFeatureDetails';
 export { useGameUpdates } from './useGameUpdates';
-export { usePrestigeUpdates } from './usePrestigeUpdates';
+export { usePrestigeUpdates } from './usePrestigeAndVineyardValueUpdates';
 export { useLoadingState } from './useLoadingState';
 export { useTableSortWithAccessors } from './useTableSort';
 export type { SortableColumn } from './useTableSort';
