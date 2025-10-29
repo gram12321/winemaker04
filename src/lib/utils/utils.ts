@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge"
 import { Customer, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
-import { NormalizeScrewed1000To01WithTail } from './calculator';
+import { Normalize1000To01WithTail } from './calculator';
 
 // ========================================
 // SECTION 1: CORE UTILITIES
@@ -599,7 +599,7 @@ export function getRatingForRange(
       // Use the existing exponential normalization function
       // Map the value from normalizeMin-normalizeMax range to 0-1000 range for the function
       const mappedValue = Math.max(0, (value - normalizeMin) / (normalizeMax - normalizeMin)) * 1000;
-      rating = NormalizeScrewed1000To01WithTail(mappedValue);
+      rating = Normalize1000To01WithTail (mappedValue);
       break;
       
     default:

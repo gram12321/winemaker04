@@ -151,15 +151,7 @@ const processWeeklyEffects = async (): Promise<void> => {
         
         if (result.totalOrdersCreated > 0) {
           console.log(`[Weekly Orders] Generated ${result.totalOrdersCreated} orders from ${result.customersGenerated} customers`);
-          
-          // Show summary notification for significant activity
-          if (result.totalOrdersCreated > 1) {
-            const totalValue = result.orders.reduce((sum, order) => sum + order.totalValue, 0);
-            await notificationService.addMessage(`${result.totalOrdersCreated} new orders received from ${result.customersGenerated} customers (€${totalValue.toFixed(2)})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
-          } else if (result.orders.length > 0) {
-            const order = result.orders[0];
-            await notificationService.addMessage(`New order received: ${order.wineName} from ${order.customerName} (${order.customerCountry})`, 'sales.orders', 'New Orders', NotificationCategory.SALES_ORDERS);
-          }
+          // Order notifications are handled inside salesOrderService
         }
       } catch (error) {
         console.warn('Error during sophisticated order generation:', error);

@@ -542,6 +542,59 @@ export function NormalizeScrewed1000To01WithTail(prestige: number): number {
   return Math.min(0.999, Math.max(0.001, normalized));
 }
 
+/**
+ * Normalize prestige values from 0-1000+ range to 0-1 scale with a much gentler low-end boost.
+ * Follows the same high-tail behavior as NormalizeScrewed1000To01WithTail.
+ *
+ * Requested mapping:
+ * - values: 0-10 (maps to ~0.1-0.2)
+ * - values: 10-100 (maps to ~0.2-0.5)
+ * - values: 100-250 (maps to ~0.5-0.9)
+ * - values: 250-1000 (maps to ~0.9-0.95)
+ * - values: >1000 (uses the same tail squash to avoid hard 1.0)
+ */
+export function Normalize1000To01WithTail(prestige: number): number {
+  const safePrestige = Math.max(0, prestige || 0);
+
+  let normalized: number;
+
+  if (safePrestige <= 10) {
+    // 0-10 → 0.1-0.2 (gentle curve, minimal boost)
+    const ratio = safePrestige / 10; // 0..1
+    // Slight concave-up to reduce early boost
+    normalized = 0.1 + 0.1 * Math.pow(ratio, 0.9);
+  } else if (safePrestige <= 100) {
+    // 10-100 → 0.2-0.5 (moderate growth; logarithmic for realism)
+    const ratio = (safePrestige - 10) / 90; // 0..1
+    const logScaled = Math.log(1 + 3 * ratio) / Math.log(4); // 0..1
+    normalized = 0.2 + 0.3 * logScaled;
+  } else if (safePrestige <= 250) {
+    // 100-250 → 0.5-0.9 (strong growth)
+    const ratio = (safePrestige - 100) / 150; // 0..1
+    // Ease-in with power >1 to keep the jump later, reaching 0.9 at 250
+    normalized = 0.5 + 0.4 * Math.pow(ratio, 1.2);
+  } else if (safePrestige <= 1000) {
+    // 250-1000 → 0.9-0.95 (very slow growth)
+    const ratio = (safePrestige - 250) / 750; // 0..1
+    // Use power >1 to slow the climb across a wide span
+    normalized = 0.9 + 0.05 * Math.pow(ratio, 1.6);
+  } else {
+    // >1000 → keep same approach as original: approach 1.0 then squash the tail
+    const excess = safePrestige - 1000;
+    const excessRatio = Math.min(excess / 1000, 1);
+    // Start from 0.98 at 1000 and add up to 0.02 linearly before squash
+    normalized = 0.98 + 0.02 * excessRatio;
+  }
+
+  if (safePrestige > 1000) {
+    // Same tail squash parameters as the original function
+    return squashNormalizeTail(normalized, 0.98, 0.999, 5);
+  }
+
+  // Keep a soft cap in regular ranges
+  return Math.min(0.999, Math.max(0.001, normalized));
+}
+
 // ===== EXPORT TYPES =====
 
 export type { SelectedWine };

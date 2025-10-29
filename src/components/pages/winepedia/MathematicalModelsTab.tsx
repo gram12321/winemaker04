@@ -2,15 +2,7 @@ import { useMemo } from 'react';
 import { SimpleCard } from '@/components/ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
-import { 
-  calculateSkewedMultiplier, 
-  calculateInvertedSkewedMultiplier, 
-  calculateAsymmetricalMultiplier, 
-  calculateSymmetricalMultiplier, 
-  vineyardAgePrestigeModifier,
-  calculateAsymmetricalScaler01,
-  NormalizeScrewed1000To01WithTail
-} from '@/lib/utils/calculator';
+import { calculateSkewedMultiplier, calculateInvertedSkewedMultiplier, calculateAsymmetricalMultiplier, calculateSymmetricalMultiplier, vineyardAgePrestigeModifier, calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail, Normalize1000To01WithTail } from '@/lib/utils/calculator';
 import { calculateVineyardYield } from '@/lib/services';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
@@ -122,6 +114,48 @@ export function MathematicalModelsTab() {
       return data;
     };
 
+    // Generate Normalize1000To01WithTail data (generic, not prestige-specific)
+    const generateNormalizationDataNew = () => {
+      const data = [] as { input: number; normalized: number }[];
+
+      // Dense points in early range (0-10): 30 points
+      for (let i = 0; i <= 30; i++) {
+        const value = (i / 30) * 10; // 0 to 10
+        const normalized = Normalize1000To01WithTail(value);
+        data.push({ input: value, normalized });
+      }
+
+      // Medium density (10-100): 25 points
+      for (let i = 1; i <= 25; i++) {
+        const value = 10 + (i / 25) * 90; // 10 to 100
+        const normalized = Normalize1000To01WithTail(value);
+        data.push({ input: value, normalized });
+      }
+
+      // Higher resolution around 100-250: 30 points
+      for (let i = 1; i <= 30; i++) {
+        const value = 100 + (i / 30) * 150; // 100 to 250
+        const normalized = Normalize1000To01WithTail(value);
+        data.push({ input: value, normalized });
+      }
+
+      // 250-1000: 30 points
+      for (let i = 1; i <= 30; i++) {
+        const value = 250 + (i / 30) * 750; // 250 to 1000
+        const normalized = Normalize1000To01WithTail(value);
+        data.push({ input: value, normalized });
+      }
+
+      // Very high range (1000-2000): 20 points
+      for (let i = 1; i <= 20; i++) {
+        const value = 1000 + (i / 20) * 1000; // 1000 to 2000
+        const normalized = Normalize1000To01WithTail(value);
+        data.push({ input: value, normalized });
+      }
+
+      return data;
+    };
+
     // Generate symmetrical data with more points at extremes (0-0.1 and 0.9-1.0)
     const generateSymmetricalData = () => {
       const data = [];
@@ -224,7 +258,8 @@ export function MathematicalModelsTab() {
       ageData: generateAgeData(),
       yieldByRipeness: generateYieldByRipeness(),
       yieldByAge: generateYieldByAge(),
-      prestigeNormalizationData: generatePrestigeNormalizationData()
+      prestigeNormalizationData: generatePrestigeNormalizationData(),
+      normalizationDataNew: generateNormalizationDataNew()
     };
   }, []); // Empty dependency array - only generate once
 
@@ -299,6 +334,61 @@ export function MathematicalModelsTab() {
               </div>
             </div>
           </div>
+
+        {/* Normalize1000To01WithTail */}
+        <div className="border rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4">Normalization (Normalize1000To01WithTail)</h3>
+          <p className="text-gray-600 mb-4">
+            Converts raw values (0-1000+) to a normalized 0-1 scale with gentler low-end boost and the same high-tail compression as the original.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-semibold mb-2">Input → Normalized Mappings (approx.):</h4>
+              <div className="space-y-1 text-sm font-mono">
+                <div>0 → 0.100</div>
+                <div>10 → 0.200</div>
+                <div>100 → 0.500</div>
+                <div>250 → 0.900</div>
+                <div>1000 → 0.950</div>
+                <div>2000 → 0.999</div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Usage in Game:</h4>
+              <div className="space-y-1 text-sm">
+                <div>• <strong>Alternative Normalization</strong> - Option with reduced low-end boost</div>
+                <div>• <strong>Compatibility:</strong> Same tail compression for extreme values</div>
+              </div>
+              <div className="mt-3">
+                <h5 className="font-semibold mb-2">Curve Shape:</h5>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData.normalizationDataNew}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="input" domain={[0, 2000]} tickFormatter={(value) => formatNumber(value, { decimals: 0 })} />
+                      <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
+                      <RechartsTooltip 
+                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Normalized']}
+                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 0 })}`}
+                      />
+                      <Line type="monotone" dataKey="normalized" stroke="#2563eb" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Intervals:</h4>
+              <div className="space-y-1 text-sm">
+                <div>• 0–10: ~0.1–0.2</div>
+                <div>• 10–100: ~0.2–0.5</div>
+                <div>• 100–250: ~0.5–0.9</div>
+                <div>• 250–1000: ~0.9–0.95</div>
+                <div>• 1000+: Tail compression to 0.999</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
           {/* Inverted Skewed Multiplier */}
           <div className="border rounded-lg p-6">

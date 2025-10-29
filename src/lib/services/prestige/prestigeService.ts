@@ -792,7 +792,8 @@ export function getEventDisplayData(event: PrestigeEvent): {
     
     if (event.type === 'vineyard_land' && metadata.vineyardName && (metadata.totalValue !== undefined || metadata.landValuePerHectare !== undefined)) {
       const lvh = formatCurrency(Number(metadata.landValuePerHectare ?? 0));
-      const basePerHa = Number(metadata.landBase01 ?? 0);
+      const landBase01 = Number(metadata.landBase01 ?? 0);
+      const landWithSuitability01 = Number(metadata.landWithSuitability01 ?? 0);
       const suitAdj = Number(metadata.landWithSuitability01 ?? 0);
       const perHaAsym = Number(metadata.landScaledPerHa ?? 0);
       const sizeFactor = Number(metadata.landSizeFactor ?? 0);
@@ -805,7 +806,9 @@ export function getEventDisplayData(event: PrestigeEvent): {
         calculationData: {
           type: 'vineyard_land',
           vineyardName: metadata.vineyardName,
-          landValuePerHa: basePerHa,
+          landValuePerHa: Number(metadata.landValuePerHectare ?? 0),
+          landNormalized01: landBase01,
+          landWithSuitability01: landWithSuitability01,
           hectares: metadata.hectares,
           density: metadata.density,
           densityModifier: densityMod,

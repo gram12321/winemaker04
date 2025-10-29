@@ -105,14 +105,13 @@ export async function generateSophisticatedWineOrders(): Promise<{
       }
     }
     
-    // Step 5: Log results and send notifications
+    // Step 5: Log results and send notifications (handled here, not in gameTick)
     if (orders.length > 0) {
       const totalValue = orders.reduce((sum, order) => {
         const orderValue = order.offeredPrice * order.requestedQuantity;
-        return sum + Math.min(orderValue, SALES_CONSTANTS.MAX_PRICE); // Cap individual order values to prevent overflow
+        return sum + Math.min(orderValue, SALES_CONSTANTS.MAX_PRICE);
       }, 0);
 
-      
       // Send notification about successful customer
       if (orders.length === 1) {
         await notificationService.addMessage(
@@ -129,12 +128,8 @@ export async function generateSophisticatedWineOrders(): Promise<{
           NotificationCategory.SALES_ORDERS
         );
       }
-    } else {
-      // Customer browsed all wines but didn't place any orders (no logging needed)
-    }
-    
-    // Trigger update once at the end, after all orders are generated
-    if (orders.length > 0) {
+
+      // Trigger update once at the end, after all orders are generated
       triggerGameUpdate();
     }
     
