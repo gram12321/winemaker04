@@ -7,7 +7,7 @@ import { getFermentationMethodInfo, getFermentationTemperatureInfo, Fermentation
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatCurrency, getCharacteristicDisplayName } from '@/lib/utils/utils';
+import { formatNumber, getCharacteristicDisplayName } from '@/lib/utils/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 
@@ -131,7 +131,7 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
       options: Object.entries(methodInfo).map(([method, info]) => ({
         value: method,
         label: method,
-        description: `${info.description} - ${info.effects} (${info.costPenalty > 0 ? `+${formatCurrency(info.costPenalty)}` : 'No cost'}) | ${info.weeklyEffects}`
+        description: `${info.description} - ${info.effects} (${info.costPenalty > 0 ? `+${formatNumber(info.costPenalty, { currency: true })}` : 'No cost'}) | ${info.weeklyEffects}`
       })),
       required: true,
       tooltip: `Choose fermentation method. Each method affects setup work, cost, and weekly characteristic development.
@@ -148,7 +148,7 @@ Work Multiplier: ${methodInfo[options.method]?.workMultiplier || 1}x`
       options: Object.entries(temperatureInfo).map(([temperature, info]) => ({
         value: temperature,
         label: temperature,
-        description: `${info.description} - ${info.effects} (${info.costModifier > 0 ? `+${formatCurrency(info.costModifier)}` : 'No cost'}) | ${info.weeklyEffects}`
+        description: `${info.description} - ${info.effects} (${info.costModifier > 0 ? `+${formatNumber(info.costModifier, { currency: true })}` : 'No cost'}) | ${info.weeklyEffects}`
       })),
       required: true,
       tooltip: `Choose temperature control. Temperature affects weekly characteristic development during fermentation.

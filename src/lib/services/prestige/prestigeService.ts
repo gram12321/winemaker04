@@ -3,7 +3,7 @@ import { loadVineyards, saveVineyard } from '../../database/activities/vineyardD
 import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail } from '../../utils/calculator';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
-import { calculateAbsoluteWeeks, formatCurrency, formatNumber } from '../../utils/utils';
+import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
 import { getMaxLandValue } from '../wine/winescore/grapeQualityCalculation';
@@ -791,7 +791,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
     }
     
     if (event.type === 'vineyard_land' && metadata.vineyardName && (metadata.totalValue !== undefined || metadata.landValuePerHectare !== undefined)) {
-      const lvh = formatCurrency(Number(metadata.landValuePerHectare ?? 0));
+      const lvh = formatNumber(Number(metadata.landValuePerHectare ?? 0), { currency: true });
       const landBase01 = Number(metadata.landBase01 ?? 0);
       const landWithSuitability01 = Number(metadata.landWithSuitability01 ?? 0);
       const suitAdj = Number(metadata.landWithSuitability01 ?? 0);
@@ -802,7 +802,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
       return {
         title: `Land Value: ${metadata.vineyardName} (${lvh}/ha)`,
         titleBase: 'Land Value',
-        amountText: `(Total ${formatCurrency(totalValue)})`,
+        amountText: `(Total ${formatNumber(totalValue, { currency: true })})`,
         calculationData: {
           type: 'vineyard_land',
           vineyardName: metadata.vineyardName,

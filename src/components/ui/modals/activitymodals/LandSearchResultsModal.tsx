@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { VineyardPurchaseOption } from '@/lib/services';
-import { formatCurrency, getFlagIcon, getBadgeColorClasses, formatNumber } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getBadgeColorClasses } from '@/lib/utils';
 import { Button, Badge } from '@/components/ui';
 import { X } from 'lucide-react';
 import { purchaseVineyard } from '@/lib/services';
@@ -145,10 +145,10 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                             <div className="text-white">{formatNumber(property.hectares)} ha</div>
 
                             <div className="text-gray-400">Price/ha:</div>
-                            <div className="text-white">{formatCurrency(property.landValue)}/ha</div>
+                            <div className="text-white">{formatNumber(property.landValue, { currency: true })}/ha</div>
 
                             <div className="text-gray-400">Total Price:</div>
-                            <div className={`${canAfford ? 'text-green-400' : 'text-red-400'} font-medium`}>{formatCurrency(property.totalPrice)}</div>
+                            <div className={`${canAfford ? 'text-green-400' : 'text-red-400'} font-medium`}>{formatNumber(property.totalPrice, { currency: true })}</div>
                           </div>
 
                           {property.soil.length > 0 && (
@@ -204,7 +204,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Land Value:</span>
-                        <span className="text-white">{formatCurrency(selectedProperty.landValue)} per hectare</span>
+                        <span className="text-white">{formatNumber(selectedProperty.landValue, { currency: true })} per hectare</span>
                       </div>
                     </div>
                   </div>
@@ -277,13 +277,13 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                           aria-disabled={!canAfford}
                         >
                           <div className="text-3xl font-bold">
-                            {formatCurrency(selectedProperty.totalPrice)}
+                            {formatNumber(selectedProperty.totalPrice, { currency: true })}
                           </div>
                           <div className={`text-sm mt-2 ${canAfford ? 'text-green-100' : 'text-gray-200'}`}>
                             Total purchase price for {selectedProperty.hectares} hectares
                           </div>
                           <div className={`text-xs mt-1 ${canAfford ? 'text-green-200' : 'text-gray-300'}`}>
-                            {formatCurrency(selectedProperty.landValue)} per hectare
+                            {formatNumber(selectedProperty.landValue, { currency: true })} per hectare
                           </div>
                         </button>
                       );
@@ -294,7 +294,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                   {(gameState.money || 0) < selectedProperty.totalPrice && (
                     <div className="pt-2">
                       <p className="text-xs text-red-400 text-center">
-                        Need {formatCurrency(selectedProperty.totalPrice - (gameState.money || 0))} more
+                        Need {formatNumber(selectedProperty.totalPrice - (gameState.money || 0), { currency: true })} more
                       </p>
                     </div>
                   )}

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
 import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine } from 'lucide-react';
-import { formatGameDateFromObject, formatCurrency, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
+import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
@@ -153,7 +153,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground">Current Money</p>
-                  <p className="text-lg font-bold">{formatCurrency(gameState.money || 0, 0, (gameState.money || 0) >= 1000)}</p>
+                  <p className="text-lg font-bold">{formatNumber(gameState.money || 0, { currency: true, decimals: 0, compact: (gameState.money || 0) >= 1000 })}</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                   💰
@@ -167,7 +167,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground">Prestige</p>
-                  <p className="text-lg font-bold">{formatCurrency(gameState.prestige || 1, 1, (gameState.prestige || 1) >= 1000).replace('€', '')}</p>
+                  <p className="text-lg font-bold">{formatNumber(gameState.prestige || 1, { compact: (gameState.prestige || 1) >= 1000, decimals: 1 })}</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                   <Trophy className="h-3.5 w-3.5 text-purple-600" />
@@ -181,7 +181,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-muted-foreground">Avg/Week</p>
-                  <p className="text-lg font-bold">{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</p>
+                  <p className="text-lg font-bold">{formatNumber(avgMoneyPerWeek, { currency: true, decimals: 0, compact: avgMoneyPerWeek >= 1000 })}</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                   <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
@@ -208,15 +208,15 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
         {/* Main Stats Grid - Mobile (2x2 grid) */}
         <div className="lg:hidden grid grid-cols-2 gap-3">
           <div className="bg-white p-3 rounded-lg shadow">
-            <div className="text-base font-bold text-gray-900">{formatCurrency(gameState.money || 0, 0, (gameState.money || 0) >= 1000)}</div>
+            <div className="text-base font-bold text-gray-900">{formatNumber(gameState.money || 0, { currency: true, decimals: 0, compact: (gameState.money || 0) >= 1000 })}</div>
             <div className="text-xs text-gray-500">Current Money</div>
           </div>
           <div className="bg-white p-3 rounded-lg shadow">
-            <div className="text-base font-bold text-purple-600">{formatCurrency(gameState.prestige || 1, 1, (gameState.prestige || 1) >= 1000).replace('€', '')}</div>
+            <div className="text-base font-bold text-purple-600">{formatNumber(gameState.prestige || 1, { compact: (gameState.prestige || 1) >= 1000, decimals: 1 })}</div>
             <div className="text-xs text-gray-500">Prestige</div>
           </div>
           <div className="bg-white p-3 rounded-lg shadow">
-            <div className="text-base font-bold text-blue-600">{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</div>
+            <div className="text-base font-bold text-blue-600">{formatNumber(avgMoneyPerWeek, { currency: true, decimals: 0, compact: avgMoneyPerWeek >= 1000 })}</div>
             <div className="text-xs text-gray-500">Avg/Week</div>
           </div>
           <div className="bg-white p-3 rounded-lg shadow">
@@ -241,7 +241,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Cash Money:</span>
-                  <span className="text-sm font-semibold">{formatCurrency(gameState.money || 0, 2, (gameState.money || 0) >= 1000)}</span>
+                  <span className="text-sm font-semibold">{formatNumber(gameState.money || 0, { currency: true, decimals: 2, compact: (gameState.money || 0) >= 1000 })}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Founded:</span>
@@ -257,7 +257,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Average per Week:</span>
-                  <span>{formatCurrency(avgMoneyPerWeek, 0, avgMoneyPerWeek >= 1000)}</span>
+                  <span>{formatNumber(avgMoneyPerWeek, { currency: true, decimals: 0, compact: avgMoneyPerWeek >= 1000 })}</span>
                 </div>
               </div>
             </CardContent>
@@ -325,7 +325,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Cellar Value:</span>
-                  <span className="text-sm font-semibold">{formatCurrency(cellarStats.totalWineValue, 0, cellarStats.totalWineValue >= 1000)}</span>
+                  <span className="text-sm font-semibold">{formatNumber(cellarStats.totalWineValue, { currency: true, decimals: 0, compact: cellarStats.totalWineValue >= 1000 })}</span>
                 </div>
                 <div className="border-t pt-1.5 mt-1.5">
                   <div className="flex justify-between items-center">
@@ -334,7 +334,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-muted-foreground text-xs">Aged Wine Value:</span>
-                    <span className="text-xs font-semibold text-amber-600">{formatCurrency(cellarStats.agedWineValue, 0, cellarStats.agedWineValue >= 1000)}</span>
+                    <span className="text-xs font-semibold text-amber-600">{formatNumber(cellarStats.agedWineValue, { currency: true, decimals: 0, compact: cellarStats.agedWineValue >= 1000 })}</span>
                   </div>
                 </div>
               </div>

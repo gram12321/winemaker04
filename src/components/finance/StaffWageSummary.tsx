@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui';
-import { formatCurrency } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { getAllStaff, calculateTotalWeeklyWages, calculateTotalSeasonalWages, calculateTotalYearlyWages } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
 import { Users } from 'lucide-react';
@@ -39,19 +39,19 @@ export function StaffWageSummary() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Per Week</span>
-              <span className="font-medium text-gray-900">{formatCurrency(weeklyWages)}</span>
+              <span className="font-medium text-gray-900">{formatNumber(weeklyWages, { currency: true })}</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Per Season (12 weeks)</span>
-              <span className="font-medium text-gray-900">{formatCurrency(seasonalWages)}</span>
+              <span className="font-medium text-gray-900">{formatNumber(seasonalWages, { currency: true })}</span>
             </div>
             
             <hr className="border-gray-300" />
             
             <div className="flex justify-between text-sm">
               <span className="text-gray-700 font-medium">Per Year (4 seasons)</span>
-              <span className="font-bold text-gray-900">{formatCurrency(yearlyWages)}</span>
+              <span className="font-bold text-gray-900">{formatNumber(yearlyWages, { currency: true })}</span>
             </div>
           </div>
         </div>
@@ -74,8 +74,8 @@ export function StaffWageSummary() {
                   <div className="text-xs text-gray-500">{member.nationality}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium text-gray-900">{formatCurrency(member.wage)}/wk</div>
-                  <div className="text-xs text-gray-500">{formatCurrency(member.wage * 12)}/season</div>
+                  <div className="font-medium text-gray-900">{formatNumber(member.wage, { currency: true })}/wk</div>
+                  <div className="text-xs text-gray-500">{formatNumber(member.wage * 12, { currency: true })}/season</div>
                 </div>
               </div>
             ))}

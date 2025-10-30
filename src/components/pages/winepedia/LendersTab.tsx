@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from '@/components/ui';
 import { Lender } from '@/lib/types/types';
 import { loadLenders } from '@/lib/database/core/lendersDB';
-import { formatCurrency, formatPercent, getLenderTypeColorClass, getColorClass } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getLenderTypeColorClass, getColorClass } from '@/lib/utils/utils';
 
 export function LendersTab() {
   const [lenders, setLenders] = useState<Lender[]>([]);
@@ -193,8 +193,8 @@ export function LendersTab() {
                     <TableCell>{formatRiskTolerance(lender.riskTolerance)}</TableCell>
                     <TableCell>{formatPercent(lender.flexibility, 1, true)}</TableCell>
                     <TableCell>{formatPercent(lender.marketPresence, 1, true)}</TableCell>
-                    <TableCell>{formatCurrency(lender.minLoanAmount)}</TableCell>
-                    <TableCell>{formatCurrency(lender.maxLoanAmount)}</TableCell>
+                    <TableCell>{formatNumber(lender.minLoanAmount, { currency: true })}</TableCell>
+                    <TableCell>{formatNumber(lender.maxLoanAmount, { currency: true })}</TableCell>
                     <TableCell>
                       <div className="text-sm">
                         {Math.round(lender.minDurationSeasons / 4 * 10) / 10} - {Math.round(lender.maxDurationSeasons / 4 * 10) / 10} years

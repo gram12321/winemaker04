@@ -4,7 +4,7 @@ import { Loan } from '@/lib/types/types';
 import { loadActiveLoans } from '@/lib/database/core/loansDB';
 import { getGameState, getAvailableLenders, calculateLenderAvailability } from '@/lib/services';
 import { loadLenders } from '@/lib/database/core/lendersDB';
-import { formatCurrency, formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
+import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
 import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull } from '@/lib/services/finance/loanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
 import { LenderSearchOptionsModal } from '@/components/ui';
@@ -172,10 +172,10 @@ export default function LoansView() {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{formatCurrency(loan.principalAmount)}</TableCell>
+                      <TableCell>{formatNumber(loan.principalAmount, { currency: true })}</TableCell>
                       <TableCell>
                         <div className="text-orange-600 font-medium">
-                          {formatCurrency(loan.originationFee)}
+                          {formatNumber(loan.originationFee, { currency: true })}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -186,18 +186,18 @@ export default function LoansView() {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{formatCurrency(loan.seasonalPayment)}</TableCell>
+                      <TableCell>{formatNumber(loan.seasonalPayment, { currency: true })}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium">{formatCurrency(totalInterest)}</div>
+                          <div className="font-medium">{formatNumber(totalInterest, { currency: true })}</div>
                           <div className="text-gray-500">
-                            {formatCurrency(remainingInterest)} remaining
+                            {formatNumber(remainingInterest, { currency: true })} remaining
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium text-red-600">{formatCurrency(totalExpenses)}</div>
+                          <div className="font-medium text-red-600">{formatNumber(totalExpenses, { currency: true })}</div>
                           <div className="text-gray-500">
                             Fee + Interest
                           </div>
@@ -205,7 +205,7 @@ export default function LoansView() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div>{formatCurrency(loan.remainingBalance)}</div>
+                          <div>{formatNumber(loan.remainingBalance, { currency: true })}</div>
                           <div className="text-gray-500">
                             {Math.round(loan.seasonsRemaining / 4 * 10) / 10} of {Math.round(loan.totalSeasons / 4 * 10) / 10} years
                           </div>

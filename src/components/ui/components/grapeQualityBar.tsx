@@ -3,7 +3,7 @@ import { Vineyard } from '@/lib/types/types';
 import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory, getBadgeColorClasses } from '@/lib/utils';
 import { getRegionalPriceRange } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 // Grape quality factor types for wine value calculation
 export type GrapeQualityFactorType =
@@ -50,6 +50,147 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
     return getColorClass(displayValue);
   };
 
+  // Build tooltip content JSX
+  const buildTooltipContent = () => {
+    return (
+      <div className={tooltipStyles.text}>
+        <TooltipSection title={`${label} Details`}>
+          <TooltipRow 
+            label="Current Value:" 
+            value={formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
+            valueRating={displayValue}
+          />
+          <TooltipRow 
+            label="Category:" 
+            value={getColorCategory(displayValue)}
+            badge
+            valueRating={displayValue}
+          />
+          
+          {rawValue !== undefined && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <TooltipRow 
+                label="Raw Value:" 
+                value={
+                  factorType === 'landValue' && typeof rawValue === 'number' 
+                    ? `€${formatNumber(rawValue, { decimals: 0, forceDecimals: false })}/hectare`
+                    : String(rawValue)
+                }
+              />
+            </div>
+          )}
+
+          {/* Factor-specific explanations */}
+          {factorType === 'landValue' && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">💰 Land Value Factor</div>
+              <div className="text-xs text-blue-300 font-medium mb-1">DIRECT INFLUENCE</div>
+              <div className="text-xs text-gray-300 mb-1">Normalized land value (logarithmic scale)</div>
+              <TooltipRow label="Weight:" value="60% of wine value index" />
+              {vineyard && (
+                <div className="text-xs text-gray-300 mt-1">
+                  Regional Range: €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })}/hectare
+                </div>
+              )}
+            </div>
+          )}
+
+          {factorType === 'vineyardPrestige' && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">🌟 Vineyard Prestige</div>
+              <div className="text-xs text-blue-300 font-medium mb-1">DIRECT INFLUENCE</div>
+              <div className="text-xs text-gray-300 mb-1">Combined prestige from all sources</div>
+              <TooltipRow label="Weight:" value="40% of wine value index" />
+            </div>
+          )}
+
+          {factorType === 'regionalPrestige' && vineyard && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">🏛️ Regional Prestige</div>
+              <div className="text-xs text-green-300 font-medium mb-1">INDIRECT INFLUENCE - Environmental Factor</div>
+              <TooltipRow label="Region:" value={`${vineyard.region}, ${vineyard.country}`} />
+              <div className="text-xs text-gray-300 mb-1">Regional prestige factor for grape quality</div>
+              <div className="text-xs text-gray-300 mt-2">
+                <strong>Impact:</strong> These factors are permanent and represent the natural advantages of your vineyard's location. Premium regions like Bordeaux, Tuscany, or Napa Valley have higher regional prestige.
+              </div>
+            </div>
+          )}
+
+          {factorType === 'altitudeRating' && vineyard && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">⛰️ Altitude Rating</div>
+              <div className="text-xs text-green-300 font-medium mb-1">INDIRECT INFLUENCE - Environmental Factor</div>
+              <TooltipRow label="Altitude:" value={`${vineyard.altitude}m`} />
+              {(() => {
+                const countryData = REGION_ALTITUDE_RANGES[vineyard.country as keyof typeof REGION_ALTITUDE_RANGES];
+                const altitudeRange = countryData?.[vineyard.region as keyof typeof countryData];
+                if (altitudeRange) {
+                  return <TooltipRow label="Regional Range:" value={`${altitudeRange[0]}m - ${altitudeRange[1]}m`} />;
+                }
+                return null;
+              })()}
+              <div className="text-xs text-gray-300 mt-1">Optimal Range: Based on {vineyard.region} conditions</div>
+            </div>
+          )}
+
+          {factorType === 'aspectRating' && vineyard && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">🧭 Aspect Rating</div>
+              <div className="text-xs text-green-300 font-medium mb-1">INDIRECT INFLUENCE - Environmental Factor</div>
+              <TooltipRow label="Aspect:" value={vineyard.aspect} />
+              {(() => {
+                const countryData = REGION_ASPECT_RATINGS[vineyard.country as keyof typeof REGION_ASPECT_RATINGS];
+                const aspectRatings = countryData?.[vineyard.region as keyof typeof countryData];
+                if (aspectRatings) {
+                  const values = Object.values(aspectRatings) as number[];
+                  const minRating = Math.min(...values);
+                  const maxRating = Math.max(...values);
+                  return <TooltipRow label="Regional Range:" value={`${formatNumber(minRating, { decimals: 2, forceDecimals: true })} - ${formatNumber(maxRating, { decimals: 2, forceDecimals: true })}`} />;
+                }
+                return null;
+              })()}
+              <div className="text-xs text-gray-300 mt-1">Rating: Based on {vineyard.region} conditions</div>
+            </div>
+          )}
+
+          {factorType === 'grapeSuitability' && vineyard?.grape && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">🍇 Grape Suitability</div>
+              <div className="text-xs text-green-300 font-medium mb-1">INDIRECT INFLUENCE - Environmental Factor</div>
+              <TooltipRow label="Grape:" value={vineyard.grape} />
+              <div className="text-xs text-gray-300 mb-1">Suitability: How well this grape fits the region</div>
+              <div className="text-xs text-gray-300 mt-2">
+                <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). Your {formatNumber(displayValue * 100, { decimals: 0, forceDecimals: true })}% suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
+              </div>
+            </div>
+          )}
+
+          {factorType === 'overgrowthPenalty' && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">🌿 Overgrowth Penalty</div>
+              <div className="text-xs text-orange-300 font-medium mb-1">GRAPE QUALITY MODIFIER</div>
+              <div className="text-xs text-gray-300 mb-1">Penalty for vineyard neglect</div>
+              <div className="text-xs text-gray-300">Values below 1.0 indicate quality reduction from overgrowth</div>
+            </div>
+          )}
+
+          {factorType === 'densityPenalty' && vineyard && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="text-xs font-medium text-gray-300 mb-1">🌳 Density Penalty</div>
+              <div className="text-xs text-orange-300 font-medium mb-1">GRAPE QUALITY MODIFIER</div>
+              <TooltipRow label="Vine Density:" value={`${vineyard.density || 0} vines/ha`} />
+              <div className="text-xs text-gray-300 mb-1">Optimal: 1500 vines/ha (no penalty)</div>
+              <div className="text-xs text-gray-300 mb-1">Max Penalty: 15000 vines/ha (50% reduction)</div>
+              <div className="text-xs text-gray-300 mt-2">
+                <strong>Density Impact:</strong> Lower density means higher grape quality (more resources per vine). Progressively reduces quality as density increases. Also affects vineyard prestige.
+              </div>
+            </div>
+          )}
+        </TooltipSection>
+      </div>
+    );
+  };
+
   return (
     <div className={`flex flex-col sm:flex-row sm:items-center py-4 px-2 border-b last:border-b-0 border-gray-200 gap-3 sm:gap-0 ${className}`}>
       {/* Label */}
@@ -67,145 +208,28 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help">
-                {/* Background bar */}
-                <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
+              <MobileDialogWrapper 
+                content={buildTooltipContent()} 
+                title={`${label} Details`}
+                triggerClassName="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help"
+              >
+                <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help">
+                  {/* Background bar */}
+                  <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
 
-                {/* Grape quality range visualization - show as gradient from poor to excellent */}
-                <div className="absolute inset-0 bg-gradient-to-r from-red-200 via-yellow-200 to-green-200 rounded-full"></div>
+                  {/* Grape quality range visualization - show as gradient from poor to excellent */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-200 via-yellow-200 to-green-200 rounded-full"></div>
 
-                {/* Value marker */}
-                <div
-                  className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
-                  style={{ left: `${displayValue * 100}%` }}
-                ></div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="max-w-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-medium">Current Value: {formatNumber(displayValue, { decimals: 2, forceDecimals: true })}</p>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getBadgeColorClasses(displayValue).bg} ${getBadgeColorClasses(displayValue).text}`}>
-                    {getColorCategory(displayValue)}
-                  </span>
+                  {/* Value marker */}
+                  <div
+                    className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
+                    style={{ left: `${displayValue * 100}%` }}
+                  ></div>
                 </div>
-                
-                {rawValue !== undefined && (
-                  <p className="text-xs mb-2 text-gray-300">
-                    {factorType === 'landValue' && typeof rawValue === 'number' 
-                      ? `Raw Value: €${formatNumber(rawValue, { decimals: 0, forceDecimals: false })}/hectare`
-                      : `Raw Value: ${rawValue}`
-                    }
-                  </p>
-                )}
-
-                {/* Factor-specific explanations */}
-                {factorType === 'landValue' && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">💰 Land Value Factor</p>
-                    <p className="text-xs text-blue-300 font-medium">DIRECT INFLUENCE</p>
-                    <p className="text-xs text-gray-300">Normalized land value (logarithmic scale)</p>
-                    <p className="text-xs text-blue-300">Weight: 60% of wine value index</p>
-                    {vineyard && (
-                      <p className="text-xs text-gray-300">
-                        Regional Range: €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })}/hectare
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {factorType === 'vineyardPrestige' && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">🌟 Vineyard Prestige</p>
-                    <p className="text-xs text-blue-300 font-medium">DIRECT INFLUENCE</p>
-                    <p className="text-xs text-gray-300">Combined prestige from all sources</p>
-                    <p className="text-xs text-purple-300">Weight: 40% of wine value index</p>
-                  </div>
-                )}
-
-                {factorType === 'regionalPrestige' && vineyard && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">🏛️ Regional Prestige</p>
-                    <p className="text-xs text-green-300 font-medium">INDIRECT INFLUENCE - Environmental Factor</p>
-                    <p className="text-xs text-gray-300">Region: {vineyard.region}, {vineyard.country}</p>
-                    <p className="text-xs text-gray-300">Regional prestige factor for grape quality</p>
-                    <p className="text-xs text-gray-300 mt-2">
-                      <strong>Impact:</strong> These factors are permanent and represent the natural advantages of your vineyard's location. Premium regions like Bordeaux, Tuscany, or Napa Valley have higher regional prestige.
-                    </p>
-                  </div>
-                )}
-
-                {factorType === 'altitudeRating' && vineyard && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">⛰️ Altitude Rating</p>
-                    <p className="text-xs text-green-300 font-medium">INDIRECT INFLUENCE - Environmental Factor</p>
-                    <p className="text-xs text-gray-300">Altitude: {vineyard.altitude}m</p>
-                    {(() => {
-                      const countryData = REGION_ALTITUDE_RANGES[vineyard.country as keyof typeof REGION_ALTITUDE_RANGES];
-                      const altitudeRange = countryData?.[vineyard.region as keyof typeof countryData];
-                      if (altitudeRange) {
-                        return <p className="text-xs text-green-300">Regional Range: {altitudeRange[0]}m - {altitudeRange[1]}m</p>;
-                      }
-                      return null;
-                    })()}
-                    <p className="text-xs text-gray-300">Optimal Range: Based on {vineyard.region} conditions</p>
-                  </div>
-                )}
-
-                {factorType === 'aspectRating' && vineyard && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">🧭 Aspect Rating</p>
-                    <p className="text-xs text-green-300 font-medium">INDIRECT INFLUENCE - Environmental Factor</p>
-                    <p className="text-xs text-gray-300">Aspect: {vineyard.aspect}</p>
-                    {(() => {
-                      const countryData = REGION_ASPECT_RATINGS[vineyard.country as keyof typeof REGION_ASPECT_RATINGS];
-                      const aspectRatings = countryData?.[vineyard.region as keyof typeof countryData];
-                      if (aspectRatings) {
-                        const values = Object.values(aspectRatings) as number[];
-                        const minRating = Math.min(...values);
-                        const maxRating = Math.max(...values);
-                        return <p className="text-xs text-green-300">Regional Range: {formatNumber(minRating, { decimals: 2, forceDecimals: true })} - {formatNumber(maxRating, { decimals: 2, forceDecimals: true })}</p>;
-                      }
-                      return null;
-                    })()}
-                    <p className="text-xs text-gray-300">Rating: Based on {vineyard.region} conditions</p>
-                  </div>
-                )}
-
-                {factorType === 'grapeSuitability' && vineyard?.grape && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">🍇 Grape Suitability</p>
-                    <p className="text-xs text-green-300 font-medium">INDIRECT INFLUENCE - Environmental Factor</p>
-                    <p className="text-xs text-gray-300">Grape: {vineyard.grape}</p>
-                    <p className="text-xs text-gray-300">Suitability: How well this grape fits the region</p>
-                    <p className="text-xs text-gray-300 mt-2">
-                      <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). Your {formatNumber(displayValue * 100, { decimals: 0, forceDecimals: true })}% suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
-                    </p>
-                  </div>
-                )}
-
-                {factorType === 'overgrowthPenalty' && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">🌿 Overgrowth Penalty</p>
-                    <p className="text-xs text-orange-300 font-medium">GRAPE QUALITY MODIFIER</p>
-                    <p className="text-xs text-gray-300">Penalty for vineyard neglect</p>
-                    <p className="text-xs text-gray-300">Values below 1.0 indicate quality reduction from overgrowth</p>
-                  </div>
-                )}
-
-                {factorType === 'densityPenalty' && vineyard && (
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">🌳 Density Penalty</p>
-                    <p className="text-xs text-orange-300 font-medium">GRAPE QUALITY MODIFIER</p>
-                    <p className="text-xs text-gray-300">Vine Density: {vineyard.density || 0} vines/ha</p>
-                    <p className="text-xs text-gray-300">Optimal: 1500 vines/ha (no penalty)</p>
-                    <p className="text-xs text-gray-300">Max Penalty: 15000 vines/ha (50% reduction)</p>
-                    <p className="text-xs text-gray-300 mt-2">
-                      <strong>Density Impact:</strong> Lower density means higher grape quality (more resources per vine). Progressively reduces quality as density increases. Also affects vineyard prestige.
-                    </p>
-                  </div>
-                )}
-              </div>
+              </MobileDialogWrapper>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+              {buildTooltipContent()}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

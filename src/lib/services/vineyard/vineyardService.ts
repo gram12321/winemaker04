@@ -6,7 +6,8 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
 import { calculateLandValue, calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
-import { getRandomFromArray, formatCurrency } from '../../utils';
+import { getRandomFromArray } from '../../utils';
+import { formatNumber } from '../../utils/utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY, GRAPE_CONST } from '../../constants';
 import { addTransaction, getGameState } from '../index';
 import { VineyardPurchaseOption } from './landSearchService';
@@ -237,14 +238,14 @@ export async function sellVineyard(
     if (proceeds > 0) {
       await addTransaction(
         proceeds,
-        `Voluntary sale of ${vineyard.name} (${formatCurrency(grossValue)} value, ${Math.round(penaltyRate * 100)}% fee)`,
+        `Voluntary sale of ${vineyard.name} (${formatNumber(grossValue, { currency: true })} value, ${Math.round(penaltyRate * 100)}% fee)`,
         TRANSACTION_CATEGORIES.VINEYARD_SALE,
         false
       );
     }
 
     await notificationService.addMessage(
-      `Sold ${vineyard.name} for ${formatCurrency(proceeds)} (after ${Math.round(penaltyRate * 100)}% fee).`,
+      `Sold ${vineyard.name} for ${formatNumber(proceeds, { currency: true })} (after ${Math.round(penaltyRate * 100)}% fee).`,
       'vineyardService.sellVineyard',
       'Vineyard Sale',
       NotificationCategory.FINANCE
@@ -395,7 +396,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     const gameState = getGameState();
     const currentMoney = gameState.money || 0;
     if (currentMoney < option.totalPrice) {
-      const errorMsg = `Insufficient funds. You have ${formatCurrency(currentMoney)} but need ${formatCurrency(option.totalPrice)}.`;
+      const errorMsg = `Insufficient funds. You have ${formatNumber(currentMoney, { currency: true })} but need ${formatNumber(option.totalPrice, { currency: true })}.`;
       await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', NotificationCategory.FINANCE);
       return { 
         success: false, 
@@ -432,7 +433,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     triggerGameUpdate();
     
     // Add success notification
-    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatCurrency(option.totalPrice)}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', NotificationCategory.FINANCE);
+    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatNumber(option.totalPrice, { currency: true })}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', NotificationCategory.FINANCE);
     
     return { success: true, vineyard };
   } catch (error) {

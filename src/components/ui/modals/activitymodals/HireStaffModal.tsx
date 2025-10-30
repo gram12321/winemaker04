@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { createStaff, addStaff, getRandomFirstName, getRandomLastName, getRandomNationality, generateRandomSkills, calculateWage } from '@/lib/services';
 import { Nationality, StaffSkills } from '@/lib/types/types';
-import { formatCurrency, getColorClass } from '@/lib/utils';
+import { formatNumber, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
@@ -230,7 +230,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
             {/* Wage Preview */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-2">Weekly Wage</h3>
-              <div className={`text-2xl font-bold ${getWageColorClass(previewWage, 'weekly')}`}>{formatCurrency(previewWage)}</div>
+              <div className={`text-2xl font-bold ${getWageColorClass(previewWage, 'weekly')}`}>{formatNumber(previewWage, { currency: true })}</div>
               <p className="text-xs text-gray-400 mt-1">
                 Wage is calculated based on average skill level. Paid seasonally (12 weeks).
               </p>
@@ -252,7 +252,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
             className="bg-green-600 hover:bg-green-700 text-white"
             disabled={!firstName.trim() || !lastName.trim()}
           >
-            Hire {firstName.trim() ? firstName : 'Staff'} ({formatCurrency(previewWage)}/wk)
+            Hire {firstName.trim() ? firstName : 'Staff'} ({formatNumber(previewWage, { currency: true })}/wk)
           </Button>
         </div>
       </div>

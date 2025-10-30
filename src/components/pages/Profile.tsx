@@ -5,7 +5,7 @@ import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-reac
 import { authService, companyService } from '@/lib/services';
 import { type AuthUser, type Company, supabase } from '@/lib/database';
 import type { CompanyStats } from '@/lib/services';
-import { formatNumber, formatCurrency, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
+import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 // Avatar options
@@ -433,13 +433,13 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                   <Card className="bg-primary/5">
                     <CardContent className="p-4 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Total Money</p>
-                      <p className="text-xl font-semibold">{formatCurrency(companyStats.totalGold, 0, companyStats.totalGold >= 1000)}</p>
+                      <p className="text-xl font-semibold">{formatNumber(companyStats.totalGold, { currency: true, decimals: 0, compact: companyStats.totalGold >= 1000 })}</p>
                     </CardContent>
                   </Card>
                   <Card className="bg-primary/5">
                     <CardContent className="p-4 text-center">
                       <p className="text-xs text-muted-foreground mb-1">Total Value</p>
-                      <p className="text-xl font-semibold">{formatCurrency(companyStats.totalValue, 0, companyStats.totalValue >= 1000)}</p>
+                      <p className="text-xl font-semibold">{formatNumber(companyStats.totalValue, { currency: true, decimals: 0, compact: companyStats.totalValue >= 1000 })}</p>
                     </CardContent>
                   </Card>
                 </div>

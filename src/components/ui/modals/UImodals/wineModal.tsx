@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../shadCN/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Badge } from '../../shadCN/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../../shadCN/tooltip';
 import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
@@ -180,62 +180,176 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="py-3 text-sm space-y-3">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex justify-between cursor-help">
-                              <span className="text-muted-foreground">Wine Score:</span>
-                              <div className="text-right">
-                                <div className={`font-medium ${getColorClass((currentGrapeQuality + currentBalance) / 2)}`}>
-                                  {formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Wine Score:</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <MobileDialogWrapper 
+                                content={
+                                  <div className={tooltipStyles.text}>
+                                    <TooltipSection title="Wine Score Details">
+                                      <TooltipRow 
+                                        label="Overall Score:" 
+                                        value={formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
+                                        valueRating={(currentGrapeQuality + currentBalance) / 2}
+                                      />
+                                      <TooltipRow 
+                                        label="Category:" 
+                                        value={getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}
+                                      />
+                                      <div className="mt-2 pt-2 border-t border-gray-600">
+                                        <div className="text-xs text-gray-300">{getGrapeQualityDescription((currentGrapeQuality + currentBalance) / 2)}</div>
+                                      </div>
+                                    </TooltipSection>
+                                  </div>
+                                } 
+                                title="Wine Score Details"
+                                triggerClassName="text-right cursor-help"
+                              >
+                                <div className="text-right cursor-help">
+                                  <div className={`font-medium ${getColorClass((currentGrapeQuality + currentBalance) / 2)}`}>
+                                    {formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}</div>
                                 </div>
-                                <div className="text-xs text-gray-500">{getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}</div>
+                              </MobileDialogWrapper>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                              <div className={tooltipStyles.text}>
+                                <TooltipSection title="Wine Score Details">
+                                  <TooltipRow 
+                                    label="Overall Score:" 
+                                    value={formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
+                                    valueRating={(currentGrapeQuality + currentBalance) / 2}
+                                  />
+                                  <TooltipRow 
+                                    label="Category:" 
+                                    value={getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}
+                                  />
+                                  <div className="mt-2 pt-2 border-t border-gray-600">
+                                    <div className="text-xs text-gray-300">{getGrapeQualityDescription((currentGrapeQuality + currentBalance) / 2)}</div>
+                                  </div>
+                                </TooltipSection>
                               </div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getGrapeQualityDescription((currentGrapeQuality + currentBalance) / 2)}</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex justify-between cursor-help">
-                              <span className="text-muted-foreground">Balance:</span>
-                              <div className="text-right">
-                                <div className={`font-medium ${getColorClass(currentBalance)}`}>
-                                  {formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Balance:</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <MobileDialogWrapper 
+                                content={
+                                  <div className={tooltipStyles.text}>
+                                    <TooltipSection title="Balance Score Details">
+                                      <TooltipRow 
+                                        label="Balance Score:" 
+                                        value={formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
+                                        valueRating={currentBalance}
+                                      />
+                                      <TooltipRow 
+                                        label="Category:" 
+                                        value={getWineBalanceCategory(currentBalance)}
+                                      />
+                                      <div className="mt-2 pt-2 border-t border-gray-600">
+                                        <div className="text-xs text-gray-300">{getWineBalanceDescription(currentBalance)}</div>
+                                      </div>
+                                    </TooltipSection>
+                                  </div>
+                                } 
+                                title="Balance Score Details"
+                                triggerClassName="text-right cursor-help"
+                              >
+                                <div className="text-right cursor-help">
+                                  <div className={`font-medium ${getColorClass(currentBalance)}`}>
+                                    {formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{getWineBalanceCategory(currentBalance)}</div>
                                 </div>
-                                <div className="text-xs text-gray-500">{getWineBalanceCategory(currentBalance)}</div>
+                              </MobileDialogWrapper>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                              <div className={tooltipStyles.text}>
+                                <TooltipSection title="Balance Score Details">
+                                  <TooltipRow 
+                                    label="Balance Score:" 
+                                    value={formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
+                                    valueRating={currentBalance}
+                                  />
+                                  <TooltipRow 
+                                    label="Category:" 
+                                    value={getWineBalanceCategory(currentBalance)}
+                                  />
+                                  <div className="mt-2 pt-2 border-t border-gray-600">
+                                    <div className="text-xs text-gray-300">{getWineBalanceDescription(currentBalance)}</div>
+                                  </div>
+                                </TooltipSection>
                               </div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getWineBalanceDescription(currentBalance)}</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex justify-between cursor-help">
-                              <span className="text-muted-foreground">Grape Quality:</span>
-                              <div className="text-right">
-                                <div className={`font-medium ${getColorClass(currentGrapeQuality)}`}>
-                                  {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Grape Quality:</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <MobileDialogWrapper 
+                                content={
+                                  <div className={tooltipStyles.text}>
+                                    <TooltipSection title="Grape Quality Details">
+                                      <TooltipRow 
+                                        label="Quality Score:" 
+                                        value={formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
+                                        valueRating={currentGrapeQuality}
+                                      />
+                                      <TooltipRow 
+                                        label="Category:" 
+                                        value={getGrapeQualityCategory(currentGrapeQuality)}
+                                      />
+                                      <div className="mt-2 pt-2 border-t border-gray-600">
+                                        <div className="text-xs text-gray-300">{getGrapeQualityDescription(currentGrapeQuality)}</div>
+                                      </div>
+                                    </TooltipSection>
+                                  </div>
+                                } 
+                                title="Grape Quality Details"
+                                triggerClassName="text-right cursor-help"
+                              >
+                                <div className="text-right cursor-help">
+                                  <div className={`font-medium ${getColorClass(currentGrapeQuality)}`}>
+                                    {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{getGrapeQualityCategory(currentGrapeQuality)}</div>
                                 </div>
-                                <div className="text-xs text-gray-500">{getGrapeQualityCategory(currentGrapeQuality)}</div>
+                              </MobileDialogWrapper>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                              <div className={tooltipStyles.text}>
+                                <TooltipSection title="Grape Quality Details">
+                                  <TooltipRow 
+                                    label="Quality Score:" 
+                                    value={formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
+                                    valueRating={currentGrapeQuality}
+                                  />
+                                  <TooltipRow 
+                                    label="Category:" 
+                                    value={getGrapeQualityCategory(currentGrapeQuality)}
+                                  />
+                                  <div className="mt-2 pt-2 border-t border-gray-600">
+                                    <div className="text-xs text-gray-300">{getGrapeQualityDescription(currentGrapeQuality)}</div>
+                                  </div>
+                                </TooltipSection>
                               </div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-xs">
-                            <div className="text-xs">{getGrapeQualityDescription(currentGrapeQuality)}</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </CardContent>
                   </Card>
 

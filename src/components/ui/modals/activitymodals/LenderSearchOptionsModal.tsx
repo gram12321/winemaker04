@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LenderSearchOptions, LenderType, Lender } from '@/lib/types/types';
-import { formatCurrency, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
+import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
 import { Button, Label, Slider, Card, CardContent, CardHeader, CardTitle, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
 import { getGameState, calculateLoanTerms } from '@/lib/services';
@@ -265,9 +265,9 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                       className="w-full"
                     />
                     <div className="flex justify-between text-sm text-gray-400">
-                      <span>{formatCurrency(selectedLender.minLoanAmount)}</span>
-                      <span className="font-medium text-white">{formatCurrency(loanAmount)}</span>
-                      <span>{formatCurrency(selectedLender.maxLoanAmount)}</span>
+                      <span>{formatNumber(selectedLender.minLoanAmount, { currency: true })}</span>
+                      <span className="font-medium text-white">{formatNumber(loanAmount, { currency: true })}</span>
+                      <span>{formatNumber(selectedLender.maxLoanAmount, { currency: true })}</span>
                     </div>
                   </div>
                 </div>
@@ -303,11 +303,11 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-gray-400">Principal Amount:</span>
-                      <div className="font-medium text-lg text-white">{formatCurrency(loanAmount)}</div>
+                      <div className="font-medium text-lg text-white">{formatNumber(loanAmount, { currency: true })}</div>
                     </div>
                     <div>
                       <span className="text-gray-400">Origination Fee:</span>
-                      <div className="font-medium text-lg text-orange-400">{formatCurrency(originationFee)}</div>
+                      <div className="font-medium text-lg text-orange-400">{formatNumber(originationFee, { currency: true })}</div>
                     </div>
                     <div>
                       <span className="text-gray-400">Effective Interest Rate:</span>
@@ -315,15 +315,15 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     </div>
                     <div>
                       <span className="text-gray-400">Seasonal Payment:</span>
-                      <div className="font-medium text-lg text-white">{formatCurrency(seasonalPayment)}</div>
+                      <div className="font-medium text-lg text-white">{formatNumber(seasonalPayment, { currency: true })}</div>
                     </div>
                     <div>
                       <span className="text-gray-400">Total Interest:</span>
-                      <div className="font-medium text-lg text-white">{formatCurrency(totalInterest)}</div>
+                      <div className="font-medium text-lg text-white">{formatNumber(totalInterest, { currency: true })}</div>
                     </div>
                     <div>
                       <span className="text-gray-400">Total Expenses:</span>
-                      <div className="font-medium text-lg text-red-400">{formatCurrency(totalExpenses)}</div>
+                      <div className="font-medium text-lg text-red-400">{formatNumber(totalExpenses, { currency: true })}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -400,7 +400,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     {/* Loan Amount Range */}
                     <div>
                       <label className="block text-sm font-medium text-white mb-2">
-                        Loan Amount Range: {formatCurrency(loanAmountRange[0])} - {formatCurrency(loanAmountRange[1])}
+                        Loan Amount Range: {formatNumber(loanAmountRange[0], { currency: true })} - {formatNumber(loanAmountRange[1], { currency: true })}
                       </label>
                       <DualSlider
                         value={loanAmountRange}
@@ -413,8 +413,8 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                         }}
                       />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>{formatCurrency(LOAN_AMOUNT_RANGES.MIN)}</span>
-                        <span>{formatCurrency(LOAN_AMOUNT_RANGES.MAX)}</span>
+                        <span>{formatNumber(LOAN_AMOUNT_RANGES.MIN, { currency: true })}</span>
+                        <span>{formatNumber(LOAN_AMOUNT_RANGES.MAX, { currency: true })}</span>
                       </div>
                     </div>
 
@@ -483,10 +483,10 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                       <div className="bg-gray-700 rounded-lg p-3 space-y-2">
                         <div className="text-center">
                           <div className="text-sm font-medium text-white">
-                            Amount: {formatCurrency(loanAmountRange[0])} - {formatCurrency(loanAmountRange[1])}
+                            Amount: {formatNumber(loanAmountRange[0], { currency: true })} - {formatNumber(loanAmountRange[1], { currency: true })}
                           </div>
                           <div className="text-xs text-gray-300">
-                            Range: {formatCurrency(loanAmountRange[1] - loanAmountRange[0])}
+                            Range: {formatNumber(loanAmountRange[1] - loanAmountRange[0], { currency: true })}
                           </div>
                         </div>
                         <div className="text-center">
@@ -508,7 +508,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                   <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Search Cost:</span>
-                      <span className="text-white font-medium">{formatCurrency(previewStats.totalCost)}</span>
+                      <span className="text-white font-medium">{formatNumber(previewStats.totalCost, { currency: true })}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Work Required:</span>
@@ -533,7 +533,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Amount Range:</span>
-                      <span className="text-white">{formatCurrency(loanAmountRange[0])} - {formatCurrency(loanAmountRange[1])}</span>
+                      <span className="text-white">{formatNumber(loanAmountRange[0], { currency: true })} - {formatNumber(loanAmountRange[1], { currency: true })}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Duration Range:</span>
@@ -541,7 +541,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Available Funds:</span>
-                      <span className="text-white">{formatCurrency(gameState.money || 0)}</span>
+                      <span className="text-white">{formatNumber(gameState.money || 0, { currency: true })}</span>
                     </div>
                   </div>
                 </div>
@@ -577,7 +577,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
               ? (selectedLender ? 'Processing...' : 'Starting...') 
               : selectedLender 
                 ? 'Accept Adjusted Offer (+50% Work)' 
-                : `Start Search (${formatCurrency(previewStats.totalCost)})`
+                : `Start Search (${formatNumber(previewStats.totalCost, { currency: true })})`
             }
           </Button>
         </div>

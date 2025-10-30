@@ -4,7 +4,7 @@ import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardH
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
 import { companyService, highscoreService, createNewCompany } from '@/lib/services';
 import { type Company, type HighscoreEntry } from '@/lib/database';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatNumber, formatDate } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
 import versionLogContent from '../../../docs/versionlog.md?raw';
@@ -156,7 +156,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                   {idx + 1}. {score.companyName}
                 </span>
                 <span className="font-medium">
-                  {formatCurrency(score.scoreValue, 0)}
+                  {formatNumber(score.scoreValue, { currency: true, decimals: 0 })}
                 </span>
               </div>
             ))}
@@ -220,7 +220,7 @@ export function Login({ onCompanySelected }: LoginProps) {
                                   Week {company.currentWeek}, {company.currentSeason} {company.currentYear}
                                 </p>
                                 <p className="text-xs">
-                                  {formatCurrency(company.money, 0)}
+                                  {formatNumber(company.money, { currency: true, decimals: 0 })}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">

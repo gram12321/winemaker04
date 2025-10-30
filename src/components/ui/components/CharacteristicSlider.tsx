@@ -1,5 +1,5 @@
 // Shared characteristic slider component for winepedia
-import { Tooltip, TooltipContent, TooltipTrigger } from '../shadCN/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 interface CharacteristicSliderProps {
   value: number;
@@ -19,18 +19,42 @@ export function CharacteristicSlider({
   return (
     <div className={`flex items-center gap-3 py-1 ${className}`}>
       <div className="w-24 flex items-center gap-2 text-xs">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <img 
-              src={icon} 
-              alt={`${label} icon`} 
-              className="w-4 h-4 opacity-80 cursor-help"
-            />
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{label}</p>
-          </TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <MobileDialogWrapper 
+                content={
+                  <div className={tooltipStyles.text}>
+                    <TooltipSection title={`${label} Information`}>
+                      <TooltipRow 
+                        label="Characteristic:" 
+                        value={label}
+                      />
+                    </TooltipSection>
+                  </div>
+                } 
+                title={`${label} Information`}
+                triggerClassName="cursor-help"
+              >
+                <img 
+                  src={icon} 
+                  alt={`${label} icon`} 
+                  className="w-4 h-4 opacity-80 cursor-help"
+                />
+              </MobileDialogWrapper>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+              <div className={tooltipStyles.text}>
+                <TooltipSection title={`${label} Information`}>
+                  <TooltipRow 
+                    label="Characteristic:" 
+                    value={label}
+                  />
+                </TooltipSection>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <span className="font-medium capitalize">{label}</span>
       </div>
       <div className="flex-1">

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork } from '@/lib/services';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
-import { formatCurrency } from '@/lib/utils';
 import { formatNumber } from '@/lib/utils/utils';
 import { Button } from '@/components/ui';
 import * as SliderPrimitive from '@radix-ui/react-slider';
@@ -602,7 +601,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Search Cost:</span>
-                    <span className="text-white font-medium">{formatCurrency(previewStats.totalCost)}</span>
+                    <span className="text-white font-medium">{formatNumber(previewStats.totalCost, { currency: true })}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Work Required:</span>
@@ -680,7 +679,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
             onClick={handleSubmit}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            Start Search ({formatCurrency(previewStats.totalCost)})
+            Start Search ({formatNumber(previewStats.totalCost, { currency: true })})
           </Button>
         </div>
       </div>

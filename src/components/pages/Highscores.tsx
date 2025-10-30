@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, Table
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { highscoreService } from '@/lib/services';
 import { type HighscoreEntry, type ScoreType } from '@/lib/database';
-import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
+import { formatNumber, formatPercent } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 interface HighscoresProps extends PageProps, CompanyProps {
@@ -241,7 +241,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                   ) : null}
                   <TableCell className="text-right font-mono">
                     {scoreType.includes('price') ? 
-                      formatCurrency(score.scoreValue, 2) :
+                      formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
                       scoreType.includes('quality') || scoreType.includes('balance') ?
                         formatPercent(score.scoreValue, 1, true) :
                         formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
@@ -303,7 +303,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                     <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
                     <span className="text-lg font-bold text-primary">
                       {scoreType.includes('price') ? 
-                        formatCurrency(score.scoreValue, 2) :
+                        formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
                         scoreType.includes('quality') || scoreType.includes('balance') ?
                           formatPercent(score.scoreValue, 1, true) :
                           formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })

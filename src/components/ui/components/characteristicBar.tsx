@@ -4,6 +4,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { getColorClass, formatNumber, getWineBalanceCategory } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
@@ -48,12 +49,10 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   const [minBalance, maxBalance] = BASE_BALANCED_RANGES[characteristicName];
   
 
-  // Build user-friendly tooltip with new terminology
-  const buildTooltip = () => {
-    const base = `Current Value: ${formatNumber(displayValue, { decimals: 2, forceDecimals: true })}`;
+  // Build tooltip content JSX
+  const buildTooltipContent = () => {
     const [rMin, rMax] = adjustedRanges ?? [minBalance, maxBalance];
-    const rangeLine = `Range: ${formatNumber(rMin, { decimals: 2, forceDecimals: true })} - ${formatNumber(rMax, { decimals: 2, forceDecimals: true })}`;
-
+    
     // Distances per new naming
     const midpoint = (rMin + rMax) / 2;
     const distanceInside = Math.abs(displayValue - midpoint);
@@ -66,10 +65,54 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
     else if (displayValue < rMin - 0.2 || displayValue > rMax + 0.2) status = 'Far outside range';
     else status = 'Slightly outside range';
 
-    const statusLine = `Status: ${status}`;
-    const details = `DistanceInside: ${formatNumber(distanceInside, { decimals: 2, forceDecimals: true })} | DistanceOutside: ${formatNumber(distanceOutside, { decimals: 2, forceDecimals: true })}\nPenalty: ${formatNumber(penalty, { decimals: 2, forceDecimals: true })} | TotalDistance: ${formatNumber(totalDistance, { decimals: 2, forceDecimals: true })}`;
-    const deltaLine = deltaTooltip ? `Deltas: ${deltaTooltip}` : '';
-    return [base, rangeLine, statusLine, details, deltaLine].filter(Boolean).join('\n');
+    return (
+      <div className={tooltipStyles.text}>
+        <TooltipSection title={`${label} Details`}>
+          <TooltipRow 
+            label="Current Value:" 
+            value={formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
+          />
+          <TooltipRow 
+            label="Range:" 
+            value={`${formatNumber(rMin, { decimals: 2, forceDecimals: true })} - ${formatNumber(rMax, { decimals: 2, forceDecimals: true })}`}
+          />
+          <TooltipRow 
+            label="Status:" 
+            value={status}
+          />
+          <div className="mt-2 pt-2 border-t border-gray-600">
+            <TooltipRow 
+              label="DistanceInside:" 
+              value={formatNumber(distanceInside, { decimals: 2, forceDecimals: true })}
+              monospaced
+            />
+            <TooltipRow 
+              label="DistanceOutside:" 
+              value={formatNumber(distanceOutside, { decimals: 2, forceDecimals: true })}
+              monospaced
+            />
+            <TooltipRow 
+              label="Penalty:" 
+              value={formatNumber(penalty, { decimals: 2, forceDecimals: true })}
+              monospaced
+            />
+            <TooltipRow 
+              label="TotalDistance:" 
+              value={formatNumber(totalDistance, { decimals: 2, forceDecimals: true })}
+              monospaced
+            />
+          </div>
+          {deltaTooltip && (
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <TooltipRow 
+                label="Deltas:" 
+                value={deltaTooltip}
+              />
+            </div>
+          )}
+        </TooltipSection>
+      </div>
+    );
   };
   
   // Get color class based on whether value is in balanced range
@@ -103,53 +146,65 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
       
       {/* Bar Container */}
       <div className="sm:w-3/4 flex items-center flex-1">
-        <div 
-          className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden"
-          title={buildTooltip()}
-        >
-          {/* Background bar with informative title */}
-          <div 
-            className="absolute inset-0 bg-gray-200 rounded-full"
-            title={buildTooltip()}
-          ></div>
-          
-          {/* Base balanced range (green) */}
-          <div 
-            className="absolute top-0 bottom-0 bg-green-300/75 rounded-full"
-            style={{
-              left: `${minBalance * 100}%`,
-              width: `${(maxBalance - minBalance) * 100}%`
-            }}
-          ></div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <MobileDialogWrapper 
+                content={buildTooltipContent()} 
+                title={`${label} Details`}
+                triggerClassName="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
+              >
+                <div 
+                  className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
+                >
+                  {/* Background bar */}
+                  <div 
+                    className="absolute inset-0 bg-gray-200 rounded-full"
+                  ></div>
+                  
+                  {/* Base balanced range (green) */}
+                  <div 
+                    className="absolute top-0 bottom-0 bg-green-300/75 rounded-full"
+                    style={{
+                      left: `${minBalance * 100}%`,
+                      width: `${(maxBalance - minBalance) * 100}%`
+                    }}
+                  ></div>
 
-          {/* Adjusted ranges (for Phase 2) - darker green for optimal zone */}
-          {adjustedRanges && (
-            <>
-              <div 
-                className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
-                style={{
-                  left: `${adjustedRanges[0] * 100}%`,
-                  width: `${(adjustedRanges[1] - adjustedRanges[0]) * 100}%`
-                }}
-              ></div>
-            </>
-          )}
+                  {/* Adjusted ranges (for Phase 2) - darker green for optimal zone */}
+                  {adjustedRanges && (
+                    <>
+                      <div 
+                        className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
+                        style={{
+                          left: `${adjustedRanges[0] * 100}%`,
+                          width: `${(adjustedRanges[1] - adjustedRanges[0]) * 100}%`
+                        }}
+                      ></div>
+                    </>
+                  )}
 
-          {/* Value marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
-            style={{ left: `${displayValue * 100}%` }}
-            title={`Current Value: ${formatNumber(displayValue, { decimals: 2, forceDecimals: true })}`}
-          ></div>
+                  {/* Value marker */}
+                  <div 
+                    className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
+                    style={{ left: `${displayValue * 100}%` }}
+                  ></div>
 
-          {/* Base grape value marker (if provided) */}
-          {typeof baseDisplay === 'number' && (
-            <div 
-              className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
-              style={{ left: `${baseDisplay * 100}%` }}
-            ></div>
-          )}
-        </div>
+                  {/* Base grape value marker (if provided) */}
+                  {typeof baseDisplay === 'number' && (
+                    <div 
+                      className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
+                      style={{ left: `${baseDisplay * 100}%` }}
+                    ></div>
+                  )}
+                </div>
+              </MobileDialogWrapper>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+              {buildTooltipContent()}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
         {/* Value display */}
         {showValue && (

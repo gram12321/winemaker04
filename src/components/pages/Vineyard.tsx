@@ -7,7 +7,7 @@ import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, H
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
-import { formatCurrency, formatNumber, getBadgeColorClasses, getRatingForRange, getColorClassForRange, getRangeColorClasses } from '@/lib/utils/utils';
+import { formatNumber, getBadgeColorClasses, getRatingForRange, getColorClassForRange, getRangeColorClasses } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
 import { clearPendingLandSearchResults, calculateVineyardExpectedYield } from '@/lib/services';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, MobileDialogWrapper, tooltipStyles } from '../ui/shadCN/tooltip';
@@ -567,7 +567,7 @@ const Vineyard: React.FC = () => {
           <div className="text-xs text-gray-500">Total Area</div>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-blue-600">{formatCurrency(totalValue)}</div>
+          <div className="text-base font-bold text-blue-600">{formatNumber(totalValue, { currency: true })}</div>
           <div className="text-xs text-gray-500">Total Value</div>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
@@ -587,7 +587,7 @@ const Vineyard: React.FC = () => {
           <div className="text-xs text-gray-500">Total Area</div>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-blue-600">{formatCurrency(totalValue)}</div>
+          <div className="text-base font-bold text-blue-600">{formatNumber(totalValue, { currency: true })}</div>
           <div className="text-xs text-gray-500">Total Value</div>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
@@ -685,7 +685,7 @@ const Vineyard: React.FC = () => {
                                   triggerClassName="inline-block ml-1 cursor-help"
                                 >
                                   <span className="ml-1 underline decoration-dotted">
-                                    {formatCurrency(vineyard.vineyardTotalValue)}
+                                    {formatNumber(vineyard.vineyardTotalValue, { currency: true })}
                                   </span>
                                 </MobileDialogWrapper>
                               </TooltipTrigger>
@@ -714,7 +714,7 @@ const Vineyard: React.FC = () => {
                             </Tooltip>
                           </TooltipProvider>
                           {vineyard.hectares > 0 && (
-                            <span className="text-xs text-gray-500 ml-1">(per ha: {formatCurrency((vineyard.vineyardTotalValue || 0) / vineyard.hectares)})</span>
+                            <span className="text-xs text-gray-500 ml-1">(per ha: {formatNumber((vineyard.vineyardTotalValue || 0) / vineyard.hectares, { currency: true })})</span>
                           )}
                           </div>
                         </div>
@@ -1014,7 +1014,7 @@ const Vineyard: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-gray-500 uppercase">Value</div>
-                      <div className="font-bold text-blue-600">{formatCurrency(vineyard.vineyardTotalValue)}</div>
+                      <div className="font-bold text-blue-600">{formatNumber(vineyard.vineyardTotalValue, { currency: true })}</div>
                     </div>
                   </div>
                 </div>
@@ -1348,7 +1348,7 @@ const Vineyard: React.FC = () => {
           severity={'warning'}
           title={'Confirm Vineyard Sale'}
           message={`Are you sure you want to sell "${selectedVineyard.name}"? This action cannot be undone.`}
-          details={`You will receive 90% of its current value after a 10% fee.\n\nEstimated proceeds: ${formatCurrency((selectedVineyard.vineyardTotalValue || 0) * 0.9)}\nCurrent value: ${formatCurrency(selectedVineyard.vineyardTotalValue || 0)}`}
+          details={`You will receive 90% of its current value after a 10% fee.\n\nEstimated proceeds: ${formatNumber((selectedVineyard.vineyardTotalValue || 0) * 0.9, { currency: true })}\nCurrent value: ${formatNumber(selectedVineyard.vineyardTotalValue || 0, { currency: true })}`}
           actions={[
             { label: 'Cancel', onClick: () => {}, variant: 'outline' },
             { label: 'Sell Vineyard', onClick: () => { confirmSellVineyard(); }, variant: 'destructive' }

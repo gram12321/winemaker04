@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { getCurrentPrestige, processGameTick } from '@/lib/services';
-import { formatCurrency, formatGameDate, formatNumber, formatCompact } from '@/lib/utils';
+import { formatGameDate, formatNumber } from '@/lib/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
 import { NotificationCenter, useNotifications } from '@/components/layout/NotificationCenter';
@@ -153,7 +153,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               onClick={() => handleNavigation('finance')}
               title="View Finance"
             >
-              <span className="font-medium">{formatCurrency(gameState.money || 0)}</span>
+              <span className="font-medium">{formatNumber(gameState.money || 0, { currency: true })}</span>
             </Badge>
             
             <Badge 
@@ -162,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               onClick={() => handleNavigation('finance')}
               title="View Finance"
             >
-              <span className="font-medium text-xs">{formatCompact(gameState.money || 0, 1)}</span>
+              <span className="font-medium text-xs">{formatNumber(gameState.money || 0, { currency: true, compact: true, decimals: 1 })}</span>
             </Badge>
             
             {/* Prestige display - responsive */}
@@ -171,7 +171,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
               onClick={handlePrestigeClick}
             >
-              <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatCompact(currentPrestige, 1) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}</span>
+              <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatNumber(currentPrestige, { compact: true, decimals: 1 }) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}</span>
             </Badge>
             
             <Badge 
@@ -179,7 +179,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               className="bg-red-700 text-white border-red-500 px-1.5 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors sm:hidden"
               onClick={handlePrestigeClick}
             >
-              <span className="font-medium text-xs">⭐ {formatCompact(currentPrestige, 1)}</span>
+              <span className="font-medium text-xs">⭐ {formatNumber(currentPrestige, { compact: true, decimals: 1 })}</span>
             </Badge>
 
             {/* Economy Phase display - responsive */}
@@ -368,7 +368,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   >
                     <span>💰</span>
                     <span className="font-medium">
-                      {formatCurrency(gameState.money || 0)}
+                      {formatNumber(gameState.money || 0, { currency: true })}
                     </span>
                   </Badge>
                   <Badge 
@@ -377,7 +377,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   >
                     <span>⭐</span>
                     <span className="font-medium">
-                      {currentPrestige >= 1000 ? formatCompact(currentPrestige, 1) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}
+                      {currentPrestige >= 1000 ? formatNumber(currentPrestige, { compact: true, decimals: 1 }) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}
                     </span>
                   </Badge>
                 </div>

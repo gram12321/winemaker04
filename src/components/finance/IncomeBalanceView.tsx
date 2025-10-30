@@ -1,4 +1,4 @@
-import { formatCurrency, getColorClass } from '@/lib/utils';
+import { formatNumber, getColorClass } from '@/lib/utils';
 import { calculateFinancialData, calculateNetWorth } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
@@ -23,7 +23,7 @@ const FinancialSection: React.FC<{ title: string; children: React.ReactNode }> =
 const DataRow: React.FC<{ label: string; value: string | number; valueClass?: string }> = ({ label, value, valueClass = '' }) => (
   <div className="flex justify-between text-sm">
     <span>{label}</span>
-    <span className={`font-medium ${valueClass}`}>{typeof value === 'number' ? formatCurrency(value) : value}</span>
+    <span className={`font-medium ${valueClass}`}>{typeof value === 'number' ? formatNumber(value, { currency: true }) : value}</span>
   </div>
 );
 
@@ -175,7 +175,7 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
                       valueClass="text-red-600" 
                     />
                     <div className="text-xs text-gray-500 ml-2">
-                      Payment: {formatCurrency(getPeriodPaymentAmount(loan.seasonalPayment))}/{period}
+                      Payment: {formatNumber(getPeriodPaymentAmount(loan.seasonalPayment), { currency: true })}/{period}
                     </div>
                   </div>
                 ))}

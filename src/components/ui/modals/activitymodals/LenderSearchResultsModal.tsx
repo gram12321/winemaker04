@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LoanOffer } from '@/lib/types/types';
-import { formatCurrency, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
+import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
 import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
 import { startTakeLoan, getGameState, calculateLoanTerms } from '@/lib/services';
@@ -221,7 +221,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                             {/* Compact details: Amount / Duration / Rate */}
                             <div className="grid grid-cols-2 gap-y-1 text-xs">
                               <div className="text-gray-400">Amount:</div>
-                              <div className="text-white font-medium">{formatCurrency(offer.principalAmount)}</div>
+                              <div className="text-white font-medium">{formatNumber(offer.principalAmount, { currency: true })}</div>
 
                               <div className="text-gray-400">Duration:</div>
                               <div className="text-white">{Math.round(offer.durationSeasons / 4)} years</div>
@@ -231,7 +231,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
 
                               <div className="text-gray-400">Total Cost:</div>
                               <div className={`${offer.isAvailable ? 'text-green-400' : 'text-red-400'} font-medium`}>
-                                {formatCurrency(offer.totalExpenses)}
+                                {formatNumber(offer.totalExpenses, { currency: true })}
                               </div>
                             </div>
 
@@ -288,9 +288,9 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                             className="w-full"
                           />
                           <div className="flex justify-between text-sm text-gray-400">
-                            <span>{formatCurrency(selectedOffer.lender.minLoanAmount)}</span>
-                            <span className="font-medium text-white">{formatCurrency(loanAmount)}</span>
-                            <span>{formatCurrency(selectedOffer.lender.maxLoanAmount)}</span>
+                            <span>{formatNumber(selectedOffer.lender.minLoanAmount, { currency: true })}</span>
+                            <span className="font-medium text-white">{formatNumber(loanAmount, { currency: true })}</span>
+                            <span>{formatNumber(selectedOffer.lender.maxLoanAmount, { currency: true })}</span>
                           </div>
                         </div>
                       </div>
@@ -348,7 +348,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-400">Principal Amount:</span>
-                          <span className="text-white font-medium">{formatCurrency(loanAmount)}</span>
+                          <span className="text-white font-medium">{formatNumber(loanAmount, { currency: true })}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Duration:</span>
@@ -360,7 +360,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Seasonal Payment:</span>
-                          <span className="text-white">{formatCurrency(seasonalPayment)}</span>
+                          <span className="text-white">{formatNumber(seasonalPayment, { currency: true })}</span>
                         </div>
                       </div>
                     </div>
@@ -371,15 +371,15 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-400">Origination Fee:</span>
-                          <span className="text-orange-400 font-medium">{formatCurrency(originationFee)}</span>
+                          <span className="text-orange-400 font-medium">{formatNumber(originationFee, { currency: true })}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Total Interest:</span>
-                          <span className="text-yellow-400">{formatCurrency(totalInterest)}</span>
+                          <span className="text-yellow-400">{formatNumber(totalInterest, { currency: true })}</span>
                         </div>
                         <div className="border-t border-gray-600 pt-2 flex justify-between">
                           <span className="text-white font-medium">Total Expenses:</span>
-                          <span className="text-red-400 font-bold">{formatCurrency(totalExpenses)}</span>
+                          <span className="text-red-400 font-bold">{formatNumber(totalExpenses, { currency: true })}</span>
                         </div>
                       </div>
                     </div>

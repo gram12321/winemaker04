@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/shadCN/table";
 import { SimpleCard } from "@/components/ui";
-import { formatCurrency, formatGameDateFromObject, getColorClass } from '@/lib/utils';
+import { formatNumber, formatGameDateFromObject, getColorClass } from '@/lib/utils';
 import { loadTransactions } from '@/lib/services';
 import { Transaction } from '@/lib/types/types';
 import { useGameStateWithData } from '@/hooks';
@@ -41,10 +41,10 @@ export function CashFlowView() {
                     </TableCell>
                     <TableCell className="text-sm">{transaction.description}</TableCell>
                     <TableCell className={`text-sm text-right ${getColorClass(transaction.amount >= 0 ? 0.8 : 0.2)}`}>
-                      {transaction.amount >= 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                      {transaction.amount >= 0 ? '+' : '-'}{formatNumber(Math.abs(transaction.amount), { currency: true })}
                     </TableCell>
                     <TableCell className="text-sm text-right font-medium">
-                      {formatCurrency(transaction.money)}
+                      {formatNumber(transaction.money, { currency: true })}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -70,7 +70,7 @@ export function CashFlowView() {
                       </div>
                       <div className="text-right">
                         <div className={`text-lg font-bold ${getColorClass(transaction.amount >= 0 ? 0.8 : 0.2)}`}>
-                          {transaction.amount >= 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                          {transaction.amount >= 0 ? '+' : '-'}{formatNumber(Math.abs(transaction.amount), { currency: true })}
                         </div>
                       </div>
                     </div>
@@ -78,7 +78,7 @@ export function CashFlowView() {
                   </div>
                   <div className="px-4 py-3 bg-gray-50 border-t flex justify-between items-center">
                     <span className="text-xs text-gray-600">Balance After:</span>
-                    <span className="text-sm font-medium text-gray-900">{formatCurrency(transaction.money)}</span>
+                    <span className="text-sm font-medium text-gray-900">{formatNumber(transaction.money, { currency: true })}</span>
                   </div>
                 </div>
               ))}

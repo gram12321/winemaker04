@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { getAllStaff, removeStaff, getAllTeams, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
 import type { Staff } from '@/lib/types/types';
-import { formatCurrency, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
+import { formatNumber, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffSearchOptionsModal, StaffSearchResultsModal, StaffModal, StaffSkillBarsList } from '@/components/ui';
@@ -236,12 +236,12 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
         </div>
         <div className="bg-white rounded-lg shadow p-3">
           <div className="text-xs text-gray-600 mb-1">Total Monthly Wages</div>
-          <div className="text-lg font-semibold text-gray-900">{formatCurrency(totalWages * 4)}</div>
+          <div className="text-lg font-semibold text-gray-900">{formatNumber(totalWages * 4, { currency: true })}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-3">
           <div className="text-xs text-gray-600 mb-1">Average Wage</div>
           <div className="text-lg font-semibold text-gray-900">
-            {allStaff.length > 0 ? formatCurrency(totalWages / allStaff.length) : formatCurrency(0)}
+            {allStaff.length > 0 ? formatNumber(totalWages / allStaff.length, { currency: true }) : formatNumber(0, { currency: true })}
           </div>
         </div>
       </div>
@@ -253,12 +253,12 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           <div className="text-xs text-gray-500">Total Staff</div>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
-          <div className="text-base font-bold text-blue-600">{formatCurrency(totalWages * 4)}</div>
+          <div className="text-base font-bold text-blue-600">{formatNumber(totalWages * 4, { currency: true })}</div>
           <div className="text-xs text-gray-500">Monthly Wages</div>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
           <div className="text-base font-bold text-green-600">
-            {allStaff.length > 0 ? formatCurrency(totalWages / allStaff.length) : formatCurrency(0)}
+            {allStaff.length > 0 ? formatNumber(totalWages / allStaff.length, { currency: true }) : formatNumber(0, { currency: true })}
           </div>
           <div className="text-xs text-gray-500">Avg Wage</div>
         </div>
@@ -745,7 +745,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <div className="flex items-center gap-4 text-xs text-gray-600">
                       <div>
-                        <span className="font-medium">Wage:</span> <span className={getWageColorClass(staff.wage, 'weekly')}>{formatCurrency(staff.wage)}/wk</span>
+                        <span className="font-medium">Wage:</span> <span className={getWageColorClass(staff.wage, 'weekly')}>{formatNumber(staff.wage, { currency: true })}/wk</span>
                       </div>
                     </div>
                     

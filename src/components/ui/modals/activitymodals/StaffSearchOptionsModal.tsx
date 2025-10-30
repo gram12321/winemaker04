@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StaffSearchOptions, calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange, calculateSearchPreview, startStaffSearch } from '@/lib/services/activity/activitymanagers/staffSearchManager';
 import { SPECIALIZED_ROLES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
-import { formatCurrency, getSpecializationIcon } from '@/lib/utils';
+import { formatNumber, getSpecializationIcon } from '@/lib/utils';
 import { Button } from '@/components/ui';
 import { X } from 'lucide-react';
 
@@ -50,7 +50,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
     
     setPreviewStats({
       skillRange: preview.skillRange,
-      wageRange: `${formatCurrency(preview.minWeeklyWage)} - ${formatCurrency(preview.maxWeeklyWage)}`,
+      wageRange: `${formatNumber(preview.minWeeklyWage, { currency: true })} - ${formatNumber(preview.maxWeeklyWage, { currency: true })}`,
       specializationBonus: preview.specializationBonusText
     });
   }, [options]);
@@ -244,7 +244,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                 <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Search Cost:</span>
-                    <span className="text-white font-medium">{formatCurrency(searchWorkEstimate.cost)}</span>
+                    <span className="text-white font-medium">{formatNumber(searchWorkEstimate.cost, { currency: true })}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Work Required:</span>
@@ -284,7 +284,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
             onClick={handleSubmit}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            Start Search ({formatCurrency(searchWorkEstimate.cost)})
+            Start Search ({formatNumber(searchWorkEstimate.cost, { currency: true })})
           </Button>
         </div>
       </div>

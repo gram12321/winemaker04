@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineBalanceCategory } from '@/lib/utils/utils';
 
@@ -169,23 +170,56 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                               key={idx}
                               className={`flex items-center gap-1 text-xs ${isActive ? 'font-bold text-red-600' : 'text-gray-500'}`}
                             >
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help font-bold">
-                                    {rule.name}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p><strong>{rule.name}</strong></p>
-                                  <p className="text-sm text-gray-600">{rule.requirement}</p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {rule.condition(characteristics) ? 
-                                      `Currently applying penalty to ${rule.targets.join(', ')}` : 
-                                      'Condition not met - no penalty applied'
-                                    }
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper 
+                                      content={
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title={rule.name}>
+                                            <TooltipRow 
+                                              label="Requirement:" 
+                                              value={rule.requirement}
+                                            />
+                                            <div className="mt-2 pt-2 border-t border-gray-600">
+                                              <div className="text-xs text-gray-300">
+                                                {rule.condition(characteristics) ? 
+                                                  `Currently applying penalty to ${rule.targets.join(', ')}` : 
+                                                  'Condition not met - no penalty applied'
+                                                }
+                                              </div>
+                                            </div>
+                                          </TooltipSection>
+                                        </div>
+                                      } 
+                                      title={rule.name}
+                                      triggerClassName="cursor-help font-bold"
+                                    >
+                                      <span className="cursor-help font-bold">
+                                        {rule.name}
+                                      </span>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title={rule.name}>
+                                        <TooltipRow 
+                                          label="Requirement:" 
+                                          value={rule.requirement}
+                                        />
+                                        <div className="mt-2 pt-2 border-t border-gray-600">
+                                          <div className="text-xs text-gray-300">
+                                            {rule.condition(characteristics) ? 
+                                              `Currently applying penalty to ${rule.targets.join(', ')}` : 
+                                              'Condition not met - no penalty applied'
+                                            }
+                                          </div>
+                                        </div>
+                                      </TooltipSection>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               {/* Show all characteristics involved in the condition */}
                               <div className="flex items-center gap-1">
                                 {/* Extract characteristics mentioned in the requirement */}
@@ -204,27 +238,58 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                     
                                     return (
                                       <React.Fragment key={char}>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className="flex items-center gap-1">
-                                              <img 
-                                                src={`/assets/icons/characteristics/${char}.png`} 
-                                                alt={`${char} icon`} 
-                                                className="w-3 h-3 opacity-80 cursor-help" 
-                                              />
-                                              <span className="text-xs">
-                                                {char}
-                                                <span className={`ml-1 ${isActive ? 'text-red-500' : ''}`}>
-                                                  {needsHigh ? '↑' : '↓'}
-                                                </span>
-                                              </span>
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>{char} needs to be {needsHigh ? 'high' : 'low'} ({needsHigh ? '>' : '<'}{threshold.toFixed(1)})</p>
-                                            <p>Current: {currentValue.toFixed(1)}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <MobileDialogWrapper 
+                                                content={
+                                                  <div className={tooltipStyles.text}>
+                                                    <TooltipSection title={`${char} Requirement`}>
+                                                      <TooltipRow 
+                                                        label="Needs to be:" 
+                                                        value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${threshold.toFixed(1)})`}
+                                                      />
+                                                      <TooltipRow 
+                                                        label="Current:" 
+                                                        value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                      />
+                                                    </TooltipSection>
+                                                  </div>
+                                                } 
+                                                title={`${char} Requirement`}
+                                                triggerClassName="flex items-center gap-1"
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <img 
+                                                    src={`/assets/icons/characteristics/${char}.png`} 
+                                                    alt={`${char} icon`} 
+                                                    className="w-3 h-3 opacity-80 cursor-help" 
+                                                  />
+                                                  <span className="text-xs">
+                                                    {char}
+                                                    <span className={`ml-1 ${isActive ? 'text-red-500' : ''}`}>
+                                                      {needsHigh ? '↑' : '↓'}
+                                                    </span>
+                                                  </span>
+                                                </div>
+                                              </MobileDialogWrapper>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                              <div className={tooltipStyles.text}>
+                                                <TooltipSection title={`${char} Requirement`}>
+                                                  <TooltipRow 
+                                                    label="Needs to be:" 
+                                                    value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${threshold.toFixed(1)})`}
+                                                  />
+                                                  <TooltipRow 
+                                                    label="Current:" 
+                                                    value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                  />
+                                                </TooltipSection>
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                         {charIdx < mentionedChars.length - 1 && (
                                           <span className={isActive ? 'text-red-500' : ''}>+</span>
                                         )}
@@ -235,31 +300,74 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                               </div>
                               
                               <span className={isActive ? 'text-red-500' : ''}>→</span>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1">
-                                    <span className="flex items-center gap-1">
-                                      {rule.targets.map((target, targetIdx) => (
-                                        <React.Fragment key={target}>
-                                          <img 
-                                            src={`/assets/icons/characteristics/${target}.png`} 
-                                            alt={`${target} icon`} 
-                                            className="w-3 h-3 opacity-80 cursor-help" 
-                                          />
-                                          <span className="text-xs">
-                                            {target}
-                                          </span>
-                                          {targetIdx < rule.targets.length - 1 && <span className="text-xs text-gray-400">+</span>}
-                                        </React.Fragment>
-                                      ))}
-                                    </span>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{rule.targets.join(', ')} get the penalty</p>
-                                  <p>Current values: {rule.targets.map(t => `${t}: ${characteristics[t as keyof WineCharacteristics].toFixed(1)}`).join(', ')}</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper 
+                                      content={
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title="Penalty Targets">
+                                            <TooltipRow 
+                                              label="Targets:" 
+                                              value={rule.targets.join(', ')}
+                                            />
+                                            <div className="mt-2 pt-2 border-t border-gray-600">
+                                              <div className="text-xs text-gray-300">Current values:</div>
+                                              {rule.targets.map(t => (
+                                                <TooltipRow 
+                                                  key={t}
+                                                  label={t} 
+                                                  value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
+                                                />
+                                              ))}
+                                            </div>
+                                          </TooltipSection>
+                                        </div>
+                                      } 
+                                      title="Penalty Targets"
+                                      triggerClassName="flex items-center gap-1 cursor-help"
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <span className="flex items-center gap-1">
+                                          {rule.targets.map((target, targetIdx) => (
+                                            <React.Fragment key={target}>
+                                              <img 
+                                                src={`/assets/icons/characteristics/${target}.png`} 
+                                                alt={`${target} icon`} 
+                                                className="w-3 h-3 opacity-80 cursor-help" 
+                                              />
+                                              <span className="text-xs">
+                                                {target}
+                                              </span>
+                                              {targetIdx < rule.targets.length - 1 && <span className="text-xs text-gray-400">+</span>}
+                                            </React.Fragment>
+                                          ))}
+                                        </span>
+                                      </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title="Penalty Targets">
+                                        <TooltipRow 
+                                          label="Targets:" 
+                                          value={rule.targets.join(', ')}
+                                        />
+                                        <div className="mt-2 pt-2 border-t border-gray-600">
+                                          <div className="text-xs text-gray-300">Current values:</div>
+                                          {rule.targets.map(t => (
+                                            <TooltipRow 
+                                              key={t}
+                                              label={t} 
+                                              value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
+                                            />
+                                          ))}
+                                        </div>
+                                      </TooltipSection>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               {/* Show penalty strength when active */}
                               {isActive && (() => {
                                 // Get detailed penalty breakdown using existing calculation logic
@@ -284,37 +392,114 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                 }
                                 
                                 return (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="text-red-600 font-bold ml-3 cursor-help">
-                                        ⚠️ {breakdown.penaltyPercentage.toFixed(1)}% penalty
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-sm">
-                                      <div className="space-y-2">
-                                        <p className="font-bold text-sm">Penalty Calculation Breakdown</p>
-                                        <div className="text-xs space-y-1">
-                                          <div><strong>Rule:</strong> {breakdown.ruleName}</div>
-                                          <div><strong>Sources:</strong> {breakdown.sources.join(', ')}</div>
-                                          <div><strong>Targets:</strong> {breakdown.targets.join(', ')}</div>
-                                          <div className="border-t pt-1 mt-2">
-                                            <div><strong>avgDeviation:</strong> {breakdown.avgDeviation.toFixed(3)}</div>
-                                            <div><strong>k (scaling):</strong> {breakdown.k}</div>
-                                            <div><strong>p (power):</strong> {breakdown.p}</div>
-                                            <div><strong>cap (maximum):</strong> {breakdown.cap}</div>
-                                            <div className="border-t pt-1 mt-1">
-                                              <div><strong>rawEffect:</strong> {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
-                                              <div><strong>cappedEffect:</strong> min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
-                                              <div><strong>penalty:</strong> {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.penaltyPercentage.toFixed(1)}%</div>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <MobileDialogWrapper 
+                                          content={
+                                            <div className={tooltipStyles.text}>
+                                              <TooltipSection title="Penalty Calculation Breakdown">
+                                                <TooltipRow 
+                                                  label="Rule:" 
+                                                  value={breakdown.ruleName}
+                                                />
+                                                <TooltipRow 
+                                                  label="Sources:" 
+                                                  value={breakdown.sources.join(', ')}
+                                                />
+                                                <TooltipRow 
+                                                  label="Targets:" 
+                                                  value={breakdown.targets.join(', ')}
+                                                />
+                                                <div className="mt-2 pt-2 border-t border-gray-600">
+                                                  <TooltipRow 
+                                                    label="avgDeviation:" 
+                                                    value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
+                                                    monospaced
+                                                  />
+                                                  <TooltipRow 
+                                                    label="k (scaling):" 
+                                                    value={String(breakdown.k)}
+                                                  />
+                                                  <TooltipRow 
+                                                    label="p (power):" 
+                                                    value={String(breakdown.p)}
+                                                  />
+                                                  <TooltipRow 
+                                                    label="cap (maximum):" 
+                                                    value={String(breakdown.cap)}
+                                                  />
+                                                </div>
+                                                <div className="mt-2 pt-2 border-t border-gray-600">
+                                                  <div className="text-xs font-mono text-gray-300 space-y-1">
+                                                    <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
+                                                    <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
+                                                    <div>penalty: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.penaltyPercentage.toFixed(1)}%</div>
+                                                  </div>
+                                                  {breakdown.hitsCap && (
+                                                    <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
+                                                  )}
+                                                </div>
+                                              </TooltipSection>
+                                            </div>
+                                          } 
+                                          title="Penalty Calculation Breakdown"
+                                          triggerClassName="text-red-600 font-bold ml-3 cursor-help"
+                                        >
+                                          <span className="text-red-600 font-bold ml-3 cursor-help">
+                                            ⚠️ {breakdown.penaltyPercentage.toFixed(1)}% penalty
+                                          </span>
+                                        </MobileDialogWrapper>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title="Penalty Calculation Breakdown">
+                                            <TooltipRow 
+                                              label="Rule:" 
+                                              value={breakdown.ruleName}
+                                            />
+                                            <TooltipRow 
+                                              label="Sources:" 
+                                              value={breakdown.sources.join(', ')}
+                                            />
+                                            <TooltipRow 
+                                              label="Targets:" 
+                                              value={breakdown.targets.join(', ')}
+                                            />
+                                            <div className="mt-2 pt-2 border-t border-gray-600">
+                                              <TooltipRow 
+                                                label="avgDeviation:" 
+                                                value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
+                                                monospaced
+                                              />
+                                              <TooltipRow 
+                                                label="k (scaling):" 
+                                                value={String(breakdown.k)}
+                                              />
+                                              <TooltipRow 
+                                                label="p (power):" 
+                                                value={String(breakdown.p)}
+                                              />
+                                              <TooltipRow 
+                                                label="cap (maximum):" 
+                                                value={String(breakdown.cap)}
+                                              />
+                                            </div>
+                                            <div className="mt-2 pt-2 border-t border-gray-600">
+                                              <div className="text-xs font-mono text-gray-300 space-y-1">
+                                                <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
+                                                <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
+                                                <div>penalty: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.penaltyPercentage.toFixed(1)}%</div>
+                                              </div>
                                               {breakdown.hitsCap && (
-                                                <div className="text-orange-600 font-bold">⚠️ Hit cap limit!</div>
+                                                <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
                                               )}
                                             </div>
-                                          </div>
+                                          </TooltipSection>
                                         </div>
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 );
                               })()}
                             </div>
@@ -332,23 +517,56 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                 key={`synergy-${idx}`}
                                 className={`flex items-center gap-1 text-xs ${isActive ? 'font-bold text-green-600' : 'text-gray-500'}`}
                               >
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="cursor-help font-bold">
-                                      {rule.name}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p><strong>{rule.name}</strong></p>
-                                    <p className="text-sm text-gray-600">{rule.requirement}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {isActive ? 
-                                        `Currently providing synergy bonus for: ${rule.targets.join(', ')}` : 
-                                        'Condition not met - no synergy bonus'
-                                      }
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <MobileDialogWrapper 
+                                        content={
+                                          <div className={tooltipStyles.text}>
+                                            <TooltipSection title={rule.name}>
+                                              <TooltipRow 
+                                                label="Requirement:" 
+                                                value={rule.requirement}
+                                              />
+                                              <div className="mt-2 pt-2 border-t border-gray-600">
+                                                <div className="text-xs text-gray-300">
+                                                  {isActive ? 
+                                                    `Currently providing synergy bonus for: ${rule.targets.join(', ')}` : 
+                                                    'Condition not met - no synergy bonus'
+                                                  }
+                                                </div>
+                                              </div>
+                                            </TooltipSection>
+                                          </div>
+                                        } 
+                                        title={rule.name}
+                                        triggerClassName="cursor-help font-bold"
+                                      >
+                                        <span className="cursor-help font-bold">
+                                          {rule.name}
+                                        </span>
+                                      </MobileDialogWrapper>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+                                      <div className={tooltipStyles.text}>
+                                        <TooltipSection title={rule.name}>
+                                          <TooltipRow 
+                                            label="Requirement:" 
+                                            value={rule.requirement}
+                                          />
+                                          <div className="mt-2 pt-2 border-t border-gray-600">
+                                            <div className="text-xs text-gray-300">
+                                              {isActive ? 
+                                                `Currently providing synergy bonus for: ${rule.targets.join(', ')}` : 
+                                                'Condition not met - no synergy bonus'
+                                              }
+                                            </div>
+                                          </div>
+                                        </TooltipSection>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                                 <span>-</span>
                                 {/* Show all characteristics involved in the synergy */}
                                 <div className="flex items-center gap-1">
@@ -356,24 +574,55 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                     const currentValue = characteristics[char as keyof WineCharacteristics];
                                     return (
                                       <React.Fragment key={char}>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className="flex items-center gap-1">
-                                              <img 
-                                                src={`/assets/icons/characteristics/${char}.png`} 
-                                                alt={`${char} icon`} 
-                                                className="w-3 h-3 opacity-80 cursor-help" 
-                                              />
-                                              <span className="text-xs">
-                                                {char}
-                                              </span>
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>{char} - part of synergy</p>
-                                            <p>Current: {currentValue.toFixed(1)}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <MobileDialogWrapper 
+                                                content={
+                                                  <div className={tooltipStyles.text}>
+                                                    <TooltipSection title={`${char} - Synergy Source`}>
+                                                      <TooltipRow 
+                                                        label="Role:" 
+                                                        value="Part of synergy"
+                                                      />
+                                                      <TooltipRow 
+                                                        label="Current:" 
+                                                        value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                      />
+                                                    </TooltipSection>
+                                                  </div>
+                                                } 
+                                                title={`${char} - Synergy Source`}
+                                                triggerClassName="flex items-center gap-1"
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <img 
+                                                    src={`/assets/icons/characteristics/${char}.png`} 
+                                                    alt={`${char} icon`} 
+                                                    className="w-3 h-3 opacity-80 cursor-help" 
+                                                  />
+                                                  <span className="text-xs">
+                                                    {char}
+                                                  </span>
+                                                </div>
+                                              </MobileDialogWrapper>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                              <div className={tooltipStyles.text}>
+                                                <TooltipSection title={`${char} - Synergy Source`}>
+                                                  <TooltipRow 
+                                                    label="Role:" 
+                                                    value="Part of synergy"
+                                                  />
+                                                  <TooltipRow 
+                                                    label="Current:" 
+                                                    value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                  />
+                                                </TooltipSection>
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                         {charIdx < rule.sources.length - 1 && (
                                           <span className={isActive ? 'text-green-500' : ''}>+</span>
                                         )}
@@ -388,24 +637,53 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                 <div className="flex items-center gap-1">
                                   {rule.targets.map((char, charIdx) => (
                                     <React.Fragment key={char}>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <div className="flex items-center gap-1">
-                                            <img 
-                                              src={`/assets/icons/characteristics/${char}.png`} 
-                                              alt={`${char} icon`} 
-                                              className="w-3 h-3 opacity-80 cursor-help" 
-                                            />
-                                            <span className="text-xs">
-                                              {char}
-                                            </span>
-                                          </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{char} gets synergy benefit</p>
-                                          <p>Reduces penalties on this characteristic</p>
-                                        </TooltipContent>
-                                      </Tooltip>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <MobileDialogWrapper 
+                                              content={
+                                                <div className={tooltipStyles.text}>
+                                                  <TooltipSection title={`${char} - Synergy Target`}>
+                                                    <TooltipRow 
+                                                      label="Benefit:" 
+                                                      value="Gets synergy benefit"
+                                                    />
+                                                    <div className="mt-2 pt-2 border-t border-gray-600">
+                                                      <div className="text-xs text-gray-300">Reduces penalties on this characteristic</div>
+                                                    </div>
+                                                  </TooltipSection>
+                                                </div>
+                                              } 
+                                              title={`${char} - Synergy Target`}
+                                              triggerClassName="flex items-center gap-1"
+                                            >
+                                              <div className="flex items-center gap-1">
+                                                <img 
+                                                  src={`/assets/icons/characteristics/${char}.png`} 
+                                                  alt={`${char} icon`} 
+                                                  className="w-3 h-3 opacity-80 cursor-help" 
+                                                />
+                                                <span className="text-xs">
+                                                  {char}
+                                                </span>
+                                              </div>
+                                            </MobileDialogWrapper>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                            <div className={tooltipStyles.text}>
+                                              <TooltipSection title={`${char} - Synergy Target`}>
+                                                <TooltipRow 
+                                                  label="Benefit:" 
+                                                  value="Gets synergy benefit"
+                                                />
+                                                <div className="mt-2 pt-2 border-t border-gray-600">
+                                                  <div className="text-xs text-gray-300">Reduces penalties on this characteristic</div>
+                                                </div>
+                                              </TooltipSection>
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                       {charIdx < rule.targets.length - 1 && (
                                         <span className={isActive ? 'text-green-500' : ''}>+</span>
                                       )}
@@ -436,37 +714,114 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   }
                                   
                                   return (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="text-green-600 font-bold ml-3 cursor-help">
-                                          ✨ -{breakdown.synergyPercentage.toFixed(1)}% reduction
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="max-w-sm">
-                                        <div className="space-y-2">
-                                          <p className="font-bold text-sm">Synergy Calculation Breakdown</p>
-                                          <div className="text-xs space-y-1">
-                                            <div><strong>Rule:</strong> {breakdown.ruleName}</div>
-                                            <div><strong>Sources:</strong> {breakdown.sources.join(', ')}</div>
-                                            <div><strong>Targets:</strong> {breakdown.targets.join(', ')}</div>
-                                            <div className="border-t pt-1 mt-2">
-                                              <div><strong>avgDeviation:</strong> {breakdown.avgDeviation.toFixed(3)}</div>
-                                              <div><strong>k (scaling):</strong> {breakdown.k}</div>
-                                              <div><strong>p (power):</strong> {breakdown.p}</div>
-                                              <div><strong>cap (maximum):</strong> {breakdown.cap}</div>
-                                              <div className="border-t pt-1 mt-1">
-                                                <div><strong>rawEffect:</strong> {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
-                                                <div><strong>cappedEffect:</strong> min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
-                                                <div><strong>synergy:</strong> {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.synergyPercentage.toFixed(1)}%</div>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <MobileDialogWrapper 
+                                            content={
+                                              <div className={tooltipStyles.text}>
+                                                <TooltipSection title="Synergy Calculation Breakdown">
+                                                  <TooltipRow 
+                                                    label="Rule:" 
+                                                    value={breakdown.ruleName}
+                                                  />
+                                                  <TooltipRow 
+                                                    label="Sources:" 
+                                                    value={breakdown.sources.join(', ')}
+                                                  />
+                                                  <TooltipRow 
+                                                    label="Targets:" 
+                                                    value={breakdown.targets.join(', ')}
+                                                  />
+                                                  <div className="mt-2 pt-2 border-t border-gray-600">
+                                                    <TooltipRow 
+                                                      label="avgDeviation:" 
+                                                      value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
+                                                      monospaced
+                                                    />
+                                                    <TooltipRow 
+                                                      label="k (scaling):" 
+                                                      value={String(breakdown.k)}
+                                                    />
+                                                    <TooltipRow 
+                                                      label="p (power):" 
+                                                      value={String(breakdown.p)}
+                                                    />
+                                                    <TooltipRow 
+                                                      label="cap (maximum):" 
+                                                      value={String(breakdown.cap)}
+                                                    />
+                                                  </div>
+                                                  <div className="mt-2 pt-2 border-t border-gray-600">
+                                                    <div className="text-xs font-mono text-gray-300 space-y-1">
+                                                      <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
+                                                      <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
+                                                      <div>synergy: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.synergyPercentage.toFixed(1)}%</div>
+                                                    </div>
+                                                    {breakdown.hitsCap && (
+                                                      <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
+                                                    )}
+                                                  </div>
+                                                </TooltipSection>
+                                              </div>
+                                            } 
+                                            title="Synergy Calculation Breakdown"
+                                            triggerClassName="text-green-600 font-bold ml-3 cursor-help"
+                                          >
+                                            <span className="text-green-600 font-bold ml-3 cursor-help">
+                                              ✨ -{breakdown.synergyPercentage.toFixed(1)}% reduction
+                                            </span>
+                                          </MobileDialogWrapper>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+                                          <div className={tooltipStyles.text}>
+                                            <TooltipSection title="Synergy Calculation Breakdown">
+                                              <TooltipRow 
+                                                label="Rule:" 
+                                                value={breakdown.ruleName}
+                                              />
+                                              <TooltipRow 
+                                                label="Sources:" 
+                                                value={breakdown.sources.join(', ')}
+                                              />
+                                              <TooltipRow 
+                                                label="Targets:" 
+                                                value={breakdown.targets.join(', ')}
+                                              />
+                                              <div className="mt-2 pt-2 border-t border-gray-600">
+                                                <TooltipRow 
+                                                  label="avgDeviation:" 
+                                                  value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
+                                                  monospaced
+                                                />
+                                                <TooltipRow 
+                                                  label="k (scaling):" 
+                                                  value={String(breakdown.k)}
+                                                />
+                                                <TooltipRow 
+                                                  label="p (power):" 
+                                                  value={String(breakdown.p)}
+                                                />
+                                                <TooltipRow 
+                                                  label="cap (maximum):" 
+                                                  value={String(breakdown.cap)}
+                                                />
+                                              </div>
+                                              <div className="mt-2 pt-2 border-t border-gray-600">
+                                                <div className="text-xs font-mono text-gray-300 space-y-1">
+                                                  <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
+                                                  <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
+                                                  <div>synergy: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.synergyPercentage.toFixed(1)}%</div>
+                                                </div>
                                                 {breakdown.hitsCap && (
-                                                  <div className="text-orange-600 font-bold">⚠️ Hit cap limit!</div>
+                                                  <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
                                                 )}
                                               </div>
-                                            </div>
+                                            </TooltipSection>
                                           </div>
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   );
                                 })()}
                               </div>

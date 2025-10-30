@@ -2,7 +2,7 @@ import React from 'react';
 import { WineLogEntry, WineBatch, Vineyard } from '@/lib/types/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from '../../ui';
 import { Wine, TrendingUp, Award, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
-import { getColorClass, formatCurrency, formatNumber, formatPercent, getGrapeQualityCategory } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, formatPercent, getGrapeQualityCategory } from '@/lib/utils/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/shadCN/tooltip';
 import { calculateVineyardAnalytics } from '@/lib/services';
 
@@ -62,7 +62,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   <div className="text-xs text-blue-600">Vintages</div>
                 </div>
                 <div className="text-center p-2 bg-green-50 rounded-lg">
-                  <div className="text-xl font-bold text-green-900">{formatCurrency(analytics.totalRevenue, 0)}</div>
+                  <div className="text-xl font-bold text-green-900">{formatNumber(analytics.totalRevenue, { currency: true, decimals: 0 })}</div>
                   <div className="text-xs text-green-600">Revenue</div>
                 </div>
               </div>
@@ -162,7 +162,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Avg Price:</span>
                       <span className="font-medium text-green-600">
-                        {formatCurrency(analytics.avgPrice, 0)}/btl
+                        {formatNumber(analytics.avgPrice, { currency: true, decimals: 0 })}/btl
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
@@ -210,7 +210,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-gray-500 text-center">
-                    Revenue/Hectare: {formatCurrency(analytics.revenuePerHectare, 0)} • {formatNumber(analytics.bottlesPerHectare, { decimals: 0 })} bottles/ha
+                    Revenue/Hectare: {formatNumber(analytics.revenuePerHectare, { currency: true, decimals: 0 })} • {formatNumber(analytics.bottlesPerHectare, { decimals: 0 })} bottles/ha
                   </div>
                 </div>
               )}
@@ -233,7 +233,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                             {formatPercent(grape.avgWineScore, 0, true)}
                           </span>
                           <span className="text-gray-500">
-                            {formatCurrency(grape.avgPrice, 0)}/btl
+                            {formatNumber(grape.avgPrice, { currency: true, decimals: 0 })}/btl
                           </span>
                         </div>
                       </div>
@@ -325,7 +325,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="font-medium text-gray-900">{analytics.bestWine.vintage} {analytics.bestWine.grape}</div>
-                      <div className="text-xs text-gray-600 mt-0.5">{analytics.bestWine.quantity} bottles • {formatCurrency(analytics.bestWine.estimatedPrice, 0)}/btl</div>
+                      <div className="text-xs text-gray-600 mt-0.5">{analytics.bestWine.quantity} bottles • {formatNumber(analytics.bestWine.estimatedPrice, { currency: true, decimals: 0 })}/btl</div>
                     </div>
                     <div className="text-right">
                       <div className={`text-sm font-bold ${getColorClass((analytics.bestWine.grapeQuality + analytics.bestWine.balance) / 2)}`}>

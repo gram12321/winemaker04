@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '../ui';
 import { Trophy, Medal, Lock, Calendar, Coins, Wine, Star } from 'lucide-react';
-import { formatNumber, formatCompact, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, formatGameDateFromObject } from '@/lib/utils/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 import { getAllAchievementsWithStatus, getAchievementStats } from '@/lib/services';
 import { getAchievementLevelInfo } from '@/lib/services/user/achievementService';
@@ -360,11 +360,11 @@ export function Achievements({ currentCompany, onBack }: AchievementsProps) {
                         <span>Progress</span>
                         <span>
                           {achievement.progress.target >= 1000
-                            ? formatCompact(achievement.progress.current)
+                            ? formatNumber(achievement.progress.current, { compact: true })
                             : formatNumber(achievement.progress.current)
                           } / {
                             achievement.progress.target >= 1000
-                              ? formatCompact(achievement.progress.target)
+                              ? formatNumber(achievement.progress.target, { compact: true })
                               : formatNumber(achievement.progress.target)
                           } {achievement.progress.unit}
                         </span>

@@ -2,7 +2,7 @@ import React from 'react';
 import { WineLogEntry, WineBatch } from '@/lib/types/types';
 import { SimpleCard, Badge, Button } from '../../ui';
 import { Wine } from 'lucide-react';
-import { formatCurrency, formatGameDate, formatPercent } from '@/lib/utils/utils';
+import { formatNumber, formatGameDate, formatPercent } from '@/lib/utils/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/shadCN/tooltip';
 
 interface ProductionHistoryTabProps {
@@ -137,7 +137,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                         <WineScoreDisplay entry={entry} />
                       </td>
                       <td className="py-3">
-                        <div className="font-medium">{formatCurrency(entry.estimatedPrice)}</div>
+                        <div className="font-medium">{formatNumber(entry.estimatedPrice, { currency: true })}</div>
                         <div className="text-xs text-gray-500">per bottle</div>
                       </td>
                       <td className="py-3">
@@ -228,7 +228,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                       <div>
                         <div className="text-xs text-gray-500 uppercase mb-1">Price</div>
                         <div className="text-base font-bold text-green-600">
-                          {formatCurrency(entry.estimatedPrice)}
+                          {formatNumber(entry.estimatedPrice, { currency: true })}
                         </div>
                         <div className="text-xs text-gray-500">per bottle</div>
                       </div>

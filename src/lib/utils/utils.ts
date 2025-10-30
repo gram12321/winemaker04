@@ -5,40 +5,17 @@ import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
 import { Normalize1000To01WithTail } from './calculator';
 
-// ========================================
-// SECTION 1: CORE UTILITIES
-// ========================================
-
-/**
- * Merge Tailwind CSS classes with proper conflict resolution
- * Used throughout the app for dynamic className composition
- */
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }
-
-/**
- * Get random element from array
- * @example getRandomFromArray(['red', 'blue', 'green']) // Returns random color
- */
 export function getRandomFromArray<T>(array: readonly T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-/**
- * Generate random value within range
- * @param min Minimum value (inclusive)
- * @param max Maximum value (exclusive)
- * @returns Random number between min and max
- * @example randomInRange(0.1, 0.9) // Returns random value between 0.1 and 0.9
- */
 export function randomInRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-/**
- * Clamp value to 0-1 range (used in wine characteristics and balance calculations)
- */
 export function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
@@ -48,19 +25,28 @@ export function clamp01(value: number): number {
 // ========================================
 
 /**
- * Format a number with appropriate thousand separators and decimal places
- * More flexible version that handles different number sizes intelligently
+ * Unified number formatting function that handles regular numbers, currency, and compact notation
+ * Replaces formatCurrency and formatCompact functions
  * 
  * @param value The number to format
  * @param options Formatting options
  * @returns Formatted number string
  * 
  * @example
+ * // Regular number formatting
  * formatNumber(1234.5) // "1.234,50" (German locale)
  * formatNumber(0.987, { adaptiveNearOne: true }) // "0.98700" (extra precision near 1.0)
  * formatNumber(0.01, { smartMaxDecimals: true }) // "0.01" (2 decimals for small numbers)
  * formatNumber(5.2, { smartMaxDecimals: true }) // "5.2" (1 decimal for medium numbers)
  * formatNumber(15, { smartMaxDecimals: true }) // "15" (0 decimals for large numbers)
+ * 
+ * // Currency formatting
+ * formatNumber(1234.56, { currency: true }) // "€1,235"
+ * formatNumber(1234567, { currency: true, compact: true }) // "€1.2M"
+ * 
+ * // Compact notation
+ * formatNumber(1234567, { compact: true }) // "1.2M"
+ * formatNumber(1234567, { compact: true, decimals: 2 }) // "1.23M"
  */
 export function formatNumber(value: number, options?: {
   decimals?: number;
@@ -68,30 +54,78 @@ export function formatNumber(value: number, options?: {
   smartDecimals?: boolean;
   smartMaxDecimals?: boolean; // when true, reduce decimals for larger numbers (0-1%: 2-3 decimals, 1-10%: 1 decimal, 10%+: 0 decimals)
   adaptiveNearOne?: boolean; // when true, increase decimals near 1.0 (e.g., 0.95-1.0)
+  currency?: boolean; // when true, formats as currency with € symbol
+  compact?: boolean; // when true, uses compact notation (K, M, B, T)
 }): string {
-  if (typeof value !== 'number' || isNaN(value)) return '0';
+  if (typeof value !== 'number' || isNaN(value)) {
+    return options?.currency ? '€0' : '0';
+  }
   
-  const { decimals = 2, forceDecimals = false, smartDecimals = false, smartMaxDecimals = false, adaptiveNearOne = true } = options || {};
+  const { 
+    decimals, 
+    forceDecimals = false, 
+    smartDecimals = false, 
+    smartMaxDecimals = false, 
+    adaptiveNearOne = true,
+    currency = false,
+    compact = false
+  } = options || {};
+
+  // Handle compact notation (with or without currency)
+  if (compact) {
+    const absValue = Math.abs(value);
+    // Default decimals for compact: 1 for currency, 1 for regular
+    const compactDecimals = decimals !== undefined ? decimals : 1;
+    
+    let compactValue: string;
+    if (absValue >= 1e12) {
+      compactValue = (value / 1e12).toFixed(compactDecimals) + 'T';
+    } else if (absValue >= 1e9) {
+      compactValue = (value / 1e9).toFixed(compactDecimals) + 'B';
+    } else if (absValue >= 1e6) {
+      compactValue = (value / 1e6).toFixed(compactDecimals) + 'M';
+    } else if (absValue >= 1e3) {
+      compactValue = (value / 1e3).toFixed(compactDecimals) + 'K';
+    } else {
+      compactValue = value.toFixed(compactDecimals);
+    }
+    
+    return currency ? '€' + compactValue : compactValue;
+  }
+  
+  // Handle currency formatting (non-compact)
+  if (currency) {
+    const finalDecimals = decimals !== undefined ? decimals : 0;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: finalDecimals,
+      maximumFractionDigits: finalDecimals
+    }).format(value);
+  }
+  
+  // Regular number formatting (original logic)
+  const effectiveDecimals = decimals ?? 2;
 
   // Smart max decimals: reduce decimals for larger numbers
-  let effectiveDecimals = decimals;
+  let calculatedDecimals = effectiveDecimals;
   if (smartMaxDecimals) {
     const absValue = Math.abs(value);
     if (absValue >= 10) {
-      effectiveDecimals = 0; // 10%+: 0 decimals (15%, 100%)
+      calculatedDecimals = 0; // 10%+: 0 decimals (15%, 100%)
     } else if (absValue >= 1) {
-      effectiveDecimals = 1; // 1-10%: 1 decimal (1.2%, 8.5%)
+      calculatedDecimals = 1; // 1-10%: 1 decimal (1.2%, 8.5%)
     } else {
-      effectiveDecimals = 2; // 0-1%: 2 decimals (0.01%, 0.15%)
+      calculatedDecimals = 2; // 0-1%: 2 decimals (0.01%, 0.15%)
     }
   }
   
   // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 → 0.9870)
   // This ALWAYS takes precedence over smart options when near 1.0
   if (adaptiveNearOne && value < 1 && value >= 0.95) {
-    effectiveDecimals = Math.max(effectiveDecimals, 4);
+    calculatedDecimals = Math.max(calculatedDecimals, 4);
     if (value >= 0.98) {
-      effectiveDecimals = Math.max(effectiveDecimals, 5);
+      calculatedDecimals = Math.max(calculatedDecimals, 5);
     }
   }
   
@@ -111,7 +145,7 @@ export function formatNumber(value: number, options?: {
   
   // Smart decimals mode: show up to specified decimals but remove trailing zeros
   if (smartDecimals) {
-    const maxDecimals = Math.min(effectiveDecimals, 6); // Cap for readability
+    const maxDecimals = Math.min(calculatedDecimals, 6); // Cap for readability
     const formatted = value.toLocaleString('de-DE', {
       minimumFractionDigits: 0,
       maximumFractionDigits: maxDecimals
@@ -121,80 +155,9 @@ export function formatNumber(value: number, options?: {
   
   // For decimals or when forced, show specified decimal places
   return value.toLocaleString('de-DE', {
-    minimumFractionDigits: effectiveDecimals,
-    maximumFractionDigits: effectiveDecimals
+    minimumFractionDigits: calculatedDecimals,
+    maximumFractionDigits: calculatedDecimals
   });
-}
-
-/**
- * Format a number as currency (Euros) with optional compact notation
- * 
- * @param value The amount to format
- * @param decimals Number of decimal places (default: 0 for regular, 1 for compact)
- * @param compact Whether to use compact notation (K, M, B, T) (default: false)
- * @returns Formatted currency string
- * 
- * @example
- * formatCurrency(1234.56) // "€1,235"
- * formatCurrency(1234567, undefined, true) // "€1.2M"
- */
-export function formatCurrency(value: number, decimals?: number, compact: boolean = false): string {
-  if (typeof value !== 'number' || isNaN(value)) return '€0';
-  
-  // Set default decimals based on compact mode
-  const defaultDecimals = compact ? 1 : 0;
-  const finalDecimals = decimals !== undefined ? decimals : defaultDecimals;
-  
-  if (compact) {
-    const absValue = Math.abs(value);
-    
-    if (absValue >= 1e12) {
-      return '€' + (value / 1e12).toFixed(finalDecimals) + 'T';
-    } else if (absValue >= 1e9) {
-      return '€' + (value / 1e9).toFixed(finalDecimals) + 'B';
-    } else if (absValue >= 1e6) {
-      return '€' + (value / 1e6).toFixed(finalDecimals) + 'M';
-    } else if (absValue >= 1e3) {
-      return '€' + (value / 1e3).toFixed(finalDecimals) + 'K';
-    } else {
-      return '€' + value.toFixed(finalDecimals);
-    }
-  }
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: finalDecimals,
-    maximumFractionDigits: finalDecimals
-  }).format(value);
-}
-
-/**
- * Format a number in compact notation (K, M, B, T)
- * 
- * @param value The number to format
- * @param decimals Number of decimal places (default: 1)
- * @returns Compact formatted number string
- * 
- * @example
- * formatCompact(1234567) // "1.2M"
- */
-export function formatCompact(value: number, decimals: number = 1): string {
-  if (typeof value !== 'number' || isNaN(value)) return '0';
-  
-  const absValue = Math.abs(value);
-  
-  if (absValue >= 1e12) {
-    return (value / 1e12).toFixed(decimals) + 'T';
-  } else if (absValue >= 1e9) {
-    return (value / 1e9).toFixed(decimals) + 'B';
-  } else if (absValue >= 1e6) {
-    return (value / 1e6).toFixed(decimals) + 'M';
-  } else if (absValue >= 1e3) {
-    return (value / 1e3).toFixed(decimals) + 'K';
-  } else {
-    return value.toFixed(decimals);
-  }
 }
 
 /**

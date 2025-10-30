@@ -7,7 +7,7 @@ import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManage
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatCurrency } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
@@ -51,7 +51,7 @@ export const CrushingOptionsModal: React.FC<CrushingOptionsModalProps> = ({
       options: Object.entries(methodInfo).map(([method, info]) => ({
         value: method,
         label: method,
-        description: `${info.description} - ${info.throughput} (${info.costPenalty > 0 ? `+${formatCurrency(info.costPenalty)}` : 'No cost'})`
+        description: `${info.description} - ${info.throughput} (${info.costPenalty > 0 ? `+${formatNumber(info.costPenalty, { currency: true })}` : 'No cost'})`
       })),
       required: true,
       tooltip: `Choose crushing method. Each method affects work time, cost, and wine characteristics.

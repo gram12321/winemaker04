@@ -11,7 +11,7 @@ import { NotificationCategory } from '../../types/types';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateCreditRating } from './creditRatingService';
 import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
-import { calculateAbsoluteWeeks, formatCurrency } from '../../utils/utils';
+import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { loadVineyards, deleteVineyards } from '../../database/activities/vineyardDB';
 import { setLoanWarning } from '../../database/core/loansDB';
 
@@ -361,7 +361,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
       // Partial payment - use all available funds
       await addTransaction(
         -availableMoney,
-        `Partial loan payment to ${loan.lenderName} (${formatCurrency(availableMoney)} of ${formatCurrency(loan.seasonalPayment)} due)`,
+        `Partial loan payment to ${loan.lenderName} (${formatNumber(availableMoney, { currency: true })} of ${formatNumber(loan.seasonalPayment, { currency: true })} due)`,
         TRANSACTION_CATEGORIES.LOAN_PAYMENT,
         false
       );
@@ -394,7 +394,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
       }
       
       await notificationService.addMessage(
-        `Partial loan payment made to ${loan.lenderName}. ${formatCurrency(loan.seasonalPayment - availableMoney)} still owed. Warning level: ${newMissedPayments}`,
+        `Partial loan payment made to ${loan.lenderName}. ${formatNumber(loan.seasonalPayment - availableMoney, { currency: true })} still owed. Warning level: ${newMissedPayments}`,
         'loan.partialPayment',
         'Partial Loan Payment',
         NotificationCategory.FINANCE
@@ -581,8 +581,8 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
     missedPayments: 1,
     severity: 'warning',
     title: 'Missed Loan Payment - Warning #1',
-    message: `You failed to make your scheduled payment of ${formatCurrency(loan.seasonalPayment)} to ${loan.lenderName}.`,
-    details: `Penalties Applied:\n• Late fee of ${formatCurrency(lateFee)} added to loan balance\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping task\n\nNew loan balance: ${formatCurrency(loan.remainingBalance + lateFee)}\n\n⚠️ If you miss 2 more payments, more severe penalties will apply including interest rate increases and prestige loss.`,
+    message: `You failed to make your scheduled payment of ${formatNumber(loan.seasonalPayment, { currency: true })} to ${loan.lenderName}.`,
+    details: `Penalties Applied:\n• Late fee of ${formatNumber(lateFee, { currency: true })} added to loan balance\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping task\n\nNew loan balance: ${formatNumber(loan.remainingBalance + lateFee, { currency: true })}\n\n⚠️ If you miss 2 more payments, more severe penalties will apply including interest rate increases and prestige loss.`,
     penalties: {
       lateFee,
       creditRatingLoss: penalties.CREDIT_RATING_LOSS,
@@ -594,7 +594,7 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
   
   // Also send regular notification
   await notificationService.addMessage(
-    `Missed payment to ${loan.lenderName}! Late fee of ${formatCurrency(lateFee)} applied. WARNING #1 - check loan details.`,
+    `Missed payment to ${loan.lenderName}! Late fee of ${formatNumber(lateFee, { currency: true })} applied. WARNING #1 - check loan details.`,
     'loan.missedPayment1',
     'Loan Warning',
     NotificationCategory.FINANCE
@@ -656,7 +656,7 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
     severity: 'error',
     title: 'Missed Loan Payment - Warning #2',
     message: `You have now missed 2 consecutive payments to ${loan.lenderName}. Severe penalties are being applied.`,
-    details: `Penalties Applied:\n• Interest rate increased from ${(loan.effectiveInterestRate * 100).toFixed(2)}% to ${(newInterestRate * 100).toFixed(2)}%\n• Balance penalty of ${formatCurrency(balancePenalty)} (5% of balance) added\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Company prestige reduced by ${Math.abs(penalties.PRESTIGE_PENALTY)}\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\nNew loan balance: ${formatCurrency(loan.remainingBalance + balancePenalty)}\n\n⚠️ WARNING: One more missed payment will result in forced vineyard seizure (up to 50% of your portfolio value)!`,
+    details: `Penalties Applied:\n• Interest rate increased from ${(loan.effectiveInterestRate * 100).toFixed(2)}% to ${(newInterestRate * 100).toFixed(2)}%\n• Balance penalty of ${formatNumber(balancePenalty, { currency: true })} (5% of balance) added\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Company prestige reduced by ${Math.abs(penalties.PRESTIGE_PENALTY)}\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\nNew loan balance: ${formatNumber(loan.remainingBalance + balancePenalty, { currency: true })}\n\n⚠️ WARNING: One more missed payment will result in forced vineyard seizure (up to 50% of your portfolio value)!`,
     penalties: {
       interestRateIncrease: penalties.INTEREST_RATE_INCREASE,
       balancePenalty,
@@ -669,7 +669,7 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
   await queueLoanWarningModal(warning);
   
   await notificationService.addMessage(
-    `Second missed payment to ${loan.lenderName}! Interest rate increased, ${formatCurrency(balancePenalty)} penalty applied. WARNING #2 - CRITICAL!`,
+    `Second missed payment to ${loan.lenderName}! Interest rate increased, ${formatNumber(balancePenalty, { currency: true })} penalty applied. WARNING #2 - CRITICAL!`,
     'loan.missedPayment2',
     'Loan Warning',
     NotificationCategory.FINANCE
@@ -713,7 +713,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
     });
     
     await notificationService.addMessage(
-      `Emergency payment of ${formatCurrency(paymentAmount)} made to ${loan.lenderName} using all available funds.`,
+      `Emergency payment of ${formatNumber(paymentAmount, { currency: true })} made to ${loan.lenderName} using all available funds.`,
       'loan.emergencyPayment',
       'Emergency Loan Payment',
       NotificationCategory.FINANCE
@@ -731,7 +731,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
     severity: 'critical',
     title: 'Missed Loan Payment - Warning #3: VINEYARD SEIZURE',
     message: `You have missed 3 consecutive payments to ${loan.lenderName}. Emergency measures are being taken.`,
-    details: `Penalties Applied:\n• ${seizureResult.vineyardsSeized > 0 ? `${seizureResult.vineyardsSeized} vineyard(s) forcibly sold` : 'Attempted to seize vineyards but none available'}\n• Vineyard value seized: ${formatCurrency(seizureResult.valueRecovered)}\n• Sale proceeds (after 25% penalty): ${formatCurrency(seizureResult.saleProceeds)}\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\n${seizureResult.vineyardNames.length > 0 ? `Vineyards Sold:\n${seizureResult.vineyardNames.map(name => `• ${name}`).join('\n')}` : 'No vineyards available for seizure'}\n\nRemaining loan balance: ${formatCurrency(loan.remainingBalance)}\n\n🚨 FINAL WARNING: One more missed payment will result in FULL DEFAULT with permanent lender blacklist!`,
+    details: `Penalties Applied:\n• ${seizureResult.vineyardsSeized > 0 ? `${seizureResult.vineyardsSeized} vineyard(s) forcibly sold` : 'Attempted to seize vineyards but none available'}\n• Vineyard value seized: ${formatNumber(seizureResult.valueRecovered, { currency: true })}\n• Sale proceeds (after 25% penalty): ${formatNumber(seizureResult.saleProceeds, { currency: true })}\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\n${seizureResult.vineyardNames.length > 0 ? `Vineyards Sold:\n${seizureResult.vineyardNames.map(name => `• ${name}`).join('\n')}` : 'No vineyards available for seizure'}\n\nRemaining loan balance: ${formatNumber(loan.remainingBalance, { currency: true })}\n\n🚨 FINAL WARNING: One more missed payment will result in FULL DEFAULT with permanent lender blacklist!`,
     penalties: {
       vineyardsSeized: seizureResult.vineyardsSeized,
       vineyardNames: seizureResult.vineyardNames,
@@ -743,7 +743,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
   await queueLoanWarningModal(warning);
   
   await notificationService.addMessage(
-    `THIRD missed payment to ${loan.lenderName}! ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold for ${formatCurrency(seizureResult.valueRecovered)}. WARNING #3 - FINAL WARNING!`,
+    `THIRD missed payment to ${loan.lenderName}! ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold for ${formatNumber(seizureResult.valueRecovered, { currency: true })}. WARNING #3 - FINAL WARNING!`,
     'loan.missedPayment3',
     'Loan Warning',
     NotificationCategory.FINANCE
@@ -818,7 +818,7 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
     if (saleProceeds > 0) {
       await addTransaction(
         saleProceeds,
-        `Forced vineyard sale by ${loan.lenderName} - ${vineyardsToRemove.length} vineyard(s) sold (${formatCurrency(valueRecovered)} value, ${formatCurrency(saleProceeds)} after 25% penalty)`,
+        `Forced vineyard sale by ${loan.lenderName} - ${vineyardsToRemove.length} vineyard(s) sold (${formatNumber(valueRecovered, { currency: true })} value, ${formatNumber(saleProceeds, { currency: true })} after 25% penalty)`,
         TRANSACTION_CATEGORIES.VINEYARD_SALE,
         false
       );

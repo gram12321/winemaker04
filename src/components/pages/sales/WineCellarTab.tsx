@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { formatCurrency, formatNumber, formatPercent, getGrapeQualityCategory, getColorClass } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
@@ -98,7 +98,7 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="cursor-help">{formatCurrency(wine.estimatedPrice, 2)}</span>
+          <span className="cursor-help">{formatNumber(wine.estimatedPrice, { currency: true, decimals: 2 })}</span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
@@ -107,7 +107,7 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
             {hasQualityAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
               <>
                 <div className="text-red-600 text-[10px]">
-                  ⚠️ Price reduced by {formatCurrency(priceImpact.priceDifference, 2)} due to:
+                  ⚠️ Price reduced by {formatNumber(priceImpact.priceDifference, { currency: true, decimals: 2 })} due to:
                 </div>
                 <div className="ml-2 text-[10px] text-gray-600">
                   {presentFeatures.map((f: any, idx: number) => (
@@ -116,8 +116,8 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
                 </div>
               </>
             )}
-            <div className="border-t pt-1 mt-1">Base Rate: <span className="font-medium">{formatCurrency(baseRate, 2)}/bottle</span></div>
-            <div>Base Price: <span className="font-medium">{formatCurrency(basePrice, 2)}</span></div>
+            <div className="border-t pt-1 mt-1">Base Rate: <span className="font-medium">{formatNumber(baseRate, { currency: true, decimals: 2 })}/bottle</span></div>
+            <div>Base Price: <span className="font-medium">{formatNumber(basePrice, { currency: true, decimals: 2 })}</span></div>
             <div>Quality Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
             <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
               Formula: (Wine Score × Base Rate) × Multiplier
@@ -434,7 +434,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
           <div>
             <h3 className="text-sm font-semibold">Wine Cellar Filters</h3>
             <p className="text-gray-500 text-xs">
-              {filterStats.total} wine{filterStats.total !== 1 ? 's' : ''} • {filterStats.totalBottles} bottles • {formatCurrency(filterStats.totalValue, 0)} total value
+              {filterStats.total} wine{filterStats.total !== 1 ? 's' : ''} • {filterStats.totalBottles} bottles • {formatNumber(filterStats.totalValue, { currency: true, decimals: 0 })} total value
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -606,7 +606,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                       <div>
                         <h3 className="text-base font-bold text-gray-900">Vintage {vintage}</h3>
                         <p className="text-xs text-gray-600">
-                          {vintageWines.length} wine{vintageWines.length !== 1 ? 's' : ''} • {vintageBottles} bottles • {formatCurrency(vintageValue, 0)} total
+                          {vintageWines.length} wine{vintageWines.length !== 1 ? 's' : ''} • {vintageBottles} bottles • {formatNumber(vintageValue, { currency: true, decimals: 0 })} total
                         </p>
                       </div>
                     </div>
@@ -736,7 +736,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                                           : 'text-gray-900'
                                         : 'text-gray-900'
                             }`}>
-                              {formatCurrency(wine.askingPrice ?? wine.estimatedPrice, 2)}
+                              {formatNumber(wine.askingPrice ?? wine.estimatedPrice, { currency: true, decimals: 2 })}
                             </span>
                             {wine.askingPrice !== undefined && wine.askingPrice !== wine.estimatedPrice && (
                               <span className="text-[10px] text-gray-500">
@@ -886,7 +886,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                               : 'text-gray-900'
                             : 'text-gray-900'
                         }`}>
-                          {formatCurrency(wine.askingPrice ?? wine.estimatedPrice, 2)}
+                          {formatNumber(wine.askingPrice ?? wine.estimatedPrice, { currency: true, decimals: 2 })}
                         </span>
                         <button
                           onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.estimatedPrice)}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Staff } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
-import { formatCurrency, formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
 import { getWageColorClass, getAllTeams } from '@/lib/services';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
@@ -102,15 +102,15 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Weekly Wage:</span>
-                  <span className={`font-medium ${getWageColorClass(staff.wage, 'weekly')}`}>{formatCurrency(staff.wage)}</span>
+                  <span className={`font-medium ${getWageColorClass(staff.wage, 'weekly')}`}>{formatNumber(staff.wage, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Seasonal Wage (12 weeks):</span>
-                  <span className={`font-medium ${getWageColorClass(staff.wage * 12, 'seasonal')}`}>{formatCurrency(staff.wage * 12)}</span>
+                  <span className={`font-medium ${getWageColorClass(staff.wage * 12, 'seasonal')}`}>{formatNumber(staff.wage * 12, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Annual Wage (48 weeks):</span>
-                  <span className={`font-medium ${getWageColorClass(staff.wage * 48, 'annual')}`}>{formatCurrency(staff.wage * 48)}</span>
+                  <span className={`font-medium ${getWageColorClass(staff.wage * 48, 'annual')}`}>{formatNumber(staff.wage * 48, { currency: true })}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 mt-3">

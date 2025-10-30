@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types/types';
 import { fulfillWineOrder, rejectWineOrder, generateCustomer } from '@/lib/services';
-import { formatNumber, formatCurrency, formatPercent, formatGameDateFromObject} from '@/lib/utils/utils';
+import { formatNumber, formatPercent, formatGameDateFromObject} from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
@@ -632,7 +632,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       {getInventoryForOrder(order)}
                     </TableCell>
                     <TableCell className="text-gray-500 font-medium">
-                      {formatCurrency(getAskingPriceForOrder(order), 2)}
+                      {formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}
                     </TableCell>
                     <TableCell className="text-gray-500">
                       <TooltipProvider>
@@ -645,7 +645,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                 ? 'text-red-600 font-medium' // Below asking price
                                 : 'text-gray-900' // Equal to asking price
                             }`}>
-                              {formatCurrency(order.offeredPrice, 2)}
+                              {formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
@@ -654,7 +654,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                 <>
                                   <div className="font-semibold">Bid Price Calculation</div>
                                   <div className="space-y-1 text-[10px]">
-                                    <div>Asking Price: <span className="font-medium">{formatCurrency(getAskingPriceForOrder(order), 2)}</span></div>
+                                    <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
                                     <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
                                     {order.calculationData.featurePriceMultiplier !== undefined && order.calculationData.featurePriceMultiplier < 1.0 && (
                                       <div className="text-red-600">
@@ -664,7 +664,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                     )}
                                     <div className="border-t pt-1 mt-1">
                                       <div className="text-[10px] text-gray-500 mb-1">Formula: Asking × Customer × Features</div>
-                                      <div>Final Bid: <span className="font-bold">{formatCurrency(order.offeredPrice, 2)}</span></div>
+                                      <div>Final Bid: <span className="font-bold">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
                                     </div>
                                   </div>
                                 </>
@@ -695,8 +695,8 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                             <div className="text-xs space-y-1">
                               <div className="font-semibold">Price Difference Analysis</div>
                               <div className="text-[10px] space-y-1">
-                                <div>Asking Price: <span className="font-medium">{formatCurrency(getAskingPriceForOrder(order), 2)}</span></div>
-                                <div>Bid Price: <span className="font-medium">{formatCurrency(order.offeredPrice, 2)}</span></div>
+                                <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
+                                <div>Bid Price: <span className="font-medium">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
                                 <div className="border-t pt-1">
                                   <div className="font-medium">
                                     {order.offeredPrice > getAskingPriceForOrder(order) ? (
@@ -716,10 +716,10 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                     </TableCell>
                     <TableCell className="font-medium text-green-600">
                       <div className="flex flex-col">
-                        <span>{formatCurrency(order.totalValue, 2)}</span>
+                        <span>{formatNumber(order.totalValue, { currency: true, decimals: 2 })}</span>
                         {order.fulfillableValue !== undefined && order.fulfillableValue !== null && order.fulfillableValue < order.totalValue && (
                           <span className="text-[10px] text-orange-600">
-                            (Can earn: {formatCurrency(order.fulfillableValue, 2)})
+                            (Can earn: {formatNumber(order.fulfillableValue, { currency: true, decimals: 2 })})
                           </span>
                         )}
                       </div>
@@ -870,7 +870,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Asking Price:</span>
-                        <span className="font-medium">{formatCurrency(askingPrice, 2)}</span>
+                        <span className="font-medium">{formatNumber(askingPrice, { currency: true, decimals: 2 })}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Bid Price:</span>
@@ -881,7 +881,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                             ? 'text-red-600'
                             : 'text-gray-900'
                         }`}>
-                          {formatCurrency(order.offeredPrice, 2)}
+                          {formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
@@ -897,11 +897,11 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       <div className="bg-green-50 rounded-lg p-3 text-center mt-2">
                         <div className="text-xs text-gray-600 mb-1">Total Value</div>
                         <div className="text-lg font-bold text-green-600">
-                          {formatCurrency(order.totalValue, 2)}
+                          {formatNumber(order.totalValue, { currency: true, decimals: 2 })}
                         </div>
                         {order.fulfillableValue !== undefined && order.fulfillableValue !== null && order.fulfillableValue < order.totalValue && (
                           <div className="text-xs text-orange-600 mt-1">
-                            Can earn: {formatCurrency(order.fulfillableValue, 2)}
+                            Can earn: {formatNumber(order.fulfillableValue, { currency: true, decimals: 2 })}
                           </div>
                         )}
                       </div>

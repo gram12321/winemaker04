@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../../database/core/supabase';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, highscoreService, initializeCustomers } from '../index';
 import { insertPrestigeEvent } from '../../database';
-import { calculateAbsoluteWeeks, formatCurrency } from '@/lib/utils';
+import { calculateAbsoluteWeeks, formatNumber } from '@/lib/utils';
 
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
@@ -22,7 +22,7 @@ export async function adminSetGoldToCompany(amount: number): Promise<void> {
   
   // Only add transaction if there's a difference
   if (difference !== 0) {
-    await addTransaction(difference, `Admin: Set to ${formatCurrency(targetAmount)} (was ${formatCurrency(currentMoney)})`, 'admin_cheat');
+    await addTransaction(difference, `Admin: Set to ${formatNumber(targetAmount, { currency: true })} (was ${formatNumber(currentMoney, { currency: true })})`, 'admin_cheat');
   }
 }
 

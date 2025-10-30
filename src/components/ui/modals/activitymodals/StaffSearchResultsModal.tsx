@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types/types';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
-import { formatCurrency, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { Button, Badge, StaffSkillBarsList, WarningModal } from '@/components/ui';
 import { startHiringProcess, clearPendingCandidates } from '@/lib/services/activity/activitymanagers/staffSearchManager';
@@ -152,7 +152,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-medium text-white">{formatCurrency(candidate.wage)}</div>
+                          <div className="text-sm font-medium text-white">{formatNumber(candidate.wage, { currency: true })}</div>
                           <div className="text-xs text-gray-400">per week</div>
                         </div>
                       </div>
@@ -226,7 +226,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                     <h4 className="text-sm font-medium text-white mb-4">Weekly Wage</h4>
                     <div className="bg-green-600 rounded-lg p-4 text-center">
                       <div className={`text-3xl font-bold ${getWageColorClass(selectedCandidate.wage, 'weekly')}`}>
-                        {formatCurrency(selectedCandidate.wage)}
+                        {formatNumber(selectedCandidate.wage, { currency: true })}
                       </div>
                       <div className="text-sm text-green-100 mt-2">
                         Wage is calculated based on average skill level. Paid seasonally (12 weeks).
