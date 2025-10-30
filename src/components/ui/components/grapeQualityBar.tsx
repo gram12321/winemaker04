@@ -1,6 +1,6 @@
 import React from 'react';
 import { Vineyard } from '@/lib/types/types';
-import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory } from '@/lib/utils';
+import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory, formatPercent } from '@/lib/utils';
 import { getRegionalPriceRange } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
@@ -73,7 +73,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
                 label="Raw Value:" 
                 value={
                   factorType === 'landValue' && typeof rawValue === 'number' 
-                    ? `€${formatNumber(rawValue, { decimals: 0, forceDecimals: false })}/hectare`
+                    ? `${formatNumber(rawValue, { currency: true })}/hectare`
                     : String(rawValue)
                 }
               />
@@ -89,7 +89,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
               <TooltipRow label="Weight:" value="60% of wine value index" />
               {vineyard && (
                 <div className="text-xs text-gray-300 mt-1">
-                  Regional Range: €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })}/hectare
+                  Regional Range: {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true })}/hectare
                 </div>
               )}
             </div>
@@ -160,11 +160,11 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
               <TooltipRow label="Grape:" value={vineyard.grape} />
               <TooltipRow 
                 label="Suitability:" 
-                value={`${formatNumber(displayValue * 100, { decimals: 0, forceDecimals: true })}%`}
+                value={formatPercent(displayValue)}
                 valueRating={displayValue}
               />
               <div className="text-xs text-gray-300 mt-2">
-                <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). Your {formatNumber(displayValue * 100, { decimals: 0, forceDecimals: true })}% suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
+                <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). Your {formatPercent(displayValue)} suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
               </div>
             </div>
           )}

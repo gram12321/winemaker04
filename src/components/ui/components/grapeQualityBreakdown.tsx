@@ -5,7 +5,7 @@ import { getVineyardGrapeQualityFactors, getMaxLandValue } from '@/lib/services/
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
-import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
+import { formatNumber, formatPercent, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getGrapeQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
@@ -250,7 +250,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <FactorCard
                       title="Land Value Factor"
-                      description={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare - Calculated from: altitude (${vineyard.altitude}m) and aspect (${vineyard.aspect})`}
+                      description={`${formatNumber(vineyard.landValue || 0, { currency: true })} per hectare - Calculated from: altitude (${vineyard.altitude}m) and aspect (${vineyard.aspect})`}
                       color="blue"
                     >
                       <div className="text-sm space-y-3">
@@ -289,7 +289,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                               
                                               <TooltipRow 
                                                 label="Regional Price Range:" 
-                                                value={`€${formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €${formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in ${vineyard.region}`}
+                                                value={`${formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })} - ${formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true })} per hectare in ${vineyard.region}`}
                                               />
                                               
                                               <div className="text-xs font-medium mt-2 mb-1 text-purple-300">Global Normalization:</div>
@@ -353,7 +353,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                           <TooltipSection title="Land Value">
                                             <TooltipRow 
                                               label="Raw Value:" 
-                                              value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare`}
+                                              value={`${formatNumber(vineyard.landValue || 0, { currency: true })} per hectare`}
                                             />
                                             <TooltipRow 
                                               label="Normalized:" 
@@ -368,7 +368,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       triggerClassName="flex justify-between cursor-help"
                                     >
                                       <div className="flex justify-between cursor-help">
-                                        <span className="text-blue-700">€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare</span>
+                                        <span className="text-blue-700">{formatNumber(vineyard.landValue || 0, { currency: true })} per hectare</span>
                                         <span className={`font-mono ${getColorClass(factors.landValue)}`}>→ {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
                                       </div>
                                     </MobileDialogWrapper>
@@ -378,7 +378,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       <TooltipSection title="Land Value">
                                         <TooltipRow 
                                           label="Raw Value:" 
-                                          value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare`}
+                                          value={`${formatNumber(vineyard.landValue || 0, { currency: true })} per hectare`}
                                         />
                                         <TooltipRow 
                                           label="Normalized:" 
@@ -483,7 +483,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             triggerClassName="font-mono text-blue-700 cursor-help"
                                           >
                                         <div className="font-mono text-blue-700 cursor-help">
-                                          €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}</span> × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
+                                          {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })} + <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}</span> × ({formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })}) = {formatNumber(vineyard.landValue || 0, { currency: true })}
                                         </div>
                                           </MobileDialogWrapper>
                                       </TooltipTrigger>
@@ -556,7 +556,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                 <div className="bg-blue-50 p-2 rounded text-xs">
                                   <div className="font-medium text-blue-700 mb-1">Regional Price Range ({vineyard.region}):</div>
                                   <div className="font-mono text-blue-600">
-                                    €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare
+                                    {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true })} per hectare
                                   </div>
                                 </div>
                                 
@@ -577,11 +577,11 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             <TooltipSection title="Normalization Calculation">
                                               <TooltipRow 
                                                 label="Land Value:" 
-                                                value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}`}
+                                                value={formatNumber(vineyard.landValue || 0, { currency: true })}
                                               />
                                               <TooltipRow 
                                                 label="Global Max:" 
-                                                value={`€${formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}`}
+                                                value={formatNumber(getMaxLandValue(), { currency: true })}
                                               />
                                               <div className="mt-2 pt-2 border-t border-gray-600">
                                                 <TooltipRow 
@@ -598,7 +598,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         triggerClassName="font-mono text-blue-700 cursor-help"
                                       >
                                       <div className="font-mono text-blue-700 cursor-help">
-                                        Scaling (€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} / €{formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}) = <span className={getColorClass(factors.landValue)}>{formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
+                                        Scaling ({formatNumber(vineyard.landValue || 0, { currency: true })} / {formatNumber(getMaxLandValue(), { currency: true })}) = <span className={getColorClass(factors.landValue)}>{formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
                                       </div>
                                       </MobileDialogWrapper>
                                     </TooltipTrigger>
@@ -958,7 +958,7 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
         <div className="flex justify-between">
           <span className="font-medium">Feature Impacts:</span>
           <span className={`font-mono ${qualityDifference !== 0 ? (qualityDifference > 0 ? 'text-green-600' : 'text-red-600') : 'text-gray-500'}`}>
-            {qualityDifference !== 0 ? `${qualityDifference > 0 ? '+' : ''}${(qualityDifference * 100).toFixed(1)}%` : 'No impact'}
+            {qualityDifference !== 0 ? `${qualityDifference > 0 ? '+' : ''}${formatPercent(Math.abs(qualityDifference))}` : 'No impact'}
           </span>
         </div>
         
@@ -983,19 +983,19 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
             
             if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
               impactValue = qualityEffect.amount * feature.severity;
-              impactText = `${(impactValue * 100).toFixed(1)}%`;
             } else if (qualityEffect.type === 'power') {
               const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
               impactValue = -scaledPenalty;
-              impactText = `-${(scaledPenalty * 100).toFixed(1)}%`;
             } else if (qualityEffect.type === 'bonus') {
               const bonusAmount = typeof qualityEffect.amount === 'function' 
                 ? qualityEffect.amount(feature.severity)
                 : qualityEffect.amount;
               if (bonusAmount !== undefined) {
                 impactValue = bonusAmount;
-                impactText = `+${(bonusAmount * 100).toFixed(1)}%`;
               }
+            }
+            if (impactValue !== 0) {
+              impactText = `${impactValue > 0 ? '+' : ''}${formatPercent(Math.abs(impactValue))}`;
             }
             
             const isBonus = qualityEffect.type === 'bonus';
