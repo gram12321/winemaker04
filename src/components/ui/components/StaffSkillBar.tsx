@@ -74,17 +74,17 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
                 triggerClassName={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <div className={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}>
-                  {/* Potential multitask overlay: reduce opacity when taskCount > 1 */}
-                  <div
-                    className="absolute top-0 bottom-0 rounded-full"
-                    style={{
-                      left: 0,
-                      width: `${Math.round(value * 100)}%`,
-                      backgroundColor: color,
-                      opacity: taskCount > 1 ? 0.85 : 1
-                    }}
-                  />
-                </div>
+          {/* Potential multitask overlay: reduce opacity when taskCount > 1 */}
+          <div
+            className="absolute top-0 bottom-0 rounded-full"
+            style={{
+              left: 0,
+              width: `${Math.round(value * 100)}%`,
+              backgroundColor: color,
+              opacity: taskCount > 1 ? 0.85 : 1
+            }}
+          />
+        </div>
               </MobileDialogWrapper>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">

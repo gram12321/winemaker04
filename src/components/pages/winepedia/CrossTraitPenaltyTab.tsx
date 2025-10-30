@@ -51,7 +51,7 @@ export function CrossTraitPenaltyTab() {
             {balanceResult && (
               <WineCharacteristicsDisplay 
                 characteristics={characteristics}
-                adjustedRanges={balanceResult.dynamicRanges}
+                adjustedRanges={balanceResult.adjustedRanges}
                 showValues={true}
                 title="Wine Characteristics"
                 collapsible={false}

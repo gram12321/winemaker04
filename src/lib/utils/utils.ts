@@ -575,11 +575,28 @@ export function getRatingForRange(
       const idealCenter = (balanceMin + balanceMax) / 2;
       const idealRange = balanceMax - balanceMin;
       
-      // Distance from ideal range (0 = perfect, 1 = worst possible)
-      const distanceFromIdeal = Math.abs(normalizedBalanced - idealCenter) / (idealRange / 2);
+      // Check if value is within the balanced range
+      const isWithinRange = normalizedBalanced >= balanceMin && normalizedBalanced <= balanceMax;
       
-      // Convert distance to rating (closer to ideal = higher rating)
-      rating = Math.max(0, 1 - distanceFromIdeal);
+      if (isWithinRange) {
+        // Value is within range: use smooth curve from center (1.0) to edge (0.5)
+        // Uses quadratic curve for smoother color transitions across full spectrum
+        const distanceFromCenter = Math.abs(normalizedBalanced - idealCenter) / (idealRange / 2);
+        // Map distance 0-1 to rating 1.0-0.5 using quadratic curve
+        // This ensures smooth transitions through all color levels (5-9)
+        rating = 1.0 - (distanceFromCenter * distanceFromCenter * 0.5);
+      } else {
+        // Value is outside range: apply penalty that scales with distance
+        const distanceOutside = normalizedBalanced < balanceMin 
+          ? (balanceMin - normalizedBalanced) 
+          : (normalizedBalanced - balanceMax);
+        // Normalize outside distance relative to range width for consistent scaling
+        const normalizedDistanceOutside = distanceOutside / idealRange;
+        // Use exponential decay for harsh penalty outside range
+        // Maps smoothly from 0.5 (at edge) down to 0.0 (far outside)
+        // This utilizes color levels 0-4 (red to yellow)
+        rating = Math.max(0, 0.5 * Math.exp(-normalizedDistanceOutside * 2));
+      }
       break;
       
     case 'exponential':

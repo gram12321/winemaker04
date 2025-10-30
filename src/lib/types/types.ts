@@ -113,7 +113,7 @@ export interface WineCharacteristics {
 export interface BalanceResult {
   score: number;        // 0-1 balance score
   qualifies: boolean;   // Whether wine qualifies for any archetype (placeholder)
-  dynamicRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges (placeholder)
+  adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from balance calculation
 }
 
 // Wine batch state - unified system replacing separate stage/process

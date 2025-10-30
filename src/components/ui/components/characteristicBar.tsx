@@ -1,7 +1,6 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { BASE_BALANCED_RANGES } from '@/lib/constants';
-import { getColorClass, formatNumber, getWineBalanceCategory } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, getWineBalanceCategory, getColorClassForRange, getRatingForRange } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
@@ -10,7 +9,7 @@ interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
   label: string;
   value: number;
-  adjustedRanges?: [number, number]; // For future Phase 2 dynamic ranges
+  adjustedRanges: [number, number]; // Adjusted ranges from balance calculation (always provided)
   showValue?: boolean;
   className?: string;
   // Optional tooltip text to explain deltas (e.g., from harvest debug)
@@ -45,14 +44,12 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   const displayValue = Math.max(0, Math.min(1, value));
   const baseDisplay = typeof baseValue === 'number' ? Math.max(0, Math.min(1, baseValue)) : undefined;
   
-  // Get base balanced ranges
-  const [minBalance, maxBalance] = BASE_BALANCED_RANGES[characteristicName];
-  
+  // Use adjustedRanges (always provided from balance calculation)
+  const [rMin, rMax] = adjustedRanges;
 
   // Build tooltip content JSX
   const buildTooltipContent = () => {
-    const [rMin, rMax] = adjustedRanges ?? [minBalance, maxBalance];
-    
+
     // Distances per new naming
     const midpoint = (rMin + rMax) / 2;
     const distanceInside = Math.abs(displayValue - midpoint);
@@ -65,12 +62,31 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
     else if (displayValue < rMin - 0.2 || displayValue > rMax + 0.2) status = 'Far outside range';
     else status = 'Slightly outside range';
 
+    // Calculate rating for color coding (same as getValueColor uses)
+    const valueRating = getRatingForRange(displayValue, 0, 1, 'balanced', rMin, rMax);
+    
+    // Calculate status rating (higher rating = better status)
+    const statusRating = displayValue >= rMin && displayValue <= rMax 
+      ? 0.8 // In range = good
+      : displayValue < rMin - 0.2 || displayValue > rMax + 0.2
+        ? 0.2 // Far outside = bad
+        : 0.5; // Slightly outside = average
+
+    // Calculate ratings for distance metrics (lower is better, so use 'lower_better' strategy)
+    // Using stricter maximums that reflect realistic "problematic" thresholds
+    // Values above these thresholds should be clearly red/orange
+    const distanceInsideRating = getRatingForRange(distanceInside, 0, 0.2, 'lower_better'); // Max 0.2 = problematic
+    const distanceOutsideRating = getRatingForRange(distanceOutside, 0, 0.2, 'lower_better'); // Max 0.2 = problematic
+    const penaltyRating = getRatingForRange(penalty, 0, 0.4, 'lower_better'); // Max 0.4 = problematic (2 × 0.2)
+    const totalDistanceRating = getRatingForRange(totalDistance, 0, 0.6, 'lower_better'); // Max 0.6 = problematic (0.2 + 0.4)
+
     return (
       <div className={tooltipStyles.text}>
         <TooltipSection title={`${label} Details`}>
           <TooltipRow 
             label="Current Value:" 
             value={formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
+            valueRating={valueRating}
           />
           <TooltipRow 
             label="Range:" 
@@ -79,26 +95,31 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
           <TooltipRow 
             label="Status:" 
             value={status}
+            valueRating={statusRating}
           />
           <div className="mt-2 pt-2 border-t border-gray-600">
             <TooltipRow 
               label="DistanceInside:" 
               value={formatNumber(distanceInside, { decimals: 2, forceDecimals: true })}
+              valueRating={distanceInsideRating}
               monospaced
             />
             <TooltipRow 
               label="DistanceOutside:" 
               value={formatNumber(distanceOutside, { decimals: 2, forceDecimals: true })}
+              valueRating={distanceOutsideRating}
               monospaced
             />
             <TooltipRow 
               label="Penalty:" 
               value={formatNumber(penalty, { decimals: 2, forceDecimals: true })}
+              valueRating={penaltyRating}
               monospaced
             />
             <TooltipRow 
               label="TotalDistance:" 
               value={formatNumber(totalDistance, { decimals: 2, forceDecimals: true })}
+              valueRating={totalDistanceRating}
               monospaced
             />
           </div>
@@ -116,17 +137,9 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   };
   
   // Get color class based on whether value is in balanced range
+  // Uses the balanced strategy from getColorClassForRange which handles ideal ranges
   const getValueColor = () => {
-    if (adjustedRanges) {
-      const [adjMin, adjMax] = adjustedRanges;
-      if (displayValue >= adjMin && displayValue <= adjMax) return getColorClass(0.8); // Good quality
-      if (displayValue < adjMin - 0.2 || displayValue > adjMax + 0.2) return getColorClass(0.2); // Poor quality
-      return getColorClass(0.5); // Average quality
-    } else {
-      if (displayValue >= minBalance && displayValue <= maxBalance) return getColorClass(0.8); // Good quality
-      if (displayValue < minBalance - 0.2 || displayValue > maxBalance + 0.2) return getColorClass(0.2); // Poor quality
-      return getColorClass(0.5); // Average quality
-    }
+    return getColorClassForRange(displayValue, 0, 1, 'balanced', 'text', rMin, rMax);
   };
 
   return (
@@ -154,50 +167,37 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
                 title={`${label} Details`}
                 triggerClassName="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
               >
-                <div 
+        <div 
                   className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
-                >
+        >
                   {/* Background bar */}
-                  <div 
-                    className="absolute inset-0 bg-gray-200 rounded-full"
-                  ></div>
-                  
-                  {/* Base balanced range (green) */}
-                  <div 
-                    className="absolute top-0 bottom-0 bg-green-300/75 rounded-full"
-                    style={{
-                      left: `${minBalance * 100}%`,
-                      width: `${(maxBalance - minBalance) * 100}%`
-                    }}
-                  ></div>
+          <div 
+            className="absolute inset-0 bg-gray-200 rounded-full"
+          ></div>
+          
+                  {/* Adjusted ranges (green) - shows optimal zone from balance calculation */}
+              <div 
+                className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
+                style={{
+                      left: `${rMin * 100}%`,
+                      width: `${(rMax - rMin) * 100}%`
+                }}
+              ></div>
 
-                  {/* Adjusted ranges (for Phase 2) - darker green for optimal zone */}
-                  {adjustedRanges && (
-                    <>
-                      <div 
-                        className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
-                        style={{
-                          left: `${adjustedRanges[0] * 100}%`,
-                          width: `${(adjustedRanges[1] - adjustedRanges[0]) * 100}%`
-                        }}
-                      ></div>
-                    </>
-                  )}
+          {/* Value marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
+            style={{ left: `${displayValue * 100}%` }}
+          ></div>
 
-                  {/* Value marker */}
-                  <div 
-                    className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
-                    style={{ left: `${displayValue * 100}%` }}
-                  ></div>
-
-                  {/* Base grape value marker (if provided) */}
-                  {typeof baseDisplay === 'number' && (
-                    <div 
-                      className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
-                      style={{ left: `${baseDisplay * 100}%` }}
-                    ></div>
-                  )}
-                </div>
+          {/* Base grape value marker (if provided) */}
+          {typeof baseDisplay === 'number' && (
+            <div 
+              className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
+              style={{ left: `${baseDisplay * 100}%` }}
+            ></div>
+          )}
+        </div>
               </MobileDialogWrapper>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
@@ -220,7 +220,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
 // Component for displaying multiple characteristics
 interface WineCharacteristicsDisplayProps {
   characteristics: WineCharacteristics;
-  adjustedRanges?: Record<keyof WineCharacteristics, [number, number]>;
+  adjustedRanges?: Record<keyof WineCharacteristics, [number, number]>; // Optional override (e.g., from user sliders)
   showValues?: boolean;
   className?: string;
   collapsible?: boolean;
@@ -238,7 +238,7 @@ interface WineCharacteristicsDisplayProps {
 
 export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProps> = ({
   characteristics,
-  adjustedRanges,
+  adjustedRanges: adjustedRangesOverride,
   showValues = true,
   className = "",
   collapsible = false,
@@ -251,13 +251,17 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   
-  // Calculate balance score if requested and not provided
-  const calculatedBalance = showBalanceScore && !balanceValue ? useWineBalance(characteristics) : null;
+  // Always calculate balance to get adjustedRanges (always defined, equals base ranges if no adjustments)
+  const calculatedBalance = useWineBalance(characteristics);
   
-  // Use provided balance value or calculated balance
+  // Use provided balance value or calculated balance for score display
   const balanceResult = balanceValue !== undefined 
-    ? { score: balanceValue, qualifies: true, dynamicRanges: {} as any }
+    ? { score: balanceValue, qualifies: true, adjustedRanges: calculatedBalance?.adjustedRanges || {} as any }
     : calculatedBalance;
+
+  // Use adjustedRanges from balance calculation (always available since characteristics is provided), override with prop if provided
+  // calculatedBalance.adjustedRanges is always defined when characteristics is provided
+  const effectiveAdjustedRanges = adjustedRangesOverride || calculatedBalance?.adjustedRanges!;
 
   const content = (
     <div className="space-y-1">
@@ -276,18 +280,27 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
       
       {Object.entries(characteristics)
         .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically by characteristic name
-        .map(([key, value]) => (
+        .map(([key, value]) => {
+          const charKey = key as keyof WineCharacteristics;
+          const ranges = effectiveAdjustedRanges?.[charKey];
+          // adjustedRanges should always be defined from balance calculation
+          if (!ranges) {
+            console.error(`Missing adjustedRanges for ${key}`);
+            return null;
+          }
+          return (
           <CharacteristicBar
             key={key}
-            characteristicName={key as keyof WineCharacteristics}
+              characteristicName={charKey}
             label={key.charAt(0).toUpperCase() + key.slice(1)}
             value={value}
-            adjustedRanges={adjustedRanges?.[key as keyof WineCharacteristics]}
+              adjustedRanges={ranges}
             showValue={showValues}
-            deltaTooltip={tooltips?.[key as keyof WineCharacteristics]}
-            baseValue={baseValues?.[key as keyof WineCharacteristics]}
+              deltaTooltip={tooltips?.[charKey]}
+              baseValue={baseValues?.[charKey]}
           />
-        ))}
+          );
+        })}
       <CharacteristicBarLegend />
     </div>
   );
@@ -321,10 +334,6 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
 export const CharacteristicBarLegend: React.FC = () => {
   return (
     <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-2 bg-green-300/75 rounded"></div>
-        <span>Balanced Range</span>
-      </div>
       <div className="flex items-center gap-1">
         <div className="w-3 h-2 bg-green-500/60 rounded"></div>
         <span>Adjusted Range</span>

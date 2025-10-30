@@ -4,7 +4,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 export interface BalanceCalculationResult {
   score: number;
   qualifies: boolean;
-  dynamicRanges: Record<keyof WineCharacteristics, [number, number]>;
+  adjustedRanges: Record<keyof WineCharacteristics, [number, number]>;
 }
 
 export interface CharacteristicCalculation {

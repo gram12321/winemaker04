@@ -67,7 +67,7 @@ export function calculateWineBalance(
   return {
     score: balanceScore,
     qualifies: false,
-    dynamicRanges: adjustedRanges
+    adjustedRanges: adjustedRanges
   };
 }
 

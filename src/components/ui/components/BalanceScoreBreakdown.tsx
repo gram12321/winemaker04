@@ -5,7 +5,7 @@ import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules,
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
-import { getWineBalanceCategory } from '@/lib/utils/utils';
+import { getWineBalanceCategory, getColorClassForRange } from '@/lib/utils/utils';
 
 
 interface BalanceScoreBreakdownProps {
@@ -112,19 +112,19 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                 <div className="space-y-1 text-xs md:text-sm">
                   <div className="flex justify-between">
                     <span>DistanceInside:</span>
-                    <span className="font-mono">{calc.distanceInside.toFixed(3)}</span>
+                    <span className={`font-mono ${getColorClassForRange(calc.distanceInside, 0, 0.2, 'lower_better')}`}>{formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>DistanceOutside:</span>
-                    <span className="font-mono">{calc.distanceOutside.toFixed(3)}</span>
+                    <span className={`font-mono ${getColorClassForRange(calc.distanceOutside, 0, 0.2, 'lower_better')}`}>{formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Penalty (2×Outside):</span>
-                    <span className="font-mono">{calc.penalty.toFixed(3)}</span>
+                    <span className={`font-mono ${getColorClassForRange(calc.penalty, 0, 0.4, 'lower_better')}`}>{formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Base TotalDistance:</span>
-                    <span className="font-mono">{calc.baseTotalDistance.toFixed(3)}</span>
+                    <span className={`font-mono ${getColorClassForRange(calc.baseTotalDistance, 0, 0.6, 'lower_better')}`}>{formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}</span>
                   </div>
                   {(calc.totalScalingMultiplier !== 1 || calc.synergyReduction > 0) && (
                     <div className="space-y-1">
@@ -148,7 +148,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                   )}
                   <div className="flex justify-between font-medium border-t pt-1">
                     <span>Final TotalDistance:</span>
-                    <span className="font-mono">{calc.finalTotalDistance.toFixed(3)}</span>
+                    <span className={`font-mono ${getColorClassForRange(calc.finalTotalDistance, 0, 0.6, 'lower_better')}`}>{formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}</span>
                   </div>
                   
                   {/* Show all rules from this characteristic */}

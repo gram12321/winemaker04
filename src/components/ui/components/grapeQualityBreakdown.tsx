@@ -6,7 +6,7 @@ import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
-import { getGrapeQualityCategory, getColorCategory, getBadgeColorClasses } from '@/lib/utils/utils';
+import { getGrapeQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
 import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
@@ -105,7 +105,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
           <div className="text-sm">
             <div className="flex justify-between mb-1">
               <span>Grape Quality Score:</span>
-              <span className="font-mono">
+              <span className={`font-mono ${getColorClass(grapeQualityScore)}`}>
                 {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
               </span>
             </div>
@@ -120,8 +120,37 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                     content={
                       <div className={tooltipStyles.text}>
                         <TooltipSection title="Weighted Calculation">
-                          <div className="font-mono text-xs text-gray-300">
-                            (({formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}×0.6) + ({formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}×0.4)) × {formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })} = {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                          <TooltipRow 
+                            label="Land Value:" 
+                            value={`${formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })} × 0.6 = ${formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}`}
+                            valueRating={factors.landValue}
+                            monospaced
+                          />
+                          <TooltipRow 
+                            label="Vineyard Prestige:" 
+                            value={`${formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })} × 0.4 = ${formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}`}
+                            valueRating={factors.vineyardPrestige}
+                            monospaced
+                          />
+                          <TooltipRow 
+                            label="Weighted Sum:" 
+                            value={formatNumber((factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4), { decimals: 2, forceDecimals: true })}
+                            valueRating={(factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4)}
+                            monospaced
+                          />
+                          <TooltipRow 
+                            label="Overgrowth Penalty:" 
+                            value={formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })}
+                            valueRating={factors.overgrowthPenalty}
+                            monospaced
+                          />
+                          <div className="mt-2 pt-2 border-t border-gray-600">
+                            <TooltipRow 
+                              label="Final Score:" 
+                              value={formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                              valueRating={grapeQualityScore}
+                              monospaced
+                            />
                           </div>
                         </TooltipSection>
                       </div>
@@ -129,19 +158,48 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                     title="Weighted Calculation"
                     triggerClassName="flex justify-between text-lg font-bold cursor-help"
                   >
-                    <div className="flex justify-between text-lg font-bold cursor-help">
-                      <span>Grape Quality Score:</span>
-                      <span className="font-mono">
-                        {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
-                      </span>
-                    </div>
+                  <div className="flex justify-between text-lg font-bold cursor-help">
+                    <span>Grape Quality Score:</span>
+                    <span className={`font-mono ${getColorClass(grapeQualityScore)}`}>
+                      {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                    </span>
+                  </div>
                   </MobileDialogWrapper>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
                   <div className={tooltipStyles.text}>
                     <TooltipSection title="Weighted Calculation">
-                      <div className="font-mono text-xs text-gray-300">
-                        (({formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}×0.6) + ({formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}×0.4)) × {formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })} = {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                      <TooltipRow 
+                        label="Land Value:" 
+                        value={`${formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })} × 0.6 = ${formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}`}
+                        valueRating={factors.landValue}
+                        monospaced
+                      />
+                      <TooltipRow 
+                        label="Vineyard Prestige:" 
+                        value={`${formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })} × 0.4 = ${formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}`}
+                        valueRating={factors.vineyardPrestige}
+                        monospaced
+                      />
+                      <TooltipRow 
+                        label="Weighted Sum:" 
+                        value={formatNumber((factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4), { decimals: 2, forceDecimals: true })}
+                        valueRating={(factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4)}
+                        monospaced
+                      />
+                      <TooltipRow 
+                        label="Overgrowth Penalty:" 
+                        value={formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })}
+                        valueRating={factors.overgrowthPenalty}
+                        monospaced
+                      />
+                      <div className="mt-2 pt-2 border-t border-gray-600">
+                        <TooltipRow 
+                          label="Final Score:" 
+                          value={formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                          valueRating={grapeQualityScore}
+                          monospaced
+                        />
                       </div>
                     </TooltipSection>
                   </div>
@@ -243,7 +301,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       title="💰 Land Value Calculation"
                                       triggerClassName="text-blue-600 cursor-help"
                                     >
-                                      <span className="text-blue-600 cursor-help">ℹ️</span>
+                                    <span className="text-blue-600 cursor-help">ℹ️</span>
                                     </MobileDialogWrapper>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
@@ -257,25 +315,25 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         />
                                         <div className="mt-2 pt-2 border-t border-gray-600">
                                           <div className="text-xs text-gray-300 mb-2">Your vineyard's land value is calculated dynamically based on multiple factors:</div>
-                                          
+                                      
                                           <div className="text-xs font-medium text-blue-300 mb-1">Calculation Formula:</div>
                                           <div className="text-xs font-mono mb-2 text-gray-300">landValue = basePrice + altitudeAspectRate × (maxPrice - basePrice)</div>
-                                          
+                                      
                                           <div className="text-xs font-medium text-blue-300 mb-1">Raw Price Factor:</div>
                                           <div className="text-xs mb-1 text-gray-300">altitudeAspectRate = (altitude + aspect) ÷ 2</div>
-                                          <ul className="text-xs space-y-1 ml-2 text-gray-300">
-                                            <li>• <strong>Altitude:</strong> {vineyard.altitude}m vs. optimal range</li>
-                                            <li>• <strong>Aspect:</strong> {vineyard.aspect} sun exposure rating</li>
-                                          </ul>
-                                          
+                                      <ul className="text-xs space-y-1 ml-2 text-gray-300">
+                                        <li>• <strong>Altitude:</strong> {vineyard.altitude}m vs. optimal range</li>
+                                        <li>• <strong>Aspect:</strong> {vineyard.aspect} sun exposure rating</li>
+                                      </ul>
+                                      
                                           <div className="text-xs font-medium mt-2 mb-1 text-green-300">Regional Scaling:</div>
                                           <div className="text-xs text-gray-300 mb-2">Perfect factors (altitudeAspectRate=1) reach the region's maximum price</div>
-                                          
+                                      
                                           <TooltipRow 
                                             label="Regional Price Range:" 
                                             value={`€${formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €${formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in ${vineyard.region}`}
                                           />
-                                          
+                                      
                                           <div className="text-xs font-medium mt-2 mb-1 text-purple-300">Global Normalization:</div>
                                           <div className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the grape quality index calculation.</div>
                                         </div>
@@ -286,18 +344,120 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                               </TooltipProvider>
                             </div>
                             <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-blue-700">€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare</span>
-                                <span className="font-mono text-blue-800">→ {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
-                              </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper
+                                      content={
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title="Land Value">
+                                            <TooltipRow 
+                                              label="Raw Value:" 
+                                              value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare`}
+                                            />
+                                            <TooltipRow 
+                                              label="Normalized:" 
+                                              value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                              valueRating={factors.landValue}
+                                              monospaced
+                                            />
+                                          </TooltipSection>
+                                        </div>
+                                      }
+                                      title="Land Value Details"
+                                      triggerClassName="flex justify-between cursor-help"
+                                    >
+                                      <div className="flex justify-between cursor-help">
+                                        <span className="text-blue-700">€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare</span>
+                                        <span className={`font-mono ${getColorClass(factors.landValue)}`}>→ {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
+                                      </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title="Land Value">
+                                        <TooltipRow 
+                                          label="Raw Value:" 
+                                          value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} per hectare`}
+                                        />
+                                        <TooltipRow 
+                                          label="Normalized:" 
+                                          value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                          valueRating={factors.landValue}
+                                          monospaced
+                                        />
+                                      </TooltipSection>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <div className="flex justify-between">
                                 <span className="text-blue-700">Weight in Index:</span>
                                 <span className="font-mono text-blue-800">60%</span>
                               </div>
-                              <div className="flex justify-between font-medium border-t border-blue-300 pt-2">
-                                <span className="text-blue-800">Contribution:</span>
-                                <span className="font-mono text-blue-900">{formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}</span>
-                              </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper
+                                      content={
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title="Contribution">
+                                            <TooltipRow 
+                                              label="Land Value:" 
+                                              value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                              valueRating={factors.landValue}
+                                              monospaced
+                                            />
+                                            <TooltipRow 
+                                              label="Weight:" 
+                                              value="60%"
+                                            />
+                                            <div className="mt-2 pt-2 border-t border-gray-600">
+                                              <TooltipRow 
+                                                label="Contribution:" 
+                                                value={formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}
+                                                valueRating={factors.landValue * 0.6}
+                                                monospaced
+                                              />
+                                            </div>
+                                          </TooltipSection>
+                                        </div>
+                                      }
+                                      title="Contribution Details"
+                                      triggerClassName="flex justify-between font-medium border-t border-blue-300 pt-2 cursor-help"
+                                    >
+                                      <div className="flex justify-between font-medium border-t border-blue-300 pt-2 cursor-help">
+                                        <span className="text-blue-800">Contribution:</span>
+                                        <span className={`font-mono ${getColorClass(factors.landValue * 0.6)}`}>{formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}</span>
+                                      </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title="Contribution">
+                                        <TooltipRow 
+                                          label="Land Value:" 
+                                          value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                          valueRating={factors.landValue}
+                                          monospaced
+                                        />
+                                        <TooltipRow 
+                                          label="Weight:" 
+                                          value="60%"
+                                        />
+                                        <div className="mt-2 pt-2 border-t border-gray-600">
+                                          <TooltipRow 
+                                            label="Contribution:" 
+                                            value={formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}
+                                            valueRating={factors.landValue * 0.6}
+                                            monospaced
+                                          />
+                                        </div>
+                                      </TooltipSection>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                             
                             {/* Land Value Calculation Breakdown */}
@@ -305,12 +465,12 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                               <div className="text-xs space-y-2">
                                 <div className="font-medium text-blue-800 mb-2">Land Value Calculation:</div>
                                 
-                                  {/* Calculation blocks (updated to match modal flow) */}
-                                  <div className="bg-blue-50 p-2 rounded text-xs space-y-2">
-                                    {/* Final Calculation first with tooltip showing the formula */}
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
+                                {/* Calculation blocks (updated to match modal flow) */}
+                                <div className="bg-blue-50 p-2 rounded text-xs space-y-2">
+                                  {/* Final Calculation first with tooltip showing the formula */}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
                                           <MobileDialogWrapper 
                                             content={
                                               <div className={tooltipStyles.text}>
@@ -322,33 +482,41 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             title="Land Value Formula"
                                             triggerClassName="font-mono text-blue-700 cursor-help"
                                           >
-                                            <div className="font-mono text-blue-700 cursor-help">
-                                              €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })} × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
-                                            </div>
+                                        <div className="font-mono text-blue-700 cursor-help">
+                                          €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}</span> × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
+                                        </div>
                                           </MobileDialogWrapper>
-                                        </TooltipTrigger>
+                                      </TooltipTrigger>
                                         <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
                                           <div className={tooltipStyles.text}>
                                             <TooltipSection title="Land Value Formula">
                                               <div className="text-xs text-gray-300">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice)</div>
                                             </TooltipSection>
                                           </div>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
 
-                                    {/* Regional Modifier with tooltip breakdown */}
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
+                                  {/* Regional Modifier with tooltip breakdown */}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
                                           <MobileDialogWrapper 
                                             content={
                                               <div className={tooltipStyles.text}>
                                                 <TooltipSection title="Regional Modifier Breakdown">
                                                   <TooltipRow label="Formula:" value="(altitude + aspect) ÷ 2" />
                                                   <div className="mt-2 pt-2 border-t border-gray-600">
-                                                    <TooltipRow label="Altitude:" value={`${formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} (${vineyard.altitude}m)`} />
-                                                    <TooltipRow label="Aspect:" value={`${formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} (${vineyard.aspect})`} />
+                                                    <TooltipRow 
+                                                      label="Altitude:" 
+                                                      value={`${formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} (${vineyard.altitude}m)`}
+                                                      valueRating={factors.altitudeRating}
+                                                    />
+                                                    <TooltipRow 
+                                                      label="Aspect:" 
+                                                      value={`${formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} (${vineyard.aspect})`}
+                                                      valueRating={factors.aspectRating}
+                                                    />
                                                   </div>
                                                 </TooltipSection>
                                               </div>
@@ -356,25 +524,33 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             title="Regional Modifier Breakdown"
                                             triggerClassName="font-mono text-blue-800 font-medium cursor-help"
                                           >
-                                            <div className="font-mono text-blue-800 font-medium cursor-help">
-                                              Regional Modifier: ({formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} + {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}) ÷ 2 = {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}
-                                            </div>
+                                        <div className="font-mono text-blue-800 font-medium cursor-help">
+                                          Regional Modifier: (<span className={getColorClass(factors.altitudeRating)}>{formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })}</span> + <span className={getColorClass(factors.aspectRating)}>{formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}</span>) ÷ 2 = <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}</span>
+                                        </div>
                                           </MobileDialogWrapper>
-                                        </TooltipTrigger>
+                                      </TooltipTrigger>
                                         <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
                                           <div className={tooltipStyles.text}>
                                             <TooltipSection title="Regional Modifier Breakdown">
                                               <TooltipRow label="Formula:" value="(altitude + aspect) ÷ 2" />
                                               <div className="mt-2 pt-2 border-t border-gray-600">
-                                                <TooltipRow label="Altitude:" value={`${formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} (${vineyard.altitude}m)`} />
-                                                <TooltipRow label="Aspect:" value={`${formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} (${vineyard.aspect})`} />
+                                                <TooltipRow 
+                                                  label="Altitude:" 
+                                                  value={`${formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} (${vineyard.altitude}m)`}
+                                                  valueRating={factors.altitudeRating}
+                                                />
+                                                <TooltipRow 
+                                                  label="Aspect:" 
+                                                  value={`${formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} (${vineyard.aspect})`}
+                                                  valueRating={factors.aspectRating}
+                                                />
                                               </div>
                                             </TooltipSection>
-                                          </div>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </div>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
                                 
                                 {/* Regional Price Range */}
                                 <div className="bg-blue-50 p-2 rounded text-xs">
@@ -399,22 +575,52 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         content={
                                           <div className={tooltipStyles.text}>
                                             <TooltipSection title="Normalization Calculation">
-                                              <TooltipRow label="Global Max:" value={`€${formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}`} />
+                                              <TooltipRow 
+                                                label="Land Value:" 
+                                                value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}`}
+                                              />
+                                              <TooltipRow 
+                                                label="Global Max:" 
+                                                value={`€${formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}`}
+                                              />
+                                              <div className="mt-2 pt-2 border-t border-gray-600">
+                                                <TooltipRow 
+                                                  label="Result:" 
+                                                  value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                                  valueRating={factors.landValue}
+                                                  monospaced
+                                                />
+                                              </div>
                                             </TooltipSection>
                                           </div>
                                         } 
                                         title="Normalization Calculation"
                                         triggerClassName="font-mono text-blue-700 cursor-help"
                                       >
-                                        <div className="font-mono text-blue-700 cursor-help">
-                                          Scaling (€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} / €{formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}) = {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
-                                        </div>
+                                      <div className="font-mono text-blue-700 cursor-help">
+                                        Scaling (€{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })} / €{formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}) = <span className={getColorClass(factors.landValue)}>{formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
+                                      </div>
                                       </MobileDialogWrapper>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
                                       <div className={tooltipStyles.text}>
                                         <TooltipSection title="Normalization Calculation">
-                                          <TooltipRow label="Global Max:" value={`€${formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}`} />
+                                          <TooltipRow 
+                                            label="Land Value:" 
+                                            value={`€${formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}`}
+                                          />
+                                          <TooltipRow 
+                                            label="Global Max:" 
+                                            value={`€${formatNumber(getMaxLandValue(), { decimals: 0, forceDecimals: false })}`}
+                                          />
+                                          <div className="mt-2 pt-2 border-t border-gray-600">
+                                            <TooltipRow 
+                                              label="Result:" 
+                                              value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                              valueRating={factors.landValue}
+                                              monospaced
+                                            />
+                                          </div>
                                         </TooltipSection>
                                       </div>
                                     </TooltipContent>
@@ -467,7 +673,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       title="🌟 Vineyard Prestige Sources"
                                       triggerClassName="text-purple-600 cursor-help"
                                     >
-                                      <span className="text-purple-600 cursor-help">ℹ️</span>
+                                    <span className="text-purple-600 cursor-help">ℹ️</span>
                                     </MobileDialogWrapper>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
@@ -483,13 +689,13 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                           <div className="text-xs text-gray-300 mb-2">Prestige accumulates from multiple sources with different decay rates.</div>
                                           <div className="text-xs font-medium text-purple-300 mb-1">Prestige Components:</div>
                                           <ul className="text-xs space-y-1 ml-2 text-gray-300">
-                                            <li>• <strong>Base Prestige:</strong> Permanent foundation (no decay)</li>
-                                            <li>• <strong>Vine Age:</strong> Increases over time, permanent</li>
-                                            <li>• <strong>Land Value:</strong> Based on property value, permanent</li>
-                                            <li>• <strong>Regional Prestige:</strong> Location-based, permanent</li>
-                                            <li>• <strong>Sales Events:</strong> Temporary boosts (95% weekly decay)</li>
-                                            <li>• <strong>Achievements:</strong> Special accomplishments, permanent</li>
-                                          </ul>
+                                        <li>• <strong>Base Prestige:</strong> Permanent foundation (no decay)</li>
+                                        <li>• <strong>Vine Age:</strong> Increases over time, permanent</li>
+                                        <li>• <strong>Land Value:</strong> Based on property value, permanent</li>
+                                        <li>• <strong>Regional Prestige:</strong> Location-based, permanent</li>
+                                        <li>• <strong>Sales Events:</strong> Temporary boosts (95% weekly decay)</li>
+                                        <li>• <strong>Achievements:</strong> Special accomplishments, permanent</li>
+                                      </ul>
                                         </div>
                                       </TooltipSection>
                                     </div>
@@ -498,18 +704,112 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                               </TooltipProvider>
                             </div>
                             <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-purple-700">Prestige Score:</span>
-                                <span className="font-mono text-purple-800">{formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}</span>
-                              </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper
+                                      content={
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title="Vineyard Prestige">
+                                            <TooltipRow 
+                                              label="Prestige Score:" 
+                                              value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                              valueRating={factors.vineyardPrestige}
+                                              monospaced
+                                            />
+                                          </TooltipSection>
+                                        </div>
+                                      }
+                                      title="Vineyard Prestige Details"
+                                      triggerClassName="flex justify-between cursor-help"
+                                    >
+                                      <div className="flex justify-between cursor-help">
+                                        <span className="text-purple-700">Prestige Score:</span>
+                                        <span className={`font-mono ${getColorClass(factors.vineyardPrestige)}`}>{formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}</span>
+                                      </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title="Vineyard Prestige">
+                                        <TooltipRow 
+                                          label="Prestige Score:" 
+                                          value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                          valueRating={factors.vineyardPrestige}
+                                          monospaced
+                                        />
+                                      </TooltipSection>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <div className="flex justify-between">
                                 <span className="text-purple-700">Weight in Index:</span>
                                 <span className="font-mono text-purple-800">40%</span>
                               </div>
-                              <div className="flex justify-between font-medium border-t border-purple-300 pt-2">
-                                <span className="text-purple-800">Contribution:</span>
-                                <span className="font-mono text-purple-900">{formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}</span>
-                              </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <MobileDialogWrapper
+                                      content={
+                                        <div className={tooltipStyles.text}>
+                                          <TooltipSection title="Contribution">
+                                            <TooltipRow 
+                                              label="Vineyard Prestige:" 
+                                              value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                              valueRating={factors.vineyardPrestige}
+                                              monospaced
+                                            />
+                                            <TooltipRow 
+                                              label="Weight:" 
+                                              value="40%"
+                                            />
+                                            <div className="mt-2 pt-2 border-t border-gray-600">
+                                              <TooltipRow 
+                                                label="Contribution:" 
+                                                value={formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}
+                                                valueRating={factors.vineyardPrestige * 0.4}
+                                                monospaced
+                                              />
+                                            </div>
+                                          </TooltipSection>
+                                        </div>
+                                      }
+                                      title="Contribution Details"
+                                      triggerClassName="flex justify-between font-medium border-t border-purple-300 pt-2 cursor-help"
+                                    >
+                                      <div className="flex justify-between font-medium border-t border-purple-300 pt-2 cursor-help">
+                                        <span className="text-purple-800">Contribution:</span>
+                                        <span className={`font-mono ${getColorClass(factors.vineyardPrestige * 0.4)}`}>{formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}</span>
+                                      </div>
+                                    </MobileDialogWrapper>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title="Contribution">
+                                        <TooltipRow 
+                                          label="Vineyard Prestige:" 
+                                          value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                          valueRating={factors.vineyardPrestige}
+                                          monospaced
+                                        />
+                                        <TooltipRow 
+                                          label="Weight:" 
+                                          value="40%"
+                                        />
+                                        <div className="mt-2 pt-2 border-t border-gray-600">
+                                          <TooltipRow 
+                                            label="Contribution:" 
+                                            value={formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}
+                                            valueRating={factors.vineyardPrestige * 0.4}
+                                            monospaced
+                                          />
+                                        </div>
+                                      </TooltipSection>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                           </div>
 
@@ -664,7 +964,7 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
         
         <div className="flex justify-between text-lg font-bold">
           <span>Final Grape Quality:</span>
-          <span className="font-mono">
+          <span className={`font-mono ${getColorClass(currentGrapeQuality)}`}>
             {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
             <span className="text-sm font-normal ml-2">({getGrapeQualityCategory(currentGrapeQuality)})</span>
           </span>

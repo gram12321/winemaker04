@@ -1,6 +1,6 @@
 import React from 'react';
 import { Vineyard } from '@/lib/types/types';
-import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory, getBadgeColorClasses } from '@/lib/utils';
+import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory } from '@/lib/utils';
 import { getRegionalPriceRange } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
@@ -158,7 +158,11 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
               <div className="text-xs font-medium text-gray-300 mb-1">🍇 Grape Suitability</div>
               <div className="text-xs text-green-300 font-medium mb-1">INDIRECT INFLUENCE - Environmental Factor</div>
               <TooltipRow label="Grape:" value={vineyard.grape} />
-              <div className="text-xs text-gray-300 mb-1">Suitability: How well this grape fits the region</div>
+              <TooltipRow 
+                label="Suitability:" 
+                value={`${formatNumber(displayValue * 100, { decimals: 0, forceDecimals: true })}%`}
+                valueRating={displayValue}
+              />
               <div className="text-xs text-gray-300 mt-2">
                 <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). Your {formatNumber(displayValue * 100, { decimals: 0, forceDecimals: true })}% suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
               </div>

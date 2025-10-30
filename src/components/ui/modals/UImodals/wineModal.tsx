@@ -182,9 +182,9 @@ export const WineModal: React.FC<WineModalProps> = ({
                     <CardContent className="py-3 text-sm space-y-3">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Wine Score:</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                               <MobileDialogWrapper 
                                 content={
                                   <div className={tooltipStyles.text}>
@@ -208,11 +208,11 @@ export const WineModal: React.FC<WineModalProps> = ({
                                 triggerClassName="text-right cursor-help"
                               >
                                 <div className="text-right cursor-help">
-                                  <div className={`font-medium ${getColorClass((currentGrapeQuality + currentBalance) / 2)}`}>
-                                    {formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
-                                  </div>
-                                  <div className="text-xs text-gray-500">{getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}</div>
+                                <div className={`font-medium ${getColorClass((currentGrapeQuality + currentBalance) / 2)}`}>
+                                  {formatNumber((currentGrapeQuality + currentBalance) / 2, { decimals: 2, forceDecimals: true })}
                                 </div>
+                                <div className="text-xs text-gray-500">{getGrapeQualityCategory((currentGrapeQuality + currentBalance) / 2)}</div>
+                              </div>
                               </MobileDialogWrapper>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
@@ -231,17 +231,17 @@ export const WineModal: React.FC<WineModalProps> = ({
                                     <div className="text-xs text-gray-300">{getGrapeQualityDescription((currentGrapeQuality + currentBalance) / 2)}</div>
                                   </div>
                                 </TooltipSection>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       </div>
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Balance:</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                               <MobileDialogWrapper 
                                 content={
                                   <div className={tooltipStyles.text}>
@@ -265,11 +265,11 @@ export const WineModal: React.FC<WineModalProps> = ({
                                 triggerClassName="text-right cursor-help"
                               >
                                 <div className="text-right cursor-help">
-                                  <div className={`font-medium ${getColorClass(currentBalance)}`}>
-                                    {formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
-                                  </div>
-                                  <div className="text-xs text-gray-500">{getWineBalanceCategory(currentBalance)}</div>
+                                <div className={`font-medium ${getColorClass(currentBalance)}`}>
+                                  {formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
                                 </div>
+                                <div className="text-xs text-gray-500">{getWineBalanceCategory(currentBalance)}</div>
+                              </div>
                               </MobileDialogWrapper>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
@@ -288,17 +288,17 @@ export const WineModal: React.FC<WineModalProps> = ({
                                     <div className="text-xs text-gray-300">{getWineBalanceDescription(currentBalance)}</div>
                                   </div>
                                 </TooltipSection>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       </div>
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Grape Quality:</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                               <MobileDialogWrapper 
                                 content={
                                   <div className={tooltipStyles.text}>
@@ -322,11 +322,11 @@ export const WineModal: React.FC<WineModalProps> = ({
                                 triggerClassName="text-right cursor-help"
                               >
                                 <div className="text-right cursor-help">
-                                  <div className={`font-medium ${getColorClass(currentGrapeQuality)}`}>
-                                    {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
-                                  </div>
-                                  <div className="text-xs text-gray-500">{getGrapeQualityCategory(currentGrapeQuality)}</div>
+                                <div className={`font-medium ${getColorClass(currentGrapeQuality)}`}>
+                                  {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
                                 </div>
+                                <div className="text-xs text-gray-500">{getGrapeQualityCategory(currentGrapeQuality)}</div>
+                              </div>
                               </MobileDialogWrapper>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
@@ -345,10 +345,10 @@ export const WineModal: React.FC<WineModalProps> = ({
                                     <div className="text-xs text-gray-300">{getGrapeQualityDescription(currentGrapeQuality)}</div>
                                   </div>
                                 </TooltipSection>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       </div>
                     </CardContent>
                   </Card>

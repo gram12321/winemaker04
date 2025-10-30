@@ -20,8 +20,8 @@ export function CharacteristicSlider({
     <div className={`flex items-center gap-3 py-1 ${className}`}>
       <div className="w-24 flex items-center gap-2 text-xs">
         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
+        <Tooltip>
+          <TooltipTrigger asChild>
               <MobileDialogWrapper 
                 content={
                   <div className={tooltipStyles.text}>
@@ -36,13 +36,13 @@ export function CharacteristicSlider({
                 title={`${label} Information`}
                 triggerClassName="cursor-help"
               >
-                <img 
-                  src={icon} 
-                  alt={`${label} icon`} 
-                  className="w-4 h-4 opacity-80 cursor-help"
-                />
+            <img 
+              src={icon} 
+              alt={`${label} icon`} 
+              className="w-4 h-4 opacity-80 cursor-help"
+            />
               </MobileDialogWrapper>
-            </TooltipTrigger>
+          </TooltipTrigger>
             <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
               <div className={tooltipStyles.text}>
                 <TooltipSection title={`${label} Information`}>
@@ -52,8 +52,8 @@ export function CharacteristicSlider({
                   />
                 </TooltipSection>
               </div>
-            </TooltipContent>
-          </Tooltip>
+          </TooltipContent>
+        </Tooltip>
         </TooltipProvider>
         <span className="font-medium capitalize">{label}</span>
       </div>
