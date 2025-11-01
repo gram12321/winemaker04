@@ -20,8 +20,8 @@ interface ProductionHistoryTabProps {
 
 // Component for combined balance and quality display (historical data)
 const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
-  const balancePercentage = Math.round(entry.balance * 100);
-  const qualityPercentage = Math.round(entry.grapeQuality * 100);
+  const balancePercentage = formatNumber(entry.balance * 100, { smartDecimals: true });
+  const qualityPercentage = formatNumber(entry.grapeQuality * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 space-y-1">

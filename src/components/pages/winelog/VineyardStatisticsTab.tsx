@@ -92,7 +92,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                   <div className="flex justify-between">
                     <span className="text-gray-500">Health:</span>
                     <span className={`font-medium ${getColorClass(vineyard.vineyardHealth)}`}>
-                      {formatNumber(vineyard.vineyardHealth * 100, { decimals: 0 })}%
+                      {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -168,7 +168,7 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Consistency:</span>
                       <span className={`font-medium ${getColorClass(analytics.consistencyScore / 100)}`}>
-                        {formatNumber(analytics.consistencyScore, { decimals: 0 })}%
+                        {formatNumber(analytics.consistencyScore, { smartDecimals: true })}%
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">

@@ -7,7 +7,8 @@ import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, MobileDialogWrapper, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
-import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName } from '@/lib/utils/utils';
+import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName, formatNumber, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 
@@ -27,7 +28,7 @@ const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
 const GrapeQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const qualityCategory = getGrapeQualityCategory(batch.grapeQuality);
   const colorClass = getColorClass(batch.grapeQuality);
-  const qualityPercentage = Math.round(batch.grapeQuality * 100);
+  const qualityPercentage = formatNumber(batch.grapeQuality * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 mt-1">
@@ -78,18 +79,27 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
                 </TooltipSection>
               </div>
             );
+            
+            // Use balance-aware color coding for fermentation effects
+            const currentValue = batch.characteristics[effect.characteristic] || 0;
+            const balancedRange = BASE_BALANCED_RANGES[effect.characteristic];
+            const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
+            const colorInfo = getCharacteristicEffectColorInfo(currentValue, effect.modifier, balancedRangeCopy);
+            const colorClass = getCharacteristicEffectColorClass(currentValue, effect.modifier, balancedRangeCopy);
+            const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
+            
             return (
               <Tooltip key={index}>
                 <TooltipTrigger asChild>
                   <MobileDialogWrapper content={content} title={getCharacteristicDisplayName(effect.characteristic)} triggerClassName="inline-block">
-                    <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
+                    <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
                       <img 
                         src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
                         alt={effect.characteristic}
                         className="w-3 h-3 mr-1"
                       />
-                      <span className={`font-medium ${effect.modifier >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                        {effect.modifier > 0 ? '+' : ''}{(effect.modifier * 100).toFixed(1)}%
+                      <span className={`font-medium ${colorClass}`}>
+                        {effect.modifier > 0 ? '+' : ''}{formatNumber(effect.modifier * 100, { smartDecimals: true })}%
                       </span>
                     </div>
                   </MobileDialogWrapper>

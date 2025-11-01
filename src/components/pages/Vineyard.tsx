@@ -7,18 +7,18 @@ import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, H
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
-import { formatNumber, getBadgeColorClasses, getRatingForRange, getColorClassForRange, getRangeColorClasses } from '@/lib/utils/utils';
+import { formatNumber, getBadgeColorClasses, getRatingForRange, getRangeColor } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
 import { clearPendingLandSearchResults, calculateVineyardExpectedYield } from '@/lib/services';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, MobileDialogWrapper, tooltipStyles } from '../ui/shadCN/tooltip';
 
 // Progress bar color helpers via global utils
-const getHealthProgressColor = (health: number): string => getColorClassForRange(health, 0, 1, 'higher_better', 'bg');
-const getRipenessProgressColor = (ripeness: number): string => getColorClassForRange(ripeness, 0, 1, 'higher_better', 'bg');
+const getHealthProgressColor = (health: number): string => getRangeColor(health, 0, 1, 'higher_better').bg;
+const getRipenessProgressColor = (ripeness: number): string => getRangeColor(ripeness, 0, 1, 'higher_better').bg;
 const getVineYieldProgressColor = (vineYield: number): string => {
   if (vineYield >= 1.0) return 'bg-purple-500';
   const normalizedYield = Math.max(0.02, Math.min(1.0, vineYield));
-  return getColorClassForRange(normalizedYield, 0.02, 1.0, 'higher_better', 'bg');
+  return getRangeColor(normalizedYield, 0.02, 1.0, 'higher_better').bg;
 };
 
 // Consolidated tooltip content builder
@@ -32,7 +32,7 @@ const buildTooltipContent = (type: string, data: any) => {
         return (
           <div className={tooltipStyles.text}>
             <TooltipSection>
-              <p className={tooltipStyles.title}>Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</p>
+              <p className={tooltipStyles.title}>Vineyard Health: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</p>
               <p className={tooltipStyles.muted}>No significant changes this season</p>
             </TooltipSection>
           </div>
@@ -43,22 +43,22 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Vineyard Health: {Math.round(vineyard.vineyardHealth * 100)}%</p>
+            <p className={tooltipStyles.title}>Vineyard Health: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</p>
           </TooltipSection>
           <TooltipSection title="Health Changes This Season:">
             {healthTrend.seasonalDecay > 0 && (
-              <TooltipRow label="Seasonal decay:" value={`-${formatNumber(healthTrend.seasonalDecay * 100, { decimals: 1 })}%`} valueRating={0.1} />
+              <TooltipRow label="Seasonal decay:" value={`-${formatNumber(healthTrend.seasonalDecay * 100, { smartDecimals: true })}%`} valueRating={0.1} />
             )}
             {healthTrend.plantingImprovement > 0 && (
-              <TooltipRow label="Recent planting:" value={`+${formatNumber(healthTrend.plantingImprovement * 100, { decimals: 1 })}%`} valueRating={0.9} />
+              <TooltipRow label="Recent planting:" value={`+${formatNumber(healthTrend.plantingImprovement * 100, { smartDecimals: true })}%`} valueRating={0.9} />
             )}
             {(netChange !== 0) && (
-              <TooltipRow label="Net change:" value={`${hasPositiveChange ? '+' : ''}${formatNumber(netChange * 100, { decimals: 1 })}%`} valueRating={hasPositiveChange ? 0.9 : 0.1} />
+              <TooltipRow label="Net change:" value={`${hasPositiveChange ? '+' : ''}${formatNumber(netChange * 100, { smartDecimals: true })}%`} valueRating={hasPositiveChange ? 0.9 : 0.1} />
             )}
           </TooltipSection>
           {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
             <TooltipSection>
-              <p className={tooltipStyles.muted}>Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining</p>
+              <p className={tooltipStyles.muted}>Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { smartDecimals: true })}% remaining</p>
             </TooltipSection>
           )}
         </div>
@@ -68,7 +68,7 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Ripeness: {formatNumber(value * 100, { decimals: 1 })}%</p>
+            <p className={tooltipStyles.title}>Ripeness: {formatNumber(value * 100, { smartDecimals: true })}%</p>
             <p className={tooltipStyles.muted}>Ripeness affects grape quality and harvest yield. Higher ripeness produces better grapes.</p>
           </TooltipSection>
           <TooltipSection title="Quality Impact">
@@ -87,7 +87,7 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Vine Yield: {formatNumber(value * 100, { decimals: 1 })}%</p>
+            <p className={tooltipStyles.title}>Vine Yield: {formatNumber(value * 100, { smartDecimals: true })}%</p>
             <p className={tooltipStyles.muted}>
               {isExceptional ? 'Exceptional yield! This vineyard is producing above normal capacity.'
                : 'Vine yield represents the productivity of individual vines. Higher yield means more grapes per vine.'}
@@ -109,7 +109,7 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>{label}: {formatNumber(value, { decimals: 2, forceDecimals: true })}</p>
+            <p className={tooltipStyles.title}>{label}: {formatNumber(value, { smartDecimals: true })}</p>
             <p className={tooltipStyles.muted}>{description}</p>
           </TooltipSection>
           <TooltipSection title="Rating Scale">
@@ -129,7 +129,7 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Vineyard Prestige: {formatNumber(value, { decimals: 2, forceDecimals: true })}</p>
+            <p className={tooltipStyles.title}>Vineyard Prestige: {formatNumber(value, { smartDecimals: true })}</p>
             <p className={tooltipStyles.muted}>Prestige is earned from vineyard quality, land value, vine age, and wine features.</p>
           </TooltipSection>
           <TooltipSection title="Impact">
@@ -193,18 +193,18 @@ const buildTooltipContent = (type: string, data: any) => {
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
-            <p className={tooltipStyles.title}>Expected Yield: {formatNumber(totalYield)} kg</p>
+            <p className={tooltipStyles.title}>Expected Yield: {formatNumber(totalYield, { smartDecimals: true })} kg</p>
           </TooltipSection>
           <TooltipSection title="Calculation">
-            <TooltipRow label="Formula:" value={`${Math.round(totalVines)} vines × ${yieldBreakdown.baseYieldPerVine} kg/vine × ${formatNumber(details.finalMultiplier, { decimals: 3, smartDecimals: true })}`} monospaced={true} />
-            <TooltipRow label="Result:" value={`${formatNumber(totalYield)} kg`} valueRating={getRatingForRange(totalYield, 0, 10000, 'higher_better')} />
+            <TooltipRow label="Formula:" value={`${formatNumber(totalVines, { decimals: 0 })} vines × ${yieldBreakdown.baseYieldPerVine} kg/vine × ${formatNumber(details.finalMultiplier, { decimals: 3, smartDecimals: true })}`} monospaced={true} />
+            <TooltipRow label="Result:" value={`${formatNumber(totalYield, { smartDecimals: true })} kg`} valueRating={getRatingForRange(totalYield, 0, 10000, 'higher_better')} />
           </TooltipSection>
           <TooltipSection title="Multiplier Breakdown">
-            <TooltipRow label="Grape Suitability:" value={`${formatNumber(details.grapeSuitability * 100, { decimals: 1 })}%`} valueRating={details.grapeSuitability} />
-            <TooltipRow label="Natural Yield:" value={`${formatNumber(details.naturalYield * 100, { decimals: 1 })}%`} valueRating={details.naturalYield} />
-            <TooltipRow label="Ripeness:" value={`${formatNumber(details.ripeness * 100, { decimals: 1 })}%`} valueRating={details.ripeness} />
-            <TooltipRow label="Vine Yield:" value={`${formatNumber(details.vineYield * 100, { decimals: 1 })}%`} valueRating={details.vineYield} />
-            <TooltipRow label="Health:" value={`${formatNumber(details.health * 100, { decimals: 1 })}%`} valueRating={details.health} />
+            <TooltipRow label="Grape Suitability:" value={`${formatNumber(details.grapeSuitability * 100, { smartDecimals: true })}%`} valueRating={details.grapeSuitability} />
+            <TooltipRow label="Natural Yield:" value={`${formatNumber(details.naturalYield * 100, { smartDecimals: true })}%`} valueRating={details.naturalYield} />
+            <TooltipRow label="Ripeness:" value={`${formatNumber(details.ripeness * 100, { smartDecimals: true })}%`} valueRating={details.ripeness} />
+            <TooltipRow label="Vine Yield:" value={`${formatNumber(details.vineYield * 100, { smartDecimals: true })}%`} valueRating={details.vineYield} />
+            <TooltipRow label="Health:" value={`${formatNumber(details.health * 100, { smartDecimals: true })}%`} valueRating={details.health} />
           </TooltipSection>
         </div>
       );
@@ -246,7 +246,7 @@ const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }
             triggerClassName="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors"
           >
           <div className="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors">
-            Expected Yield: <span className="font-medium">{formatNumber(totalYield)} kg</span>
+            Expected Yield: <span className="font-medium">{formatNumber(totalYield, { smartDecimals: true })} kg</span>
           </div>
           </MobileDialogWrapper>
         </TooltipTrigger>
@@ -415,7 +415,7 @@ const Vineyard: React.FC = () => {
         );
         const targetDensity = plantingActivity?.params?.density || vineyard.density || 1;
         const currentDensity = vineyard.density || 0;
-        const plantingProgress = targetDensity > 0 ? Math.round((currentDensity / targetDensity) * 100) : 0;
+        const plantingProgress = targetDensity > 0 ? formatNumber((currentDensity / targetDensity) * 100, { smartDecimals: true }) : 0;
         return (
           <div className="space-y-1">
           <div className="text-xs text-emerald-600 font-medium">Planting in progress... ({plantingProgress}% complete)</div>
@@ -670,9 +670,9 @@ const Vineyard: React.FC = () => {
                                           </TooltipSection>
                                           <TooltipSection>
                                             <TooltipRow label="Base (per ha)" value={`€${formatNumber(b.basePerHa, { decimals: 0 })}`} monospaced={true} />
-                                            <TooltipRow label="Planted" value={`+${formatNumber(b.plantedBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
-                                            <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
-                                            <TooltipRow label="Prestige" value={`+${formatNumber(b.prestigeBonusPct * 100, { decimals: 2 })}%`} monospaced={true} />
+                                            <TooltipRow label="Planted" value={`+${formatNumber(b.plantedBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
+                                            <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
+                                            <TooltipRow label="Prestige" value={`+${formatNumber(b.prestigeBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
                                             <TooltipRow label="Total multiplier" value={`×${formatNumber(b.totalMultiplier, { decimals: 3, forceDecimals: true })}`} monospaced={true} />
                                             <TooltipRow label="Adjusted (per ha)" value={`€${formatNumber(b.adjustedPerHa, { decimals: 0 })}`} monospaced={true} />
                                             <TooltipRow label="Projected Total" value={`€${formatNumber(b.adjustedTotal, { decimals: 0 })}`} monospaced={true} />
@@ -801,7 +801,7 @@ const Vineyard: React.FC = () => {
                                 title="Prestige Details"
                                 triggerClassName="inline-block ml-1 cursor-help"
                               >
-                                {(() => { const { badge } = getRangeColorClasses(vineyard.vineyardPrestige ?? 0, 0, 10, 'higher_better'); return (
+                                {(() => { const { badge } = getRangeColor(vineyard.vineyardPrestige ?? 0, 0, 10, 'higher_better'); return (
                                 <span className={`ml-1 px-1 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
                                   {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
                                 </span>
@@ -825,7 +825,7 @@ const Vineyard: React.FC = () => {
                                   title="Density Details"
                                   triggerClassName="inline-block ml-1 cursor-help"
                                 >
-                                  {(() => { const { badge } = getRangeColorClasses(vineyard.density, 1500, 15000, 'lower_better'); return (
+                                  {(() => { const { badge } = getRangeColor(vineyard.density, 1500, 15000, 'lower_better'); return (
                                   <span className={`ml-1 px-1 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
                                     {formatNumber(vineyard.density, { decimals: 0 })} vines/ha
                                   </span>
@@ -849,7 +849,7 @@ const Vineyard: React.FC = () => {
                         {/* Vineyard Health Progress Bar - Always show */}
                         <div>
                           <div className="text-xs text-gray-500 mb-1">
-                            Health: {Math.round((vineyard.vineyardHealth || 1.0) * 100)}%
+                            Health: {formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%
                           </div>
                           <TooltipProvider>
                             <Tooltip>
@@ -879,7 +879,7 @@ const Vineyard: React.FC = () => {
                             {/* Ripeness Progress Bar */}
                             <div>
                               <div className="text-xs text-gray-500 mb-1">
-                                Ripeness: {Math.round((vineyard.ripeness || 0) * 100)}%
+                                Ripeness: {formatNumber((vineyard.ripeness || 0) * 100, { smartDecimals: true })}%
                               </div>
                               <TooltipProvider>
                                 <Tooltip>
@@ -909,7 +909,7 @@ const Vineyard: React.FC = () => {
                               <div className="text-xs text-gray-500 mb-1">
                                 Vine Yield: {(() => {
                                   const yieldValue = (vineyard.vineYield || 0.02) * 100;
-                                  return yieldValue >= 100 ? `${Math.round(yieldValue)}%` : `${Math.round(yieldValue)}%`;
+                                  return yieldValue >= 100 ? `${formatNumber(yieldValue, { smartDecimals: true })}%` : `${formatNumber(yieldValue, { smartDecimals: true })}%`;
                                 })()}
                               </div>
                               <TooltipProvider>
@@ -1122,7 +1122,7 @@ const Vineyard: React.FC = () => {
                                   title="Prestige Details"
                                   triggerClassName="inline-block cursor-help"
                                 >
-                                  {(() => { const { badge } = getRangeColorClasses(vineyard.vineyardPrestige ?? 0, 0, 10, 'higher_better'); return (
+                                  {(() => { const { badge } = getRangeColor(vineyard.vineyardPrestige ?? 0, 0, 10, 'higher_better'); return (
                                   <span className={`px-2 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
                                     {formatNumber(vineyard.vineyardPrestige ?? 0, { decimals: 2, forceDecimals: true })}
                                   </span>
@@ -1146,7 +1146,7 @@ const Vineyard: React.FC = () => {
                                     title="Density Details"
                                     triggerClassName="inline-block cursor-help"
                                   >
-                                    {(() => { const { badge } = getRangeColorClasses(vineyard.density, 1500, 15000, 'lower_better'); return (
+                                    {(() => { const { badge } = getRangeColor(vineyard.density, 1500, 15000, 'lower_better'); return (
                                     <span className={`px-2 py-0.5 rounded text-xs cursor-help ${badge.text} ${badge.bg}`}>
                                       {formatNumber(vineyard.density, { decimals: 0 })} vines/ha
                                     </span>
@@ -1180,7 +1180,7 @@ const Vineyard: React.FC = () => {
                           <div>
                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                               <span>Health</span>
-                              <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
+                              <span>{formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%</span>
                             </div>
                             <TooltipProvider>
                               <Tooltip>
@@ -1209,7 +1209,7 @@ const Vineyard: React.FC = () => {
                           <div>
                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                               <span>Ripeness</span>
-                              <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
+                              <span>{formatNumber((vineyard.ripeness || 0) * 100, { smartDecimals: true })}%</span>
                             </div>
                             <TooltipProvider>
                               <Tooltip>
@@ -1238,10 +1238,7 @@ const Vineyard: React.FC = () => {
                           <div>
                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                               <span>Vine Yield</span>
-                              <span>{(() => {
-                                const yieldValue = (vineyard.vineYield || 0.02) * 100;
-                                return yieldValue >= 100 ? `${Math.round(yieldValue)}%` : `${Math.round(yieldValue)}%`;
-                              })()}</span>
+                              <span>{formatNumber((vineyard.vineYield || 0.02) * 100, { smartDecimals: true })}%</span>
                             </div>
                             <TooltipProvider>
                               <Tooltip>

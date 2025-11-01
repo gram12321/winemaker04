@@ -7,7 +7,7 @@ import { Separator } from '../../shadCN/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../../shadCN/tooltip';
 import { Grape, MapPin, Ruler, Mountain, Compass, BarChart3 } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
-import { formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory, getColorClass, getColorClassForRange, getRangeColorClasses } from '@/lib/utils';
+import { formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory, getColorClass, getRangeColor } from '@/lib/utils';
 import { getAltitudeRating, getAspectRating, calculateVineyardExpectedYield } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
 import { getRegionalPriceRange } from '@/lib/services';
@@ -229,11 +229,11 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                 <div className="pt-2">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
                     <span>Vineyard Health</span>
-                    <span>{Math.round((vineyard.vineyardHealth || 1.0) * 100)}%</span>
+                    <span>{formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
                     <div
-                      className={`h-2 rounded-full transition-all duration-300 ${getColorClassForRange(vineyard.vineyardHealth || 1.0, 0, 1, 'higher_better', 'bg')}`}
+                      className={`h-2 rounded-full transition-all duration-300 ${getRangeColor(vineyard.vineyardHealth || 1.0, 0, 1, 'higher_better').bg}`}
                       style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
                     />
                     {/* Health Tooltip */}
@@ -246,7 +246,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                                 <TooltipSection title="Vineyard Health Details">
                                   <TooltipRow 
                                     label="Current Health:" 
-                                    value={`${Math.round((vineyard.vineyardHealth || 1.0) * 100)}%`}
+                                    value={`${formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%`}
                                     valueRating={vineyard.vineyardHealth || 1.0}
                                   />
                                   
@@ -303,7 +303,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                             <TooltipSection title="Vineyard Health Details">
                               <TooltipRow 
                                 label="Current Health:" 
-                                value={`${Math.round((vineyard.vineyardHealth || 1.0) * 100)}%`}
+                                value={`${formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%`}
                                 valueRating={vineyard.vineyardHealth || 1.0}
                               />
                               
@@ -359,11 +359,11 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Ripeness</span>
-                        <span>{Math.round((vineyard.ripeness || 0) * 100)}%</span>
+                        <span>{formatNumber((vineyard.ripeness || 0) * 100, { smartDecimals: true })}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all duration-300 ${getColorClassForRange(vineyard.ripeness || 0, 0, 1, 'higher_better', 'bg')}`}
+                          className={`h-2 rounded-full transition-all duration-300 ${getRangeColor(vineyard.ripeness || 0, 0, 1, 'higher_better').bg}`}
                           style={{ width: `${Math.min(100, (vineyard.ripeness || 0) * 100)}%` }}
                         />
                       </div>
@@ -371,14 +371,14 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Vine Yield</span>
-                        <span>{Math.round((vineyard.vineYield || 0.02) * 100)}%</span>
+                        <span>{formatNumber((vineyard.vineYield || 0.02) * 100, { smartDecimals: true })}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
                             (vineyard.vineYield || 0.02) >= 1.0 
                               ? 'bg-purple-500' 
-                              : getColorClassForRange(Math.max(0.02, Math.min(1.0, vineyard.vineYield || 0.02)), 0.02, 1.0, 'higher_better', 'bg')
+                              : getRangeColor(Math.max(0.02, Math.min(1.0, vineyard.vineYield || 0.02)), 0.02, 1.0, 'higher_better').bg
                           }`}
                           style={{ width: `${Math.min(100, (vineyard.vineYield || 0.02) * 100)}%` }}
                         />
@@ -479,7 +479,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                         </div>
                         <div>
                           <span className="text-muted-foreground">Total Vines:</span>
-                          <span className="font-medium ml-2">{Math.round(yieldBreakdown.totalVines)}</span>
+                          <span className="font-medium ml-2">{formatNumber(yieldBreakdown.totalVines, { decimals: 0 })}</span>
                         </div>
                       </div>
                       <div>
@@ -492,7 +492,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="text-xs font-mono bg-gray-50 p-2 rounded cursor-help">
-                                {Math.round(yieldBreakdown.totalVines)} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(yieldBreakdown.breakdown.finalMultiplier, { decimals: 3, smartDecimals: true })} = {formatNumber(yieldBreakdown.totalYield)} kg
+                                {formatNumber(yieldBreakdown.totalVines, { decimals: 0 })} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(yieldBreakdown.breakdown.finalMultiplier, { decimals: 3, smartDecimals: true })} = {formatNumber(yieldBreakdown.totalYield)} kg
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>

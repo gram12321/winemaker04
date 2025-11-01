@@ -92,7 +92,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       <div className="space-y-2">
         {skills.map((skill) => {
           const skillValue = previewSkills[skill.key];
-          const percentage = Math.round(skillValue * 100);
+          const percentage = formatNumber(skillValue * 100, { smartDecimals: true });
           
           return (
             <div key={skill.key} className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                   <div className="flex justify-between mb-2">
                     <Label className="text-gray-300">Overall Skill</Label>
                     <span className={`text-sm font-medium ${getColorClass(skillLevel)}`}>
-                      {skillInfo.name} ({Math.round(skillLevel * 100)}%)
+                      {skillInfo.name} ({formatNumber(skillLevel * 100, { smartDecimals: true })}%)
                     </span>
                   </div>
                   <Slider

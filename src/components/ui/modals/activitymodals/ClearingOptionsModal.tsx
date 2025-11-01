@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Vineyard } from '@/lib/types/types';
-import { formatNumber } from '@/lib/utils/utils';
+import { formatNumber, getColorClass } from '@/lib/utils/utils';
 import { WorkCalculationTable } from '@/components/ui';
 import { calculateClearingWork } from '@/lib/services/activity';
 import { getGameState } from '@/lib/services';
@@ -370,7 +370,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                   {vineyard.vineAge !== null && vineyard.vineAge > 0 && (
                     <span className="text-xs text-gray-500 ml-2">
                       (Vine age: {vineyard.vineAge} → 
-                      {(vineyard.vineAge * (1 - options.replantingIntensity/100)).toFixed(1)} years)
+                      {formatNumber(vineyard.vineAge * (1 - options.replantingIntensity/100), { smartDecimals: true })} years)
                     </span>
                   )}
                 </div>
@@ -399,7 +399,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Vineyard Health:</span>
-                <span className="text-sm font-medium text-gray-700">{Math.round(projectedHealth * 100)}%</span>
+                <span className={`text-sm font-medium ${getColorClass(projectedHealth)}`}>{formatNumber(projectedHealth * 100, { smartDecimals: true })}%</span>
               </div>
               
               <div className="relative">
@@ -449,9 +449,9 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
               {/* Health Change Indicator */}
               {healthImprovement !== 0 && (
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Current: {Math.round(vineyard.vineyardHealth * 100)}%</span>
+                  <span className="text-gray-600">Current: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</span>
                   <span className={`font-medium ${healthImprovement > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {healthImprovement > 0 ? '+' : ''}{Math.round(healthImprovement * 100)}% health {healthImprovement > 0 ? 'improvement' : 'reduction'}
+                    {healthImprovement > 0 ? '+' : ''}{formatNumber(healthImprovement * 100, { smartDecimals: true })}% health {healthImprovement > 0 ? 'improvement' : 'reduction'}
                   </span>
                 </div>
               )}
@@ -462,7 +462,7 @@ const ClearingOptionsModal: React.FC<ClearingOptionsModalProps> = ({
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-300 opacity-50 rounded"></div>
                     <span className="text-green-700 font-medium">Gradual Improvement:</span>
-                    <span className="text-green-600">+{Math.round(0.2 * options.replantingIntensity / 100 * 100)}% health over 5 years</span>
+                    <span className="text-green-600">+{formatNumber(0.2 * options.replantingIntensity / 100 * 100, { smartDecimals: true })}% health over 5 years</span>
                   </div>
                   <div className="text-green-600 mt-1">
                     The semi-transparent green bar shows the additional health that will gradually improve over time (scales with replanting intensity).

@@ -224,7 +224,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                               <div className="text-white font-medium">{formatNumber(offer.principalAmount, { currency: true })}</div>
 
                               <div className="text-gray-400">Duration:</div>
-                              <div className="text-white">{Math.round(offer.durationSeasons / 4)} years</div>
+                              <div className="text-white">{formatNumber(offer.durationSeasons / 4, { smartDecimals: true })} years</div>
 
                               <div className="text-gray-400">Interest Rate:</div>
                               <div className="text-white">{formatPercent(offer.effectiveInterestRate)}</div>
@@ -269,7 +269,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Risk Tolerance:</span>
-                          <span className="text-white font-medium">{Math.round(selectedOffer.lender.riskTolerance * 100)}%</span>
+                          <span className="text-white font-medium">{formatNumber(selectedOffer.lender.riskTolerance * 100, { smartDecimals: true })}%</span>
                         </div>
                       </div>
                     </div>
@@ -307,9 +307,9 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                             className="w-full"
                           />
                           <div className="flex justify-between text-sm text-gray-400">
-                            <span>{Math.round(selectedOffer.lender.minDurationSeasons / 4 * 10) / 10} years</span>
-                            <span className="font-medium text-white">{Math.round(durationSeasons / 4 * 10) / 10} years</span>
-                            <span>{Math.round(selectedOffer.lender.maxDurationSeasons / 4 * 10) / 10} years</span>
+                            <span>{formatNumber(selectedOffer.lender.minDurationSeasons / 4, { smartDecimals: true })} years</span>
+                            <span className="font-medium text-white">{formatNumber(durationSeasons / 4, { smartDecimals: true })} years</span>
+                            <span>{formatNumber(selectedOffer.lender.maxDurationSeasons / 4, { smartDecimals: true })} years</span>
                           </div>
                         </div>
                       </div>
@@ -352,7 +352,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Duration:</span>
-                          <span className="text-white">{Math.round(durationSeasons / 4 * 10) / 10} years ({durationSeasons} seasons)</span>
+                          <span className="text-white">{formatNumber(durationSeasons / 4, { smartDecimals: true })} years ({durationSeasons} seasons)</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Interest Rate:</span>
@@ -390,7 +390,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-400">Total Work:</span>
-                          <span className="text-white font-medium">{Math.round(workCalculation.totalWork)} work units</span>
+                          <span className="text-white font-medium">{formatNumber(workCalculation.totalWork, { smartDecimals: true })} work units</span>
                         </div>
                         {workCalculation.factors.length > 3 && (
                           <div className="text-xs text-gray-500">
@@ -407,7 +407,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                         disabled={isSubmitting}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        {isSubmitting ? 'Processing...' : `Apply for Loan (${Math.round(workCalculation.totalWork)} work)`}
+                        {isSubmitting ? 'Processing...' : `Apply for Loan (${formatNumber(workCalculation.totalWork, { smartDecimals: true })} work)`}
                       </Button>
                     </div>
                   </div>

@@ -180,7 +180,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
 
             {/* Progress info */}
             <div className="flex justify-between items-center text-xs text-gray-400">
-              <span>{Math.round(progress)}% complete</span>
+              <span>{formatNumber(progress, { smartDecimals: true })}% complete</span>
               <span>{formatNumber(activity.totalWork - activity.completedWork, { decimals: 0 })} work left</span>
             </div>
 

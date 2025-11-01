@@ -690,7 +690,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-gray-600">{staff.nationality}</span>
                         <Badge variant="outline" className={`text-2xs ${getColorClass(staff.skillLevel)}`}>
-                          {skillInfo.name} ({Math.round(staff.skillLevel * 100)}%)
+                          {skillInfo.name} ({formatNumber(staff.skillLevel * 100, { smartDecimals: true })}%)
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 mt-1">

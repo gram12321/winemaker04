@@ -1,5 +1,9 @@
 // Shared characteristic slider component for winepedia
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
+import { getRatingForRange } from '@/lib/utils/utils';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
+import { WineCharacteristics } from '@/lib/types/types';
+import { formatNumber } from '@/lib/utils';
 
 interface CharacteristicSliderProps {
   value: number;
@@ -30,6 +34,21 @@ export function CharacteristicSlider({
                         label="Characteristic:" 
                         value={label}
                       />
+                      <TooltipRow 
+                        label="Current Value:" 
+                        value={value.toFixed(2)}
+                        valueRating={(() => {
+                          // Try to get balanced range for this characteristic if it exists
+                          const charKey = label.toLowerCase() as keyof WineCharacteristics;
+                          const balancedRange = BASE_BALANCED_RANGES[charKey];
+                          if (balancedRange) {
+                            return getRatingForRange(value, 0, 1, 'balanced', balancedRange[0], balancedRange[1]);
+                          }
+                          // Fallback to higher_better if no balanced range available
+                          return getRatingForRange(value, 0, 1, 'higher_better');
+                        })()}
+                        monospaced
+                      />
                     </TooltipSection>
                   </div>
                 } 
@@ -50,6 +69,21 @@ export function CharacteristicSlider({
                     label="Characteristic:" 
                     value={label}
                   />
+                  <TooltipRow 
+                    label="Current Value:" 
+                    value={formatNumber(value, { smartDecimals: true })}
+                    valueRating={(() => {
+                      // Try to get balanced range for this characteristic if it exists
+                      const charKey = label.toLowerCase() as keyof WineCharacteristics;
+                      const balancedRange = BASE_BALANCED_RANGES[charKey];
+                      if (balancedRange) {
+                        return getRatingForRange(value, 0, 1, 'balanced', balancedRange[0], balancedRange[1]);
+                      }
+                      // Fallback to higher_better if no balanced range available
+                      return getRatingForRange(value, 0, 1, 'higher_better');
+                    })()}
+                    monospaced
+                  />
                 </TooltipSection>
               </div>
           </TooltipContent>
@@ -69,7 +103,7 @@ export function CharacteristicSlider({
         />
         <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
           <span>0.00</span>
-          <span className="font-medium">{value.toFixed(2)}</span>
+          <span className="font-medium">{formatNumber(value, { smartDecimals: true })}</span>
           <span>1.00</span>
         </div>
       </div>

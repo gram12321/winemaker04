@@ -65,7 +65,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
       category: WorkCategory.HARVESTING,
       title: `Harvesting ${vineyard.name}`,
       totalWork: harvestCalculation.workEstimate.totalWork,
-      activityDetails: `Expected yield: ${harvestCalculation.expectedYield.toFixed(0)} kg`,
+      activityDetails: `Expected yield: ${formatNumber(harvestCalculation.expectedYield, { smartDecimals: true })} kg`,
       targetId: vineyard.id,
       params: {
         grape: vineyard.grape,
@@ -105,13 +105,13 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
 
     // Low yield warning
     if (ripenessPercent < 30) {
-      riskMessages.push(`⚠️ Low ripeness (${Math.round(ripenessPercent)}%) - harvest will yield very little.`);
+      riskMessages.push(`⚠️ Low ripeness (${formatNumber(ripenessPercent, { smartDecimals: true })}%) - harvest will yield very little.`);
     }
 
     // Check all harvest features
     const harvestFeatures = previewFeatureRisks(undefined, 'harvest', vineyard);
     for (const feature of harvestFeatures) {
-      const riskPercent = (feature.newRisk * 100).toFixed(1);
+      const riskPercent = formatNumber(feature.newRisk * 100, { smartDecimals: true });
       riskMessages.push(`📊 ${riskPercent}% chance of ${feature.featureName} (${feature.description || ''})`);
 
       // Pull tips from feature config

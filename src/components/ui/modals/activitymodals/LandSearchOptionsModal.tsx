@@ -360,7 +360,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
                         <span>{formatNumber(MIN_HA, { smartMaxDecimals: true })} ha</span>
-                        <span>{formatNumber(MAX_HA)} ha</span>
+                        <span>{formatNumber(MAX_HA, { smartDecimals: true })} ha</span>
                       </div>
                     </div>
                   );
@@ -392,8 +392,8 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                       }}
                     />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>{Math.round((currentMin) * 100)}%</span>
-                        <span>{Math.round((currentMax) * 100)}%</span>
+                        <span>{formatNumber(currentMin * 100, { smartDecimals: true })}%</span>
+                        <span>{formatNumber(currentMax * 100, { smartDecimals: true })}%</span>
                       </div>
                       <p className="text-xs text-gray-400">Normalized by region. Higher is always better.</p>
                     </div>
@@ -433,7 +433,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
               {/* Min Grape Suitability */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Min Grape Suitability ({Math.round((options.minGrapeSuitability || 0) * 100)}%)
+                  Min Grape Suitability ({formatNumber((options.minGrapeSuitability || 0) * 100, { smartDecimals: true })}%)
                 </label>
                 <input
                   type="range"
@@ -511,7 +511,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
               {/* Number of Options */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Number of Properties ({formatNumber(options.numberOfOptions)})
+                  Number of Properties ({formatNumber(options.numberOfOptions, { smartDecimals: true })})
                 </label>
                 <input
                   type="range"
@@ -523,8 +523,8 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>{formatNumber(3)}</span>
-                  <span>{formatNumber(10)}</span>
+                  <span>{formatNumber(3, { smartDecimals: true })}</span>
+                  <span>{formatNumber(10, { smartDecimals: true })}</span>
                 </div>
               </div>
 
@@ -605,7 +605,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Work Required:</span>
-                    <span className="text-white font-medium">{Math.round(previewStats.totalWork)} units</span>
+                    <span className="text-white font-medium">{formatNumber(previewStats.totalWork, { smartDecimals: true })} units</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Estimated Time:</span>
@@ -620,20 +620,20 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 <div className="bg-gray-800 rounded-lg p-4 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Properties:</span>
-                    <span className="text-white">{formatNumber(options.numberOfOptions)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Regions:</span>
-                    <span className="text-white">{options.regions.length > 0 ? `${formatNumber(redistributedProbabilities.length)} accessible` : 'All accessible'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Hectares:</span>
-                    <span className="text-white">{formatNumber(options.hectareRange[0])}-{formatNumber(options.hectareRange[1])}</span>
-                  </div>
-                  {options.altitudeRange && (
+                      <span className="text-white">{formatNumber(options.numberOfOptions, { smartDecimals: true })}</span>
+                    </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Altitude:</span>
-                      <span className="text-white">{formatNumber(options.altitudeRange[0])}-{formatNumber(options.altitudeRange[1])}m</span>
+                      <span className="text-gray-400">Regions:</span>
+                      <span className="text-white">{options.regions.length > 0 ? `${formatNumber(redistributedProbabilities.length, { smartDecimals: true })} accessible` : 'All accessible'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Hectares:</span>
+                      <span className="text-white">{formatNumber(options.hectareRange[0], { smartDecimals: true })}-{formatNumber(options.hectareRange[1], { smartDecimals: true })}</span>
+                    </div>
+                    {options.altitudeRange && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Altitude:</span>
+                        <span className="text-white">{formatNumber(options.altitudeRange[0], { smartDecimals: true })}-{formatNumber(options.altitudeRange[1], { smartDecimals: true })}m</span>
                     </div>
                   )}
                   {options.aspectPreferences && options.aspectPreferences.length > 0 && (
@@ -657,7 +657,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   {options.minGrapeSuitability && options.minGrapeSuitability > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-400">Min Suitability:</span>
-                      <span className="text-white">{Math.round(options.minGrapeSuitability * 100)}%</span>
+                      <span className="text-white">{formatNumber(options.minGrapeSuitability * 100, { smartDecimals: true })}%</span>
                     </div>
                   )}
                 </div>

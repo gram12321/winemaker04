@@ -5,7 +5,7 @@ import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules,
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
-import { getWineBalanceCategory, getColorClassForRange } from '@/lib/utils/utils';
+import { getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 
 
 interface BalanceScoreBreakdownProps {
@@ -110,29 +110,193 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                 </div>
                 
                 <div className="space-y-1 text-xs md:text-sm">
-                  <div className="flex justify-between">
-                    <span>DistanceInside:</span>
-                    <span className={`font-mono ${getColorClassForRange(calc.distanceInside, 0, 0.2, 'lower_better')}`}>{formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>DistanceOutside:</span>
-                    <span className={`font-mono ${getColorClassForRange(calc.distanceOutside, 0, 0.2, 'lower_better')}`}>{formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Penalty (2×Outside):</span>
-                    <span className={`font-mono ${getColorClassForRange(calc.penalty, 0, 0.4, 'lower_better')}`}>{formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Base TotalDistance:</span>
-                    <span className={`font-mono ${getColorClassForRange(calc.baseTotalDistance, 0, 0.6, 'lower_better')}`}>{formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}</span>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <MobileDialogWrapper
+                          content={
+                            <div className={tooltipStyles.text}>
+                              <TooltipSection title="DistanceInside Details">
+                                <TooltipRow 
+                                  label="DistanceInside:" 
+                                  value={formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}
+                                  valueRating={getRatingForRange(calc.distanceInside, 0, 0.2, 'lower_better')}
+                                  monospaced
+                                />
+                                <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                                  Distance from the midpoint of the balanced range. Lower values are better.
+                                </div>
+                              </TooltipSection>
+                            </div>
+                          }
+                          title="DistanceInside Details"
+                          triggerClassName="flex justify-between cursor-help"
+                        >
+                          <div className="flex justify-between">
+                            <span>DistanceInside:</span>
+                            <span className={`font-mono ${getRangeColor(calc.distanceInside, 0, 0.2, 'lower_better').text}`}>{formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}</span>
+                          </div>
+                        </MobileDialogWrapper>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection title="DistanceInside Details">
+                            <TooltipRow 
+                              label="DistanceInside:" 
+                              value={formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}
+                              valueRating={getRatingForRange(calc.distanceInside, 0, 0.2, 'lower_better')}
+                              monospaced
+                            />
+                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                              Distance from the midpoint of the balanced range. Lower values are better.
+                            </div>
+                          </TooltipSection>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <MobileDialogWrapper
+                          content={
+                            <div className={tooltipStyles.text}>
+                              <TooltipSection title="DistanceOutside Details">
+                                <TooltipRow 
+                                  label="DistanceOutside:" 
+                                  value={formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}
+                                  valueRating={getRatingForRange(calc.distanceOutside, 0, 0.2, 'lower_better')}
+                                  monospaced
+                                />
+                                <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                                  Distance outside the balanced range. Values outside the range incur penalties. Lower values are better.
+                                </div>
+                              </TooltipSection>
+                            </div>
+                          }
+                          title="DistanceOutside Details"
+                          triggerClassName="flex justify-between cursor-help"
+                        >
+                          <div className="flex justify-between">
+                            <span>DistanceOutside:</span>
+                            <span className={`font-mono ${getRangeColor(calc.distanceOutside, 0, 0.2, 'lower_better').text}`}>{formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}</span>
+                          </div>
+                        </MobileDialogWrapper>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection title="DistanceOutside Details">
+                            <TooltipRow 
+                              label="DistanceOutside:" 
+                              value={formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}
+                              valueRating={getRatingForRange(calc.distanceOutside, 0, 0.2, 'lower_better')}
+                              monospaced
+                            />
+                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                              Distance outside the balanced range. Values outside the range incur penalties. Lower values are better.
+                            </div>
+                          </TooltipSection>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <MobileDialogWrapper
+                          content={
+                            <div className={tooltipStyles.text}>
+                              <TooltipSection title="Penalty Details">
+                                <TooltipRow 
+                                  label="Penalty (2×Outside):" 
+                                  value={formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}
+                                  valueRating={getRatingForRange(calc.penalty, 0, 0.4, 'lower_better')}
+                                  monospaced
+                                />
+                                <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                                  Penalty is calculated as 2× the distance outside the balanced range. Lower values are better.
+                                </div>
+                              </TooltipSection>
+                            </div>
+                          }
+                          title="Penalty Details"
+                          triggerClassName="flex justify-between cursor-help"
+                        >
+                          <div className="flex justify-between">
+                            <span>Penalty (2×Outside):</span>
+                            <span className={`font-mono ${getRangeColor(calc.penalty, 0, 0.4, 'lower_better').text}`}>{formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}</span>
+                          </div>
+                        </MobileDialogWrapper>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection title="Penalty Details">
+                            <TooltipRow 
+                              label="Penalty (2×Outside):" 
+                              value={formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}
+                              valueRating={getRatingForRange(calc.penalty, 0, 0.4, 'lower_better')}
+                              monospaced
+                            />
+                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                              Penalty is calculated as 2× the distance outside the balanced range. Lower values are better.
+                            </div>
+                          </TooltipSection>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <MobileDialogWrapper
+                          content={
+                            <div className={tooltipStyles.text}>
+                              <TooltipSection title="Base TotalDistance Details">
+                                <TooltipRow 
+                                  label="Base TotalDistance:" 
+                                  value={formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}
+                                  valueRating={getRatingForRange(calc.baseTotalDistance, 0, 0.6, 'lower_better')}
+                                  monospaced
+                                />
+                                <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                                  Sum of distance inside and penalty. This is the base calculation before scaling and synergy adjustments.
+                                </div>
+                              </TooltipSection>
+                            </div>
+                          }
+                          title="Base TotalDistance Details"
+                          triggerClassName="flex justify-between cursor-help"
+                        >
+                          <div className="flex justify-between">
+                            <span>Base TotalDistance:</span>
+                            <span className={`font-mono ${getRangeColor(calc.baseTotalDistance, 0, 0.6, 'lower_better').text}`}>{formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}</span>
+                          </div>
+                        </MobileDialogWrapper>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection title="Base TotalDistance Details">
+                            <TooltipRow 
+                              label="Base TotalDistance:" 
+                              value={formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}
+                              valueRating={getRatingForRange(calc.baseTotalDistance, 0, 0.6, 'lower_better')}
+                              monospaced
+                            />
+                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                              Sum of distance inside and penalty. This is the base calculation before scaling and synergy adjustments.
+                            </div>
+                          </TooltipSection>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   {(calc.totalScalingMultiplier !== 1 || calc.synergyReduction > 0) && (
                     <div className="space-y-1">
                       {calc.totalScalingMultiplier !== 1 && (
                         <div className="flex justify-between">
                           <span>Cross-trait scaling:</span>
                           <span className={`font-mono ${calc.totalScalingMultiplier > 1 ? 'text-red-600' : 'text-green-600'}`}>
-                            {calc.totalScalingMultiplier.toFixed(2)}x
+                            {formatNumber(calc.totalScalingMultiplier, { smartDecimals: true })}x
                           </span>
                         </div>
                       )}
@@ -140,16 +304,57 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                         <div className="flex justify-between">
                           <span>Synergy reduction:</span>
                           <span className="font-mono text-yellow-600">
-                            -{(calc.synergyReduction * 100).toFixed(0)}%
+                            -{formatNumber(calc.synergyReduction * 100, { smartDecimals: true })}%
                           </span>
                         </div>
                       )}
                     </div>
                   )}
-                  <div className="flex justify-between font-medium border-t pt-1">
-                    <span>Final TotalDistance:</span>
-                    <span className={`font-mono ${getColorClassForRange(calc.finalTotalDistance, 0, 0.6, 'lower_better')}`}>{formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}</span>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <MobileDialogWrapper
+                          content={
+                            <div className={tooltipStyles.text}>
+                              <TooltipSection title="Final TotalDistance Details">
+                                <TooltipRow 
+                                  label="Final TotalDistance:" 
+                                  value={formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}
+                                  valueRating={getRatingForRange(calc.finalTotalDistance, 0, 0.6, 'lower_better')}
+                                  monospaced
+                                />
+                                <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                                  Final calculated distance after all scaling and synergy adjustments. Lower values contribute to better balance score.
+                                </div>
+                              </TooltipSection>
+                            </div>
+                          }
+                          title="Final TotalDistance Details"
+                          triggerClassName="flex justify-between font-medium border-t pt-1 cursor-help"
+                        >
+                          <div className="flex justify-between font-medium border-t pt-1">
+                            <span>Final TotalDistance:</span>
+                            <span className={`font-mono ${getRangeColor(calc.finalTotalDistance, 0, 0.6, 'lower_better').text}`}>{formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}</span>
+                          </div>
+                        </MobileDialogWrapper>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection title="Final TotalDistance Details">
+                            <TooltipRow 
+                              label="Final TotalDistance:" 
+                              value={formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}
+                              valueRating={getRatingForRange(calc.finalTotalDistance, 0, 0.6, 'lower_better')}
+                              monospaced
+                            />
+                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
+                              Final calculated distance after all scaling and synergy adjustments. Lower values contribute to better balance score.
+                            </div>
+                          </TooltipSection>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   
                   {/* Show all rules from this characteristic */}
                   <div className="mt-2 pt-2 border-t">
@@ -247,40 +452,41 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                                     <TooltipSection title={`${char} Requirement`}>
                                                       <TooltipRow 
                                                         label="Needs to be:" 
-                                                        value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${threshold.toFixed(1)})`}
+                                                        value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${formatNumber(threshold, { smartDecimals: true })})`}
                                                       />
-                                                      <TooltipRow 
-                                                        label="Current:" 
-                                                        value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                      />
-                                                    </TooltipSection>
-                                                  </div>
-                                                } 
-                                                title={`${char} Requirement`}
-                                                triggerClassName="flex items-center gap-1"
-                                              >
-                                                <div className="flex items-center gap-1">
-                                                  <img 
-                                                    src={`/assets/icons/characteristics/${char}.png`} 
-                                                    alt={`${char} icon`} 
-                                                    className="w-3 h-3 opacity-80 cursor-help" 
-                                                  />
-                                                  <span className="text-xs">
-                                                    {char}
-                                                    <span className={`ml-1 ${isActive ? 'text-red-500' : ''}`}>
-                                                      {needsHigh ? '↑' : '↓'}
-                                                    </span>
-                                                  </span>
-                                                </div>
-                                              </MobileDialogWrapper>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                                              <div className={tooltipStyles.text}>
-                                                <TooltipSection title={`${char} Requirement`}>
                                                   <TooltipRow 
-                                                    label="Needs to be:" 
-                                                    value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${threshold.toFixed(1)})`}
+                                                    label="Current:" 
+                                                    value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                    valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
                                                   />
+                                                </TooltipSection>
+                                              </div>
+                                            } 
+                                            title={`${char} Requirement`}
+                                            triggerClassName="flex items-center gap-1"
+                                          >
+                                            <div className="flex items-center gap-1">
+                                              <img 
+                                                src={`/assets/icons/characteristics/${char}.png`} 
+                                                alt={`${char} icon`} 
+                                                className="w-3 h-3 opacity-80 cursor-help" 
+                                              />
+                                              <span className="text-xs">
+                                                {char}
+                                                <span className={`ml-1 ${isActive ? 'text-red-500' : ''}`}>
+                                                  {needsHigh ? '↑' : '↓'}
+                                                </span>
+                                              </span>
+                                            </div>
+                                          </MobileDialogWrapper>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
+                                          <div className={tooltipStyles.text}>
+                                            <TooltipSection title={`${char} Requirement`}>
+                                              <TooltipRow 
+                                                label="Needs to be:" 
+                                                value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${formatNumber(threshold, { smartDecimals: true })})`}
+                                              />
                                                   <TooltipRow 
                                                     label="Current:" 
                                                     value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
@@ -318,6 +524,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                                   key={t}
                                                   label={t} 
                                                   value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
+                                                  valueRating={getRatingForRange(characteristics[t as keyof WineCharacteristics], 0, 1, 'balanced', BASE_BALANCED_RANGES[t as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[t as keyof WineCharacteristics][1])}
                                                 />
                                               ))}
                                             </div>
@@ -386,7 +593,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   // Fallback to simple display if detailed breakdown not available
                                   return (
                                     <span className="text-red-600 font-bold ml-3">
-                                      ⚠️ {rule.cap ? (rule.cap * 100).toFixed(1) : '40.0'}% penalty
+                                      ⚠️ {rule.cap ? formatNumber(rule.cap * 100, { smartDecimals: true }) : '40.0'}% penalty
                                     </span>
                                   );
                                 }
@@ -415,6 +622,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                                   <TooltipRow 
                                                     label="avgDeviation:" 
                                                     value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
+                                                    valueRating={getRatingForRange(breakdown.avgDeviation, 0, 0.5, 'lower_better')}
                                                     monospaced
                                                   />
                                                   <TooltipRow 
@@ -447,7 +655,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                           triggerClassName="text-red-600 font-bold ml-3 cursor-help"
                                         >
                                           <span className="text-red-600 font-bold ml-3 cursor-help">
-                                            ⚠️ {breakdown.penaltyPercentage.toFixed(1)}% penalty
+                                            ⚠️ {formatNumber(breakdown.penaltyPercentage, { smartDecimals: true })}% penalty
                                           </span>
                                         </MobileDialogWrapper>
                                       </TooltipTrigger>
@@ -588,6 +796,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                                       <TooltipRow 
                                                         label="Current:" 
                                                         value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                        valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
                                                       />
                                                     </TooltipSection>
                                                   </div>
@@ -707,9 +916,9 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   if (!breakdown) {
                                     // Fallback to simple display if detailed breakdown not available
                                     return (
-                                      <span className="text-green-600 font-bold ml-3">
-                                        ✨ -{rule.cap ? (rule.cap * 100).toFixed(1) : '75.0'}% reduction
-                                      </span>
+                                    <span className="text-green-600 font-bold ml-3">
+                                      ✨ -{rule.cap ? formatNumber(rule.cap * 100, { smartDecimals: true }) : '75.0'}% reduction
+                                    </span>
                                     );
                                   }
                                   
@@ -769,7 +978,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                             triggerClassName="text-green-600 font-bold ml-3 cursor-help"
                                           >
                                             <span className="text-green-600 font-bold ml-3 cursor-help">
-                                              ✨ -{breakdown.synergyPercentage.toFixed(1)}% reduction
+                                              ✨ -{formatNumber(breakdown.synergyPercentage, { smartDecimals: true })}% reduction
                                             </span>
                                           </MobileDialogWrapper>
                                         </TooltipTrigger>
@@ -858,17 +1067,17 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
             <div className="flex justify-between mb-1">
               <span>Average TotalDistance:</span>
               <span className="font-mono">
-                {(Object.values(breakdown).reduce((sum, calc) => sum + calc.finalTotalDistance, 0) / 6).toFixed(3)}
+                {formatNumber((Object.values(breakdown).reduce((sum, calc) => sum + calc.finalTotalDistance, 0) / 6), { smartDecimals: true })}
               </span>
             </div>
             <div className="flex justify-between mb-1">
               <span>Balance Score (1 - 2×Avg):</span>
-              <span className="font-mono font-medium">{balanceResult.score.toFixed(3)}</span>
+              <span className="font-mono font-medium">{formatNumber(balanceResult.score, { smartDecimals: true })}</span>
             </div>
             <div className="flex justify-between text-lg font-bold">
               <span>Final Score:</span>
               <div className="text-right">
-                <div>{Math.round(balanceResult.score * 100)}%</div>
+                <div>{formatNumber(balanceResult.score * 100, { smartDecimals: true })}%</div>
                 <div className="text-sm font-normal text-gray-600">{getWineBalanceCategory(balanceResult.score)}</div>
               </div>
             </div>

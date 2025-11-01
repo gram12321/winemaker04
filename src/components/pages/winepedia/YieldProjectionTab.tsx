@@ -378,7 +378,7 @@ export function YieldProjectionTab() {
                         {cells.map((c, idx) => (
                           <div
                             key={idx}
-                            title={`Ripeness ${formatNumber(c.r, {decimals:2, forceDecimals:true})}, Age ${Math.round(c.a)}y\nYield ${formatNumber(c.y, {decimals:0})} kg`}
+                            title={`Ripeness ${formatNumber(c.r, {decimals:2, forceDecimals:true})}, Age ${formatNumber(c.a, {decimals:0})}y\nYield ${formatNumber(c.y, {decimals:0})} kg`}
                             style={{ background: toColor(c.y) }}
                             className="w-4 h-4 md:w-5 md:h-5"
                           />

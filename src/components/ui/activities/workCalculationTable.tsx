@@ -18,14 +18,14 @@ export const WorkCalculationTable: React.FC<WorkCalculationTableProps> = ({ fact
         </small>
       );
     } 
-    const percentage = formatNumber(modifier * 100, { decimals: 0 }); // Format as integer percentage
+    const percentage = formatNumber(modifier * 100, { smartDecimals: true }); // Format as integer percentage
     const modifierText = modifier > 0 ? 'more' : 'less';
     const colorClass = modifier > 0 ? 'text-red-600' : 'text-green-600'; // Red for more work, green for less
     
     
     return (
       <small className={`block ${colorClass} text-xs`}>
-        {Math.abs(Number(percentage))}% {modifierText} work {label ? `(${label})` : ''}
+        {percentage}% {modifierText} work {label ? `(${label})` : ''}
       </small>
     );
   };
@@ -40,7 +40,7 @@ export const WorkCalculationTable: React.FC<WorkCalculationTableProps> = ({ fact
           {/* Updated label span to accommodate potentially longer text */}
           <span className="w-1/2 pr-2">{factor.label}:</span> 
           <span className="w-1/2 text-right">
-            {typeof factor.value === 'number' ? formatNumber(factor.value, { decimals: 2 }) : factor.value}
+            {typeof factor.value === 'number' ? formatNumber(factor.value, { smartDecimals: true }) : factor.value}
             {factor.unit && ` ${factor.unit}`}
             {factor.modifier !== undefined && renderModifier(factor.modifier, factor.modifierLabel)}
           </span>

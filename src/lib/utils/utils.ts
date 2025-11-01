@@ -143,14 +143,78 @@ export function formatNumber(value: number, options?: {
     });
   }
   
-  // Smart decimals mode: show up to specified decimals but remove trailing zeros
+  // Smart decimals mode: intelligent decimal display based on value magnitude
+  // Always uses calculatedDecimals as base (includes smartMaxDecimals and adaptiveNearOne logic)
+  // If decimals is specified: uses calculatedDecimals (preserves original behavior)
+  // If decimals is NOT specified: uses calculatedDecimals for >=1, new intelligent logic for <1
+  // NOTE: Uses minimumFractionDigits: 0 (when forceDecimals is false) to remove trailing zeros
+  //       So whole numbers show as "6" not "6,0", but decimals show as "6,1"
   if (smartDecimals) {
-    const maxDecimals = Math.min(calculatedDecimals, 6); // Cap for readability
-    const formatted = value.toLocaleString('de-DE', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: maxDecimals
+    // Handle zero case: show "0" with no decimals
+    if (value === 0) {
+      return '0';
+    }
+    
+    // If decimals is specified with smartDecimals, use calculatedDecimals (includes smartMaxDecimals and adaptiveNearOne)
+    // This preserves the original behavior completely
+    if (decimals !== undefined) {
+      const maxDecimals = Math.min(calculatedDecimals, 6); // Cap for readability
+      const formatted = value.toLocaleString('de-DE', {
+        minimumFractionDigits: forceDecimals ? maxDecimals : 0,
+        maximumFractionDigits: maxDecimals
+      });
+      return formatted;
+    }
+    
+    // New intelligent behavior: no decimals specified
+    // For values >= 1: use calculatedDecimals (which includes smartMaxDecimals: >=10: 0, >=1: 1, default: 2)
+    if (Math.abs(value) >= 1) {
+      const maxDecimals = Math.min(calculatedDecimals, 6);
+      return value.toLocaleString('de-DE', {
+        minimumFractionDigits: forceDecimals ? maxDecimals : 0,
+        maximumFractionDigits: maxDecimals
+      });
+    }
+    
+    // Handle values > 0 and < 1: show 2 decimals after first non-zero digit
+    // BUT respect adaptiveNearOne first (takes precedence)
+    // Example: 0.999999 → 0.99999 (adaptiveNearOne: 5 decimals)
+    // Example: 0.00044 → 0.00044 (first non-zero at pos 4, show positions 4-5, need 5 total decimals)
+    // Example: 0.123 → 0.12 (first non-zero at pos 1, show positions 1-2, need 2 total decimals)
+    
+    // Check adaptiveNearOne first (takes precedence over new logic)
+    if (adaptiveNearOne && value >= 0.95) {
+      let adaptiveDecimals = 4;
+      if (value >= 0.98) {
+        adaptiveDecimals = 5;
+      }
+      return value.toLocaleString('de-DE', {
+        minimumFractionDigits: forceDecimals ? adaptiveDecimals : 0,
+        maximumFractionDigits: adaptiveDecimals
+      });
+    }
+    
+    // New intelligent logic: show 2 decimals after first non-zero digit
+    const absValue = Math.abs(value);
+    
+    // Use logarithmic approach to find the order of magnitude
+    // This handles floating point precision better than string conversion
+    // log10(0.00044) ≈ -3.357, so first non-zero is at position ceil(3.357) = 4
+    const log10 = Math.log10(absValue);
+    const firstNonZeroPosition = Math.ceil(-log10);
+    
+    // Calculate total decimal places to show: include first non-zero position + 1 more decimal
+    // (to show 2 digits total: first non-zero + 1 more)
+    // Cap at 6 decimals total for readability
+    const totalDecimals = Math.min(firstNonZeroPosition + 1, 6);
+    
+    // Ensure at least 2 decimals for values < 1 (for values like 0.123)
+    const finalDecimals = Math.max(totalDecimals, 2);
+    
+    return value.toLocaleString('de-DE', {
+      minimumFractionDigits: forceDecimals ? finalDecimals : 0,
+      maximumFractionDigits: finalDecimals
     });
-    return formatted;
   }
   
   // For decimals or when forced, show specified decimal places
@@ -444,74 +508,42 @@ export function getBadgeColorClasses(value: number): { text: string; bg: string 
 }
 
 /**
- * Get color class for values with flexible range normalization and interpretation strategies
- * Handles different value ranges, normalization, and interpretation strategies
- * 
- * @param value The actual value to color-code
- * @param normalizeMin Minimum value of the actual range (e.g., 0, 1500, 0)
- * @param normalizeMax Maximum value of the actual range (e.g., 10000, 15000, 1)
- * @param strategy How to interpret the normalized value: 'higher_better', 'lower_better', 'balanced', or 'exponential'
- * @param balanceMin Optional: minimum of ideal range for 'balanced' strategy (e.g., 0.5)
- * @param balanceMax Optional: maximum of ideal range for 'balanced' strategy (e.g., 0.7)
- * @returns Tailwind color class string
+ * Compute rating and color classes for a range-based value.
+ * @param value The value to rate and color-code
+ * @param normalizeMin Minimum value of the range
+ * @param normalizeMax Maximum value of the range
+ * @param strategy 'higher_better' | 'lower_better' | 'balanced' | 'exponential'
+ * @param balanceMin Optional: minimum of ideal range for 'balanced' strategy
+ * @param balanceMax Optional: maximum of ideal range for 'balanced' strategy
+ * @returns Object with rating, text, bg, and badge color classes
  * 
  * @example
- * // Company Value: 0-10000 range, higher is better
- * getColorClassForRange(7500, 0, 10000, 'higher_better') // "text-green-700"
- * 
- * // Density: 1500-15000 range, lower is better  
- * getColorClassForRange(8000, 1500, 15000, 'lower_better') // "text-amber-500"
- * 
- * // Wine Body: 0-1 range, balanced at 0.5-0.7
- * getColorClassForRange(0.3, 0, 1, 'balanced', 0.5, 0.7) // "text-red-600"
- * 
- * // Wine Tannins: 0-1 range, balanced at 0.4-0.6
- * getColorClassForRange(0.5, 0, 1, 'balanced', 0.4, 0.6) // "text-green-700"
- * 
- * // Prestige: 0-1000 range, exponential scaling (quick out of red, slow to deep green)
- * getColorClassForRange(50, 0, 1000, 'exponential') // "text-lime-600" (out of red quickly)
- * getColorClassForRange(500, 0, 1000, 'exponential') // "text-green-800" (takes long to reach deep green)
+ * const { text, bg } = getRangeColor(7500, 0, 10000, 'higher_better');
  */
-/**
- * Unified helper: return color class with desired prefix ('text' or 'bg').
- */
-export function getColorClassForRange(
-  value: number,
-  normalizeMin: number,
-  normalizeMax: number,
-  strategy: 'higher_better' | 'lower_better' | 'balanced' | 'exponential',
-  prefix: 'text' | 'bg' = 'text',
-  balanceMin?: number,
-  balanceMax?: number
-): string {
-  const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
-  const textClass = getColorClass(rating);
-  if (prefix === 'text') return textClass;
-  return textClass.replace('text-', 'bg-');
-}
-
-/**
- * All-in-one: compute text color, background color, and badge classes for a range-based value.
- */
-export function getRangeColorClasses(
+export function getRangeColor(
   value: number,
   normalizeMin: number,
   normalizeMax: number,
   strategy: 'higher_better' | 'lower_better' | 'balanced' | 'exponential',
   balanceMin?: number,
   balanceMax?: number
-): { text: string; bg: string; badge: { text: string; bg: string } } {
+): { 
+  rating: number;
+  text: string;
+  bg: string;
+  badge: { text: string; bg: string };
+} {
   const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
   const text = getColorClass(rating);
   const bg = text.replace('text-', 'bg-');
   const badge = getBadgeColorClasses(rating);
-  return { text, bg, badge };
+  return { rating, text, bg, badge };
 }
 
 /**
  * Get rating (0-1) for values with flexible range normalization and interpretation strategies
- * This is the internal calculation used by getColorClassForRange, but can be used directly
- * when you need the rating value instead of the color class
+ * This is the internal calculation used by getRangeColor, but can be used directly
+ * when you need the rating value instead of the color classes
  * 
  * @param value The actual value to rate
  * @param normalizeMin Minimum value of the actual range (e.g., 0, 1500, 0)
@@ -812,4 +844,62 @@ export function createAdjustedRangesRecord(): Record<keyof WineCharacteristics, 
     sweetness: [...BASE_BALANCED_RANGES.sweetness] as [number, number],
     tannins: [...BASE_BALANCED_RANGES.tannins] as [number, number]
   };
+}
+
+/**
+ * Determine if a characteristic effect modifier is moving towards balance
+ * Returns information for color coding: isGood (true = green, false = red) and intensity rating
+ * @param currentValue Current characteristic value (0-1)
+ * @param modifier Effect modifier (can be positive or negative)
+ * @param balancedRange Balanced range [min, max] for this characteristic
+ * @returns Object with isGood (moving towards balance) and intensity (0-1, higher = stronger effect)
+ */
+export function getCharacteristicEffectColorInfo(
+  currentValue: number,
+  modifier: number,
+  balancedRange: readonly [number, number] | [number, number]
+): { isGood: boolean; intensity: number } {
+  const [min, max] = balancedRange;
+  const midpoint = (min + max) / 2;
+  
+  // Calculate distance from midpoint before and after applying modifier
+  const distanceBefore = Math.abs(currentValue - midpoint);
+  const newValue = Math.max(0, Math.min(1, currentValue + modifier));
+  const distanceAfter = Math.abs(newValue - midpoint);
+  
+  // If distance decreases, we're moving towards balance (good = green)
+  // If distance increases, we're moving away from balance (bad = red)
+  const isGood = distanceAfter < distanceBefore;
+  
+  // Calculate intensity based on how much the distance changes
+  // Use absolute value of modifier as base intensity (0-0.1 typical range)
+  // Then adjust based on whether it's helping or hurting balance
+  const distanceChange = Math.abs(distanceBefore - distanceAfter);
+  const intensity = Math.min(1, Math.max(0, distanceChange / 0.1)); // Normalize to 0-1, assuming 0.1 is max typical modifier
+  
+  return { isGood, intensity };
+}
+
+/**
+ * Get color class for characteristic effect modifier
+ * Uses balance-aware logic: green if moving towards balance, red if moving away
+ * Intensity increases with stronger effects
+ * @param currentValue Current characteristic value (0-1)
+ * @param modifier Effect modifier (can be positive or negative)
+ * @param balancedRange Balanced range [min, max] for this characteristic
+ * @returns Color class string for text color
+ */
+export function getCharacteristicEffectColorClass(
+  currentValue: number,
+  modifier: number,
+  balancedRange: readonly [number, number] | [number, number]
+): string {
+  const { isGood, intensity } = getCharacteristicEffectColorInfo(currentValue, modifier, balancedRange);
+  
+  // Use intensity to determine color depth
+  // Higher intensity = deeper colors (greener for good, redder for bad)
+  // Use getRangeColor with 'higher_better' strategy where intensity is the value
+  // Map intensity to rating: higher intensity = better rating (for green) or worse rating (for red)
+  const rating = isGood ? intensity : (1 - intensity);
+  return getColorClass(rating);
 }

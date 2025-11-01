@@ -7,7 +7,7 @@ import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManage
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, getColorClass } from '@/lib/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
@@ -94,7 +94,7 @@ Processing Effects:
     },
     {
       id: 'pressingIntensity',
-      label: `Pressing Intensity (Max: ${Math.round(maxPressure * 100)}% for ${options.method})`,
+      label: `Pressing Intensity (Max: ${formatNumber(maxPressure * 100, { smartDecimals: true })}% for ${options.method})`,
       type: 'range',
       defaultValue: Math.min(options.pressingIntensity, maxPressure),
       min: 0,
@@ -180,7 +180,7 @@ MAX PRESSURE BY METHOD:
       const isTriggered = config?.behavior === 'triggered';
 
       // Format main risk message
-      const riskPercent = (cumulativeRisk.cumulative.total * 100).toFixed(1);
+      const riskPercent = formatNumber(cumulativeRisk.cumulative.total * 100, { smartDecimals: true });
 
       if (isTriggered) {
         // For triggered features, only show current event risk
@@ -188,9 +188,9 @@ MAX PRESSURE BY METHOD:
       } else {
         // For accumulation features, show total risk with breakdown
         if (cumulativeRisk.cumulative.sources.length > 1) {
-          const total = (cumulativeRisk.cumulative.total * 100).toFixed(1);
+          const total = formatNumber(cumulativeRisk.cumulative.total * 100, { smartDecimals: true });
           const sources = cumulativeRisk.cumulative.sources
-            .map(s => `${(s.risk * 100).toFixed(0)}% ${s.source}`)
+            .map(s => `${formatNumber(s.risk * 100, { smartDecimals: true })}% ${s.source}`)
             .join(' + ');
           riskMessages.push(`📊 ${riskPercent}% chance of ${cumulativeRisk.featureName} (${config?.description || ''}). CUMULATIVE RISK: ${total}% total (${sources})`);
         } else {
@@ -355,13 +355,13 @@ MAX PRESSURE BY METHOD:
                 <div className="flex justify-between">
                   <span className="text-blue-700">Yield Multiplier:</span>
                   <span className="font-mono text-blue-900">
-                    {(calculateYieldMultiplier(options.pressingIntensity) * 100).toFixed(1)}%
+                    {formatNumber(calculateYieldMultiplier(options.pressingIntensity) * 100, { smartDecimals: true })}%
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-blue-300 pt-1">
                   <span className="text-blue-800 font-medium">Final Quantity:</span>
                   <span className="font-mono text-blue-900 font-medium">
-                    {Math.round((batch?.quantity || 0) * calculateYieldMultiplier(options.pressingIntensity))} kg
+                    {formatNumber((batch?.quantity || 0) * calculateYieldMultiplier(options.pressingIntensity), { smartDecimals: true })} kg
                   </span>
                 </div>
               </div>
@@ -373,20 +373,20 @@ MAX PRESSURE BY METHOD:
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-blue-700">Current Quality:</span>
-                  <span className="font-mono text-blue-900">
-                    {((batch?.grapeQuality || 0) * 100).toFixed(1)}%
+                  <span className={`font-mono ${getColorClass(batch?.grapeQuality || 0)}`}>
+                    {formatNumber((batch?.grapeQuality || 0) * 100, { smartDecimals: true })}%
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">Pressure Impact:</span>
                   <span className={`font-mono ${calculatePressingQualityPenalty(options.pressingIntensity) < 0 ? 'text-red-600' : 'text-blue-900'}`}>
-                    {(calculatePressingQualityPenalty(options.pressingIntensity) * 100).toFixed(2)}%
+                    {formatNumber(calculatePressingQualityPenalty(options.pressingIntensity) * 100, { smartDecimals: true })}%
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-blue-300 pt-1">
                   <span className="text-blue-800 font-medium">After Crushing:</span>
-                  <span className="font-mono text-blue-900 font-medium">
-                    {(Math.max(0, Math.min(1, (batch?.grapeQuality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100).toFixed(1)}%
+                  <span className={`font-mono font-medium ${getColorClass(Math.max(0, Math.min(1, (batch?.grapeQuality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))))}`}>
+                    {formatNumber(Math.max(0, Math.min(1, (batch?.grapeQuality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100, { smartDecimals: true })}%
                   </span>
                 </div>
               </div>
@@ -399,7 +399,7 @@ MAX PRESSURE BY METHOD:
               <p className="text-xs font-medium text-blue-800 mb-2">Characteristic Changes:</p>
               <div className="flex flex-wrap gap-1">
                 {getPressingIntensityCharacteristicEffects(options.pressingIntensity, options.method).map((effect) => {
-                  const percentage = Math.round(effect.modifier * 100);
+                  const percentage = formatNumber(effect.modifier * 100, { smartDecimals: true });
                   const isPositive = effect.modifier > 0;
                   const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
                   const sign = isPositive ? '+' : '';
@@ -478,7 +478,7 @@ MAX PRESSURE BY METHOD:
                       <div key={feature.featureId} className="text-xs">
                         <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
                         <span className="text-red-600">
-                          {feature.featureName} (Quality: {feature.qualityImpact && feature.qualityImpact > 0 ? '+' : ''}{((feature.qualityImpact || 0) * 100).toFixed(0)}%)
+                          {feature.featureName} (Quality: {feature.qualityImpact && feature.qualityImpact > 0 ? '+' : ''}{formatNumber((feature.qualityImpact || 0) * 100, { smartDecimals: true })}%)
                         </span>
                       </div>
                     ))}
@@ -504,7 +504,7 @@ MAX PRESSURE BY METHOD:
                       <div key={feature.featureId} className="text-xs">
                         <span className="font-medium">{feature.icon} {feature.featureName}:</span>{' '}
                         <span className="text-amber-600">
-                          {(feature.currentRisk * 100).toFixed(1)}% risk (from harvest)
+                          {formatNumber(feature.currentRisk * 100, { smartDecimals: true })}% risk (from harvest)
                         </span>
                       </div>
                     ))}

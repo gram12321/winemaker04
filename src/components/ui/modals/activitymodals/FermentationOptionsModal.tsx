@@ -7,7 +7,7 @@ import { getFermentationMethodInfo, getFermentationTemperatureInfo, Fermentation
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber, getCharacteristicDisplayName } from '@/lib/utils/utils';
+import { formatNumber, getCharacteristicDisplayName, getColorClass } from '@/lib/utils/utils';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 
@@ -365,13 +365,13 @@ Note: These effects apply each week while fermentation is active.`
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">⚠️ Oxidation Risk:</span>
               <span className={`font-mono ${getOxidationRiskModifier(options.method) < 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {getOxidationRiskModifier(options.method) < 0 ? getOxidationRiskModifier(options.method) * -100 : getOxidationRiskModifier(options.method) * 100}%
+                {formatNumber(Math.abs(getOxidationRiskModifier(options.method) * 100), { smartDecimals: true })}%
               </span>
             </div>
             <p className="text-xs text-amber-700">
               {getOxidationRiskModifier(options.method) < 0
-                ? `Temperature Controlled reduces oxidation risk by ${Math.abs(getOxidationRiskModifier(options.method) * 100).toFixed(1)}%`
-                : `Extended Maceration increases oxidation risk by ${getOxidationRiskModifier(options.method) * 100}%`
+                ? `Temperature Controlled reduces oxidation risk by ${formatNumber(Math.abs(getOxidationRiskModifier(options.method) * 100), { smartDecimals: true })}%`
+                : `Extended Maceration increases oxidation risk by ${formatNumber(getOxidationRiskModifier(options.method) * 100, { smartDecimals: true })}%`
               }
             </p>
           </div>
@@ -386,12 +386,12 @@ Note: These effects apply each week while fermentation is active.`
 
              return (
                <div className="bg-red-100 border border-red-200 rounded p-3">
-                 <div className="flex items-center justify-between mb-2">
-                   <span className="font-medium">🧊 Stuck Fermentation Risk:</span>
-                   <span className="font-mono text-red-600">
-                     {(stuckRisk.cumulative.total * 100).toFixed(1)}%
-                   </span>
-                 </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">🧊 Stuck Fermentation Risk:</span>
+                  <span className={`font-mono ${getColorClass(1 - stuckRisk.cumulative.total)}`}>
+                    {formatNumber(stuckRisk.cumulative.total * 100, { smartDecimals: true })}%
+                  </span>
+                </div>
                  <p className="text-xs text-red-700">
                    {batch?.grapeColor === 'red' && options.temperature === 'Cool'
                      ? 'Red wines + Cool temperatures create high stuck fermentation risk (tannins inhibit yeast)'

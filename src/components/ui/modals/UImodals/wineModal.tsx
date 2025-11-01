@@ -401,15 +401,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Natural Yield:</span>
-                      <span className="font-medium">{formatNumber(wineBatch.naturalYield * 100)}%</span>
+                      <span className="font-medium">{formatNumber(wineBatch.naturalYield * 100, { smartDecimals: true })}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Fragile:</span>
-                      <span className="font-medium">{formatNumber(wineBatch.fragile * 100)}%</span>
+                      <span className="font-medium">{formatNumber(wineBatch.fragile * 100, { smartDecimals: true })}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Prone to Oxidation:</span>
-                      <span className="font-medium">{formatNumber(wineBatch.proneToOxidation * 100)}%</span>
+                      <span className="font-medium">{formatNumber(wineBatch.proneToOxidation * 100, { smartDecimals: true })}%</span>
                     </div>
                   </CardContent>
                 </Card>

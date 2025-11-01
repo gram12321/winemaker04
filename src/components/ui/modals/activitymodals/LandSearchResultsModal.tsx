@@ -142,7 +142,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                           {/* Old-style compact details: Size / Price per ha / Total price */}
                           <div className="grid grid-cols-2 gap-y-1 text-xs">
                             <div className="text-gray-400">Size:</div>
-                            <div className="text-white">{formatNumber(property.hectares)} ha</div>
+                            <div className="text-white">{formatNumber(property.hectares, { smartDecimals: true })} ha</div>
 
                             <div className="text-gray-400">Price/ha:</div>
                             <div className="text-white">{formatNumber(property.landValue, { currency: true })}/ha</div>
@@ -224,7 +224,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                                 variant="secondary" 
                                 className={`text-xs px-2 py-0.5 ${colors.text} ${colors.bg}`}
                               >
-                                {Math.round(selectedProperty.altitudeRating * 100)}%
+                                {formatNumber(selectedProperty.altitudeRating * 100, { smartDecimals: true })}%
                               </Badge>
                             );
                           })()}
@@ -241,7 +241,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                                 variant="secondary" 
                                 className={`text-xs px-2 py-0.5 ${colors.text} ${colors.bg}`}
                               >
-                                {Math.round(selectedProperty.aspectRating * 100)}%
+                                {formatNumber(selectedProperty.aspectRating * 100, { smartDecimals: true })}%
                               </Badge>
                             );
                           })()}

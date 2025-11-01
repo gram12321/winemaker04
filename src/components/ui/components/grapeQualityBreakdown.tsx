@@ -106,7 +106,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
             <div className="flex justify-between mb-1">
               <span>Grape Quality Score:</span>
               <span className={`font-mono ${getColorClass(grapeQualityScore)}`}>
-                {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                {formatNumber(grapeQualityScore, { smartDecimals: true })}
               </span>
             </div>
             <div className="flex justify-between mb-1">
@@ -122,32 +122,32 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                         <TooltipSection title="Weighted Calculation">
                           <TooltipRow 
                             label="Land Value:" 
-                            value={`${formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })} × 0.6 = ${formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}`}
+                            value={`${formatNumber(factors.landValue, { smartDecimals: true })} × 0.6 = ${formatNumber(factors.landValue * 0.6, { smartDecimals: true })}`}
                             valueRating={factors.landValue}
                             monospaced
                           />
                           <TooltipRow 
                             label="Vineyard Prestige:" 
-                            value={`${formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })} × 0.4 = ${formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}`}
+                            value={`${formatNumber(factors.vineyardPrestige, { smartDecimals: true })} × 0.4 = ${formatNumber(factors.vineyardPrestige * 0.4, { smartDecimals: true })}`}
                             valueRating={factors.vineyardPrestige}
                             monospaced
                           />
                           <TooltipRow 
                             label="Weighted Sum:" 
-                            value={formatNumber((factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4), { decimals: 2, forceDecimals: true })}
+                            value={formatNumber((factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4), { smartDecimals: true })}
                             valueRating={(factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4)}
                             monospaced
                           />
                           <TooltipRow 
                             label="Overgrowth Penalty:" 
-                            value={formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })}
+                            value={formatNumber(factors.overgrowthPenalty, { smartDecimals: true })}
                             valueRating={factors.overgrowthPenalty}
                             monospaced
                           />
                           <div className="mt-2 pt-2 border-t border-gray-600">
                             <TooltipRow 
                               label="Final Score:" 
-                              value={formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                              value={formatNumber(grapeQualityScore, { smartDecimals: true })}
                               valueRating={grapeQualityScore}
                               monospaced
                             />
@@ -161,7 +161,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                   <div className="flex justify-between text-lg font-bold cursor-help">
                     <span>Grape Quality Score:</span>
                     <span className={`font-mono ${getColorClass(grapeQualityScore)}`}>
-                      {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                      {formatNumber(grapeQualityScore, { smartDecimals: true })}
                     </span>
                   </div>
                   </MobileDialogWrapper>
@@ -171,32 +171,32 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                     <TooltipSection title="Weighted Calculation">
                       <TooltipRow 
                         label="Land Value:" 
-                        value={`${formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })} × 0.6 = ${formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}`}
+                        value={`${formatNumber(factors.landValue, { smartDecimals: true })} × 0.6 = ${formatNumber(factors.landValue * 0.6, { smartDecimals: true })}`}
                         valueRating={factors.landValue}
                         monospaced
                       />
                       <TooltipRow 
                         label="Vineyard Prestige:" 
-                        value={`${formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })} × 0.4 = ${formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}`}
+                        value={`${formatNumber(factors.vineyardPrestige, { smartDecimals: true })} × 0.4 = ${formatNumber(factors.vineyardPrestige * 0.4, { smartDecimals: true })}`}
                         valueRating={factors.vineyardPrestige}
                         monospaced
                       />
                       <TooltipRow 
                         label="Weighted Sum:" 
-                        value={formatNumber((factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4), { decimals: 2, forceDecimals: true })}
+                        value={formatNumber((factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4), { smartDecimals: true })}
                         valueRating={(factors.landValue * 0.6) + (factors.vineyardPrestige * 0.4)}
                         monospaced
                       />
                       <TooltipRow 
                         label="Overgrowth Penalty:" 
-                        value={formatNumber(factors.overgrowthPenalty, { decimals: 2, forceDecimals: true })}
+                        value={formatNumber(factors.overgrowthPenalty, { smartDecimals: true })}
                         valueRating={factors.overgrowthPenalty}
                         monospaced
                       />
                       <div className="mt-2 pt-2 border-t border-gray-600">
                         <TooltipRow 
                           label="Final Score:" 
-                          value={formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+                          value={formatNumber(grapeQualityScore, { smartDecimals: true })}
                           valueRating={grapeQualityScore}
                           monospaced
                         />
@@ -357,7 +357,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             />
                                             <TooltipRow 
                                               label="Normalized:" 
-                                              value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                              value={formatNumber(factors.landValue, { smartDecimals: true })}
                                               valueRating={factors.landValue}
                                               monospaced
                                             />
@@ -369,7 +369,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                     >
                                       <div className="flex justify-between cursor-help">
                                         <span className="text-blue-700">{formatNumber(vineyard.landValue || 0, { currency: true })} per hectare</span>
-                                        <span className={`font-mono ${getColorClass(factors.landValue)}`}>→ {formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
+                                        <span className={`font-mono ${getColorClass(factors.landValue)}`}>→ {formatNumber(factors.landValue, { smartDecimals: true })}</span>
                                       </div>
                                     </MobileDialogWrapper>
                                   </TooltipTrigger>
@@ -382,7 +382,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         />
                                         <TooltipRow 
                                           label="Normalized:" 
-                                          value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                          value={formatNumber(factors.landValue, { smartDecimals: true })}
                                           valueRating={factors.landValue}
                                           monospaced
                                         />
@@ -404,7 +404,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                           <TooltipSection title="Contribution">
                                             <TooltipRow 
                                               label="Land Value:" 
-                                              value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                              value={formatNumber(factors.landValue, { smartDecimals: true })}
                                               valueRating={factors.landValue}
                                               monospaced
                                             />
@@ -415,7 +415,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             <div className="mt-2 pt-2 border-t border-gray-600">
                                               <TooltipRow 
                                                 label="Contribution:" 
-                                                value={formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}
+                                                value={formatNumber(factors.landValue * 0.6, { smartDecimals: true })}
                                                 valueRating={factors.landValue * 0.6}
                                                 monospaced
                                               />
@@ -428,7 +428,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                     >
                                       <div className="flex justify-between font-medium border-t border-blue-300 pt-2 cursor-help">
                                         <span className="text-blue-800">Contribution:</span>
-                                        <span className={`font-mono ${getColorClass(factors.landValue * 0.6)}`}>{formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}</span>
+                                        <span className={`font-mono ${getColorClass(factors.landValue * 0.6)}`}>{formatNumber(factors.landValue * 0.6, { smartDecimals: true })}</span>
                                       </div>
                                     </MobileDialogWrapper>
                                   </TooltipTrigger>
@@ -437,7 +437,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       <TooltipSection title="Contribution">
                                         <TooltipRow 
                                           label="Land Value:" 
-                                          value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                          value={formatNumber(factors.landValue, { smartDecimals: true })}
                                           valueRating={factors.landValue}
                                           monospaced
                                         />
@@ -448,7 +448,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         <div className="mt-2 pt-2 border-t border-gray-600">
                                           <TooltipRow 
                                             label="Contribution:" 
-                                            value={formatNumber(factors.landValue * 0.6, { decimals: 2, forceDecimals: true })}
+                                            value={formatNumber(factors.landValue * 0.6, { smartDecimals: true })}
                                             valueRating={factors.landValue * 0.6}
                                             monospaced
                                           />
@@ -483,7 +483,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             triggerClassName="font-mono text-blue-700 cursor-help"
                                           >
                                         <div className="font-mono text-blue-700 cursor-help">
-                                          {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })} + <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}</span> × ({formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })}) = {formatNumber(vineyard.landValue || 0, { currency: true })}
+                                          {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })} + <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { smartDecimals: true })}</span> × ({formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true })}) = {formatNumber(vineyard.landValue || 0, { currency: true })}
                                         </div>
                                           </MobileDialogWrapper>
                                       </TooltipTrigger>
@@ -509,12 +509,12 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                                   <div className="mt-2 pt-2 border-t border-gray-600">
                                                     <TooltipRow 
                                                       label="Altitude:" 
-                                                      value={`${formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} (${vineyard.altitude}m)`}
+                                                      value={`${formatNumber(factors.altitudeRating, { smartDecimals: true })} (${vineyard.altitude}m)`}
                                                       valueRating={factors.altitudeRating}
                                                     />
                                                     <TooltipRow 
                                                       label="Aspect:" 
-                                                      value={`${formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} (${vineyard.aspect})`}
+                                                      value={`${formatNumber(factors.aspectRating, { smartDecimals: true })} (${vineyard.aspect})`}
                                                       valueRating={factors.aspectRating}
                                                     />
                                                   </div>
@@ -525,7 +525,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             triggerClassName="font-mono text-blue-800 font-medium cursor-help"
                                           >
                                         <div className="font-mono text-blue-800 font-medium cursor-help">
-                                          Regional Modifier: (<span className={getColorClass(factors.altitudeRating)}>{formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })}</span> + <span className={getColorClass(factors.aspectRating)}>{formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}</span>) ÷ 2 = <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}</span>
+                                          Regional Modifier: (<span className={getColorClass(factors.altitudeRating)}>{formatNumber(factors.altitudeRating, { smartDecimals: true })}</span> + <span className={getColorClass(factors.aspectRating)}>{formatNumber(factors.aspectRating, { smartDecimals: true })}</span>) ÷ 2 = <span className={getColorClass((factors.altitudeRating + factors.aspectRating) / 2)}>{formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { smartDecimals: true })}</span>
                                         </div>
                                           </MobileDialogWrapper>
                                       </TooltipTrigger>
@@ -536,12 +536,12 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                               <div className="mt-2 pt-2 border-t border-gray-600">
                                                 <TooltipRow 
                                                   label="Altitude:" 
-                                                  value={`${formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} (${vineyard.altitude}m)`}
+                                                  value={`${formatNumber(factors.altitudeRating, { smartDecimals: true })} (${vineyard.altitude}m)`}
                                                   valueRating={factors.altitudeRating}
                                                 />
                                                 <TooltipRow 
                                                   label="Aspect:" 
-                                                  value={`${formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} (${vineyard.aspect})`}
+                                                  value={`${formatNumber(factors.aspectRating, { smartDecimals: true })} (${vineyard.aspect})`}
                                                   valueRating={factors.aspectRating}
                                                 />
                                               </div>
@@ -586,7 +586,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                               <div className="mt-2 pt-2 border-t border-gray-600">
                                                 <TooltipRow 
                                                   label="Result:" 
-                                                  value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                                  value={formatNumber(factors.landValue, { smartDecimals: true })}
                                                   valueRating={factors.landValue}
                                                   monospaced
                                                 />
@@ -598,7 +598,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         triggerClassName="font-mono text-blue-700 cursor-help"
                                       >
                                       <div className="font-mono text-blue-700 cursor-help">
-                                        Scaling ({formatNumber(vineyard.landValue || 0, { currency: true })} / {formatNumber(getMaxLandValue(), { currency: true })}) = <span className={getColorClass(factors.landValue)}>{formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}</span>
+                                        Scaling ({formatNumber(vineyard.landValue || 0, { currency: true })} / {formatNumber(getMaxLandValue(), { currency: true })}) = <span className={getColorClass(factors.landValue)}>{formatNumber(factors.landValue, { smartDecimals: true })}</span>
                                       </div>
                                       </MobileDialogWrapper>
                                     </TooltipTrigger>
@@ -616,7 +616,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                           <div className="mt-2 pt-2 border-t border-gray-600">
                                             <TooltipRow 
                                               label="Result:" 
-                                              value={formatNumber(factors.landValue, { decimals: 2, forceDecimals: true })}
+                                              value={formatNumber(factors.landValue, { smartDecimals: true })}
                                               valueRating={factors.landValue}
                                               monospaced
                                             />
@@ -713,7 +713,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                           <TooltipSection title="Vineyard Prestige">
                                             <TooltipRow 
                                               label="Prestige Score:" 
-                                              value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                              value={formatNumber(factors.vineyardPrestige, { smartDecimals: true })}
                                               valueRating={factors.vineyardPrestige}
                                               monospaced
                                             />
@@ -725,7 +725,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                     >
                                       <div className="flex justify-between cursor-help">
                                         <span className="text-purple-700">Prestige Score:</span>
-                                        <span className={`font-mono ${getColorClass(factors.vineyardPrestige)}`}>{formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}</span>
+                                        <span className={`font-mono ${getColorClass(factors.vineyardPrestige)}`}>{formatNumber(factors.vineyardPrestige, { smartDecimals: true })}</span>
                                       </div>
                                     </MobileDialogWrapper>
                                   </TooltipTrigger>
@@ -734,7 +734,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       <TooltipSection title="Vineyard Prestige">
                                         <TooltipRow 
                                           label="Prestige Score:" 
-                                          value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                          value={formatNumber(factors.vineyardPrestige, { smartDecimals: true })}
                                           valueRating={factors.vineyardPrestige}
                                           monospaced
                                         />
@@ -756,7 +756,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                           <TooltipSection title="Contribution">
                                             <TooltipRow 
                                               label="Vineyard Prestige:" 
-                                              value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                              value={formatNumber(factors.vineyardPrestige, { smartDecimals: true })}
                                               valueRating={factors.vineyardPrestige}
                                               monospaced
                                             />
@@ -767,7 +767,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                             <div className="mt-2 pt-2 border-t border-gray-600">
                                               <TooltipRow 
                                                 label="Contribution:" 
-                                                value={formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}
+                                                value={formatNumber(factors.vineyardPrestige * 0.4, { smartDecimals: true })}
                                                 valueRating={factors.vineyardPrestige * 0.4}
                                                 monospaced
                                               />
@@ -780,7 +780,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                     >
                                       <div className="flex justify-between font-medium border-t border-purple-300 pt-2 cursor-help">
                                         <span className="text-purple-800">Contribution:</span>
-                                        <span className={`font-mono ${getColorClass(factors.vineyardPrestige * 0.4)}`}>{formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}</span>
+                                        <span className={`font-mono ${getColorClass(factors.vineyardPrestige * 0.4)}`}>{formatNumber(factors.vineyardPrestige * 0.4, { smartDecimals: true })}</span>
                                       </div>
                                     </MobileDialogWrapper>
                                   </TooltipTrigger>
@@ -789,7 +789,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                       <TooltipSection title="Contribution">
                                         <TooltipRow 
                                           label="Vineyard Prestige:" 
-                                          value={formatNumber(factors.vineyardPrestige, { decimals: 2, forceDecimals: true })}
+                                          value={formatNumber(factors.vineyardPrestige, { smartDecimals: true })}
                                           valueRating={factors.vineyardPrestige}
                                           monospaced
                                         />
@@ -800,7 +800,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         <div className="mt-2 pt-2 border-t border-gray-600">
                                           <TooltipRow 
                                             label="Contribution:" 
-                                            value={formatNumber(factors.vineyardPrestige * 0.4, { decimals: 2, forceDecimals: true })}
+                                            value={formatNumber(factors.vineyardPrestige * 0.4, { smartDecimals: true })}
                                             valueRating={factors.vineyardPrestige * 0.4}
                                             monospaced
                                           />

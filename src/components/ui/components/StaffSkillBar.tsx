@@ -34,6 +34,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
           <TooltipRow 
             label={`${label}:`} 
             value={`${formatNumber(value * 100, { decimals: 0 })}%`}
+            valueRating={value}
           />
           <TooltipRow 
             label="Workforce:" 
@@ -79,7 +80,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
             className="absolute top-0 bottom-0 rounded-full"
             style={{
               left: 0,
-              width: `${Math.round(value * 100)}%`,
+              width: `${formatNumber(value * 100, { decimals: 0 })}%`,
               backgroundColor: color,
               opacity: taskCount > 1 ? 0.85 : 1
             }}
@@ -94,7 +95,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
         </TooltipProvider>
       </div>
       {showValue && (
-        <div className={`w-10 text-right text-xs ${getColorClass(value)}`}>{Math.round(value * 100)}%</div>
+        <div className={`w-10 text-right text-xs ${getColorClass(value)}`}>{formatNumber(value * 100, { smartDecimals: true })}%</div>
       )}
     </div>
   );

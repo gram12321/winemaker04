@@ -511,9 +511,9 @@ export function MathematicalModelsTab() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                         <YAxis scale="log" domain={[1, 100000000]} tickFormatter={(value) => {
-                          if (value >= 1000000) return `${(value / 1000000).toFixed(0)}M`;
-                          if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                          return value.toFixed(0);
+                          if (value >= 1000000) return `${formatNumber(value / 1000000, { decimals: 0, forceDecimals: true })}M`;
+                          if (value >= 1000) return `${formatNumber(value / 1000, { decimals: 0, forceDecimals: true })}K`;
+                          return formatNumber(value, { decimals: 0, forceDecimals: true });
                         }} />
                         <RechartsTooltip 
                           formatter={(value: number) => [formatNumber(value, { decimals: 1, forceDecimals: true }) + 'x', 'Multiplier']}

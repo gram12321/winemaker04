@@ -1,6 +1,6 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { getColorClass, formatNumber, getWineBalanceCategory, getColorClassForRange, getRatingForRange } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
@@ -137,9 +137,9 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   };
   
   // Get color class based on whether value is in balanced range
-  // Uses the balanced strategy from getColorClassForRange which handles ideal ranges
+  // Uses the balanced strategy from getRangeColor which handles ideal ranges
   const getValueColor = () => {
-    return getColorClassForRange(displayValue, 0, 1, 'balanced', 'text', rMin, rMax);
+    return getRangeColor(displayValue, 0, 1, 'balanced', rMin, rMax).text;
   };
 
   return (

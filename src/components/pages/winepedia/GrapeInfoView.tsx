@@ -3,16 +3,10 @@ import { GrapeVariety } from '@/lib/types/types';
 import { GRAPE_CONST, COUNTRY_REGION_MAP, REGION_GRAPE_SUITABILITY } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, Button, WineCharacteristicsDisplay } from '@/components/ui';
 import { DialogProps } from '@/lib/types/UItypes';
+import { formatNumber, getColorClass } from '@/lib/utils/utils';
 
-// Utility functions for formatting
-const formatPercentage = (value: number): string => `${(value * 100).toFixed(0)}%`;
-
-const getColorClass = (value: number): string => {
-  if (value >= 0.8) return 'text-green-600';
-  if (value >= 0.6) return 'text-yellow-600';
-  if (value >= 0.4) return 'text-orange-600';
-  return 'text-red-600';
-};
+// Utility function for formatting percentage
+const formatPercentage = (value: number): string => `${formatNumber(value * 100, { smartDecimals: true })}%`;
 
 interface GrapeInfoViewProps extends DialogProps {
   grapeName: GrapeVariety;

@@ -188,7 +188,7 @@ export const StaffSearchResultsModal: React.FC<StaffSearchResultsModalProps> = (
                       <div className="flex justify-between">
                         <span className="text-gray-400">Skill Level:</span>
                         <Badge variant="outline" className={`text-xs bg-gray-600 text-white border-gray-500 ${getColorClass(selectedCandidate.skillLevel)}`}>
-                          {getSkillLevelInfo(selectedCandidate.skillLevel).name} ({Math.round(selectedCandidate.skillLevel * 100)}%)
+                          {getSkillLevelInfo(selectedCandidate.skillLevel).name} ({formatNumber(selectedCandidate.skillLevel * 100, { smartDecimals: true })}%)
                         </Badge>
                       </div>
                       {selectedCandidate.specializations.length > 0 && (

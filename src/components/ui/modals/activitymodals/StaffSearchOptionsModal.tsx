@@ -62,8 +62,8 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
     const cost = calculateStaffSearchCost(options);
 
     setSearchWorkEstimate({
-      totalWork: Math.round(totalWork),
-      cost: Math.round(cost)
+      totalWork: totalWork,
+      cost: cost
     });
 
     // Hiring work calculation (range)
@@ -248,7 +248,7 @@ export const StaffSearchOptionsModal: React.FC<StaffSearchOptionsModalProps> = (
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Work Required:</span>
-                    <span className="text-white font-medium">{searchWorkEstimate.totalWork} units</span>
+                    <span className="text-white font-medium">{formatNumber(searchWorkEstimate.totalWork, { smartDecimals: true })} units</span>
                   </div>
                 </div>
               </div>

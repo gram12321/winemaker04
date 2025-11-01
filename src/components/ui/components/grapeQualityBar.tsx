@@ -57,7 +57,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
         <TooltipSection title={`${label} Details`}>
           <TooltipRow 
             label="Current Value:" 
-            value={formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
+            value={formatNumber(displayValue, { smartDecimals: true })}
             valueRating={displayValue}
           />
           <TooltipRow 
@@ -145,7 +145,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
                   const values = Object.values(aspectRatings) as number[];
                   const minRating = Math.min(...values);
                   const maxRating = Math.max(...values);
-                  return <TooltipRow label="Regional Range:" value={`${formatNumber(minRating, { decimals: 2, forceDecimals: true })} - ${formatNumber(maxRating, { decimals: 2, forceDecimals: true })}`} />;
+                  return <TooltipRow label="Regional Range:" value={`${formatNumber(minRating, { smartDecimals: true })} - ${formatNumber(maxRating, { smartDecimals: true })}`} />;
                 }
                 return null;
               })()}
@@ -241,7 +241,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
         {/* Value display */}
         {showValue && (
           <span className={`text-sm font-medium w-12 sm:w-14 text-right flex-shrink-0 ${getValueColor()}`}>
-            {formatNumber(displayValue, { decimals: 2, forceDecimals: true })}
+            {formatNumber(displayValue, { smartDecimals: true })}
           </span>
         )}
       </div>
@@ -292,7 +292,7 @@ export const GrapeQualityFactorsDisplay: React.FC<GrapeQualityFactorsDisplayProp
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium">Current Grape Quality Score:</span>
           <span className={`text-2xl font-bold ${getColorClass(grapeQualityScore)}`}>
-            {formatNumber(grapeQualityScore, { decimals: 2, forceDecimals: true })}
+            {formatNumber(grapeQualityScore, { smartDecimals: true })}
           </span>
         </div>
       )}

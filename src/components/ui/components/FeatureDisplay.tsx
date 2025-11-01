@@ -14,7 +14,8 @@
 
 import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { formatNumber, getColorClassForRange, getRatingForRange } from '@/lib/utils/utils';
+import { formatNumber, getRangeColor, getRatingForRange, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles, MobileDialogWrapper } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction } from '@/lib/services/wine/features/featureService';
@@ -152,6 +153,7 @@ export function FeatureDisplay({
           <WeeklyEffectsDisplay 
             combinedWeeklyEffects={displayData.combinedWeeklyEffects}
             evolvingFeatures={displayData.evolvingFeatures}
+            batch={batch}
           />
         </div>
       )}
@@ -177,6 +179,7 @@ export function FeatureDisplay({
             combinedActiveEffects={displayData.combinedActiveEffects}
             totalQualityEffect={displayData.totalQualityEffect}
             activeFeatures={displayData.activeFeatures}
+            batch={batch}
           />
         </div>
       )}
@@ -217,7 +220,7 @@ function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: Evolv
   const weeklyGrowthPercent = formatNumber(weeklyGrowthRate * 100, { smartDecimals: true });
   
   // Use intelligent color coding for severity
-  const growthColorClass = getColorClassForRange(weeklyGrowthRate, 0, 0.05, 'higher_better'); // 0-5% weekly growth range
+  const growthColorClass = getRangeColor(weeklyGrowthRate, 0, 0.05, 'higher_better').text; // 0-5% weekly growth range
   
   const displayElement = (
     <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
@@ -296,16 +299,16 @@ function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItem
   let colorClass: string;
   if (config.badgeColor === 'destructive') {
     // For destructive features, higher severity = worse (redder)
-    colorClass = getColorClassForRange(1 - severity, 0, 1, 'higher_better');
+    colorClass = getRangeColor(1 - severity, 0, 1, 'higher_better').text;
   } else if (config.badgeColor === 'success') {
     // For success features, higher severity = better (greener)
-    colorClass = getColorClassForRange(severity, 0, 1, 'higher_better');
+    colorClass = getRangeColor(severity, 0, 1, 'higher_better').text;
   } else if (config.badgeColor === 'warning') {
     // For warning features, use amber colors
-    colorClass = getColorClassForRange(severity, 0, 1, 'higher_better');
+    colorClass = getRangeColor(severity, 0, 1, 'higher_better').text;
   } else {
     // Default to blue for info features
-    colorClass = getColorClassForRange(severity, 0, 1, 'higher_better');
+    colorClass = getRangeColor(severity, 0, 1, 'higher_better').text;
   }
   
   const displayElement = (
@@ -392,7 +395,7 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
   const riskPercent = formatNumber(risk * 100, { smartDecimals: true });
   
   // Use intelligent color coding for risk (lower risk = better colors)
-  const riskColorClass = getColorClassForRange(1 - risk, 0, 1, 'higher_better');
+  const riskColorClass = getRangeColor(1 - risk, 0, 1, 'higher_better').text;
   
   const displayElement = (
     <div className="text-xs">
@@ -453,9 +456,10 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
 interface WeeklyEffectsDisplayProps {
   combinedWeeklyEffects: Record<string, number>;
   evolvingFeatures: Array<{ feature: any; config: any; weeklyEffects: Record<string, number> }>;
+  batch: WineBatch; // Need batch for current characteristic values
 }
 
-function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures }: WeeklyEffectsDisplayProps) {
+function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }: WeeklyEffectsDisplayProps) {
   if (Object.keys(combinedWeeklyEffects).length === 0) return null;
   
   return (
@@ -465,21 +469,34 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures }: Weekl
         {Object.entries(combinedWeeklyEffects).map(([key, totalEffect]) => {
           if (Math.abs(totalEffect) > 0.001) {
             const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
-            const isPositive = totalEffect > 0;
-            const bgClass = isPositive ? 'bg-green-100' : 'bg-red-100';
-            const sign = isPositive ? '+' : '';
+            const sign = totalEffect > 0 ? '+' : '';
             
             // Special handling for quality vs characteristics
             const isQuality = key === 'quality';
             
-            // Use intelligent color coding for effects
-            const intelligentColorClass = getColorClassForRange(Math.abs(totalEffect), 0, 0.1, 'higher_better');
+            // For quality: positive = good (green), negative = bad (red)
+            // For characteristics: use balance-aware coloring
+            let bgClass: string;
+            let colorClass: string;
+            
+            if (isQuality) {
+              bgClass = totalEffect > 0 ? 'bg-green-100' : 'bg-red-100';
+              // Use intensity based on absolute value for quality
+              colorClass = getRangeColor(totalEffect, -0.5, 0.5, 'higher_better').text;
+            } else {
+              // Characteristic: determine if moving towards balance
+              const currentValue = batch.characteristics[key as keyof typeof batch.characteristics] || 0;
+              const balancedRange = BASE_BALANCED_RANGES[key as keyof typeof BASE_BALANCED_RANGES];
+              const colorInfo = getCharacteristicEffectColorInfo(currentValue, totalEffect, balancedRange);
+              bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
+              colorClass = getCharacteristicEffectColorClass(currentValue, totalEffect, balancedRange);
+            }
             
             return (
               <TooltipProvider key={key}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className={`text-xs px-2 py-1 rounded ${bgClass} ${intelligentColorClass} flex items-center gap-1 cursor-help`}>
+                    <div className={`text-xs px-2 py-1 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
                       {isQuality ? (
                         <span>⭐</span>
                       ) : (
@@ -520,9 +537,10 @@ interface CombinedEffectsDisplayProps {
   combinedActiveEffects: Record<string, number>;
   totalQualityEffect: number;
   activeFeatures: Array<{ feature: any; config: any; qualityImpact: number; characteristicEffects: Record<string, number> }>;
+  batch: WineBatch; // Need batch for current characteristic values
 }
 
-function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, activeFeatures }: CombinedEffectsDisplayProps) {
+function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, activeFeatures, batch }: CombinedEffectsDisplayProps) {
   if (Object.keys(combinedActiveEffects).length === 0 && Math.abs(totalQualityEffect) < 0.001) return null;
   
   return (
@@ -533,17 +551,20 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
         {Object.entries(combinedActiveEffects).map(([characteristic, totalEffect]) => {
           if (Math.abs(totalEffect) > 0.001) {
             const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
-            const isPositive = totalEffect > 0;
-            const sign = isPositive ? '+' : '';
+            const sign = totalEffect > 0 ? '+' : '';
             
-            // Use intelligent color coding for characteristic effects
-            const intelligentColorClass = getColorClassForRange(Math.abs(totalEffect), 0, 0.1, 'higher_better');
+            // Use balance-aware color coding for characteristic effects
+            const currentValue = batch.characteristics[characteristic as keyof typeof batch.characteristics] || 0;
+            const balancedRange = BASE_BALANCED_RANGES[characteristic as keyof typeof BASE_BALANCED_RANGES];
+            const colorInfo = getCharacteristicEffectColorInfo(currentValue, totalEffect, balancedRange);
+            const colorClass = getCharacteristicEffectColorClass(currentValue, totalEffect, balancedRange);
+            const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
             
             return (
               <TooltipProvider key={characteristic}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className={`text-xs px-1.5 py-0.5 rounded bg-gray-100 ${intelligentColorClass} flex items-center gap-1 cursor-help`}>
+                    <div className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
                       <img src={`/assets/icons/characteristics/${characteristic}.png`} alt={`${characteristic} icon`} className="w-3 h-3 opacity-80" />
                       <span>{characteristic}: {sign}{percentage}%</span>
                     </div>
@@ -572,7 +593,7 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
           <TooltipProvider key="quality">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${getColorClassForRange(totalQualityEffect, -0.5, 0.5, 'higher_better')} flex items-center gap-1 cursor-help`}>
+                <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${getRangeColor(totalQualityEffect, -0.5, 0.5, 'higher_better').text} flex items-center gap-1 cursor-help`}>
                   <span>⭐</span>
                   <span>Quality {totalQualityEffect > 0 ? '+' : ''}{formatNumber(totalQualityEffect * 100, { smartDecimals: true })}%</span>
                 </div>
@@ -751,7 +772,7 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
       ? `${maxPercent}%`
       : `${minPercent}%-${maxPercent}%`;
     
-    colorClass = getColorClassForRange(1 - maxRisk, 0, 1, 'higher_better'); // Lower risk = better colors
+    colorClass = getRangeColor(1 - maxRisk, 0, 1, 'higher_better').text; // Lower risk = better colors
   } else if (feature.riskCombinations && feature.riskCombinations.length > 0) {
     const risks = feature.riskCombinations.map((c: any) => c.risk);
     const minRisk = Math.min(...risks);
@@ -763,7 +784,7 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
       ? `${maxPercent}%`
       : `${minPercent}%-${maxPercent}%`;
     
-    colorClass = getColorClassForRange(1 - maxRisk, 0, 1, 'higher_better'); // Lower risk = better colors
+    colorClass = getRangeColor(1 - maxRisk, 0, 1, 'higher_better').text; // Lower risk = better colors
   } else if (feature.config?.behavior === 'accumulation') {
     const currentRiskPercent = formatNumber(feature.currentRisk * 100, { smartDecimals: true });
     
@@ -772,19 +793,19 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
       const estimatedWeeks = Math.ceil((1.0 - feature.currentRisk) / feature.weeklyRiskIncrease);
       
       displayText = `${currentRiskPercent}% (+${weeklyIncreasePercent}%/week)`;
-      colorClass = getColorClassForRange(1 - feature.currentRisk, 0, 1, 'higher_better'); // Lower risk = better colors
+      colorClass = getRangeColor(1 - feature.currentRisk, 0, 1, 'higher_better').text; // Lower risk = better colors
       
       if (estimatedWeeks < 50) {
         additionalInfo = <span className="text-gray-400 ml-1">(~{estimatedWeeks} weeks)</span>;
       }
     } else {
       displayText = `${currentRiskPercent}%`;
-      colorClass = getColorClassForRange(1 - feature.currentRisk, 0, 1, 'higher_better'); // Lower risk = better colors
+      colorClass = getRangeColor(1 - feature.currentRisk, 0, 1, 'higher_better').text; // Lower risk = better colors
     }
   } else {
     const riskPercent = formatNumber(feature.newRisk * 100, { smartDecimals: true });
     displayText = `${riskPercent}%`;
-    colorClass = getColorClassForRange(1 - feature.newRisk, 0, 1, 'higher_better'); // Lower risk = better colors
+    colorClass = getRangeColor(1 - feature.newRisk, 0, 1, 'higher_better').text; // Lower risk = better colors
   }
   
   const displayElement = (

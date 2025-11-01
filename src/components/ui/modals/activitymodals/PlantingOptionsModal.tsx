@@ -148,7 +148,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${colors.text} ${colors.bg}`}>
-                    {(grapeSuitability * 100).toFixed(0)}%
+                    {formatNumber(grapeSuitability * 100, { smartDecimals: true })}%
                   </span>
                 </div>
               </div>

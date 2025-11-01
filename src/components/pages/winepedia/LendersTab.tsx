@@ -197,7 +197,7 @@ export function LendersTab() {
                     <TableCell>{formatNumber(lender.maxLoanAmount, { currency: true })}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {Math.round(lender.minDurationSeasons / 4 * 10) / 10} - {Math.round(lender.maxDurationSeasons / 4 * 10) / 10} years
+                        {formatNumber(lender.minDurationSeasons / 4, { smartDecimals: true })} - {formatNumber(lender.maxDurationSeasons / 4, { smartDecimals: true })} years
                       </div>
                     </TableCell>
                     <TableCell>

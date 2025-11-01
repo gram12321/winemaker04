@@ -266,7 +266,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs text-gray-300">€{formatNumber(staff.wage)}/wk</span>
+                          <span className="text-xs text-gray-300">{formatNumber(staff.wage, { currency: true })}/wk</span>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -346,7 +346,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                               <span className="text-gray-500 text-xs">None</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-300 text-right">€{formatNumber(staff.wage)}/wk</td>
+                          <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatNumber(staff.wage, { currency: true })}/wk</td>
                           <td className="px-4 py-3 text-center">
                             <input
                               type="checkbox"

@@ -237,15 +237,15 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     </div>
                     <div>
                       <span className="text-gray-600">Risk Tolerance:</span>
-                      <div className="font-medium">{Math.round(selectedLender.riskTolerance * 100)}%</div>
+                      <div className="font-medium">{formatNumber(selectedLender.riskTolerance * 100, { smartDecimals: true })}%</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Flexibility:</span>
-                      <div className="font-medium">{Math.round(selectedLender.flexibility * 100)}%</div>
+                      <div className="font-medium">{formatNumber(selectedLender.flexibility * 100, { smartDecimals: true })}%</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Market Presence:</span>
-                      <div className="font-medium">{Math.round(selectedLender.marketPresence * 100)}%</div>
+                      <div className="font-medium">{formatNumber(selectedLender.marketPresence * 100, { smartDecimals: true })}%</div>
                     </div>
                   </div>
                 </CardContent>
@@ -283,11 +283,11 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                       step={1}
                       className="w-full"
                     />
-                    <div className="flex justify-between text-sm text-gray-400">
-                      <span>{Math.round(selectedLender.minDurationSeasons / 4 * 10) / 10} years</span>
-                      <span className="font-medium text-white">{Math.round(durationSeasons / 4 * 10) / 10} years</span>
-                      <span>{Math.round(selectedLender.maxDurationSeasons / 4 * 10) / 10} years</span>
-                    </div>
+                      <div className="flex justify-between text-sm text-gray-400">
+                        <span>{formatNumber(selectedLender.minDurationSeasons / 4, { smartDecimals: true })} years</span>
+                        <span className="font-medium text-white">{formatNumber(durationSeasons / 4, { smartDecimals: true })} years</span>
+                        <span>{formatNumber(selectedLender.maxDurationSeasons / 4, { smartDecimals: true })} years</span>
+                      </div>
                   </div>
                 </div>
               </div>
@@ -421,7 +421,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     {/* Duration Range */}
                     <div>
                       <label className="block text-sm font-medium text-white mb-2">
-                        Duration Range: {Math.round(durationRange[0] / 4 * 10) / 10} - {Math.round(durationRange[1] / 4 * 10) / 10} years
+                        Duration Range: {formatNumber(durationRange[0] / 4, { smartDecimals: true })} - {formatNumber(durationRange[1] / 4, { smartDecimals: true })} years
                       </label>
                       <DualSlider
                         value={durationRange}
@@ -434,8 +434,8 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                         }}
                       />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>{Math.round(LOAN_DURATION_RANGES.MIN / 4 * 10) / 10} years</span>
-                        <span>{Math.round(LOAN_DURATION_RANGES.MAX / 4 * 10) / 10} years</span>
+                        <span>{formatNumber(LOAN_DURATION_RANGES.MIN / 4, { smartDecimals: true })} years</span>
+                        <span>{formatNumber(LOAN_DURATION_RANGES.MAX / 4, { smartDecimals: true })} years</span>
                       </div>
                     </div>
                   </div>
@@ -491,10 +491,10 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                         </div>
                         <div className="text-center">
                           <div className="text-sm font-medium text-white">
-                            Duration: {Math.round(durationRange[0] / 4 * 10) / 10} - {Math.round(durationRange[1] / 4 * 10) / 10} years
+                            Duration: {formatNumber(durationRange[0] / 4, { smartDecimals: true })} - {formatNumber(durationRange[1] / 4, { smartDecimals: true })} years
                           </div>
                           <div className="text-xs text-gray-300">
-                            Range: {Math.round((durationRange[1] - durationRange[0]) / 4 * 10) / 10} years
+                            Range: {formatNumber((durationRange[1] - durationRange[0]) / 4, { smartDecimals: true })} years
                           </div>
                         </div>
                       </div>
@@ -512,7 +512,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Work Required:</span>
-                      <span className="text-white font-medium">{Math.round(previewStats.totalWork)} units</span>
+                      <span className="text-white font-medium">{formatNumber(previewStats.totalWork, { smartDecimals: true })} units</span>
                     </div>
                   </div>
                 </div>
@@ -537,7 +537,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Duration Range:</span>
-                      <span className="text-white">{Math.round(durationRange[0] / 4 * 10) / 10} - {Math.round(durationRange[1] / 4 * 10) / 10} years</span>
+                      <span className="text-white">{formatNumber(durationRange[0] / 4, { smartDecimals: true })} - {formatNumber(durationRange[1] / 4, { smartDecimals: true })} years</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Available Funds:</span>

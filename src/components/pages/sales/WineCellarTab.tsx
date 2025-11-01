@@ -20,7 +20,7 @@ const BalanceAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => 
   
   const qualityCategory = getGrapeQualityCategory(batch.grapeQuality);
   const qualityColorClass = getColorClass(batch.grapeQuality);
-  const qualityPercentage = Math.round(batch.grapeQuality * 100);
+  const qualityPercentage = formatNumber(batch.grapeQuality * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
