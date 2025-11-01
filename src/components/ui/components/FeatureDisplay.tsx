@@ -462,6 +462,15 @@ interface WeeklyEffectsDisplayProps {
 function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }: WeeklyEffectsDisplayProps) {
   if (Object.keys(combinedWeeklyEffects).length === 0) return null;
   
+  const displayData = getFeatureDisplayData(batch);
+  const effectiveCharacteristics: Record<string, number> = { ...batch.characteristics };
+  
+  Object.entries(displayData.combinedActiveEffects).forEach(([char, effect]) => {
+    if (effect !== undefined && effect !== null && !isNaN(effect)) {
+      effectiveCharacteristics[char] = (effectiveCharacteristics[char] || 0) + effect;
+    }
+  });
+  
   return (
     <div className="space-y-1">
       <div className="text-xs text-gray-600">Weekly Effects:</div>
@@ -485,7 +494,11 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }
               colorClass = getRangeColor(totalEffect, -0.5, 0.5, 'higher_better').text;
             } else {
               // Characteristic: determine if moving towards balance
-              const currentValue = batch.characteristics[key as keyof typeof batch.characteristics] || 0;
+              // Use effective current value (base + active effects) for accurate evaluation
+              // Ensure we always use the calculated effective value, not fallback to base
+              const baseValue = batch.characteristics[key as keyof typeof batch.characteristics] || 0;
+              const activeEffect = displayData.combinedActiveEffects[key] || 0;
+              const currentValue = effectiveCharacteristics[key] ?? (baseValue + activeEffect);
               const balancedRange = BASE_BALANCED_RANGES[key as keyof typeof BASE_BALANCED_RANGES];
               const colorInfo = getCharacteristicEffectColorInfo(currentValue, totalEffect, balancedRange);
               bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
@@ -554,6 +567,8 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
             const sign = totalEffect > 0 ? '+' : '';
             
             // Use balance-aware color coding for characteristic effects
+            // For combined effects, we need to evaluate against the base value (before active effects)
+            // because combinedActiveEffects represents the total change from base
             const currentValue = batch.characteristics[characteristic as keyof typeof batch.characteristics] || 0;
             const balancedRange = BASE_BALANCED_RANGES[characteristic as keyof typeof BASE_BALANCED_RANGES];
             const colorInfo = getCharacteristicEffectColorInfo(currentValue, totalEffect, balancedRange);

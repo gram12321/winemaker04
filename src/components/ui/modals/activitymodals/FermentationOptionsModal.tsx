@@ -7,7 +7,8 @@ import { getFermentationMethodInfo, getFermentationTemperatureInfo, Fermentation
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber, getCharacteristicDisplayName, getColorClass } from '@/lib/utils/utils';
+import { formatNumber, getCharacteristicDisplayName, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
 
@@ -270,27 +271,38 @@ Note: These effects apply each week while fermentation is active.`
           <div>
             <div className="font-medium text-green-800 mb-1">{options.method} Method</div>
             <div className="flex flex-wrap gap-1">
-              {combinedEffects.methodParsed.map((effect, index) => (
-                <Tooltip key={index}>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
-                      <img 
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                        alt={effect.characteristic}
-                        className="w-3 h-3 mr-1"
-                      />
-                      <span className={`${effect.value >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                        {effect.value > 0 ? '+' : ''}{effect.value}%
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <div className="text-xs">
-                      {getCharacteristicDisplayName(effect.characteristic)}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
+              {combinedEffects.methodParsed.map((effect, index) => {
+                // Convert percentage to decimal modifier (e.g., 5% -> 0.05)
+                const modifier = effect.value / 100;
+                const currentValue = batch?.characteristics[effect.characteristic as keyof typeof batch.characteristics] || 0;
+                const balancedRange = BASE_BALANCED_RANGES[effect.characteristic as keyof typeof BASE_BALANCED_RANGES];
+                const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
+                const colorInfo = getCharacteristicEffectColorInfo(currentValue, modifier, balancedRangeCopy);
+                const colorClass = getCharacteristicEffectColorClass(currentValue, modifier, balancedRangeCopy);
+                const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
+                
+                return (
+                  <Tooltip key={index}>
+                    <TooltipTrigger asChild>
+                      <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                        <img 
+                          src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
+                          alt={effect.characteristic}
+                          className="w-3 h-3 mr-1"
+                        />
+                        <span className={colorClass}>
+                          {effect.value > 0 ? '+' : ''}{effect.value}%
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <div className="text-xs">
+                        {getCharacteristicDisplayName(effect.characteristic)}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
 
@@ -298,27 +310,38 @@ Note: These effects apply each week while fermentation is active.`
           <div>
             <div className="font-medium text-green-800 mb-1">{options.temperature} Temperature</div>
             <div className="flex flex-wrap gap-1">
-              {combinedEffects.temperatureParsed.map((effect, index) => (
-                <Tooltip key={index}>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center bg-green-100 px-2 py-1 rounded text-xs cursor-help">
-                      <img 
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                        alt={effect.characteristic}
-                        className="w-3 h-3 mr-1"
-                      />
-                      <span className={`${effect.value >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                        {effect.value > 0 ? '+' : ''}{effect.value}%
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <div className="text-xs">
-                      {getCharacteristicDisplayName(effect.characteristic)}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
+              {combinedEffects.temperatureParsed.map((effect, index) => {
+                // Convert percentage to decimal modifier (e.g., 5% -> 0.05)
+                const modifier = effect.value / 100;
+                const currentValue = batch?.characteristics[effect.characteristic as keyof typeof batch.characteristics] || 0;
+                const balancedRange = BASE_BALANCED_RANGES[effect.characteristic as keyof typeof BASE_BALANCED_RANGES];
+                const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
+                const colorInfo = getCharacteristicEffectColorInfo(currentValue, modifier, balancedRangeCopy);
+                const colorClass = getCharacteristicEffectColorClass(currentValue, modifier, balancedRangeCopy);
+                const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
+                
+                return (
+                  <Tooltip key={index}>
+                    <TooltipTrigger asChild>
+                      <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                        <img 
+                          src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
+                          alt={effect.characteristic}
+                          className="w-3 h-3 mr-1"
+                        />
+                        <span className={colorClass}>
+                          {effect.value > 0 ? '+' : ''}{effect.value}%
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <div className="text-xs">
+                        {getCharacteristicDisplayName(effect.characteristic)}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
 
@@ -326,27 +349,38 @@ Note: These effects apply each week while fermentation is active.`
           <div className="border-t border-green-300 pt-2 mt-2">
             <div className="font-medium text-green-800 mb-1">Total Weekly Development</div>
             <div className="flex flex-wrap gap-1">
-              {parseCharacteristicEffects(combinedEffects.combined).map((effect, index) => (
-                <Tooltip key={index}>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center bg-green-200 px-2 py-1 rounded text-xs cursor-help">
-                      <img 
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                        alt={effect.characteristic}
-                        className="w-3 h-3 mr-1"
-                      />
-                      <span className={`${effect.value >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                        {effect.value > 0 ? '+' : ''}{effect.value}%
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <div className="text-xs">
-                      {getCharacteristicDisplayName(effect.characteristic)}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
+              {parseCharacteristicEffects(combinedEffects.combined).map((effect, index) => {
+                // Convert percentage to decimal modifier (e.g., 5% -> 0.05)
+                const modifier = effect.value / 100;
+                const currentValue = batch?.characteristics[effect.characteristic as keyof typeof batch.characteristics] || 0;
+                const balancedRange = BASE_BALANCED_RANGES[effect.characteristic as keyof typeof BASE_BALANCED_RANGES];
+                const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
+                const colorInfo = getCharacteristicEffectColorInfo(currentValue, modifier, balancedRangeCopy);
+                const colorClass = getCharacteristicEffectColorClass(currentValue, modifier, balancedRangeCopy);
+                const bgClass = colorInfo.isGood ? 'bg-green-200' : 'bg-red-200';
+                
+                return (
+                  <Tooltip key={index}>
+                    <TooltipTrigger asChild>
+                      <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                        <img 
+                          src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
+                          alt={effect.characteristic}
+                          className="w-3 h-3 mr-1"
+                        />
+                        <span className={colorClass}>
+                          {effect.value > 0 ? '+' : ''}{effect.value}%
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <div className="text-xs">
+                        {getCharacteristicDisplayName(effect.characteristic)}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
         </div>

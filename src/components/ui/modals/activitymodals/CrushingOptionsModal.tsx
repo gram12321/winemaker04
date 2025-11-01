@@ -7,7 +7,8 @@ import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManage
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber, getColorClass } from '@/lib/utils';
+import { formatNumber, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
@@ -400,12 +401,18 @@ MAX PRESSURE BY METHOD:
               <div className="flex flex-wrap gap-1">
                 {getPressingIntensityCharacteristicEffects(options.pressingIntensity, options.method).map((effect) => {
                   const percentage = formatNumber(effect.modifier * 100, { smartDecimals: true });
-                  const isPositive = effect.modifier > 0;
-                  const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
-                  const sign = isPositive ? '+' : '';
+                  const sign = effect.modifier > 0 ? '+' : '';
+                  
+                  // Use balance-aware color coding for effects
+                  const currentValue = batch?.characteristics[effect.characteristic as keyof typeof batch.characteristics] || 0;
+                  const balancedRange = BASE_BALANCED_RANGES[effect.characteristic as keyof typeof BASE_BALANCED_RANGES];
+                  const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
+                  const colorInfo = getCharacteristicEffectColorInfo(currentValue, effect.modifier, balancedRangeCopy);
+                  const colorClass = getCharacteristicEffectColorClass(currentValue, effect.modifier, balancedRangeCopy);
+                  const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
                   
                   return (
-                    <div key={effect.characteristic} className={`text-xs px-1.5 py-0.5 rounded bg-gray-100 ${colorClass} flex items-center gap-1`}>
+                    <div key={effect.characteristic} className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} flex items-center gap-1`}>
                       <img src={`/assets/icons/characteristics/${effect.characteristic}.png`} alt={`${effect.characteristic} icon`} className="w-3 h-3 opacity-80" />
                       <span>{effect.characteristic}: {sign}{percentage}%</span>
                     </div>

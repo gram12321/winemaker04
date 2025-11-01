@@ -847,6 +847,25 @@ export function createAdjustedRangesRecord(): Record<keyof WineCharacteristics, 
 }
 
 /**
+ * ===== COLOR CODING FOR CHARACTERISTICS =====
+ * 
+ * Use getRangeColor(value, 0, 1, 'balanced', min, max) for:
+ * - Static characteristic VALUES (e.g., "Body: 0.7")
+ * - Current state display (bars, sliders, tooltips)
+ * - Rating how good a value is relative to balanced range
+ * 
+ * Use getCharacteristicEffectColorClass(currentValue, modifier, balancedRange) for:
+ * - EFFECTS/MODIFIERS (e.g., "+5% body", "-10% acidity")
+ * - Changes/changes (weekly effects, feature impacts, processing options)
+ * - Determining if a change moves towards balance (green) or away (red)
+ * 
+ * Examples:
+ * - CharacteristicBar: Use 'balanced' strategy (displaying current value)
+ * - FeatureDisplay effects: Use getCharacteristicEffectColorClass (displaying modifiers)
+ * - Fermentation preview: Use getCharacteristicEffectColorClass (displaying expected changes)
+ */
+
+/**
  * Determine if a characteristic effect modifier is moving towards balance
  * Returns information for color coding: isGood (true = green, false = red) and intensity rating
  * @param currentValue Current characteristic value (0-1)
@@ -869,13 +888,43 @@ export function getCharacteristicEffectColorInfo(
   
   // If distance decreases, we're moving towards balance (good = green)
   // If distance increases, we're moving away from balance (bad = red)
-  const isGood = distanceAfter < distanceBefore;
+  // Use small epsilon (1e-9) to handle floating point precision issues
+  const epsilon = 1e-9;
+  const isGood = distanceAfter < (distanceBefore - epsilon);
   
   // Calculate intensity based on how much the distance changes
-  // Use absolute value of modifier as base intensity (0-0.1 typical range)
-  // Then adjust based on whether it's helping or hurting balance
+  // For bad effects (moving away): use absolute distance change as intensity
+  // For good effects (moving towards): use relative improvement (distance change / distance before)
+  // Special case: if starting from perfect balance (distanceBefore = 0), any movement away should be high intensity
   const distanceChange = Math.abs(distanceBefore - distanceAfter);
-  const intensity = Math.min(1, Math.max(0, distanceChange / 0.1)); // Normalize to 0-1, assuming 0.1 is max typical modifier
+  
+  let intensity: number;
+  if (isGood) {
+    // Moving towards balance: intensity based on relative improvement
+    // If distanceBefore is 0, we can't divide, so use distanceChange directly
+    if (distanceBefore === 0) {
+      intensity = Math.min(1, distanceChange / 0.1); // Normalize assuming 0.1 is max typical modifier
+    } else {
+      // Relative improvement: how much of the imbalance we're fixing
+      const relativeImprovement = distanceChange / distanceBefore;
+      // Use absolute change for minimum intensity, relative improvement for scaling
+      // This ensures that large absolute changes (like tannins) get proper intensity even if relative improvement is small
+      const absoluteIntensity = Math.min(1, distanceChange / 0.1);
+      const relativeIntensity = Math.min(1, relativeImprovement * 0.7); // Scale relative improvement
+      // Take the maximum to ensure good effects always show as green
+      intensity = Math.max(absoluteIntensity, relativeIntensity, 0.6); // Minimum 0.6 for any good effect
+    }
+  } else {
+    // Moving away from balance: intensity based on absolute change
+    // If starting from perfect balance (distanceBefore = 0), use high intensity
+    if (distanceBefore === 0) {
+      // Starting from perfect balance - any movement away should be strong red
+      intensity = Math.min(1, Math.max(0.8, distanceChange / 0.1)); // At least 0.8 intensity for moving away from perfect balance
+    } else {
+      // Already unbalanced - intensity based on how much worse we're getting
+      intensity = Math.min(1, distanceChange / 0.1);
+    }
+  }
   
   return { isGood, intensity };
 }
@@ -896,10 +945,23 @@ export function getCharacteristicEffectColorClass(
 ): string {
   const { isGood, intensity } = getCharacteristicEffectColorInfo(currentValue, modifier, balancedRange);
   
-  // Use intensity to determine color depth
-  // Higher intensity = deeper colors (greener for good, redder for bad)
-  // Use getRangeColor with 'higher_better' strategy where intensity is the value
-  // Map intensity to rating: higher intensity = better rating (for green) or worse rating (for red)
-  const rating = isGood ? intensity : (1 - intensity);
-  return getColorClass(rating);
+  // getColorClass maps ratings to colors:
+  // 0-0.4 = red/orange/yellow, 0.5-0.6 = lime, 0.7+ = green
+  // For good effects: higher intensity = deeper green (needs rating >= 0.7)
+  // For bad effects: higher intensity = deeper red (needs rating <= 0.4)
+  if (isGood) {
+    // Good effects: map intensity to green range (0.7-1.0)
+    // Minimum 0.7 to ensure green, scale intensity (0.6-1.0) to (0.7-1.0)
+    const rating = Math.max(0.7, Math.min(1.0, 0.7 + (intensity - 0.6) * 0.3 / 0.4)); // Map [0.6,1.0] to [0.7,1.0]
+    return getColorClass(rating);
+  } else {
+    // Bad effects: map intensity to red range (0.0-0.4)
+    // Higher intensity = deeper red (lower rating)
+    // Map intensity (0.2-1.0) to rating (0.4-0.0)
+    // If intensity < 0.2, clamp to 0.4 (light red)
+    const rating = intensity < 0.2 
+      ? 0.4 
+      : Math.max(0.0, 0.4 - (intensity - 0.2) * 0.4 / 0.8); // Map [0.2,1.0] to [0.4,0.0]
+    return getColorClass(rating);
+  }
 }
