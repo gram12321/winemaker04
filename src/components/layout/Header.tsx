@@ -190,7 +190,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   <Badge 
                     variant="outline" 
                     className={`px-2 py-0.5 flex items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Recovery')}`}
-                    title={`Economy Phase: ${gameState.economyPhase}`}
                     onClick={() => {
                       try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
                       handleNavigation('winepedia');
@@ -211,7 +210,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             <Badge 
               variant="outline" 
               className={`px-1.5 py-0.5 flex items-center cursor-pointer transition-colors sm:hidden ${getEconomyPhaseColorClass(gameState.economyPhase || 'Recovery')}`}
-              title={`Economy Phase: ${gameState.economyPhase}`}
               onClick={() => {
                 try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
                 handleNavigation('winepedia');

@@ -5,6 +5,7 @@ import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine } from 'lucide
 import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
+import { type ScoreType } from '@/lib/database';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { NavigationProps } from '../../lib/types/UItypes';
 
@@ -12,10 +13,7 @@ interface CompanyOverviewProps extends NavigationProps {
   // Inherits onNavigate from NavigationProps
 }
 
-interface CompanyRankings {
-  company_value: { position: number; total: number };
-  company_value_per_week: { position: number; total: number };
-}
+type CompanyRankings = Record<ScoreType, { position: number; total: number }>;
 
 const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   const { isLoading, withLoading } = useLoadingState();
@@ -24,7 +22,14 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   
   const [rankings, setRankings] = useState<CompanyRankings>({
     company_value: { position: 0, total: 0 },
-    company_value_per_week: { position: 0, total: 0 }
+    company_value_per_week: { position: 0, total: 0 },
+    highest_vintage_quantity: { position: 0, total: 0 },
+    most_productive_vineyard: { position: 0, total: 0 },
+    highest_wine_score: { position: 0, total: 0 },
+    highest_grape_quality: { position: 0, total: 0 },
+    highest_balance: { position: 0, total: 0 },
+    highest_price: { position: 0, total: 0 },
+    lowest_price: { position: 0, total: 0 }
   });
   
   const [cellarStats, setCellarStats] = useState({
@@ -95,6 +100,65 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     if (ranking.position === 0) return "Not ranked";
     return `${ranking.position} / ${ranking.total}`;
   }, []);
+
+  const getTabTitle = useCallback((scoreType: ScoreType): string => {
+    const fullName = highscoreService.getScoreTypeName(scoreType);
+    switch (scoreType) {
+      case 'company_value':
+        return 'Company Value';
+      case 'company_value_per_week':
+        return 'Value/Week';
+      case 'highest_vintage_quantity':
+        return 'Vintage Quantity';
+      case 'most_productive_vineyard':
+        return 'Vineyard Production';
+      case 'highest_wine_score':
+        return 'Wine Score';
+      case 'highest_grape_quality':
+        return 'Grape Quality';
+      case 'highest_balance':
+        return 'Balance';
+      case 'highest_price':
+        return 'Highest Price';
+      case 'lowest_price':
+        return 'Lowest Price';
+      default:
+        return fullName;
+    }
+  }, []);
+
+  const getTabIcon = useCallback((scoreType: ScoreType) => {
+    switch (scoreType) {
+      case 'company_value':
+        return '🏢';
+      case 'company_value_per_week':
+        return '🚀';
+      case 'highest_vintage_quantity':
+        return '🍾';
+      case 'most_productive_vineyard':
+        return '🍇';
+      case 'highest_wine_score':
+        return '🏆';
+      case 'highest_grape_quality':
+        return '⭐';
+      case 'highest_balance':
+        return '⚖️';
+      case 'highest_price':
+        return '💰';
+      case 'lowest_price':
+        return '💸';
+      default:
+        return '🏆';
+    }
+  }, []);
+
+  const firstTabGroup = useMemo(() => (
+    ['company_value', 'company_value_per_week', 'highest_vintage_quantity', 'most_productive_vineyard'] as ScoreType[]
+  ), []);
+
+  const secondTabGroup = useMemo(() => (
+    ['highest_wine_score', 'highest_grape_quality', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
+  ), []);
 
   // Calculate some basic stats using utility functions - memoized for performance
   const { weeksElapsed, avgMoneyPerWeek, companyAge } = useMemo(() => {
@@ -288,15 +352,21 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               {isLoading ? (
                 <p className="text-xs text-muted-foreground">Loading rankings...</p>
               ) : (
-                <div className="space-y-2.5">
-                  <div className="border rounded-md p-2">
-                    <div className="text-xs text-muted-foreground">Company Value</div>
-                    <div className="text-sm font-medium">{formatRanking(rankings.company_value)}</div>
-                  </div>
-                  <div className="border rounded-md p-2">
-                    <div className="text-xs text-muted-foreground">Value Growth</div>
-                    <div className="text-sm font-medium">{formatRanking(rankings.company_value_per_week)}</div>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {[...firstTabGroup, ...secondTabGroup].map((scoreType) => (
+                    <div
+                      key={scoreType}
+                      className="flex items-center gap-2 rounded-md bg-muted/60 px-2 py-1.5 max-w-full"
+                    >
+                      <span className="shrink-0">{getTabIcon(scoreType)}</span>
+                      <span className="text-[11px] text-muted-foreground truncate max-w-[28vw] sm:max-w-[14vw] md:max-w-[10vw]">
+                        {getTabTitle(scoreType)}
+                      </span>
+                      <span className="text-[11px] font-medium text-foreground/90 whitespace-nowrap">
+                        {formatRanking(rankings[scoreType])}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

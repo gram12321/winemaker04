@@ -371,20 +371,28 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="company_value" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="w-full mb-6 flex flex-wrap gap-2 sm:grid sm:grid-cols-4 sm:gap-0">
                 {firstTabGroup.map((scoreType) => (
-                  <TabsTrigger key={scoreType} value={scoreType} className="flex items-center gap-2">
+                  <TabsTrigger
+                    key={scoreType}
+                    value={scoreType}
+                    className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
+                  >
                     <span>{getTabIcon(scoreType)}</span>
-                    <span className="hidden sm:inline">{getTabTitle(scoreType)}</span>
+                    <span className="truncate max-w-[42vw] sm:max-w-none">{getTabTitle(scoreType)}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
               
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="w-full mb-6 flex flex-wrap gap-2 sm:grid sm:grid-cols-4 sm:gap-0">
                 {secondTabGroup.map((scoreType) => (
-                  <TabsTrigger key={scoreType} value={scoreType} className="flex items-center gap-2">
+                  <TabsTrigger
+                    key={scoreType}
+                    value={scoreType}
+                    className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm truncate"
+                  >
                     <span>{getTabIcon(scoreType)}</span>
-                    <span className="hidden sm:inline">{getTabTitle(scoreType)}</span>
+                    <span className="truncate max-w-[42vw] sm:max-w-none">{getTabTitle(scoreType)}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>

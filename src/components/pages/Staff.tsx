@@ -2,7 +2,7 @@
 // Main page for viewing and managing staff members
 
 import React, { useState } from 'react';
-import { getAllStaff, removeStaff, getAllTeams, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
+import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
 import type { Staff } from '@/lib/types/types';
 import { formatNumber, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
@@ -11,6 +11,7 @@ import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
 import { getTaskTypeDisplayName } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/types/types';
+import { useGameState } from '@/hooks';
 
 interface StaffPageProps {
   title: string;
@@ -43,8 +44,9 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     defaultTaskTypes: [] as string[]
   });
   
-  const allStaff = getAllStaff();
-  const allTeams = getAllTeams();
+  const { staff: gameStaff, teams: gameTeams } = useGameState();
+  const allStaff = gameStaff || [];
+  const allTeams = gameTeams || [];
   const totalWages = allStaff.reduce((sum, staff) => sum + staff.wage, 0);
   
   // Filter staff based on selected team
@@ -69,17 +71,17 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     setShowTeamAssignmentDialog(true);
   };
 
-  const handleAssignToTeam = (teamId: string) => {
+  const handleAssignToTeam = async (teamId: string) => {
     if (staffForTeamAssignment) {
-      assignStaffToTeam(staffForTeamAssignment.id, teamId);
+      await assignStaffToTeam(staffForTeamAssignment.id, teamId);
       setShowTeamAssignmentDialog(false);
       setStaffForTeamAssignment(null);
     }
   };
 
-  const handleRemoveFromTeam = (teamId: string) => {
+  const handleRemoveFromTeam = async (teamId: string) => {
     if (staffForTeamAssignment) {
-      removeStaffFromTeam(staffForTeamAssignment.id, teamId);
+      await removeStaffFromTeam(staffForTeamAssignment.id, teamId);
       setShowTeamAssignmentDialog(false);
       setStaffForTeamAssignment(null);
     }
