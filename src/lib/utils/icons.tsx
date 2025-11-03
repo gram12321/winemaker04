@@ -74,6 +74,26 @@ export const EMOJI_OPTIONS: readonly string[] = [
   '🏢', '🏭', '🌍', '🌱', '🌿', '🍃', '🌺', '🌻', '🌸', '🌷'
 ];
 
+// Avatar options for user profiles
+export const AVATAR_OPTIONS = [
+  { id: 'default', emoji: '👤', label: 'Default' },
+  { id: 'businessman', emoji: '👨‍💼', label: 'Businessman' },
+  { id: 'businesswoman', emoji: '👩‍💼', label: 'Businesswoman' },
+  { id: 'scientist', emoji: '🧑‍🔬', label: 'Scientist' },
+  { id: 'farmer', emoji: '👨‍🌾', label: 'Farmer' },
+  { id: 'chef', emoji: '👩‍🍳', label: 'Chef' },
+  { id: 'astronaut', emoji: '👨‍🚀', label: 'Astronaut' },
+  { id: 'construction', emoji: '👷', label: 'Construction' },
+  { id: 'mechanic', emoji: '🧑‍🔧', label: 'Mechanic' },
+  { id: 'office', emoji: '🧑‍💻', label: 'Office Worker' },
+  { id: 'teacher', emoji: '👨‍🏫', label: 'Teacher' },
+  { id: 'artist', emoji: '👩‍🎨', label: 'Artist' },
+  { id: 'superhero', emoji: '🦸', label: 'Superhero' },
+  { id: 'ninja', emoji: '🥷', label: 'Ninja' },
+  { id: 'royal', emoji: '👑', label: 'Royal' },
+  { id: 'mage', emoji: '🧙', label: 'Mage' }
+] as const;
+
 export const NAVIGATION_EMOJIS = {
   dashboard: '🏠',
   vineyard: '🍇',

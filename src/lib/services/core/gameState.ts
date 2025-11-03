@@ -4,11 +4,12 @@ import { GAME_INITIALIZATION } from '../../constants/constants';
 import { CREDIT_RATING } from '../../constants/loanConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
 import { companyService } from '../user/companyService';
-import { Company } from '@/lib/database';
+import { Company, loadGameState, saveGameState } from '@/lib/database';
 import { initializeStartingCapital } from '../finance/financeService';
 import { initializeStaffSystem, createStartingStaff } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { initializeEconomyPhase } from '../finance/economyService';
 
 // Current active company and game state
 let currentCompany: Company | null = null;
@@ -30,6 +31,14 @@ const LAST_COMPANY_ID_KEY = 'lastCompanyId';
 function setLastCompanyId(companyId: string): void {
   try {
     localStorage.setItem(LAST_COMPANY_ID_KEY, companyId);
+  } catch (error) {
+    // no-op
+  }
+}
+
+function clearLastCompanyId(): void {
+  try {
+    localStorage.removeItem(LAST_COMPANY_ID_KEY);
   } catch (error) {
     // no-op
   }
@@ -101,7 +110,29 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   // Persist only the lastCompanyId for autologin
   setLastCompanyId(company.id);
   
-  // Update local game state to match company
+  // Load persisted game state (including economy phase) for this company
+  let persisted = null as Partial<GameState> | null;
+  try {
+    persisted = await loadGameState();
+  } catch {}
+  
+  // If no persisted state, initialize once with defaults and set economyPhase to Recovery
+  let ensuredEconomyPhase = persisted?.economyPhase;
+  if (!ensuredEconomyPhase) {
+    ensuredEconomyPhase = initializeEconomyPhase();
+    try {
+      await saveGameState({
+        week: company.currentWeek,
+        season: company.currentSeason,
+        currentYear: company.currentYear,
+        money: company.money,
+        prestige: company.prestige,
+        economyPhase: ensuredEconomyPhase
+      });
+    } catch {}
+  }
+
+  // Update local game state to match company and DB (no fallback defaults here)
   gameState = {
     week: company.currentWeek,
     season: company.currentSeason,
@@ -109,7 +140,8 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     companyName: company.name,
     foundedYear: company.foundedYear,
     money: company.money,
-    prestige: company.prestige
+    prestige: company.prestige,
+    economyPhase: ensuredEconomyPhase
   };
   
   // Initialize prestige system for this company
@@ -208,6 +240,9 @@ export const resetGameState = (): void => {
     prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
   };
   prestigeCache = null;
+  
+  // Clear the lastCompanyId to prevent autologin
+  clearLastCompanyId();
 };
 
 // Get current prestige (with caching for performance)
@@ -256,4 +291,9 @@ export async function initializePrestigeSystem(): Promise<void> {
 // Clear prestige cache (for admin functions)
 export const clearPrestigeCache = (): void => {
   prestigeCache = null;
+};
+
+// Export clearLastCompanyId for explicit logout handling
+export const clearLastCompanyIdForLogout = (): void => {
+  clearLastCompanyId();
 };

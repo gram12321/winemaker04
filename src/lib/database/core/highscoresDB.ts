@@ -52,19 +52,32 @@ export const getExistingScore = async (companyId: string, scoreType: ScoreType):
 
 export const upsertHighscore = async (highscoreData: HighscoreData): Promise<{ success: boolean; error?: string }> => {
   try {
+    const isCompanyAggregate = highscoreData.score_type === 'company_value' || highscoreData.score_type === 'company_value_per_week';
+
+    if (isCompanyAggregate) {
+      // Enforced by partial unique index on (company_id, score_type) for aggregate types
+      const { error } = await supabase
+        .from(HIGHSCORES_TABLE)
+        .upsert(highscoreData, {
+          onConflict: 'company_id,score_type'
+        });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    }
+
+    // For non-aggregate types, allow multiple entries per company
     const { error } = await supabase
       .from(HIGHSCORES_TABLE)
-      .upsert(highscoreData, {
-        onConflict: 'company_id,score_type'
-      });
+      .insert(highscoreData);
 
     if (error) {
       return { success: false, error: error.message };
     }
-
     return { success: true };
   } catch (error: any) {
-    console.error('Error upserting highscore:', error);
+    console.error('Error upserting/inserting highscore:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 };
@@ -123,6 +136,31 @@ export const loadHighscores = async (scoreType: ScoreType, limit: number = 20): 
     return (data || []).map(mapHighscoreFromDB);
   } catch (error) {
     console.error('Error loading highscores:', error);
+    return [];
+  }
+};
+
+/**
+ * Load a specific ordered window of highscores by index range
+ */
+export const loadHighscoresRange = async (
+  scoreType: ScoreType,
+  start: number,
+  end: number
+): Promise<HighscoreEntry[]> => {
+  try {
+    const ascending = scoreType === 'lowest_price';
+    const { data, error } = await supabase
+      .from(HIGHSCORES_TABLE)
+      .select('*')
+      .eq('score_type', scoreType)
+      .order('score_value', { ascending })
+      .range(start, end);
+
+    if (error) throw error;
+    return (data || []).map(mapHighscoreFromDB);
+  } catch (error) {
+    console.error('Error loading highscores range:', error);
     return [];
   }
 };

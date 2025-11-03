@@ -1,6 +1,6 @@
 import { notificationService } from '@/lib/services';
 import { Season, NotificationCategory } from '../../types/types';
-import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
+import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, loadHighscoresRange, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
 
 export interface HighscoreSubmission {
   companyId: string;
@@ -10,6 +10,7 @@ export interface HighscoreSubmission {
   gameWeek?: number;
   gameSeason?: Season;
   gameYear?: number;
+  achievedAt?: string; // ISO string; when provided, overrides default now
   
   // Wine-specific data
   vineyardId?: string;
@@ -21,18 +22,17 @@ export interface HighscoreSubmission {
 class HighscoreService {
   public async submitHighscore(submission: HighscoreSubmission): Promise<{ success: boolean; error?: string }> {
     try {
-      // Check if there's an existing highscore for this company and score type
-      const existingScore = await getExistingScore(submission.companyId, submission.scoreType);
+      const isCompanyAggregate = submission.scoreType === 'company_value' || submission.scoreType === 'company_value_per_week';
 
-      // For most scores, higher is better. For lowest_price, lower is better.
-      const isLowerBetter = submission.scoreType === 'lowest_price';
-      const shouldUpdate = !existingScore || 
-        (isLowerBetter ? 
-          submission.scoreValue < existingScore.score_value : 
-          submission.scoreValue > existingScore.score_value);
-
-      if (!shouldUpdate) {
-        return { success: true }; // Score not improved, but not an error
+      // Only enforce "best per company" for aggregate company scores
+      if (isCompanyAggregate) {
+        const existingScore = await getExistingScore(submission.companyId, submission.scoreType);
+        const isLowerBetter = submission.scoreType === 'lowest_price';
+        const shouldUpdate = !existingScore || 
+          (isLowerBetter ? submission.scoreValue < existingScore.score_value : submission.scoreValue > existingScore.score_value);
+        if (!shouldUpdate) {
+          return { success: true };
+        }
       }
 
       const highscoreData: HighscoreData = {
@@ -47,7 +47,7 @@ class HighscoreService {
         vineyard_name: submission.vineyardName,
         wine_vintage: submission.wineVintage,
         grape_variety: submission.grapeVariety,
-        achieved_at: new Date().toISOString()
+        achieved_at: submission.achievedAt || new Date().toISOString()
       };
 
       return await upsertHighscore(highscoreData);
@@ -117,6 +117,34 @@ class HighscoreService {
     return rankings;
   }
 
+  /**
+   * Get a company's leaderboard context: two entries above and two below (window configurable)
+   */
+  public async getCompanyHighscoreContext(
+    companyId: string,
+    scoreType: ScoreType,
+    window: number = 2
+  ): Promise<{ position: number; total: number; entries: HighscoreEntry[]; startIndex: number } | null> {
+    try {
+      const companyScore = await getCompanyScore(companyId, scoreType);
+      if (!companyScore) return null;
+
+      const higherCount = await countHigherScores(scoreType, companyScore.score_value);
+      const totalCount = await countTotalScores(scoreType);
+      if (higherCount === null || totalCount === null) return null;
+
+      const position = higherCount + 1; // 1-based
+      const startIndex = Math.max(0, position - 1 - window);
+      const endIndex = Math.min((totalCount || 0) - 1, position - 1 + window);
+
+      const entries = await loadHighscoresRange(scoreType, startIndex, endIndex);
+      return { position, total: totalCount, entries, startIndex };
+    } catch (error) {
+      console.error('Error getting company highscore context:', error);
+      return null;
+    }
+  }
+
   public async submitAllCompanyScores(
     companyId: string,
     companyName: string,
@@ -183,6 +211,7 @@ class HighscoreService {
       balance: number;
       wineScore: number;
       price: number;
+      bottledAt?: string; // ISO date string used as achievedAt
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -195,7 +224,8 @@ class HighscoreService {
         vineyardId: wineData.vineyardId,
         vineyardName: wineData.vineyardName,
         wineVintage: wineData.vintage,
-        grapeVariety: wineData.grape
+        grapeVariety: wineData.grape,
+        achievedAt: wineData.bottledAt
       };
 
       // Use the pre-calculated wine score from the database

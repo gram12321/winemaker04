@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
-import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine } from 'lucide-react';
+import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
+import { formatPercent } from '@/lib/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
 import { type ScoreType } from '@/lib/database';
@@ -31,6 +32,10 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     highest_price: { position: 0, total: 0 },
     lowest_price: { position: 0, total: 0 }
   });
+
+  const [selectedScoreType, setSelectedScoreType] = useState<ScoreType>('company_value');
+  const [contextLoading, setContextLoading] = useState(false);
+  const [contextEntries, setContextEntries] = useState<{ entries: any[]; startIndex: number } | null>(null);
   
   const [cellarStats, setCellarStats] = useState({
     totalWineValue: 0,
@@ -68,6 +73,14 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     const companyRankings = await highscoreService.getCompanyRankings(company.id);
     setRankings(companyRankings);
   });
+
+  const loadContext = useCallback(async (scoreType: ScoreType) => {
+    if (!company) return;
+    setContextLoading(true);
+    const ctx = await highscoreService.getCompanyHighscoreContext(company.id, scoreType, 2);
+    setContextEntries(ctx ? { entries: ctx.entries, startIndex: ctx.startIndex } : null);
+    setContextLoading(false);
+  }, [company]);
   
   const loadCellarStats = async () => {
     try {
@@ -159,6 +172,22 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   const secondTabGroup = useMemo(() => (
     ['highest_wine_score', 'highest_grape_quality', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
   ), []);
+
+  const allGroups = useMemo(() => ([...firstTabGroup, ...secondTabGroup]), [firstTabGroup, secondTabGroup]);
+
+  const goPrev = () => {
+    const idx = allGroups.indexOf(selectedScoreType);
+    const next = allGroups[(idx - 1 + allGroups.length) % allGroups.length];
+    setSelectedScoreType(next);
+    loadContext(next);
+  };
+
+  const goNext = () => {
+    const idx = allGroups.indexOf(selectedScoreType);
+    const next = allGroups[(idx + 1) % allGroups.length];
+    setSelectedScoreType(next);
+    loadContext(next);
+  };
 
   // Calculate some basic stats using utility functions - memoized for performance
   const { weeksElapsed, avgMoneyPerWeek, companyAge } = useMemo(() => {
@@ -352,11 +381,13 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
               {isLoading ? (
                 <p className="text-xs text-muted-foreground">Loading rankings...</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
                   {[...firstTabGroup, ...secondTabGroup].map((scoreType) => (
-                    <div
+                    <button
                       key={scoreType}
-                      className="flex items-center gap-2 rounded-md bg-muted/60 px-2 py-1.5 max-w-full"
+                      className={`flex items-center gap-2 rounded-md bg-muted/60 px-2 py-1.5 max-w-full hover:bg-muted ${selectedScoreType === scoreType ? 'ring-1 ring-primary' : ''}`}
+                      onClick={() => { setSelectedScoreType(scoreType); loadContext(scoreType); }}
                     >
                       <span className="shrink-0">{getTabIcon(scoreType)}</span>
                       <span className="text-[11px] text-muted-foreground truncate max-w-[28vw] sm:max-w-[14vw] md:max-w-[10vw]">
@@ -365,8 +396,50 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                       <span className="text-[11px] font-medium text-foreground/90 whitespace-nowrap">
                         {formatRanking(rankings[scoreType])}
                       </span>
-                    </div>
+                    </button>
                   ))}
+                  </div>
+
+                {/* Context viewer */}
+                <div className="mt-3 border rounded-md">
+                  <div className="flex items-center justify-between px-2 py-1.5 bg-muted/50 rounded-t-md">
+                    <button className="p-1 hover:text-primary" onClick={goPrev} aria-label="Previous">
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div className="text-xs font-medium">
+                      {getTabIcon(selectedScoreType)} <span className="ml-1">{getTabTitle(selectedScoreType)}</span>
+                    </div>
+                    <button className="p-1 hover:text-primary" onClick={goNext} aria-label="Next">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="px-2 py-2">
+                    {contextLoading ? (
+                      <p className="text-xs text-muted-foreground">Loading scores…</p>
+                    ) : contextEntries && contextEntries.entries.length > 0 ? (
+                      <div className="space-y-1">
+                        {contextEntries.entries.map((e, i) => {
+                          const rank = contextEntries.startIndex + i + 1;
+                          const isYou = e.companyId === company?.id;
+                          const scoreText = selectedScoreType.includes('price')
+                            ? formatNumber(e.scoreValue, { currency: true, decimals: 2 })
+                            : (selectedScoreType.includes('quality') || selectedScoreType.includes('balance'))
+                              ? formatPercent(e.scoreValue, 1, true)
+                              : formatNumber(e.scoreValue, { decimals: 0, forceDecimals: true });
+                          return (
+                            <div key={`${e.id}-${i}`} className={`flex items-center justify-between rounded px-2 py-1 ${isYou ? 'bg-primary/10' : ''}`}>
+                              <span className="text-[11px] w-6">{rank}</span>
+                              <span className="text-[12px] font-medium truncate flex-1 ml-1">{e.companyName}</span>
+                              <span className="text-[12px] font-mono ml-2">{scoreText}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No scores yet for this category.</p>
+                    )}
+                  </div>
+                </div>
                 </div>
               )}
             </CardContent>

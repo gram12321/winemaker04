@@ -43,7 +43,11 @@ export async function processEconomyPhaseTransition(): Promise<void> {
   try {
     const { getGameState } = await import('../core/gameState');
     const currentState = getGameState();
-    const currentPhase = currentState.economyPhase || 'Recovery';
+    const currentPhase = currentState.economyPhase;
+    if (!currentPhase) {
+      // No economy phase present; nothing to transition yet
+      return;
+    }
     
     const newPhase = calculateNextEconomyPhase(currentPhase);
     

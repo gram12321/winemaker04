@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
-import { companyService, highscoreService, createNewCompany } from '@/lib/services';
-import { type Company, type HighscoreEntry } from '@/lib/database';
+import { companyService, highscoreService, createNewCompany, authService } from '@/lib/services';
+import { type Company, type HighscoreEntry, type AuthUser, getUserById, insertUser } from '@/lib/database';
 import { formatNumber, formatDate } from '@/lib/utils';
+import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
 import versionLogContent from '../../../docs/versionlog.md?raw';
@@ -22,6 +23,12 @@ export function Login({ onCompanySelected }: LoginProps) {
   const [userName, setUserName] = useState('');
   const [createUserProfile, setCreateUserProfile] = useState(false);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+  const [companiesWithoutUsers, setCompaniesWithoutUsers] = useState<Company[]>([]);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<AuthUser[]>([]);
+  const [showUserSelection, setShowUserSelection] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
   const [highscores, setHighscores] = useState<{
     company_value: HighscoreEntry[];
     company_value_per_week: HighscoreEntry[];
@@ -35,13 +42,29 @@ export function Login({ onCompanySelected }: LoginProps) {
   const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
 
   useEffect(() => {
-    loadAllCompanies();
+    // Set up auth state listener
+    const unsubscribe = authService.onAuthStateChange((user) => {
+      setCurrentUser(user);
+    });
+    
     loadHighscores();
+    
+    return unsubscribe;
   }, []);
+
+  // Load companies when user state changes
+  useEffect(() => {
+    if (currentUser) {
+      loadUserCompanies();
+    } else {
+      // If no authenticated user, try autologin with lastCompanyId
+      loadAllCompanies();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const loadAllCompanies = async () => {
     const companies = await companyService.getAllCompanies(20);
-    setAllCompanies(companies);
     
     // If no companies exist, show create form
     if (companies.length === 0) {
@@ -49,7 +72,88 @@ export function Login({ onCompanySelected }: LoginProps) {
       return;
     }
 
-    // Attempt auto-login to last active company AFTER companies are loaded
+    // Check if there's a last company and detect company-linked user
+    try {
+      const lastCompanyId = localStorage.getItem('lastCompanyId');
+      if (lastCompanyId) {
+        const match = companies.find(c => c.id === lastCompanyId);
+        if (match) {
+          // If this company has a user_id, load that user's companies instead
+          if (match.userId) {
+            await loadCompanyLinkedUser(match.userId);
+            return;
+          }
+          
+          // Otherwise, autologin to this company (no user linked)
+          onCompanySelected(match);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking lastCompanyId:', error);
+    }
+    
+    // Separate companies with and without users
+    const companiesWithUsers = companies.filter(c => c.userId);
+    const orphanCompanies = companies.filter(c => !c.userId);
+    setCompaniesWithoutUsers(orphanCompanies);
+    
+    if (companiesWithUsers.length > 0) {
+      // Get unique user IDs
+      const uniqueUserIds = [...new Set(companiesWithUsers.map(c => c.userId))].filter((id): id is string => !!id);
+      
+      // If there's exactly one unique user, use that user
+      if (uniqueUserIds.length === 1) {
+        // All companies belong to the same user - detect and load that user
+        await loadCompanyLinkedUser(uniqueUserIds[0]);
+        return;
+      }
+      
+      // If multiple users exist, load them and show user selection UI
+      const loadedUsers = await Promise.all(
+        uniqueUserIds.map(userId => getUserById(userId))
+      );
+      
+      const validUsers = loadedUsers.filter((user): user is AuthUser => !!user);
+      
+      if (validUsers.length > 0) {
+        setAvailableUsers(validUsers);
+        setShowUserSelection(true);
+        return;
+      }
+    }
+    
+    // If no autologin happened and no single user detected, show all companies
+    setAllCompanies(companies);
+  };
+
+  const loadCompanyLinkedUser = async (userId: string) => {
+    try {
+      const user = await getUserById(userId);
+      
+      if (user) {
+        // Set the user state manually
+        setCurrentUser(user);
+        // loadUserCompanies will be called automatically by the useEffect
+      }
+    } catch (error) {
+      console.error('Error loading company-linked user:', error);
+    }
+  };
+
+  const loadUserCompanies = async () => {
+    if (!currentUser) return;
+    
+    const companies = await companyService.getUserCompanies(currentUser.id);
+    setAllCompanies(companies);
+    
+    // If no companies exist for this user, show create form
+    if (companies.length === 0) {
+      setShowCreateCompany(true);
+      return;
+    }
+
+    // Attempt auto-login to last active company if it belongs to this user
     try {
       const lastCompanyId = localStorage.getItem('lastCompanyId');
       if (lastCompanyId) {
@@ -73,6 +177,39 @@ export function Login({ onCompanySelected }: LoginProps) {
     });
   });
 
+  const handleCreateUser = (e: React.FormEvent) => withLoading(async () => {
+    e.preventDefault();
+    setError('');
+
+    if (!newUserName.trim()) {
+      setError('Please enter a username');
+      return;
+    }
+
+    const result = await insertUser({
+      name: newUserName.trim(),
+      created_at: new Date().toISOString()
+    });
+
+    if (result.success && result.data) {
+      const newUser: AuthUser = {
+        id: result.data.id,
+        email: result.data.email,
+        name: result.data.name,
+        avatar: result.data.avatar,
+        avatarColor: result.data.avatar_color,
+        createdAt: new Date(result.data.created_at),
+        updatedAt: new Date(result.data.updated_at)
+      };
+      
+      setNewUserName('');
+      setShowCreateUser(false);
+      setCurrentUser(newUser);
+    } else {
+      setError(result.error || 'Failed to create user');
+    }
+  });
+
   const handleCreateCompany = (e: React.FormEvent) => withLoading(async () => {
     e.preventDefault();
     setError('');
@@ -84,7 +221,13 @@ export function Login({ onCompanySelected }: LoginProps) {
       setUserName('');
       setCreateUserProfile(false);
       setShowCreateCompany(false);
-      loadAllCompanies();
+      
+      // Reload appropriate company list
+      if (currentUser) {
+        await loadUserCompanies();
+      } else {
+        await loadAllCompanies();
+      }
       
       // Select the new company
       onCompanySelected(company);
@@ -183,6 +326,12 @@ export function Login({ onCompanySelected }: LoginProps) {
           <p className="text-muted-foreground text-xs drop-shadow-md">
             Manage your wine empire and compete with other vintners
           </p>
+          {currentUser && (
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs">
+              <User className="h-3 w-3 text-wine" />
+              <span className="text-wine font-medium">{currentUser.name}</span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
@@ -190,17 +339,116 @@ export function Login({ onCompanySelected }: LoginProps) {
           <div className="lg:col-span-3">
             <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl text-sm">
               <CardHeader className="py-3 px-4">
-                <CardTitle className="flex items-center gap-2 text-wine text-base">
-                  <Building2 className="h-4 w-4" />
-                  Company Selection
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Select an existing company or create a new one
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-wine text-base">
+                      {showUserSelection ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                      {showUserSelection ? 'User Selection' : currentUser ? 'My Companies' : 'Company Selection'}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {showUserSelection 
+                        ? 'Select a user or create a new one'
+                        : currentUser 
+                        ? 'Select one of your companies or create a new one'
+                        : 'Select an existing company or create a new one'}
+                    </CardDescription>
+                  </div>
+                  {currentUser && !showUserSelection && availableUsers.length > 0 && (
+                    <Button
+                      onClick={() => {
+                        setCurrentUser(null);
+                        setShowUserSelection(true);
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      ← Back
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="px-4 py-3">
+                {/* User Selection */}
+                {showUserSelection && availableUsers.length > 0 && (
+                  <div className="mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {availableUsers.map((user) => (
+                        <Card 
+                          key={user.id}
+                          className="hover:bg-accent/50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setCurrentUser(user);
+                            setShowUserSelection(false);
+                          }}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
+                                {AVATAR_OPTIONS.find(a => a.id === user.avatar)?.emoji || AVATAR_OPTIONS[0].emoji}
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{user.name}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  Member since {formatDate(user.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Companies Without Users (shown on User Selection screen) */}
+                {showUserSelection && companiesWithoutUsers.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="font-medium mb-2">Unassigned Companies</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {companiesWithoutUsers.map((company) => (
+                        <Card 
+                          key={company.id}
+                          className="hover:bg-accent/50 transition-colors"
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-start">
+                              <div 
+                                className="flex-1 cursor-pointer"
+                                onClick={() => handleSelectCompany(company)}
+                              >
+                                <h4 className="font-medium">{company.name}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  Week {company.currentWeek}, {company.currentSeason} {company.currentYear}
+                                </p>
+                                <p className="text-xs">
+                                  {formatNumber(company.money, { currency: true, decimals: 0 })}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-right text-[10px] text-muted-foreground">
+                                  {formatLastPlayed(company.lastPlayed)}
+                                </div>
+                                <button
+                                  onClick={(e) => handleDeleteCompany(company.id, e)}
+                                  className={`p-1 rounded hover:bg-destructive/10 transition-colors text-xs ${
+                                    deletingCompany === company.id ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground'
+                                  }`}
+                                  title={deletingCompany === company.id ? 'Click again to confirm deletion' : 'Delete company'}
+                                >
+                                  {deletingCompany === company.id ? '🗑️' : '🗑️'}
+                                </button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Recent Companies */}
-                {allCompanies.length > 0 && !showCreateCompany && (
+                {allCompanies.length > 0 && !showCreateCompany && !showUserSelection && (
                   <div className="mb-4">
                     <h3 className="font-medium mb-2">Recent Companies</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -245,17 +493,141 @@ export function Login({ onCompanySelected }: LoginProps) {
                   </div>
                 )}
 
-                {/* Create Company */}
-                <div className="pt-3 border-t">
-                  {!showCreateCompany ? (
-                    <Button 
-                      onClick={() => setShowCreateCompany(true)}
-                      className="w-full border-wine text-wine hover:bg-wine hover:text-white text-sm"
-                      variant="outline"
-                    >
-                      Create New Company
-                    </Button>
-                  ) : (
+                {/* Create User (shown when multiple users exist) */}
+                {showUserSelection && (
+                  <div className="pt-3 border-t">
+                    {!showCreateUser && !showCreateCompany ? (
+                      <div className="space-y-2">
+                        <Button 
+                          onClick={() => setShowCreateUser(true)}
+                          className="w-full border-wine text-wine hover:bg-wine hover:text-white text-sm"
+                          variant="outline"
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Create New User
+                        </Button>
+                        <Button 
+                          onClick={() => setShowCreateCompany(true)}
+                          className="w-full border-wine text-wine hover:bg-wine hover:text-white text-sm"
+                          variant="outline"
+                        >
+                          <Building2 className="h-4 w-4 mr-2" />
+                          Create Company Without User
+                        </Button>
+                      </div>
+                    ) : showCreateUser ? (
+                      <form onSubmit={handleCreateUser} className="space-y-3">
+                        <div>
+                          <Label htmlFor="newUserName">User Name</Label>
+                          <Input
+                            id="newUserName"
+                            value={newUserName}
+                            onChange={(e) => setNewUserName(e.target.value)}
+                            placeholder="Enter your username"
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            type="submit" 
+                            disabled={isLoading}
+                            className="bg-wine hover:bg-wine-dark text-white text-sm"
+                          >
+                            {isLoading ? 'Creating...' : 'Create User'}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => {
+                              setShowCreateUser(false);
+                              setNewUserName('');
+                            }}
+                            className="border-wine text-wine hover:bg-wine hover:text-white text-sm"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : showCreateCompany ? (
+                      <form onSubmit={handleCreateCompany} className="space-y-3">
+                        <div>
+                          <Label htmlFor="companyName">Company Name</Label>
+                          <Input
+                            id="companyName"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            placeholder="Enter company name"
+                            required
+                          />
+                        </div>
+
+                        {/* User Creation Toggle */}
+                        <div className="flex items-center space-x-3 p-2.5 bg-gray-50 rounded-lg border">
+                          <Switch
+                            id="createUser"
+                            checked={createUserProfile}
+                            onCheckedChange={setCreateUserProfile}
+                          />
+                          <Label htmlFor="createUser" className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                            {createUserProfile ? <User className="h-3.5 w-3.5 text-wine" /> : <UserPlus className="h-3.5 w-3.5 text-gray-500" />}
+                            Create a user profile?
+                          </Label>
+                        </div>
+
+                        {/* User Name Input - Only show when toggle is on */}
+                        {createUserProfile && (
+                          <div className="p-2.5 bg-wine/5 rounded-lg border border-wine/20">
+                            <Label htmlFor="userName" className="text-xs font-medium text-wine">User Name</Label>
+                            <Input
+                              id="userName"
+                              value={userName}
+                              onChange={(e) => setUserName(e.target.value)}
+                              placeholder="Enter your username"
+                              required={createUserProfile}
+                              className="mt-1 border-wine/30 focus:border-wine focus:ring-wine/20 text-sm"
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button 
+                            type="submit" 
+                            disabled={isLoading}
+                            className="bg-wine hover:bg-wine-dark text-white text-sm"
+                          >
+                            {isLoading ? 'Creating...' : 'Start'}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => {
+                              setShowCreateCompany(false);
+                              setCompanyName('');
+                              setUserName('');
+                              setCreateUserProfile(false);
+                            }}
+                            className="border-wine text-wine hover:bg-wine hover:text-white text-sm"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Create Company (shown when NOT on User Selection screen) */}
+                {!showUserSelection && (
+                  <div className="pt-3 border-t">
+                    {!showCreateCompany ? (
+                      <Button 
+                        onClick={() => setShowCreateCompany(true)}
+                        className="w-full border-wine text-wine hover:bg-wine hover:text-white text-sm"
+                        variant="outline"
+                      >
+                        Create New Company
+                      </Button>
+                    ) : (
                     <form onSubmit={handleCreateCompany} className="space-y-3">
                       <div>
                         <Label htmlFor="companyName">Company Name</Label>
@@ -317,7 +689,8 @@ export function Login({ onCompanySelected }: LoginProps) {
                       </div>
                     </form>
                   )}
-                </div>
+                  </div>
+                )}
 
                 {error && (
                   <div className="mt-3 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md">

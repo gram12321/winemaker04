@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { getCurrentPrestige, processGameTick } from '@/lib/services';
+import { getCurrentPrestige, processGameTick, clearLastCompanyIdForLogout } from '@/lib/services';
 import { formatGameDate, formatNumber } from '@/lib/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
@@ -322,7 +322,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                     try {
                       const company = currentCompany;
                       const keysToRemove = [
-                        'lastCompanyId',
                         'showNotifications'
                       ];
                       keysToRemove.forEach((key) => localStorage.removeItem(key));
@@ -336,6 +335,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                       Object.keys(localStorage)
                         .filter((key) => key.startsWith('company_settings_'))
                         .forEach((key) => localStorage.removeItem(key));
+                      
+                      // Clear lastCompanyId to prevent autologin
+                      clearLastCompanyIdForLogout();
                     } catch {}
                     window.location.reload();
                   }}
@@ -453,7 +455,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   try {
                     const company = currentCompany;
                     const keysToRemove = [
-                      'lastCompanyId',
                       'showNotifications'
                     ];
                     keysToRemove.forEach((key) => localStorage.removeItem(key));
@@ -467,6 +468,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                     Object.keys(localStorage)
                       .filter((key) => key.startsWith('company_settings_'))
                       .forEach((key) => localStorage.removeItem(key));
+                    
+                    // Clear lastCompanyId to prevent autologin
+                    clearLastCompanyIdForLogout();
                   } catch {}
                   window.location.reload();
                 }}

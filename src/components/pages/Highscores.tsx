@@ -98,7 +98,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       case 'company_value':
         return 'Company Value';
       case 'company_value_per_week':
-        return 'Value/Week';
+        return 'Company Value/Week';
       case 'highest_vintage_quantity':
         return 'Vintage Quantity';
       case 'most_productive_vineyard':
@@ -201,10 +201,12 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
               <TableRow>
                 <TableHead className="w-[60px]">Rank</TableHead>
                 <TableHead>Company Name</TableHead>
-                {scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard') ? (
+                {(scoreType.includes('wine') || scoreType.includes('vintage') || scoreType.includes('vineyard')) ? (
                   <>
                     <TableHead>Vineyard</TableHead>
-                    <TableHead>Vintage</TableHead>
+                    {scoreType !== 'most_productive_vineyard' && (
+                      <TableHead>Vintage</TableHead>
+                    )}
                   </>
                 ) : null}
                 <TableHead className="text-right">{getColumnTitle(scoreType)}</TableHead>
@@ -240,7 +242,9 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                     </>
                   ) : null}
                   <TableCell className="text-right font-mono">
-                    {scoreType.includes('price') ? 
+                  {scoreType === 'highest_wine_score' ?
+                    formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                    scoreType.includes('price') ? 
                       formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
                       scoreType.includes('quality') || scoreType.includes('balance') ?
                         formatPercent(score.scoreValue, 1, true) :
@@ -289,7 +293,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                         <div className="text-sm font-medium">{score.vineyardName}</div>
                       </div>
                     )}
-                    {score.wineVintage && (
+                    {score.wineVintage && scoreType !== 'most_productive_vineyard' && (
                       <div>
                         <div className="text-xs text-gray-500">Vintage</div>
                         <div className="text-sm font-medium">{score.wineVintage} {score.grapeVariety || ''}</div>
@@ -302,11 +306,13 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
                     <span className="text-lg font-bold text-primary">
-                      {scoreType.includes('price') ? 
-                        formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
-                        scoreType.includes('quality') || scoreType.includes('balance') ?
-                          formatPercent(score.scoreValue, 1, true) :
-                          formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                    {scoreType === 'highest_wine_score' ?
+                        formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                        scoreType.includes('price') ?
+                          formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                          scoreType.includes('quality') || scoreType.includes('balance') ?
+                            formatPercent(score.scoreValue, 1, true) :
+                            formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
                       }
                     </span>
                   </div>
@@ -371,7 +377,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="company_value" className="w-full">
-              <TabsList className="w-full mb-6 flex flex-wrap gap-2 sm:grid sm:grid-cols-4 sm:gap-0">
+              <TabsList className="w-full mb-6 flex flex-wrap gap-2 h-auto">
                 {firstTabGroup.map((scoreType) => (
                   <TabsTrigger
                     key={scoreType}
@@ -384,7 +390,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                 ))}
               </TabsList>
               
-              <TabsList className="w-full mb-6 flex flex-wrap gap-2 sm:grid sm:grid-cols-4 sm:gap-0">
+              <TabsList className="w-full mb-6 flex flex-wrap gap-2 h-auto">
                 {secondTabGroup.map((scoreType) => (
                   <TabsTrigger
                     key={scoreType}

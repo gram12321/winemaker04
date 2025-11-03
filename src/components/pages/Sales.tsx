@@ -30,7 +30,8 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
   const allBatches = useGameStateWithData(
     () => loadWineBatches(),
-    []
+    [],
+    { topic: 'wine_batches' }
   );
 
 

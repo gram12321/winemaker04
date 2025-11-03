@@ -29,15 +29,16 @@ export const useGameState = () => {
  */
 export function useGameStateWithData<T>(
   loadData: () => Promise<T>,
-  initialValue: T
+  initialValue: T,
+  options?: { topic?: string }
 ): T {
   const [data, setData] = useState<T>(initialValue);
-  const { subscribe } = useGameUpdates();
+  const { subscribe, subscribeTopic } = useGameUpdates();
 
   // Request deduplication - prevent multiple simultaneous requests
   const isLoadingRef = useRef(false);
   const lastLoadTime = useRef(0);
-  const CACHE_DURATION = 2000; // Increased cache to reduce egress and improve performance
+  const CACHE_DURATION = 500; // Fixed 200ms cache to reduce egress
 
   const refreshData = useCallback(async () => {
     try {
@@ -75,15 +76,19 @@ export function useGameStateWithData<T>(
     // Initial load
     refreshData();
 
-    // Subscribe to global updates
-    const unsubscribe = subscribe(() => {
-      refreshData();
-    });
+    // Subscribe either to topic-scoped updates or global updates
+    const unsubscribe = options?.topic
+      ? subscribeTopic(options.topic, () => {
+          refreshData();
+        })
+      : subscribe(() => {
+          refreshData();
+        });
 
     return () => {
       unsubscribe();
     };
-  }, [refreshData, subscribe]);
+  }, [refreshData, subscribe, subscribeTopic, options?.topic]);
 
   return data;
 };

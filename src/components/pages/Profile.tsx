@@ -3,30 +3,11 @@ import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
 import { authService, companyService } from '@/lib/services';
-import { type AuthUser, type Company, supabase } from '@/lib/database';
+import { type AuthUser, type Company, supabase, updateUser, deleteUser } from '@/lib/database';
 import type { CompanyStats } from '@/lib/services';
 import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
+import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
-
-// Avatar options
-const AVATAR_OPTIONS = [
-  { id: 'default', emoji: '👤', label: 'Default' },
-  { id: 'businessman', emoji: '👨‍💼', label: 'Businessman' },
-  { id: 'businesswoman', emoji: '👩‍💼', label: 'Businesswoman' },
-  { id: 'scientist', emoji: '🧑‍🔬', label: 'Scientist' },
-  { id: 'farmer', emoji: '👨‍🌾', label: 'Farmer' },
-  { id: 'chef', emoji: '👩‍🍳', label: 'Chef' },
-  { id: 'astronaut', emoji: '👨‍🚀', label: 'Astronaut' },
-  { id: 'construction', emoji: '👷', label: 'Construction' },
-  { id: 'mechanic', emoji: '🧑‍🔧', label: 'Mechanic' },
-  { id: 'office', emoji: '🧑‍💻', label: 'Office Worker' },
-  { id: 'teacher', emoji: '👨‍🏫', label: 'Teacher' },
-  { id: 'artist', emoji: '👩‍🎨', label: 'Artist' },
-  { id: 'superhero', emoji: '🦸', label: 'Superhero' },
-  { id: 'ninja', emoji: '🥷', label: 'Ninja' },
-  { id: 'royal', emoji: '👑', label: 'Royal' },
-  { id: 'mage', emoji: '🧙', label: 'Mage' }
-];
 
 // Color options
 const COLOR_OPTIONS = [
@@ -136,6 +117,9 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
         setEditName(user.name);
         setSelectedAvatar(user.avatar || 'default');
         setSelectedColor(user.avatar_color || 'blue');
+        
+        // Load all companies for this user
+        await loadUserData(userId);
       }
     } catch (error) {
       console.error('Error loading company user data:', error);
@@ -153,11 +137,30 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
 
     setError('');
 
-    const result = await authService.updateProfile({
-      name: editName.trim(),
-      avatar: selectedAvatar,
-      avatarColor: selectedColor
-    });
+    // Check if this is a company-linked user (not authenticated via Supabase)
+    const isAuthenticatedUser = authService.isAuthenticated();
+    
+    let result;
+    if (isAuthenticatedUser) {
+      // Use authService for authenticated users
+      result = await authService.updateProfile({
+        name: editName.trim(),
+        avatar: selectedAvatar,
+        avatarColor: selectedColor
+      });
+    } else {
+      // Use direct database update for company-linked users
+      result = await updateUser(currentUser.id, {
+        name: editName.trim(),
+        avatar: selectedAvatar,
+        avatar_color: selectedColor
+      });
+      
+      // Reload the user data after update
+      if (result.success) {
+        await loadCompanyUserData(currentUser.id);
+      }
+    }
 
     if (result.success) {
       setIsEditDialogOpen(false);
@@ -177,7 +180,17 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
     if (!currentUser) return;
     
     if (confirm('Are you sure you want to permanently delete your account? This will delete all your companies and cannot be undone.')) {
-      const result = await authService.deleteAccount();
+      // Check if this is a company-linked user (not authenticated via Supabase)
+      const isAuthenticatedUser = authService.isAuthenticated();
+      
+      let result;
+      if (isAuthenticatedUser) {
+        // Use authService for authenticated users
+        result = await authService.deleteAccount();
+      } else {
+        // Use direct database deletion for company-linked users
+        result = await deleteUser(currentUser.id);
+      }
       
       if (result.success) {
         onBackToLogin();

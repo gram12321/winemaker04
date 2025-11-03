@@ -6,7 +6,7 @@ import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useEstimatedPrice } from '@/hooks';
-import { triggerGameUpdate } from '@/hooks/useGameUpdates';
+import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { calculateAgingStatus, getFeatureDisplayData } from '@/lib/services';
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
@@ -607,7 +607,8 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       };
       
       await saveWineBatch(updatedWine);
-      triggerGameUpdate();
+      // Notify only cellar-related subscribers
+      triggerTopicUpdate('wine_batches');
       setEditingPrices(prev => {
         const updated = { ...prev };
         delete updated[wine.id];
