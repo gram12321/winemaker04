@@ -17,7 +17,7 @@
 -- https://supabase.com/dashboard/project/uuzoeoukixvunbnkrowi/editor
 --
 -- CRITICAL UNIQUE CONSTRAINTS (from dev database):
--- ✅ highscores: UNIQUE (company_id, score_type)
+-- ✅ highscores: Partial unique index on (company_id, score_type) for aggregate types only
 -- ✅ achievements: UNIQUE (company_id, achievement_key)
 -- ✅ user_settings: UNIQUE (user_id, company_id)
 -- ✅ companies: UNIQUE (name)
@@ -320,8 +320,7 @@ CREATE TABLE highscores (
     vineyard_id text,
     vineyard_name text,
     wine_vintage integer,
-    grape_variety text,
-    UNIQUE (company_id, score_type)
+    grape_variety text
 );
 
 -- Achievements table
@@ -675,6 +674,11 @@ CREATE INDEX IF NOT EXISTS idx_prestige_events_type ON prestige_events(type);
 CREATE INDEX IF NOT EXISTS idx_highscores_company_id ON highscores(company_id);
 CREATE INDEX IF NOT EXISTS idx_highscores_score_type ON highscores(score_type);
 CREATE INDEX IF NOT EXISTS idx_highscores_score_value ON highscores(score_value DESC);
+-- Partial unique index for aggregate score types (company_value, company_value_per_week)
+-- Only one record per company for these aggregate types
+CREATE UNIQUE INDEX IF NOT EXISTS highscores_unique_company_aggregate 
+    ON highscores(company_id, score_type) 
+    WHERE (score_type = ANY (ARRAY['company_value'::text, 'company_value_per_week'::text]));
 
 -- Notifications indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_company_id ON notifications(company_id);

@@ -229,7 +229,18 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
         
         // Check if this is an accumulation feature to show weekly increase
         const isAccumulation = config.behavior === 'accumulation';
-        const weeklyIncrease = isAccumulation ? calculateWeeklyRiskIncrease(wine, feature) : undefined;
+        // Convert WineFeature to FeatureRiskInfo for calculateWeeklyRiskIncrease
+        const featureRiskInfo = {
+          featureId: feature.id,
+          featureName: feature.name,
+          icon: feature.icon,
+          currentRisk: risk,
+          newRisk: risk,
+          riskIncrease: 0,
+          isPresent: feature.isPresent,
+          severity: feature.severity
+        };
+        const weeklyIncrease = isAccumulation ? calculateWeeklyRiskIncrease(wine, featureRiskInfo) : undefined;
         const weeklyIncreasePercent = weeklyIncrease ? formatNumber(weeklyIncrease * 100, { smartDecimals: true }) : null;
         
         // Use intelligent color coding for risk (lower risk = better colors)

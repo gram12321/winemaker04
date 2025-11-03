@@ -55,16 +55,48 @@ export const upsertHighscore = async (highscoreData: HighscoreData): Promise<{ s
     const isCompanyAggregate = highscoreData.score_type === 'company_value' || highscoreData.score_type === 'company_value_per_week';
 
     if (isCompanyAggregate) {
-      // Enforced by partial unique index on (company_id, score_type) for aggregate types
-      const { error } = await supabase
-        .from(HIGHSCORES_TABLE)
-        .upsert(highscoreData, {
-          onConflict: 'company_id,score_type'
-        });
-      if (error) {
-        return { success: false, error: error.message };
+      // For aggregate types, manually handle upsert since Supabase onConflict doesn't work with partial unique indexes
+      // Check if a record exists first
+      const existing = await getExistingScore(highscoreData.company_id, highscoreData.score_type);
+      
+      if (existing) {
+        // Update existing record - include all fields from highscoreData
+        const updateData: Partial<HighscoreData> = {
+          company_name: highscoreData.company_name,
+          score_value: highscoreData.score_value,
+          game_week: highscoreData.game_week,
+          game_season: highscoreData.game_season,
+          game_year: highscoreData.game_year,
+          achieved_at: highscoreData.achieved_at
+        };
+        
+        // Include optional fields if they exist
+        if (highscoreData.vineyard_id !== undefined) updateData.vineyard_id = highscoreData.vineyard_id;
+        if (highscoreData.vineyard_name !== undefined) updateData.vineyard_name = highscoreData.vineyard_name;
+        if (highscoreData.wine_vintage !== undefined) updateData.wine_vintage = highscoreData.wine_vintage;
+        if (highscoreData.grape_variety !== undefined) updateData.grape_variety = highscoreData.grape_variety;
+        
+        const { error } = await supabase
+          .from(HIGHSCORES_TABLE)
+          .update(updateData)
+          .eq('company_id', highscoreData.company_id)
+          .eq('score_type', highscoreData.score_type);
+        
+        if (error) {
+          return { success: false, error: error.message };
+        }
+        return { success: true };
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from(HIGHSCORES_TABLE)
+          .insert(highscoreData);
+        
+        if (error) {
+          return { success: false, error: error.message };
+        }
+        return { success: true };
       }
-      return { success: true };
     }
 
     // For non-aggregate types, allow multiple entries per company
