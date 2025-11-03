@@ -10,6 +10,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
 import { getCurrentCompany } from '@/lib/services';
+import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { SALES_CONSTANTS } from '@/lib/constants';
 
 /**
@@ -119,7 +120,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     
     // Fallback to current asking price for old orders without stored asking price
     const wineBatch = bottledWines.find(batch => batch.id === order.wineBatchId);
-    return wineBatch ? (wineBatch.askingPrice ?? wineBatch.estimatedPrice) : 0;
+    if (!wineBatch) return 0;
+    const computed = calculateEstimatedPrice(wineBatch as any, undefined as any);
+    return wineBatch.askingPrice ?? computed;
   };
 
   // Define sortable columns for orders

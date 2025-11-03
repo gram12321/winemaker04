@@ -8,3 +8,4 @@ export type { SortableColumn } from './useTableSort';
 export * from './useWineBalance';
 export * from './useWineCombinedScore';
 export { useCustomerData } from './useCustomerData';
+export { useEstimatedPrice } from './useEstimatedPrice';
