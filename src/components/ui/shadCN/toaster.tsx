@@ -2,10 +2,11 @@ import { useEffect, useState } from "react"
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "./toast"
 import { getToasts } from "@/lib/utils/toast"
 import { Button } from "@/components/ui"
-import { Filter, Shield, VolumeX } from "lucide-react"
+import { Filter, Shield, VolumeX, BellOff } from "lucide-react"
 import { toast } from "@/lib/utils/toast"
 import { getTailwindClasses } from "@/lib/utils/colorMapping"
 import { cn } from "@/lib/utils/utils"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip"
 
 export function Toaster() {
   const [toasts, setToasts] = useState(getToasts())
@@ -96,48 +97,76 @@ export function Toaster() {
             <div className="flex items-center gap-1">
               {action}
               {origin && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBlockOrigin(origin, userFriendlyOrigin)}
-                    className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
-                    title={`Block notifications from ${origin} (save to history)`}
-                  >
-                    <Shield className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBlockOriginFromHistory(origin, userFriendlyOrigin)}
-                    className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                    title={`Completely silence notifications from ${origin} (no history)`}
-                  >
-                    <VolumeX className="h-3 w-3" />
-                  </Button>
-                </>
+                <TooltipProvider>
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleBlockOrigin(origin, userFriendlyOrigin)}
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
+                        >
+                          <Shield className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" variant="panel" density="compact">
+                        {`Block notifications from ${userFriendlyOrigin || origin} (save to history)`}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleBlockOriginFromHistory(origin, userFriendlyOrigin)}
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                        >
+                          <VolumeX className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" variant="panel" density="compact">
+                        {`Completely silence notifications from ${userFriendlyOrigin || origin} (no history)`}
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                </TooltipProvider>
               )}
               {category && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBlockCategory(category)}
-                    className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
-                    title={`Block all ${category} notifications (save to history)`}
-                  >
-                    <Filter className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBlockCategoryFromHistory(category)}
-                    className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                    title={`Completely silence all ${category} notifications (no history)`}
-                  >
-                    <VolumeX className="h-3 w-3" />
-                  </Button>
-                </>
+                <TooltipProvider>
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleBlockCategory(category)}
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
+                        >
+                          <Filter className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" variant="panel" density="compact">
+                        {`Block all ${category} notifications (save to history)`}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleBlockCategoryFromHistory(category)}
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                        >
+                          <BellOff className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" variant="panel" density="compact">
+                        {`Completely silence all ${category} notifications (no history)`}
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                </TooltipProvider>
               )}
               <ToastClose />
             </div>

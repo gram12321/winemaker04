@@ -129,20 +129,20 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
     }
   }
 
-  // Density effects: Progressive system - no penalty at 1500, max penalty at 15000
+  // Density effects: Progressive system - no penalty at 1500, max penalty at 10000
   // High density reduces body, aroma, spice, and sweetness due to competition for resources
   if (density && density > 0) {
     const minDensity = 1500;  // No penalty at this density
-    const maxDensity = 15000; // Max penalty at this density
+    const maxDensity = 10000; // Max penalty at this density
     
     // Clamp density to reasonable range
     const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
     
-    // Calculate density multiplier: 1.0 at 1500, 0.5 at 15000
+    // Calculate density multiplier: 1.0 at 1500, 0.5 at 10000
     const densityMultiplier = 1.0 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 0.5;
     
     // Apply characteristic reductions proportionally
-    // At max density (15000), max reduction is about 30% for body
+    // At max density (10000), max reduction is about 30% for body
     const maxReduction = 0.3;
     const reductionScale = (1.0 - densityMultiplier) * maxReduction;
     

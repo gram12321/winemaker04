@@ -160,27 +160,3 @@ export function getBottleAgingSeverity(wine: WineBatch): number {
   return calculateAgingStatus(wine).agingProgress;
 }
 
-// ===== WEEKLY AGING PROGRESSION =====
-
-/**
- * Process weekly aging for all bottled wines
- * Called by game tick system to increment agingProgress
- * 
- * @param batches - All wine batches to process
- * @returns Updated batches with incremented agingProgress
- */
-export function processWeeklyAging(batches: WineBatch[]): WineBatch[] {
-  return batches.map(batch => {
-    // Only age bottled wines
-    if (batch.state !== 'bottled') return batch;
-    
-    // Increment aging progress by 1 week
-    const newAgingProgress = (batch.agingProgress || 0) + 1;
-    
-    return {
-      ...batch,
-      agingProgress: newAgingProgress
-    };
-  });
-}
-

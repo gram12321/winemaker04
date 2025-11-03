@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { LoanOffer } from '@/lib/types/types';
-import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
+import { formatNumber, formatPercent, getLenderTypeColorClass, setModalMinimized } from '@/lib/utils';
 import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
-import { X } from 'lucide-react';
+import { X, Minimize2 } from 'lucide-react';
 import { startTakeLoan, getGameState, calculateLoanTerms } from '@/lib/services';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { WarningModal } from '@/components/ui';
@@ -26,6 +26,8 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
   const [acceptedOfferIds, setAcceptedOfferIds] = useState<Set<string>>(new Set());
   // Track which offer is selected for preview
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  // Track if modal is minimized
+  const [isMinimized, setIsMinimized] = useState(false);
   
   // Loan parameter state for third column
   const [loanAmount, setLoanAmount] = useState(50000);
@@ -136,10 +138,22 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
     }
   };
 
+  const handleMinimize = () => {
+    setIsMinimized(true);
+    setModalMinimized('lender', true, handleRestore);
+  };
+
+  const handleRestore = () => {
+    setIsMinimized(false);
+    setModalMinimized('lender', false);
+  };
+
   const handleClose = () => {
     setAcceptedOfferIds(new Set()); // Reset accepted list
     setSelectedOfferId(null); // Reset selected offer
     setError(null); // Reset error
+    setIsMinimized(false); // Reset minimized state
+    setModalMinimized('lender', false); // Clear from global state
     onClose();
   };
 
@@ -168,6 +182,9 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
     );
   }
 
+  // If minimized, don't render the modal (will be handled by restore button in GlobalSearchResultsDisplay)
+  if (isMinimized) return null;
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -181,12 +198,21 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                 {acceptedOfferIds.size > 0 && ` (${acceptedOfferIds.size} already processed)`}
               </p>
             </div>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-white text-2xl leading-none"
-            >
-              <X className="h-6 w-6" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleMinimize}
+                className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+                title="Minimize"
+              >
+                <Minimize2 className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleClose}
+                className="text-gray-400 hover:text-white text-2xl leading-none"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
           </div>
 
           {/* Three Column Layout */}
@@ -428,13 +454,23 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
             <div className="text-sm text-gray-400">
               <span className="font-medium text-white">{availableOffers.length}</span> offer{availableOffers.length !== 1 ? 's' : ''} remaining
             </div>
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
-            >
-              Close
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleMinimize}
+                className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600 flex items-center gap-2"
+              >
+                <Minimize2 className="h-4 w-4" />
+                Minimize
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       </div>

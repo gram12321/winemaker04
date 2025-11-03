@@ -297,7 +297,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                   </Button>
                                 </div>
                               </div>
-                              <p className={`break-words ${isOld ? 'text-gray-600' : ''}`}>
+                              <p className={`break-words whitespace-pre-line ${isOld ? 'text-gray-600' : ''}`}>
                                 {message.text}
                               </p>
                             </div>
@@ -473,7 +473,7 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
                                   </Button>
                                 </div>
                               </div>
-                              <p className={`break-words ${isOld ? 'text-gray-600' : ''}`}>
+                              <p className={`break-words whitespace-pre-line ${isOld ? 'text-gray-600' : ''}`}>
                                 {message.text}
                               </p>
                             </div>

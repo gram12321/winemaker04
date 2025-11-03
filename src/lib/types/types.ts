@@ -510,6 +510,8 @@ export interface ActivityCreationOptions {
   isCancellable?: boolean;
   // Optional details appended to the generic start notification
   activityDetails?: string;
+  // Skip the default activity creation notification (useful for combined notifications)
+  skipNotification?: boolean;
 }
 
 export interface ActivityProgress {

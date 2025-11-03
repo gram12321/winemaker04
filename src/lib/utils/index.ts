@@ -16,5 +16,8 @@ export * from './colorMapping';
 // Toast utilities
 export * from './toast';
 
+// Modal state utilities
+export * from './modalState';
+
 // Types
 export { NotificationCategory } from '@/lib/types/types';

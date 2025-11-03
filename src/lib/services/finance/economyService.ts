@@ -38,15 +38,17 @@ export function initializeEconomyPhase(): EconomyPhase {
 /**
  * Process economy phase transition and update game state
  * Called during season changes
+ * @param skipNotification If true, returns notification text instead of sending it
+ * @returns Notification message text if phase changed (and skipNotification is true), null otherwise
  */
-export async function processEconomyPhaseTransition(): Promise<void> {
+export async function processEconomyPhaseTransition(skipNotification: boolean = false): Promise<string | null> {
   try {
     const { getGameState } = await import('../core/gameState');
     const currentState = getGameState();
     const currentPhase = currentState.economyPhase;
     if (!currentPhase) {
       // No economy phase present; nothing to transition yet
-      return;
+      return null;
     }
     
     const newPhase = calculateNextEconomyPhase(currentPhase);
@@ -54,7 +56,7 @@ export async function processEconomyPhaseTransition(): Promise<void> {
     if (newPhase !== currentPhase) {
       await updateGameState({ economyPhase: newPhase });
       
-      // Add notification for phase change
+      // Prepare notification for phase change
       const phaseDescriptions = {
         'Crash': 'Economic crisis with high interest rates',
         'Recession': 'Economic downturn with elevated rates',
@@ -63,14 +65,22 @@ export async function processEconomyPhaseTransition(): Promise<void> {
         'Boom': 'Economic boom with low interest rates'
       };
       
-      await notificationService.addMessage(
-        `Economy phase changed to ${newPhase}: ${phaseDescriptions[newPhase]}`,
-        'economy.phaseChange',
-        'Economy Update',
-        NotificationCategory.FINANCE
-      );
+      const message = `Economy phase changed to ${newPhase}: ${phaseDescriptions[newPhase]}`;
+      
+      if (skipNotification) {
+        return message;
+      } else {
+        await notificationService.addMessage(
+          message,
+          'economy.phaseChange',
+          'Economy Update',
+          NotificationCategory.FINANCE
+        );
+      }
     }
+    return null;
   } catch (error) {
     console.error('Error processing economy phase transition:', error);
+    return null;
   }
 }

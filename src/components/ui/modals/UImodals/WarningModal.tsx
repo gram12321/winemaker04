@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui';
-import { AlertTriangle, AlertCircle, XCircle, Info } from 'lucide-react';
+import { AlertTriangle, AlertCircle, XCircle, Info, Minimize2 } from 'lucide-react';
 
 export type WarningSeverity = 'info' | 'warning' | 'error' | 'critical';
 
@@ -18,6 +18,8 @@ export interface WarningModalProps {
   message: string;
   details?: string;
   actions?: WarningModalAction[];
+  onMinimize?: () => void;
+  showMinimizeButton?: boolean;
 }
 
 /**
@@ -32,7 +34,9 @@ export const WarningModal: React.FC<WarningModalProps> = ({
   title,
   message,
   details,
-  actions
+  actions,
+  onMinimize,
+  showMinimizeButton = false
 }) => {
   if (!isOpen) return null;
 
@@ -78,7 +82,22 @@ export const WarningModal: React.FC<WarningModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] p-4">
-      <div className={`${config.bgColor} rounded-lg shadow-2xl w-full max-w-md border-2 ${config.borderColor} animate-in fade-in zoom-in duration-200`}>
+      <div className={`${config.bgColor} rounded-lg shadow-2xl w-full max-w-md border-2 ${config.borderColor} animate-in fade-in zoom-in duration-200 relative`}>
+        {/* Header buttons */}
+        {(showMinimizeButton || onMinimize) && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+            {showMinimizeButton && onMinimize && (
+              <button
+                onClick={onMinimize}
+                className="text-gray-300 hover:text-white p-1 rounded transition-colors"
+                title="Minimize"
+              >
+                <Minimize2 className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        )}
+        
         {/* Icon Header */}
         <div className="flex justify-center pt-8 pb-4">
           <div className={`${config.iconBg} rounded-full p-4`}>
@@ -106,32 +125,56 @@ export const WarningModal: React.FC<WarningModalProps> = ({
         {/* Actions */}
         <div className="px-8 pb-8 flex gap-3 justify-center">
           {actions && actions.length > 0 ? (
-            actions.map((action, index) => (
-              <Button
-                key={index}
-                onClick={() => {
-                  action.onClick();
-                  onClose();
-                }}
-                variant={action.variant || 'default'}
-                className={
-                  action.variant === 'destructive'
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : action.variant === 'outline'
-                    ? 'bg-transparent border-2 border-gray-600 text-gray-300 hover:bg-gray-800'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }
-              >
-                {action.label}
-              </Button>
-            ))
+            <>
+              {showMinimizeButton && onMinimize && (
+                <Button
+                  onClick={onMinimize}
+                  variant="outline"
+                  className="bg-transparent border-2 border-gray-600 text-gray-300 hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  Minimize
+                </Button>
+              )}
+              {actions.map((action, index) => (
+                <Button
+                  key={index}
+                  onClick={() => {
+                    action.onClick();
+                    onClose();
+                  }}
+                  variant={action.variant || 'default'}
+                  className={
+                    action.variant === 'destructive'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : action.variant === 'outline'
+                      ? 'bg-transparent border-2 border-gray-600 text-gray-300 hover:bg-gray-800'
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  }
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </>
           ) : (
-            <Button
-              onClick={onClose}
-              className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-            >
-              Acknowledge
-            </Button>
+            <div className="flex gap-3 justify-center w-full">
+              {showMinimizeButton && onMinimize && (
+                <Button
+                  onClick={onMinimize}
+                  variant="outline"
+                  className="bg-transparent border-2 border-gray-600 text-gray-300 hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  Minimize
+                </Button>
+              )}
+              <Button
+                onClick={onClose}
+                className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
+              >
+                Acknowledge
+              </Button>
+            </div>
           )}
         </div>
       </div>

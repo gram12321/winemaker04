@@ -66,7 +66,7 @@ function calculateOvergrowthQualityPenalty(overgrowth: Vineyard['overgrowth']): 
 /**
  * Calculate density quality penalty based on vine density
  * High density leads to competition for resources, reducing grape quality
- * Progressive system: no penalty at 1500 vines/ha, max penalty at 15000 vines/ha
+ * Progressive system: no penalty at 1500 vines/ha, max penalty at 10000 vines/ha
  * @param density - Vine density (vines/hectare)
  * @returns Quality multiplier (0-1, where 1 = no penalty, 0.5 = 50% penalty)
  */
@@ -74,13 +74,13 @@ function calculateDensityQualityPenalty(density: number): number {
   if (!density || density <= 0) return 1.0; // No vines = no penalty
   
   const minDensity = 1500;  // No penalty at this density
-  const maxDensity = 15000; // Max penalty at this density
+  const maxDensity = 10000; // Max penalty at this density
   
   // Clamp density to reasonable range
   const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
   
-  // Linear progression from 1.0 (no penalty) at 1500 to 0.5 (max penalty) at 15000
-  // Formula: penalty = 1.0 - (density - 1500) / (15000 - 1500) * 0.5
+  // Linear progression from 1.0 (no penalty) at 1500 to 0.5 (max penalty) at 10000
+  // Formula: penalty = 1.0 - (density - 1500) / (10000 - 1500) * 0.5
   const penalty = 1.0 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 0.5;
   
   return Math.max(0.5, Math.min(1.0, penalty));

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { WarningModal } from '@/components/ui';
 import { PendingLoanWarning } from '@/lib/types/types';
 import { getFirstUnacknowledgedLoanWarning, acknowledgeLoanWarning } from '@/lib/database/core/loansDB';
+import { setModalMinimized, isModalMinimized } from '@/lib/utils';
 
 /**
  * Display loan warning modals from database only
@@ -11,6 +12,7 @@ import { getFirstUnacknowledgedLoanWarning, acknowledgeLoanWarning } from '@/lib
 export function LoanWarningModalDisplay() {
   const [warning, setWarning] = useState<PendingLoanWarning | null>(null);
   const [warningId, setWarningId] = useState<string | null>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Load unacknowledged warnings from database on startup
   useEffect(() => {
@@ -54,6 +56,16 @@ export function LoanWarningModalDisplay() {
     return () => clearInterval(interval);
   }, [warning]);
 
+  const handleMinimize = () => {
+    setIsMinimized(true);
+    setModalMinimized('loan', true, handleRestore);
+  };
+
+  const handleRestore = () => {
+    setIsMinimized(false);
+    setModalMinimized('loan', false);
+  };
+
   const handleClose = async () => {
     try {
       // Acknowledge warning in database if it has an ID
@@ -64,23 +76,32 @@ export function LoanWarningModalDisplay() {
       // Clear local state
       setWarning(null);
       setWarningId(null);
+      setIsMinimized(false); // Reset minimized state
+      setModalMinimized('loan', false); // Clear from global state
     } catch (error) {
       // Still clear the warning from UI even if database update fails
       setWarning(null);
       setWarningId(null);
+      setIsMinimized(false);
+      setModalMinimized('loan', false);
     }
   };
 
   if (!warning) return null;
 
+  // If minimized, don't render the modal (will be handled by restore button in GlobalSearchResultsDisplay)
+  if (isMinimized) return null;
+
   return (
     <WarningModal
-      isOpen={true}
+      isOpen={!isModalMinimized('loan')}
       onClose={handleClose}
       severity={warning.severity}
       title={warning.title}
       message={warning.message}
       details={warning.details}
+      onMinimize={handleMinimize}
+      showMinimizeButton={true}
     />
   );
 }

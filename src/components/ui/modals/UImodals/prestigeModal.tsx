@@ -211,7 +211,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               <TooltipRow 
                 label="Vine Density:" 
                 value={`${formatNumber(calculationData.density, { smartDecimals: true })} vines/ha`}
-                valueRating={getRatingForRange(calculationData.density, 1500, 15000, 'lower_better')}
+                valueRating={getRatingForRange(calculationData.density, 1500, 10000, 'lower_better')}
               />
               <TooltipRow 
                 label="Density Modifier:" 
@@ -1644,7 +1644,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                   Key Mechanics
                 </h4>
                 <div className="ml-4 space-y-1 text-xs text-muted-foreground">
-                  <div>• <strong>Density Modifier:</strong> Lower vine density (1500 vines/ha) = higher prestige (1.5×), higher density (15000 vines/ha) = lower prestige (0.5×)</div>
+                  <div>• <strong>Density Modifier:</strong> Lower vine density (1500 vines/ha) = higher prestige (1.5×), higher density (10000 vines/ha) = lower prestige (0.5×)</div>
                   <div>• <strong>Grape Suitability:</strong> Regional grape suitability multiplies both land and age prestige</div>
                   <div>• <strong>Decay Rates:</strong> Sales decay at 5% weekly (95% retention), some features decay at 2% weekly (98% retention)</div>
                   <div>• <strong>Permanent Sources:</strong> Company value, vineyard land/age, cellar collection, and achievements don't decay</div>

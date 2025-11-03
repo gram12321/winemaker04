@@ -5,10 +5,14 @@ import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activ
 import { calculateTotalBookkeepingWork } from '../workcalculators/bookkeepingWorkCalculator';
 import { notificationService } from '@/lib/services';
 import { v4 as uuidv4 } from 'uuid';
-import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
+import { calculateAbsoluteWeeks, formatSeasonChangeNotification } from '@/lib/utils/utils';
 import { insertPrestigeEvent } from '@/lib/database';
 
-export async function checkAndTriggerBookkeeping(): Promise<void> {
+export async function checkAndTriggerBookkeeping(
+  newSeason?: string,
+  economyPhaseMessage?: string | null,
+  wageMessage?: string | null
+): Promise<void> {
   const gameState = getGameState();
   const { week } = gameState;
   
@@ -18,44 +22,91 @@ export async function checkAndTriggerBookkeeping(): Promise<void> {
     const calculation = await calculateTotalBookkeepingWork();
     const { totalWork, spilloverData, seasonData } = calculation;
     
-    if (seasonData.transactionCount === 0 && spilloverData.spilloverWork === 0 && seasonData.loanPenaltyWork === 0) {
-      return;
-    }
-    
     if (spilloverData.incompleteTaskCount > 0) {
       await handleSpilloverPenalties(spilloverData);
     }
     
-    // Create activity details including loan penalty work
-    let activityDetails = `Processing ${seasonData.transactionCount} transactions (${totalWork} work units).`;
-    if (spilloverData.incompleteTaskCount > 0) {
-      activityDetails += ' Spillover penalties applied.';
-    }
-    if (seasonData.loanPenaltyWork > 0) {
-      activityDetails += ` Loan penalty work: ${seasonData.loanPenaltyWork} units.`;
+    // Build notification message parts
+    let seasonChangeMessage: string | null = null;
+    let bookkeepingMessage: string | null = null;
+    
+    // Always start with season change if it happened
+    if (newSeason) {
+      seasonChangeMessage = `The season has changed to ${newSeason}!`;
     }
     
-    await createActivity({
-      category: WorkCategory.ADMINISTRATION,
-      title: `Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear}`,
-      totalWork,
-      activityDetails,
-      params: {
-        prevSeason: seasonData.prevSeason,
-        prevYear: seasonData.prevYear,
-        transactionCount: seasonData.transactionCount,
-        spilloverWork: spilloverData.spilloverWork,
-        incompleteTaskCount: spilloverData.incompleteTaskCount,
-        loanPenaltyWork: seasonData.loanPenaltyWork
-      },
-      isCancellable: true
-    });
+    // Add bookkeeping activity if needed
+    if (seasonData.transactionCount > 0 || spilloverData.spilloverWork > 0 || seasonData.loanPenaltyWork > 0) {
+      // Create activity details including loan penalty work
+      let activityDetails = `Processing ${seasonData.transactionCount} transaction${seasonData.transactionCount !== 1 ? 's' : ''} (${totalWork} work units)`;
+      if (spilloverData.incompleteTaskCount > 0) {
+        activityDetails += '. Spillover penalties applied';
+      }
+      if (seasonData.loanPenaltyWork > 0) {
+        activityDetails += `. Loan penalty work: ${seasonData.loanPenaltyWork} units`;
+      }
+      activityDetails += '.';
+      
+      // Create activity with skipNotification flag if we're combining with season change
+      const activityId = await createActivity({
+        category: WorkCategory.ADMINISTRATION,
+        title: `Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear}`,
+        totalWork,
+        activityDetails,
+        params: {
+          prevSeason: seasonData.prevSeason,
+          prevYear: seasonData.prevYear,
+          transactionCount: seasonData.transactionCount,
+          spilloverWork: spilloverData.spilloverWork,
+          incompleteTaskCount: spilloverData.incompleteTaskCount,
+          loanPenaltyWork: seasonData.loanPenaltyWork
+        },
+        isCancellable: true,
+        skipNotification: !!newSeason // Skip default notification if season changed
+      });
+      
+      if (activityId) {
+        // Get the actual assigned staff count from the created activity
+        const activities = await loadActivitiesFromDb();
+        const createdActivity = activities.find(a => a.id === activityId);
+        const assignedCount = createdActivity?.params.assignedStaffIds?.length || 0;
+        
+        bookkeepingMessage = assignedCount > 0 
+          ? `Started Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear} - ${totalWork} work units required (${assignedCount} staff auto-assigned). ${activityDetails}`
+          : `Started Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear} - ${totalWork} work units required. ${activityDetails}`;
+      }
+      
+      // Clear loan penalty work from game state after creating the activity
+      if (seasonData.loanPenaltyWork > 0) {
+        const updatedGameState = { ...gameState, loanPenaltyWork: 0 };
+        updateGameState(updatedGameState);
+        console.log(`🔔 Cleared ${seasonData.loanPenaltyWork} loan penalty work units from game state`);
+      }
+    }
     
-    // Clear loan penalty work from game state after creating the activity
-    if (seasonData.loanPenaltyWork > 0) {
-      const updatedGameState = { ...gameState, loanPenaltyWork: 0 };
-      updateGameState(updatedGameState);
-      console.log(`🔔 Cleared ${seasonData.loanPenaltyWork} loan penalty work units from game state`);
+    // Send combined notification if season changed, otherwise send individual notifications
+    if (newSeason && seasonChangeMessage) {
+      const formattedMessage = formatSeasonChangeNotification(
+        seasonChangeMessage,
+        bookkeepingMessage,
+        economyPhaseMessage,
+        wageMessage
+      );
+      
+      await notificationService.addMessage(
+        formattedMessage,
+        'time.seasonChange',
+        'Season Changes',
+        NotificationCategory.TIME_CALENDAR
+      );
+    } else if (!newSeason && bookkeepingMessage) {
+      // Send individual bookkeeping notification if no season change
+      await notificationService.addMessage(
+        bookkeepingMessage,
+        'activity.creation',
+        'Activity Creation',
+        NotificationCategory.ACTIVITIES_TASKS
+      );
     }
     
   } catch (error) {
@@ -119,4 +170,5 @@ async function cleanupIncompleteBookkeeping(): Promise<void> {
     incompleteBookkeeping.map(task => removeActivityFromDb(task.id))
   );
 }
+
 

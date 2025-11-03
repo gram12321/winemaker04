@@ -19,7 +19,7 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         name: vineyard.name,
         country: vineyard.country,
         region: vineyard.region,
-        hectares: vineyard.hectares,
+        hectares: vineyard.hectares ? Number(Number(vineyard.hectares).toFixed(2)) : 0,
         grape_variety: vineyard.grape,
         vine_age: vineyard.vineAge,
         soil: vineyard.soil, // Store as JSON array
@@ -57,7 +57,7 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       name: row.name,
       country: row.country,
       region: row.region,
-      hectares: row.hectares,
+      hectares: row.hectares ? Number(Number(row.hectares).toFixed(2)) : 0,
       grape: row.grape_variety,
       vineAge: row.vine_age,
       soil: row.soil,

@@ -184,7 +184,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
               <div className="text-xs text-orange-300 font-medium mb-1">GRAPE QUALITY MODIFIER</div>
               <TooltipRow label="Vine Density:" value={`${vineyard.density || 0} vines/ha`} />
               <div className="text-xs text-gray-300 mb-1">Optimal: 1500 vines/ha (no penalty)</div>
-              <div className="text-xs text-gray-300 mb-1">Max Penalty: 15000 vines/ha (50% reduction)</div>
+              <div className="text-xs text-gray-300 mb-1">Max Penalty: 10000 vines/ha (50% reduction)</div>
               <div className="text-xs text-gray-300 mt-2">
                 <strong>Density Impact:</strong> Lower density means higher grape quality (more resources per vine). Progressively reduces quality as density increases. Also affects vineyard prestige.
               </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { VineyardPurchaseOption } from '@/lib/services';
-import { formatNumber, getFlagIcon, getBadgeColorClasses } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getBadgeColorClasses, setModalMinimized } from '@/lib/utils';
 import { Button, Badge } from '@/components/ui';
-import { X } from 'lucide-react';
+import { X, Minimize2 } from 'lucide-react';
 import { purchaseVineyard } from '@/lib/services';
 import { getGameState } from '@/lib/services';
 import { WarningModal } from '@/components/ui';
@@ -27,6 +27,8 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
   const [purchasedPropertyIds, setPurchasedPropertyIds] = useState<Set<string>>(new Set());
   // Track which property is selected for preview
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  // Track if modal is minimized
+  const [isMinimized, setIsMinimized] = useState(false);
   
   // Filter out properties that have already been purchased
   const availableProperties = options?.filter(p => !purchasedPropertyIds.has(p.id)) || [];
@@ -57,9 +59,21 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
     }
   };
 
+  const handleMinimize = () => {
+    setIsMinimized(true);
+    setModalMinimized('land', true, handleRestore);
+  };
+
+  const handleRestore = () => {
+    setIsMinimized(false);
+    setModalMinimized('land', false);
+  };
+
   const handleClose = () => {
     setPurchasedPropertyIds(new Set()); // Reset purchased list
     setSelectedPropertyId(null); // Reset selected property
+    setIsMinimized(false); // Reset minimized state
+    setModalMinimized('land', false); // Clear from global state
     onClose();
   };
 
@@ -92,6 +106,9 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
     );
   }
 
+  // If minimized, don't render the modal (will be handled by restore button in GlobalSearchResultsDisplay)
+  if (isMinimized) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -104,12 +121,21 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
               {purchasedPropertyIds.size > 0 && ` (${purchasedPropertyIds.size} already purchased)`}
             </p>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleMinimize}
+              className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+              title="Minimize"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-white text-2xl leading-none"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Two Column Layout */}
@@ -316,13 +342,23 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
           <div className="text-sm text-gray-400">
             <span className="font-medium text-white">{availableProperties.length}</span> propert{availableProperties.length !== 1 ? 'ies' : 'y'} remaining
           </div>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
-          >
-            Close
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleMinimize}
+              className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600 flex items-center gap-2"
+            >
+              <Minimize2 className="h-4 w-4" />
+              Minimize
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </div>
     </div>

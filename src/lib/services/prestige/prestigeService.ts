@@ -62,7 +62,7 @@ export async function createBaseVineyardPrestigeEvents(): Promise<void> {
 /**
  * Calculate density prestige modifier
  * Lower density = higher prestige (premium approach)
- * Progressive system: 1.5x bonus at 1500, 0.5x penalty at 15000
+ * Progressive system: 1.5x bonus at 1500, 0.5x penalty at 10000
  * @param density - Vine density (vines/hectare)
  * @returns Prestige multiplier (0.5 to 1.5)
  */
@@ -70,13 +70,13 @@ function calculateDensityPrestigeModifier(density: number): number {
   if (!density || density <= 0) return 1.0; // No vines = neutral
   
   const minDensity = 1500;  // Max bonus at this density
-  const maxDensity = 15000; // Max penalty at this density
+  const maxDensity = 10000; // Max penalty at this density
   
   // Clamp density to reasonable range
   const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
   
-  // Linear progression from 1.5 (max bonus) at 1500 to 0.5 (max penalty) at 15000
-  // Formula: modifier = 1.5 - (density - 1500) / (15000 - 1500) * 1.0
+  // Linear progression from 1.5 (max bonus) at 1500 to 0.5 (max penalty) at 10000
+  // Formula: modifier = 1.5 - (density - 1500) / (10000 - 1500) * 1.0
   const modifier = 1.5 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 1.0;
   
   return Math.max(0.5, Math.min(1.5, modifier));
@@ -413,11 +413,12 @@ export async function updateCellarCollectionPrestige(): Promise<void> {
     const { loadWineBatches } = await import('../../database/activities/inventoryDB');
     const allBatches = await loadWineBatches();
     
-    // Filter aged wines (5+ years, bottled, not oxidized)
+    // Filter aged wines (5+ years, bottled, not oxidized, still in inventory)
     const agedWines = allBatches.filter(batch => {
       const ageInYears = (batch.agingProgress || 0) / 52;
       if (ageInYears < 5) return false;  // Must be 5+ years
       if (batch.state !== 'bottled') return false;  // Must be in cellar
+      if (batch.quantity === 0) return false;  // Must still be in inventory (sold-out wines don't count)
       
       // Check for oxidation feature
       const oxidationFeature = batch.features?.find(f => f.id === 'oxidation');

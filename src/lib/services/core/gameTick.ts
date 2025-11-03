@@ -2,7 +2,7 @@ import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
-import { NotificationCategory, calculateAbsoluteWeeks } from '@/lib/utils';
+import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
 import { GAME_INITIALIZATION } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
@@ -18,11 +18,18 @@ let lastAchievementCheckAbsoluteWeek = -1;
  * Enhanced time advancement with automatic game events
  * This replaces the simple incrementWeek() function with a more sophisticated system
  * Includes protection against concurrent execution to prevent race conditions
+ * Also prevents time advancement when modals are minimized
  */
 export const processGameTick = async (): Promise<void> => {
   // Prevent concurrent execution - if already processing, return early
   if (isProcessingGameTick) {
     console.warn('Game tick already in progress, skipping duplicate call to prevent race conditions');
+    return;
+  }
+
+  // Block time advancement if modals are minimized - restore them but don't advance time
+  if (hasMinimizedModals()) {
+    restoreAllMinimizedModals();
     return;
   }
 
@@ -47,6 +54,8 @@ const executeGameTick = async (): Promise<void> => {
   
   const previousSeason = season;
   const previousYear = currentYear;
+  let newSeason: string | undefined;
+  let economyPhaseMessage: string | null = null;
   
   // Increment week
   week += 1;
@@ -57,6 +66,7 @@ const executeGameTick = async (): Promise<void> => {
     const currentSeasonIndex = ['Spring', 'Summer', 'Fall', 'Winter'].indexOf(season);
     const nextSeasonIndex = (currentSeasonIndex + 1) % 4;
     season = ['Spring', 'Summer', 'Fall', 'Winter'][nextSeasonIndex] as 'Spring' | 'Summer' | 'Fall' | 'Winter';
+    newSeason = season; // Store the new season for combined notification
     
     // If we're back to Spring, increment year
     if (season === 'Spring') {
@@ -65,9 +75,9 @@ const executeGameTick = async (): Promise<void> => {
       await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', NotificationCategory.TIME_CALENDAR);
     }
     
-    // Process season change
-    await onSeasonChange(previousSeason, season);
-    await notificationService.addMessage(`The season has changed to ${season}!`, 'time.seasonChange', 'Season Changes', NotificationCategory.TIME_CALENDAR);
+    // Process season change (collect economy phase notification if season changed)
+    economyPhaseMessage = await onSeasonChange(previousSeason, season, true);
+    // Season change notification will be combined with bookkeeping notification below
   }
   
   // Update game state with new time values
@@ -76,11 +86,12 @@ const executeGameTick = async (): Promise<void> => {
   // Progress all activities based on assigned staff work contribution
   await progressActivities();
   
-  // Check for bookkeeping activity creation (week 1 of any season)
-  await checkAndTriggerBookkeeping();
+  // Process weekly effects (wage payment will be handled here, but we'll suppress it if season changed)
+  const wageMessage = await processWeeklyEffects(!!newSeason);
   
-  // Process weekly effects
-  await processWeeklyEffects();
+  // Check for bookkeeping activity creation (week 1 of any season)
+  // Pass season change info and all collected messages if we just changed seasons
+  await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
   
   // Update vineyard ripeness and status based on current season and week
   await updateVineyardRipeness(season, week);
@@ -102,12 +113,14 @@ const executeGameTick = async (): Promise<void> => {
 
 /**
  * Handle effects that happen on season change
+ * @param skipNotification If true, returns notification text instead of sending it
+ * @returns Notification message text if economy phase changed (and skipNotification is true), null otherwise
  */
-const onSeasonChange = async (_previousSeason: string, _newSeason: string): Promise<void> => {
+const onSeasonChange = async (_previousSeason: string, _newSeason: string, skipNotification: boolean = false): Promise<string | null> => {
   // Season change notification is handled in the main processGameTick function
   
   // Process economy phase transition
-  await processEconomyPhaseTransition();
+  return await processEconomyPhaseTransition(skipNotification);
   
   // TODO: Add other seasonal effects when vineyard system is ready
 };
@@ -133,8 +146,10 @@ const onNewYear = async (_previousYear: number, _newYear: number): Promise<void>
 /**
  * Process effects that happen every week
  * OPTIMIZED: Runs independent operations in parallel
+ * @param suppressWageNotification If true, returns wage notification text instead of sending it
+ * @returns Wage notification message text if wages were paid (and suppressWageNotification is true), null otherwise
  */
-const processWeeklyEffects = async (): Promise<void> => {
+const processWeeklyEffects = async (suppressWageNotification: boolean = false): Promise<string | null> => {
   const gameState = getGameState();
   const currentWeek = gameState.week || 1;
   
@@ -227,17 +242,28 @@ const processWeeklyEffects = async (): Promise<void> => {
   }
 
   // Process seasonal wage payments (at the start of each season - week 1)
+  let wageMessage: string | null = null;
   if (currentWeek === 1) {
-    weeklyTasks.push(
-      (async () => {
-        try {
-          const staff = getAllStaff();
-          await processSeasonalWages(staff);
-        } catch (error) {
-          console.warn('Error during seasonal wage processing:', error);
-        }
-      })()
-    );
+    // Process wages synchronously if we need to capture the notification
+    if (suppressWageNotification) {
+      try {
+        const staff = getAllStaff();
+        wageMessage = await processSeasonalWages(staff, true);
+      } catch (error) {
+        console.warn('Error during seasonal wage processing:', error);
+      }
+    } else {
+      weeklyTasks.push(
+        (async () => {
+          try {
+            const staff = getAllStaff();
+            await processSeasonalWages(staff, false);
+          } catch (error) {
+            console.warn('Error during seasonal wage processing:', error);
+          }
+        })()
+      );
+    }
     
     // Process seasonal loan payments (at the start of each season - week 1)
     weeklyTasks.push(
@@ -253,24 +279,36 @@ const processWeeklyEffects = async (): Promise<void> => {
   
   // OPTIMIZATION: Wait for all tasks to complete in parallel
   await Promise.all(weeklyTasks);
+  
+  return wageMessage;
 };
 
 /**
  * Apply feature effects directly to wine batches
  * Updates grapeQuality and balance based on present features
  * Called after processWeeklyFeatureRisks to ensure features are up-to-date
+ * Skips sold-out bottled wines (quantity === 0) as they should not continue developing
  */
 async function applyWeeklyFeatureEffects(): Promise<void> {
   const batches = await loadWineBatches();
   
   if (batches.length === 0) return;
   
-  // Apply feature effects to each batch
-  const updates = batches
+  // Filter out sold-out bottled wines (they should not continue developing)
+  const activeBatches = batches.filter(batch => {
+    // Skip sold-out bottled wines (they should not continue developing)
+    if (batch.state === 'bottled' && batch.quantity === 0) return false;
+    return true;
+  });
+  
+  if (activeBatches.length === 0) return;
+  
+  // Apply feature effects to each active batch
+  const updates = activeBatches
     .map(batch => applyFeatureEffectsToBatch(batch))
     .filter((updatedBatch, index) => {
       // Only include batches that actually changed
-      const originalBatch = batches[index];
+      const originalBatch = activeBatches[index];
       return updatedBatch.grapeQuality !== originalBatch.grapeQuality || 
              updatedBatch.balance !== originalBatch.balance;
     })
@@ -290,11 +328,15 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
 /**
  * Update aging progress for all bottled wines
  * Increments agingProgress by 1 week for each wine in bottled state
+ * Skips sold-out wines (quantity === 0) as they should not continue developing
  * OPTIMIZED: Uses bulk update instead of individual saves
  */
 async function updateBottledWineAging(): Promise<void> {
   const batches = await loadWineBatches();
-  const bottledWines = batches.filter((batch: WineBatch) => batch.state === 'bottled');
+  // Filter to only bottled wines that still have inventory (quantity > 0)
+  const bottledWines = batches.filter((batch: WineBatch) => 
+    batch.state === 'bottled' && batch.quantity > 0
+  );
   
   if (bottledWines.length === 0) return;
   

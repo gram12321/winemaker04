@@ -136,9 +136,24 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
         if (vineyard.status === 'Dormant' || vineyard.status === 'Planted' || vineyard.status === 'Harvested') {
           newStatus = 'Growing';
         }
-        // If currently planting, keep Planting status but allow ripeness for planted portion
+        // If status is 'Planting', check if there's actually an active planting activity
         if (vineyard.status === 'Planting') {
-          newStatus = 'Planting'; // Keep planting status
+          const plantingActivity = activities.find(
+            (a) => a.category === WorkCategory.PLANTING && 
+                   a.status === 'active' && 
+                   a.targetId === vineyard.id
+          );
+          
+          if (plantingActivity) {
+            // Keep Planting status if there's an active planting activity
+            newStatus = 'Planting';
+          } else {
+            // No active planting activity - transition to Growing if vineyard is planted
+            // This handles cases where planting completed but status wasn't updated
+            if (vineyard.density > 0 && vineyard.grape) {
+              newStatus = 'Growing';
+            }
+          }
         }
       } else if (season === 'Winter' && week === 1) {
         // If still planting in winter, terminate planting and finalize density
@@ -147,6 +162,23 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
         if (vineyard.status === 'Planting') {
           await terminatePlantingActivity(vineyard.id, vineyard.name);
           newStatus = 'Dormant'; // Set to Dormant status with current density
+        }
+      }
+      
+      // General check: If status is 'Planting' but no active planting activity exists, fix the status
+      // This handles edge cases where planting completed but status wasn't properly updated
+      if (newStatus === 'Planting' || vineyard.status === 'Planting') {
+        const plantingActivity = activities.find(
+          (a) => a.category === WorkCategory.PLANTING && 
+                 a.status === 'active' && 
+                 a.targetId === vineyard.id
+        );
+        
+        if (!plantingActivity && vineyard.density > 0 && vineyard.grape) {
+          // No active planting activity but vineyard is planted - determine correct status
+          const currentSeason = season;
+          const isGrowingSeason = currentSeason === 'Spring' || currentSeason === 'Summer' || currentSeason === 'Fall';
+          newStatus = isGrowingSeason ? 'Growing' : 'Planted';
         }
       }
       

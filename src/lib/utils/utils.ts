@@ -491,6 +491,7 @@ export function getColorClass(value: number): string {
   return colorMap[level] || 'text-gray-500';
 }
 
+
 /**
  * Get badge color classes based on rating value (0-1)
  * Returns both text and background colors for badge components
@@ -542,7 +543,9 @@ export function getRangeColor(
 } {
   const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
   const text = getColorClass(rating);
-  const bg = text.replace('text-', 'bg-');
+  // Derive bg color from text color using the existing color scheme
+  // Replace 'text-' with 'bg-' to get matching background color
+  const bg = text.startsWith('text-') ? text.replace(/^text-/, 'bg-') : `bg-${text}`;
   const badge = getBadgeColorClasses(rating);
   return { rating, text, bg, badge };
 }
@@ -554,7 +557,7 @@ export function getRangeColor(
  * 
  * @param value The actual value to rate
  * @param normalizeMin Minimum value of the actual range (e.g., 0, 1500, 0)
- * @param normalizeMax Maximum value of the actual range (e.g., 10000, 15000, 1)
+ * @param normalizeMax Maximum value of the actual range (e.g., 10000, 1)
  * @param strategy How to interpret the normalized value: 'higher_better', 'lower_better', 'balanced', or 'exponential'
  * @param balanceMin Optional: minimum of ideal range for 'balanced' strategy (e.g., 0.5)
  * @param balanceMax Optional: maximum of ideal range for 'balanced' strategy (e.g., 0.7)
@@ -564,8 +567,8 @@ export function getRangeColor(
  * // Company Value: 0-10000 range, higher is better
  * getRatingForRange(7500, 0, 10000, 'higher_better') // 0.75
  * 
- * // Density: 1500-15000 range, lower is better  
- * getRatingForRange(8000, 1500, 15000, 'lower_better') // 0.52
+ * // Density: 1500-10000 range, lower is better  
+ * getRatingForRange(8000, 1500, 10000, 'lower_better') // 0.52
  * 
  * // Wine Body: 0-1 range, balanced at 0.5-0.7
  * getRatingForRange(0.3, 0, 1, 'balanced', 0.5, 0.7) // 0.33
@@ -751,7 +754,65 @@ export function getEconomyPhaseColorClass(phase: string): string {
 }
 
 // ========================================
-// SECTION 7: UI & DISPLAY UTILITIES
+// SECTION 7: NOTIFICATION FORMATTING
+// ========================================
+
+/**
+ * Format a combined season change notification with clear sections and line breaks
+ * @param seasonChangeMessage The season change announcement
+ * @param bookkeepingMessage Optional bookkeeping activity message
+ * @param economyPhaseMessage Optional economy phase change message
+ * @param wageMessage Optional wage payment message
+ * @returns Formatted notification text with line breaks and sections
+ */
+export function formatSeasonChangeNotification(
+  seasonChangeMessage: string,
+  bookkeepingMessage?: string | null,
+  economyPhaseMessage?: string | null,
+  wageMessage?: string | null
+): string {
+  const sections: string[] = [];
+  
+  // Main season change header
+  sections.push(`🎉 ${seasonChangeMessage}`);
+  
+  // Only add spacing if there are other sections
+  const hasOtherSections = !!(bookkeepingMessage || economyPhaseMessage || wageMessage);
+  if (hasOtherSections) {
+    sections.push(''); // Empty line for spacing
+  }
+  
+  // Bookkeeping section
+  if (bookkeepingMessage) {
+    sections.push('📋 Bookkeeping:');
+    sections.push(`   ${bookkeepingMessage}`);
+    // Add spacing if there are more sections after this
+    if (economyPhaseMessage || wageMessage) {
+      sections.push(''); // Empty line for spacing
+    }
+  }
+  
+  // Economy phase section
+  if (economyPhaseMessage) {
+    sections.push('💰 Economy:');
+    sections.push(`   ${economyPhaseMessage}`);
+    // Add spacing if there are more sections after this
+    if (wageMessage) {
+      sections.push(''); // Empty line for spacing
+    }
+  }
+  
+  // Wage payment section
+  if (wageMessage) {
+    sections.push('💼 Staff Wages:');
+    sections.push(`   ${wageMessage}`);
+  }
+  
+  return sections.join('\n');
+}
+
+// ========================================
+// SECTION 8: UI & DISPLAY UTILITIES
 // ========================================
 
 /**

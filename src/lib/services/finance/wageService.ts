@@ -200,18 +200,20 @@ export function getWageStatistics(staff: { wage: number }[]): {
  * Process seasonal wage payments for all staff
  * Called at the start of each season (week 1) from the game tick system
  * @param staff Array of staff members to pay wages for
+ * @param skipNotification If true, returns notification text instead of sending it
+ * @returns Notification message text if wages were paid (and skipNotification is true), null otherwise
  */
-export async function processSeasonalWages(staff: Staff[]): Promise<void> {
+export async function processSeasonalWages(staff: Staff[], skipNotification: boolean = false): Promise<string | null> {
   try {
     if (staff.length === 0) {
-      return; // No staff to pay
+      return null; // No staff to pay
     }
     
     // Calculate total seasonal wages (12 weeks per season)
     const totalWages = staff.reduce((sum, member) => sum + (member.wage * 12), 0);
     
     if (totalWages === 0) {
-      return; // No wages to pay
+      return null; // No wages to pay
     }
     
     // Check if we have enough money
@@ -220,12 +222,16 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
     const season = gameState.season || 'Spring';
     
     if (currentMoney < totalWages) {
-      await notificationService.addMessage(
-        `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
-        'wageService.processSeasonalWages',
-        'Insufficient Funds',
-        NotificationCategory.FINANCE
-      );
+      const insufficientFundsMessage = `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`;
+      
+      if (!skipNotification) {
+        await notificationService.addMessage(
+          insufficientFundsMessage,
+          'wageService.processSeasonalWages',
+          'Insufficient Funds',
+          NotificationCategory.FINANCE
+        );
+      }
       // Still process the transaction to show negative balance
     }
     
@@ -237,15 +243,23 @@ export async function processSeasonalWages(staff: Staff[]): Promise<void> {
       true // recurring transaction
     );
     
-    // Notify about wage payment
-    await notificationService.addMessage(
-      `Paid €${formatNumber(totalWages)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`,
-      'staff.wages',
-      'Staff Wages Paid',
-      NotificationCategory.STAFF_MANAGEMENT
-    );
+    // Prepare notification about wage payment
+    const message = `Paid €${formatNumber(totalWages)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`;
+    
+    if (skipNotification) {
+      return message;
+    } else {
+      await notificationService.addMessage(
+        message,
+        'staff.wages',
+        'Staff Wages Paid',
+        NotificationCategory.STAFF_MANAGEMENT
+      );
+      return null;
+    }
     
   } catch (error) {
     console.error('Error processing seasonal wages:', error);
+    return null;
   }
 }
