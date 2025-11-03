@@ -4,6 +4,7 @@ import { generateDefaultCharacteristics } from '@/lib/services/wine/characterist
 import { GRAPE_CONST } from '@/lib/constants';
 import { GrapeInfoView } from './GrapeInfoView';
 import { GrapeVariety } from '@/lib/types/types';
+import { GrapeIcon } from '@/lib/utils/icons';
 
 export function GrapeVarietiesTab() {
   const [selectedGrape, setSelectedGrape] = useState<GrapeVariety | null>(null);
@@ -30,11 +31,16 @@ export function GrapeVarietiesTab() {
         {grapeVarieties.map((grape, index) => (
           <GridCard
             key={index}
-            icon={grape.name.charAt(0)}
+            icon={
+              <GrapeIcon 
+                variety={grape.name as GrapeVariety} 
+                size="xl" 
+                className="w-16 h-16"
+                rounded={true}
+              />
+            }
             title={grape.name}
             onClick={() => setSelectedGrape(grape.name as GrapeVariety)}
-            iconBgColor="bg-red-100"
-            iconTextColor="text-red-700"
           >
             <p className="text-gray-600">{grape.description}</p>
             <div className="text-sm text-blue-600 font-medium">Click to view details →</div>

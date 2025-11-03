@@ -1,11 +1,13 @@
-// Icon components for consistent UI across the application
+import React from 'react';
+import { WineCharacteristics } from '@/lib/types/types';
+import { GrapeVariety } from '@/lib/types/types';
+import { WorkCategory } from '@/lib/types/types';
+import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { getCharacteristicDisplayName } from './utils';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/shadCN/tooltip';
 
-/**
- * Common icon components for consistent UI across the application
- * These replace inline SVG definitions and provide consistent styling
- */
+// ===== SVG ICONS =====
 
-// Chevron Icons for expandable/collapsible UI elements
 export const ChevronDownIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -30,19 +32,18 @@ export const ChevronLeftIcon = ({ className = "w-5 h-5" }: { className?: string 
   </svg>
 );
 
-// Utility function to get the appropriate chevron icon based on expanded state
 export const getChevronIcon = (isExpanded: boolean, className?: string) => {
   return isExpanded ? 
     <ChevronDownIcon className={className} /> : 
     <ChevronRightIcon className={className} />;
 };
 
-// Alternative function that returns just the icon component
 export const getChevronIconComponent = (isExpanded: boolean) => {
   return isExpanded ? ChevronDownIcon : ChevronRightIcon;
 };
 
-// Common icon sizes for consistency
+// ===== CONSTANTS =====
+
 export const ICON_SIZES = {
   xs: 'w-3 h-3',
   sm: 'w-4 h-4', 
@@ -53,28 +54,25 @@ export const ICON_SIZES = {
 
 export type IconSize = keyof typeof ICON_SIZES;
 
-// Specialization Icons - Emoji-based icons for staff specializations
+// ===== EMOJI CONSTANTS =====
+
 export const SPECIALIZATION_ICONS = {
-  field: '🌱',        // Vineyard Manager - Growing/planting
-  winery: '🍷',       // Master Winemaker - Wine production
-  administration: '📊', // Estate Administrator - Business/management
-  sales: '💼',        // Sales Director - Business/sales
-  maintenance: '🔧'   // Technical Director - Technical/maintenance
+  field: '🌱',
+  winery: '🍷',
+  administration: '📊',
+  sales: '💼',
+  maintenance: '🔧'
 } as const;
 
-// Helper function to get specialization icon
 export const getSpecializationIcon = (specialization: string): string => {
   return SPECIALIZATION_ICONS[specialization as keyof typeof SPECIALIZATION_ICONS] || '⭐';
 };
 
-// Team Icon Options - Emoji options for team icons
 export const EMOJI_OPTIONS: readonly string[] = [
   '📊', '🔧', '🍇', '🍷', '💼', '👥', '🌟', '⚡', '🎯', '🚀', 
   '💡', '🔥', '⭐', '🎪', '🏆', '🎨', '🎵', '🎮', '📱', '💻',
   '🏢', '🏭', '🌍', '🌱', '🌿', '🍃', '🌺', '🌻', '🌸', '🌷'
 ];
-
-// ===== EMOJI MAPPINGS =====
 
 export const NAVIGATION_EMOJIS = {
   dashboard: '🏠',
@@ -126,3 +124,191 @@ export const QUALITY_FACTOR_EMOJIS = {
   densityPenalty: '🌳'
 } as const;
 
+// ===== ASSET ICON COMPONENTS =====
+
+// Characteristic Icon
+export type CharacteristicName = keyof WineCharacteristics;
+
+interface CharacteristicIconProps {
+  name: CharacteristicName;
+  size?: IconSize;
+  className?: string;
+  opacity?: number;
+  rounded?: boolean;
+  alt?: string;
+  tooltip?: boolean | string | React.ReactNode;
+}
+
+export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
+  name,
+  size = 'xs',
+  className = '',
+  opacity = 100,
+  rounded = false,
+  alt,
+  tooltip = true
+}) => {
+  const sizeClass = ICON_SIZES[size];
+  const roundedClass = rounded ? 'rounded-full' : '';
+  // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
+  const style = opacity !== 100 ? { opacity: opacity / 100 } : undefined;
+  
+  const iconElement = (
+    <img
+      src={`/assets/icons/characteristics/${name}.png`}
+      alt={alt || `${name} icon`}
+      className={`${sizeClass} ${roundedClass} ${tooltip !== false ? 'cursor-help' : ''} ${className}`.trim()}
+      style={style}
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+  
+  if (tooltip === false) {
+    return iconElement;
+  }
+  
+  const tooltipContent = tooltip === true ? getCharacteristicDisplayName(name) : tooltip;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {iconElement}
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// Activity Icon
+const getActivityIconFile = (category: WorkCategory): string => {
+  return WORK_CATEGORY_INFO[category].icon;
+};
+
+interface ActivityIconProps {
+  category: WorkCategory;
+  size?: IconSize;
+  className?: string;
+  opacity?: number;
+  rounded?: boolean;
+  alt?: string;
+  tooltip?: boolean | string | React.ReactNode;
+}
+
+export const ActivityIcon: React.FC<ActivityIconProps> = ({
+  category,
+  size = 'md',
+  className = '',
+  opacity = 100,
+  rounded = true,
+  alt,
+  tooltip = true
+}) => {
+  const iconFile = getActivityIconFile(category);
+  const sizeClass = ICON_SIZES[size];
+  const roundedClass = rounded ? 'rounded-full' : '';
+  // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
+  const style = opacity !== 100 ? { opacity: opacity / 100 } : undefined;
+  
+  const iconElement = (
+    <img
+      src={`/assets/icons/activities/${iconFile}`}
+      alt={alt || `${category} icon`}
+      className={`${sizeClass} ${roundedClass} ${tooltip !== false ? 'cursor-help' : ''} ${className}`.trim()}
+      style={style}
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+  
+  if (tooltip === false) {
+    return iconElement;
+  }
+  
+  const tooltipContent = tooltip === true ? WORK_CATEGORY_INFO[category].displayName : tooltip;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {iconElement}
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// Grape Icon
+const GRAPE_ICON_MAP: Record<GrapeVariety, string> = {
+  'Barbera': 'icon_barbera.webp',
+  'Chardonnay': 'icon_chardonnay.webp',
+  'Pinot Noir': 'icon_pinot noir.webp',
+  'Primitivo': 'icon_primitivo.webp',
+  'Sauvignon Blanc': 'icon_sauvignon blanc.webp'
+};
+
+interface GrapeIconProps {
+  variety: GrapeVariety;
+  size?: IconSize;
+  className?: string;
+  opacity?: number;
+  rounded?: boolean;
+  alt?: string;
+  tooltip?: boolean | string | React.ReactNode;
+}
+
+export const GrapeIcon: React.FC<GrapeIconProps> = ({
+  variety,
+  size = 'md',
+  className = '',
+  opacity = 100,
+  rounded = false,
+  alt,
+  tooltip = true
+}) => {
+  const iconFile = GRAPE_ICON_MAP[variety];
+  const sizeClass = ICON_SIZES[size];
+  const roundedClass = rounded ? 'rounded-full' : '';
+  // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
+  const style = opacity !== 100 ? { opacity: opacity / 100 } : undefined;
+  
+  const iconElement = (
+    <img
+      src={`/assets/icons/grape/${iconFile}`}
+      alt={alt || `${variety} icon`}
+      className={`${sizeClass} ${roundedClass} ${tooltip !== false ? 'cursor-help' : ''} ${className}`.trim()}
+      style={style}
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+  
+  if (tooltip === false) {
+    return iconElement;
+  }
+  
+  const tooltipContent = tooltip === true ? variety : tooltip;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {iconElement}
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};

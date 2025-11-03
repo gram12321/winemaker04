@@ -142,6 +142,19 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
       if (config.behavior !== 'evolving') return false;
       if (!feature.isPresent || feature.severity === 0) return false;
       
+      // Special case: bottle_aging weekly growth is derived from aging progress curve
+      if (config.id === 'bottle_aging' && batch.state === 'bottled') {
+        const currentSeverity = getFeatureDisplaySeverity(batch, 'bottle_aging');
+        const currentAgingProgress = batch.agingProgress || 0;
+        const nextWeekBatch = {
+          ...batch,
+          agingProgress: currentAgingProgress + 1
+        };
+        const nextWeekSeverity = getBottleAgingSeverity(nextWeekBatch);
+        const weeklyGrowthRate = nextWeekSeverity - currentSeverity;
+        return weeklyGrowthRate > 0.0001; // Very small threshold for aging
+      }
+      
       const behaviorConfig = config.behaviorConfig as any;
       const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
       const multiplierValue = behaviorConfig.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
@@ -152,16 +165,45 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
     })
     .map(({ feature, config }) => {
       const behaviorConfig = config.behaviorConfig as any;
-      const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
-      const multiplierValue = behaviorConfig.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
-      const stateMultiplier = typeof multiplierValue === 'function' ? multiplierValue(batch) : multiplierValue;
-      const weeklyGrowthRate = (baseGrowthRate || 0) * (stateMultiplier || 1.0);
+      
+      // Special case: bottle_aging weekly growth is derived from aging progress curve
+      let weeklyGrowthRate: number;
+      let currentSeverityForEffects: number;
+      
+      if (config.id === 'bottle_aging' && batch.state === 'bottled') {
+        // Use calculated severity from aging progress
+        currentSeverityForEffects = getFeatureDisplaySeverity(batch, 'bottle_aging');
+        
+        // Calculate growth rate as difference between current and next week's severity
+        const currentAgingProgress = batch.agingProgress || 0;
+        const nextWeekBatch = {
+          ...batch,
+          agingProgress: currentAgingProgress + 1
+        };
+        const nextWeekSeverity = getBottleAgingSeverity(nextWeekBatch);
+        weeklyGrowthRate = nextWeekSeverity - currentSeverityForEffects;
+      } else {
+        // Standard calculation for other features
+        const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
+        const multiplierValue = behaviorConfig.severityGrowth?.stateMultipliers?.[batch.state] ?? 1.0;
+        const stateMultiplier = typeof multiplierValue === 'function' ? multiplierValue(batch) : multiplierValue;
+        weeklyGrowthRate = (baseGrowthRate || 0) * (stateMultiplier || 1.0);
+        currentSeverityForEffects = feature.severity;
+      }
       
       const weeklyEffects: Record<string, number> = {};
       
+      // Calculate weekly effects as the CHANGE per week, not the total effect
+      const nextSeverity = Math.min(1.0, currentSeverityForEffects + weeklyGrowthRate);
+      
       if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
         config.effects.characteristics.forEach(({ characteristic, modifier }) => {
-          weeklyEffects[characteristic] = applyModifier(modifier, feature.severity);
+          // Calculate effect at current severity
+          const currentEffect = applyModifier(modifier, currentSeverityForEffects);
+          // Calculate effect at next severity (after weekly growth)
+          const nextEffect = applyModifier(modifier, nextSeverity);
+          // Weekly effect is the difference (change per week)
+          weeklyEffects[characteristic] = nextEffect - currentEffect;
         });
       }
       
@@ -172,12 +214,12 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
         if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
           weeklyQualityEffect = qualityEffect.amount * weeklyGrowthRate;
         } else if (qualityEffect.type === 'bonus') {
-          const nextSeverity = Math.min(1.0, feature.severity + weeklyGrowthRate);
+          const nextSeverityForQuality = Math.min(1.0, currentSeverityForEffects + weeklyGrowthRate);
           const currentBonus = typeof qualityEffect.amount === 'function' 
-            ? qualityEffect.amount(feature.severity)
+            ? qualityEffect.amount(currentSeverityForEffects)
             : (qualityEffect.amount || 0);
           const nextBonus = typeof qualityEffect.amount === 'function'
-            ? qualityEffect.amount(nextSeverity)
+            ? qualityEffect.amount(nextSeverityForQuality)
             : (qualityEffect.amount || 0);
           weeklyQualityEffect = nextBonus - currentBonus;
         }
@@ -198,12 +240,17 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
   const activeFeatures = relevantFeatures
     .filter(({ feature }) => feature.isPresent && feature.severity > 0)
     .map(({ feature, config }) => {
-      const qualityImpact = calculateQualityImpact(batch, config, feature.severity);
+      // Use getFeatureDisplaySeverity for bottle_aging to ensure consistency across displays
+      const displaySeverity = config.id === 'bottle_aging' 
+        ? getFeatureDisplaySeverity(batch, 'bottle_aging')
+        : feature.severity;
+      
+      const qualityImpact = calculateQualityImpact(batch, config, displaySeverity);
       
       const characteristicEffects: Record<string, number> = {};
       if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
         config.effects.characteristics.forEach(({ characteristic, modifier }) => {
-          characteristicEffects[characteristic] = applyModifier(modifier, feature.severity);
+          characteristicEffects[characteristic] = applyModifier(modifier, displaySeverity);
         });
       }
       
@@ -1139,6 +1186,42 @@ async function processTimeBased(
   
   if (config.behavior === 'evolving') {
     if (!feature.isPresent) return features;
+    
+    // Special case: bottle_aging severity growth is derived from agingProgress calculation
+    // This ensures the standard severity accumulation system stays in sync with the aging progress curve
+    if (config.id === 'bottle_aging') {
+      if (batch.state === 'bottled') {
+        // Calculate current severity from aging progress
+        const currentSeverity = getBottleAgingSeverity(batch);
+        
+        // Calculate what severity will be next week (agingProgress + 1)
+        const currentAgingProgress = batch.agingProgress || 0;
+        const nextWeekBatch = {
+          ...batch,
+          agingProgress: currentAgingProgress + 1
+        };
+        const nextWeekSeverity = getBottleAgingSeverity(nextWeekBatch);
+        
+        // The growth rate is the difference (this is what we add each week)
+        const weeklyGrowth = nextWeekSeverity - currentSeverity;
+        
+        // Apply growth using standard system (but derived from aging progress curve)
+        const cap = (config.behaviorConfig as any).severityGrowth?.cap || 1.0;
+        const newSeverity = Math.min(cap, currentSeverity + weeklyGrowth);
+        
+        return updateFeatureInArray(features, {
+          ...feature,
+          severity: newSeverity,
+          isPresent: newSeverity > 0
+        });
+      }
+      // For non-bottled wines, keep severity at 0
+      return updateFeatureInArray(features, {
+        ...feature,
+        severity: 0,
+        isPresent: false
+      });
+    }
     
     const behaviorConfig = config.behaviorConfig as any;
     const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;

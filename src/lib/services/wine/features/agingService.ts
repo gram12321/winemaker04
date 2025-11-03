@@ -86,15 +86,17 @@ export function calculateAgingStatus(wine: WineBatch): AgingStatus {
   if (ageInYears >= 20) agingStage = 'Vintage';
   
   // Calculate aging progress using squashNormalizeTail for diminishing returns
-  // Normalize age so that latePeak corresponds to 90% (start of diminishing returns)
-  const normalizedAge = Math.min(ageInYears / profile.latePeak, 1.0) * 0.9;
+  // Normalize age: 1.0 = latePeak years (100% target, but never reachable)
+  // Allow values > 1.0 to represent aging beyond latePeak (diminishing returns)
+  const normalizedAge = ageInYears / profile.latePeak;
   
   // Use squashNormalizeTail with maxTarget 0.9999 to create diminishing returns
-  // This ensures the bar never fills completely and there's always minimal benefit from aging more
+  // threshold 0.9 means: values from 0.9-1.0+ get squashed toward 0.9999 (never quite 1.0)
+  // This ensures 100% is the theoretical max (latePeak years) but is never actually reached
   const agingProgress = squashNormalizeTail(
     normalizedAge,
-    0.9,       // threshold: start squashing at 90% (which is the late peak)
-    0.9999,    // maxTarget: never quite reach 100% (always room for more aging)
+    0.9,       // threshold: start squashing at 90% (just before late peak)
+    0.9999,    // maxTarget: approach but never reach 100% (1.0)
     8          // alpha: steepness of the tail squashing
   );
   

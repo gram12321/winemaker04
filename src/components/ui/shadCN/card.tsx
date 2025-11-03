@@ -97,7 +97,7 @@ const SimpleCard = React.forwardRef<HTMLDivElement, SimpleCardProps>(
 SimpleCard.displayName = "SimpleCard"
 
 interface GridCardProps {
-  icon: string;
+  icon: string | ReactNode;
   title: string;
   description?: string;
   children: ReactNode;
@@ -136,8 +136,12 @@ const GridCard = React.forwardRef<HTMLDivElement, GridCardProps>(
       onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center gap-4 pb-2">
-        <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", iconBgColor)}>
-          <span className={cn("font-bold", iconTextColor)}>{icon}</span>
+        <div className={cn("flex items-center justify-center", typeof icon === 'string' ? "w-12 h-12 rounded-full" : '', typeof icon === 'string' ? iconBgColor : '')}>
+          {typeof icon === 'string' ? (
+            <span className={cn("font-bold", iconTextColor)}>{icon}</span>
+          ) : (
+            icon
+          )}
         </div>
         <div>
           <CardTitle className="text-lg">{title}</CardTitle>

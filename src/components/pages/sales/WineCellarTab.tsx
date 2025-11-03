@@ -7,8 +7,9 @@ import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails } from '@/hooks';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
-import { calculateAgingStatus } from '@/lib/services';
+import { calculateAgingStatus, getFeatureDisplayData } from '@/lib/services';
+import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 
 
 // Component for combined balance and quality display
@@ -164,7 +165,7 @@ const AgingProgressBar: React.FC<{ wine: WineBatch }> = ({ wine }) => {
                 style={{ width: `${status.progressPercent}%` }}
               />
             </div>
-            <div className="text-[10px] text-gray-600">{peakStatusLabels[status.peakStatus]} • {formatNumber(status.progressPercent / 100, { decimals: 2, adaptiveNearOne: true })}%</div>
+            <div className="text-[10px] text-gray-600">{peakStatusLabels[status.peakStatus]} • {formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</div>
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
@@ -172,7 +173,7 @@ const AgingProgressBar: React.FC<{ wine: WineBatch }> = ({ wine }) => {
             <div className="font-semibold">Aging Progress</div>
             <div>Age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
             <div>Status: <span className="font-medium">{peakStatusLabels[status.peakStatus]}</span></div>
-            <div>Maturity: <span className="font-medium">{formatNumber(status.progressPercent / 100, { decimals: 3, adaptiveNearOne: true })}%</span></div>
+            <div>Maturity: <span className="font-medium">{formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</span></div>
             <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
               Aging improves quality, characteristics, and value. Risk of oxidation increases over time.
             </div>
@@ -183,24 +184,17 @@ const AgingProgressBar: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   );
 };
 
-// Component for compact feature icons (inline in table)
-const CompactFeatureIcons: React.FC<{ wine: WineBatch }> = ({ wine }) => {
-  const configs = getAllFeatureConfigs();
-  const features = wine.features || [];
+// Component for manifested features (active features with severity > 0)
+const ManifestedFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  const displayData = getFeatureDisplayData(wine);
   
-  const manifestedFeatures = configs
-    .filter(config => {
-      const feature = features.find(f => f.id === config.id);
-      return feature?.isPresent;
-    });
-  
-  if (manifestedFeatures.length === 0) {
+  if (displayData.activeFeatures.length === 0) {
     return <span className="text-[10px] text-gray-400">—</span>;
   }
   
   return (
     <div className="flex gap-1">
-      {manifestedFeatures.map(config => (
+      {displayData.activeFeatures.map(({ config }) => (
         <TooltipProvider key={config.id}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -212,6 +206,187 @@ const CompactFeatureIcons: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           </Tooltip>
         </TooltipProvider>
       ))}
+    </div>
+  );
+};
+
+// Component for risk features (features with risk > 0 but not yet manifested)
+const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  const displayData = getFeatureDisplayData(wine);
+  
+  if (displayData.riskFeatures.length === 0) {
+    return <span className="text-[10px] text-gray-400">—</span>;
+  }
+  
+  return (
+    <div className="flex gap-1">
+      {displayData.riskFeatures.map(({ feature, config }) => {
+        const riskPercent = formatNumber((feature.risk || 0) * 100, { smartDecimals: true });
+        return (
+          <TooltipProvider key={config.id}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm cursor-help opacity-70" title={`${config.name}: ${riskPercent}% risk`}>
+                  {config.icon}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <div className="text-xs">
+                  <div>{config.name}</div>
+                  <div className="text-gray-400">Risk: {riskPercent}%</div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      })}
+    </div>
+  );
+};
+
+// Component for current effects display (separate column)
+const CurrentEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  if (wine.state !== 'bottled') return null;
+  
+  const displayData = getFeatureDisplayData(wine);
+  
+  // Get significant effects (filtered by threshold)
+  const activeEffects = Object.entries(displayData.combinedActiveEffects).filter(([_, effect]) => Math.abs(effect) > 0.001);
+  const hasQualityEffect = Math.abs(displayData.totalQualityEffect) > 0.001;
+  
+  if (!hasQualityEffect && activeEffects.length === 0) {
+    return <span className="text-[10px] text-gray-400">—</span>;
+  }
+  
+  // Collect all effects into a single array for grid distribution
+  type EffectData = 
+    | { type: 'quality'; content: number }
+    | { type: 'characteristic'; key: string; content: number };
+  
+  const allEffects: EffectData[] = [];
+  if (hasQualityEffect) {
+    allEffects.push({
+      type: 'quality',
+      content: displayData.totalQualityEffect
+    });
+  }
+  activeEffects.forEach(([char, effect]) => {
+    allEffects.push({
+      type: 'characteristic',
+      key: char,
+      content: effect
+    });
+  });
+
+  // Determine grid columns based on effect count
+  const effectCount = allEffects.length;
+  let gridCols = 'grid-cols-1';
+  if (effectCount >= 4 && effectCount <= 6) {
+    gridCols = 'grid-cols-2';
+  } else if (effectCount >= 7) {
+    gridCols = 'grid-cols-3';
+  }
+
+  return (
+    <div className={`grid ${gridCols} gap-1`}>
+      {allEffects.map((effectData, index) => {
+        if (effectData.type === 'quality') {
+          return (
+            <TooltipProvider key={`quality-${index}`}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${
+                    effectData.content > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    <span>⭐</span>
+                    <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="text-xs">Quality Effect: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        } else {
+          const currentValue = wine.characteristics[effectData.key as keyof typeof wine.characteristics] || 0;
+          const balancedRange = BASE_BALANCED_RANGES[effectData.key as keyof typeof BASE_BALANCED_RANGES];
+          const colorInfo = getCharacteristicEffectColorInfo(currentValue, effectData.content, balancedRange);
+          const bgClass = colorInfo.isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+          return (
+            <TooltipProvider key={effectData.key}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
+                    <img 
+                      src={`/assets/icons/characteristics/${effectData.key}.png`} 
+                      alt={effectData.key}
+                      className="w-3 h-3"
+                    />
+                    <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="text-xs capitalize">{effectData.key}: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        }
+      })}
+    </div>
+  );
+};
+
+// Component for weekly effects display (separate column)
+const WeeklyEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+  if (wine.state !== 'bottled') return null;
+  
+  const displayData = getFeatureDisplayData(wine);
+  
+  // Get significant effects (filtered by threshold)
+  const weeklyEffects = Object.entries(displayData.combinedWeeklyEffects).filter(([_, effect]) => Math.abs(effect) > 0.0001);
+  
+  if (weeklyEffects.length === 0) {
+    return <span className="text-[10px] text-gray-400">—</span>;
+  }
+  
+  // Determine grid columns based on effect count
+  const effectCount = weeklyEffects.length;
+  let gridCols = 'grid-cols-1';
+  if (effectCount >= 4 && effectCount <= 6) {
+    gridCols = 'grid-cols-2';
+  } else if (effectCount >= 7) {
+    gridCols = 'grid-cols-3';
+  }
+  
+  return (
+    <div className={`grid ${gridCols} gap-1`}>
+      {weeklyEffects.map(([char, effect]) => {
+        const currentValue = wine.characteristics[char as keyof typeof wine.characteristics] || 0;
+        const balancedRange = BASE_BALANCED_RANGES[char as keyof typeof BASE_BALANCED_RANGES];
+        const colorInfo = getCharacteristicEffectColorInfo(currentValue, effect, balancedRange);
+        const bgClass = colorInfo.isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+        return (
+          <TooltipProvider key={char}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
+                  <img 
+                    src={`/assets/icons/characteristics/${char}.png`} 
+                    alt={char}
+                    className="w-3 h-3"
+                  />
+                  <span>{effect > 0 ? '+' : ''}{formatNumber(effect * 100, { smartDecimals: true })}%/wk</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="text-xs capitalize">{char}: {effect > 0 ? '+' : ''}{formatNumber(effect * 100, { smartDecimals: true })}% per week</div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      })}
     </div>
   );
 };
@@ -240,9 +415,6 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
     features: 'all'
   });
   
-  // Collapsible vintage groups state (for desktop hierarchical view)
-  const [expandedVintages, setExpandedVintages] = useState<Set<number>>(new Set());
-  
   // Get unique filter options from wines
   const filterOptions = useMemo(() => {
     const vineyards = new Set(bottledWines.map(w => w.vineyardName));
@@ -255,6 +427,33 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       vintages: Array.from(vintages).sort((a, b) => b - a)
     };
   }, [bottledWines]);
+  
+  // Collapsible vintage groups state (for desktop hierarchical view)
+  // Initialize with newest vintage expanded by default
+  const [expandedVintages, setExpandedVintages] = useState<Set<number>>(() => {
+    const vintages = new Set(bottledWines.map(w => w.harvestStartDate.year));
+    const sortedVintages = Array.from(vintages).sort((a, b) => b - a);
+    if (sortedVintages.length > 0) {
+      return new Set([sortedVintages[0]]); // Newest vintage (first in sorted array)
+    }
+    return new Set();
+  });
+  
+  // Ensure newest vintage is expanded when wines load
+  React.useEffect(() => {
+    if (filterOptions.vintages.length > 0) {
+      const newestVintage = filterOptions.vintages[0];
+      setExpandedVintages(prev => {
+        // If no vintages are expanded yet, or if the newest vintage changed, ensure it's expanded
+        if (prev.size === 0 || !prev.has(newestVintage)) {
+          const newSet = new Set(prev);
+          newSet.add(newestVintage);
+          return newSet;
+        }
+        return prev;
+      });
+    }
+  }, [filterOptions.vintages]);
   
   // Apply filters
   const filteredWines = useMemo(() => {
@@ -274,9 +473,13 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
         if (filters.agingStatus !== status.peakStatus) return false;
       }
       
-      // Features filter
+      // Features filter - only check features that actually have an effect (> 0)
       if (filters.features !== 'all') {
-        const hasFeature = wine.features?.some(f => f.id === filters.features && f.isPresent);
+        const displayData = getFeatureDisplayData(wine);
+        const hasFeature = [
+          ...displayData.activeFeatures,
+          ...displayData.riskFeatures
+        ].some(({ feature }) => feature.id === filters.features);
         if (!hasFeature) return false;
       }
       
@@ -286,8 +489,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
   // Define sortable columns for wine cellar
   const cellarColumns: SortableColumn<WineBatch>[] = [
-    { key: 'grape', label: 'Wine', sortable: true },
-    { key: 'vineyardName', label: 'Vineyard', sortable: true },
+    { key: 'grape' as any, label: 'Wine & Vineyard', sortable: true, accessor: (wine) => wine.grape },
     { key: 'harvestStartDate', label: 'Vintage', sortable: true, accessor: (wine) => wine.harvestStartDate.year },
     { 
       key: 'agingProgress' as any, 
@@ -302,16 +504,12 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       sortable: true,
       accessor: (wine) => (wine.grapeQuality + wine.balance) / 2
     },
-    { key: 'estimatedPrice' as any, label: 'Est. Price', sortable: true },
-    { 
-      key: 'askingPrice', 
-      label: 'Asking Price', 
-      sortable: true,
-      accessor: (wine) => wine.askingPrice ?? wine.estimatedPrice
-    },
+    { key: 'estimatedPrice' as any, label: 'Price', sortable: true },
     { key: 'quantity', label: 'Bottles', sortable: true },
-    { key: 'features' as any, label: 'Features', sortable: false },
-    { key: 'actions' as any, label: 'Actions', sortable: false }
+    { key: 'manifested' as any, label: 'Manifested', sortable: false },
+    { key: 'risk' as any, label: 'Risk', sortable: false },
+    { key: 'currentEffects' as any, label: 'Current Effects', sortable: false },
+    { key: 'weeklyEffects' as any, label: 'Weekly Effects', sortable: false }
   ];
 
   const {
@@ -620,19 +818,11 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
               <TableRow>
                 <TableHead 
                   sortable 
-                  onSort={() => handleCellarSort('grape')}
-                  sortIndicator={getCellarSortIndicator('grape')}
-                  isSorted={isCellarColumnSorted('grape')}
+                  onSort={() => handleCellarSort('grape' as any)}
+                  sortIndicator={getCellarSortIndicator('grape' as any)}
+                  isSorted={isCellarColumnSorted('grape' as any)}
                 >
-                  Wine
-                </TableHead>
-                <TableHead 
-                  sortable 
-                  onSort={() => handleCellarSort('vineyardName')}
-                  sortIndicator={getCellarSortIndicator('vineyardName')}
-                  isSorted={isCellarColumnSorted('vineyardName')}
-                >
-                  Vineyard
+                  Wine & Vineyard
                 </TableHead>
                 <TableHead 
                   sortable 
@@ -658,15 +848,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                   sortIndicator={getCellarSortIndicator('estimatedPrice' as any)}
                   isSorted={isCellarColumnSorted('estimatedPrice' as any)}
                 >
-                              Est. Price
-                </TableHead>
-                <TableHead 
-                  sortable 
-                  onSort={() => handleCellarSort('askingPrice')}
-                  sortIndicator={getCellarSortIndicator('askingPrice')}
-                  isSorted={isCellarColumnSorted('askingPrice')}
-                >
-                  Asking Price
+                  Price
                 </TableHead>
                 <TableHead 
                   sortable 
@@ -676,18 +858,18 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 >
                   Bottles
                 </TableHead>
-                            <TableHead>Features</TableHead>
-                            <TableHead>Actions</TableHead>
+                            <TableHead>Manifested</TableHead>
+                            <TableHead>Risk</TableHead>
+                            <TableHead>Current Effects</TableHead>
+                            <TableHead>Weekly Effects</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
                           {vintageWines.map((wine) => (
-                            <TableRow key={wine.id} className="hover:bg-gray-50">
+                            <TableRow key={wine.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onWineDetailsClick(wine.id)}>
                       <TableCell className="font-medium text-gray-900">
-                        {wine.grape}
-                      </TableCell>
-                              <TableCell className="text-gray-600">
-                        {wine.vineyardName}
+                        <div>{wine.grape}</div>
+                        <div className="text-xs text-gray-500">{wine.vineyardName}</div>
                       </TableCell>
                               <TableCell className="text-gray-600">
                                 <AgingProgressBar wine={wine} />
@@ -699,34 +881,39 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                         <WineScoreDisplay wine={wine} />
                       </TableCell>
                               <TableCell className="text-gray-600 font-medium">
-                        <EstimatedPriceDisplay wine={wine} />
-                      </TableCell>
-                              <TableCell className="text-gray-600 font-medium">
+                        <div>{formatNumber(wine.estimatedPrice, { currency: true, decimals: 2 })}</div>
                         {editingPrices[wine.id] !== undefined ? (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 mt-1">
                             <input
                               type="number"
                               step="0.01"
                               min="0"
                               value={editingPrices[wine.id]}
                               onChange={(e) => handlePriceChange(wine.id, e.target.value)}
-                                      className="w-20 px-1.5 py-1 border rounded text-xs"
+                              className="w-20 px-1.5 py-1 border rounded text-xs"
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <button
-                              onClick={() => handlePriceSave(wine)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePriceSave(wine);
+                              }}
                               className="text-green-600 hover:text-green-800 text-xs"
                             >
                               ✓
                             </button>
                             <button
-                              onClick={() => handlePriceCancel(wine.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePriceCancel(wine.id);
+                              }}
                               className="text-red-600 hover:text-red-800 text-xs"
                             >
                               ✕
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 mt-1">
                             <span className={`${
                               wine.askingPrice !== undefined 
                                 ? wine.askingPrice < wine.estimatedPrice
@@ -744,7 +931,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                               </span>
                             )}
                             <button
-                              onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? wine.estimatedPrice)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePriceEdit(wine.id, wine.askingPrice ?? wine.estimatedPrice);
+                              }}
                               className="text-blue-600 hover:text-blue-800 text-xs"
                             >
                               ✏️
@@ -756,18 +946,17 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                         {wine.quantity}
                       </TableCell>
                               <TableCell className="text-gray-600">
-                                <CompactFeatureIcons wine={wine} />
+                                <ManifestedFeatures wine={wine} />
                               </TableCell>
-                      <TableCell>
-                                  <Button
-                                  onClick={() => onWineDetailsClick(wine.id)}
-                                    size="sm"
-                                    variant="outline"
-                                  className="text-purple-600 border-purple-600 hover:bg-purple-50 text-xs px-2 py-1"
-                                >
-                                  Details
-                                  </Button>
-                        </TableCell>
+                              <TableCell className="text-gray-600">
+                                <RiskFeatures wine={wine} />
+                              </TableCell>
+                              <TableCell className="text-gray-600">
+                                <CurrentEffectsDisplay wine={wine} />
+                              </TableCell>
+                              <TableCell className="text-gray-600">
+                                <WeeklyEffectsDisplay wine={wine} />
+                              </TableCell>
                       </TableRow>
                           ))}
             </TableBody>
@@ -833,16 +1022,32 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                   </div>
 
                       {/* Score & Features */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-3">
                   <div>
-                          <div className="text-xs text-gray-500 uppercase mb-1">Wine Score</div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Score</div>
                           <WineScoreDisplay wine={wine} />
                   </div>
                   <div>
-                          <div className="text-xs text-gray-500 uppercase mb-1">Features</div>
-                          <CompactFeatureIcons wine={wine} />
+                          <div className="text-xs text-gray-500 uppercase mb-1">Manifested</div>
+                          <ManifestedFeatures wine={wine} />
+                  </div>
+                  <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Risk</div>
+                          <RiskFeatures wine={wine} />
                   </div>
                 </div>
+
+                      {/* Effects (for bottled wines) */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Current Effects</div>
+                          <CurrentEffectsDisplay wine={wine} />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase mb-1">Weekly Effects</div>
+                          <WeeklyEffectsDisplay wine={wine} />
+                        </div>
+                      </div>
 
                       {/* Pricing */}
                 <div className="border-t pt-3">

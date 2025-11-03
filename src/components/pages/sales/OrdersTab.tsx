@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types/types';
 import { fulfillWineOrder, rejectWineOrder, generateCustomer } from '@/lib/services';
-import { formatNumber, formatPercent, formatGameDateFromObject} from '@/lib/utils/utils';
+import { formatNumber, formatPercent, formatGameDateFromObject, getBadgeColorClasses} from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { useGameUpdates } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
 import { getCurrentCompany } from '@/lib/services';
+import { SALES_CONSTANTS } from '@/lib/constants';
 
 /**
  * Create minimal customer object for relationship breakdown from order data
@@ -50,7 +51,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   withLoading,
   onNavigateToWinepedia
 }) => {
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('pending');
   const [orderChanceInfo, setOrderChanceInfo] = useState<{
     companyPrestige: number;
     availableWines: number;
@@ -62,6 +63,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   } | null>(null);
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
   const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
+  const [relationshipBoosts, setRelationshipBoosts] = useState<{[key: string]: number}>({});
   const [isLoadingRelationships, setIsLoadingRelationships] = useState<boolean>(false);
   const [ordersPage, setOrdersPage] = useState<number>(1);
   const ordersPageSize = 20;
@@ -75,6 +77,23 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       // Fallback to just customerId if no company context
       return customerId;
     }
+  };
+
+  // Helper function to get relationship badge colors based on value (0-100 scale)
+  const getRelationshipBadgeColors = (value: number): string => {
+    const normalizedValue = value / 100; // Convert to 0-1 scale
+    const { text, bg } = getBadgeColorClasses(normalizedValue);
+    return `${text} ${bg}`;
+  };
+
+  // Helper function to format customer type quantity range for display
+  const getCustomerTypeRange = (customerType: CustomerType): string => {
+    const config = SALES_CONSTANTS.CUSTOMER_TYPES[customerType];
+    if (!config) return '';
+    const [min, max] = config.quantityRange;
+    const minCases = (min / 6).toFixed(1);
+    const maxCases = (max / 6).toFixed(0);
+    return `${min}-${max} bottles (${minCases}-${maxCases} cases)`;
   };
 
   // Memoize filtered orders to prevent unnecessary recalculations
@@ -229,6 +248,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       // Calculate relationship breakdowns for each customer (with caching)
       const formattedBreakdowns: {[key: string]: string} = {};
       const computedRels: {[key: string]: number} = {};
+      const boosts: {[key: string]: number} = {};
       
       for (const customer of customers) {
         const customerKey = getCustomerKey(customer.id);
@@ -237,10 +257,12 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
         
         formattedBreakdowns[customerKey] = formattedBreakdown;
         computedRels[customerKey] = breakdown.totalRelationship;
+        boosts[customerKey] = breakdown.relationshipBoosts;
       }
       
       setRelationshipBreakdowns(formattedBreakdowns);
       setComputedRelationships(computedRels);
+      setRelationshipBoosts(boosts);
     } catch (error) {
       console.error('Error loading relationship breakdowns:', error);
     } finally {
@@ -263,6 +285,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       clearRelationshipBreakdownCache();
       setRelationshipBreakdowns({});
       setComputedRelationships({});
+      setRelationshipBoosts({});
       // Only reload if we have orders and not currently loading
       if (allOrders.length > 0 && !isLoadingRelationships) {
         loadAllRelationshipBreakdowns();
@@ -558,19 +581,24 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span 
-                              className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${
-                                (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
-                                (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                (computedRelationships[getCustomerKey(order.customerId)] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                              {isLoadingRelationships ? (
-                                <span className="text-xs text-gray-500">Loading...</span>
-                              ) : (
-                                formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)
+                            <div className="flex flex-col gap-1">
+                              <span 
+                                className={`inline-flex w-fit px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${
+                                  getRelationshipBadgeColors(computedRelationships[getCustomerKey(order.customerId)] ?? 0)
+                                }`}>
+                                {isLoadingRelationships ? (
+                                  <span className="text-xs text-gray-500">Loading...</span>
+                                ) : (
+                                  formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)
+                                )}
+                              </span>
+                              {relationshipBoosts[getCustomerKey(order.customerId)] !== undefined && 
+                               relationshipBoosts[getCustomerKey(order.customerId)] > 0 && (
+                                <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800">
+                                  Boost: {formatPercent((relationshipBoosts[getCustomerKey(order.customerId)] ?? 0) / 100, 1, true)}
+                                </span>
                               )}
-                            </span>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <div className="text-xs">
@@ -605,10 +633,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                             <div className="text-xs">
                               <div className="font-semibold">Type Range</div>
                               <div className="text-[10px] text-gray-500">
-                                {order.customerType === 'Restaurant' && '12-80 bottles (2-13 cases)'}
-                                {order.customerType === 'Wine Shop' && '18-120 bottles (3-20 cases)'}
-                                {order.customerType === 'Private Collector' && '3-36 bottles (0.5-6 cases)'}
-                                {order.customerType === 'Chain Store' && '60-300 bottles (10-50 cases)'}
+                                {getCustomerTypeRange(order.customerType)}
                               </div>
                             </div>
                           </TooltipContent>
@@ -843,19 +868,23 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-xs text-gray-500 uppercase mb-1">Relationship</div>
-                        <span 
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            (computedRelationships[customerKey] ?? 0) >= 80 ? 'bg-green-100 text-green-800' :
-                            (computedRelationships[customerKey] ?? 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                            (computedRelationships[customerKey] ?? 0) >= 40 ? 'bg-orange-100 text-orange-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                          {isLoadingRelationships ? (
-                            <span className="text-xs text-gray-500">Loading...</span>
-                          ) : (
-                            formatPercent((computedRelationships[customerKey] ?? 0) / 100, 0, true)
+                        <div className="flex flex-col gap-1">
+                          <span 
+                            className={`inline-flex w-fit px-2 py-1 text-xs font-semibold rounded-full ${
+                              getRelationshipBadgeColors(computedRelationships[customerKey] ?? 0)
+                            }`}>
+                            {isLoadingRelationships ? (
+                              <span className="text-xs text-gray-500">Loading...</span>
+                            ) : (
+                              formatPercent((computedRelationships[customerKey] ?? 0) / 100, 0, true)
+                            )}
+                          </span>
+                          {relationshipBoosts[customerKey] !== undefined && relationshipBoosts[customerKey] > 0 && (
+                            <span className="inline-flex w-fit px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-800">
+                              Boost: {formatPercent((relationshipBoosts[customerKey] ?? 0) / 100, 1, true)}
+                            </span>
                           )}
-                        </span>
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500 uppercase mb-1">Quantity</div>

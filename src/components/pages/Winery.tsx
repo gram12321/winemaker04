@@ -11,6 +11,7 @@ import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName, f
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
+import { CharacteristicIcon } from '@/lib/utils/icons';
 
 const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const balanceResult = useWineBatchBalance(batch);
@@ -93,10 +94,11 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
                 <TooltipTrigger asChild>
                   <MobileDialogWrapper content={content} title={getCharacteristicDisplayName(effect.characteristic)} triggerClassName="inline-block">
                     <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
-                      <img 
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                        alt={effect.characteristic}
-                        className="w-3 h-3 mr-1"
+                      <CharacteristicIcon 
+                        name={effect.characteristic}
+                        size="xs"
+                        className="mr-1"
+                        tooltip={false}
                       />
                       <span className={`font-medium ${colorClass}`}>
                         {effect.modifier > 0 ? '+' : ''}{formatNumber(effect.modifier * 100, { smartDecimals: true })}%

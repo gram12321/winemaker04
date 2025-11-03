@@ -4,6 +4,7 @@ import { GRAPE_CONST, COUNTRY_REGION_MAP, REGION_GRAPE_SUITABILITY } from '@/lib
 import { Card, CardContent, CardHeader, CardTitle, Button, WineCharacteristicsDisplay } from '@/components/ui';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getColorClass } from '@/lib/utils/utils';
+import { GrapeIcon } from '@/lib/utils/icons';
 
 // Utility function for formatting percentage
 const formatPercentage = (value: number): string => `${formatNumber(value * 100, { smartDecimals: true })}%`;
@@ -56,14 +57,13 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
       <Card className="w-full max-w-4xl shadow-lg">
         <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
         <div className="flex items-center">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
-            grapeMetadata.grapeColor === 'red' ? 'bg-red-100' : 'bg-yellow-100'
-          }`}>
-            <span className={`font-bold ${
-              grapeMetadata.grapeColor === 'red' ? 'text-red-700' : 'text-yellow-700'
-            }`}>
-              {grapeMetadata.name.charAt(0)}
-            </span>
+          <div className="mr-4">
+            <GrapeIcon 
+              variety={grapeName} 
+              size="xl" 
+              className="w-12 h-12"
+              rounded={true}
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-wine">{grapeMetadata.name}</CardTitle>
         </div>

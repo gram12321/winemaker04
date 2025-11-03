@@ -52,6 +52,26 @@ export async function fulfillWineOrder(orderId: string): Promise<boolean> {
   
   await saveWineBatch(updatedBatch);
   
+  // Auto-reject other pending orders for this batch if inventory is now 0
+  if (updatedBatch.quantity === 0) {
+    try {
+      const allOrders = await loadWineOrders();
+      const pendingOrdersForBatch = allOrders.filter(
+        o => o.status === 'pending' && o.wineBatchId === order.wineBatchId && o.id !== order.id
+      );
+      
+      // Reject all other pending orders for this batch
+      await Promise.all(
+        pendingOrdersForBatch.map(pendingOrder => 
+          updateWineOrderStatus(pendingOrder.id, 'rejected')
+        )
+      );
+    } catch (error) {
+      console.error('Failed to auto-reject sold out orders:', error);
+      // Don't fail the fulfillment if auto-reject fails
+    }
+  }
+  
   // Add money to player account through finance system
   await addTransaction(
     fulfillableValue,

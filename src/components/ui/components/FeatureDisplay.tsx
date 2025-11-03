@@ -18,7 +18,7 @@ import { formatNumber, getRangeColor, getRatingForRange, getCharacteristicEffect
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles, MobileDialogWrapper } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
-import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction } from '@/lib/services/wine/features/featureService';
+import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction, getFeatureDisplaySeverity } from '@/lib/services/wine/features/featureService';
 
 interface FeatureDisplayProps {
   batch?: WineBatch;
@@ -170,6 +170,7 @@ export function FeatureDisplay({
                 config={config}
                 qualityImpact={qualityImpact}
                 characteristicEffects={characteristicEffects}
+                batch={batch}
               />
             ))}
           </div>
@@ -215,7 +216,10 @@ interface EvolvingFeatureItemProps {
 }
 
 function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: EvolvingFeatureItemProps) {
-  const severity = feature.severity || 0;
+  // Use getFeatureDisplaySeverity for bottle_aging to ensure it syncs with agingProgress
+  const severity = config.id === 'bottle_aging' 
+    ? (getFeatureDisplaySeverity(batch, 'bottle_aging') || 0)
+    : (feature.severity || 0);
   const severityPercent = formatNumber(severity * 100, { smartDecimals: true });
   const weeklyGrowthPercent = formatNumber(weeklyGrowthRate * 100, { smartDecimals: true });
   
@@ -289,10 +293,14 @@ interface ActiveFeatureItemProps {
   config: any;
   qualityImpact: number;
   characteristicEffects: Record<string, number>;
+  batch?: WineBatch;
 }
 
-function ActiveFeatureItem({ feature, config, qualityImpact }: ActiveFeatureItemProps) {
-  const severity = feature.severity || 0;
+function ActiveFeatureItem({ feature, config, qualityImpact, batch }: ActiveFeatureItemProps & { batch?: WineBatch }) {
+  // Use getFeatureDisplaySeverity for bottle_aging to ensure consistency
+  const severity = config.id === 'bottle_aging' && batch
+    ? (getFeatureDisplaySeverity(batch, 'bottle_aging') || 0)
+    : (feature.severity || 0);
   const severityPercent = formatNumber(severity * 100, { smartDecimals: true });
   
   // Use intelligent color coding based on feature type and severity
@@ -476,7 +484,8 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }
       <div className="text-xs text-gray-600">Weekly Effects:</div>
       <div className="flex flex-wrap gap-1">
         {Object.entries(combinedWeeklyEffects).map(([key, totalEffect]) => {
-          if (Math.abs(totalEffect) > 0.001) {
+          // Lower threshold for weekly effects (0.01% = 0.0001) to show small incremental changes
+          if (Math.abs(totalEffect) > 0.0001) {
             const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
             const sign = totalEffect > 0 ? '+' : '';
             
