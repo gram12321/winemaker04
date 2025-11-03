@@ -6,6 +6,7 @@ import { saveWineOrder } from '../../database/customers/salesDB';
 import { getGameState } from '../core/gameState';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
+import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
@@ -111,6 +112,11 @@ export async function generateOrder(
   const relationshipRejectionModifier = 1 - currentRelationship * 0.005; // 0.5% reduction per relationship point
   rejectionProbability = rejectionProbability * Math.max(0.1, relationshipRejectionModifier); // Minimum 10% of base rejection
   
+  // Apply economy price tolerance (reduce/increase rejection based on phase)
+  const economyPhase = (getGameState().economyPhase || 'Recovery') as keyof typeof ECONOMY_SALES_MULTIPLIERS;
+  const priceToleranceMultiplier = ECONOMY_SALES_MULTIPLIERS[economyPhase].priceToleranceMultiplier;
+  rejectionProbability = rejectionProbability / priceToleranceMultiplier;
+
   // Apply multiple order modifier - add rejection penalty for multiple orders
   // If base rejection is 0% (discount), add penalty instead of multiplying
   // If base rejection > 0%, multiply as before
@@ -165,13 +171,17 @@ export async function generateOrder(
   // Convert market share from decimal (0.01) to percentage multiplier (1.01) for quantity calculation
   const relationshipQuantityBonus = 1 + currentRelationship * 0.002; // 0.2% per relationship point
   const quantityMarketShareMultiplier = (1 + customer.marketShare) * relationshipQuantityBonus; // 0.01 → 1.01x + relationship bonus
-  const desiredQuantity = Math.floor(
+  let desiredQuantity = Math.floor(
     baseQuantity * 
     orderAmountMultiplier * 
     customer.purchasingPower * 
     customer.wineTradition * 
     quantityMarketShareMultiplier
   );
+
+  // Apply economy quantity multiplier
+  const quantityMultiplier = ECONOMY_SALES_MULTIPLIERS[economyPhase].quantityMultiplier;
+  desiredQuantity = Math.max(0, Math.floor(desiredQuantity * quantityMultiplier));
 
   // Quantity calculation completed (no logging needed)
 

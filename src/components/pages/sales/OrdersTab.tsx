@@ -65,6 +65,12 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
   const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
   const [relationshipBoosts, setRelationshipBoosts] = useState<{[key: string]: number}>({});
+  const [boostDetails, setBoostDetails] = useState<{[key: string]: Array<{
+    description: string;
+    amount: number;
+    weeksAgo: number;
+    decayedAmount: number;
+  }>}>({});
   const [isLoadingRelationships, setIsLoadingRelationships] = useState<boolean>(false);
   const [ordersPage, setOrdersPage] = useState<number>(1);
   const ordersPageSize = 20;
@@ -252,6 +258,12 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       const formattedBreakdowns: {[key: string]: string} = {};
       const computedRels: {[key: string]: number} = {};
       const boosts: {[key: string]: number} = {};
+      const details: {[key: string]: Array<{
+        description: string;
+        amount: number;
+        weeksAgo: number;
+        decayedAmount: number;
+      }>} = {};
       
       for (const customer of customers) {
         const customerKey = getCustomerKey(customer.id);
@@ -261,11 +273,13 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
         formattedBreakdowns[customerKey] = formattedBreakdown;
         computedRels[customerKey] = breakdown.totalRelationship;
         boosts[customerKey] = breakdown.relationshipBoosts;
+        details[customerKey] = breakdown.factors.boostDetails;
       }
       
       setRelationshipBreakdowns(formattedBreakdowns);
       setComputedRelationships(computedRels);
       setRelationshipBoosts(boosts);
+      setBoostDetails(details);
     } catch (error) {
       console.error('Error loading relationship breakdowns:', error);
     } finally {
@@ -289,6 +303,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       setRelationshipBreakdowns({});
       setComputedRelationships({});
       setRelationshipBoosts({});
+      setBoostDetails({});
       // Only reload if we have orders and not currently loading
       if (allOrders.length > 0 && !isLoadingRelationships) {
         loadAllRelationshipBreakdowns();
@@ -597,9 +612,38 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                               </span>
                               {relationshipBoosts[getCustomerKey(order.customerId)] !== undefined && 
                                relationshipBoosts[getCustomerKey(order.customerId)] > 0 && (
-                                <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800">
-                                  Boost: {formatPercent((relationshipBoosts[getCustomerKey(order.customerId)] ?? 0) / 100, 1, true)}
-                                </span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
+                                        Boost: {formatPercent((relationshipBoosts[getCustomerKey(order.customerId)] ?? 0) / 100, 1, true)}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <div className="text-xs">
+                                        <div className="font-semibold mb-2">Relationship Boost Details</div>
+                                        {boostDetails[getCustomerKey(order.customerId)] && boostDetails[getCustomerKey(order.customerId)].length > 0 ? (
+                                          <div className="space-y-1 text-[10px]">
+                                            {boostDetails[getCustomerKey(order.customerId)].slice(0, 5).map((boost, index) => (
+                                              <div key={index}>
+                                                • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                                              </div>
+                                            ))}
+                                            {boostDetails[getCustomerKey(order.customerId)].length > 5 && (
+                                              <div className="text-[9px] opacity-70">
+                                                ... and {boostDetails[getCustomerKey(order.customerId)].length - 5} more
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="text-[10px] opacity-70">
+                                            No boost events found
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </div>
                           </TooltipTrigger>
@@ -883,9 +927,38 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                             )}
                           </span>
                           {relationshipBoosts[customerKey] !== undefined && relationshipBoosts[customerKey] > 0 && (
-                            <span className="inline-flex w-fit px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-800">
-                              Boost: {formatPercent((relationshipBoosts[customerKey] ?? 0) / 100, 1, true)}
-                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex w-fit px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
+                                    Boost: {formatPercent((relationshipBoosts[customerKey] ?? 0) / 100, 1, true)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <div className="text-xs">
+                                    <div className="font-semibold mb-2">Relationship Boost Details</div>
+                                    {boostDetails[customerKey] && boostDetails[customerKey].length > 0 ? (
+                                      <div className="space-y-1 text-[10px]">
+                                        {boostDetails[customerKey].slice(0, 5).map((boost, index) => (
+                                          <div key={index}>
+                                            • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                                          </div>
+                                        ))}
+                                        {boostDetails[customerKey].length > 5 && (
+                                          <div className="text-[9px] opacity-70">
+                                            ... and {boostDetails[customerKey].length - 5} more
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="text-[10px] opacity-70">
+                                        No boost events found
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       </div>

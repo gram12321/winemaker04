@@ -9,7 +9,7 @@ import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { calculateGrapeSuitabilityContribution } from '@/lib/services';
-import { getBadgeColorClasses } from '@/lib/utils';
+import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
 
 
 /**

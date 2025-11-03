@@ -1,9 +1,10 @@
 // Customer acquisition service - handles company prestige-based customer generation
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadWineOrders } from '../../database/customers/salesDB';
-import { getCurrentPrestige } from '../core/gameState';
+import { getCurrentPrestige, getGameState } from '../core/gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
 import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
+import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
 
 /**
  * Generate a customer based on company prestige
@@ -67,7 +68,11 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   
   // Apply pending order penalty
   const pendingPenalty = Math.pow(PRESTIGE_ORDER_GENERATION.PENDING_ORDER_PENALTY, pendingCount);
-  const finalChance = baseChance * pendingPenalty;
+  // Apply economy phase frequency multiplier
+  const gameState = getGameState();
+  const economyPhase = (gameState.economyPhase ) as keyof typeof ECONOMY_SALES_MULTIPLIERS;
+  const frequencyMultiplier = ECONOMY_SALES_MULTIPLIERS[economyPhase].frequencyMultiplier;
+  const finalChance = baseChance * pendingPenalty * frequencyMultiplier;
   
   // Only roll if not in dry run mode
   const randomRoll = dryRun ? 0 : Math.random();

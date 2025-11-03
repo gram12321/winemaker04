@@ -25,6 +25,30 @@
 
 ---
 
+
+---
+
+## Version 0.049a - Sales UI Improvements & Feature Utilities
+**Date:** 2025-11-03 | **Commit:** d1fc50d | **Stats:** 792 additions, 172 deletions
+
+### 🧭 Sales & Winery UI Updates
+- `src/components/pages/sales/WineCellarTab.tsx` — Significant UI/UX improvements (289 additions, 84 deletions)
+- `src/components/pages/sales/OrdersTab.tsx` — Order view polish and layout tweaks (59 additions, 30 deletions)
+- `src/components/pages/Winery.tsx` — Minor layout/labels refinement (6 additions, 4 deletions)
+
+### 🧩 Feature & Icons Enhancements
+- `src/lib/services/wine/features/featureService.ts` — Added helper functions and refined feature transformations (93 additions, 10 deletions)
+- `src/lib/services/wine/features/agingService.ts` — Minor adjustments for display/consistency (7 additions, 5 deletions)
+- `src/lib/services/sales/salesService.ts` — Utility adjustments used by sales pages (20 additions)
+- `src/lib/utils/icons.tsx` — Expanded icon helpers and mappings (205 additions, 19 deletions)
+- `src/components/ui/shadCN/card.tsx` — Card polish (7 additions, 3 deletions)
+- `src/components/ui/components/FeatureDisplay.tsx` — Minor enhancements (14 additions, 5 deletions)
+
+### Winepedia Tweaks
+- `src/components/pages/winepedia/GrapeVarietiesTab.tsx` (9 additions, 3 deletions) and `GrapeInfoView.tsx` (8 additions, 8 deletions)
+
+---
+
 ## Version 0.049 - Intelligent Color Coding System
 **Date:** 2025-11-01 | **Commit:** da6c376 | **Stats:** 198 additions, 80 deletions
 

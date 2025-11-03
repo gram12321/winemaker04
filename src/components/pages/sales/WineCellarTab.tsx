@@ -6,6 +6,7 @@ import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useEstimatedPrice } from '@/hooks';
+import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { calculateAgingStatus, getFeatureDisplayData } from '@/lib/services';
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
@@ -606,6 +607,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
       };
       
       await saveWineBatch(updatedWine);
+      triggerGameUpdate();
       setEditingPrices(prev => {
         const updated = { ...prev };
         delete updated[wine.id];
@@ -894,15 +896,17 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                               <TableCell className="text-gray-600 font-medium">
                         <div>{formatNumber(estimatedPriceById[wine.id] || 0, { currency: true, decimals: 2 })}</div>
                         {editingPrices[wine.id] !== undefined ? (
-                          <div className="flex items-center space-x-2 mt-1">
+                          <div className="flex items-center space-x-2 mt-1" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="number"
                               step="0.01"
                               min="0"
                               value={editingPrices[wine.id]}
                               onChange={(e) => handlePriceChange(wine.id, e.target.value)}
-                              className="w-20 px-1.5 py-1 border rounded text-xs"
                               onClick={(e) => e.stopPropagation()}
+                              onFocus={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="w-20 px-1.5 py-1 border rounded text-xs"
                             />
                             <button
                               onClick={(e) => {
@@ -924,7 +928,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-2 mt-1">
+                          <div className="flex items-center space-x-2 mt-1" onClick={(e) => e.stopPropagation()}>
                             <span className={`${
                               wine.askingPrice !== undefined 
                                 ? wine.askingPrice < (estimatedPriceById[wine.id] || 0)
@@ -1069,30 +1073,39 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Asking Price:</span>
                     {editingPrices[wine.id] !== undefined ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           value={editingPrices[wine.id]}
                           onChange={(e) => handlePriceChange(wine.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onFocus={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
                           className="w-24 px-2 py-1 border rounded text-sm"
                         />
                         <button
-                          onClick={() => handlePriceSave(wine)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePriceSave(wine);
+                          }}
                           className="text-green-600 hover:text-green-800"
                         >
                           ✓
                         </button>
                         <button
-                          onClick={() => handlePriceCancel(wine.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePriceCancel(wine.id);
+                          }}
                           className="text-red-600 hover:text-red-800"
                         >
                           ✕
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <span className={`text-sm font-medium ${
                           wine.askingPrice !== undefined 
                             ? wine.askingPrice < (estimatedPriceById[wine.id] || 0)
@@ -1105,7 +1118,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                           {formatNumber(wine.askingPrice ?? (estimatedPriceById[wine.id] || 0), { currency: true, decimals: 2 })}
                         </span>
                         <button
-                          onClick={() => handlePriceEdit(wine.id, wine.askingPrice ?? (estimatedPriceById[wine.id] || 0))}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePriceEdit(wine.id, wine.askingPrice ?? (estimatedPriceById[wine.id] || 0));
+                          }}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           ✏️

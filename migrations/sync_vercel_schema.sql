@@ -59,10 +59,24 @@ DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS wine_orders CASCADE;
 DROP TABLE IF EXISTS wine_batches CASCADE;
 DROP TABLE IF EXISTS vineyards CASCADE;
+DROP TABLE IF EXISTS game_state CASCADE;
 
 -- ============================================================
 -- CREATE TABLES (in dependency order)
 -- ============================================================
+-- Game state table (company-scoped snapshot)
+CREATE TABLE game_state (
+    id uuid PRIMARY KEY, -- company id
+    player_name text DEFAULT 'Player',
+    week integer DEFAULT 1,
+    season text DEFAULT 'Spring' CHECK (season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    current_year integer DEFAULT 2024,
+    money numeric DEFAULT 0,
+    prestige numeric DEFAULT 0,
+    economy_phase text DEFAULT 'Recovery' CHECK (economy_phase IN ('Crash', 'Recession', 'Recovery', 'Expansion', 'Boom')),
+    updated_at timestamptz DEFAULT now()
+);
+
 
 -- Users table
 CREATE TABLE users (

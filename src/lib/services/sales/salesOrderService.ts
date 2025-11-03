@@ -8,6 +8,8 @@ import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
+import { getGameState } from '../core/gameState';
 
 
 /**
@@ -88,7 +90,10 @@ export async function generateSophisticatedWineOrders(): Promise<{
       const ordersPlaced = orders.length;
       
       // Calculate diminishing returns: each accepted order reduces chance for next order
-      const multipleOrderModifier = Math.pow(customerTypeConfig.multipleOrderPenalty, ordersPlaced);
+      const economyPhase = (getGameState().economyPhase ) as keyof typeof ECONOMY_SALES_MULTIPLIERS;
+      const multiplePenaltyBoost = ECONOMY_SALES_MULTIPLIERS[economyPhase].multipleOrderPenaltyMultiplier;
+      const effectivePenalty = customerTypeConfig.multipleOrderPenalty * multiplePenaltyBoost;
+      const multipleOrderModifier = Math.pow(effectivePenalty, ordersPlaced);
       
       // Find vineyard for this wine batch
       const vineyard = allVineyards.find((v: Vineyard) => v.id === wineBatch.vineyardId);

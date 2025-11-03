@@ -150,7 +150,7 @@ export async function getRelationshipBoostDetails(customerId: string): Promise<A
         decayedAmount: Math.max(0, currentAmount),
       };
     })
-    .filter(boost => boost.decayedAmount > 0.00001);
+    .filter(boost => boost.decayedAmount >= 0.001);
 }
 
 /**

@@ -56,6 +56,8 @@ export function formatNumber(value: number, options?: {
   adaptiveNearOne?: boolean; // when true, increase decimals near 1.0 (e.g., 0.95-1.0)
   currency?: boolean; // when true, formats as currency with € symbol
   compact?: boolean; // when true, uses compact notation (K, M, B, T)
+  percent?: boolean; // when true, formats as a percentage
+  percentIsDecimal?: boolean; // when percent is true: input is decimal (0-1) if true, else 0-100
 }): string {
   if (typeof value !== 'number' || isNaN(value)) {
     return options?.currency ? '€0' : '0';
@@ -68,8 +70,21 @@ export function formatNumber(value: number, options?: {
     smartMaxDecimals = false, 
     adaptiveNearOne = true,
     currency = false,
-    compact = false
+    compact = false,
+    percent = false,
+    percentIsDecimal = true
   } = options || {};
+
+  // Handle percentage formatting first (ignores compact/currency)
+  if (percent) {
+    const finalDecimals = decimals !== undefined ? decimals : 1;
+    const percentage = percentIsDecimal ? value * 100 : value;
+    return new Intl.NumberFormat('en-US', {
+      style: 'percent',
+      minimumFractionDigits: finalDecimals,
+      maximumFractionDigits: finalDecimals
+    }).format(percentage / 100);
+  }
 
   // Handle compact notation (with or without currency)
   if (compact) {
@@ -236,15 +251,7 @@ export function formatNumber(value: number, options?: {
  * formatPercent(0.873, 1) // "87.3%"
  */
 export function formatPercent(value: number, decimals: number = 1, isDecimal: boolean = true): string {
-  if (typeof value !== 'number' || isNaN(value)) return '0%';
-  
-  const percentage = isDecimal ? value * 100 : value;
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'percent',
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  }).format(percentage / 100);
+  return formatNumber(value, { percent: true, decimals, percentIsDecimal: isDecimal });
 }
 
 // ========================================

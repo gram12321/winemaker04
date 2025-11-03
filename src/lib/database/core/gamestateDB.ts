@@ -18,7 +18,8 @@ export const saveGameState = async (gameState: Partial<GameState>): Promise<void
       season: gameState.season,
       current_year: gameState.currentYear,
       money: gameState.money || 0,
-      prestige: gameState.prestige
+      prestige: gameState.prestige,
+      economy_phase: (gameState as any).economyPhase
     };
     
     const { error } = await supabase
@@ -53,7 +54,8 @@ export const loadGameState = async (): Promise<Partial<GameState> | null> => {
       season: record.season,
       currentYear: record.current_year,
       money: record.money,
-      prestige: record.prestige
+      prestige: record.prestige,
+      economyPhase: record.economy_phase
     };
   } catch (error) {
     return null;
