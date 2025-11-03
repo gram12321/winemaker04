@@ -131,8 +131,9 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       
       // Handle seasonal status transitions
       if (season === 'Spring' && week === 1) {
-        // First week of Spring: Dormant -> Growing, Planted -> Growing
-        if (vineyard.status === 'Dormant' || vineyard.status === 'Planted') {
+        // First week of Spring: Dormant -> Growing, Planted -> Growing, Harvested -> Growing
+        // Harvested vineyards from previous season should also transition to Growing
+        if (vineyard.status === 'Dormant' || vineyard.status === 'Planted' || vineyard.status === 'Harvested') {
           newStatus = 'Growing';
         }
         // If currently planting, keep Planting status but allow ripeness for planted portion
@@ -140,12 +141,9 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
           newStatus = 'Planting'; // Keep planting status
         }
       } else if (season === 'Winter' && week === 1) {
-        // First week of Winter: Growing/Harvested -> Dormant, reset ripeness
-        if (vineyard.status === 'Growing' || vineyard.status === 'Harvested') {
-          newStatus = 'Dormant';
-          newRipeness = 0; // Reset ripeness when going dormant
-        }
         // If still planting in winter, terminate planting and finalize density
+        // Note: Growing/Harvested vineyards are NOT immediately reset to Dormant here
+        // They will naturally become Dormant when ripeness degrades to 0 (handled below)
         if (vineyard.status === 'Planting') {
           await terminatePlantingActivity(vineyard.id, vineyard.name);
           newStatus = 'Dormant'; // Set to Dormant status with current density

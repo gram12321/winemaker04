@@ -1185,10 +1185,7 @@ async function processTimeBased(
   }
   
   if (config.behavior === 'evolving') {
-    if (!feature.isPresent) return features;
-    
-    // Special case: bottle_aging severity growth is derived from agingProgress calculation
-    // This ensures the standard severity accumulation system stays in sync with the aging progress curve
+    // Special case: bottle_aging should become manifested when bottled
     if (config.id === 'bottle_aging') {
       if (batch.state === 'bottled') {
         // Calculate current severity from aging progress
@@ -1212,7 +1209,7 @@ async function processTimeBased(
         return updateFeatureInArray(features, {
           ...feature,
           severity: newSeverity,
-          isPresent: newSeverity > 0
+          isPresent: true  // Bottle aging is always manifested when bottled
         });
       }
       // For non-bottled wines, keep severity at 0
@@ -1222,6 +1219,9 @@ async function processTimeBased(
         isPresent: false
       });
     }
+    
+    // For other evolving features, skip if not present
+    if (!feature.isPresent) return features;
     
     const behaviorConfig = config.behaviorConfig as any;
     const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
@@ -1364,7 +1364,7 @@ function getContextInfo(risk: FeatureRiskInfo, context: FeatureRiskContext): str
   return '';
 }
 
-function calculateWeeklyRiskIncrease(batch: WineBatch | undefined, feature: FeatureRiskInfo): number | undefined {
+export function calculateWeeklyRiskIncrease(batch: WineBatch | undefined, feature: FeatureRiskInfo): number | undefined {
   if (!batch) {
     return undefined;
   }

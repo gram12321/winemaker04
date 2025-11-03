@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, Table
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { highscoreService } from '@/lib/services';
 import { type HighscoreEntry, type ScoreType } from '@/lib/database';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatNumber, formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 interface HighscoresProps extends PageProps, CompanyProps {
@@ -151,6 +151,34 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     ['highest_wine_score', 'highest_grape_quality', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
   ), []);
 
+  const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number, index: number, totalScores: number): string => {
+    // For wine quality metrics (0-1 range), use direct color mapping
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_grape_quality' || scoreType === 'highest_balance') {
+      return getColorClass(scoreValue);
+    }
+    
+    // For ranking-based coloring (top performers get better colors)
+    // Normalize position to 0-1 (1st place = 1.0, last place = 0.0)
+    const normalizedPosition = totalScores > 1 ? 1 - (index / (totalScores - 1)) : 1;
+    
+    // Use exponential scaling for ranking colors (top ranks get better colors)
+    if (normalizedPosition >= 0.9) return getColorClass(0.95); // Top 10%
+    if (normalizedPosition >= 0.7) return getColorClass(0.85); // Top 30%
+    if (normalizedPosition >= 0.5) return getColorClass(0.7);  // Top 50%
+    if (normalizedPosition >= 0.3) return getColorClass(0.5);  // Top 70%
+    return getColorClass(0.3); // Bottom 30%
+  }, []);
+
+  const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_grape_quality') {
+      return getGrapeQualityCategory(scoreValue);
+    }
+    if (scoreType === 'highest_balance') {
+      return getWineBalanceCategory(scoreValue);
+    }
+    return null;
+  }, []);
+
   const renderHighscoreTable = useCallback((scoreType: ScoreType) => {
     const scores = highscores[scoreType];
     
@@ -241,15 +269,24 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                       </TableCell>
                     </>
                   ) : null}
-                  <TableCell className="text-right font-mono">
-                  {scoreType === 'highest_wine_score' ?
-                    formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
-                    scoreType.includes('price') ? 
-                      formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
-                      scoreType.includes('quality') || scoreType.includes('balance') ?
-                        formatPercent(score.scoreValue, 1, true) :
-                        formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
-                    }
+                  <TableCell className="text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`font-mono font-semibold ${getScoreColorClass(scoreType, score.scoreValue, index, scores.length)}`}>
+                        {scoreType === 'highest_wine_score' ?
+                          formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                          scoreType.includes('price') ? 
+                            formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                            scoreType.includes('quality') || scoreType.includes('balance') ?
+                              formatPercent(score.scoreValue, 1, true) :
+                              formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                        }
+                      </span>
+                      {getScoreCategory(scoreType, score.scoreValue) && (
+                        <span className="text-xs text-muted-foreground">
+                          {getScoreCategory(scoreType, score.scoreValue)}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground">
                     {formatGameDate(score)}
@@ -305,16 +342,23 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{getColumnTitle(scoreType)}:</span>
-                    <span className="text-lg font-bold text-primary">
-                    {scoreType === 'highest_wine_score' ?
-                        formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
-                        scoreType.includes('price') ?
-                          formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
-                          scoreType.includes('quality') || scoreType.includes('balance') ?
-                            formatPercent(score.scoreValue, 1, true) :
-                            formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
-                      }
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`text-lg font-bold ${getScoreColorClass(scoreType, score.scoreValue, index, scores.length)}`}>
+                        {scoreType === 'highest_wine_score' ?
+                          formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
+                          scoreType.includes('price') ?
+                            formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
+                            scoreType.includes('quality') || scoreType.includes('balance') ?
+                              formatPercent(score.scoreValue, 1, true) :
+                              formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
+                        }
+                      </span>
+                      {getScoreCategory(scoreType, score.scoreValue) && (
+                        <span className="text-xs text-muted-foreground">
+                          {getScoreCategory(scoreType, score.scoreValue)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Game Date:</span>
@@ -331,7 +375,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         </div>
       </>
     );
-  }, [error, highscores, isLoading, currentCompanyId, getColumnTitle, getRankIcon]);
+  }, [error, highscores, isLoading, currentCompanyId, getColumnTitle, getRankIcon, getScoreColorClass, getScoreCategory]);
 
   return (
     <div className="min-h-screen bg-background p-4">

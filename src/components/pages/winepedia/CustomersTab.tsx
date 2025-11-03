@@ -17,7 +17,9 @@ export function CustomersTab() {
     activeCustomers, 
     allCustomers,
     relationshipBreakdowns, 
-    computedRelationships, 
+    computedRelationships,
+    relationshipBoosts,
+    boostDetails,
     getCustomerKey, 
     loadRelationshipBreakdown,
     loadAllCustomersWithRelationships,
@@ -237,20 +239,57 @@ export function CustomersTab() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span 
-                              onMouseEnter={() => {
-                                const customerKey = getCustomerKey(customer.id);
-                                if (!relationshipBreakdowns[customerKey]) {
-                                  loadRelationshipBreakdown(customer);
-                                }
-                              }}
-                              className="cursor-help"
-                            >
-                              {formatRelationship(
-                                computedRelationships[getCustomerKey(customer.id)] ?? 0,
-                                !!relationshipBreakdowns[getCustomerKey(customer.id)]
+                            <div className="flex flex-col gap-1">
+                              <span 
+                                onMouseEnter={() => {
+                                  const customerKey = getCustomerKey(customer.id);
+                                  if (!relationshipBreakdowns[customerKey]) {
+                                    loadRelationshipBreakdown(customer);
+                                  }
+                                }}
+                                className="cursor-help"
+                              >
+                                {formatRelationship(
+                                  computedRelationships[getCustomerKey(customer.id)] ?? 0,
+                                  !!relationshipBreakdowns[getCustomerKey(customer.id)]
+                                )}
+                              </span>
+                              {relationshipBoosts[getCustomerKey(customer.id)] !== undefined && 
+                               relationshipBoosts[getCustomerKey(customer.id)] > 0 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
+                                        Boost: {formatPercent((relationshipBoosts[getCustomerKey(customer.id)] ?? 0) / 100, 1, true)}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <div className="text-xs">
+                                        <div className="font-semibold mb-2">Relationship Boost Details</div>
+                                        {boostDetails[getCustomerKey(customer.id)] && boostDetails[getCustomerKey(customer.id)].length > 0 ? (
+                                          <div className="space-y-1 text-[10px]">
+                                            {boostDetails[getCustomerKey(customer.id)].slice(0, 5).map((boost, index) => (
+                                              <div key={index}>
+                                                • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                                              </div>
+                                            ))}
+                                            {boostDetails[getCustomerKey(customer.id)].length > 5 && (
+                                              <div className="text-[9px] opacity-70">
+                                                ... and {boostDetails[getCustomerKey(customer.id)].length - 5} more
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="text-[10px] opacity-70">
+                                            No boost events found
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
-                            </span>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-md">
                             <div className="text-sm">

@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, MobileDialogWrapper, tooltipStyles } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useEstimatedPrice } from '@/hooks';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { calculateAgingStatus, getFeatureDisplayData } from '@/lib/services';
+import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
@@ -222,22 +222,82 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   }
   
   return (
-    <div className="flex gap-1">
-      {displayData.riskFeatures.map(({ feature, config }) => {
-        const riskPercent = formatNumber((feature.risk || 0) * 100, { smartDecimals: true });
+    <div className="space-y-1">
+      {displayData.riskFeatures.map(({ feature, config, expectedWeeks }) => {
+        const risk = feature.risk || 0;
+        const riskPercent = formatNumber(risk * 100, { smartDecimals: true });
+        
+        // Check if this is an accumulation feature to show weekly increase
+        const isAccumulation = config.behavior === 'accumulation';
+        const weeklyIncrease = isAccumulation ? calculateWeeklyRiskIncrease(wine, feature) : undefined;
+        const weeklyIncreasePercent = weeklyIncrease ? formatNumber(weeklyIncrease * 100, { smartDecimals: true }) : null;
+        
+        // Use intelligent color coding for risk (lower risk = better colors)
+        const riskColorClass = getRangeColor(1 - risk, 0, 1, 'higher_better').text;
+        
+        const displayElement = (
+          <div className="text-xs">
+            <span className="font-medium">{config.icon} {config.name}:</span>{' '}
+            <span className={riskColorClass}>
+              {riskPercent}% risk
+            </span>
+            {weeklyIncreasePercent && (
+              <span className="text-gray-600"> (+{weeklyIncreasePercent}%/wk)</span>
+            )}
+            {expectedWeeks !== undefined && expectedWeeks < 50 && (
+              <span className="text-gray-400 ml-1 text-[10px]">(~{expectedWeeks}w)</span>
+            )}
+          </div>
+        );
+        
+        const tooltipBody = (
+          <div className={`${tooltipStyles.text} space-y-2`}>
+            <TooltipSection>
+              <p className={tooltipStyles.title}>{config.name}</p>
+              <p className={tooltipStyles.muted}>{config.description}</p>
+            </TooltipSection>
+            <TooltipSection>
+              <TooltipRow 
+                label={`${config.name} Risk`} 
+                value={`${riskPercent}%`}
+                valueRating={getRatingForRange(1 - risk, 0, 1, 'higher_better')}
+                monospaced={true}
+              />
+              <p className={tooltipStyles.muted}>Chance this batch develops {config.name.toLowerCase()}.</p>
+              {weeklyIncreasePercent && (
+                <div className="mt-1">
+                  <TooltipRow 
+                    label="Weekly increase" 
+                    value={`+${weeklyIncreasePercent}% per week`}
+                    monospaced={true}
+                  />
+                  <p className={`${tooltipStyles.text} text-yellow-400 mt-1`}>
+                    Cumulative: This risk accumulates over time
+                  </p>
+                </div>
+              )}
+              {expectedWeeks !== undefined && expectedWeeks < 50 && (
+                <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
+              )}
+              <p className="mt-2">
+                <span className={tooltipStyles.muted}>Current state:</span> <span className={tooltipStyles.subtitle}>{wine.state}</span>
+              </p>
+            </TooltipSection>
+          </div>
+        );
+        
         return (
           <TooltipProvider key={config.id}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-sm cursor-help opacity-70" title={`${config.name}: ${riskPercent}% risk`}>
-                  {config.icon}
-                </span>
+                <MobileDialogWrapper content={tooltipBody} title={`${config.name} Risk Details`} triggerClassName="inline-block">
+                  <div className="cursor-help">
+                    {displayElement}
+                  </div>
+                </MobileDialogWrapper>
               </TooltipTrigger>
-              <TooltipContent side="top">
-                <div className="text-xs">
-                  <div>{config.name}</div>
-                  <div className="text-gray-400">Risk: {riskPercent}%</div>
-                </div>
+              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
+                {tooltipBody}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

@@ -3,7 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
 import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
-import { formatPercent } from '@/lib/utils';
+import { formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory } from '@/lib/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
 import { type ScoreType } from '@/lib/database';
@@ -112,6 +112,39 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   const formatRanking = useCallback((ranking: { position: number; total: number }): string => {
     if (ranking.position === 0) return "Not ranked";
     return `${ranking.position} / ${ranking.total}`;
+  }, []);
+
+  const getRankingColorClass = useCallback((ranking: { position: number; total: number }): string => {
+    if (ranking.position === 0 || ranking.total === 0) return 'text-muted-foreground';
+    
+    // Normalize position to 0-1 (1st place = 1.0, last place = 0.0)
+    const normalizedPosition = ranking.total > 1 ? 1 - ((ranking.position - 1) / (ranking.total - 1)) : 1;
+    
+    // Use color class based on percentile
+    if (normalizedPosition >= 0.9) return getColorClass(0.95); // Top 10%
+    if (normalizedPosition >= 0.7) return getColorClass(0.85); // Top 30%
+    if (normalizedPosition >= 0.5) return getColorClass(0.7);  // Top 50%
+    if (normalizedPosition >= 0.3) return getColorClass(0.5);  // Top 70%
+    return getColorClass(0.3); // Bottom 30%
+  }, []);
+
+  const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number): string => {
+    // For wine quality metrics (0-1 range), use direct color mapping
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_grape_quality' || scoreType === 'highest_balance') {
+      return getColorClass(scoreValue);
+    }
+    // For other metrics, return neutral color (can be enhanced later with relative comparisons)
+    return 'text-foreground';
+  }, []);
+
+  const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_grape_quality') {
+      return getGrapeQualityCategory(scoreValue);
+    }
+    if (scoreType === 'highest_balance') {
+      return getWineBalanceCategory(scoreValue);
+    }
+    return null;
   }, []);
 
   const getTabTitle = useCallback((scoreType: ScoreType): string => {
@@ -393,7 +426,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                       <span className="text-[11px] text-muted-foreground truncate max-w-[28vw] sm:max-w-[14vw] md:max-w-[10vw]">
                         {getTabTitle(scoreType)}
                       </span>
-                      <span className="text-[11px] font-medium text-foreground/90 whitespace-nowrap">
+                      <span className={`text-[11px] font-medium whitespace-nowrap ${getRankingColorClass(rankings[scoreType])}`}>
                         {formatRanking(rankings[scoreType])}
                       </span>
                     </button>
@@ -423,14 +456,24 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
                           const isYou = e.companyId === company?.id;
                           const scoreText = selectedScoreType.includes('price')
                             ? formatNumber(e.scoreValue, { currency: true, decimals: 2 })
-                            : (selectedScoreType.includes('quality') || selectedScoreType.includes('balance'))
-                              ? formatPercent(e.scoreValue, 1, true)
-                              : formatNumber(e.scoreValue, { decimals: 0, forceDecimals: true });
+                            : selectedScoreType === 'highest_wine_score'
+                              ? formatNumber(e.scoreValue, { decimals: 1, forceDecimals: true })
+                              : (selectedScoreType.includes('quality') || selectedScoreType.includes('balance'))
+                                ? formatPercent(e.scoreValue, 1, true)
+                                : formatNumber(e.scoreValue, { decimals: 0, forceDecimals: true });
+                          const category = getScoreCategory(selectedScoreType, e.scoreValue);
                           return (
                             <div key={`${e.id}-${i}`} className={`flex items-center justify-between rounded px-2 py-1 ${isYou ? 'bg-primary/10' : ''}`}>
                               <span className="text-[11px] w-6">{rank}</span>
                               <span className="text-[12px] font-medium truncate flex-1 ml-1">{e.companyName}</span>
-                              <span className="text-[12px] font-mono ml-2">{scoreText}</span>
+                              <div className="flex flex-col items-end ml-2">
+                                <span className={`text-[12px] font-mono font-semibold ${getScoreColorClass(selectedScoreType, e.scoreValue)}`}>
+                                  {scoreText}
+                                </span>
+                                {category && (
+                                  <span className="text-[10px] text-muted-foreground">{category}</span>
+                                )}
+                              </div>
                             </div>
                           );
                         })}

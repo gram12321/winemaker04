@@ -90,7 +90,8 @@ export async function calculateRelationshipBreakdown(customer: Customer): Promis
   const prestigeContribution = Math.log(cachedPrestige + 1);
   const marketShareModifier = 1 - calculateInvertedSkewedMultiplier(customer.marketShare);
   const relationshipBoosts = await calculateCustomerRelationshipBoosts(customer.id);
-  const boostDetails = await getRelationshipBoostDetails(customer.id);
+  // Include boosts below threshold so details match the total boost value
+  const boostDetails = await getRelationshipBoostDetails(customer.id, true);
 
   const totalRelationship =
     prestigeContribution * marketShareModifier +
@@ -127,8 +128,9 @@ export function clearRelationshipBreakdownCache(): void {
 
 /**
  * Get detailed information about relationship boosts for a customer
+ * @param includeBelowThreshold - If true, includes boosts below 0.001 threshold (default: false)
  */
-export async function getRelationshipBoostDetails(customerId: string): Promise<Array<{
+export async function getRelationshipBoostDetails(customerId: string, includeBelowThreshold: boolean = false): Promise<Array<{
   description: string;
   amount: number;
   weeksAgo: number;
@@ -138,7 +140,7 @@ export async function getRelationshipBoostDetails(customerId: string): Promise<A
   const gs = getGameState();
   const currentAbsWeeks = calculateAbsoluteWeeks(gs.week!, gs.season!, gs.currentYear!);
 
-  return boosts
+  const mappedBoosts = boosts
     .map(row => {
       const createdWeek = (row as any).created_game_week || currentAbsWeeks;
       const weeksElapsed = Math.max(0, currentAbsWeeks - createdWeek);
@@ -149,8 +151,13 @@ export async function getRelationshipBoostDetails(customerId: string): Promise<A
         weeksAgo: Math.round(weeksElapsed * 10) / 10,
         decayedAmount: Math.max(0, currentAmount),
       };
-    })
-    .filter(boost => boost.decayedAmount >= 0.001);
+    });
+
+  if (includeBelowThreshold) {
+    return mappedBoosts;
+  }
+  
+  return mappedBoosts.filter(boost => boost.decayedAmount >= 0.001);
 }
 
 /**

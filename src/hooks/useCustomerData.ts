@@ -15,6 +15,13 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 export function useCustomerData(activeCustomersOnly: boolean = false) {
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
   const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
+  const [relationshipBoosts, setRelationshipBoosts] = useState<{[key: string]: number}>({});
+  const [boostDetails, setBoostDetails] = useState<{[key: string]: Array<{
+    description: string;
+    amount: number;
+    weeksAgo: number;
+    decayedAmount: number;
+  }>}>({});
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [isLoadingAllCustomers, setIsLoadingAllCustomers] = useState<boolean>(false);
 
@@ -58,6 +65,13 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
     
     const formattedBreakdowns: {[key: string]: string} = {};
     const computedRels: {[key: string]: number} = {};
+    const boosts: {[key: string]: number} = {};
+    const details: {[key: string]: Array<{
+      description: string;
+      amount: number;
+      weeksAgo: number;
+      decayedAmount: number;
+    }>} = {};
     
     for (const customer of activeCustomers) {
       const customerKey = getCustomerKey(customer.id);
@@ -70,6 +84,8 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
           
           formattedBreakdowns[customerKey] = formattedBreakdown;
           computedRels[customerKey] = breakdown.totalRelationship;
+          boosts[customerKey] = breakdown.relationshipBoosts;
+          details[customerKey] = breakdown.factors.boostDetails;
         } catch (error) {
           console.error(`Error loading relationship for ${customer.name}:`, error);
         }
@@ -79,6 +95,8 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
     if (Object.keys(formattedBreakdowns).length > 0) {
       setRelationshipBreakdowns(prev => ({ ...prev, ...formattedBreakdowns }));
       setComputedRelationships(prev => ({ ...prev, ...computedRels }));
+      setRelationshipBoosts(prev => ({ ...prev, ...boosts }));
+      setBoostDetails(prev => ({ ...prev, ...details }));
     }
   }, [activeCustomers, getCustomerKey]); // Removed computedRelationships from dependencies
 
@@ -104,6 +122,16 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
         ...prev,
         [customerKey]: breakdown.totalRelationship
       }));
+
+      setRelationshipBoosts(prev => ({
+        ...prev,
+        [customerKey]: breakdown.relationshipBoosts
+      }));
+
+      setBoostDetails(prev => ({
+        ...prev,
+        [customerKey]: breakdown.factors.boostDetails
+      }));
     } catch (error) {
       console.error('Error loading relationship breakdown:', error);
     }
@@ -116,6 +144,13 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
     
     const formattedBreakdowns: {[key: string]: string} = {};
     const computedRels: {[key: string]: number} = {};
+    const boosts: {[key: string]: number} = {};
+    const details: {[key: string]: Array<{
+      description: string;
+      amount: number;
+      weeksAgo: number;
+      decayedAmount: number;
+    }>} = {};
     
     for (const customer of customers) {
       const customerKey = getCustomerKey(customer.id);
@@ -128,6 +163,8 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
           
           formattedBreakdowns[customerKey] = formattedBreakdown;
           computedRels[customerKey] = breakdown.totalRelationship;
+          boosts[customerKey] = breakdown.relationshipBoosts;
+          details[customerKey] = breakdown.factors.boostDetails;
         } catch (error) {
           console.error(`Error loading relationship for ${customer.name}:`, error);
         }
@@ -137,6 +174,8 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
     if (Object.keys(formattedBreakdowns).length > 0) {
       setRelationshipBreakdowns(prev => ({ ...prev, ...formattedBreakdowns }));
       setComputedRelationships(prev => ({ ...prev, ...computedRels }));
+      setRelationshipBoosts(prev => ({ ...prev, ...boosts }));
+      setBoostDetails(prev => ({ ...prev, ...details }));
     }
   }, [loadAllCustomersData, getCustomerKey]); // Removed computedRelationships from dependencies
 
@@ -147,6 +186,8 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
       clearRelationshipBreakdownCache();
       setRelationshipBreakdowns({});
       setComputedRelationships({});
+      setRelationshipBoosts({});
+      setBoostDetails({});
       setAllCustomers([]); // Clear all customers cache
     });
     return () => { unsubscribe(); };
@@ -168,6 +209,8 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
     allCustomers,
     relationshipBreakdowns,
     computedRelationships,
+    relationshipBoosts,
+    boostDetails,
     getCustomerKey,
     loadRelationshipBreakdown,
     loadAllCustomersWithRelationships,

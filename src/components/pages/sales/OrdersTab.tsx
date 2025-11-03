@@ -144,7 +144,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     { key: 'wineName', label: 'Wine', sortable: true },
     { key: 'requestedQuantity', label: 'Quantity', sortable: true },
     {
-      key: 'wineBatchId',
+      key: 'inventoryQuantity' as keyof WineOrder,
       label: 'Inventory',
       sortable: true,
       accessor: (order) => {
@@ -153,14 +153,14 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       }
     },
     { 
-      key: 'wineBatchId', 
+      key: 'askingPrice' as keyof WineOrder, 
       label: 'Asking Price', 
       sortable: true,
       accessor: (order) => getAskingPriceForOrder(order)
     },
     { key: 'offeredPrice', label: 'Bid Price', sortable: true },
     { 
-      key: 'wineBatchId', 
+      key: 'premiumDiscount' as keyof WineOrder, 
       label: 'Premium/Discount', 
       sortable: true,
       accessor: (order) => (order.offeredPrice / getAskingPriceForOrder(order) - 1) * 100
@@ -503,17 +503,17 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 </TableHead>
                 <TableHead 
                   sortable 
-                  onSort={() => handleOrderSort('wineBatchId')}
-                  sortIndicator={getOrderSortIndicator('wineBatchId')}
-                  isSorted={isOrderColumnSorted('wineBatchId')}
+                  onSort={() => handleOrderSort('inventoryQuantity' as keyof WineOrder)}
+                  sortIndicator={getOrderSortIndicator('inventoryQuantity' as keyof WineOrder)}
+                  isSorted={isOrderColumnSorted('inventoryQuantity' as keyof WineOrder)}
                 >
                   Inventory
                 </TableHead>
                 <TableHead 
                   sortable 
-                  onSort={() => handleOrderSort('wineBatchId')}
-                  sortIndicator={getOrderSortIndicator('wineBatchId')}
-                  isSorted={isOrderColumnSorted('wineBatchId')}
+                  onSort={() => handleOrderSort('askingPrice' as keyof WineOrder)}
+                  sortIndicator={getOrderSortIndicator('askingPrice' as keyof WineOrder)}
+                  isSorted={isOrderColumnSorted('askingPrice' as keyof WineOrder)}
                 >
                   Asking Price
                 </TableHead>
@@ -527,9 +527,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 </TableHead>
                 <TableHead 
                   sortable 
-                  onSort={() => handleOrderSort('wineBatchId')}
-                  sortIndicator={getOrderSortIndicator('wineBatchId')}
-                  isSorted={isOrderColumnSorted('wineBatchId')}
+                  onSort={() => handleOrderSort('premiumDiscount' as keyof WineOrder)}
+                  sortIndicator={getOrderSortIndicator('premiumDiscount' as keyof WineOrder)}
+                  isSorted={isOrderColumnSorted('premiumDiscount' as keyof WineOrder)}
                 >
                   Premium/Discount
                 </TableHead>
