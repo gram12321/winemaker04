@@ -644,7 +644,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 </span>
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
                       <MobileDialogWrapper 
                         content={
                           <div className={tooltipStyles.text}>
@@ -1012,7 +1012,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                                 <span className="font-medium text-purple-800">{wine.vineyardName} - {wine.grape} ({wine.vintage})</span>
                                 <TooltipProvider>
                                   <Tooltip>
-                                    <TooltipTrigger asChild>
+                                    <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
                                       <MobileDialogWrapper 
                                         content={
                                           <div className={tooltipStyles.text}>
@@ -1323,7 +1323,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                           <span className="font-medium text-green-800">{vineyard.name}</span>
                           <TooltipProvider>
                             <Tooltip>
-                              <TooltipTrigger asChild>
+                              <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
                                 <MobileDialogWrapper 
                                   content={
                                     <div className={tooltipStyles.text}>

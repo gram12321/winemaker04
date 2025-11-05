@@ -56,8 +56,14 @@ const TooltipTrigger = React.forwardRef<
     tooltipTitle?: string;
     iconSize?: number;
     iconClassName?: string;
+    showMobileInfoButton?: boolean;
+    showMobileHint?: boolean;
+    mobileHintClassName?: string;
+    mobileHintVariant?: 'underline' | 'corner-dot';
+    mobileHintDotPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+    mobileHintDotClassName?: string;
   }
->(({ children, tooltipContent, tooltipTitle, iconSize = 14, iconClassName, ...props }, ref) => {
+>(({ children, tooltipContent, tooltipTitle, iconSize = 14, iconClassName, showMobileInfoButton = false, showMobileHint = true, mobileHintClassName, mobileHintVariant = 'underline', mobileHintDotPosition = 'top-right', mobileHintDotClassName, ...props }, ref) => {
   const isMobile = useIsMobile();
   const context = useContext(TooltipContext);
   
@@ -68,7 +74,7 @@ const TooltipTrigger = React.forwardRef<
   // On mobile, wrap trigger with MobileDialogWrapper if content is available
   // Note: Content might not be available on first render (TooltipContent registers it via useEffect)
   // This is fine - the trigger will re-render when content becomes available
-  if (isMobile && content) {
+  if (isMobile && content && showMobileInfoButton) {
     return (
       <div className="inline-flex items-center gap-1">
         <TooltipPrimitive.Trigger {...props} ref={ref}>
@@ -92,9 +98,39 @@ const TooltipTrigger = React.forwardRef<
     );
   }
 
+  // Optional subtle mobile-only hint (e.g., dotted underline) without adding an icon
+  const hintedChildren = (isMobile && showMobileHint)
+    ? (
+      mobileHintVariant === 'corner-dot'
+        ? (
+          <span className={cn('relative block md:hidden w-full', mobileHintClassName)}>
+            {children}
+            <span
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-gray-400/70 shadow-sm z-10',
+                mobileHintDotPosition === 'top-right' && 'right-0 -top-0.5 translate-x-1/4',
+                mobileHintDotPosition === 'top-left' && 'left-0 -top-0.5 -translate-x-1/4',
+                mobileHintDotPosition === 'bottom-right' && 'right-0 -bottom-0.5 translate-x-1/4',
+                mobileHintDotPosition === 'bottom-left' && 'left-0 -bottom-0.5 -translate-x-1/4',
+                mobileHintDotClassName
+              )}
+            />
+          </span>
+        )
+        : (
+          <span className={cn(
+            'underline decoration-dotted decoration-gray-400/70 underline-offset-2 cursor-help md:no-underline',
+            mobileHintClassName
+          )}>
+            {children}
+          </span>
+        )
+    ) : children;
+
   return (
     <TooltipPrimitive.Trigger {...props} ref={ref}>
-      {children}
+      {hintedChildren}
     </TooltipPrimitive.Trigger>
   );
 });
@@ -366,6 +402,7 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const combinedClassName = cn(triggerClassName, className);
+  const triggerDivRef = React.useRef<HTMLDivElement | null>(null);
 
   if (isMobile) {
     const handleMobileClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -379,15 +416,27 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <div
-            ref={ref}
+            ref={(node) => {
+              triggerDivRef.current = node;
+              if (typeof ref === 'function') ref(node as any);
+              else if (ref && 'current' in (ref as any)) (ref as any).current = node;
+            }}
             className={combinedClassName}
             onClick={handleMobileClick}
+            tabIndex={-1}
             {...rest}
           >
             {children}
           </div>
         </DialogTrigger>
-        <DialogContent className={contentClassName}>
+        <DialogContent
+          className={contentClassName}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            // Restore focus to trigger to avoid focus remaining inside aria-hidden content during exit
+            triggerDivRef.current?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className={title ? undefined : "sr-only"}>
               {title || "Tooltip Information"}

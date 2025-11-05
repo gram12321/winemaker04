@@ -28,6 +28,138 @@
 
 ---
 
+## Version 0.053c - Tooltip Mobile Info Button Opt-In
+**Date:** 2025-11-04 | **Status:** local (uncommitted)
+
+### 🎨 UI Behavior Adjustment
+- `src/components/ui/shadCN/tooltip.tsx` — Added optional prop `showMobileInfoButton` to `TooltipTrigger` (default: `false`).
+  - On mobile, the automatic "(i)" button is now rendered only when explicitly requested by passing `showMobileInfoButton`.
+  - Prevents default UI clutter and interference with layouts.
+  - Added optional subtle hint styling: `showMobileHint` (default `false`) and `mobileHintClassName`.
+    - When enabled, wraps trigger children with a dotted underline and `cursor-help` on mobile only (`md:no-underline`).
+  - Added `mobileHintVariant` with `corner-dot` for non-text elements.
+    - Small non-interactive dot adornment positioned via `mobileHintDotPosition` (top-right by default) and `mobileHintDotClassName`.
+
+## Version 0.053b - Modal State Utility & System Improvements
+**Date:** 2025-11-03 | **Commit:** ac624656 | **Stats:** 966 additions, 322 deletions
+
+### 🛠️ **New Utility System**
+- **NEW FILE:** `src/lib/utils/modalState.ts` (76 lines) - Centralized modal state management utility
+- `src/lib/utils/utils.ts` - Added new utility functions for modal and state management (66 additions, 5 deletions)
+- `src/lib/utils/index.ts` - Updated barrel exports (3 additions)
+
+### 🔧 **System Enhancements**
+- `src/lib/services/core/gameTick.ts` - Enhanced game tick system with improved processing (67 additions, 25 deletions)
+- `src/lib/services/activity/activitymanagers/bookkeepingManager.ts` - Improved bookkeeping management (85 additions, 33 deletions)
+- `src/lib/services/finance/wageService.ts` - Enhanced wage calculation system (30 additions, 16 deletions)
+- `src/lib/services/finance/economyService.ts` - Economy service improvements (19 additions, 9 deletions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard management enhancements (34 additions, 2 deletions)
+
+### 🎨 **UI Component Updates**
+- `src/components/ui/shadCN/toaster.tsx` - Enhanced toaster notification system (70 additions, 41 deletions)
+- `src/components/ui/modals/UImodals/WarningModal.tsx` - Improved warning modal functionality (69 additions, 26 deletions)
+- `src/components/layout/GlobalSearchResultsDisplay.tsx` - Enhanced search results display (95 additions, 6 deletions)
+- `src/components/pages/Vineyard.tsx` - Vineyard page improvements (139 additions, 54 deletions)
+- Enhanced result modals: LandSearchResultsModal, LenderSearchResultsModal, StaffSearchResultsModal (51 additions each)
+
+## Version 0.053a - Database Schema & Build Fixes
+**Date:** 2025-11-03 | **Commit:** 795b299 | **Stats:** 60 additions, 13 deletions
+
+### 🗄️ **Database Improvements**
+- `src/lib/database/core/highscoresDB.ts` - Enhanced highscores database operations (41 additions, 9 deletions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates (7 additions, 3 deletions)
+
+### 🔧 **Build Fixes**
+- `src/components/pages/sales/WineCellarTab.tsx` - Build error fixes (12 additions, 1 deletion)
+
+## Version 0.053 - Tooltip System & Customer Data Enhancements
+**Date:** 2025-11-03 | **Commit:** f3f13429 | **Stats:** 430 additions, 115 deletions
+
+### 🎨 **Tooltip System Enhancement**
+- `src/components/ui/shadCN/tooltip.tsx` - Major tooltip system improvements (111 additions, 30 deletions)
+- Enhanced tooltip functionality across multiple components
+
+### 📊 **Customer Data System**
+- `src/hooks/useCustomerData.ts` - Enhanced customer data hook with improved caching (43 additions)
+- `src/lib/services/sales/relationshipService.ts` - Improved relationship service (12 additions, 5 deletions)
+
+### 🎯 **UI Component Updates**
+- `src/components/pages/CompanyOverview.tsx` - Enhanced company overview display (49 additions, 6 deletions)
+- `src/components/pages/Highscores.tsx` - Improved highscores display (65 additions, 21 deletions)
+- `src/components/pages/sales/OrdersTab.tsx` - Sales order improvements (12 additions, 12 deletions)
+- `src/components/pages/sales/WineCellarTab.tsx` - Wine cellar enhancements (74 additions, 14 deletions)
+- `src/components/pages/winepedia/CustomersTab.tsx` - Customer information improvements (53 additions, 14 deletions)
+
+## Version 0.052 - Login System Overhaul & Game State Improvements
+**Date:** 2025-11-03 | **Commit:** d1a8ff6 | **Stats:** 741 additions, 109 deletions
+
+### 🔐 **Login System Enhancement**
+- `src/components/pages/Login.tsx` - Major login system overhaul (399 additions, 26 deletions)
+- Improved authentication flow and user experience
+- Enhanced login UI and error handling
+
+### 🎮 **Game State System**
+- `src/lib/services/core/gameState.ts` - Enhanced game state management (43 additions, 3 deletions)
+- `src/hooks/useGameState.ts` - Improved game state hook (13 additions, 8 deletions)
+- `src/hooks/useGameUpdates.ts` - Enhanced game updates hook (25 additions, 1 deletion)
+
+### 📊 **Highscore System**
+- `src/lib/services/user/highscoreService.ts` - Improved highscore service (45 additions, 15 deletions)
+- `src/lib/database/core/highscoresDB.ts` - Enhanced highscore database operations (43 additions, 5 deletions)
+- `src/components/pages/Highscores.tsx` - Highscores display improvements (18 additions, 12 deletions)
+
+### 🎨 **UI Component Updates**
+- `src/components/pages/CompanyOverview.tsx` - Enhanced company overview (78 additions, 5 deletions)
+- `src/components/pages/Profile.tsx` - Profile page improvements (40 additions, 27 deletions)
+- `src/lib/utils/icons.tsx` - Added new icon utilities (20 additions)
+
+## Version 0.051a - Economy Tab & UI Updates
+**Date:** 2025-11-03 | **Commit:** c3e708ad | **Stats:** 164 additions, 57 deletions
+
+### 📊 **UI Component Updates**
+- `src/components/pages/winepedia/EconomyTab.tsx` - Enhanced economy tab display (57 additions, 28 deletions)
+- `src/components/pages/CompanyOverview.tsx` - Company overview improvements (84 additions, 14 deletions)
+- `src/components/pages/Highscores.tsx` - Highscores display refinements (14 additions, 6 deletions)
+- `src/components/pages/Staff.tsx` - Staff page updates (9 additions, 7 deletions)
+
+## Version 0.051 - Economy Phase Integration with Orders System
+**Date:** 2025-11-03 | **Commit:** 9dc1c138 | **Stats:** 329 additions, 47 deletions
+
+### 💰 **Economy Phase Feature**
+- **NEW FILE:** `src/components/pages/winepedia/EconomyTab.tsx` (54 lines) - Comprehensive economy phase information tab in Winepedia
+- `src/lib/constants/economyConstants.ts` - Enhanced economy constants and phase definitions (43 additions)
+- Economy phase integration with order generation and pricing
+
+### 📊 **Order System Integration**
+- `src/components/pages/sales/OrdersTab.tsx` - Economy phase display in orders (79 additions, 6 deletions)
+- `src/lib/services/sales/generateOrder.ts` - Economy phase integration in order generation (11 additions, 1 deletion)
+- `src/lib/services/sales/generateCustomer.ts` - Customer generation with economy phase awareness (7 additions, 2 deletions)
+- `src/lib/services/sales/salesOrderService.ts` - Enhanced sales order service (6 additions, 1 deletion)
+
+### 🛠️ **Utility Functions**
+- `src/lib/utils/utils.ts` - Added economy phase utility functions (17 additions, 10 deletions)
+
+### 🎨 **UI Updates**
+- `src/components/layout/Header.tsx` - Enhanced economy phase indicator (32 additions, 12 deletions)
+- `src/components/pages/sales/WineCellarTab.tsx` - Economy phase display integration (24 additions, 8 deletions)
+- `src/components/pages/Winepedia.tsx` - Added Economy tab navigation (10 additions, 2 deletions)
+
+### 🗄️ **Database Updates**
+- `migrations/sync_vercel_schema.sql` - Database schema updates for economy phase (14 additions)
+- `src/lib/database/core/gamestateDB.ts` - Game state database updates (4 additions, 2 deletions)
+
+## Version 0.05 - Estimated Price Hook & Sales Integration
+**Date:** 2025-11-03 | **Commit:** 75c5771 | **Stats:** 45 additions, 16 deletions
+
+### 🧮 **New Hook**
+- **NEW FILE:** `src/hooks/useEstimatedPrice.ts` (13 lines) - Reactive hook for estimated wine pricing based on current characteristics
+- `src/hooks/index.ts` - Added export for new hook (1 addition)
+
+### 🛠️ **Sales Integration**
+- `src/components/pages/sales/WineCellarTab.tsx` - Integrated estimated price display (26 additions, 15 deletions)
+- `src/components/pages/sales/OrdersTab.tsx` - Estimated price integration in orders (4 additions, 1 deletion)
+- `src/lib/services/index.ts` - Updated barrel exports (1 addition)
+
 ## Version 0.049a - Sales UI Improvements & Feature Utilities
 **Date:** 2025-11-03 | **Commit:** d1fc50d | **Stats:** 792 additions, 172 deletions
 
@@ -1058,7 +1190,7 @@ Complete refactoring from standalone oxidation to extensible config-driven featu
 
 ---
 
-## 🎯 **Overgrowth System Refactor** (Latest)
+## 🎯 **Overgrowth System Refactor**
 - **New Structure**: Replaced separate year tracking fields with nested `overgrowth` object
 - **Task-Specific Tracking**: Each clearing task type (vegetation, debris, uproot, replant) tracked separately
 - **Flexible Usage**: Work calculators can use specific overgrowth types as needed

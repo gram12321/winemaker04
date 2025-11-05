@@ -68,7 +68,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
       <div className="flex-1">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
               <MobileDialogWrapper 
                 content={buildTooltipContent()} 
                 title={`${label} Skill Details`}
