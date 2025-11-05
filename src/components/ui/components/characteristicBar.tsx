@@ -161,7 +161,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
       <div className="sm:w-3/4 flex items-center flex-1">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
               <MobileDialogWrapper 
                 content={buildTooltipContent()} 
                 title={`${label} Details`}

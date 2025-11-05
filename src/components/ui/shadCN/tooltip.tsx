@@ -120,7 +120,7 @@ const TooltipTrigger = React.forwardRef<
         )
         : (
           <span className={cn(
-            'underline decoration-dotted decoration-gray-400/70 underline-offset-2 cursor-help md:no-underline',
+            'relative cursor-help after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:border-b after:border-dotted after:border-gray-400/70 md:after:border-b-0',
             mobileHintClassName
           )}>
             {children}
@@ -406,10 +406,20 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
 
   if (isMobile) {
     const handleMobileClick = (event: React.MouseEvent<HTMLDivElement>) => {
+      event.stopPropagation(); // Prevent click from bubbling to parent row/card
       onClick?.(event);
       if (!event.defaultPrevented) {
         setOpen(true);
       }
+    };
+
+    const handleDialogContentClick = (event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent clicks inside dialog (including close button) from propagating to parent row/card
+    };
+
+    const handleInteractOutside = (event: Event) => {
+      event.stopPropagation(); // Prevent clicks outside dialog (on overlay/backdrop) from propagating to parent row/card
+      // Note: We don't call preventDefault() so the dialog still closes normally
     };
 
     return (
@@ -431,6 +441,8 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
         </DialogTrigger>
         <DialogContent
           className={contentClassName}
+          onClick={handleDialogContentClick}
+          onInteractOutside={handleInteractOutside}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             // Restore focus to trigger to avoid focus remaining inside aria-hidden content during exit
@@ -445,7 +457,7 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
               {title ? `Details about ${title}` : "Additional information"}
             </DialogDescription>
           </DialogHeader>
-          <div className="text-sm">{content}</div>
+          <div className="text-sm" onClick={handleDialogContentClick}>{content}</div>
         </DialogContent>
       </Dialog>
     );

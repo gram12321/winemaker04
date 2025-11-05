@@ -91,10 +91,10 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
             
             return (
               <Tooltip key={index}>
-                <TooltipTrigger asChild>
+                <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
                   <MobileDialogWrapper content={content} title={getCharacteristicDisplayName(effect.characteristic)} triggerClassName="inline-block">
                     <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
-                      <CharacteristicIcon 
+                      <CharacteristicIcon
                         name={effect.characteristic}
                         size="xs"
                         className="mr-1"

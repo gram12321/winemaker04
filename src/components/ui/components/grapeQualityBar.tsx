@@ -211,7 +211,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
       <div className="sm:w-3/4 flex items-center flex-1 gap-3 sm:gap-4">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
               <MobileDialogWrapper 
                 content={buildTooltipContent()} 
                 title={`${label} Details`}
