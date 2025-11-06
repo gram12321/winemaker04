@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { WorkCalculationTable } from './workCalculationTable';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../shadCN/tooltip';
+import { UnifiedTooltip } from '../shadCN/tooltip';
 
 export type ActivityOptionType = 'number' | 'select' | 'text' | 'range' | 'radio-group' | 'checkbox-group';
 
@@ -93,7 +93,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
   };
 
   return (
-    <TooltipProvider>
+    <div>
       <div 
         className={`bg-white rounded-lg shadow-lg overflow-y-auto ${maxWidthClasses[maxWidth]} w-full`}
         style={{ maxHeight }}
@@ -123,21 +123,26 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                   </label>
                   
                   {field.tooltip && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="text-gray-400 hover:text-gray-600 text-sm ml-2"
-                        >
-                          ⓘ
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
+                    <UnifiedTooltip
+                      content={
                         <div className="whitespace-pre-line text-xs">
                           {field.tooltip}
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
+                      }
+                      title={`${field.label} Info`}
+                      side="top"
+                      sideOffset={4}
+                      className="max-w-xs"
+                      variant="panel"
+                      density="compact"
+                    >
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-gray-600 text-sm ml-2"
+                      >
+                        ⓘ
+                      </button>
+                    </UnifiedTooltip>
                   )}
                 </div>
                 
@@ -298,7 +303,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
         </form>
       </div>
       </div>
-    </TooltipProvider>
+    </div>
   );
 };
 

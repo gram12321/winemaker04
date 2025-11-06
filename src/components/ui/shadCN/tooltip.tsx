@@ -120,7 +120,7 @@ const TooltipTrigger = React.forwardRef<
         )
         : (
           <span className={cn(
-            'relative cursor-help after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:border-b after:border-dotted after:border-gray-400/70 md:after:border-b-0',
+            'relative block w-full cursor-help after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:border-b after:border-dotted after:border-gray-400/70 md:after:border-b-0',
             mobileHintClassName
           )}>
             {children}
@@ -405,12 +405,31 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
   const triggerDivRef = React.useRef<HTMLDivElement | null>(null);
 
   if (isMobile) {
+    // Extract onClick from rest to merge with our handler
+    const { onClick: restOnClick, onPointerDown: restOnPointerDown, onMouseDown: restOnMouseDown, ...restProps } = rest as any;
+
     const handleMobileClick = (event: React.MouseEvent<HTMLDivElement>) => {
-      event.stopPropagation(); // Prevent click from bubbling to parent row/card
+      // Stop propagation immediately to prevent bubbling to parent row/card
+      // This must happen before any other handlers to ensure the row click doesn't fire
+      event.stopPropagation();
+      event.nativeEvent.stopImmediatePropagation?.(); // Also stop on native event if available
+      
+      // Call any onClick handler from props first
+      restOnClick?.(event);
       onClick?.(event);
       if (!event.defaultPrevented) {
         setOpen(true);
       }
+    };
+
+    const handleMobilePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation(); // Stop propagation at capture phase
+      restOnPointerDown?.(event);
+    };
+
+    const handleMobileMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+      event.stopPropagation(); // Stop propagation at capture phase
+      restOnMouseDown?.(event);
     };
 
     const handleDialogContentClick = (event: React.MouseEvent) => {
@@ -433,8 +452,11 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
             }}
             className={combinedClassName}
             onClick={handleMobileClick}
+            onPointerDown={handleMobilePointerDown}
+            onMouseDown={handleMobileMouseDown}
+            style={{ position: 'relative', zIndex: 1 }} // Ensure wrapper is on top for event handling
             tabIndex={-1}
-            {...rest}
+            {...restProps}
           >
             {children}
           </div>
@@ -533,6 +555,213 @@ export function InfoTooltip({ title, content, size = 14, className }: { title?: 
     </TooltipProvider>
   );
 }
+// =============================
+// UNIFIED TOOLTIP COMPONENT
+// =============================
+
+type UnifiedTooltipProps = {
+  children: React.ReactNode;
+  content: React.ReactNode;
+  title?: string;
+  // Tooltip positioning
+  side?: 'top' | 'right' | 'bottom' | 'left';
+  sideOffset?: number;
+  // Styling
+  variant?: 'default' | 'panel';
+  density?: 'normal' | 'compact';
+  scrollable?: boolean;
+  maxHeight?: string;
+  className?: string;
+  contentClassName?: string;
+  // Mobile hints
+  showMobileHint?: boolean;
+  mobileHintVariant?: 'underline' | 'corner-dot';
+  mobileHintDotPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  mobileHintClassName?: string;
+  mobileHintDotClassName?: string;
+  // Trigger styling
+  triggerClassName?: string;
+  // Event handling
+  onClick?: (event: React.MouseEvent) => void;
+  onPointerDown?: (event: React.PointerEvent) => void;
+  onMouseDown?: (event: React.MouseEvent) => void;
+};
+
+/**
+ * UnifiedTooltip - A single component that handles both desktop (hover) and mobile (click dialog) tooltips
+ * 
+ * This component replaces the complex TooltipProvider/Tooltip/TooltipTrigger/TooltipContent/MobileDialogWrapper pattern
+ * with a single, simpler component that handles all event propagation correctly.
+ * 
+ * @example
+ * <UnifiedTooltip content={<div>Tooltip content</div>} title="Tooltip Title">
+ *   <div>Hover/click me</div>
+ * </UnifiedTooltip>
+ */
+export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipProps>(
+  function UnifiedTooltip(
+    {
+      children,
+      content,
+      title,
+      side = 'top',
+      sideOffset = 4,
+      variant = 'panel',
+      density = 'compact',
+      scrollable = false,
+      maxHeight = 'max-h-60',
+      className,
+      contentClassName,
+      showMobileHint = true,
+      mobileHintVariant = 'underline',
+      mobileHintDotPosition = 'top-right',
+      mobileHintClassName,
+      mobileHintDotClassName,
+      triggerClassName,
+      onClick,
+      onPointerDown,
+      onMouseDown,
+      ...rest
+    },
+    ref
+  ) {
+    const isMobile = useIsMobile();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const triggerRef = React.useRef<HTMLDivElement | null>(null);
+
+    // Mobile: Handle click events with proper propagation stopping
+    if (isMobile) {
+      const handleMobileClick = (event: React.MouseEvent<HTMLDivElement>) => {
+        // Stop propagation immediately to prevent bubbling to parent row/card
+        event.stopPropagation();
+        event.nativeEvent.stopImmediatePropagation?.();
+        
+        // Call any onClick handler from props
+        onClick?.(event);
+        
+        if (!event.defaultPrevented) {
+          setDialogOpen(true);
+        }
+      };
+
+      const handleMobilePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+        onPointerDown?.(event);
+      };
+
+      const handleMobileMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+        onMouseDown?.(event);
+      };
+
+      const handleDialogContentClick = (event: React.MouseEvent) => {
+        event.stopPropagation();
+      };
+
+      const handleInteractOutside = (event: Event) => {
+        event.stopPropagation();
+      };
+
+      // Apply mobile hint styling to children
+      const hintedChildren = showMobileHint
+        ? (
+            mobileHintVariant === 'corner-dot'
+              ? (
+                  <span className={cn('relative block md:hidden w-full', mobileHintClassName)}>
+                    {children}
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-gray-400/70 shadow-sm z-10',
+                        mobileHintDotPosition === 'top-right' && 'right-0 -top-0.5 translate-x-1/4',
+                        mobileHintDotPosition === 'top-left' && 'left-0 -top-0.5 -translate-x-1/4',
+                        mobileHintDotPosition === 'bottom-right' && 'right-0 -bottom-0.5 translate-x-1/4',
+                        mobileHintDotPosition === 'bottom-left' && 'left-0 -bottom-0.5 -translate-x-1/4',
+                        mobileHintDotClassName
+                      )}
+                    />
+                  </span>
+                )
+              : (
+                  <span className={cn(
+                    'relative cursor-help after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:border-b after:border-dotted after:border-gray-400/70 md:after:border-b-0',
+                    mobileHintClassName
+                  )}>
+                    {children}
+                  </span>
+                )
+          )
+        : children;
+
+      return (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <div
+              ref={(node) => {
+                triggerRef.current = node;
+                if (typeof ref === 'function') ref(node as any);
+                else if (ref && 'current' in (ref as any)) (ref as any).current = node;
+              }}
+              className={cn('w-full', triggerClassName)}
+              onClick={handleMobileClick}
+              onPointerDown={handleMobilePointerDown}
+              onMouseDown={handleMobileMouseDown}
+              style={{ position: 'relative', zIndex: 1 }}
+              tabIndex={-1}
+              data-tooltip-trigger="true"
+              {...rest}
+            >
+              {hintedChildren}
+            </div>
+          </DialogTrigger>
+          <DialogContent
+            className={cn(contentClassName || "max-w-sm")}
+            onClick={handleDialogContentClick}
+            onInteractOutside={handleInteractOutside}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              triggerRef.current?.focus();
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className={title ? undefined : "sr-only"}>
+                {title || "Tooltip Information"}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                {title ? `Details about ${title}` : "Additional information"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="text-xs" onClick={handleDialogContentClick}>{content}</div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    // Desktop: Use Radix UI tooltip
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild className={triggerClassName}>
+            {children}
+          </TooltipTrigger>
+          <TooltipContent
+            side={side}
+            sideOffset={sideOffset}
+            variant={variant}
+            density={density}
+            scrollable={scrollable}
+            maxHeight={maxHeight}
+            title={title}
+            className={contentClassName}
+          >
+            {content}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+);
+
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
 
 

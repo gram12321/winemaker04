@@ -16,7 +16,7 @@ import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { formatNumber, getRangeColor, getRatingForRange, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles, MobileDialogWrapper } from '../shadCN/tooltip';
+import { UnifiedTooltip, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction, getFeatureDisplaySeverity } from '@/lib/services/wine/features/featureService';
 
@@ -271,18 +271,19 @@ function EvolvingFeatureItem({ feature, config, batch, weeklyGrowthRate }: Evolv
   );
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild showMobileHint mobileHintVariant="underline">
-          <MobileDialogWrapper content={tooltipBody} title={`${config.name} Details`} triggerClassName="inline-block">
-            {displayElement}
-          </MobileDialogWrapper>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          {tooltipBody}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={tooltipBody}
+      title={`${config.name} Details`}
+      side="top"
+      className="max-w-sm"
+      variant="panel"
+      density="compact"
+      triggerClassName="inline-block"
+      showMobileHint={true}
+      mobileHintVariant="underline"
+    >
+      {displayElement}
+    </UnifiedTooltip>
   );
 }
 
@@ -372,20 +373,21 @@ function ActiveFeatureItem({ feature, config, qualityImpact, batch }: ActiveFeat
   );
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild showMobileHint mobileHintVariant="underline">
-          <MobileDialogWrapper content={tooltipBody} title={`${config.name} Details`} triggerClassName="inline-block">
-            <div className="cursor-help">
-              {displayElement}
-            </div>
-          </MobileDialogWrapper>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          {tooltipBody}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={tooltipBody}
+      title={`${config.name} Details`}
+      side="top"
+      className="max-w-sm"
+      variant="panel"
+      density="compact"
+      triggerClassName="inline-block"
+      showMobileHint={true}
+      mobileHintVariant="underline"
+    >
+      <div className="cursor-help">
+        {displayElement}
+      </div>
+    </UnifiedTooltip>
   );
 }
 
@@ -442,20 +444,21 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
   );
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild showMobileHint mobileHintVariant="underline">
-          <MobileDialogWrapper content={tooltipBody} title={`${config.name} Risk Details`} triggerClassName="inline-block">
-            <div className="cursor-help">
-              {displayElement}
-            </div>
-          </MobileDialogWrapper>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          {tooltipBody}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={tooltipBody}
+      title={`${config.name} Risk Details`}
+      side="top"
+      className="max-w-sm"
+      variant="panel"
+      density="compact"
+      triggerClassName="inline-block"
+      showMobileHint={true}
+      mobileHintVariant="underline"
+    >
+      <div className="cursor-help">
+        {displayElement}
+      </div>
+    </UnifiedTooltip>
   );
 }
 
@@ -514,58 +517,45 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }
               colorClass = getCharacteristicEffectColorClass(currentValue, totalEffect, balancedRange);
             }
             
-            return (
-              <TooltipProvider key={key}>
-                <Tooltip>
-                  <TooltipTrigger asChild showMobileHint mobileHintVariant="underline">
-                    <MobileDialogWrapper
-                      content={
-                        <div className={`${tooltipStyles.text} space-y-1`}>
-                          <TooltipSection>
-                            <p className={`${tooltipStyles.title} capitalize`}>{isQuality ? 'Quality' : key}</p>
-                            {isQuality ? (
-                              <p className={tooltipStyles.muted}>Weekly quality change from evolving features</p>
-                            ) : (
-                              <TooltipScrollableContent maxHeight="max-h-60">
-                                <div className="space-y-1">
-                                  {getCharacteristicBreakdown(key, evolvingFeatures)}
-                                </div>
-                              </TooltipScrollableContent>
-                            )}
-                          </TooltipSection>
-                        </div>
-                      }
-                      title={`${isQuality ? 'Quality' : key.charAt(0).toUpperCase() + key.slice(1)} Effects`}
-                      triggerClassName="inline-block"
-                    >
-                      <div className={`text-xs px-2 py-1 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
-                        {isQuality ? (
-                          <span>⭐</span>
-                        ) : (
-                          <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-3 h-3" />
-                        )}
-                        <span className="font-medium">{sign}{percentage}%</span>
+            const tooltipContent = (
+              <div className={`${tooltipStyles.text} space-y-1`}>
+                <TooltipSection>
+                  <p className={`${tooltipStyles.title} capitalize`}>{isQuality ? 'Quality' : key}</p>
+                  {isQuality ? (
+                    <p className={tooltipStyles.muted}>Weekly quality change from evolving features</p>
+                  ) : (
+                    <TooltipScrollableContent maxHeight="max-h-60">
+                      <div className="space-y-1">
+                        {getCharacteristicBreakdown(key, evolvingFeatures)}
                       </div>
-                    </MobileDialogWrapper>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs" variant="panel" density="compact">
-                    <div className={`${tooltipStyles.text} space-y-1`}>
-                      <TooltipSection>
-                        <p className={`${tooltipStyles.title} capitalize`}>{isQuality ? 'Quality' : key}</p>
-                        {isQuality ? (
-                          <p className={tooltipStyles.muted}>Weekly quality change from evolving features</p>
-                        ) : (
-                          <TooltipScrollableContent maxHeight="max-h-60">
-                            <div className="space-y-1">
-                              {getCharacteristicBreakdown(key, evolvingFeatures)}
-                            </div>
-                          </TooltipScrollableContent>
-                        )}
-                      </TooltipSection>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                    </TooltipScrollableContent>
+                  )}
+                </TooltipSection>
+              </div>
+            );
+            
+            return (
+              <UnifiedTooltip
+                key={key}
+                content={tooltipContent}
+                title={`${isQuality ? 'Quality' : key.charAt(0).toUpperCase() + key.slice(1)} Effects`}
+                side="top"
+                className="max-w-xs"
+                variant="panel"
+                density="compact"
+                triggerClassName="inline-block"
+                showMobileHint={true}
+                mobileHintVariant="underline"
+              >
+                <div className={`text-xs px-2 py-1 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
+                  {isQuality ? (
+                    <span>⭐</span>
+                  ) : (
+                    <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-3 h-3" />
+                  )}
+                  <span className="font-medium">{sign}{percentage}%</span>
+                </div>
+              </UnifiedTooltip>
             );
           }
           return null;
@@ -605,46 +595,37 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
             const colorClass = getCharacteristicEffectColorClass(currentValue, totalEffect, balancedRange);
             const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
             
-            return (
-              <TooltipProvider key={characteristic}>
-                <Tooltip>
-                  <TooltipTrigger asChild showMobileHint mobileHintVariant="underline">
-                    <MobileDialogWrapper
-                      content={
-                        <div className={`${tooltipStyles.text} space-y-1`}>
-                          <TooltipSection>
-                            <p className={`${tooltipStyles.title} capitalize`}>{characteristic}</p>
-                            <TooltipScrollableContent maxHeight="max-h-60">
-                              <div className="space-y-1">
-                                {getCombinedCharacteristicBreakdown(characteristic, activeFeatures)}
-                              </div>
-                            </TooltipScrollableContent>
-                          </TooltipSection>
-                        </div>
-                      }
-                      title={`${characteristic.charAt(0).toUpperCase() + characteristic.slice(1)} Effects`}
-                      triggerClassName="inline-block"
-                    >
-                      <div className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
-                        <img src={`/assets/icons/characteristics/${characteristic}.png`} alt={`${characteristic} icon`} className="w-3 h-3 opacity-80" />
-                        <span>{characteristic}: {sign}{percentage}%</span>
-                      </div>
-                    </MobileDialogWrapper>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs" variant="panel" density="compact">
-                    <div className={`${tooltipStyles.text} space-y-1`}>
-                      <TooltipSection>
-                        <p className={`${tooltipStyles.title} capitalize`}>{characteristic}</p>
-                        <TooltipScrollableContent maxHeight="max-h-60">
-                          <div className="space-y-1">
-                            {getCombinedCharacteristicBreakdown(characteristic, activeFeatures)}
-                          </div>
-                        </TooltipScrollableContent>
-                      </TooltipSection>
+            const tooltipContent = (
+              <div className={`${tooltipStyles.text} space-y-1`}>
+                <TooltipSection>
+                  <p className={`${tooltipStyles.title} capitalize`}>{characteristic}</p>
+                  <TooltipScrollableContent maxHeight="max-h-60">
+                    <div className="space-y-1">
+                      {getCombinedCharacteristicBreakdown(characteristic, activeFeatures)}
                     </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  </TooltipScrollableContent>
+                </TooltipSection>
+              </div>
+            );
+            
+            return (
+              <UnifiedTooltip
+                key={characteristic}
+                content={tooltipContent}
+                title={`${characteristic.charAt(0).toUpperCase() + characteristic.slice(1)} Effects`}
+                side="top"
+                className="max-w-xs"
+                variant="panel"
+                density="compact"
+                triggerClassName="inline-block"
+                showMobileHint={true}
+                mobileHintVariant="underline"
+              >
+                <div className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
+                  <img src={`/assets/icons/characteristics/${characteristic}.png`} alt={`${characteristic} icon`} className="w-3 h-3 opacity-80" />
+                  <span>{characteristic}: {sign}{percentage}%</span>
+                </div>
+              </UnifiedTooltip>
             );
           }
           return null;
@@ -652,41 +633,32 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
         
         {/* Quality effect */}
         {Math.abs(totalQualityEffect) > 0.001 && (
-          <TooltipProvider key="quality">
-            <Tooltip>
-              <TooltipTrigger asChild showMobileHint mobileHintVariant="underline">
-                <MobileDialogWrapper
-                  content={
-                    <div className={`${tooltipStyles.text} space-y-1`}>
-                      <TooltipSection>
-                        <p className={tooltipStyles.title}>Quality Impact</p>
-                        <div className="space-y-1">
-                          {getCombinedQualityBreakdown(activeFeatures)}
-                        </div>
-                      </TooltipSection>
-                    </div>
-                  }
-                  title="Quality Effects"
-                  triggerClassName="inline-block"
-                >
-                  <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${getRangeColor(totalQualityEffect, -0.5, 0.5, 'higher_better').text} flex items-center gap-1 cursor-help`}>
-                    <span>⭐</span>
-                    <span>Quality {totalQualityEffect > 0 ? '+' : ''}{formatNumber(totalQualityEffect * 100, { smartDecimals: true })}%</span>
+          <UnifiedTooltip
+            key="quality"
+            content={
+              <div className={`${tooltipStyles.text} space-y-1`}>
+                <TooltipSection>
+                  <p className={tooltipStyles.title}>Quality Impact</p>
+                  <div className="space-y-1">
+                    {getCombinedQualityBreakdown(activeFeatures)}
                   </div>
-                </MobileDialogWrapper>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs" variant="panel" density="compact">
-                <div className={`${tooltipStyles.text} space-y-1`}>
-                  <TooltipSection>
-                    <p className={tooltipStyles.title}>Quality Impact</p>
-                    <div className="space-y-1">
-                      {getCombinedQualityBreakdown(activeFeatures)}
-                    </div>
-                  </TooltipSection>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipSection>
+              </div>
+            }
+            title="Quality Effects"
+            side="top"
+            className="max-w-xs"
+            variant="panel"
+            density="compact"
+            triggerClassName="inline-block"
+            showMobileHint={true}
+            mobileHintVariant="underline"
+          >
+            <div className={`text-xs px-1.5 py-0.5 rounded ${totalQualityEffect > 0 ? 'bg-green-100' : 'bg-red-100'} ${getRangeColor(totalQualityEffect, -0.5, 0.5, 'higher_better').text} flex items-center gap-1 cursor-help`}>
+              <span>⭐</span>
+              <span>Quality {totalQualityEffect > 0 ? '+' : ''}{formatNumber(totalQualityEffect * 100, { smartDecimals: true })}%</span>
+            </div>
+          </UnifiedTooltip>
         )}
       </div>
     </div>
@@ -805,26 +777,22 @@ function FeatureBadge({ feature, config, showSeverity = false, className }: Feat
   const tooltipContent = getFeatureTooltipContent(feature, config);
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge variant={variant} className={`gap-1 cursor-help ${colorClass} ${className || ''}`}>
-            <span>{config.icon}</span>
-            <span>{config.name}</span>
-            {showSeverity && config.behavior === 'evolving' && feature.severity > 0 && (
-              <span className="text-xs opacity-90">
-                {formatNumber(feature.severity * 100, { smartDecimals: true })}%
-              </span>
-            )}
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="text-xs whitespace-pre-line">
-            {tooltipContent}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={<div className="text-xs whitespace-pre-line">{tooltipContent}</div>}
+      side="top"
+      className="max-w-xs"
+      variant="default"
+    >
+      <Badge variant={variant} className={`gap-1 cursor-help ${colorClass} ${className || ''}`}>
+        <span>{config.icon}</span>
+        <span>{config.name}</span>
+        {showSeverity && config.behavior === 'evolving' && feature.severity > 0 && (
+          <span className="text-xs opacity-90">
+            {formatNumber(feature.severity * 100, { smartDecimals: true })}%
+          </span>
+        )}
+      </Badge>
+    </UnifiedTooltip>
   );
 }
 
@@ -899,18 +867,17 @@ function PreviewRiskFeatureItem({ feature }: PreviewRiskFeatureItemProps) {
 
 function wrapPreviewWithTooltip(element: React.ReactNode, feature: PreviewRiskFeatureItemProps['feature']) {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="cursor-help">
-            {element}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          <PreviewRiskTooltipContent feature={feature} />
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={<PreviewRiskTooltipContent feature={feature} />}
+      side="top"
+      className="max-w-sm"
+      variant="panel"
+      density="compact"
+    >
+      <div className="cursor-help">
+        {element}
+      </div>
+    </UnifiedTooltip>
   );
 }
 

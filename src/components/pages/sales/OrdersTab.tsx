@@ -3,7 +3,7 @@ import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@
 import { fulfillWineOrder, rejectWineOrder, generateCustomer } from '@/lib/services';
 import { formatNumber, formatPercent, formatGameDateFromObject, getBadgeColorClasses} from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedTooltip } from '../../ui';
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown, clearRelationshipBreakdownCache } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -384,45 +384,44 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
             <p className="text-gray-500 text-xs">Current chance to attract new customers</p>
           </div>
           <div className="flex items-center space-x-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-help">
-                    <div className="text-xs text-blue-700">
-                      <span className="font-medium">Customer Chance:</span>
-                      <span className="ml-2 text-sm font-bold text-blue-800">
-                        {orderChanceInfo ? formatPercent(orderChanceInfo.finalChance, 1, true) : '--'}
-                      </span>
-                    </div>
-                    <div className="text-blue-500">ℹ️</div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  {orderChanceInfo ? (
-                    <div className="space-y-2 text-xs">
-                      <div className="font-semibold">Customer Acquisition Details</div>
-                      <div className="text-[10px] text-gray-400 mb-2">This chance is automatically evaluated every game tick</div>
-                      <div className="space-y-1">
-                        <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, { decimals: 1, forceDecimals: true })}</span></div>
-                        <div>Available Wines: <span className="font-medium">{orderChanceInfo.availableWines}</span></div>
-                        <div>Pending Orders: <span className="font-medium">{orderChanceInfo.pendingOrders}</span></div>
-                        <div>Base Chance: <span className="font-medium">{formatPercent(orderChanceInfo.baseChance, 1, true)}</span></div>
-                        <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, { decimals: 2, forceDecimals: true })}x</span></div>
-                        <div className="border-t pt-1">
-                          <div>Final Chance: <span className="font-bold text-blue-300">{formatPercent(orderChanceInfo.finalChance, 1, true)}</span></div>
-                          <div className="text-[10px] text-gray-400 mt-1">Updated each game tick</div>
-                        </div>
+            <UnifiedTooltip
+              content={
+                orderChanceInfo ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="font-semibold">Customer Acquisition Details</div>
+                    <div className="text-[10px] text-gray-400 mb-2">This chance is automatically evaluated every game tick</div>
+                    <div className="space-y-1">
+                      <div>Company Prestige: <span className="font-medium">{formatNumber(orderChanceInfo.companyPrestige, { decimals: 1, forceDecimals: true })}</span></div>
+                      <div>Available Wines: <span className="font-medium">{orderChanceInfo.availableWines}</span></div>
+                      <div>Pending Orders: <span className="font-medium">{orderChanceInfo.pendingOrders}</span></div>
+                      <div>Base Chance: <span className="font-medium">{formatPercent(orderChanceInfo.baseChance, 1, true)}</span></div>
+                      <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, { decimals: 2, forceDecimals: true })}x</span></div>
+                      <div className="border-t pt-1">
+                        <div>Final Chance: <span className="font-bold text-blue-300">{formatPercent(orderChanceInfo.finalChance, 1, true)}</span></div>
+                        <div className="text-[10px] text-gray-400 mt-1">Updated each game tick</div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-xs">
-                      <div className="font-semibold">Customer Acquisition</div>
-                      <div>Loading customer acquisition chance...</div>
-                    </div>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                  </div>
+                ) : (
+                  <div className="text-xs">
+                    <div className="font-semibold">Customer Acquisition</div>
+                    <div>Loading customer acquisition chance...</div>
+                  </div>
+                )
+              }
+              className="max-w-xs"
+              variant="default"
+            >
+              <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-help">
+                <div className="text-xs text-blue-700">
+                  <span className="font-medium">Customer Chance:</span>
+                  <span className="ml-2 text-sm font-bold text-blue-800">
+                    {orderChanceInfo ? formatPercent(orderChanceInfo.finalChance, 1, true) : '--'}
+                  </span>
+                </div>
+                <div className="text-blue-500">ℹ️</div>
+              </div>
+            </UnifiedTooltip>
           </div>
         </div>
       </div>
@@ -572,120 +571,114 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 paginatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium text-gray-900">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                              <button 
-                                onClick={() => onNavigateToWinepedia?.()}
-                                className="cursor-pointer hover:text-blue-600 hover:underline decoration-dotted flex items-center space-x-1.5 text-left"
-                                title="Click to view customer details in Winepedia"
-                              >
-                                <span className={`${getFlagIcon(order.customerCountry || '')} text-lg`}></span>
-                                <span>{order.customerName || 'Unknown Customer'}</span>
-                              </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">
-                              <div className="font-semibold">Customer Information</div>
-                              <div className="text-[10px] text-gray-500 mt-1">
-                                Click to view detailed customer information in Winepedia
-                              </div>
+                      <UnifiedTooltip
+                        content={
+                          <div className="text-xs">
+                            <div className="font-semibold">Customer Information</div>
+                            <div className="text-[10px] text-gray-500 mt-1">
+                              Click to view detailed customer information in Winepedia
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                          </div>
+                        }
+                        variant="default"
+                      >
+                        <button 
+                          onClick={() => onNavigateToWinepedia?.()}
+                          className="cursor-pointer hover:text-blue-600 hover:underline decoration-dotted flex items-center space-x-1.5 text-left"
+                          title="Click to view customer details in Winepedia"
+                        >
+                          <span className={`${getFlagIcon(order.customerCountry || '')} text-lg`}></span>
+                          <span>{order.customerName || 'Unknown Customer'}</span>
+                        </button>
+                      </UnifiedTooltip>
                     </TableCell>
                     <TableCell className="text-gray-500">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex flex-col gap-1">
-                              <span 
-                                className={`inline-flex w-fit px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${
-                                  getRelationshipBadgeColors(computedRelationships[getCustomerKey(order.customerId)] ?? 0)
-                                }`}>
-                                {isLoadingRelationships ? (
-                                  <span className="text-xs text-gray-500">Loading...</span>
-                                ) : (
-                                  formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)
-                                )}
-                              </span>
-                              {relationshipBoosts[getCustomerKey(order.customerId)] !== undefined && 
-                               relationshipBoosts[getCustomerKey(order.customerId)] > 0 && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
-                                        Boost: {formatPercent((relationshipBoosts[getCustomerKey(order.customerId)] ?? 0) / 100, 1, true)}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs">
-                                      <div className="text-xs">
-                                        <div className="font-semibold mb-2">Relationship Boost Details</div>
-                                        {boostDetails[getCustomerKey(order.customerId)] && boostDetails[getCustomerKey(order.customerId)].length > 0 ? (
-                                          <div className="space-y-1 text-[10px]">
-                                            {boostDetails[getCustomerKey(order.customerId)].slice(0, 5).map((boost, index) => (
-                                              <div key={index}>
-                                                • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
-                                              </div>
-                                            ))}
-                                            {boostDetails[getCustomerKey(order.customerId)].length > 5 && (
-                                              <div className="text-[9px] opacity-70">
-                                                ... and {boostDetails[getCustomerKey(order.customerId)].length - 5} more
-                                              </div>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <div className="text-[10px] opacity-70">
-                                            No boost events found
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <div className="text-xs">
-                              <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
-                              {relationshipBreakdowns[getCustomerKey(order.customerId)] ? (
-                                <div className="space-y-1 text-[10px]">
-                                  {relationshipBreakdowns[getCustomerKey(order.customerId)].split('\n').map((line, index) => (
-                                    <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
-                                      {line}
+                      <UnifiedTooltip
+                        content={
+                          <div className="text-xs">
+                            <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
+                            {relationshipBreakdowns[getCustomerKey(order.customerId)] ? (
+                              <div className="space-y-1 text-[10px]">
+                                {relationshipBreakdowns[getCustomerKey(order.customerId)].split('\n').map((line, index) => (
+                                  <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
+                                    {line}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-gray-500">
+                                {isLoadingRelationships ? 'Loading relationship breakdown...' : 'Relationship data not available'}
+                              </div>
+                            )}
+                          </div>
+                        }
+                        className="max-w-xs"
+                        variant="default"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <span 
+                            className={`inline-flex w-fit px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${
+                              getRelationshipBadgeColors(computedRelationships[getCustomerKey(order.customerId)] ?? 0)
+                            }`}>
+                            {isLoadingRelationships ? (
+                              <span className="text-xs text-gray-500">Loading...</span>
+                            ) : (
+                              formatPercent((computedRelationships[getCustomerKey(order.customerId)] ?? 0) / 100, 0, true)
+                            )}
+                          </span>
+                          {relationshipBoosts[getCustomerKey(order.customerId)] !== undefined && 
+                           relationshipBoosts[getCustomerKey(order.customerId)] > 0 && (
+                            <UnifiedTooltip
+                              content={
+                                <div className="text-xs">
+                                  <div className="font-semibold mb-2">Relationship Boost Details</div>
+                                  {boostDetails[getCustomerKey(order.customerId)] && boostDetails[getCustomerKey(order.customerId)].length > 0 ? (
+                                    <div className="space-y-1 text-[10px]">
+                                      {boostDetails[getCustomerKey(order.customerId)].slice(0, 5).map((boost, index) => (
+                                        <div key={index}>
+                                          • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                                        </div>
+                                      ))}
+                                      {boostDetails[getCustomerKey(order.customerId)].length > 5 && (
+                                        <div className="text-[9px] opacity-70">
+                                          ... and {boostDetails[getCustomerKey(order.customerId)].length - 5} more
+                                        </div>
+                                      )}
                                     </div>
-                                  ))}
+                                  ) : (
+                                    <div className="text-[10px] opacity-70">
+                                      No boost events found
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="text-[10px] text-gray-500">
-                                  {isLoadingRelationships ? 'Loading relationship breakdown...' : 'Relationship data not available'}
-                                </div>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                              }
+                              className="max-w-xs"
+                              variant="default"
+                            >
+                              <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
+                                Boost: {formatPercent((relationshipBoosts[getCustomerKey(order.customerId)] ?? 0) / 100, 1, true)}
+                              </span>
+                            </UnifiedTooltip>
+                          )}
+                        </div>
+                      </UnifiedTooltip>
                     </TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-full bg-blue-100 text-blue-800 cursor-help">
-                              {order.customerType}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">
-                              <div className="font-semibold">Type Range</div>
-                              <div className="text-[10px] text-gray-500">
-                                {getCustomerTypeRange(order.customerType)}
-                              </div>
+                      <UnifiedTooltip
+                        content={
+                          <div className="text-xs">
+                            <div className="font-semibold">Type Range</div>
+                            <div className="text-[10px] text-gray-500">
+                              {getCustomerTypeRange(order.customerType)}
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                          </div>
+                        }
+                        variant="default"
+                      >
+                        <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-full bg-blue-100 text-blue-800 cursor-help">
+                          {order.customerType}
+                        </span>
+                      </UnifiedTooltip>
                     </TableCell>
                     <TableCell className="font-medium text-gray-900">
                       {order.wineName}
@@ -707,84 +700,81 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       {formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}
                     </TableCell>
                     <TableCell className="text-gray-500">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className={`cursor-help ${
-                              order.offeredPrice > getAskingPriceForOrder(order)
-                                ? 'text-green-600 font-medium' // Above asking price
-                                : order.offeredPrice < getAskingPriceForOrder(order)
-                                ? 'text-red-600 font-medium' // Below asking price
-                                : 'text-gray-900' // Equal to asking price
-                            }`}>
-                              {formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <div className="space-y-2 text-xs">
-                              {order.calculationData ? (
-                                <>
-                                  <div className="font-semibold">Bid Price Calculation</div>
-                                  <div className="space-y-1 text-[10px]">
-                                    <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
-                                    <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
-                                    {order.calculationData.featurePriceMultiplier !== undefined && order.calculationData.featurePriceMultiplier < 1.0 && (
-                                      <div className="text-red-600">
-                                        Feature Penalty: <span className="font-medium">{formatNumber(order.calculationData.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span>
-                                        <div className="text-[10px] mt-1">Wine features reduce customer bid price</div>
-                                      </div>
-                                    )}
-                                    <div className="border-t pt-1 mt-1">
-                                      <div className="text-[10px] text-gray-500 mb-1">Formula: Asking × Customer × Features</div>
-                                      <div>Final Bid: <span className="font-bold">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
+                      <UnifiedTooltip
+                        content={
+                          <div className="space-y-2 text-xs">
+                            {order.calculationData ? (
+                              <>
+                                <div className="font-semibold">Bid Price Calculation</div>
+                                <div className="space-y-1 text-[10px]">
+                                  <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
+                                  <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                  {order.calculationData.featurePriceMultiplier !== undefined && order.calculationData.featurePriceMultiplier < 1.0 && (
+                                    <div className="text-red-600">
+                                      Feature Penalty: <span className="font-medium">{formatNumber(order.calculationData.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span>
+                                      <div className="text-[10px] mt-1">Wine features reduce customer bid price</div>
                                     </div>
+                                  )}
+                                  <div className="border-t pt-1 mt-1">
+                                    <div className="text-[10px] text-gray-500 mb-1">Formula: Asking × Customer × Features</div>
+                                    <div>Final Bid: <span className="font-bold">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="text-gray-500">Calculation data not available</div>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-gray-500">Calculation data not available</div>
+                            )}
+                          </div>
+                        }
+                        className="max-w-xs"
+                        variant="default"
+                      >
+                        <span className={`cursor-help ${
+                          order.offeredPrice > getAskingPriceForOrder(order)
+                            ? 'text-green-600 font-medium' // Above asking price
+                            : order.offeredPrice < getAskingPriceForOrder(order)
+                            ? 'text-red-600 font-medium' // Below asking price
+                            : 'text-gray-900' // Equal to asking price
+                        }`}>
+                          {formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}
+                        </span>
+                      </UnifiedTooltip>
                     </TableCell>
                     <TableCell className="text-gray-500">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className={`cursor-help font-medium ${
-                              order.offeredPrice > getAskingPriceForOrder(order)
-                                ? 'text-green-600' // Above asking price
-                                : order.offeredPrice < getAskingPriceForOrder(order)
-                                ? 'text-red-600' // Below asking price
-                                : 'text-gray-600' // Equal to asking price
-                            }`}>
-                              {order.offeredPrice > getAskingPriceForOrder(order) ? '+' : ''}
-                              {formatPercent((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order), 1, true)}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs space-y-1">
-                              <div className="font-semibold">Price Difference Analysis</div>
-                              <div className="text-[10px] space-y-1">
-                                <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
-                                <div>Bid Price: <span className="font-medium">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
-                                <div className="border-t pt-1">
-                                  <div className="font-medium">
-                                    {order.offeredPrice > getAskingPriceForOrder(order) ? (
-                                      <span className="text-green-600">Customer is paying premium</span>
-                                    ) : order.offeredPrice < getAskingPriceForOrder(order) ? (
-                                      <span className="text-red-600">Customer wants discount</span>
-                                    ) : (
-                                      <span className="text-gray-600">Customer accepts asking price</span>
-                                    )}
-                                  </div>
+                      <UnifiedTooltip
+                        content={
+                          <div className="text-xs space-y-1">
+                            <div className="font-semibold">Price Difference Analysis</div>
+                            <div className="text-[10px] space-y-1">
+                              <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
+                              <div>Bid Price: <span className="font-medium">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
+                              <div className="border-t pt-1">
+                                <div className="font-medium">
+                                  {order.offeredPrice > getAskingPriceForOrder(order) ? (
+                                    <span className="text-green-600">Customer is paying premium</span>
+                                  ) : order.offeredPrice < getAskingPriceForOrder(order) ? (
+                                    <span className="text-red-600">Customer wants discount</span>
+                                  ) : (
+                                    <span className="text-gray-600">Customer accepts asking price</span>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                          </div>
+                        }
+                        variant="default"
+                      >
+                        <span className={`cursor-help font-medium ${
+                          order.offeredPrice > getAskingPriceForOrder(order)
+                            ? 'text-green-600' // Above asking price
+                            : order.offeredPrice < getAskingPriceForOrder(order)
+                            ? 'text-red-600' // Below asking price
+                            : 'text-gray-600' // Equal to asking price
+                        }`}>
+                          {order.offeredPrice > getAskingPriceForOrder(order) ? '+' : ''}
+                          {formatPercent((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order), 1, true)}
+                        </span>
+                      </UnifiedTooltip>
                     </TableCell>
                     <TableCell className="font-medium text-green-600">
                       <div className="flex flex-col">
@@ -927,38 +917,37 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                             )}
                           </span>
                           {relationshipBoosts[customerKey] !== undefined && relationshipBoosts[customerKey] > 0 && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex w-fit px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
-                                    Boost: {formatPercent((relationshipBoosts[customerKey] ?? 0) / 100, 1, true)}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
-                                  <div className="text-xs">
-                                    <div className="font-semibold mb-2">Relationship Boost Details</div>
-                                    {boostDetails[customerKey] && boostDetails[customerKey].length > 0 ? (
-                                      <div className="space-y-1 text-[10px]">
-                                        {boostDetails[customerKey].slice(0, 5).map((boost, index) => (
-                                          <div key={index}>
-                                            • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
-                                          </div>
-                                        ))}
-                                        {boostDetails[customerKey].length > 5 && (
-                                          <div className="text-[9px] opacity-70">
-                                            ... and {boostDetails[customerKey].length - 5} more
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="text-[10px] opacity-70">
-                                        No boost events found
-                                      </div>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <UnifiedTooltip
+                              content={
+                                <div className="text-xs">
+                                  <div className="font-semibold mb-2">Relationship Boost Details</div>
+                                  {boostDetails[customerKey] && boostDetails[customerKey].length > 0 ? (
+                                    <div className="space-y-1 text-[10px]">
+                                      {boostDetails[customerKey].slice(0, 5).map((boost, index) => (
+                                        <div key={index}>
+                                          • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                                        </div>
+                                      ))}
+                                      {boostDetails[customerKey].length > 5 && (
+                                        <div className="text-[9px] opacity-70">
+                                          ... and {boostDetails[customerKey].length - 5} more
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="text-[10px] opacity-70">
+                                      No boost events found
+                                    </div>
+                                  )}
+                                </div>
+                              }
+                              className="max-w-xs"
+                              variant="default"
+                            >
+                              <span className="inline-flex w-fit px-1.5 py-0.5 text-[10px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
+                                Boost: {formatPercent((relationshipBoosts[customerKey] ?? 0) / 100, 1, true)}
+                              </span>
+                            </UnifiedTooltip>
                           )}
                         </div>
                       </div>

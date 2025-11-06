@@ -3,7 +3,7 @@ import { WineLogEntry, WineBatch, Vineyard } from '@/lib/types/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from '../../ui';
 import { Wine, TrendingUp, Award, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
 import { getColorClass, formatNumber, formatPercent, getGrapeQualityCategory } from '@/lib/utils/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/shadCN/tooltip';
+import { UnifiedTooltip } from '../../ui/shadCN/tooltip';
 import { calculateVineyardAnalytics } from '@/lib/services';
 
 interface VineyardStatisticsTabProps {
@@ -119,33 +119,37 @@ const VineyardStatisticsTab: React.FC<VineyardStatisticsTabProps> = ({
                           const isLast = i === analytics.yearlyScores.length - 1;
                           
                           return (
-                            <TooltipProvider key={yearData.year}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex-1 flex flex-col justify-end cursor-help">
-                                    <div 
-                                      className={`w-full rounded-t transition-all ${
-                                        isLast 
-                                          ? 'bg-purple-500' 
-                                          : isFirst 
-                                          ? 'bg-gray-300' 
-                                          : 'bg-purple-300'
-                                      }`}
-                                      style={{ height: `${height}%` }}
-                                    />
-                                    <div className="text-[8px] text-center text-gray-500 mt-0.5">
-                                      {yearData.year}
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <div className="text-xs">
-                                    <div className="font-semibold">{yearData.year}</div>
-                                    <div>Wine Score: {formatPercent(yearData.avgScore, 1, true)}</div>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <UnifiedTooltip
+                              key={yearData.year}
+                              content={
+                                <div className="text-xs">
+                                  <div className="font-semibold">{yearData.year}</div>
+                                  <div>Wine Score: {formatPercent(yearData.avgScore, 1, true)}</div>
+                                </div>
+                              }
+                              title={`${yearData.year} Statistics`}
+                              side="top"
+                              sideOffset={8}
+                              className="max-w-xs"
+                              variant="panel"
+                              density="compact"
+                            >
+                              <div className="flex-1 flex flex-col justify-end cursor-help">
+                                <div
+                                  className={`w-full rounded-t transition-all ${
+                                    isLast
+                                      ? 'bg-purple-500'
+                                      : isFirst
+                                      ? 'bg-gray-300'
+                                      : 'bg-purple-300'
+                                  }`}
+                                  style={{ height: `${height}%` }}
+                                />
+                                <div className="text-[8px] text-center text-gray-500 mt-0.5">
+                                  {yearData.year}
+                                </div>
+                              </div>
+                            </UnifiedTooltip>
                           );
                         })}
                       </div>

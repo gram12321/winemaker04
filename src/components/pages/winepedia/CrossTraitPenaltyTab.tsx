@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BalanceScoreBreakdown, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
 import { useWineBalance } from '@/hooks';
-import { WineCharacteristicsDisplay, TooltipProvider } from '@/components/ui';
+import { WineCharacteristicsDisplay } from '@/components/ui';
 import { calculateMidpointCharacteristics, RESET_BUTTON_CLASSES } from '@/lib/utils';
 
 export function CrossTraitPenaltyTab() {
@@ -15,62 +15,60 @@ export function CrossTraitPenaltyTab() {
   const balanceResult = useWineBalance(characteristics);
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
-        <section>
-          <h2 className="text-xl font-semibold">Cross-Trait Scaling (applied to TotalDistance)</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Characteristics affect each other's penalty severity. Good combinations provide synergy reductions.
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-xl font-semibold">Cross-Trait Scaling (applied to TotalDistance)</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Characteristics affect each other's penalty severity. Good combinations provide synergy reductions.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-medium">Interactive Penalty Scaling</h3>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-gray-600">
+            Adjust characteristics to see penalty scaling effects.
           </p>
-        </section>
+          <button
+            onClick={() => setCharacteristics(calculateMidpointCharacteristics())}
+            className={RESET_BUTTON_CLASSES}
+          >
+            Reset to Midpoints
+          </button>
+        </div>
 
-        <section>
-          <h3 className="text-lg font-medium">Interactive Penalty Scaling</h3>
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-sm text-gray-600">
-              Adjust characteristics to see penalty scaling effects.
-            </p>
-            <button
-              onClick={() => setCharacteristics(calculateMidpointCharacteristics())}
-              className={RESET_BUTTON_CLASSES}
-            >
-              Reset to Midpoints
-            </button>
-          </div>
-          
-          <CharacteristicSliderGrid
-            characteristics={characteristics}
-            onChange={(key, value) => updateCharacteristic(key as keyof WineCharacteristics, value)}
-            className="space-y-3"
-          />
-        </section>
+        <CharacteristicSliderGrid
+          characteristics={characteristics}
+          onChange={(key, value) => updateCharacteristic(key as keyof WineCharacteristics, value)}
+          className="space-y-3"
+        />
+      </section>
 
-        <section>
-          <h3 className="text-lg font-medium">Live Balance Calculation</h3>
-          <div className="p-4 rounded-lg">
-            {balanceResult && (
-              <WineCharacteristicsDisplay 
-                characteristics={characteristics}
-                adjustedRanges={balanceResult.adjustedRanges}
-                showValues={true}
-                title="Wine Characteristics"
-                collapsible={false}
-                showBalanceScore={true}
-              />
-            )}
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-lg font-medium">Balance Score Breakdown</h3>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <BalanceScoreBreakdown 
-              characteristics={characteristics} 
-              showWineStyleRules={true}
+      <section>
+        <h3 className="text-lg font-medium">Live Balance Calculation</h3>
+        <div className="p-4 rounded-lg">
+          {balanceResult && (
+            <WineCharacteristicsDisplay
+              characteristics={characteristics}
+              adjustedRanges={balanceResult.adjustedRanges}
+              showValues={true}
+              title="Wine Characteristics"
+              collapsible={false}
+              showBalanceScore={true}
             />
-          </div>
-        </section>
-      </div>
-    </TooltipProvider>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-medium">Balance Score Breakdown</h3>
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <BalanceScoreBreakdown
+            characteristics={characteristics}
+            showWineStyleRules={true}
+          />
+        </div>
+      </section>
+    </div>
   );
 };

@@ -3,7 +3,7 @@ import { WineLogEntry, WineBatch } from '@/lib/types/types';
 import { SimpleCard, Badge, Button } from '../../ui';
 import { Wine } from 'lucide-react';
 import { formatNumber, formatGameDate, formatPercent } from '@/lib/utils/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/shadCN/tooltip';
+import { UnifiedTooltip } from '../../ui/shadCN/tooltip';
 
 interface ProductionHistoryTabProps {
   paginatedWineLog: WineLogEntry[];
@@ -40,23 +40,26 @@ const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
   const wineScore = (entry.grapeQuality + entry.balance) / 2;
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help">
-            {formatPercent(wineScore, 0, true)}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1 text-xs">
-            <div className="font-semibold">Wine Score Calculation</div>
-            <div>Grape Quality: <span className="font-medium">{formatPercent(entry.grapeQuality, 1, true)}</span></div>
-            <div>Balance: <span className="font-medium">{formatPercent(entry.balance, 1, true)}</span></div>
-            <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={
+        <div className="space-y-1 text-xs">
+          <div className="font-semibold">Wine Score Calculation</div>
+          <div>Grape Quality: <span className="font-medium">{formatPercent(entry.grapeQuality, 1, true)}</span></div>
+          <div>Balance: <span className="font-medium">{formatPercent(entry.balance, 1, true)}</span></div>
+          <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
+        </div>
+      }
+      title="Wine Score Calculation"
+      side="top"
+      sideOffset={4}
+      className="max-w-xs"
+      variant="panel"
+      density="compact"
+    >
+      <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help">
+        {formatPercent(wineScore, 0, true)}
+      </span>
+    </UnifiedTooltip>
   );
 };
 

@@ -3,7 +3,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
+import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
@@ -159,52 +159,50 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
       
       {/* Bar Container */}
       <div className="sm:w-3/4 flex items-center flex-1">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
-              <MobileDialogWrapper 
-                content={buildTooltipContent()} 
-                title={`${label} Details`}
-                triggerClassName="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
-              >
-        <div 
-                  className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
+        <UnifiedTooltip
+          content={buildTooltipContent()}
+          title={`${label} Details`}
+          side="top"
+          sideOffset={8}
+          className="max-w-sm"
+          variant="panel"
+          density="compact"
+          showMobileHint={true}
+          mobileHintVariant="corner-dot"
+          triggerClassName="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
         >
-                  {/* Background bar */}
           <div 
-            className="absolute inset-0 bg-gray-200 rounded-full"
-          ></div>
-          
-                  {/* Adjusted ranges (green) - shows optimal zone from balance calculation */}
-              <div 
-                className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
-                style={{
-                      left: `${rMin * 100}%`,
-                      width: `${(rMax - rMin) * 100}%`
-                }}
-              ></div>
-
-          {/* Value marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
-            style={{ left: `${displayValue * 100}%` }}
-          ></div>
-
-          {/* Base grape value marker (if provided) */}
-          {typeof baseDisplay === 'number' && (
+            className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help"
+          >
+            {/* Background bar */}
             <div 
-              className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
-              style={{ left: `${baseDisplay * 100}%` }}
+              className="absolute inset-0 bg-gray-200 rounded-full"
             ></div>
-          )}
-        </div>
-              </MobileDialogWrapper>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
-              {buildTooltipContent()}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+            
+            {/* Adjusted ranges (green) - shows optimal zone from balance calculation */}
+            <div 
+              className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
+              style={{
+                    left: `${rMin * 100}%`,
+                    width: `${(rMax - rMin) * 100}%`
+              }}
+            ></div>
+
+            {/* Value marker */}
+            <div 
+              className="absolute top-0 bottom-0 w-1 bg-black z-10 rounded-full"
+              style={{ left: `${displayValue * 100}%` }}
+            ></div>
+
+            {/* Base grape value marker (if provided) */}
+            {typeof baseDisplay === 'number' && (
+              <div 
+                className="absolute top-0 bottom-0 w-1 bg-blue-700 z-10 rounded-full opacity-80"
+                style={{ left: `${baseDisplay * 100}%` }}
+              ></div>
+            )}
+          </div>
+        </UnifiedTooltip>
         
         {/* Value display */}
         {showValue && (

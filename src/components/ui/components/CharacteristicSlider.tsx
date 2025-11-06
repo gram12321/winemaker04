@@ -1,5 +1,5 @@
 // Shared characteristic slider component for winepedia
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
+import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 import { getRatingForRange } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { WineCharacteristics } from '@/lib/types/types';
@@ -23,72 +23,37 @@ export function CharacteristicSlider({
   return (
     <div className={`flex items-center gap-3 py-1 ${className}`}>
       <div className="w-24 flex items-center gap-2 text-xs">
-        <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-              <MobileDialogWrapper 
-                content={
-                  <div className={tooltipStyles.text}>
-                    <TooltipSection title={`${label} Information`}>
-                      <TooltipRow 
-                        label="Characteristic:" 
-                        value={label}
-                      />
-                      <TooltipRow 
-                        label="Current Value:" 
-                        value={value.toFixed(2)}
-                        valueRating={(() => {
-                          // Try to get balanced range for this characteristic if it exists
-                          const charKey = label.toLowerCase() as keyof WineCharacteristics;
-                          const balancedRange = BASE_BALANCED_RANGES[charKey];
-                          if (balancedRange) {
-                            return getRatingForRange(value, 0, 1, 'balanced', balancedRange[0], balancedRange[1]);
-                          }
-                          // Fallback to higher_better if no balanced range available
-                          return getRatingForRange(value, 0, 1, 'higher_better');
-                        })()}
-                        monospaced
-                      />
-                    </TooltipSection>
-                  </div>
-                } 
-                title={`${label} Information`}
-                triggerClassName="cursor-help"
-              >
-            <img 
-              src={icon} 
-              alt={`${label} icon`} 
-              className="w-4 h-4 opacity-80 cursor-help"
-            />
-              </MobileDialogWrapper>
-          </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-              <div className={tooltipStyles.text}>
-                <TooltipSection title={`${label} Information`}>
-                  <TooltipRow 
-                    label="Characteristic:" 
-                    value={label}
-                  />
-                  <TooltipRow 
-                    label="Current Value:" 
-                    value={formatNumber(value, { smartDecimals: true })}
-                    valueRating={(() => {
-                      // Try to get balanced range for this characteristic if it exists
-                      const charKey = label.toLowerCase() as keyof WineCharacteristics;
-                      const balancedRange = BASE_BALANCED_RANGES[charKey];
-                      if (balancedRange) {
-                        return getRatingForRange(value, 0, 1, 'balanced', balancedRange[0], balancedRange[1]);
-                      }
-                      // Fallback to higher_better if no balanced range available
-                      return getRatingForRange(value, 0, 1, 'higher_better');
-                    })()}
-                    monospaced
-                  />
-                </TooltipSection>
-              </div>
-          </TooltipContent>
-        </Tooltip>
-        </TooltipProvider>
+        <UnifiedTooltip
+          content={
+            <div className={tooltipStyles.text}>
+              <TooltipSection title={`${label} Information`}>
+                <TooltipRow label="Characteristic:" value={label} />
+                <TooltipRow 
+                  label="Current Value:" 
+                  value={formatNumber(value, { smartDecimals: true })}
+                  valueRating={(() => {
+                    const charKey = label.toLowerCase() as keyof WineCharacteristics;
+                    const balancedRange = BASE_BALANCED_RANGES[charKey];
+                    if (balancedRange) {
+                      return getRatingForRange(value, 0, 1, 'balanced', balancedRange[0], balancedRange[1]);
+                    }
+                    return getRatingForRange(value, 0, 1, 'higher_better');
+                  })()}
+                  monospaced
+                />
+              </TooltipSection>
+            </div>
+          }
+          title={`${label} Information`}
+          side="top"
+          sideOffset={8}
+          className="max-w-xs"
+          variant="panel"
+          density="compact"
+          triggerClassName="cursor-help"
+        >
+          <img src={icon} alt={`${label} icon`} className="w-4 h-4 opacity-80 cursor-help" />
+        </UnifiedTooltip>
         <span className="font-medium capitalize">{label}</span>
       </div>
       <div className="flex-1">

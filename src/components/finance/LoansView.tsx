@@ -6,7 +6,7 @@ import { getGameState, getAvailableLenders, calculateLenderAvailability } from '
 import { loadLenders } from '@/lib/database/core/lendersDB';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
 import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull } from '@/lib/services/finance/loanService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from '@/components/ui';
 // LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
 import { calculateCreditRating } from '@/lib/services';
@@ -404,143 +404,170 @@ export default function LoansView() {
                       <div className="pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="font-medium text-blue-800 mb-2 cursor-help">
-                                    Asset Health ({formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%)
+                            <UnifiedTooltip
+                              content={
+                                <div className="max-w-xs">
+                                  <div className="font-medium mb-2">Asset Health Formula:</div>
+                                  <div className="text-xs space-y-1">
+                                    <div>• Debt-to-Asset Ratio = Outstanding Loans ÷ Total Assets</div>
+                                    <div>• Asset Coverage = Total Assets ÷ Outstanding Loans</div>
+                                    <div>• Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
+                                    <div className="mt-2 font-medium">Scoring:</div>
+                                    <div>• Debt-to-Asset ≤10%: +8% | ≤30%: +6% | ≤50%: +4% | ≤70%: +2%</div>
+                                    <div>• Asset Coverage ≥5x: +6% | ≥3x: +4% | ≥2x: +2%</div>
+                                    <div>• Liquidity ≥2x: +6% | ≥1x: +4% | ≥0.5x: +2%</div>
+                                    <div className="mt-2 font-medium">Max Score: 20% of total credit rating</div>
                                   </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="max-w-xs">
-                                    <div className="font-medium mb-2">Asset Health Formula:</div>
-                                    <div className="text-xs space-y-1">
-                                      <div>• Debt-to-Asset Ratio = Outstanding Loans ÷ Total Assets</div>
-                                      <div>• Asset Coverage = Total Assets ÷ Outstanding Loans</div>
-                                      <div>• Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
-                                      <div className="mt-2 font-medium">Scoring:</div>
-                                      <div>• Debt-to-Asset ≤10%: +8% | ≤30%: +6% | ≤50%: +4% | ≤70%: +2%</div>
-                                      <div>• Asset Coverage ≥5x: +6% | ≥3x: +4% | ≥2x: +2%</div>
-                                      <div>• Liquidity ≥2x: +6% | ≥1x: +4% | ≥0.5x: +2%</div>
-                                      <div className="mt-2 font-medium">Max Score: 20% of total credit rating</div>
-                                    </div>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                                </div>
+                              }
+                              title="Asset Health Formula"
+                              side="top"
+                              sideOffset={4}
+                              className="max-w-xs"
+                              variant="panel"
+                              density="compact"
+                            >
+                              <div className="font-medium text-blue-800 mb-2 cursor-help">
+                                Asset Health ({formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%)
+                              </div>
+                            </UnifiedTooltip>
                             <div className="space-y-1 text-blue-700">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-help">Debt-to-Asset: {formatNumber(creditRatingBreakdown.assetHealth.debtToAssetRatio * 100, { decimals: 1 })}%</div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">Debt-to-Asset Ratio = Outstanding Loans ÷ Total Company Assets</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-help">Asset Coverage: {formatNumber(creditRatingBreakdown.assetHealth.assetCoverage, { decimals: 1 })}x</div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">Asset Coverage = Total Assets ÷ Outstanding Loans</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-help">Liquidity Ratio: {formatNumber(creditRatingBreakdown.assetHealth.liquidityRatio, { decimals: 1 })}x</div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs">Debt-to-Asset Ratio = Outstanding Loans ÷ Total Company Assets</div>
+                                }
+                                title="Debt-to-Asset Ratio"
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <div className="cursor-help">Debt-to-Asset: {formatNumber(creditRatingBreakdown.assetHealth.debtToAssetRatio * 100, { decimals: 1 })}%</div>
+                              </UnifiedTooltip>
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs">Asset Coverage = Total Assets ÷ Outstanding Loans</div>
+                                }
+                                title="Asset Coverage"
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <div className="cursor-help">Asset Coverage: {formatNumber(creditRatingBreakdown.assetHealth.assetCoverage, { decimals: 1 })}x</div>
+                              </UnifiedTooltip>
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs">Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
+                                }
+                                title="Liquidity Ratio"
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <div className="cursor-help">Liquidity Ratio: {formatNumber(creditRatingBreakdown.assetHealth.liquidityRatio, { decimals: 1 })}x</div>
+                              </UnifiedTooltip>
                             </div>
                           </div>
                           <div>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="font-medium text-blue-800 mb-2 cursor-help">
-                                    Company Stability ({formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%)
+                            <UnifiedTooltip
+                              content={
+                                <div className="max-w-xs">
+                                  <div className="font-medium mb-2">Company Stability Formula:</div>
+                                  <div className="text-xs space-y-1">
+                                    <div>• Age Score = min(Company Age × 0.5%, 5%) [max 5% at 10+ years]</div>
+                                    <div>• Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3%</div>
+                                    <div>• Expense Efficiency = (1 - Expense Ratio) × 2%</div>
+                                    <div className="mt-2 font-medium">Scoring:</div>
+                                    <div>• Company Age: 0.5% per year, max 5% at 10+ years</div>
+                                    <div>• Profit Consistency: Based on variance in last 4 seasons</div>
+                                    <div>• Expense Efficiency: Lower expense ratio = higher score</div>
+                                    <div className="mt-2 font-medium">Max Score: 10% of total credit rating</div>
                                   </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="max-w-xs">
-                                    <div className="font-medium mb-2">Company Stability Formula:</div>
-                                    <div className="text-xs space-y-1">
-                                      <div>• Age Score = min(Company Age × 0.5%, 5%) [max 5% at 10+ years]</div>
-                                      <div>• Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3%</div>
-                                      <div>• Expense Efficiency = (1 - Expense Ratio) × 2%</div>
-                                      <div className="mt-2 font-medium">Scoring:</div>
-                                      <div>• Company Age: 0.5% per year, max 5% at 10+ years</div>
-                                      <div>• Profit Consistency: Based on variance in last 4 seasons</div>
-                                      <div>• Expense Efficiency: Lower expense ratio = higher score</div>
-                                      <div className="mt-2 font-medium">Max Score: 10% of total credit rating</div>
-                                    </div>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                                </div>
+                              }
+                              title="Company Stability Formula"
+                              side="top"
+                              sideOffset={4}
+                              className="max-w-xs"
+                              variant="panel"
+                              density="compact"
+                            >
+                              <div className="font-medium text-blue-800 mb-2 cursor-help">
+                                Company Stability ({formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%)
+                              </div>
+                            </UnifiedTooltip>
                             <div className="space-y-1 text-blue-700">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-help">Company Age: {formatNumber(creditRatingBreakdown.companyStability.companyAge, { decimals: 1 })} years</div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">Age Score = min(Company Age × 0.5%, 5%) - Max 5% at 10+ years</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-help">Profit Consistency: {formatNumber(creditRatingBreakdown.companyStability.profitConsistency * 100, { decimals: 1 })}%</div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3% - Based on variance in last 4 seasons</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-help">Expense Efficiency: {formatNumber(creditRatingBreakdown.companyStability.expenseEfficiency * 100, { decimals: 1 })}%</div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">Expense Efficiency = (1 - Expense Ratio) × 2% - Lower expense ratio = higher score</div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs">Age Score = min(Company Age × 0.5%, 5%) - Max 5% at 10+ years</div>
+                                }
+                                title="Company Age Score"
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <div className="cursor-help">Company Age: {formatNumber(creditRatingBreakdown.companyStability.companyAge, { decimals: 1 })} years</div>
+                              </UnifiedTooltip>
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs">Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3% - Based on variance in last 4 seasons</div>
+                                }
+                                title="Profit Consistency"
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <div className="cursor-help">Profit Consistency: {formatNumber(creditRatingBreakdown.companyStability.profitConsistency * 100, { decimals: 1 })}%</div>
+                              </UnifiedTooltip>
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs">Expense Efficiency = (1 - Expense Ratio) × 2% - Lower expense ratio = higher score</div>
+                                }
+                                title="Expense Efficiency"
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <div className="cursor-help">Expense Efficiency: {formatNumber(creditRatingBreakdown.companyStability.expenseEfficiency * 100, { decimals: 1 })}%</div>
+                              </UnifiedTooltip>
                             </div>
                           </div>
                           <div>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="font-medium text-blue-800 mb-2 cursor-help">
-                                    Negative Balance ({formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%)
+                            <UnifiedTooltip
+                              content={
+                                <div className="max-w-xs">
+                                  <div className="font-medium mb-2">Negative Balance Penalty:</div>
+                                  <div className="text-xs space-y-1">
+                                    <div>• Penalty: -2% per week with negative balance</div>
+                                    <div>• Max Penalty: -30% (after 15 weeks)</div>
+                                    <div>• Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
+                                    <div className="mt-2 font-medium">Formula:</div>
+                                    <div>Penalty = min(Weeks Negative × -2%, -30%)</div>
                                   </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="max-w-xs">
-                                    <div className="font-medium mb-2">Negative Balance Penalty:</div>
-                                    <div className="text-xs space-y-1">
-                                      <div>• Penalty: -2% per week with negative balance</div>
-                                      <div>• Max Penalty: -30% (after 15 weeks)</div>
-                                      <div>• Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
-                                      <div className="mt-2 font-medium">Formula:</div>
-                                      <div>Penalty = min(Weeks Negative × -2%, -30%)</div>
-                                    </div>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                                </div>
+                              }
+                              title="Negative Balance Penalty"
+                              side="top"
+                              sideOffset={4}
+                              className="max-w-xs"
+                              variant="panel"
+                              density="compact"
+                            >
+                              <div className="font-medium text-blue-800 mb-2 cursor-help">
+                                Negative Balance ({formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%)
+                              </div>
+                            </UnifiedTooltip>
                             <div className="space-y-1 text-blue-700">
                               <div>Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
                               <div>Penalty per Week: {formatNumber(creditRatingBreakdown.negativeBalance.penaltyPerWeek * 100, { decimals: 1 })}%</div>
@@ -548,37 +575,37 @@ export default function LoansView() {
                           </div>
                         </div>
                         <div className="mt-3 text-xs text-blue-600">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="cursor-help">
-                                  {getCreditRatingDescription(creditRatingBreakdown.finalRating)}
+                          <UnifiedTooltip
+                            content={
+                              <div className="max-w-xs">
+                                <div className="font-medium mb-2">Final Credit Rating Formula:</div>
+                                <div className="text-xs space-y-1">
+                                  <div>Final Rating = Base Rating (50%) + Asset Health + Payment History + Company Stability + Negative Balance Penalty</div>
+                                  <div className="mt-2 font-medium">Components:</div>
+                                  <div>• Base Rating: 50% (BBB- equivalent)</div>
+                                  <div>• Asset Health: 0-20% (debt ratios, coverage, liquidity)</div>
+                                  <div>• Payment History: 0-15% (on-time payments, defaults, payoffs)</div>
+                                  <div>• Company Stability: 0-10% (age, profit consistency, efficiency)</div>
+                                  <div>• Negative Balance: 0 to -30% (penalty for negative balance over time)</div>
+                                  <div className="mt-2 font-medium">Total Range: 0-100% (0% = C rating, 100% = AAA rating)</div>
+                                  <div className="mt-2 font-medium">Current Breakdown:</div>
+                                  <div>• Base: 50%</div>
+                                  <div>• Asset Health: {formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%</div>
+                                  <div>• Payment History: {formatNumber(creditRatingBreakdown.paymentHistory.score * 100, { decimals: 1 })}%</div>
+                                  <div>• Company Stability: {formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%</div>
+                                  <div>• Negative Balance: {formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%</div>
+                                  <div>• Final: {formatNumber(creditRatingBreakdown.finalRating * 100, { decimals: 1 })}%</div>
                                 </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="max-w-xs">
-                                  <div className="font-medium mb-2">Final Credit Rating Formula:</div>
-                                  <div className="text-xs space-y-1">
-                                    <div>Final Rating = Base Rating (50%) + Asset Health + Payment History + Company Stability + Negative Balance Penalty</div>
-                                    <div className="mt-2 font-medium">Components:</div>
-                                    <div>• Base Rating: 50% (BBB- equivalent)</div>
-                                    <div>• Asset Health: 0-20% (debt ratios, coverage, liquidity)</div>
-                                    <div>• Payment History: 0-15% (on-time payments, defaults, payoffs)</div>
-                                    <div>• Company Stability: 0-10% (age, profit consistency, efficiency)</div>
-                                    <div>• Negative Balance: 0 to -30% (penalty for negative balance over time)</div>
-                                    <div className="mt-2 font-medium">Total Range: 0-100% (0% = C rating, 100% = AAA rating)</div>
-                                    <div className="mt-2 font-medium">Current Breakdown:</div>
-                                    <div>• Base: 50%</div>
-                                    <div>• Asset Health: {formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%</div>
-                                    <div>• Payment History: {formatNumber(creditRatingBreakdown.paymentHistory.score * 100, { decimals: 1 })}%</div>
-                                    <div>• Company Stability: {formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%</div>
-                                    <div>• Negative Balance: {formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%</div>
-                                    <div>• Final: {formatNumber(creditRatingBreakdown.finalRating * 100, { decimals: 1 })}%</div>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                              </div>
+                            }
+                            title="Final Credit Rating Formula"
+                            variant="panel"
+                            density="compact"
+                          >
+                            <div className="cursor-help">
+                              {getCreditRatingDescription(creditRatingBreakdown.finalRating)}
+                            </div>
+                          </UnifiedTooltip>
                         </div>
             </div>
             </div>
@@ -593,143 +620,131 @@ export default function LoansView() {
                 <h4 className="font-medium text-blue-900 mb-3">Comprehensive Credit Rating Breakdown</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="font-medium text-blue-800 mb-2 cursor-help">
-                            Asset Health ({formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%)
+                    <UnifiedTooltip
+                      content={
+                        <div className="max-w-xs">
+                          <div className="font-medium mb-2">Asset Health Formula:</div>
+                          <div className="text-xs space-y-1">
+                            <div>• Debt-to-Asset Ratio = Outstanding Loans ÷ Total Assets</div>
+                            <div>• Asset Coverage = Total Assets ÷ Outstanding Loans</div>
+                            <div>• Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
+                            <div className="mt-2 font-medium">Scoring:</div>
+                            <div>• Debt-to-Asset ≤10%: +8% | ≤30%: +6% | ≤50%: +4% | ≤70%: +2%</div>
+                            <div>• Asset Coverage ≥5x: +6% | ≥3x: +4% | ≥2x: +2%</div>
+                            <div>• Liquidity ≥2x: +6% | ≥1x: +4% | ≥0.5x: +2%</div>
+                            <div className="mt-2 font-medium">Max Score: 20% of total credit rating</div>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="max-w-xs">
-                            <div className="font-medium mb-2">Asset Health Formula:</div>
-                            <div className="text-xs space-y-1">
-                              <div>• Debt-to-Asset Ratio = Outstanding Loans ÷ Total Assets</div>
-                              <div>• Asset Coverage = Total Assets ÷ Outstanding Loans</div>
-                              <div>• Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
-                              <div className="mt-2 font-medium">Scoring:</div>
-                              <div>• Debt-to-Asset ≤10%: +8% | ≤30%: +6% | ≤50%: +4% | ≤70%: +2%</div>
-                              <div>• Asset Coverage ≥5x: +6% | ≥3x: +4% | ≥2x: +2%</div>
-                              <div>• Liquidity ≥2x: +6% | ≥1x: +4% | ≥0.5x: +2%</div>
-                              <div className="mt-2 font-medium">Max Score: 20% of total credit rating</div>
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </div>
+                      }
+                      title="Asset Health Formula"
+                      variant="panel"
+                      density="compact"
+                    >
+                      <div className="font-medium text-blue-800 mb-2 cursor-help">
+                        Asset Health ({formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%)
+                      </div>
+                    </UnifiedTooltip>
                     <div className="space-y-1 text-blue-700">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">Debt-to-Asset: {formatNumber(creditRatingBreakdown.assetHealth.debtToAssetRatio * 100, { decimals: 1 })}%</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">Debt-to-Asset Ratio = Outstanding Loans ÷ Total Company Assets</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">Asset Coverage: {formatNumber(creditRatingBreakdown.assetHealth.assetCoverage, { decimals: 1 })}x</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">Asset Coverage = Total Assets ÷ Outstanding Loans</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">Liquidity Ratio: {formatNumber(creditRatingBreakdown.assetHealth.liquidityRatio, { decimals: 1 })}x</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <UnifiedTooltip
+                        content={<div className="text-xs">Debt-to-Asset Ratio = Outstanding Loans ÷ Total Company Assets</div>}
+                        title="Debt-to-Asset Ratio"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <div className="cursor-help">Debt-to-Asset: {formatNumber(creditRatingBreakdown.assetHealth.debtToAssetRatio * 100, { decimals: 1 })}%</div>
+                      </UnifiedTooltip>
+                      <UnifiedTooltip
+                        content={<div className="text-xs">Asset Coverage = Total Assets ÷ Outstanding Loans</div>}
+                        title="Asset Coverage"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <div className="cursor-help">Asset Coverage: {formatNumber(creditRatingBreakdown.assetHealth.assetCoverage, { decimals: 1 })}x</div>
+                      </UnifiedTooltip>
+                      <UnifiedTooltip
+                        content={<div className="text-xs">Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>}
+                        title="Liquidity Ratio"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <div className="cursor-help">Liquidity Ratio: {formatNumber(creditRatingBreakdown.assetHealth.liquidityRatio, { decimals: 1 })}x</div>
+                      </UnifiedTooltip>
                     </div>
                   </div>
                   <div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="font-medium text-blue-800 mb-2 cursor-help">
-                            Company Stability ({formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%)
+                    <UnifiedTooltip
+                      content={
+                        <div className="max-w-xs">
+                          <div className="font-medium mb-2">Company Stability Formula:</div>
+                          <div className="text-xs space-y-1">
+                            <div>• Age Score = min(Company Age × 0.5%, 5%) [max 5% at 10+ years]</div>
+                            <div>• Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3%</div>
+                            <div>• Expense Efficiency = (1 - Expense Ratio) × 2%</div>
+                            <div className="mt-2 font-medium">Scoring:</div>
+                            <div>• Company Age: 0.5% per year, max 5% at 10+ years</div>
+                            <div>• Profit Consistency: Based on variance in last 4 seasons</div>
+                            <div>• Expense Efficiency: Lower expense ratio = higher score</div>
+                            <div className="mt-2 font-medium">Max Score: 10% of total credit rating</div>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="max-w-xs">
-                            <div className="font-medium mb-2">Company Stability Formula:</div>
-                            <div className="text-xs space-y-1">
-                              <div>• Age Score = min(Company Age × 0.5%, 5%) [max 5% at 10+ years]</div>
-                              <div>• Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3%</div>
-                              <div>• Expense Efficiency = (1 - Expense Ratio) × 2%</div>
-                              <div className="mt-2 font-medium">Scoring:</div>
-                              <div>• Company Age: 0.5% per year, max 5% at 10+ years</div>
-                              <div>• Profit Consistency: Based on variance in last 4 seasons</div>
-                              <div>• Expense Efficiency: Lower expense ratio = higher score</div>
-                              <div className="mt-2 font-medium">Max Score: 10% of total credit rating</div>
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </div>
+                      }
+                      title="Company Stability Formula"
+                      variant="panel"
+                      density="compact"
+                    >
+                      <div className="font-medium text-blue-800 mb-2 cursor-help">
+                        Company Stability ({formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%)
+                      </div>
+                    </UnifiedTooltip>
                     <div className="space-y-1 text-blue-700">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">Company Age: {formatNumber(creditRatingBreakdown.companyStability.companyAge, { decimals: 1 })} years</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">Age Score = min(Company Age × 0.5%, 5%) - Max 5% at 10+ years</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">Profit Consistency: {formatNumber(creditRatingBreakdown.companyStability.profitConsistency * 100, { decimals: 1 })}%</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3% - Based on variance in last 4 seasons</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">Expense Efficiency: {formatNumber(creditRatingBreakdown.companyStability.expenseEfficiency * 100, { decimals: 1 })}%</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">Expense Efficiency = (1 - Expense Ratio) × 2% - Lower expense ratio = higher score</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <UnifiedTooltip
+                        content={<div className="text-xs">Age Score = min(Company Age × 0.5%, 5%) - Max 5% at 10+ years</div>}
+                        title="Company Age"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <div className="cursor-help">Company Age: {formatNumber(creditRatingBreakdown.companyStability.companyAge, { decimals: 1 })} years</div>
+                      </UnifiedTooltip>
+                      <UnifiedTooltip
+                        content={<div className="text-xs">Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3% - Based on variance in last 4 seasons</div>}
+                        title="Profit Consistency"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <div className="cursor-help">Profit Consistency: {formatNumber(creditRatingBreakdown.companyStability.profitConsistency * 100, { decimals: 1 })}%</div>
+                      </UnifiedTooltip>
+                      <UnifiedTooltip
+                        content={<div className="text-xs">Expense Efficiency = (1 - Expense Ratio) × 2% - Lower expense ratio = higher score</div>}
+                        title="Expense Efficiency"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <div className="cursor-help">Expense Efficiency: {formatNumber(creditRatingBreakdown.companyStability.expenseEfficiency * 100, { decimals: 1 })}%</div>
+                      </UnifiedTooltip>
                     </div>
                   </div>
                   <div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="font-medium text-blue-800 mb-2 cursor-help">
-                            Negative Balance ({formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%)
+                    <UnifiedTooltip
+                      content={
+                        <div className="max-w-xs">
+                          <div className="font-medium mb-2">Negative Balance Penalty:</div>
+                          <div className="text-xs space-y-1">
+                            <div>• Penalty: -2% per week with negative balance</div>
+                            <div>• Max Penalty: -30% (after 15 weeks)</div>
+                            <div>• Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
+                            <div className="mt-2 font-medium">Formula:</div>
+                            <div>Penalty = min(Weeks Negative × -2%, -30%)</div>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="max-w-xs">
-                            <div className="font-medium mb-2">Negative Balance Penalty:</div>
-                            <div className="text-xs space-y-1">
-                              <div>• Penalty: -2% per week with negative balance</div>
-                              <div>• Max Penalty: -30% (after 15 weeks)</div>
-                              <div>• Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
-                              <div className="mt-2 font-medium">Formula:</div>
-                              <div>Penalty = min(Weeks Negative × -2%, -30%)</div>
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </div>
+                      }
+                      title="Negative Balance Penalty"
+                      variant="panel"
+                      density="compact"
+                    >
+                      <div className="font-medium text-blue-800 mb-2 cursor-help">
+                        Negative Balance ({formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%)
+                      </div>
+                    </UnifiedTooltip>
                     <div className="space-y-1 text-blue-700">
                       <div>Consecutive Weeks: {creditRatingBreakdown.negativeBalance.consecutiveWeeksNegative} weeks</div>
                       <div>Penalty per Week: {formatNumber(creditRatingBreakdown.negativeBalance.penaltyPerWeek * 100, { decimals: 1 })}%</div>
@@ -737,37 +752,37 @@ export default function LoansView() {
                   </div>
                 </div>
                 <div className="mt-3 text-xs text-blue-600">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="cursor-help">
-                          {getCreditRatingDescription(creditRatingBreakdown.finalRating)}
+                  <UnifiedTooltip
+                    content={
+                      <div className="max-w-xs">
+                        <div className="font-medium mb-2">Final Credit Rating Formula:</div>
+                        <div className="text-xs space-y-1">
+                          <div>Final Rating = Base Rating (50%) + Asset Health + Payment History + Company Stability + Negative Balance Penalty</div>
+                          <div className="mt-2 font-medium">Components:</div>
+                          <div>• Base Rating: 50% (BBB- equivalent)</div>
+                          <div>• Asset Health: 0-20% (debt ratios, coverage, liquidity)</div>
+                          <div>• Payment History: 0-15% (on-time payments, defaults, payoffs)</div>
+                          <div>• Company Stability: 0-10% (age, profit consistency, efficiency)</div>
+                          <div>• Negative Balance: 0 to -30% (penalty for negative balance over time)</div>
+                          <div className="mt-2 font-medium">Total Range: 0-100% (0% = C rating, 100% = AAA rating)</div>
+                          <div className="mt-2 font-medium">Current Breakdown:</div>
+                          <div>• Base: 50%</div>
+                          <div>• Asset Health: {formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%</div>
+                          <div>• Payment History: {formatNumber(creditRatingBreakdown.paymentHistory.score * 100, { decimals: 1 })}%</div>
+                          <div>• Company Stability: {formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%</div>
+                          <div>• Negative Balance: {formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%</div>
+                          <div>• Final: {formatNumber(creditRatingBreakdown.finalRating * 100, { decimals: 1 })}%</div>
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="max-w-xs">
-                          <div className="font-medium mb-2">Final Credit Rating Formula:</div>
-                          <div className="text-xs space-y-1">
-                            <div>Final Rating = Base Rating (50%) + Asset Health + Payment History + Company Stability + Negative Balance Penalty</div>
-                            <div className="mt-2 font-medium">Components:</div>
-                            <div>• Base Rating: 50% (BBB- equivalent)</div>
-                            <div>• Asset Health: 0-20% (debt ratios, coverage, liquidity)</div>
-                            <div>• Payment History: 0-15% (on-time payments, defaults, payoffs)</div>
-                            <div>• Company Stability: 0-10% (age, profit consistency, efficiency)</div>
-                            <div>• Negative Balance: 0 to -30% (penalty for negative balance over time)</div>
-                            <div className="mt-2 font-medium">Total Range: 0-100% (0% = C rating, 100% = AAA rating)</div>
-                            <div className="mt-2 font-medium">Current Breakdown:</div>
-                            <div>• Base: 50%</div>
-                            <div>• Asset Health: {formatNumber(creditRatingBreakdown.assetHealth.score * 100, { decimals: 1 })}%</div>
-                            <div>• Payment History: {formatNumber(creditRatingBreakdown.paymentHistory.score * 100, { decimals: 1 })}%</div>
-                            <div>• Company Stability: {formatNumber(creditRatingBreakdown.companyStability.score * 100, { decimals: 1 })}%</div>
-                            <div>• Negative Balance: {formatNumber(creditRatingBreakdown.negativeBalance.score * 100, { decimals: 1 })}%</div>
-                            <div>• Final: {formatNumber(creditRatingBreakdown.finalRating * 100, { decimals: 1 })}%</div>
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                      </div>
+                    }
+                    title="Final Credit Rating Formula"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <div className="cursor-help">
+                      {getCreditRatingDescription(creditRatingBreakdown.finalRating)}
+                    </div>
+                  </UnifiedTooltip>
                 </div>
               </div>
             )}

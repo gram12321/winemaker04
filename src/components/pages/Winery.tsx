@@ -5,7 +5,7 @@ import { getAllWineBatches, bottleWine, isActionAvailable } from '@/lib/services
 import { WineBatch } from '@/lib/types/types';
 import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, MobileDialogWrapper, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
+import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
 import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName, formatNumber, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
@@ -70,50 +70,51 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
   return (
     <div className="mt-2">
       <div className="text-xs text-gray-600 mb-1">Weekly Effects:</div>
-      <TooltipProvider>
-        <div className="flex flex-wrap gap-1">
-          {effects.map((effect, index) => {
-            const content = (
-              <div className={tooltipStyles.text}>
-                <TooltipSection>
-                  <p className={"capitalize"}>{getCharacteristicDisplayName(effect.characteristic)}</p>
-                </TooltipSection>
+      <div className="flex flex-wrap gap-1">
+        {effects.map((effect, index) => {
+          const content = (
+            <div className={tooltipStyles.text}>
+              <TooltipSection>
+                <p className={"capitalize"}>{getCharacteristicDisplayName(effect.characteristic)}</p>
+              </TooltipSection>
+            </div>
+          );
+          
+          // Use balance-aware color coding for fermentation effects
+          const currentValue = batch.characteristics[effect.characteristic] || 0;
+          const balancedRange = BASE_BALANCED_RANGES[effect.characteristic];
+          const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
+          const colorInfo = getCharacteristicEffectColorInfo(currentValue, effect.modifier, balancedRangeCopy);
+          const colorClass = getCharacteristicEffectColorClass(currentValue, effect.modifier, balancedRangeCopy);
+          const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
+          
+          return (
+            <UnifiedTooltip
+              key={index}
+              content={content}
+              title={getCharacteristicDisplayName(effect.characteristic)}
+              side="top"
+              variant="panel"
+              density="compact"
+              triggerClassName="inline-block"
+              showMobileHint={true}
+              mobileHintVariant="corner-dot"
+            >
+              <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                <CharacteristicIcon
+                  name={effect.characteristic}
+                  size="xs"
+                  className="mr-1"
+                  tooltip={false}
+                />
+                <span className={`font-medium ${colorClass}`}>
+                  {effect.modifier > 0 ? '+' : ''}{formatNumber(effect.modifier * 100, { smartDecimals: true })}%
+                </span>
               </div>
-            );
-            
-            // Use balance-aware color coding for fermentation effects
-            const currentValue = batch.characteristics[effect.characteristic] || 0;
-            const balancedRange = BASE_BALANCED_RANGES[effect.characteristic];
-            const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
-            const colorInfo = getCharacteristicEffectColorInfo(currentValue, effect.modifier, balancedRangeCopy);
-            const colorClass = getCharacteristicEffectColorClass(currentValue, effect.modifier, balancedRangeCopy);
-            const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
-            
-            return (
-              <Tooltip key={index}>
-                <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
-                  <MobileDialogWrapper content={content} title={getCharacteristicDisplayName(effect.characteristic)} triggerClassName="inline-block">
-                    <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
-                      <CharacteristicIcon
-                        name={effect.characteristic}
-                        size="xs"
-                        className="mr-1"
-                        tooltip={false}
-                      />
-                      <span className={`font-medium ${colorClass}`}>
-                        {effect.modifier > 0 ? '+' : ''}{formatNumber(effect.modifier * 100, { smartDecimals: true })}%
-                      </span>
-                    </div>
-                  </MobileDialogWrapper>
-                </TooltipTrigger>
-                <TooltipContent side="top" variant="panel" density="compact">
-                  {content}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      </TooltipProvider>
+            </UnifiedTooltip>
+          );
+        })}
+      </div>
     </div>
   );
 };

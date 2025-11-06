@@ -4,7 +4,7 @@ import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, ge
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider, TooltipSection, TooltipRow, MobileDialogWrapper, tooltipStyles } from '../../ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useEstimatedPrice } from '@/hooks';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
@@ -47,39 +47,39 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   const { currentGrapeQuality, grapeQualityPenalty, presentFeatures, hasQualityAffectingFeatures } = featureDetails;
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${wineScoreData.badgeClasses.bg} ${wineScoreData.badgeClasses.text}`}>
-            {wineScoreData.formattedScore}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1 text-xs">
-            <div className="font-semibold">Wine Score Calculation</div>
-            <div>Base Grape Quality: <span className="font-medium">{formatPercent(wine.grapeQuality, 1, true)}</span></div>
-            {hasQualityAffectingFeatures && grapeQualityPenalty > 0.001 && (
-              <>
-                <div className="text-red-600">
-                  Feature Penalty: <span className="font-medium">-{formatPercent(grapeQualityPenalty, 1, true)}</span>
-                </div>
-                <div className="ml-2 text-xs text-gray-600">
-                  {presentFeatures.map((f: any, idx: number) => (
-                    <div key={idx}>• {f.feature.icon} {f.config.name}</div>
-                  ))}
-                </div>
-                <div>Current Grape Quality: <span className="font-medium">{formatPercent(currentGrapeQuality, 1, true)}</span></div>
-              </>
-            )}
-            <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
-            <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
-            <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-              Formula: (Effective Quality + Balance) ÷ 2
-            </div>
+    <UnifiedTooltip
+      content={
+        <div className="space-y-1 text-xs">
+          <div className="font-semibold">Wine Score Calculation</div>
+          <div>Base Grape Quality: <span className="font-medium">{formatPercent(wine.grapeQuality, 1, true)}</span></div>
+          {hasQualityAffectingFeatures && grapeQualityPenalty > 0.001 && (
+            <>
+              <div className="text-red-600">
+                Feature Penalty: <span className="font-medium">-{formatPercent(grapeQualityPenalty, 1, true)}</span>
+              </div>
+              <div className="ml-2 text-xs text-gray-600">
+                {presentFeatures.map((f: any, idx: number) => (
+                  <div key={idx}>• {f.feature.icon} {f.config.name}</div>
+                ))}
+              </div>
+              <div>Current Grape Quality: <span className="font-medium">{formatPercent(currentGrapeQuality, 1, true)}</span></div>
+            </>
+          )}
+          <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
+          <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
+          <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+            Formula: (Effective Quality + Balance) ÷ 2
           </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      }
+      side="top"
+      className="max-w-xs"
+      variant="default"
+    >
+      <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full cursor-help ${wineScoreData.badgeClasses.bg} ${wineScoreData.badgeClasses.text}`}>
+        {wineScoreData.formattedScore}
+      </span>
+    </UnifiedTooltip>
   );
 };
 
@@ -99,37 +99,37 @@ const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   const { presentFeatures, hasQualityAffectingFeatures, priceImpact } = featureDetails;
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="cursor-help">{formatNumber(estimatedPrice, { currency: true, decimals: 2 })}</span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1 text-xs">
-            <div className="font-semibold">Estimated Price Calculation</div>
-            <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
-            {hasQualityAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
-              <>
-                <div className="text-red-600 text-[10px]">
-                  ⚠️ Price reduced by {formatNumber(priceImpact.priceDifference, { currency: true, decimals: 2 })} due to:
-                </div>
-                <div className="ml-2 text-[10px] text-gray-600">
-                  {presentFeatures.map((f: any, idx: number) => (
-                    <div key={idx}>• {f.feature.icon} {f.config.name}</div>
-                  ))}
-                </div>
-              </>
-            )}
-            <div className="border-t pt-1 mt-1">Base Rate: <span className="font-medium">{formatNumber(baseRate, { currency: true, decimals: 2 })}/bottle</span></div>
-            <div>Base Price: <span className="font-medium">{formatNumber(basePrice, { currency: true, decimals: 2 })}</span></div>
-            <div>Quality Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
-            <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-              Formula: (Wine Score × Base Rate) × Multiplier
-            </div>
+    <UnifiedTooltip
+      content={
+        <div className="space-y-1 text-xs">
+          <div className="font-semibold">Estimated Price Calculation</div>
+          <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
+          {hasQualityAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
+            <>
+              <div className="text-red-600 text-[10px]">
+                ⚠️ Price reduced by {formatNumber(priceImpact.priceDifference, { currency: true, decimals: 2 })} due to:
+              </div>
+              <div className="ml-2 text-[10px] text-gray-600">
+                {presentFeatures.map((f: any, idx: number) => (
+                  <div key={idx}>• {f.feature.icon} {f.config.name}</div>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="border-t pt-1 mt-1">Base Rate: <span className="font-medium">{formatNumber(baseRate, { currency: true, decimals: 2 })}/bottle</span></div>
+          <div>Base Price: <span className="font-medium">{formatNumber(basePrice, { currency: true, decimals: 2 })}</span></div>
+          <div>Quality Multiplier: <span className="font-medium">{formatNumber(multiplier, { decimals: 2, forceDecimals: true })}×</span></div>
+          <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+            Formula: (Wine Score × Base Rate) × Multiplier
           </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      }
+      side="top"
+      className="max-w-xs"
+      variant="default"
+    >
+      <span className="cursor-help">{formatNumber(estimatedPrice, { currency: true, decimals: 2 })}</span>
+    </UnifiedTooltip>
   );
 };
 
@@ -149,41 +149,41 @@ const AgingProgressBar: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   };
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="w-full space-y-1 cursor-help">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-medium">
-                {status.ageInYears >= 1 
-                  ? `${formatNumber(status.ageInYears, { decimals: 1, adaptiveNearOne: true })} years` 
-                  : `${status.ageInWeeks} weeks`
-                }
-              </span>
-              <span className="text-[10px] text-gray-500">{status.agingStage}</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div 
-                className={`h-full ${status.progressColor} transition-all duration-300`}
-                style={{ width: `${status.progressPercent}%` }}
-              />
-            </div>
-            <div className="text-[10px] text-gray-600">{peakStatusLabels[status.peakStatus]} • {formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</div>
+    <UnifiedTooltip
+      content={
+        <div className="space-y-1 text-xs">
+          <div className="font-semibold">Aging Progress</div>
+          <div>Age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
+          <div>Status: <span className="font-medium">{peakStatusLabels[status.peakStatus]}</span></div>
+          <div>Maturity: <span className="font-medium">{formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</span></div>
+          <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
+            Aging improves quality, characteristics, and value. Risk of oxidation increases over time.
           </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1 text-xs">
-            <div className="font-semibold">Aging Progress</div>
-            <div>Age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
-            <div>Status: <span className="font-medium">{peakStatusLabels[status.peakStatus]}</span></div>
-            <div>Maturity: <span className="font-medium">{formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</span></div>
-            <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
-              Aging improves quality, characteristics, and value. Risk of oxidation increases over time.
-            </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      }
+      side="top"
+      className="max-w-xs"
+      variant="default"
+    >
+      <div className="w-full space-y-1 cursor-help">
+        <div className="flex justify-between items-center text-xs">
+          <span className="font-medium">
+            {status.ageInYears >= 1 
+              ? `${formatNumber(status.ageInYears, { decimals: 1, adaptiveNearOne: true })} years` 
+              : `${status.ageInWeeks} weeks`
+            }
+          </span>
+          <span className="text-[10px] text-gray-500">{status.agingStage}</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div 
+            className={`h-full ${status.progressColor} transition-all duration-300`}
+            style={{ width: `${status.progressPercent}%` }}
+          />
+        </div>
+        <div className="text-[10px] text-gray-600">{peakStatusLabels[status.peakStatus]} • {formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</div>
+      </div>
+    </UnifiedTooltip>
   );
 };
 
@@ -198,16 +198,14 @@ const ManifestedFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   return (
     <div className="flex gap-1">
       {displayData.activeFeatures.map(({ config }) => (
-        <TooltipProvider key={config.id}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-sm cursor-help">{config.icon}</span>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <div className="text-xs">{config.name}</div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <UnifiedTooltip
+          key={config.id}
+          content={<div className="text-xs">{config.name}</div>}
+          side="top"
+          variant="default"
+        >
+          <span className="text-sm cursor-help">{config.icon}</span>
+        </UnifiedTooltip>
       ))}
     </div>
   );
@@ -298,20 +296,20 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
         );
         
         return (
-          <TooltipProvider key={config.id}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <MobileDialogWrapper content={tooltipBody} title={`${config.name} Risk Details`} triggerClassName="inline-block">
-                  <div className="cursor-help">
-                    {displayElement}
-                  </div>
-                </MobileDialogWrapper>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-                {tooltipBody}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <UnifiedTooltip
+            key={config.id}
+            content={tooltipBody}
+            title={`${config.name} Risk Details`}
+            side="top"
+            className="max-w-sm"
+            variant="panel"
+            density="compact"
+            triggerClassName="inline-block"
+          >
+            <div className="cursor-help">
+              {displayElement}
+            </div>
+          </UnifiedTooltip>
         );
       })}
     </div>
@@ -366,21 +364,20 @@ const CurrentEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
       {allEffects.map((effectData, index) => {
         if (effectData.type === 'quality') {
           return (
-            <TooltipProvider key={`quality-${index}`}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${
-                    effectData.content > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    <span>⭐</span>
-                    <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="text-xs">Quality Effect: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <UnifiedTooltip
+              key={`quality-${index}`}
+              content={<div className="text-xs">Quality Effect: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>}
+              side="top"
+              className="max-w-xs"
+              variant="default"
+            >
+              <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${
+                effectData.content > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}>
+                <span>⭐</span>
+                <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
+              </span>
+            </UnifiedTooltip>
           );
         } else {
           const currentValue = wine.characteristics[effectData.key as keyof typeof wine.characteristics] || 0;
@@ -388,23 +385,22 @@ const CurrentEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           const colorInfo = getCharacteristicEffectColorInfo(currentValue, effectData.content, balancedRange);
           const bgClass = colorInfo.isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
           return (
-            <TooltipProvider key={effectData.key}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
-                    <img 
-                      src={`/assets/icons/characteristics/${effectData.key}.png`} 
-                      alt={effectData.key}
-                      className="w-3 h-3"
-                    />
-                    <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="text-xs capitalize">{effectData.key}: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <UnifiedTooltip
+              key={effectData.key}
+              content={<div className="text-xs capitalize">{effectData.key}: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>}
+              side="top"
+              className="max-w-xs"
+              variant="default"
+            >
+              <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
+                <img 
+                  src={`/assets/icons/characteristics/${effectData.key}.png`} 
+                  alt={effectData.key}
+                  className="w-3 h-3"
+                />
+                <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
+              </span>
+            </UnifiedTooltip>
           );
         }
       })}
@@ -442,23 +438,22 @@ const WeeklyEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
         const colorInfo = getCharacteristicEffectColorInfo(currentValue, effect, balancedRange);
         const bgClass = colorInfo.isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
         return (
-          <TooltipProvider key={char}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
-                  <img 
-                    src={`/assets/icons/characteristics/${char}.png`} 
-                    alt={char}
-                    className="w-3 h-3"
-                  />
-                  <span>{effect > 0 ? '+' : ''}{formatNumber(effect * 100, { smartDecimals: true })}%/wk</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <div className="text-xs capitalize">{char}: {effect > 0 ? '+' : ''}{formatNumber(effect * 100, { smartDecimals: true })}% per week</div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <UnifiedTooltip
+            key={char}
+            content={<div className="text-xs capitalize">{char}: {effect > 0 ? '+' : ''}{formatNumber(effect * 100, { smartDecimals: true })}% per week</div>}
+            side="top"
+            className="max-w-xs"
+            variant="default"
+          >
+            <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
+              <img 
+                src={`/assets/icons/characteristics/${char}.png`} 
+                alt={char}
+                className="w-3 h-3"
+              />
+              <span>{effect > 0 ? '+' : ''}{formatNumber(effect * 100, { smartDecimals: true })}%/wk</span>
+            </span>
+          </UnifiedTooltip>
         );
       })}
     </div>

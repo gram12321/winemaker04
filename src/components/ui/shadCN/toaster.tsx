@@ -6,7 +6,7 @@ import { Filter, Shield, VolumeX, BellOff } from "lucide-react"
 import { toast } from "@/lib/utils/toast"
 import { getTailwindClasses } from "@/lib/utils/colorMapping"
 import { cn } from "@/lib/utils/utils"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip"
+import { UnifiedTooltip } from "./tooltip"
 
 export function Toaster() {
   const [toasts, setToasts] = useState(getToasts())
@@ -97,76 +97,72 @@ export function Toaster() {
             <div className="flex items-center gap-1">
               {action}
               {origin && (
-                <TooltipProvider>
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBlockOrigin(origin, userFriendlyOrigin)}
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
-                        >
-                          <Shield className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" variant="panel" density="compact">
-                        {`Block notifications from ${userFriendlyOrigin || origin} (save to history)`}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBlockOriginFromHistory(origin, userFriendlyOrigin)}
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                        >
-                          <VolumeX className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" variant="panel" density="compact">
-                        {`Completely silence notifications from ${userFriendlyOrigin || origin} (no history)`}
-                      </TooltipContent>
-                    </Tooltip>
-                  </>
-                </TooltipProvider>
+                <>
+                  <UnifiedTooltip
+                    content={`Block notifications from ${userFriendlyOrigin || origin} (save to history)`}
+                    side="top"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleBlockOrigin(origin, userFriendlyOrigin)}
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-orange-600"
+                    >
+                      <Shield className="h-3 w-3" />
+                    </Button>
+                  </UnifiedTooltip>
+                  <UnifiedTooltip
+                    content={`Completely silence notifications from ${userFriendlyOrigin || origin} (no history)`}
+                    side="top"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleBlockOriginFromHistory(origin, userFriendlyOrigin)}
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                    >
+                      <VolumeX className="h-3 w-3" />
+                    </Button>
+                  </UnifiedTooltip>
+                </>
               )}
               {category && (
-                <TooltipProvider>
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBlockCategory(category)}
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
-                        >
-                          <Filter className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" variant="panel" density="compact">
-                        {`Block all ${category} notifications (save to history)`}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBlockCategoryFromHistory(category)}
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                        >
-                          <BellOff className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" variant="panel" density="compact">
-                        {`Completely silence all ${category} notifications (no history)`}
-                      </TooltipContent>
-                    </Tooltip>
-                  </>
-                </TooltipProvider>
+                <>
+                  <UnifiedTooltip
+                    content={`Block all ${category} notifications (save to history)`}
+                    side="top"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleBlockCategory(category)}
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-purple-600"
+                    >
+                      <Filter className="h-3 w-3" />
+                    </Button>
+                  </UnifiedTooltip>
+                  <UnifiedTooltip
+                    content={`Completely silence all ${category} notifications (no history)`}
+                    side="top"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleBlockCategoryFromHistory(category)}
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                    >
+                      <BellOff className="h-3 w-3" />
+                    </Button>
+                  </UnifiedTooltip>
+                </>
               )}
               <ToastClose />
             </div>

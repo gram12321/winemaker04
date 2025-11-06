@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomerData } from '@/hooks';
-import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { getFlagIcon } from '@/lib/utils';
 import { Customer } from '@/lib/types/types';
 import { formatNumber, formatPercent, getColorClass } from '@/lib/utils/utils';
@@ -236,84 +237,90 @@ export function CustomersTab() {
                     <TableCell>{formatPercent(customer.purchasingPower, 0, true)}</TableCell>
                     <TableCell>{formatPercent(customer.wineTradition, 0, true)}</TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex flex-col gap-1">
-                              <span 
-                                onMouseEnter={() => {
-                                  const customerKey = getCustomerKey(customer.id);
-                                  if (!relationshipBreakdowns[customerKey]) {
-                                    loadRelationshipBreakdown(customer);
-                                  }
-                                }}
-                                className="cursor-help"
-                              >
-                                {formatRelationship(
-                                  computedRelationships[getCustomerKey(customer.id)] ?? 0,
-                                  !!relationshipBreakdowns[getCustomerKey(customer.id)]
-                                )}
-                              </span>
-                              {relationshipBoosts[getCustomerKey(customer.id)] !== undefined && 
-                               relationshipBoosts[getCustomerKey(customer.id)] > 0 && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
-                                        Boost: {formatPercent((relationshipBoosts[getCustomerKey(customer.id)] ?? 0) / 100, 1, true)}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs">
-                                      <div className="text-xs">
-                                        <div className="font-semibold mb-2">Relationship Boost Details</div>
-                                        {boostDetails[getCustomerKey(customer.id)] && boostDetails[getCustomerKey(customer.id)].length > 0 ? (
-                                          <div className="space-y-1 text-[10px]">
-                                            {boostDetails[getCustomerKey(customer.id)].slice(0, 5).map((boost, index) => (
-                                              <div key={index}>
-                                                • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
-                                              </div>
-                                            ))}
-                                            {boostDetails[getCustomerKey(customer.id)].length > 5 && (
-                                              <div className="text-[9px] opacity-70">
-                                                ... and {boostDetails[getCustomerKey(customer.id)].length - 5} more
-                                              </div>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <div className="text-[10px] opacity-70">
-                                            No boost events found
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-md">
-                            <div className="text-sm">
-                              <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
-                              {relationshipBreakdowns[getCustomerKey(customer.id)] ? (
-                                <div className="space-y-1 text-xs">
-                                  {relationshipBreakdowns[getCustomerKey(customer.id)].split('\n').map((line, index) => (
-                                    <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
-                                      {line}
+                      <UnifiedTooltip
+                        content={
+                          <div className="text-sm">
+                            <div className="font-semibold mb-2">Customer Relationship Breakdown</div>
+                            {relationshipBreakdowns[getCustomerKey(customer.id)] ? (
+                              <div className="space-y-1 text-xs">
+                                {relationshipBreakdowns[getCustomerKey(customer.id)].split('\n').map((line, index) => (
+                                  <div key={index} className={line.startsWith('•') ? 'ml-2' : line === '' ? 'h-1' : ''}>
+                                    {line}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-500">
+                                {computedRelationships[getCustomerKey(customer.id)] ?
+                                  'Click to load detailed breakdown...' :
+                                  'Loading relationship data...'
+                                }
+                              </div>
+                            )}
+                          </div>
+                        }
+                        title="Customer Relationship Breakdown"
+                        side="top"
+                        sideOffset={8}
+                        className="max-w-md"
+                        variant="panel"
+                        density="compact"
+                        onClick={() => {
+                          const customerKey = getCustomerKey(customer.id);
+                          if (!relationshipBreakdowns[customerKey]) {
+                            loadRelationshipBreakdown(customer);
+                          }
+                        }}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className="cursor-help"
+                          >
+                            {formatRelationship(
+                              computedRelationships[getCustomerKey(customer.id)] ?? 0,
+                              !!relationshipBreakdowns[getCustomerKey(customer.id)]
+                            )}
+                          </span>
+                          {relationshipBoosts[getCustomerKey(customer.id)] !== undefined &&
+                           relationshipBoosts[getCustomerKey(customer.id)] > 0 && (
+                            <UnifiedTooltip
+                              content={
+                                <div className="text-xs">
+                                  <div className="font-semibold mb-2">Relationship Boost Details</div>
+                                  {boostDetails[getCustomerKey(customer.id)] && boostDetails[getCustomerKey(customer.id)].length > 0 ? (
+                                    <div className="space-y-1 text-[10px]">
+                                      {boostDetails[getCustomerKey(customer.id)].slice(0, 5).map((boost, index) => (
+                                        <div key={index}>
+                                          • {boost.description} ({formatNumber(boost.weeksAgo, { decimals: 1, forceDecimals: true })}w ago): +{formatNumber(boost.decayedAmount, { decimals: 3, forceDecimals: true })}%
+                                        </div>
+                                      ))}
+                                      {boostDetails[getCustomerKey(customer.id)].length > 5 && (
+                                        <div className="text-[9px] opacity-70">
+                                          ... and {boostDetails[getCustomerKey(customer.id)].length - 5} more
+                                        </div>
+                                      )}
                                     </div>
-                                  ))}
+                                  ) : (
+                                    <div className="text-[10px] opacity-70">
+                                      No boost events found
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="text-xs text-gray-500">
-                                  {computedRelationships[getCustomerKey(customer.id)] ? 
-                                    'Hover to load detailed breakdown...' : 
-                                    'Loading relationship data...'
-                                  }
-                                </div>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                              }
+                              title="Relationship Boost Details"
+                              side="top"
+                              sideOffset={4}
+                              className="max-w-xs"
+                              variant="panel"
+                              density="compact"
+                            >
+                              <span className="inline-flex w-fit px-1.5 py-0.5 text-[9px] font-semibold rounded bg-purple-100 text-purple-800 cursor-help">
+                                Boost: {formatPercent((relationshipBoosts[getCustomerKey(customer.id)] ?? 0) / 100, 1, true)}
+                              </span>
+                            </UnifiedTooltip>
+                          )}
+                        </div>
+                      </UnifiedTooltip>
                     </TableCell>
                   </TableRow>
                 ))}

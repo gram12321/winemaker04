@@ -17,10 +17,7 @@ import {
 } from "@/components/ui/shadCN/sheet"
 import { Skeleton } from "@/components/ui/shadCN/skeleton"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  UnifiedTooltip,
 } from "@/components/ui/shadCN/tooltip"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
@@ -135,25 +132,23 @@ const SidebarProvider = React.forwardRef<
 
     return (
       <SidebarContext.Provider value={contextValue}>
-        <TooltipProvider delayDuration={0}>
-          <div
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH,
-                "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-                ...style,
-              } as React.CSSProperties
-            }
-            className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
-              className
-            )}
-            ref={ref}
-            {...props}
-          >
-            {children}
-          </div>
-        </TooltipProvider>
+        <div
+          style={
+            {
+              "--sidebar-width": SIDEBAR_WIDTH,
+              "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+              ...style,
+            } as React.CSSProperties
+          }
+          className={cn(
+            "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
+            className
+          )}
+          ref={ref}
+          {...props}
+        >
+          {children}
+        </div>
       </SidebarContext.Provider>
     )
   }
@@ -585,17 +580,25 @@ const SidebarMenuButton = React.forwardRef<
       }
     }
 
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent
+    // Only show tooltip when sidebar is collapsed and not on mobile
+    if (state === "collapsed" && !isMobile) {
+      return (
+        <UnifiedTooltip
+          content={tooltip.children}
+          title={typeof tooltip.children === 'string' ? tooltip.children : undefined}
           side="right"
-          align="center"
-          hidden={state !== "collapsed" || isMobile}
-          {...tooltip}
-        />
-      </Tooltip>
-    )
+          sideOffset={4}
+          className="max-w-xs"
+          variant="panel"
+          density="compact"
+          {...(tooltip as any)}
+        >
+          {button}
+        </UnifiedTooltip>
+      )
+    }
+
+    return button
   }
 )
 SidebarMenuButton.displayName = "SidebarMenuButton"

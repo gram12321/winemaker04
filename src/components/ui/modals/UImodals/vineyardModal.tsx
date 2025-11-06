@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Badge } from '../../shadCN/badge';
 import { Separator } from '../../shadCN/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../../shadCN/tooltip';
+import { TooltipSection, TooltipRow, tooltipStyles, UnifiedTooltip } from '../../shadCN/tooltip';
 import { Grape, MapPin, Ruler, Mountain, Compass, BarChart3 } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColorCategory, getColorClass, getRangeColor } from '@/lib/utils';
@@ -177,16 +177,18 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Soil</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="font-medium cursor-help">{vineyard.soil.join(', ')}</span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <span className="text-xs">Primary soil composition</span>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <UnifiedTooltip
+                    content={<span className="text-xs">Primary soil composition</span>}
+                    title="Soil Composition"
+                    side="top"
+                    sideOffset={4}
+                    className="max-w-xs"
+                    variant="panel"
+                    density="compact"
+                    triggerClassName="font-medium cursor-help"
+                  >
+                    <span className="font-medium cursor-help">{vineyard.soil.join(', ')}</span>
+                  </UnifiedTooltip>
                 </div>
                 {prestigeRanking !== undefined && (
                   <div className="flex items-center justify-between">
@@ -231,127 +233,73 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                     <span>Vineyard Health</span>
                     <span>{formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-300 ${getRangeColor(vineyard.vineyardHealth || 1.0, 0, 1, 'higher_better').bg}`}
-                      style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
-                    />
-                    {/* Health Tooltip */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <MobileDialogWrapper 
-                            content={
-                              <div className={tooltipStyles.text}>
-                                <TooltipSection title="Vineyard Health Details">
-                                  <TooltipRow 
-                                    label="Current Health:" 
-                                    value={`${formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%`}
-                                    valueRating={vineyard.vineyardHealth || 1.0}
-                                  />
-                                  
-                                  {vineyard.healthTrend && (vineyard.healthTrend.seasonalDecay > 0 || vineyard.healthTrend.plantingImprovement > 0) ? (
-                                    <div className="mt-2 space-y-1">
-                                      <div className="font-medium text-gray-300 mb-1">Health Changes This Season:</div>
-                                      
-                                      {vineyard.healthTrend.seasonalDecay > 0 && (
-                                        <TooltipRow 
-                                          label="Seasonal decay:" 
-                                          value={`-${formatNumber(vineyard.healthTrend.seasonalDecay * 100, { decimals: 1 })}%`}
-                                          valueRating={1 - vineyard.healthTrend.seasonalDecay}
-                                        />
-                                      )}
-                                      
-                                      {vineyard.healthTrend.plantingImprovement > 0 && (
-                                        <TooltipRow 
-                                          label="Recent planting:" 
-                                          value={`+${formatNumber(vineyard.healthTrend.plantingImprovement * 100, { decimals: 1 })}%`}
-                                          valueRating={vineyard.healthTrend.plantingImprovement}
-                                        />
-                                      )}
-                                      
-                                      {(vineyard.healthTrend.netChange > 0 || vineyard.healthTrend.netChange < 0) && (
-                                        <TooltipRow 
-                                          label="Net change:" 
-                                          value={`${vineyard.healthTrend.netChange > 0 ? '+' : ''}${formatNumber(vineyard.healthTrend.netChange * 100, { decimals: 1 })}%`}
-                                          valueRating={vineyard.healthTrend.netChange > 0 ? 0.8 : 0.2}
-                                        />
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="text-gray-400 mt-2">No significant changes this season</div>
-                                  )}
-                                  
-                                  {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
-                                    <div className="mt-2 pt-2 border-t border-gray-600">
-                                      <div className="text-gray-400">
-                                        Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining
-                                      </div>
-                                    </div>
-                                  )}
-                                </TooltipSection>
+                  <UnifiedTooltip
+                    content={
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title="Vineyard Health Details">
+                          <TooltipRow
+                            label="Current Health:"
+                            value={`${formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%`}
+                            valueRating={vineyard.vineyardHealth || 1.0}
+                          />
+
+                          {vineyard.healthTrend && (vineyard.healthTrend.seasonalDecay > 0 || vineyard.healthTrend.plantingImprovement > 0) ? (
+                            <div className="mt-2 space-y-1">
+                              <div className="font-medium text-gray-300 mb-1">Health Changes This Season:</div>
+
+                              {vineyard.healthTrend.seasonalDecay > 0 && (
+                                <TooltipRow
+                                  label="Seasonal decay:"
+                                  value={`-${formatNumber(vineyard.healthTrend.seasonalDecay * 100, { decimals: 1 })}%`}
+                                  valueRating={1 - vineyard.healthTrend.seasonalDecay}
+                                />
+                              )}
+
+                              {vineyard.healthTrend.plantingImprovement > 0 && (
+                                <TooltipRow
+                                  label="Recent planting:"
+                                  value={`+${formatNumber(vineyard.healthTrend.plantingImprovement * 100, { decimals: 1 })}%`}
+                                  valueRating={vineyard.healthTrend.plantingImprovement}
+                                />
+                              )}
+
+                              {(vineyard.healthTrend.netChange > 0 || vineyard.healthTrend.netChange < 0) && (
+                                <TooltipRow
+                                  label="Net change:"
+                                  value={`${vineyard.healthTrend.netChange > 0 ? '+' : ''}${formatNumber(vineyard.healthTrend.netChange * 100, { decimals: 1 })}%`}
+                                  valueRating={vineyard.healthTrend.netChange > 0 ? 0.8 : 0.2}
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 mt-2">No significant changes this season</div>
+                          )}
+
+                          {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-600">
+                              <div className="text-gray-400">
+                                Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining
                               </div>
-                            } 
-                            title="Vineyard Health Details"
-                            triggerClassName="absolute inset-0"
-                          >
-                            <div className="absolute inset-0" />
-                          </MobileDialogWrapper>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-                          <div className={tooltipStyles.text}>
-                            <TooltipSection title="Vineyard Health Details">
-                              <TooltipRow 
-                                label="Current Health:" 
-                                value={`${formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%`}
-                                valueRating={vineyard.vineyardHealth || 1.0}
-                              />
-                              
-                              {vineyard.healthTrend && (vineyard.healthTrend.seasonalDecay > 0 || vineyard.healthTrend.plantingImprovement > 0) ? (
-                                <div className="mt-2 space-y-1">
-                                  <div className="font-medium text-gray-300 mb-1">Health Changes This Season:</div>
-                                  
-                                  {vineyard.healthTrend.seasonalDecay > 0 && (
-                                    <TooltipRow 
-                                      label="Seasonal decay:" 
-                                      value={`-${formatNumber(vineyard.healthTrend.seasonalDecay * 100, { decimals: 1 })}%`}
-                                      valueRating={1 - vineyard.healthTrend.seasonalDecay}
-                                    />
-                                  )}
-                                  
-                                  {vineyard.healthTrend.plantingImprovement > 0 && (
-                                    <TooltipRow 
-                                      label="Recent planting:" 
-                                      value={`+${formatNumber(vineyard.healthTrend.plantingImprovement * 100, { decimals: 1 })}%`}
-                                      valueRating={vineyard.healthTrend.plantingImprovement}
-                                    />
-                                  )}
-                                  
-                                  {(vineyard.healthTrend.netChange > 0 || vineyard.healthTrend.netChange < 0) && (
-                                    <TooltipRow 
-                                      label="Net change:" 
-                                      value={`${vineyard.healthTrend.netChange > 0 ? '+' : ''}${formatNumber(vineyard.healthTrend.netChange * 100, { decimals: 1 })}%`}
-                                      valueRating={vineyard.healthTrend.netChange > 0 ? 0.8 : 0.2}
-                                    />
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="text-gray-400 mt-2">No significant changes this season</div>
-                              )}
-                              
-                              {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
-                                <div className="mt-2 pt-2 border-t border-gray-600">
-                                  <div className="text-gray-400">
-                                    Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { decimals: 1 })}% remaining
-                                  </div>
-                                </div>
-                              )}
-                            </TooltipSection>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                            </div>
+                          )}
+                        </TooltipSection>
+                      </div>
+                    }
+                    title="Vineyard Health Details"
+                    side="top"
+                    sideOffset={8}
+                    className="max-w-sm"
+                    variant="panel"
+                    density="compact"
+                    triggerClassName="w-full bg-gray-200 rounded-full h-2 relative group cursor-help"
+                  >
+                    <div className="w-full bg-gray-200 rounded-full h-2 relative group cursor-help">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${getRangeColor(vineyard.vineyardHealth || 1.0, 0, 1, 'higher_better').bg}`}
+                        style={{ width: `${Math.min(100, (vineyard.vineyardHealth || 1.0) * 100)}%` }}
+                      />
+                    </div>
+                  </UnifiedTooltip>
                 </div>
 
                 {vineyard.grape && (
@@ -488,28 +436,32 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                       </div>
                       <div className="border-t pt-2 mt-2">
                         <div className="text-xs text-muted-foreground mb-1">Calculation Formula:</div>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="text-xs font-mono bg-gray-50 p-2 rounded cursor-help">
-                                {formatNumber(yieldBreakdown.totalVines, { decimals: 0 })} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(yieldBreakdown.breakdown.finalMultiplier, { decimals: 3, smartDecimals: true })} = {formatNumber(yieldBreakdown.totalYield)} kg
+                        <UnifiedTooltip
+                          content={
+                            <div className="text-xs">
+                              <div className="font-medium mb-2">Combined Multiplier Formula:</div>
+                              <div className="font-mono">Suitability × Natural Yield × Ripeness × Vine Yield × Health</div>
+                              <div className="mt-2 space-y-1">
+                                <div>Grape Suitability: {formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}</div>
+                                <div>Natural Yield: {formatPercent(yieldBreakdown.breakdown.naturalYield, 1)}</div>
+                                <div>Ripeness: {formatPercent(yieldBreakdown.breakdown.ripeness, 1)}</div>
+                                <div>Vine Yield: {formatPercent(yieldBreakdown.breakdown.vineYield, 1)}</div>
+                                <div>Health: {formatPercent(yieldBreakdown.breakdown.health, 1)}</div>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-xs">
-                                <div className="font-medium mb-2">Combined Multiplier Formula:</div>
-                                <div className="font-mono">Suitability × Natural Yield × Ripeness × Vine Yield × Health</div>
-                                <div className="mt-2 space-y-1">
-                                  <div>Grape Suitability: {formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}</div>
-                                  <div>Natural Yield: {formatPercent(yieldBreakdown.breakdown.naturalYield, 1)}</div>
-                                  <div>Ripeness: {formatPercent(yieldBreakdown.breakdown.ripeness, 1)}</div>
-                                  <div>Vine Yield: {formatPercent(yieldBreakdown.breakdown.vineYield, 1)}</div>
-                                  <div>Health: {formatPercent(yieldBreakdown.breakdown.health, 1)}</div>
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </div>
+                          }
+                          title="Yield Calculation Formula"
+                          side="top"
+                          sideOffset={4}
+                          className="max-w-xs"
+                          variant="panel"
+                          density="compact"
+                          triggerClassName="text-xs font-mono bg-gray-50 p-2 rounded cursor-help"
+                        >
+                          <div className="text-xs font-mono bg-gray-50 p-2 rounded cursor-help">
+                            {formatNumber(yieldBreakdown.totalVines, { decimals: 0 })} vines × {yieldBreakdown.baseYieldPerVine} kg/vine × {formatNumber(yieldBreakdown.breakdown.finalMultiplier, { decimals: 3, smartDecimals: true })} = {formatNumber(yieldBreakdown.totalYield)} kg
+                          </div>
+                        </UnifiedTooltip>
                       </div>
                       <div className="border-t pt-2 mt-2">
                         <div className="text-xs text-muted-foreground mb-1">Multiplier Factors:</div>
@@ -571,55 +523,59 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                   <CardHeader className="py-3">
                     <CardTitle className="text-xs font-medium flex items-center gap-2">
                       Land Value Calculation
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-blue-600 cursor-help">ℹ️</span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="max-w-sm">
-                              <div className="flex items-center justify-between mb-2">
-                                <p className="font-medium text-sm">💰 Land Value Calculation</p>
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${getBadgeColorClasses(factors.landValue).bg} ${getBadgeColorClasses(factors.landValue).text}`}>
-                                  {getColorCategory(factors.landValue)}
-                                </span>
-                              </div>
-                              <p className="text-xs mb-2 text-gray-300">Your vineyard's land value is calculated dynamically based on multiple factors:</p>
-                              <p className="font-medium mb-1 text-blue-300">Calculation Formula:</p>
-                              <p className="text-xs font-mono mb-2 text-gray-300">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice</p>
-                              <p className="font-medium mb-1 text-blue-300">Raw Price Factor:</p>
-                              <p className="text-xs mb-1 text-gray-300">Regional Modifier = (Altitude + Aspect) ÷ 2</p>
-                              <ul className="text-xs space-y-1 ml-2 text-gray-300">
-                                <li>• <strong>Altitude:</strong> {vineyard.altitude}m vs. optimal range</li>
-                                <li>• <strong>Aspect:</strong> {vineyard.aspect} sun exposure rating</li>
-                              </ul>
-                              <p className="font-medium mt-2 mb-1 text-green-300">Regional Scaling:</p>
-                              <p className="text-xs text-gray-300">Perfect factors (altitudeAspectRate=1) reach the region's maximum price</p>
-                              <p className="font-medium mt-2 mb-1 text-green-300">Regional Price Range:</p>
-                              <p className="text-xs text-gray-300">€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in {vineyard.region}</p>
-                              <p className="font-medium mt-2 mb-1 text-purple-300">Global Normalization:</p>
-                              <p className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the quality index calculation.</p>
+                      <UnifiedTooltip
+                        content={
+                          <div className="max-w-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-medium text-sm">💰 Land Value Calculation</p>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${getBadgeColorClasses(factors.landValue).bg} ${getBadgeColorClasses(factors.landValue).text}`}>
+                                {getColorCategory(factors.landValue)}
+                              </span>
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                            <p className="text-xs mb-2 text-gray-300">Your vineyard's land value is calculated dynamically based on multiple factors:</p>
+                            <p className="font-medium mb-1 text-blue-300">Calculation Formula:</p>
+                            <p className="text-xs font-mono mb-2 text-gray-300">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice</p>
+                            <p className="font-medium mb-1 text-blue-300">Raw Price Factor:</p>
+                            <p className="text-xs mb-1 text-gray-300">Regional Modifier = (Altitude + Aspect) ÷ 2</p>
+                            <ul className="text-xs space-y-1 ml-2 text-gray-300">
+                              <li>• <strong>Altitude:</strong> {vineyard.altitude}m vs. optimal range</li>
+                              <li>• <strong>Aspect:</strong> {vineyard.aspect} sun exposure rating</li>
+                            </ul>
+                            <p className="font-medium mt-2 mb-1 text-green-300">Regional Scaling:</p>
+                            <p className="text-xs text-gray-300">Perfect factors (altitudeAspectRate=1) reach the region's maximum price</p>
+                            <p className="font-medium mt-2 mb-1 text-green-300">Regional Price Range:</p>
+                            <p className="text-xs text-gray-300">€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in {vineyard.region}</p>
+                            <p className="font-medium mt-2 mb-1 text-purple-300">Global Normalization:</p>
+                            <p className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the quality index calculation.</p>
+                          </div>
+                        }
+                        title="Land Value Calculation"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <span className="text-blue-600 cursor-help">ℹ️</span>
+                      </UnifiedTooltip>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="py-3 text-sm space-y-3">
                     <div className="text-xs space-y-2">
                       <div className="space-y-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="font-mono text-gray-700 cursor-help">
-                                €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })} × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-xs">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice)</div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <UnifiedTooltip
+                          content={
+                            <div className="text-xs">Land value = Regional Baseprice + Regional modifier × (Regional Maxprice - Regional Baseprice)</div>
+                          }
+                          title="Land Value Formula"
+                          side="top"
+                          sideOffset={4}
+                          className="max-w-xs"
+                          variant="panel"
+                          density="compact"
+                          triggerClassName="font-mono text-gray-700 cursor-help"
+                        >
+                          <div className="font-mono text-gray-700 cursor-help">
+                            €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })} × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
+                          </div>
+                        </UnifiedTooltip>
                       </div>
                       <div className="text-xs text-gray-600">
                         Annual adjustments to total value: planted grape suitability (up to ~5%), vine age × prestige (up to ~3%), vineyard prestige (up to ~2%).
@@ -631,22 +587,26 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="font-mono text-gray-800 font-medium cursor-help">
-                                Regional Modifier: ({formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} + {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}) ÷ 2 = {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-xs space-y-1">
-                                <div>Regional Modifier: (altitude + aspect) ÷ 2</div>
-                                <div>Altitude: {formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} ({vineyard.altitude}m)</div>
-                                <div>Aspect: {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} ({vineyard.aspect})</div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <UnifiedTooltip
+                          content={
+                            <div className="text-xs space-y-1">
+                              <div>Regional Modifier: (altitude + aspect) ÷ 2</div>
+                              <div>Altitude: {formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} ({vineyard.altitude}m)</div>
+                              <div>Aspect: {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })} ({vineyard.aspect})</div>
+                            </div>
+                          }
+                          title="Regional Modifier Breakdown"
+                          side="top"
+                          sideOffset={4}
+                          className="max-w-xs"
+                          variant="panel"
+                          density="compact"
+                          triggerClassName="font-mono text-gray-800 font-medium cursor-help"
+                        >
+                          <div className="font-mono text-gray-800 font-medium cursor-help">
+                            Regional Modifier: ({formatNumber(factors.altitudeRating, { decimals: 2, forceDecimals: true })} + {formatNumber(factors.aspectRating, { decimals: 2, forceDecimals: true })}) ÷ 2 = {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })}
+                          </div>
+                        </UnifiedTooltip>
                       </div>
                     </div>
 

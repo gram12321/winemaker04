@@ -3,7 +3,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
+import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 
@@ -75,7 +75,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
   };
 
   return (
-    <TooltipProvider>
+    <>
       <div className={`space-y-4 ${className}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Object.entries(characteristics).map(([key, value]) => {
@@ -110,13 +110,10 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                 </div>
                 
                 <div className="space-y-1 text-xs md:text-sm">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <MobileDialogWrapper
-                          content={
-                            <div className={tooltipStyles.text}>
-                              <TooltipSection title="DistanceInside Details">
+                    <UnifiedTooltip
+                      content={
+                        <div className={tooltipStyles.text}>
+                          <TooltipSection title="DistanceInside Details">
                                 <TooltipRow 
                                   label="DistanceInside:" 
                                   value={formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}
@@ -127,41 +124,27 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   Distance from the midpoint of the balanced range. Lower values are better.
                                 </div>
                               </TooltipSection>
-                            </div>
-                          }
-                          title="DistanceInside Details"
-                          triggerClassName="flex justify-between cursor-help"
-                        >
-                          <div className="flex justify-between">
-                            <span>DistanceInside:</span>
-                            <span className={`font-mono ${getRangeColor(calc.distanceInside, 0, 0.2, 'lower_better').text}`}>{formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                        </MobileDialogWrapper>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                        <div className={tooltipStyles.text}>
-                          <TooltipSection title="DistanceInside Details">
-                            <TooltipRow 
-                              label="DistanceInside:" 
-                              value={formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}
-                              valueRating={getRatingForRange(calc.distanceInside, 0, 0.2, 'lower_better')}
-                              monospaced
-                            />
-                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                              Distance from the midpoint of the balanced range. Lower values are better.
-                            </div>
-                          </TooltipSection>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <MobileDialogWrapper
-                          content={
-                            <div className={tooltipStyles.text}>
-                              <TooltipSection title="DistanceOutside Details">
+                      }
+                      title={`DistanceInside for ${key}`}
+                      side="top"
+                      sideOffset={8}
+                      className="max-w-xs"
+                      variant="panel"
+                      density="compact"
+                      triggerClassName="flex justify-between cursor-help"
+                    >
+                      <div className="flex justify-between w-full">
+                        <span>DistanceInside:</span>
+                        <span className={`font-mono ${getRangeColor(calc.distanceInside, 0, 0.2, 'lower_better').text}`}>
+                          {formatNumber(calc.distanceInside, { decimals: 2, forceDecimals: true })}
+                        </span>
+                      </div>
+                    </UnifiedTooltip>
+                  <UnifiedTooltip
+                    content={
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title="DistanceOutside Details">
                                 <TooltipRow 
                                   label="DistanceOutside:" 
                                   value={formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}
@@ -172,41 +155,27 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   Distance outside the balanced range. Values outside the range incur penalties. Lower values are better.
                                 </div>
                               </TooltipSection>
-                            </div>
-                          }
-                          title="DistanceOutside Details"
-                          triggerClassName="flex justify-between cursor-help"
-                        >
-                          <div className="flex justify-between">
-                            <span>DistanceOutside:</span>
-                            <span className={`font-mono ${getRangeColor(calc.distanceOutside, 0, 0.2, 'lower_better').text}`}>{formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                        </MobileDialogWrapper>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                        <div className={tooltipStyles.text}>
-                          <TooltipSection title="DistanceOutside Details">
-                            <TooltipRow 
-                              label="DistanceOutside:" 
-                              value={formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}
-                              valueRating={getRatingForRange(calc.distanceOutside, 0, 0.2, 'lower_better')}
-                              monospaced
-                            />
-                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                              Distance outside the balanced range. Values outside the range incur penalties. Lower values are better.
-                            </div>
-                          </TooltipSection>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <MobileDialogWrapper
-                          content={
-                            <div className={tooltipStyles.text}>
-                              <TooltipSection title="Penalty Details">
+                      }
+                      title={`DistanceOutside for ${key}`}
+                      side="top"
+                      sideOffset={8}
+                      className="max-w-xs"
+                      variant="panel"
+                      density="compact"
+                      triggerClassName="flex justify-between cursor-help"
+                    >
+                      <div className="flex justify-between w-full">
+                        <span>DistanceOutside:</span>
+                        <span className={`font-mono ${getRangeColor(calc.distanceOutside, 0, 0.2, 'lower_better').text}`}>
+                          {formatNumber(calc.distanceOutside, { decimals: 2, forceDecimals: true })}
+                        </span>
+                      </div>
+                    </UnifiedTooltip>
+                  <UnifiedTooltip
+                    content={
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title="Penalty Details">
                                 <TooltipRow 
                                   label="Penalty (2×Outside):" 
                                   value={formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}
@@ -217,41 +186,27 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   Penalty is calculated as 2× the distance outside the balanced range. Lower values are better.
                                 </div>
                               </TooltipSection>
-                            </div>
-                          }
-                          title="Penalty Details"
-                          triggerClassName="flex justify-between cursor-help"
-                        >
-                          <div className="flex justify-between">
-                            <span>Penalty (2×Outside):</span>
-                            <span className={`font-mono ${getRangeColor(calc.penalty, 0, 0.4, 'lower_better').text}`}>{formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                        </MobileDialogWrapper>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                        <div className={tooltipStyles.text}>
-                          <TooltipSection title="Penalty Details">
-                            <TooltipRow 
-                              label="Penalty (2×Outside):" 
-                              value={formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}
-                              valueRating={getRatingForRange(calc.penalty, 0, 0.4, 'lower_better')}
-                              monospaced
-                            />
-                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                              Penalty is calculated as 2× the distance outside the balanced range. Lower values are better.
-                            </div>
-                          </TooltipSection>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <MobileDialogWrapper
-                          content={
-                            <div className={tooltipStyles.text}>
-                              <TooltipSection title="Base TotalDistance Details">
+                      }
+                      title={`Penalty for ${key}`}
+                      side="top"
+                      sideOffset={8}
+                      className="max-w-xs"
+                      variant="panel"
+                      density="compact"
+                      triggerClassName="flex justify-between cursor-help"
+                    >
+                      <div className="flex justify-between w-full">
+                        <span>Penalty (2×Outside):</span>
+                        <span className={`font-mono ${getRangeColor(calc.penalty, 0, 0.4, 'lower_better').text}`}>
+                          {formatNumber(calc.penalty, { decimals: 2, forceDecimals: true })}
+                        </span>
+                      </div>
+                    </UnifiedTooltip>
+                  <UnifiedTooltip
+                    content={
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title="Base TotalDistance Details">
                                 <TooltipRow 
                                   label="Base TotalDistance:" 
                                   value={formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}
@@ -262,34 +217,23 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   Sum of distance inside and penalty. This is the base calculation before scaling and synergy adjustments.
                                 </div>
                               </TooltipSection>
-                            </div>
-                          }
-                          title="Base TotalDistance Details"
-                          triggerClassName="flex justify-between cursor-help"
-                        >
-                          <div className="flex justify-between">
-                            <span>Base TotalDistance:</span>
-                            <span className={`font-mono ${getRangeColor(calc.baseTotalDistance, 0, 0.6, 'lower_better').text}`}>{formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                        </MobileDialogWrapper>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                        <div className={tooltipStyles.text}>
-                          <TooltipSection title="Base TotalDistance Details">
-                            <TooltipRow 
-                              label="Base TotalDistance:" 
-                              value={formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}
-                              valueRating={getRatingForRange(calc.baseTotalDistance, 0, 0.6, 'lower_better')}
-                              monospaced
-                            />
-                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                              Sum of distance inside and penalty. This is the base calculation before scaling and synergy adjustments.
-                            </div>
-                          </TooltipSection>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                      }
+                      title={`Base TotalDistance for ${key}`}
+                      side="top"
+                      sideOffset={8}
+                      className="max-w-xs"
+                      variant="panel"
+                      density="compact"
+                      triggerClassName="flex justify-between cursor-help"
+                    >
+                      <div className="flex justify-between w-full">
+                        <span>Base TotalDistance:</span>
+                        <span className={`font-mono ${getRangeColor(calc.baseTotalDistance, 0, 0.6, 'lower_better').text}`}>
+                          {formatNumber(calc.baseTotalDistance, { decimals: 2, forceDecimals: true })}
+                        </span>
+                      </div>
+                    </UnifiedTooltip>
                   {(calc.totalScalingMultiplier !== 1 || calc.synergyReduction > 0) && (
                     <div className="space-y-1">
                       {calc.totalScalingMultiplier !== 1 && (
@@ -310,13 +254,10 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                       )}
                     </div>
                   )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <MobileDialogWrapper
-                          content={
-                            <div className={tooltipStyles.text}>
-                              <TooltipSection title="Final TotalDistance Details">
+                  <UnifiedTooltip
+                    content={
+                      <div className={tooltipStyles.text}>
+                        <TooltipSection title="Final TotalDistance Details">
                                 <TooltipRow 
                                   label="Final TotalDistance:" 
                                   value={formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}
@@ -327,34 +268,21 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   Final calculated distance after all scaling and synergy adjustments. Lower values contribute to better balance score.
                                 </div>
                               </TooltipSection>
-                            </div>
-                          }
-                          title="Final TotalDistance Details"
-                          triggerClassName="flex justify-between font-medium border-t pt-1 cursor-help"
-                        >
-                          <div className="flex justify-between font-medium border-t pt-1">
-                            <span>Final TotalDistance:</span>
-                            <span className={`font-mono ${getRangeColor(calc.finalTotalDistance, 0, 0.6, 'lower_better').text}`}>{formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}</span>
-                          </div>
-                        </MobileDialogWrapper>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                        <div className={tooltipStyles.text}>
-                          <TooltipSection title="Final TotalDistance Details">
-                            <TooltipRow 
-                              label="Final TotalDistance:" 
-                              value={formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}
-                              valueRating={getRatingForRange(calc.finalTotalDistance, 0, 0.6, 'lower_better')}
-                              monospaced
-                            />
-                            <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                              Final calculated distance after all scaling and synergy adjustments. Lower values contribute to better balance score.
-                            </div>
-                          </TooltipSection>
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                      }
+                      title={`Final TotalDistance for ${key}`}
+                      side="top"
+                      sideOffset={8}
+                      className="max-w-xs"
+                      variant="panel"
+                      density="compact"
+                      triggerClassName="flex justify-between font-medium border-t pt-1 cursor-help"
+                    >
+                      <div className="flex justify-between font-medium border-t pt-1">
+                        <span>Final TotalDistance:</span>
+                        <span className={`font-mono ${getRangeColor(calc.finalTotalDistance, 0, 0.6, 'lower_better').text}`}>{formatNumber(calc.finalTotalDistance, { decimals: 2, forceDecimals: true })}</span>
+                      </div>
+                    </UnifiedTooltip>
                   
                   {/* Show all rules from this characteristic */}
                   <div className="mt-2 pt-2 border-t">
@@ -375,56 +303,37 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                               key={idx}
                               className={`flex items-center gap-1 text-xs ${isActive ? 'font-bold text-red-600' : 'text-gray-500'}`}
                             >
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <MobileDialogWrapper 
-                                      content={
-                                        <div className={tooltipStyles.text}>
-                                          <TooltipSection title={rule.name}>
-                                            <TooltipRow 
-                                              label="Requirement:" 
-                                              value={rule.requirement}
-                                            />
-                                            <div className="mt-2 pt-2 border-t border-gray-600">
-                                              <div className="text-xs text-gray-300">
-                                                {rule.condition(characteristics) ? 
-                                                  `Currently applying penalty to ${rule.targets.join(', ')}` : 
-                                                  'Condition not met - no penalty applied'
-                                                }
-                                              </div>
-                                            </div>
-                                          </TooltipSection>
+                              <UnifiedTooltip 
+                                content={
+                                  <div className={tooltipStyles.text}>
+                                    <TooltipSection title={rule.name}>
+                                      <TooltipRow 
+                                        label="Requirement:" 
+                                        value={rule.requirement}
+                                      />
+                                      <div className="mt-2 pt-2 border-t border-gray-600">
+                                        <div className="text-xs text-gray-300">
+                                          {rule.condition(characteristics) ? 
+                                            `Currently applying penalty to ${rule.targets.join(', ')}` : 
+                                            'Condition not met - no penalty applied'
+                                          }
                                         </div>
-                                      } 
-                                      title={rule.name}
-                                      triggerClassName="cursor-help font-bold"
-                                    >
-                                      <span className="cursor-help font-bold">
-                                        {rule.name}
-                                      </span>
-                                    </MobileDialogWrapper>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
-                                    <div className={tooltipStyles.text}>
-                                      <TooltipSection title={rule.name}>
-                                        <TooltipRow 
-                                          label="Requirement:" 
-                                          value={rule.requirement}
-                                        />
-                                        <div className="mt-2 pt-2 border-t border-gray-600">
-                                          <div className="text-xs text-gray-300">
-                                            {rule.condition(characteristics) ? 
-                                              `Currently applying penalty to ${rule.targets.join(', ')}` : 
-                                              'Condition not met - no penalty applied'
-                                            }
-                                          </div>
-                                        </div>
-                                      </TooltipSection>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                                      </div>
+                                    </TooltipSection>
+                                  </div>
+                                } 
+                                title={rule.name}
+                                side="top"
+                                sideOffset={8}
+                                className="max-w-sm"
+                                variant="panel"
+                                density="compact"
+                                triggerClassName="cursor-help font-bold"
+                              >
+                                <span className="cursor-help font-bold">
+                                  {rule.name}
+                                </span>
+                              </UnifiedTooltip>
                               {/* Show all characteristics involved in the condition */}
                               <div className="flex items-center gap-1">
                                 {/* Extract characteristics mentioned in the requirement */}
@@ -443,59 +352,44 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                     
                                     return (
                                       <React.Fragment key={char}>
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <MobileDialogWrapper 
-                                                content={
-                                                  <div className={tooltipStyles.text}>
-                                                    <TooltipSection title={`${char} Requirement`}>
-                                                      <TooltipRow 
-                                                        label="Needs to be:" 
-                                                        value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${formatNumber(threshold, { smartDecimals: true })})`}
-                                                      />
-                                                  <TooltipRow 
-                                                    label="Current:" 
-                                                    value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                    valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
-                                                  />
-                                                </TooltipSection>
-                                              </div>
-                                            } 
-                                            title={`${char} Requirement`}
-                                            triggerClassName="flex items-center gap-1"
-                                          >
-                                            <div className="flex items-center gap-1">
-                                              <img 
-                                                src={`/assets/icons/characteristics/${char}.png`} 
-                                                alt={`${char} icon`} 
-                                                className="w-3 h-3 opacity-80 cursor-help" 
-                                              />
-                                              <span className="text-xs">
-                                                {char}
-                                                <span className={`ml-1 ${isActive ? 'text-red-500' : ''}`}>
-                                                  {needsHigh ? '↑' : '↓'}
-                                                </span>
-                                              </span>
-                                            </div>
-                                          </MobileDialogWrapper>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                                          <div className={tooltipStyles.text}>
-                                            <TooltipSection title={`${char} Requirement`}>
+                                        <UnifiedTooltip 
+                                          content={
+                                            <div className={tooltipStyles.text}>
+                                              <TooltipSection title={`${char} Requirement`}>
+                                                <TooltipRow 
+                                                  label="Needs to be:" 
+                                                  value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${formatNumber(threshold, { smartDecimals: true })})`}
+                                                />
                                               <TooltipRow 
-                                                label="Needs to be:" 
-                                                value={`${needsHigh ? 'high' : 'low'} (${needsHigh ? '>' : '<'}${formatNumber(threshold, { smartDecimals: true })})`}
+                                                label="Current:" 
+                                                value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
                                               />
-                                                  <TooltipRow 
-                                                    label="Current:" 
-                                                    value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                  />
-                                                </TooltipSection>
-                                              </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
+                                            </TooltipSection>
+                                          </div>
+                                        } 
+                                        title={`${char} Requirement`}
+                                        side="top"
+                                        sideOffset={8}
+                                        className="max-w-xs"
+                                        variant="panel"
+                                        density="compact"
+                                        triggerClassName="flex items-center gap-1"
+                                      >
+                                        <div className="flex items-center gap-1">
+                                          <img 
+                                            src={`/assets/icons/characteristics/${char}.png`} 
+                                            alt={`${char} icon`} 
+                                            className="w-3 h-3 opacity-80 cursor-help" 
+                                          />
+                                          <span className="text-xs">
+                                            {char}
+                                            <span className={`ml-1 ${isActive ? 'text-red-500' : ''}`}>
+                                              {needsHigh ? '↑' : '↓'}
+                                            </span>
+                                          </span>
+                                        </div>
+                                      </UnifiedTooltip>
                                         {charIdx < mentionedChars.length - 1 && (
                                           <span className={isActive ? 'text-red-500' : ''}>+</span>
                                         )}
@@ -506,75 +400,54 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                               </div>
                               
                               <span className={isActive ? 'text-red-500' : ''}>→</span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <MobileDialogWrapper 
-                                      content={
-                                        <div className={tooltipStyles.text}>
-                                          <TooltipSection title="Penalty Targets">
-                                            <TooltipRow 
-                                              label="Targets:" 
-                                              value={rule.targets.join(', ')}
-                                            />
-                                            <div className="mt-2 pt-2 border-t border-gray-600">
-                                              <div className="text-xs text-gray-300">Current values:</div>
-                                              {rule.targets.map(t => (
-                                                <TooltipRow 
-                                                  key={t}
-                                                  label={t} 
-                                                  value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
-                                                  valueRating={getRatingForRange(characteristics[t as keyof WineCharacteristics], 0, 1, 'balanced', BASE_BALANCED_RANGES[t as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[t as keyof WineCharacteristics][1])}
-                                                />
-                                              ))}
-                                            </div>
-                                          </TooltipSection>
-                                        </div>
-                                      } 
-                                      title="Penalty Targets"
-                                      triggerClassName="flex items-center gap-1 cursor-help"
-                                    >
-                                      <div className="flex items-center gap-1">
-                                        <span className="flex items-center gap-1">
-                                          {rule.targets.map((target, targetIdx) => (
-                                            <React.Fragment key={target}>
-                                              <img 
-                                                src={`/assets/icons/characteristics/${target}.png`} 
-                                                alt={`${target} icon`} 
-                                                className="w-3 h-3 opacity-80 cursor-help" 
-                                              />
-                                              <span className="text-xs">
-                                                {target}
-                                              </span>
-                                              {targetIdx < rule.targets.length - 1 && <span className="text-xs text-gray-400">+</span>}
-                                            </React.Fragment>
-                                          ))}
-                                        </span>
+                              <UnifiedTooltip 
+                                content={
+                                  <div className={tooltipStyles.text}>
+                                    <TooltipSection title="Penalty Targets">
+                                      <TooltipRow 
+                                        label="Targets:" 
+                                        value={rule.targets.join(', ')}
+                                      />
+                                      <div className="mt-2 pt-2 border-t border-gray-600">
+                                        <div className="text-xs text-gray-300">Current values:</div>
+                                        {rule.targets.map(t => (
+                                          <TooltipRow 
+                                            key={t}
+                                            label={t} 
+                                            value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
+                                            valueRating={getRatingForRange(characteristics[t as keyof WineCharacteristics], 0, 1, 'balanced', BASE_BALANCED_RANGES[t as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[t as keyof WineCharacteristics][1])}
+                                          />
+                                        ))}
                                       </div>
-                                    </MobileDialogWrapper>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                                    <div className={tooltipStyles.text}>
-                                      <TooltipSection title="Penalty Targets">
-                                        <TooltipRow 
-                                          label="Targets:" 
-                                          value={rule.targets.join(', ')}
+                                    </TooltipSection>
+                                  </div>
+                                } 
+                                title="Penalty Targets"
+                                side="top"
+                                sideOffset={8}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                                triggerClassName="flex items-center gap-1 cursor-help"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <span className="flex items-center gap-1">
+                                    {rule.targets.map((target, targetIdx) => (
+                                      <React.Fragment key={target}>
+                                        <img 
+                                          src={`/assets/icons/characteristics/${target}.png`} 
+                                          alt={`${target} icon`} 
+                                          className="w-3 h-3 opacity-80 cursor-help" 
                                         />
-                                        <div className="mt-2 pt-2 border-t border-gray-600">
-                                          <div className="text-xs text-gray-300">Current values:</div>
-                                          {rule.targets.map(t => (
-                                            <TooltipRow 
-                                              key={t}
-                                              label={t} 
-                                              value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
-                                            />
-                                          ))}
-                                        </div>
-                                      </TooltipSection>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                                        <span className="text-xs">
+                                          {target}
+                                        </span>
+                                        {targetIdx < rule.targets.length - 1 && <span className="text-xs text-gray-400">+</span>}
+                                      </React.Fragment>
+                                    ))}
+                                  </span>
+                                </div>
+                              </UnifiedTooltip>
                               {/* Show penalty strength when active */}
                               {isActive && (() => {
                                 // Get detailed penalty breakdown using existing calculation logic
@@ -599,69 +472,238 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                 }
                                 
                                 return (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <MobileDialogWrapper 
+                                  <UnifiedTooltip 
+                                    content={
+                                      <div className={tooltipStyles.text}>
+                                        <TooltipSection title="Penalty Calculation Breakdown">
+                                          <TooltipRow 
+                                            label="Rule:" 
+                                            value={breakdown.ruleName}
+                                          />
+                                          <TooltipRow 
+                                            label="Sources:" 
+                                            value={breakdown.sources.join(', ')}
+                                          />
+                                          <TooltipRow 
+                                            label="Targets:" 
+                                            value={breakdown.targets.join(', ')}
+                                          />
+                                          <div className="mt-2 pt-2 border-t border-gray-600">
+                                            <TooltipRow 
+                                              label="avgDeviation:" 
+                                              value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
+                                              valueRating={getRatingForRange(breakdown.avgDeviation, 0, 0.5, 'lower_better')}
+                                              monospaced
+                                            />
+                                            <TooltipRow 
+                                              label="k (scaling):" 
+                                              value={String(breakdown.k)}
+                                            />
+                                            <TooltipRow 
+                                              label="p (power):" 
+                                              value={String(breakdown.p)}
+                                            />
+                                            <TooltipRow 
+                                              label="cap (maximum):" 
+                                              value={String(breakdown.cap)}
+                                            />
+                                          </div>
+                                          <div className="mt-2 pt-2 border-t border-gray-600">
+                                            <div className="text-xs font-mono text-gray-300 space-y-1">
+                                              <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
+                                              <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
+                                              <div>penalty: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.penaltyPercentage.toFixed(1)}%</div>
+                                            </div>
+                                            {breakdown.hitsCap && (
+                                              <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
+                                            )}
+                                          </div>
+                                        </TooltipSection>
+                                      </div>
+                                    } 
+                                    title="Penalty Calculation Breakdown"
+                                    side="top"
+                                    sideOffset={8}
+                                    className="max-w-sm"
+                                    variant="panel"
+                                    density="compact"
+                                    triggerClassName="text-red-600 font-bold ml-3 cursor-help"
+                                  >
+                                    <span className="text-red-600 font-bold ml-3 cursor-help">
+                                      ⚠️ {formatNumber(breakdown.penaltyPercentage, { smartDecimals: true })}% penalty
+                                    </span>
+                                  </UnifiedTooltip>
+                                );
+                              })()}
+                            </div>
+                          );
+                        });
+
+                        // Add synergy rules for this characteristic
+                        const synergyRuleElements = RULES.synergies
+                          .filter(rule => rule.targets.includes(charKey))
+                          .map((rule, idx) => {
+                            const isActive = rule.condition(characteristics);
+                            
+                            return (
+                              <div 
+                                key={`synergy-${idx}`}
+                                className={`flex items-center gap-1 text-xs ${isActive ? 'font-bold text-green-600' : 'text-gray-500'}`}
+                              >
+                                <UnifiedTooltip 
+                                  content={
+                                    <div className={tooltipStyles.text}>
+                                      <TooltipSection title={rule.name}>
+                                        <TooltipRow 
+                                          label="Requirement:" 
+                                          value={rule.requirement}
+                                        />
+                                        <div className="mt-2 pt-2 border-t border-gray-600">
+                                          <div className="text-xs text-gray-300">
+                                            {isActive ? 
+                                              `Currently providing synergy bonus for: ${rule.targets.join(', ')}` : 
+                                              'Condition not met - no synergy bonus'
+                                            }
+                                          </div>
+                                        </div>
+                                      </TooltipSection>
+                                    </div>
+                                  } 
+                                  title={rule.name}
+                                  side="top"
+                                  sideOffset={8}
+                                  className="max-w-sm"
+                                  variant="panel"
+                                  density="compact"
+                                  triggerClassName="cursor-help font-bold"
+                                >
+                                  <span className="cursor-help font-bold">
+                                    {rule.name}
+                                  </span>
+                                </UnifiedTooltip>
+                                <span>-</span>
+                                {/* Show all characteristics involved in the synergy */}
+                                <div className="flex items-center gap-1">
+                                  {rule.sources.map((char, charIdx) => {
+                                    const currentValue = characteristics[char as keyof WineCharacteristics];
+                                    return (
+                                      <React.Fragment key={char}>
+                                        <UnifiedTooltip 
                                           content={
                                             <div className={tooltipStyles.text}>
-                                              <TooltipSection title="Penalty Calculation Breakdown">
+                                              <TooltipSection title={`${char} - Synergy Source`}>
                                                 <TooltipRow 
-                                                  label="Rule:" 
-                                                  value={breakdown.ruleName}
+                                                  label="Role:" 
+                                                  value="Part of synergy"
                                                 />
                                                 <TooltipRow 
-                                                  label="Sources:" 
-                                                  value={breakdown.sources.join(', ')}
+                                                  label="Current:" 
+                                                  value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
+                                                  valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
                                                 />
-                                                <TooltipRow 
-                                                  label="Targets:" 
-                                                  value={breakdown.targets.join(', ')}
-                                                />
-                                                <div className="mt-2 pt-2 border-t border-gray-600">
-                                                  <TooltipRow 
-                                                    label="avgDeviation:" 
-                                                    value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
-                                                    valueRating={getRatingForRange(breakdown.avgDeviation, 0, 0.5, 'lower_better')}
-                                                    monospaced
-                                                  />
-                                                  <TooltipRow 
-                                                    label="k (scaling):" 
-                                                    value={String(breakdown.k)}
-                                                  />
-                                                  <TooltipRow 
-                                                    label="p (power):" 
-                                                    value={String(breakdown.p)}
-                                                  />
-                                                  <TooltipRow 
-                                                    label="cap (maximum):" 
-                                                    value={String(breakdown.cap)}
-                                                  />
-                                                </div>
-                                                <div className="mt-2 pt-2 border-t border-gray-600">
-                                                  <div className="text-xs font-mono text-gray-300 space-y-1">
-                                                    <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
-                                                    <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
-                                                    <div>penalty: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.penaltyPercentage.toFixed(1)}%</div>
-                                                  </div>
-                                                  {breakdown.hitsCap && (
-                                                    <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
-                                                  )}
-                                                </div>
                                               </TooltipSection>
                                             </div>
                                           } 
-                                          title="Penalty Calculation Breakdown"
-                                          triggerClassName="text-red-600 font-bold ml-3 cursor-help"
+                                          title={`${char} - Synergy Source`}
+                                          side="top"
+                                          sideOffset={8}
+                                          className="max-w-xs"
+                                          variant="panel"
+                                          density="compact"
+                                          triggerClassName="flex items-center gap-1"
                                         >
-                                          <span className="text-red-600 font-bold ml-3 cursor-help">
-                                            ⚠️ {formatNumber(breakdown.penaltyPercentage, { smartDecimals: true })}% penalty
+                                          <div className="flex items-center gap-1">
+                                            <img 
+                                              src={`/assets/icons/characteristics/${char}.png`} 
+                                              alt={`${char} icon`} 
+                                              className="w-3 h-3 opacity-80 cursor-help" 
+                                            />
+                                            <span className="text-xs">
+                                              {char}
+                                            </span>
+                                          </div>
+                                        </UnifiedTooltip>
+                                        {charIdx < rule.sources.length - 1 && (
+                                          <span className={isActive ? 'text-green-500' : ''}>+</span>
+                                        )}
+                                      </React.Fragment>
+                                    );
+                                  })}
+                                </div>
+                                
+                                <span className={isActive ? 'text-green-500' : ''}>→</span>
+                                
+                                {/* Show what gets the synergy benefit */}
+                                <div className="flex items-center gap-1">
+                                  {rule.targets.map((char, charIdx) => (
+                                    <React.Fragment key={char}>
+                                      <UnifiedTooltip 
+                                        content={
+                                          <div className={tooltipStyles.text}>
+                                            <TooltipSection title={`${char} - Synergy Target`}>
+                                              <TooltipRow 
+                                                label="Benefit:" 
+                                                value="Gets synergy benefit"
+                                              />
+                                              <div className="mt-2 pt-2 border-t border-gray-600">
+                                                <div className="text-xs text-gray-300">Reduces penalties on this characteristic</div>
+                                              </div>
+                                            </TooltipSection>
+                                          </div>
+                                        } 
+                                        title={`${char} - Synergy Target`}
+                                        side="top"
+                                        sideOffset={8}
+                                        className="max-w-xs"
+                                        variant="panel"
+                                        density="compact"
+                                        triggerClassName="flex items-center gap-1"
+                                      >
+                                        <div className="flex items-center gap-1">
+                                          <img 
+                                            src={`/assets/icons/characteristics/${char}.png`} 
+                                            alt={`${char} icon`} 
+                                            className="w-3 h-3 opacity-80 cursor-help" 
+                                          />
+                                          <span className="text-xs">
+                                            {char}
                                           </span>
-                                        </MobileDialogWrapper>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
+                                        </div>
+                                      </UnifiedTooltip>
+                                      {charIdx < rule.targets.length - 1 && (
+                                        <span className={isActive ? 'text-green-500' : ''}>+</span>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                                {/* Show synergy strength when active */}
+                                {isActive && (() => {
+                                  // Get detailed synergy breakdown using existing calculation logic
+                                  const { synergyBreakdown } = calculateRules(
+                                    characteristics, 
+                                    BASE_BALANCED_RANGES, 
+                                    RULES, 
+                                    false, // not dry run
+                                    true // return detailed breakdown
+                                  );
+                                  
+                                  const sourceKey = rule.sources.join('+');
+                                  const breakdown = synergyBreakdown?.[sourceKey];
+                                  
+                                  if (!breakdown) {
+                                    // Fallback to simple display if detailed breakdown not available
+                                    return (
+                                    <span className="text-green-600 font-bold ml-3">
+                                      ✨ -{rule.cap ? formatNumber(rule.cap * 100, { smartDecimals: true }) : '75.0'}% reduction
+                                    </span>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <UnifiedTooltip 
+                                      content={
                                         <div className={tooltipStyles.text}>
-                                          <TooltipSection title="Penalty Calculation Breakdown">
+                                          <TooltipSection title="Synergy Calculation Breakdown">
                                             <TooltipRow 
                                               label="Rule:" 
                                               value={breakdown.ruleName}
@@ -697,7 +739,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                               <div className="text-xs font-mono text-gray-300 space-y-1">
                                                 <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
                                                 <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
-                                                <div>penalty: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.penaltyPercentage.toFixed(1)}%</div>
+                                                <div>synergy: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.synergyPercentage.toFixed(1)}%</div>
                                               </div>
                                               {breakdown.hitsCap && (
                                                 <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
@@ -705,332 +747,19 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                             </div>
                                           </TooltipSection>
                                         </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                );
-                              })()}
-                            </div>
-                          );
-                        });
-
-                        // Add synergy rules for this characteristic
-                        const synergyRuleElements = RULES.synergies
-                          .filter(rule => rule.targets.includes(charKey))
-                          .map((rule, idx) => {
-                            const isActive = rule.condition(characteristics);
-                            
-                            return (
-                              <div 
-                                key={`synergy-${idx}`}
-                                className={`flex items-center gap-1 text-xs ${isActive ? 'font-bold text-green-600' : 'text-gray-500'}`}
-                              >
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <MobileDialogWrapper 
-                                        content={
-                                          <div className={tooltipStyles.text}>
-                                            <TooltipSection title={rule.name}>
-                                              <TooltipRow 
-                                                label="Requirement:" 
-                                                value={rule.requirement}
-                                              />
-                                              <div className="mt-2 pt-2 border-t border-gray-600">
-                                                <div className="text-xs text-gray-300">
-                                                  {isActive ? 
-                                                    `Currently providing synergy bonus for: ${rule.targets.join(', ')}` : 
-                                                    'Condition not met - no synergy bonus'
-                                                  }
-                                                </div>
-                                              </div>
-                                            </TooltipSection>
-                                          </div>
-                                        } 
-                                        title={rule.name}
-                                        triggerClassName="cursor-help font-bold"
-                                      >
-                                        <span className="cursor-help font-bold">
-                                          {rule.name}
-                                        </span>
-                                      </MobileDialogWrapper>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
-                                      <div className={tooltipStyles.text}>
-                                        <TooltipSection title={rule.name}>
-                                          <TooltipRow 
-                                            label="Requirement:" 
-                                            value={rule.requirement}
-                                          />
-                                          <div className="mt-2 pt-2 border-t border-gray-600">
-                                            <div className="text-xs text-gray-300">
-                                              {isActive ? 
-                                                `Currently providing synergy bonus for: ${rule.targets.join(', ')}` : 
-                                                'Condition not met - no synergy bonus'
-                                              }
-                                            </div>
-                                          </div>
-                                        </TooltipSection>
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                <span>-</span>
-                                {/* Show all characteristics involved in the synergy */}
-                                <div className="flex items-center gap-1">
-                                  {rule.sources.map((char, charIdx) => {
-                                    const currentValue = characteristics[char as keyof WineCharacteristics];
-                                    return (
-                                      <React.Fragment key={char}>
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <MobileDialogWrapper 
-                                                content={
-                                                  <div className={tooltipStyles.text}>
-                                                    <TooltipSection title={`${char} - Synergy Source`}>
-                                                      <TooltipRow 
-                                                        label="Role:" 
-                                                        value="Part of synergy"
-                                                      />
-                                                      <TooltipRow 
-                                                        label="Current:" 
-                                                        value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                        valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
-                                                      />
-                                                    </TooltipSection>
-                                                  </div>
-                                                } 
-                                                title={`${char} - Synergy Source`}
-                                                triggerClassName="flex items-center gap-1"
-                                              >
-                                                <div className="flex items-center gap-1">
-                                                  <img 
-                                                    src={`/assets/icons/characteristics/${char}.png`} 
-                                                    alt={`${char} icon`} 
-                                                    className="w-3 h-3 opacity-80 cursor-help" 
-                                                  />
-                                                  <span className="text-xs">
-                                                    {char}
-                                                  </span>
-                                                </div>
-                                              </MobileDialogWrapper>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                                              <div className={tooltipStyles.text}>
-                                                <TooltipSection title={`${char} - Synergy Source`}>
-                                                  <TooltipRow 
-                                                    label="Role:" 
-                                                    value="Part of synergy"
-                                                  />
-                                                  <TooltipRow 
-                                                    label="Current:" 
-                                                    value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                  />
-                                                </TooltipSection>
-                                              </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                        {charIdx < rule.sources.length - 1 && (
-                                          <span className={isActive ? 'text-green-500' : ''}>+</span>
-                                        )}
-                                      </React.Fragment>
-                                    );
-                                  })}
-                                </div>
-                                
-                                <span className={isActive ? 'text-green-500' : ''}>→</span>
-                                
-                                {/* Show what gets the synergy benefit */}
-                                <div className="flex items-center gap-1">
-                                  {rule.targets.map((char, charIdx) => (
-                                    <React.Fragment key={char}>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <MobileDialogWrapper 
-                                              content={
-                                                <div className={tooltipStyles.text}>
-                                                  <TooltipSection title={`${char} - Synergy Target`}>
-                                                    <TooltipRow 
-                                                      label="Benefit:" 
-                                                      value="Gets synergy benefit"
-                                                    />
-                                                    <div className="mt-2 pt-2 border-t border-gray-600">
-                                                      <div className="text-xs text-gray-300">Reduces penalties on this characteristic</div>
-                                                    </div>
-                                                  </TooltipSection>
-                                                </div>
-                                              } 
-                                              title={`${char} - Synergy Target`}
-                                              triggerClassName="flex items-center gap-1"
-                                            >
-                                              <div className="flex items-center gap-1">
-                                                <img 
-                                                  src={`/assets/icons/characteristics/${char}.png`} 
-                                                  alt={`${char} icon`} 
-                                                  className="w-3 h-3 opacity-80 cursor-help" 
-                                                />
-                                                <span className="text-xs">
-                                                  {char}
-                                                </span>
-                                              </div>
-                                            </MobileDialogWrapper>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top" sideOffset={8} className="max-w-xs" variant="panel" density="compact">
-                                            <div className={tooltipStyles.text}>
-                                              <TooltipSection title={`${char} - Synergy Target`}>
-                                                <TooltipRow 
-                                                  label="Benefit:" 
-                                                  value="Gets synergy benefit"
-                                                />
-                                                <div className="mt-2 pt-2 border-t border-gray-600">
-                                                  <div className="text-xs text-gray-300">Reduces penalties on this characteristic</div>
-                                                </div>
-                                              </TooltipSection>
-                                            </div>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      {charIdx < rule.targets.length - 1 && (
-                                        <span className={isActive ? 'text-green-500' : ''}>+</span>
-                                      )}
-                                    </React.Fragment>
-                                  ))}
-                                </div>
-                                {/* Show synergy strength when active */}
-                                {isActive && (() => {
-                                  // Get detailed synergy breakdown using existing calculation logic
-                                  const { synergyBreakdown } = calculateRules(
-                                    characteristics, 
-                                    BASE_BALANCED_RANGES, 
-                                    RULES, 
-                                    false, // not dry run
-                                    true // return detailed breakdown
-                                  );
-                                  
-                                  const sourceKey = rule.sources.join('+');
-                                  const breakdown = synergyBreakdown?.[sourceKey];
-                                  
-                                  if (!breakdown) {
-                                    // Fallback to simple display if detailed breakdown not available
-                                    return (
-                                    <span className="text-green-600 font-bold ml-3">
-                                      ✨ -{rule.cap ? formatNumber(rule.cap * 100, { smartDecimals: true }) : '75.0'}% reduction
-                                    </span>
-                                    );
-                                  }
-                                  
-                                  return (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <MobileDialogWrapper 
-                                            content={
-                                              <div className={tooltipStyles.text}>
-                                                <TooltipSection title="Synergy Calculation Breakdown">
-                                                  <TooltipRow 
-                                                    label="Rule:" 
-                                                    value={breakdown.ruleName}
-                                                  />
-                                                  <TooltipRow 
-                                                    label="Sources:" 
-                                                    value={breakdown.sources.join(', ')}
-                                                  />
-                                                  <TooltipRow 
-                                                    label="Targets:" 
-                                                    value={breakdown.targets.join(', ')}
-                                                  />
-                                                  <div className="mt-2 pt-2 border-t border-gray-600">
-                                                    <TooltipRow 
-                                                      label="avgDeviation:" 
-                                                      value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
-                                                      monospaced
-                                                    />
-                                                    <TooltipRow 
-                                                      label="k (scaling):" 
-                                                      value={String(breakdown.k)}
-                                                    />
-                                                    <TooltipRow 
-                                                      label="p (power):" 
-                                                      value={String(breakdown.p)}
-                                                    />
-                                                    <TooltipRow 
-                                                      label="cap (maximum):" 
-                                                      value={String(breakdown.cap)}
-                                                    />
-                                                  </div>
-                                                  <div className="mt-2 pt-2 border-t border-gray-600">
-                                                    <div className="text-xs font-mono text-gray-300 space-y-1">
-                                                      <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
-                                                      <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
-                                                      <div>synergy: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.synergyPercentage.toFixed(1)}%</div>
-                                                    </div>
-                                                    {breakdown.hitsCap && (
-                                                      <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
-                                                    )}
-                                                  </div>
-                                                </TooltipSection>
-                                              </div>
-                                            } 
-                                            title="Synergy Calculation Breakdown"
-                                            triggerClassName="text-green-600 font-bold ml-3 cursor-help"
-                                          >
-                                            <span className="text-green-600 font-bold ml-3 cursor-help">
-                                              ✨ -{formatNumber(breakdown.synergyPercentage, { smartDecimals: true })}% reduction
-                                            </span>
-                                          </MobileDialogWrapper>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
-                                          <div className={tooltipStyles.text}>
-                                            <TooltipSection title="Synergy Calculation Breakdown">
-                                              <TooltipRow 
-                                                label="Rule:" 
-                                                value={breakdown.ruleName}
-                                              />
-                                              <TooltipRow 
-                                                label="Sources:" 
-                                                value={breakdown.sources.join(', ')}
-                                              />
-                                              <TooltipRow 
-                                                label="Targets:" 
-                                                value={breakdown.targets.join(', ')}
-                                              />
-                                              <div className="mt-2 pt-2 border-t border-gray-600">
-                                                <TooltipRow 
-                                                  label="avgDeviation:" 
-                                                  value={formatNumber(breakdown.avgDeviation, { decimals: 3, forceDecimals: true })}
-                                                  monospaced
-                                                />
-                                                <TooltipRow 
-                                                  label="k (scaling):" 
-                                                  value={String(breakdown.k)}
-                                                />
-                                                <TooltipRow 
-                                                  label="p (power):" 
-                                                  value={String(breakdown.p)}
-                                                />
-                                                <TooltipRow 
-                                                  label="cap (maximum):" 
-                                                  value={String(breakdown.cap)}
-                                                />
-                                              </div>
-                                              <div className="mt-2 pt-2 border-t border-gray-600">
-                                                <div className="text-xs font-mono text-gray-300 space-y-1">
-                                                  <div>rawEffect: {breakdown.k} × {breakdown.avgDeviation.toFixed(3)}^({breakdown.p}) = {breakdown.rawEffect.toFixed(3)}</div>
-                                                  <div>cappedEffect: min({breakdown.cap}, {breakdown.rawEffect.toFixed(3)}) = {breakdown.cappedEffect.toFixed(3)}</div>
-                                                  <div>synergy: {breakdown.cappedEffect.toFixed(3)} × 100 = {breakdown.synergyPercentage.toFixed(1)}%</div>
-                                                </div>
-                                                {breakdown.hitsCap && (
-                                                  <div className="text-orange-400 font-bold mt-2">⚠️ Hit cap limit!</div>
-                                                )}
-                                              </div>
-                                            </TooltipSection>
-                                          </div>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                      } 
+                                      title="Synergy Calculation Breakdown"
+                                      side="top"
+                                      sideOffset={8}
+                                      className="max-w-sm"
+                                      variant="panel"
+                                      density="compact"
+                                      triggerClassName="text-green-600 font-bold ml-3 cursor-help"
+                                    >
+                                      <span className="text-green-600 font-bold ml-3 cursor-help">
+                                        ✨ -{formatNumber(breakdown.synergyPercentage, { smartDecimals: true })}% reduction
+                                      </span>
+                                    </UnifiedTooltip>
                                   );
                                 })()}
                               </div>
@@ -1308,6 +1037,6 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
           </div>
         </div>
       )}
-    </TooltipProvider>
+    </>
   );
 };

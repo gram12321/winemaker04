@@ -3,7 +3,7 @@ import { Vineyard } from '@/lib/types/types';
 import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory, formatPercent } from '@/lib/utils';
 import { getRegionalPriceRange } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, MobileDialogWrapper, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
+import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 // Grape quality factor types for wine value calculation
 export type GrapeQualityFactorType =
@@ -209,15 +209,19 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
 
       {/* Bar Container */}
       <div className="sm:w-3/4 flex items-center flex-1 gap-3 sm:gap-4">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
-              <MobileDialogWrapper 
-                content={buildTooltipContent()} 
-                title={`${label} Details`}
-                triggerClassName="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help"
-              >
-                <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help">
+        <UnifiedTooltip
+          content={buildTooltipContent()}
+          title={`${label} Details`}
+          side="top"
+          sideOffset={8}
+          className="max-w-sm"
+          variant="panel"
+          density="compact"
+          showMobileHint={true}
+          mobileHintVariant="corner-dot"
+          triggerClassName="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help"
+        >
+          <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden cursor-help">
                   {/* Background bar */}
                   <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
 
@@ -230,13 +234,7 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
                     style={{ left: `${displayValue * 100}%` }}
                   ></div>
                 </div>
-              </MobileDialogWrapper>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8} className="max-w-sm" variant="panel" density="compact">
-              {buildTooltipContent()}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        </UnifiedTooltip>
 
         {/* Value display */}
         {showValue && (

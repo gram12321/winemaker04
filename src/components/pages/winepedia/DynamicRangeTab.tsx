@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { WineCharacteristicsDisplay, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { RANGE_ADJUSTMENTS } from '@/lib/balance';
 import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
 
@@ -61,7 +61,7 @@ export function DynamicRangeTab() {
   // const balanceResult = calculateWineBalance(sliderValues, baseRanges, RANGE_ADJUSTMENTS, RULES);
 
   return (
-    <TooltipProvider>
+    <div>
       <div className="space-y-6">
         <section>
           <h2 className="text-xl font-semibold">Dynamic Range</h2>
@@ -114,14 +114,17 @@ export function DynamicRangeTab() {
             {Object.entries(RANGE_ADJUSTMENTS).map(([source, dirs]) => (
               <div key={source} className="p-2">
                 <div className="font-medium capitalize flex items-center gap-2 text-sm">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <img src={`/assets/icons/characteristics/${source}.png`} alt={`${source} icon`} className="w-4 h-4 opacity-80 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{source}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <UnifiedTooltip
+                    content={<p>{source}</p>}
+                    title={`${source} characteristic`}
+                    side="top"
+                    sideOffset={4}
+                    className="max-w-xs"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <img src={`/assets/icons/characteristics/${source}.png`} alt={`${source} icon`} className="w-4 h-4 opacity-80 cursor-help" />
+                  </UnifiedTooltip>
                   <span>{source}</span>
                 </div>
                 {(['above','below'] as const).map(dir => {
@@ -135,14 +138,17 @@ export function DynamicRangeTab() {
                         {rules.map((r: any, idx: number) => (
                           <li key={idx} className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <img src={`/assets/icons/characteristics/${r.target}.png`} className="w-3 h-3 opacity-80 cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{r.target}</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <UnifiedTooltip
+                                content={<p>{r.target}</p>}
+                                title={`${r.target} characteristic`}
+                                side="top"
+                                sideOffset={4}
+                                className="max-w-xs"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <img src={`/assets/icons/characteristics/${r.target}.png`} className="w-3 h-3 opacity-80 cursor-help" />
+                              </UnifiedTooltip>
                               <span className="capitalize">{r.target}</span>
                             </span>
                             <span>range {r.shiftPerUnit < 0 ? '↓' : '↑'} (strength {Math.abs(r.shiftPerUnit)})</span>
@@ -164,7 +170,7 @@ export function DynamicRangeTab() {
           </p>
         </section>
       </div>
-    </TooltipProvider>
+    </div>
   );
 };
 

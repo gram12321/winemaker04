@@ -469,6 +469,24 @@ export function getColorCategory(value: number): string {
 }
 
 /**
+ * Shared color map for quality-based colors (0-1 scale)
+ * Maps level (0-9) to color names without prefix
+ * Used by both text and background color functions
+ */
+const QUALITY_COLOR_MAP: Record<number, string> = {
+  0: 'red-600',
+  1: 'red-500', 
+  2: 'orange-500',
+  3: 'amber-500',
+  4: 'yellow-500',
+  5: 'lime-500',
+  6: 'lime-600',
+  7: 'green-600',
+  8: 'green-700',
+  9: 'green-800',
+};
+
+/**
  * Get Tailwind color class based on quality value (0-1)
  * Returns text color class from red (poor) to green (excellent)
  * 
@@ -476,19 +494,8 @@ export function getColorCategory(value: number): string {
  */
 export function getColorClass(value: number): string {
   const level = Math.max(0, Math.min(9, Math.floor(value * 10)));
-  const colorMap: Record<number, string> = {
-    0: 'text-red-600',
-    1: 'text-red-500', 
-    2: 'text-orange-500',
-    3: 'text-amber-500',
-    4: 'text-yellow-500',
-    5: 'text-lime-500',
-    6: 'text-lime-600',
-    7: 'text-green-600',
-    8: 'text-green-700',
-    9: 'text-green-800',
-  };
-  return colorMap[level] || 'text-gray-500';
+  const colorName = QUALITY_COLOR_MAP[level] || 'gray-500';
+  return `text-${colorName}`;
 }
 
 
@@ -543,9 +550,11 @@ export function getRangeColor(
 } {
   const rating = getRatingForRange(value, normalizeMin, normalizeMax, strategy, balanceMin, balanceMax);
   const text = getColorClass(rating);
-  // Derive bg color from text color using the existing color scheme
-  // Replace 'text-' with 'bg-' to get matching background color
-  const bg = text.startsWith('text-') ? text.replace(/^text-/, 'bg-') : `bg-${text}`;
+  // Use the same shared color map as getColorClass for background colors
+  // This ensures consistency with the existing color scheme without duplication
+  const level = Math.max(0, Math.min(9, Math.floor(rating * 10)));
+  const colorName = QUALITY_COLOR_MAP[level] || 'gray-500';
+  const bg = `bg-${colorName}`;
   const badge = getBadgeColorClasses(rating);
   return { rating, text, bg, badge };
 }

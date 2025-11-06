@@ -4,7 +4,7 @@ import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { getCharacteristicDisplayName } from './utils';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/shadCN/tooltip';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
 // ===== SVG ICONS =====
 
@@ -192,16 +192,14 @@ export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
   const tooltipContent = tooltip === true ? getCharacteristicDisplayName(name) : tooltip;
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {iconElement}
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          {tooltipContent}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={tooltipContent}
+      side="top"
+      variant="panel"
+      density="compact"
+    >
+      {iconElement}
+    </UnifiedTooltip>
   );
 };
 
@@ -254,16 +252,14 @@ export const ActivityIcon: React.FC<ActivityIconProps> = ({
   const tooltipContent = tooltip === true ? WORK_CATEGORY_INFO[category].displayName : tooltip;
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {iconElement}
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          {tooltipContent}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={tooltipContent}
+      side="top"
+      variant="panel"
+      density="compact"
+    >
+      {iconElement}
+    </UnifiedTooltip>
   );
 };
 
@@ -320,15 +316,13 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
   const tooltipContent = tooltip === true ? variety : tooltip;
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {iconElement}
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          {tooltipContent}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <UnifiedTooltip
+      content={tooltipContent}
+      side="top"
+      variant="panel"
+      density="compact"
+    >
+      {iconElement}
+    </UnifiedTooltip>
   );
 };

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '../../shadCN/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Separator } from '../../shadCN/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipSection, TooltipRow, TooltipHeader, tooltipStyles, MobileDialogWrapper } from '../../shadCN/tooltip';
+import { TooltipSection, TooltipRow, TooltipHeader, tooltipStyles, UnifiedTooltip } from '../../shadCN/tooltip';
 import { Star, TrendingUp, Grape, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 
@@ -396,18 +396,19 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     );
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <MobileDialogWrapper content={tooltipBody} title="Calculation Details" triggerClassName="inline-block">
-              {children}
-            </MobileDialogWrapper>
-          </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
-            {tooltipBody}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <UnifiedTooltip
+        content={tooltipBody}
+        title="Calculation Details"
+        side="top"
+        className="max-w-sm"
+        variant="panel"
+        density="compact"
+        scrollable
+        maxHeight="max-h-60"
+        triggerClassName="inline-block"
+      >
+        {children}
+      </UnifiedTooltip>
     );
   }, []);
 
@@ -453,143 +454,86 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               )
             )}
             {!isAchievement && displayData.displayInfo && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <MobileDialogWrapper 
-                      content={
-                        <div className={tooltipStyles.text}>
-                          <TooltipSection>
-                            <TooltipHeader 
-                              title={displayData.title || 'Details'}
-                              description={displayData.displayInfo || 'Additional information'}
-                            />
-                          </TooltipSection>
-                          <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
-                            {`Additional Info:\n- This prestige source contributes to your total company prestige\n- Some sources decay over time, others remain permanent`}
-                          </div>
-                        </div>
-                      } 
-                      title={displayData.title || 'Details'} 
-                      triggerClassName="inline-block"
-                    >
-                      <span className={`${tooltipStyles.text} text-muted-foreground cursor-help`}>(details)</span>
-                    </MobileDialogWrapper>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
-                    <div className={tooltipStyles.text}>
-                      <TooltipSection>
-                        <TooltipHeader 
-                          title={displayData.title || 'Details'}
-                          description={displayData.displayInfo || 'Additional information'}
-                        />
-                      </TooltipSection>
-                      <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
-                        {`Additional Info:\n- This prestige source contributes to your total company prestige\n- Some sources decay over time, others remain permanent`}
-                      </div>
+              <UnifiedTooltip
+                content={
+                  <div className={tooltipStyles.text}>
+                    <TooltipSection>
+                      <TooltipHeader
+                        title={displayData.title || 'Details'}
+                        description={displayData.displayInfo || 'Additional information'}
+                      />
+                    </TooltipSection>
+                    <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                      {`Additional Info:\n- This prestige source contributes to your total company prestige\n- Some sources decay over time, others remain permanent`}
                     </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  </div>
+                }
+                title={displayData.title || 'Details'}
+                className="max-w-sm"
+                variant="panel"
+                density="compact"
+                scrollable
+                maxHeight="max-h-60"
+                triggerClassName="inline-block"
+              >
+                <span className={`${tooltipStyles.text} text-muted-foreground cursor-help`}>(details)</span>
+              </UnifiedTooltip>
             )}
           </div>
           <p className={`${tooltipStyles.text} text-muted-foreground`}>{formatDecayRate(event.decayRate)}</p>
         </div>
         <div className="text-right">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <MobileDialogWrapper 
-                  content={(() => {
-                    const original = event.originalAmount ?? event.amount;
-                    const current = event.currentAmount ?? event.amount;
-                    const weeks = estimateWeeksFromDecay(original, current, event.decayRate);
-                    return (
-                      <div className={tooltipStyles.text}>
-                        <TooltipSection title="Prestige Details">
-                          <TooltipRow 
-                            label="Original:" 
-                            value={formatAmount(original)}
-                            monospaced={true}
-                          />
-                          <TooltipRow 
-                            label="Weekly decay:"
-                            value={event.decayRate === 0 ? 'No decay' : `${formatNumber((1 - event.decayRate) * 100, { smartDecimals: true })}%`}
-                            // Use logarithmic scale: 0.90-1.0 retention rate maps to 0-1 rating
-                            // 0.90 retention (10% decay) = 0 rating (red)
-                            // 1.0 retention (0% decay) = 1 rating (green)
-                            valueRating={event.decayRate === 0 ? 1 : Math.max(0, Math.min(1, (event.decayRate - 0.90) / 0.10))}
-                          />
-                          {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
-                            <TooltipRow 
-                              label="Estimation:" 
-                              value={`${formatAmount(original)} × ${formatNumber(event.decayRate, { decimals: 4 })}^${weeks} ≈ ${formatAmount(current)}`}
-                              monospaced={true}
-                            />
-                          ) : (
-                            <TooltipRow 
-                              label="Formula:" 
-                              value="Current ≈ Original × retention^weeks"
-                              monospaced={true}
-                            />
-                          )}
-                        </TooltipSection>
-                        <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
-                          {`Notes:\n- Weekly decay shows how much prestige is lost each week.\n- Lower decay means prestige lasts longer.`}
-                        </div>
-                      </div>
-                    );
-                  })()} 
-                  title="Prestige Details" 
-                  triggerClassName="inline-block"
-                >
-                  <p className={`text-sm ${tooltipStyles.subtitle} cursor-help ${getRangeColor(event.currentAmount ?? event.amount, 0, 10, 'higher_better').text}`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
-                </MobileDialogWrapper>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
-                {(() => {
-                  const original = event.originalAmount ?? event.amount;
-                  const current = event.currentAmount ?? event.amount;
-                  const weeks = estimateWeeksFromDecay(original, current, event.decayRate);
-                  return (
-                    <div className={tooltipStyles.text}>
-                      <TooltipSection title="Prestige Details">
-                        <TooltipRow 
-                          label="Original:" 
-                          value={formatAmount(original)}
+            <UnifiedTooltip
+              content={(() => {
+                const original = event.originalAmount ?? event.amount;
+                const current = event.currentAmount ?? event.amount;
+                const weeks = estimateWeeksFromDecay(original, current, event.decayRate);
+                return (
+                  <div className={tooltipStyles.text}>
+                    <TooltipSection title="Prestige Details">
+                      <TooltipRow
+                        label="Original:"
+                        value={formatAmount(original)}
+                        monospaced={true}
+                      />
+                      <TooltipRow
+                        label="Weekly decay:"
+                        value={event.decayRate === 0 ? 'No decay' : `${formatNumber((1 - event.decayRate) * 100, { smartDecimals: true })}%`}
+                        // Use logarithmic scale: 0.90-1.0 retention rate maps to 0-1 rating
+                        // 0.90 retention (10% decay) = 0 rating (red)
+                        // 1.0 retention (0% decay) = 1 rating (green)
+                        valueRating={event.decayRate === 0 ? 1 : Math.max(0, Math.min(1, (event.decayRate - 0.90) / 0.10))}
+                      />
+                      {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
+                        <TooltipRow
+                          label="Estimation:"
+                          value={`${formatAmount(original)} × ${formatNumber(event.decayRate, { decimals: 4 })}^${weeks} ≈ ${formatAmount(current)}`}
                           monospaced={true}
                         />
-                        <TooltipRow 
-                          label="Weekly decay:"
-                          value={event.decayRate === 0 ? 'No decay' : `${formatNumber((1 - event.decayRate) * 100, { smartDecimals: true })}%`}
-                          // Use logarithmic scale: 0.90-1.0 retention rate maps to 0-1 rating
-                          // 0.90 retention (10% decay) = 0 rating (red)
-                          // 1.0 retention (0% decay) = 1 rating (green)
-                          valueRating={event.decayRate === 0 ? 1 : Math.max(0, Math.min(1, (event.decayRate - 0.90) / 0.10))}
+                      ) : (
+                        <TooltipRow
+                          label="Formula:"
+                          value="Current ≈ Original × retention^weeks"
+                          monospaced={true}
                         />
-                        {event.decayRate && event.decayRate > 0 && weeks !== undefined ? (
-                          <TooltipRow 
-                            label="Estimation:" 
-                            value={`${formatAmount(original)} × ${formatNumber(event.decayRate, { decimals: 4 })}^${weeks} ≈ ${formatAmount(current)}`}
-                            monospaced={true}
-                          />
-                        ) : (
-                          <TooltipRow 
-                            label="Formula:" 
-                            value="Current ≈ Original × retention^weeks"
-                            monospaced={true}
-                          />
-                        )}
-                      </TooltipSection>
-                      <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
-                        {`Notes:\n- Weekly decay shows how much prestige is lost each week.\n- Lower decay means prestige lasts longer.`}
-                      </div>
+                      )}
+                    </TooltipSection>
+                    <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                      {`Notes:\n- Weekly decay shows how much prestige is lost each week.\n- Lower decay means prestige lasts longer.`}
                     </div>
-                  );
-                })()}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                  </div>
+                );
+              })()}
+              title="Prestige Details"
+              className="max-w-sm"
+              variant="panel"
+              density="compact"
+              scrollable
+              maxHeight="max-h-60"
+              triggerClassName="inline-block"
+            >
+              <p className={`text-sm ${tooltipStyles.subtitle} cursor-help ${getRangeColor(event.currentAmount ?? event.amount, 0, 10, 'higher_better').text}`}>{formatAmount(event.currentAmount ?? event.amount)}</p>
+            </UnifiedTooltip>
           {event.originalAmount !== event.currentAmount && (
             <p className={`${tooltipStyles.text} text-muted-foreground`}>
               (was {formatAmount(event.originalAmount ?? event.amount)})
@@ -642,84 +586,53 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                 <span className="text-gray-600">
                   {feature.featureName} ({getEventTypeLabel(feature.eventType)})
                 </span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
-                      <MobileDialogWrapper 
-                        content={
-                          <div className={tooltipStyles.text}>
-                            <TooltipSection title={`${feature.featureName} Events`}>
-                              <div className="space-y-2">
-                                {feature.recentEvents.map((event, eventIdx) => {
-                                  const metadata: any = event.metadata ?? {};
-                                  const customerName = metadata.customerName || 'Unknown Customer';
-                                  const saleValue = metadata.saleValue || 0;
-                                  const saleVolume = metadata.saleVolume || 0;
-                                  
-                                  return (
-                                    <div key={eventIdx} className="space-y-1">
-                                      <TooltipRow
-                                        label={`${customerName}:`}
-                                        value={`${formatAmount(event.amount)} prestige`}
-                                        monospaced={true}
-                                      />
-                                      {saleValue > 0 && (
-                                        <div className="ml-4 text-xs text-gray-400">
-                                          Sale: €{formatNumber(saleValue, { smartDecimals: true })} ({saleVolume} bottles)
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                <UnifiedTooltip
+                  content={
+                    <div className={tooltipStyles.text}>
+                      <TooltipSection title={`${feature.featureName} Events`}>
+                        <div className="space-y-2">
+                          {feature.recentEvents.map((event, eventIdx) => {
+                            const metadata: any = event.metadata ?? {};
+                            const customerName = metadata.customerName || 'Unknown Customer';
+                            const saleValue = metadata.saleValue || 0;
+                            const saleVolume = metadata.saleVolume || 0;
+
+                            return (
+                              <div key={eventIdx} className="space-y-1">
+                                <TooltipRow
+                                  label={`${customerName}:`}
+                                  value={`${formatAmount(event.amount)} prestige`}
+                                  monospaced={true}
+                                />
+                                {saleValue > 0 && (
+                                  <div className="ml-4 text-xs text-gray-400">
+                                    Sale: €{formatNumber(saleValue, { smartDecimals: true })} ({saleVolume} bottles)
+                                  </div>
+                                )}
                               </div>
-                            </TooltipSection>
-                            <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
-                              {`Total: ${formatAmount(feature.totalAmount)} prestige\nDecay: ${formatDecayRate(feature.decayRate)}`}
-                            </div>
-                          </div>
-                        } 
-                        title={`${feature.featureName} Events`} 
-                        triggerClassName="inline-block"
-                      >
-                        <Badge variant="outline" className="text-[10px] cursor-help">
+                            );
+                          })}
+                        </div>
+                      </TooltipSection>
+                      <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
+                        {`Total: ${formatAmount(feature.totalAmount)} prestige\nDecay: ${formatDecayRate(feature.decayRate)}`}
+                      </div>
+                    </div>
+                  }
+                  title={`${feature.featureName} Events`}
+                  className="max-w-sm"
+                  variant="panel"
+                  density="compact"
+                  scrollable
+                  maxHeight="max-h-60"
+                  triggerClassName="inline-block"
+                  showMobileHint
+                  mobileHintVariant="corner-dot"
+                >
+                  <Badge variant="outline" className="text-[10px] cursor-help">
                     {feature.eventCount} {feature.eventCount === 1 ? 'event' : 'events'}
                   </Badge>
-                      </MobileDialogWrapper>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-sm" variant="panel" density="compact" scrollable maxHeight="max-h-60">
-                      <div className={tooltipStyles.text}>
-                        <TooltipSection title={`${feature.featureName} Events`}>
-                          <div className="space-y-2">
-                            {feature.recentEvents.map((event, eventIdx) => {
-                              const metadata: any = event.metadata ?? {};
-                              const customerName = metadata.customerName || 'Unknown Customer';
-                              const saleValue = metadata.saleValue || 0;
-                              const saleVolume = metadata.saleVolume || 0;
-                              
-                              return (
-                                <div key={eventIdx} className="space-y-1">
-                                  <TooltipRow
-                                    label={`${customerName}:`}
-                                    value={`${formatAmount(event.amount)} prestige`}
-                                    monospaced={true}
-                                  />
-                                  {saleValue > 0 && (
-                                    <div className="ml-4 text-xs text-gray-400">
-                                      Sale: €{formatNumber(saleValue, { smartDecimals: true })} ({saleVolume} bottles)
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </TooltipSection>
-                        <div className="mt-2 border-t border-gray-600 pt-2 whitespace-pre-line text-gray-300">
-                          {`Total: ${formatAmount(feature.totalAmount)} prestige\nDecay: ${formatDecayRate(feature.decayRate)}`}
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                </UnifiedTooltip>
               </div>
               <div className="text-right">
                 <span className="font-medium">{formatAmount(feature.totalAmount)}</span>
@@ -1010,52 +923,35 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                               <div className="flex items-center gap-2">
                                 <Star className="h-4 w-4 text-purple-600" />
                                 <span className="font-medium text-purple-800">{wine.vineyardName} - {wine.grape} ({wine.vintage})</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
-                                      <MobileDialogWrapper 
-                                        content={
-                                          <div className={tooltipStyles.text}>
-                                            <TooltipSection title="Feature Events">
-                                              <div className="space-y-1">
-                                                {groupEventsByTypeAndFeature(
-                                                  wine.features.flatMap(f => f.recentEvents)
-                                                ).map((group, idx) => (
-                                                  <div key={idx} className="flex justify-between">
-                                                    <span className="capitalize">{group.type}</span>
-                                                    <span className="font-mono">×{group.count}</span>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </TooltipSection>
+                              <UnifiedTooltip
+                                content={
+                                  <div className={tooltipStyles.text}>
+                                    <TooltipSection title="Feature Events">
+                                      <div className="space-y-1">
+                                        {groupEventsByTypeAndFeature(
+                                          wine.features.flatMap(f => f.recentEvents)
+                                        ).map((group, idx) => (
+                                          <div key={idx} className="flex justify-between">
+                                            <span className="capitalize">{group.type}</span>
+                                            <span className="font-mono">×{group.count}</span>
                                           </div>
-                                        } 
-                                        title="Feature Events" 
-                                        triggerClassName="inline-block"
-                                      >
-                                        <Badge variant="outline" className="text-xs cursor-help">
-                                          {wine.features.length} {wine.features.length === 1 ? 'feature' : 'features'}
-                                        </Badge>
-                                      </MobileDialogWrapper>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-sm" variant="panel" density="compact">
-                                      <div className={tooltipStyles.text}>
-                                        <TooltipSection title="Feature Events">
-                                          <div className="space-y-1">
-                                            {groupEventsByTypeAndFeature(
-                                              wine.features.flatMap(f => f.recentEvents)
-                                            ).map((group, idx) => (
-                                              <div key={idx} className="flex justify-between">
-                                                <span className="capitalize">{group.type}</span>
-                                                <span className="font-mono">×{group.count}</span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </TooltipSection>
+                                        ))}
                                       </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                    </TooltipSection>
+                                  </div>
+                                }
+                                title="Feature Events"
+                                className="max-w-sm"
+                                variant="panel"
+                                density="compact"
+                                triggerClassName="inline-block"
+                                showMobileHint
+                                mobileHintVariant="corner-dot"
+                              >
+                                <Badge variant="outline" className="text-xs cursor-help">
+                                  {wine.features.length} {wine.features.length === 1 ? 'feature' : 'features'}
+                                </Badge>
+                              </UnifiedTooltip>
                               </div>
                               <div className="text-right">
                                 <span className="font-bold text-purple-900">
@@ -1321,48 +1217,33 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                         <div className="flex items-center gap-2">
                           <Grape className="h-4 w-4 text-green-600" />
                           <span className="font-medium text-green-800">{vineyard.name}</span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild showMobileHint mobileHintVariant="corner-dot">
-                                <MobileDialogWrapper 
-                                  content={
-                                    <div className={tooltipStyles.text}>
-                                      <TooltipSection title="Prestige Sources">
-                                        <div className="space-y-1">
-                                          {groupEventsByTypeAndFeature(vineyard.events).map((group, idx) => (
-                                            <div key={idx} className="flex justify-between">
-                                              <span className="capitalize">{group.type}</span>
-                                              <span className="font-mono">×{group.count}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </TooltipSection>
-                                    </div>
-                                  } 
-                                  title="Prestige Sources" 
-                                  triggerClassName="inline-block"
-                                >
-                                  <Badge variant="outline" className="text-xs cursor-help">
-                                    {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
-                                  </Badge>
-                                </MobileDialogWrapper>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-sm" variant="panel" density="compact">
-                                <div className={tooltipStyles.text}>
-                                  <TooltipSection title="Prestige Sources">
-                                    <div className="space-y-1">
-                                      {groupEventsByTypeAndFeature(vineyard.events).map((group, idx) => (
-                                        <div key={idx} className="flex justify-between">
-                                          <span className="capitalize">{group.type}</span>
-                                          <span className="font-mono">×{group.count}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </TooltipSection>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <UnifiedTooltip
+                            content={
+                              <div className={tooltipStyles.text}>
+                                <TooltipSection title="Prestige Sources">
+                                  <div className="space-y-1">
+                                    {groupEventsByTypeAndFeature(vineyard.events).map((group, idx) => (
+                                      <div key={idx} className="flex justify-between">
+                                        <span className="capitalize">{group.type}</span>
+                                        <span className="font-mono">×{group.count}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipSection>
+                              </div>
+                            }
+                            title="Prestige Sources"
+                            className="max-w-sm"
+                            variant="panel"
+                            density="compact"
+                            triggerClassName="inline-block"
+                            showMobileHint
+                            mobileHintVariant="corner-dot"
+                          >
+                            <Badge variant="outline" className="text-xs cursor-help">
+                              {vineyard.events.length} {vineyard.events.length === 1 ? 'source' : 'sources'}
+                            </Badge>
+                          </UnifiedTooltip>
                         </div>
                         <div className="text-right">
                           <span className="font-bold text-green-900">

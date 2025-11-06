@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
 import { calculateFermentationWork, validateFermentationBatch } from '@/lib/services/activity';
@@ -243,22 +243,27 @@ Note: These effects apply each week while fermentation is active.`
   // Compact info button with tooltip (replaces previous inline info panel)
   const customContent = (
     <div className="mb-4 space-y-3">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center px-2 py-1 rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-          >
-            <span className="mr-1">ⓘ</span>
-            Fermentation Process
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm">
+      <UnifiedTooltip
+        content={
           <div className="whitespace-pre-line text-xs">
             {modalTooltip}
           </div>
-        </TooltipContent>
-      </Tooltip>
+        }
+        title="Fermentation Process Info"
+        side="top"
+        sideOffset={8}
+        className="max-w-sm"
+        variant="panel"
+        density="compact"
+      >
+        <button
+          type="button"
+          className="inline-flex items-center px-2 py-1 rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+        >
+          <span className="mr-1">ⓘ</span>
+          Fermentation Process
+        </button>
+      </UnifiedTooltip>
       
       {/* Combined Effects Display */}
       <div className="bg-green-50 border border-green-200 rounded p-3">
@@ -282,25 +287,31 @@ Note: These effects apply each week while fermentation is active.`
                 const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
                 
                 return (
-                  <Tooltip key={index}>
-                    <TooltipTrigger asChild>
-                      <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
-                        <img 
-                          src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                          alt={effect.characteristic}
-                          className="w-3 h-3 mr-1"
-                        />
-                        <span className={colorClass}>
-                          {effect.value > 0 ? '+' : ''}{effect.value}%
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
+                  <UnifiedTooltip
+                    key={index}
+                    content={
                       <div className="text-xs">
                         {getCharacteristicDisplayName(effect.characteristic)}
                       </div>
-                    </TooltipContent>
-                  </Tooltip>
+                    }
+                    title={`${getCharacteristicDisplayName(effect.characteristic)} Effect`}
+                    side="top"
+                    sideOffset={4}
+                    className="max-w-xs"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                      <img
+                        src={`/assets/icons/characteristics/${effect.characteristic}.png`}
+                        alt={effect.characteristic}
+                        className="w-3 h-3 mr-1"
+                      />
+                      <span className={colorClass}>
+                        {effect.value > 0 ? '+' : ''}{effect.value}%
+                      </span>
+                    </div>
+                  </UnifiedTooltip>
                 );
               })}
             </div>
@@ -321,25 +332,31 @@ Note: These effects apply each week while fermentation is active.`
                 const bgClass = colorInfo.isGood ? 'bg-green-100' : 'bg-red-100';
                 
                 return (
-                  <Tooltip key={index}>
-                    <TooltipTrigger asChild>
-                      <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
-                        <img 
-                          src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                          alt={effect.characteristic}
-                          className="w-3 h-3 mr-1"
-                        />
-                        <span className={colorClass}>
-                          {effect.value > 0 ? '+' : ''}{effect.value}%
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
+                  <UnifiedTooltip
+                    key={index}
+                    content={
                       <div className="text-xs">
                         {getCharacteristicDisplayName(effect.characteristic)}
                       </div>
-                    </TooltipContent>
-                  </Tooltip>
+                    }
+                    title={`${getCharacteristicDisplayName(effect.characteristic)} Effect`}
+                    side="top"
+                    sideOffset={4}
+                    className="max-w-xs"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                      <img
+                        src={`/assets/icons/characteristics/${effect.characteristic}.png`}
+                        alt={effect.characteristic}
+                        className="w-3 h-3 mr-1"
+                      />
+                      <span className={colorClass}>
+                        {effect.value > 0 ? '+' : ''}{effect.value}%
+                      </span>
+                    </div>
+                  </UnifiedTooltip>
                 );
               })}
             </div>
@@ -360,25 +377,31 @@ Note: These effects apply each week while fermentation is active.`
                 const bgClass = colorInfo.isGood ? 'bg-green-200' : 'bg-red-200';
                 
                 return (
-                  <Tooltip key={index}>
-                    <TooltipTrigger asChild>
-                      <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
-                        <img 
-                          src={`/assets/icons/characteristics/${effect.characteristic}.png`} 
-                          alt={effect.characteristic}
-                          className="w-3 h-3 mr-1"
-                        />
-                        <span className={colorClass}>
-                          {effect.value > 0 ? '+' : ''}{effect.value}%
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
+                  <UnifiedTooltip
+                    key={index}
+                    content={
                       <div className="text-xs">
                         {getCharacteristicDisplayName(effect.characteristic)}
                       </div>
-                    </TooltipContent>
-                  </Tooltip>
+                    }
+                    title={`${getCharacteristicDisplayName(effect.characteristic)} Effect`}
+                    side="top"
+                    sideOffset={4}
+                    className="max-w-xs"
+                    variant="panel"
+                    density="compact"
+                  >
+                    <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
+                      <img
+                        src={`/assets/icons/characteristics/${effect.characteristic}.png`}
+                        alt={effect.characteristic}
+                        className="w-3 h-3 mr-1"
+                      />
+                      <span className={colorClass}>
+                        {effect.value > 0 ? '+' : ''}{effect.value}%
+                      </span>
+                    </div>
+                  </UnifiedTooltip>
                 );
               })}
             </div>

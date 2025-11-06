@@ -10,7 +10,7 @@ import { PrestigeModal } from '@/components/ui';
 import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/shadCN/tooltip';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import versionLogRaw from '../../../docs/versionlog.md?raw';
 
 
@@ -184,28 +184,35 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             </Badge>
 
             {/* Economy Phase display - responsive with tooltip */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge 
-                    variant="outline" 
-                    className={`px-2 py-0.5 flex items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Recovery')}`}
-                    onClick={() => {
-                      try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
-                      handleNavigation('winepedia');
-                    }}
-                  >
-                    <span className="font-medium text-xs">{gameState.economyPhase}</span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" variant="panel" density="compact" className="max-w-sm">
-                  <div className="space-y-1">
-                    <p className="font-semibold">Economy Effects</p>
-                    <p className="text-xs text-gray-300">Loans are affected by the current phase.<br/>Sales are affected by the current phase.</p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <UnifiedTooltip
+              content={
+                <div className="space-y-1">
+                  <p className="font-semibold">Economy Effects</p>
+                  <p className="text-xs text-gray-300">Impacts sales, event frequency, and risks.</p>
+                </div>
+              }
+              side="bottom"
+              variant="panel"
+              density="compact"
+              className="max-w-sm"
+              onClick={() => {
+                try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
+                handleNavigation('winepedia');
+              }}
+            >
+              <Badge 
+                variant="outline" 
+                className={`px-2 py-0.5 flex items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Recovery')}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
+                  handleNavigation('winepedia');
+                }}
+              >
+                <span className="w-2 h-2 rounded-full bg-green-400 mr-1.5"></span>
+                <span className="font-medium">{gameState.economyPhase || 'Recovery'}</span>
+              </Badge>
+            </UnifiedTooltip>
             
             <Badge 
               variant="outline" 
