@@ -1,200 +1,10 @@
 import * as React from "react"
-import { useState, createContext, useContext } from "react"
+import { useState } from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import { cn, getColorClass, getBadgeColorClasses, formatNumber } from "@/lib/utils/utils"
-import { Button } from "./button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./dialog"
-import { Info } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 
-// Context to share tooltip content between TooltipTrigger and TooltipContent for mobile conversion
-type TooltipContextType = {
-  setContent: (content: React.ReactNode) => void;
-  setTitle: (title: string | undefined) => void;
-  content: React.ReactNode;
-  title: string | undefined;
-};
-
-const TooltipContext = createContext<TooltipContextType | null>(null);
-
-// Wrapper component that provides context for tooltip content sharing
-const TooltipProvider = ({ children, ...props }: React.ComponentProps<typeof TooltipPrimitive.Provider>) => {
-  const [content, setContentState] = useState<React.ReactNode>(null);
-  const [title, setTitleState] = useState<string | undefined>(undefined);
-
-  const setContent = React.useCallback((newContent: React.ReactNode) => {
-    setContentState(newContent);
-  }, []);
-
-  const setTitle = React.useCallback((newTitle: string | undefined) => {
-    setTitleState(newTitle);
-  }, []);
-
-  const contextValue = React.useMemo(() => ({
-    content,
-    title,
-    setContent,
-    setTitle
-  }), [content, title, setContent, setTitle]);
-
-  return (
-    <TooltipContext.Provider value={contextValue}>
-      <TooltipPrimitive.Provider {...props}>
-        {children}
-      </TooltipPrimitive.Provider>
-    </TooltipContext.Provider>
-  );
-};
-
-const Tooltip = TooltipPrimitive.Root
-
-// Enhanced TooltipTrigger with mobile detection
-const TooltipTrigger = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger> & {
-    tooltipContent?: React.ReactNode;
-    tooltipTitle?: string;
-    iconSize?: number;
-    iconClassName?: string;
-    showMobileInfoButton?: boolean;
-    showMobileHint?: boolean;
-    mobileHintClassName?: string;
-    mobileHintVariant?: 'underline' | 'corner-dot';
-    mobileHintDotPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-    mobileHintDotClassName?: string;
-  }
->(({ children, tooltipContent, tooltipTitle, iconSize = 14, iconClassName, showMobileInfoButton = false, showMobileHint = true, mobileHintClassName, mobileHintVariant = 'underline', mobileHintDotPosition = 'top-right', mobileHintDotClassName, ...props }, ref) => {
-  const isMobile = useIsMobile();
-  const context = useContext(TooltipContext);
-  
-  // Use prop content if provided, otherwise use context content
-  const content = tooltipContent || context?.content;
-  const title = tooltipTitle || context?.title;
-
-  // On mobile, wrap trigger with MobileDialogWrapper if content is available
-  // Note: Content might not be available on first render (TooltipContent registers it via useEffect)
-  // This is fine - the trigger will re-render when content becomes available
-  if (isMobile && content && showMobileInfoButton) {
-    return (
-      <div className="inline-flex items-center gap-1">
-        <TooltipPrimitive.Trigger {...props} ref={ref}>
-          {children}
-        </TooltipPrimitive.Trigger>
-        <MobileDialogWrapper 
-          content={content} 
-          title={title}
-          triggerClassName="inline-block"
-          contentClassName="max-w-sm"
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-auto p-1 hover:bg-gray-100", iconClassName)}
-          >
-            <Info size={iconSize} className="text-gray-500" />
-          </Button>
-        </MobileDialogWrapper>
-      </div>
-    );
-  }
-
-  // Optional subtle mobile-only hint (e.g., dotted underline) without adding an icon
-  const hintedChildren = (isMobile && showMobileHint)
-    ? (
-      mobileHintVariant === 'corner-dot'
-        ? (
-          <span className={cn('relative block md:hidden w-full', mobileHintClassName)}>
-            {children}
-            <span
-              aria-hidden
-              className={cn(
-                'pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-gray-400/70 shadow-sm z-10',
-                mobileHintDotPosition === 'top-right' && 'right-0 -top-0.5 translate-x-1/4',
-                mobileHintDotPosition === 'top-left' && 'left-0 -top-0.5 -translate-x-1/4',
-                mobileHintDotPosition === 'bottom-right' && 'right-0 -bottom-0.5 translate-x-1/4',
-                mobileHintDotPosition === 'bottom-left' && 'left-0 -bottom-0.5 -translate-x-1/4',
-                mobileHintDotClassName
-              )}
-            />
-          </span>
-        )
-        : (
-          <span className={cn(
-            'relative block w-full cursor-help after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:border-b after:border-dotted after:border-gray-400/70 md:after:border-b-0',
-            mobileHintClassName
-          )}>
-            {children}
-          </span>
-        )
-    ) : children;
-
-  return (
-    <TooltipPrimitive.Trigger {...props} ref={ref}>
-      {hintedChildren}
-    </TooltipPrimitive.Trigger>
-  );
-});
-TooltipTrigger.displayName = TooltipPrimitive.Trigger.displayName;
-
-type TooltipContentProps = React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
-  variant?: 'default' | 'panel';
-  density?: 'normal' | 'compact';
-  scrollable?: boolean;
-  maxHeight?: string;
-  title?: string;
-};
-
-const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Content>,
-  TooltipContentProps
->(({ className, sideOffset = 4, variant = 'default', density = 'normal', scrollable = false, maxHeight = 'max-h-60', title, children, ...props }, ref) => {
-  const context = useContext(TooltipContext);
-  const isMobile = useIsMobile();
-
-  // On mobile, register content with context so TooltipTrigger can access it
-  React.useEffect(() => {
-    if (isMobile && context) {
-      context.setContent(children);
-      if (title) {
-        context.setTitle(title);
-      }
-    }
-    // Cleanup: clear content when unmounting
-    return () => {
-      if (isMobile && context) {
-        context.setContent(null);
-        context.setTitle(undefined);
-      }
-    };
-  }, [isMobile, context, children, title]);
-
-  // On mobile, don't render the tooltip content (it will be shown in dialog instead)
-  if (isMobile) {
-    return null;
-  }
-
-  return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        ref={ref}
-        sideOffset={sideOffset}
-        className={cn(
-          "z-[110] rounded-md text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]",
-          density === 'compact' ? 'px-2 py-1' : 'px-3 py-1.5',
-          variant === 'panel' 
-            ? 'bg-gray-900 text-white border border-gray-700 shadow-lg'
-            : 'bg-primary text-primary-foreground',
-          scrollable && cn('overflow-y-auto', maxHeight, 'scrollbar-styled'),
-          className
-        )}
-        {...props}
-      >
-        {children}
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
-  );
-})
-TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
 // =============================
 // DESIGN TOKENS & STYLES
@@ -516,45 +326,6 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
   );
 });
 
-// Info icon that shows tooltip/dialog content. Useful when no trigger child exists.
-export function InfoTooltip({ title, content, size = 14, className }: { title?: string; content: React.ReactNode; size?: number; className?: string }) {
-  const isMobile = useIsMobile();
-  
-  const triggerButton = (
-    <Button variant="ghost" size="sm" className={cn('h-auto p-1 hover:bg-gray-100', className)}>
-      <Info size={size} className="text-gray-500" />
-    </Button>
-  );
-
-  if (isMobile) {
-    return (
-      <MobileDialogWrapper 
-        content={content} 
-        title={title}
-        triggerClassName="inline-block"
-        contentClassName="max-w-sm"
-      >
-        {triggerButton}
-      </MobileDialogWrapper>
-    );
-  }
-  
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {triggerButton}
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-sm" variant="panel" density="compact">
-          <div className={tooltipStyles.text}>
-            {title && <p className={cn(tooltipStyles.title, 'mb-1')}>{title}</p>}
-            {content}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
 // =============================
 // UNIFIED TOOLTIP COMPONENT
 // =============================
@@ -625,7 +396,7 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
     },
     ref
   ) {
-    const isMobile = useIsMobile();
+  const isMobile = useIsMobile();
     const [dialogOpen, setDialogOpen] = useState(false);
     const triggerRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -693,7 +464,7 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
           )
         : children;
 
-      return (
+    return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <div
@@ -737,31 +508,34 @@ export const UnifiedTooltip = React.forwardRef<HTMLDivElement, UnifiedTooltipPro
       );
     }
 
-    // Desktop: Use Radix UI tooltip
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild className={triggerClassName}>
+    // Desktop: Use Radix UI tooltip directly
+  return (
+      <TooltipPrimitive.Provider>
+        <TooltipPrimitive.Root>
+          <TooltipPrimitive.Trigger asChild className={triggerClassName}>
             {children}
-          </TooltipTrigger>
-          <TooltipContent
-            side={side}
-            sideOffset={sideOffset}
-            variant={variant}
-            density={density}
-            scrollable={scrollable}
-            maxHeight={maxHeight}
-            title={title}
-            className={contentClassName}
-          >
+          </TooltipPrimitive.Trigger>
+          <TooltipPrimitive.Portal>
+            <TooltipPrimitive.Content
+              ref={ref}
+              side={side}
+              sideOffset={sideOffset}
+              className={cn(
+                "z-[110] rounded-md text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-tooltip-content-transform-origin]",
+                density === 'compact' ? 'px-2 py-1' : 'px-3 py-1.5',
+                variant === 'panel'
+                  ? 'bg-gray-900 text-white border border-gray-700 shadow-lg'
+                  : 'bg-primary text-primary-foreground',
+                scrollable && cn('overflow-y-auto', maxHeight, 'scrollbar-styled'),
+                contentClassName
+              )}
+              {...rest}
+            >
             {content}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+            </TooltipPrimitive.Content>
+          </TooltipPrimitive.Portal>
+        </TooltipPrimitive.Root>
+      </TooltipPrimitive.Provider>
     );
   }
 );
-
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
-
-
