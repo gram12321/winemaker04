@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Separator } from '@/components/ui';
-import { Loan } from '@/lib/types/types';
+import { Loan, LenderType } from '@/lib/types/types';
 import { loadActiveLoans } from '@/lib/database/core/loansDB';
 import { getGameState, getAvailableLenders, calculateLenderAvailability } from '@/lib/services';
 import { loadLenders } from '@/lib/database/core/lendersDB';
@@ -11,6 +11,7 @@ import { LenderSearchOptionsModal } from '@/components/ui';
 // LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
 import { calculateCreditRating } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
+import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants';
 
 // Helper type for combined loans data
 type LoansData = {
@@ -33,8 +34,14 @@ export default function LoansView() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isLenderAvailabilityExpanded, setIsLenderAvailabilityExpanded] = useState(false);
   const [isCreditRatingExpanded, setIsCreditRatingExpanded] = useState(false);
+  const [lenderTypeFilter, setLenderTypeFilter] = useState<LenderType | 'All'>('All');
 
   const gameState = getGameState();
+  const lenderTypeOrder = useMemo(() => Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[], []);
+  const lenderTypeOptions: Array<'All' | LenderType> = useMemo(
+    () => ['All', ...lenderTypeOrder],
+    [lenderTypeOrder]
+  );
 
   // Use the global cache hook for all loan-related data
   const loansData = useGameStateWithData<LoansData>(async () => {
@@ -96,6 +103,26 @@ export default function LoansView() {
   }, defaultLoansData);
 
   const { loans: activeLoans, creditRatingBreakdown, comprehensiveCreditRating, lenderAvailabilityBreakdown } = loansData;
+  const sortedLenderAvailability = useMemo(() => {
+    if (!lenderAvailabilityBreakdown || lenderAvailabilityBreakdown.length === 0) {
+      return [];
+    }
+
+    const filtered = lenderAvailabilityBreakdown.filter((lender: any) =>
+      lenderTypeFilter === 'All' ? true : lender.type === lenderTypeFilter
+    );
+
+    return filtered.sort((a: any, b: any) => {
+      const typeComparison =
+        lenderTypeOrder.indexOf(a.type) - lenderTypeOrder.indexOf(b.type);
+
+      if (typeComparison !== 0) {
+        return typeComparison;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [lenderAvailabilityBreakdown, lenderTypeFilter, lenderTypeOrder]);
 
   // Note: Lender search results are now handled globally by GlobalSearchResultsDisplay
 
@@ -305,8 +332,30 @@ export default function LoansView() {
                   <div className="px-4 pb-4 border-t border-gray-200">
                     <div className="pt-4 space-y-4">
                       {lenderAvailabilityBreakdown && lenderAvailabilityBreakdown.length > 0 ? (
+                        <>
+                          <div className="flex flex-wrap gap-2">
+                            {lenderTypeOptions.map((typeOption) => {
+                              const isActive = lenderTypeFilter === typeOption;
+                              return (
+                                <Button
+                                  key={typeOption}
+                                  size="sm"
+                                  variant={isActive ? 'default' : 'outline'}
+                                  className={
+                                    isActive
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                      : 'text-gray-700 border-gray-300 hover:bg-gray-100'
+                                  }
+                                  onClick={() => setLenderTypeFilter(typeOption)}
+                                >
+                                  {typeOption === 'All' ? 'All Types' : typeOption}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          {sortedLenderAvailability.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {lenderAvailabilityBreakdown.map((lender: any, index: number) => (
+                          {sortedLenderAvailability.map((lender: any, index: number) => (
                             <div key={lender.id || index} className={`p-4 rounded-lg border-2 ${
                               lender.availability.isAvailable 
                                 ? 'bg-green-50 border-green-200' 
@@ -373,6 +422,12 @@ export default function LoansView() {
                             </div>
                           ))}
                         </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              No lenders match the selected type.
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-4 text-gray-500">
                           No lender availability data available

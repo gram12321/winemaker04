@@ -397,9 +397,9 @@ export interface Transaction {
 }
 
 // ===== ECONOMY TYPES =====
-export type EconomyPhase = 'Crash' | 'Recession' | 'Recovery' | 'Expansion' | 'Boom';
+export type EconomyPhase = 'Crash' | 'Recession' | 'Stable' | 'Expansion' | 'Boom';
 
-export type LenderType = 'Bank' | 'Investment Fund' | 'Private Lender';
+export type LenderType = 'Bank' | 'Investment Fund' | 'Private Lender' | 'QuickLoan';
 
 export interface Lender {
   id: string;

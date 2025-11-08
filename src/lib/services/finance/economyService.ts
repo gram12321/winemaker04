@@ -7,7 +7,7 @@ import { NotificationCategory } from '../../types/types';
 /**
  * Calculate the next economy phase based on semi-random transitions
  * Edge phases (Crash, Boom) have 33% chance to shift, 67% to stay
- * Middle phases (Recovery, Expansion) have 25% chance each direction, 50% to stay
+ * Middle phases (Recession, Stable, Expansion) have 25% chance each direction, 50% to stay
  */
 export function calculateNextEconomyPhase(currentPhase: EconomyPhase): EconomyPhase {
   const currentIndex = ECONOMY_PHASES.indexOf(currentPhase);
@@ -29,10 +29,10 @@ export function calculateNextEconomyPhase(currentPhase: EconomyPhase): EconomyPh
 }
 
 /**
- * Initialize economy phase to 'Recovery' for new companies
+ * Initialize economy phase to 'Stable' for new companies
  */
 export function initializeEconomyPhase(): EconomyPhase {
-  return 'Recovery';
+  return 'Stable';
 }
 
 /**
@@ -60,7 +60,7 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
       const phaseDescriptions = {
         'Crash': 'Economic crisis with high interest rates',
         'Recession': 'Economic downturn with elevated rates',
-        'Recovery': 'Stable economic conditions',
+        'Stable': 'Stable economic conditions',
         'Expansion': 'Growing economy with favorable rates',
         'Boom': 'Economic boom with low interest rates'
       };

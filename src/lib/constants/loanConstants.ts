@@ -10,7 +10,8 @@ export const TAKE_LOAN_BASE_COST = 1000;
 export const LENDER_TYPE_DISTRIBUTION = {
   'Bank': 0.25,
   'Investment Fund': 0.25,
-  'Private Lender': 0.50
+  'Private Lender': 0.40,
+  'QuickLoan': 0.10
 } as const;
 
 // Lender generation parameters by type
@@ -45,7 +46,7 @@ export const LENDER_PARAMS: Record<LenderType, {
   'Investment Fund': {
     baseInterestRange: [0.05, 0.10], // 5-10%
     loanAmountRange: [100000, 1000000],
-    durationRange: [4, 120], // 1-30 years
+    durationRange: [4, 240], // 1-60 years
     riskToleranceRange: [0.4, 0.7],
     flexibilityRange: [0.6, 0.9],
     originationFeeRange: {
@@ -59,15 +60,29 @@ export const LENDER_PARAMS: Record<LenderType, {
   'Private Lender': {
     baseInterestRange: [0.08, 0.15], // 8-15%
     loanAmountRange: [5000, 50000], // Small loans
-    durationRange: [4, 120], // 1-30 years
+    durationRange: [4, 60], // 1-15 years
     riskToleranceRange: [0.5, 0.9],
     flexibilityRange: [0.3, 0.7],
     originationFeeRange: {
-      basePercentRange: [0.04, 0.06], // 4-6% base fee (highest for private lenders)
-      minFeeRange: [300, 800], // €300-800 minimum
-      maxFeeRange: [6000, 10000], // €6k-10k maximum
-      creditRatingModifierRange: [0.8, 1.2], // 20% discount to 20% premium based on credit
-      durationModifierRange: [0.9, 1.4] // 10% discount to 40% premium based on duration
+      basePercentRange: [0.045, 0.07], // 4.5-7% base fee (largest proportional hit among traditional lenders)
+      minFeeRange: [400, 1000], // €400-1000 minimum
+      maxFeeRange: [7000, 12000], // €7k-12k maximum
+      creditRatingModifierRange: [0.85, 1.25], // 15% discount to 25% premium based on credit
+      durationModifierRange: [0.95, 1.45] // Slightly higher premium for long-term adjustments
+    }
+  },
+  'QuickLoan': {
+    baseInterestRange: [0.12, 0.20], // 12-20%
+    loanAmountRange: [5000, 75000], // Micro to small business loans
+    durationRange: [4, 8], // 1-2 years (strictly short-term)
+    riskToleranceRange: [0.15, 0.35], // Very easy credit requirement
+    flexibilityRange: [0.5, 0.8], // Fast approvals, more flexible terms
+    originationFeeRange: {
+      basePercentRange: [0.06, 0.10], // 6-10% base fee (largest proportional cost)
+      minFeeRange: [400, 1500], // Higher minimum keeps upfront hit noticeable
+      maxFeeRange: [5000, 10000], // Higher ceiling while still below big-bank fees
+      creditRatingModifierRange: [1.15, 1.45], // Slightly sharper penalty for weaker credit
+      durationModifierRange: [0.9, 1.15] // Modest boost for stretching beyond a single season
     }
   }
 };
@@ -88,15 +103,15 @@ export const LOAN_DURATION_RANGES = {
 
 // Lender generation
 export const LENDER_GENERATION = {
-  MIN_LENDERS: 15,
-  MAX_LENDERS: 45
+  MIN_LENDERS: 25,
+  MAX_LENDERS: 65
 } as const;
 
 // Economy phase interest rate multipliers
 export const ECONOMY_INTEREST_MULTIPLIERS: Record<EconomyPhase, number> = {
   'Crash': 1.7,
   'Recession': 1.5,
-  'Recovery': 1.0,
+  'Stable': 1.0,
   'Expansion': 0.5,
   'Boom': 0.3
 };
@@ -105,8 +120,17 @@ export const ECONOMY_INTEREST_MULTIPLIERS: Record<EconomyPhase, number> = {
 export const LENDER_TYPE_MULTIPLIERS: Record<LenderType, number> = {
   'Bank': 0.9,
   'Investment Fund': 1.1,
-  'Private Lender': 1.4
+  'Private Lender': 1.4,
+  'QuickLoan': 1.6
 };
+
+// Lender-specific processing complexity multipliers (used by take-loan activity)
+export const LENDER_TYPE_COMPLEXITY: Record<LenderType, number> = {
+  'Bank': 1.1, // Heavier compliance and documentation
+  'Investment Fund': 1.2, // Most complex underwriting
+  'Private Lender': 0.95, // Leaner processes
+  'QuickLoan': 0.75 // Fast-track workflow
+} as const;
 
 // Credit rating configuration (0-1 scale)
 export const CREDIT_RATING = {

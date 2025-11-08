@@ -726,10 +726,10 @@ export function getEconomyPhaseAbbreviation(phase: string): string {
   switch (phase) {
     case 'Crash': return 'CR';
     case 'Recession': return 'RE';
-    case 'Recovery': return 'RV';
+    case 'Stable': return 'ST';
     case 'Expansion': return 'EX';
     case 'Boom': return 'BM';
-    default: return 'RV';
+    default: return 'ST';
   }
 }
 
@@ -741,6 +741,7 @@ export function getLenderTypeColorClass(type: string): string {
     case 'Bank': return 'bg-blue-100 text-blue-800';
     case 'Investment Fund': return 'bg-green-100 text-green-800';
     case 'Private Lender': return 'bg-purple-100 text-purple-800';
+    case 'QuickLoan': return 'bg-rose-100 text-rose-800';
     default: return 'bg-gray-100 text-gray-800';
   }
 }
@@ -752,7 +753,7 @@ export function getEconomyPhaseColorClass(phase: string): string {
   switch (phase) {
     case 'Crash': return 'bg-red-100 text-red-800';
     case 'Recession': return 'bg-orange-100 text-orange-800';
-    case 'Recovery': return 'bg-yellow-100 text-yellow-800';
+    case 'Stable': return 'bg-yellow-100 text-yellow-800';
     case 'Expansion': return 'bg-green-100 text-green-800';
     case 'Boom': return 'bg-emerald-100 text-emerald-800';
     default: return 'bg-gray-100 text-gray-800';

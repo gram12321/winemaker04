@@ -4,6 +4,7 @@ import { getGameState, updateGameState } from '../../core/gameState';
 import { createActivity } from './activityManager';
 import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
+import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
 import { calculateLenderSearchWork, calculateLenderSearchCost } from '../workcalculators/lenderSearchWorkCalculator';
 import { loadLenders } from '../../../database/core/lendersDB';
 import { calculateLenderAvailability } from '../../finance/lenderService';
@@ -19,9 +20,9 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
     const searchCost = calculateLenderSearchCost(options);
     const { totalWork } = calculateLenderSearchWork(options);
     
-    // Check if we have enough money
+    // Check if we have enough money (skip for free searches)
     const currentMoney = gameState.money || 0;
-    if (currentMoney < searchCost) {
+    if (searchCost > 0 && currentMoney < searchCost) {
       await notificationService.addMessage(
         `Insufficient funds for lender search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
         'lenderSearchManager.startLenderSearch',
@@ -31,25 +32,24 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
       return null;
     }
     
-    // Deduct search cost immediately
-    await addTransaction(
-      -searchCost,
-      `Lender search for ${options.numberOfOffers} offer${options.numberOfOffers > 1 ? 's' : ''} (${options.lenderTypes.length > 0 ? options.lenderTypes.join(', ') : 'all types'})`,
-      TRANSACTION_CATEGORIES.LENDER_SEARCH,
-      false
-    );
+    // Deduct search cost immediately (only when cost > 0)
+    if (searchCost > 0) {
+      await addTransaction(
+        -searchCost,
+        `Lender search for ${options.numberOfOffers} offer${options.numberOfOffers > 1 ? 's' : ''} (${options.lenderTypes.length > 0 ? options.lenderTypes.join(', ') : 'all types'})`,
+        TRANSACTION_CATEGORIES.LENDER_SEARCH,
+        false
+      );
+    }
     
     // Create the search activity
-    const typeText = options.lenderTypes.length > 0 && options.lenderTypes.length < 3 
-      ? ` from ${options.lenderTypes.join(', ')}` 
-      : '';
-    const title = `Lender Search${typeText}`;
+    const title = 'Lender Search';
     
     const activityId = await createActivity({
       category: WorkCategory.LENDER_SEARCH,
       title,
       totalWork,
-      activityDetails: `Cost: €${searchCost.toFixed(2)}`,
+      activityDetails: searchCost > 0 ? `Cost: €${searchCost.toFixed(2)}` : 'Cost: €0 (QuickLoan fast-track)',
       params: {
         searchOptions: options,
         searchCost
@@ -121,7 +121,8 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
   
   // Filter by lender types if specified
   let eligibleLenders = allLenders;
-  if (options.lenderTypes.length > 0 && options.lenderTypes.length < 3) {
+  const totalLenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION).length;
+  if (options.lenderTypes.length > 0 && options.lenderTypes.length < totalLenderTypes) {
     eligibleLenders = allLenders.filter(lender => options.lenderTypes.includes(lender.type));
   }
   
@@ -163,7 +164,7 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
     // Calculate loan terms
     const effectiveRate = calculateEffectiveInterestRate(
       lender.baseInterestRate,
-      gameState.economyPhase || 'Recovery',
+      gameState.economyPhase || 'Stable',
       lender.type,
       creditRating,
       durationSeasons

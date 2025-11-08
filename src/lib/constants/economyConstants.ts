@@ -2,7 +2,7 @@ import { EconomyPhase } from '../types/types';
 
 // Economy phase transition probabilities
 export const ECONOMY_TRANSITION = {
-  MIDDLE_PHASES: { // Recovery, Expansion
+  MIDDLE_PHASES: { // Recession, Stable, Expansion
     SHIFT_PROBABILITY: 0.25,
     STAY_PROBABILITY: 0.5
   },
@@ -16,7 +16,7 @@ export const ECONOMY_TRANSITION = {
 export const ECONOMY_PHASES: readonly EconomyPhase[] = [
   'Crash',
   'Recession', 
-  'Recovery',
+  'Stable',
   'Expansion',
   'Boom'
 ] as const;
@@ -44,7 +44,7 @@ export const ECONOMY_SALES_MULTIPLIERS: Record<EconomyPhase, {
     priceToleranceMultiplier: 0.95,
     multipleOrderPenaltyMultiplier: 0.9
   },
-  Recovery: {
+  Stable: {
     frequencyMultiplier: 1.0,
     quantityMultiplier: 1.0,
     priceToleranceMultiplier: 1.0,

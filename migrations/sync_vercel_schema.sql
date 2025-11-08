@@ -459,7 +459,7 @@ CREATE TABLE lenders (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     name text NOT NULL,
-    type text NOT NULL CHECK (type IN ('Bank', 'Investment Fund', 'Private Lender')),
+    type text NOT NULL CHECK (type IN ('Bank', 'Investment Fund', 'Private Lender', 'QuickLoan')),
     risk_tolerance decimal(3,2) NOT NULL,
     flexibility decimal(3,2) NOT NULL,
     market_presence decimal(3,2) NOT NULL,

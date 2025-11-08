@@ -22,7 +22,7 @@ let gameState: Partial<GameState> = {
   money: 0,
   prestige: GAME_INITIALIZATION.STARTING_PRESTIGE,
   creditRating: CREDIT_RATING.DEFAULT_RATING,
-  economyPhase: 'Recovery'
+  economyPhase: 'Stable'
 };
 
 // Persistence key
@@ -116,7 +116,7 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     persisted = await loadGameState();
   } catch {}
   
-  // If no persisted state, initialize once with defaults and set economyPhase to Recovery
+  // If no persisted state, initialize once with defaults and set economyPhase to Stable
   let ensuredEconomyPhase = persisted?.economyPhase;
   if (!ensuredEconomyPhase) {
     ensuredEconomyPhase = initializeEconomyPhase();

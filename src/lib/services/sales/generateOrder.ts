@@ -113,7 +113,7 @@ export async function generateOrder(
   rejectionProbability = rejectionProbability * Math.max(0.1, relationshipRejectionModifier); // Minimum 10% of base rejection
   
   // Apply economy price tolerance (reduce/increase rejection based on phase)
-  const economyPhase = (getGameState().economyPhase || 'Recovery') as keyof typeof ECONOMY_SALES_MULTIPLIERS;
+  const economyPhase = (getGameState().economyPhase || 'Stable') as keyof typeof ECONOMY_SALES_MULTIPLIERS;
   const priceToleranceMultiplier = ECONOMY_SALES_MULTIPLIERS[economyPhase].priceToleranceMultiplier;
   rejectionProbability = rejectionProbability / priceToleranceMultiplier;
 

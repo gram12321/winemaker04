@@ -16,7 +16,7 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
     const { totalWork } = calculateTakeLoanWork(offer, amount, duration);
     
     // Create the take loan activity
-    const title = `Processing Loan from ${offer.lender.name}`;
+    const title = 'Processing Loan';
     
     const activityId = await createActivity({
       category: WorkCategory.TAKE_LOAN,

@@ -276,5 +276,14 @@ export const LENDER_NAMES = {
   privateLenderSuffixes: [
     'Lending', 'Capital', 'Finance', 'Loans', 'Credit Services',
     'Private Funding', 'Financial Solutions'
+  ],
+  quickLoanProviders: [
+    'FlashBridge Finance',
+    'Rapid Relief Loans',
+    'SwiftLine Funding',
+    'Express Capital Group',
+    'Lightning Credit Partners',
+    'QuickHarvest Lending',
+    'Momentum Microloans'
   ]
 } as const;

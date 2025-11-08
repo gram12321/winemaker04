@@ -1,7 +1,7 @@
 import { WorkCategory, LenderSearchOptions } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { LENDER_SEARCH_BASE_COST } from '@/lib/constants/loanConstants';
+import { LENDER_SEARCH_BASE_COST, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
 
 /**
  * Calculate work required for lender search activity
@@ -15,6 +15,12 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
 } {
   const rate = TASK_RATES[WorkCategory.LENDER_SEARCH];
   const initialWork = INITIAL_WORK[WorkCategory.LENDER_SEARCH];
+  const allLenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION) as Array<keyof typeof LENDER_TYPE_DISTRIBUTION>;
+  const selectedTypes = options.lenderTypes && options.lenderTypes.length > 0 ? options.lenderTypes : allLenderTypes;
+  const selectedNonQuickTypes = selectedTypes.filter(type => type !== 'QuickLoan');
+  const quickLoanCount = selectedTypes.filter(type => type === 'QuickLoan').length;
+  const quickLoanSelected = quickLoanCount > 0;
+  const totalNonQuickTypes = allLenderTypes.filter(type => type !== 'QuickLoan').length || 1;
   
   // Number of offers modifier - no upper limit, scales exponentially for high numbers
   const numberOfOffers = Math.max(1, options.numberOfOffers || 3);
@@ -36,13 +42,21 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
   
   // Lender type constraint - constraining types increases work
   let lenderTypeMultiplier = 1;
-  const totalLenderTypes = 3; // Bank, Investment Fund, Private Lender
-  const selectedTypes = options.lenderTypes.length;
+  const selectedNonQuickCount = selectedNonQuickTypes.length;
   
-  if (selectedTypes > 0 && selectedTypes < totalLenderTypes) {
+  if (selectedNonQuickCount > 0 && selectedNonQuickCount < totalNonQuickTypes) {
     // More selective search requires more work
-    const restrictionRatio = (totalLenderTypes - selectedTypes) / totalLenderTypes;
+    const restrictionRatio = (totalNonQuickTypes - selectedNonQuickCount) / totalNonQuickTypes;
     lenderTypeMultiplier = 1 + (restrictionRatio * 0.5); // 1.0-1.5 multiplier
+  }
+
+  // QuickLoan discount: including quick loans makes searches easier
+  if (quickLoanSelected && selectedNonQuickCount < totalNonQuickTypes) {
+    const totalSelectedCount = selectedTypes.length || 1;
+    const quickProportion = quickLoanCount / totalSelectedCount;
+    const pivotMultiplier = 1 / allLenderTypes.length;
+    const quickDiscount = quickProportion * pivotMultiplier;
+    lenderTypeMultiplier *= 1 - quickDiscount;
   }
   
   // Multiply the constraints together
@@ -75,9 +89,10 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
   }
 
   if (lenderTypeMultiplier > 1) {
+    const selectionSummary = `${selectedNonQuickCount}/${totalNonQuickTypes} core types${quickLoanSelected ? ' (+QuickLoan)' : ''}`;
     factors.push({
       label: 'Lender Type Filter',
-      value: `${selectedTypes}/${totalLenderTypes} types selected`,
+      value: selectionSummary,
       modifier: lenderTypeMultiplier - 1,
       modifierLabel: 'selective filtering complexity'
     });
@@ -93,6 +108,20 @@ export function calculateLenderSearchWork(options: LenderSearchOptions): {
 export function calculateLenderSearchCost(options: LenderSearchOptions): number {
   const baseCost = LENDER_SEARCH_BASE_COST;
   const numberOfOffers = Math.max(1, options.numberOfOffers || 3);
+  const allLenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION) as Array<keyof typeof LENDER_TYPE_DISTRIBUTION>;
+  const selectedTypes = options.lenderTypes && options.lenderTypes.length > 0 ? options.lenderTypes : allLenderTypes;
+  const selectedNonQuickTypes = selectedTypes.filter(type => type !== 'QuickLoan');
+  const quickLoanCount = selectedTypes.filter(type => type === 'QuickLoan').length;
+  const quickLoanSelected = quickLoanCount > 0;
+  const totalNonQuickTypes = allLenderTypes.filter(type => type !== 'QuickLoan').length || 1;
+
+  // QuickLoan fast-track: searching exclusively for QuickLoan offers is free
+  if (
+    selectedTypes.length > 0 &&
+    selectedTypes.every((type) => type === 'QuickLoan')
+  ) {
+    return 0;
+  }
   
   // Cost increases with number of offers - same scaling as work
   let offersCostMultiplier = 1;
@@ -113,12 +142,19 @@ export function calculateLenderSearchCost(options: LenderSearchOptions): number 
   
   // Cost increases when filtering by lender type
   let lenderTypeMultiplier = 1;
-  const totalLenderTypes = 3;
-  const selectedTypes = options.lenderTypes.length;
+  const selectedNonQuickCount = selectedNonQuickTypes.length;
   
-  if (selectedTypes > 0 && selectedTypes < totalLenderTypes) {
-    const restrictionRatio = (totalLenderTypes - selectedTypes) / totalLenderTypes;
+  if (selectedNonQuickCount > 0 && selectedNonQuickCount < totalNonQuickTypes) {
+    const restrictionRatio = (totalNonQuickTypes - selectedNonQuickCount) / totalNonQuickTypes;
     lenderTypeMultiplier = 1 + (restrictionRatio * 0.4); // 1.0-1.4
+  }
+
+  if (quickLoanSelected && selectedNonQuickCount < totalNonQuickTypes) {
+    const totalSelectedCount = selectedTypes.length || 1;
+    const quickProportion = quickLoanCount / totalSelectedCount;
+    const pivotMultiplier = 1 / allLenderTypes.length;
+    const quickDiscount = quickProportion * pivotMultiplier;
+    lenderTypeMultiplier *= 1 - quickDiscount;
   }
   
   // Multiply the constraints together (same as work calculation)

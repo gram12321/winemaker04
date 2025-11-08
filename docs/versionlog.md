@@ -482,7 +482,7 @@ Fixed critical issues with customer creation and display logic that caused incor
 - `src/components/finance/index.ts` - Updated barrel exports for new LoansView component
 
 ### System Features
-- 5-phase economy system (Crash → Recession → Recovery → Expansion → Boom) with semi-random transitions
+- 5-phase economy system (Crash → Recession → Stable → Expansion → Boom) with semi-random transitions
 - 3 lender types (Bank, Investment Fund, Private Lender) with different characteristics and rates
 - Credit rating system (0-1) affecting loan availability and interest rates
 - Seasonal loan payments with automatic processing and default consequences
@@ -530,7 +530,7 @@ Fixed critical issues with customer creation and display logic that caused incor
 - **NEW FILE:** LoansView.tsx (245 lines) - Loan management UI with active loans table and available lenders
 - **NEW FILE:** LoanApplicationModal.tsx (285 lines) - Loan application form with interest rate breakdown
 - **MODIFIED:** types.ts - Added EconomyPhase, Lender, Loan interfaces, updated GameState with creditRating and economyPhase
-- **MODIFIED:** gameState.ts - Added creditRating (50) and economyPhase ('Recovery') to initial state
+- **MODIFIED:** gameState.ts - Added creditRating (50) and economyPhase ('Stable') to initial state
 - **MODIFIED:** gameTick.ts - Added economy phase transitions and seasonal loan payment processing
 - **MODIFIED:** companyService.ts - Added lender initialization for new companies
 - **MODIFIED:** financeConstants.ts - Added loan transaction categories (LOAN_RECEIVED, LOAN_PAYMENT, LOAN_DEFAULT_PENALTY)
@@ -540,7 +540,7 @@ Fixed critical issues with customer creation and display logic that caused incor
 - **DATABASE:** Created lenders table (company-scoped) with type, risk tolerance, flexibility, loan parameters
 - **DATABASE:** Created loans table (company-scoped) with payment tracking, interest calculations, status
 - **DATABASE:** Added credit_rating (0-100) and economy_phase columns to companies table
-- **FEATURES:** 5-phase economy system (Crash → Recession → Recovery → Expansion → Boom) with semi-random transitions
+- **FEATURES:** 5-phase economy system (Crash → Recession → Stable → Expansion → Boom) with semi-random transitions
 - **FEATURES:** 3 lender types (Bank, Investment Fund, Private Lender) with different characteristics and rates
 - **FEATURES:** Credit rating system (0-100) affecting loan availability and interest rates
 - **FEATURES:** Seasonal loan payments with automatic processing and default consequences

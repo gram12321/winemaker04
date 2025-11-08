@@ -73,7 +73,7 @@ export function EconomyTab() {
         <p className="font-medium">How phases shift</p>
         <p>
           Phases transition semi-randomly with higher stickiness at the edges (Crash/Boom) and more
-          fluidity in the middle (Recovery/Expansion). Changes are processed during season changes.
+          fluidity in the middle (Recession/Stable/Expansion). Changes are processed during season changes.
         </p>
       </div>
     </div>

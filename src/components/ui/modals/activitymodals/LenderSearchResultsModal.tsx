@@ -78,7 +78,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
     loanAmount,
     durationSeasons,
     gameState.creditRating || 0.5,
-    gameState.economyPhase || 'Recovery'
+    gameState.economyPhase || 'Stable'
   ) : {
     effectiveInterestRate: 0,
     seasonalPayment: 0,

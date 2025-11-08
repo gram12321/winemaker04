@@ -1,7 +1,8 @@
 import { WorkCategory, LoanOffer } from '@/lib/types/types';
 import { WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK, BASE_WORK_UNITS } from '@/lib/constants/activityConstants';
-import { TAKE_LOAN_BASE_COST } from '@/lib/constants/loanConstants';
+import { TAKE_LOAN_BASE_COST, LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_COMPLEXITY } from '@/lib/constants/loanConstants';
+import { clamp01 } from '@/lib/utils';
 
 /**
  * Calculate work required for taking a loan with adjustments
@@ -21,7 +22,19 @@ export function calculateTakeLoanWork(
   const rate = TASK_RATES[WorkCategory.TAKE_LOAN];
   const initialWork = INITIAL_WORK[WorkCategory.TAKE_LOAN];
   
-  // Calculate deltas from original offer
+  // Normalize loan profile to gauge baseline complexity
+  const normalizedAmount = clamp01(
+    (adjustedAmount - LOAN_AMOUNT_RANGES.MIN) / (LOAN_AMOUNT_RANGES.MAX - LOAN_AMOUNT_RANGES.MIN)
+  );
+  const normalizedDuration = clamp01(
+    (adjustedDurationSeasons - LOAN_DURATION_RANGES.MIN) / (LOAN_DURATION_RANGES.MAX - LOAN_DURATION_RANGES.MIN)
+  );
+
+  const amountComplexity = 0.7 + (normalizedAmount * 0.8); // 0.7 - 1.5 scaling
+  const durationComplexity = 0.75 + (normalizedDuration * 0.55); // 0.75 - 1.3 scaling
+  const lenderTypeComplexity = LENDER_TYPE_COMPLEXITY[originalOffer.lender.type] ?? 1;
+
+  // Calculate deltas from original offer to capture manual adjustments
   const amountDelta = Math.abs(adjustedAmount - originalOffer.principalAmount) / originalOffer.principalAmount;
   const durationDelta = Math.abs(adjustedDurationSeasons - originalOffer.durationSeasons) / originalOffer.durationSeasons;
   
@@ -67,7 +80,9 @@ export function calculateTakeLoanWork(
   }
   
   // Combine adjustments (multiply deltas as requested)
-  const totalMultiplier = amountMultiplier * durationMultiplier;
+  const adjustmentMultiplier = amountMultiplier * durationMultiplier;
+  const complexityMultiplier = amountComplexity * durationComplexity * lenderTypeComplexity;
+  const totalMultiplier = adjustmentMultiplier * complexityMultiplier;
   
   // Apply modifiers to base work
   const modifiedBaseWork = baseWork * totalMultiplier;

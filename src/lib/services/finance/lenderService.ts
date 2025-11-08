@@ -26,6 +26,10 @@ function generateLenderName(lenderType: LenderType): string {
       const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
       const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
       return `${prefix} ${suffix}`;
+
+    case 'QuickLoan':
+      const quickProviders = LENDER_NAMES.quickLoanProviders;
+      return quickProviders[Math.floor(Math.random() * quickProviders.length)];
     
     default:
       return 'Unknown Lender';
@@ -49,12 +53,16 @@ export async function generateLenders(): Promise<Lender[]> {
     const rand = Math.random();
     let lenderType: LenderType;
     
-    if (rand < LENDER_TYPE_DISTRIBUTION.Bank) {
-      lenderType = 'Bank';
-    } else if (rand < LENDER_TYPE_DISTRIBUTION.Bank + LENDER_TYPE_DISTRIBUTION['Investment Fund']) {
-      lenderType = 'Investment Fund';
-    } else {
-      lenderType = 'Private Lender';
+    const distributionEntries = Object.entries(LENDER_TYPE_DISTRIBUTION) as Array<[LenderType, number]>;
+    let cumulative = 0;
+    lenderType = distributionEntries[distributionEntries.length - 1]?.[0] ?? 'Private Lender';
+
+    for (const [type, weight] of distributionEntries) {
+      cumulative += weight;
+      if (rand < cumulative) {
+        lenderType = type;
+        break;
+      }
     }
     
     const params = LENDER_PARAMS[lenderType];

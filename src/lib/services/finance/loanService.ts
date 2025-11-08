@@ -91,7 +91,7 @@ export async function applyForLoan(
     // Calculate effective interest rate
     const effectiveRate = calculateEffectiveInterestRate(
       lender.baseInterestRate,
-      gameState.economyPhase || 'Recovery',
+      gameState.economyPhase || 'Stable',
       lender.type,
       gameState.creditRating || CREDIT_RATING.DEFAULT_RATING,
       durationSeasons
@@ -111,7 +111,7 @@ export async function applyForLoan(
       lenderType: lender.type,
       principalAmount: amount,
       baseInterestRate: lender.baseInterestRate,
-      economyPhaseAtCreation: gameState.economyPhase || 'Recovery',
+      economyPhaseAtCreation: gameState.economyPhase || 'Stable',
       effectiveInterestRate: effectiveRate,
       originationFee,
       remainingBalance: amount,

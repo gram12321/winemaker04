@@ -5,7 +5,7 @@ import { Button, Label, Slider, Card, CardContent, CardHeader, CardTitle, Badge,
 import { X } from 'lucide-react';
 import { getGameState, calculateLoanTerms } from '@/lib/services';
 import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services';
-import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES } from '@/lib/constants/loanConstants';
+import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 interface LenderSearchOptionsModalProps {
@@ -15,7 +15,7 @@ interface LenderSearchOptionsModalProps {
   selectedLender?: Lender; // Optional: if provided, show loan parameter configuration
 }
 
-const LENDER_TYPES: LenderType[] = ['Bank', 'Investment Fund', 'Private Lender'];
+const LENDER_TYPES = Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[];
 
 // Dual slider component for range selection
 const DualSlider: React.FC<{
@@ -86,7 +86,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
     loanAmount,
     durationSeasons,
     gameState.creditRating || 0.5,
-    gameState.economyPhase || 'Recovery'
+    gameState.economyPhase || 'Stable'
   ) : {
     effectiveInterestRate: 0,
     seasonalPayment: 0,
@@ -571,7 +571,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
               ? "bg-blue-600 hover:bg-blue-700 text-white" 
               : "bg-green-600 hover:bg-green-700 text-white"
             }
-            disabled={isSubmitting || (!selectedLender && (gameState.money || 0) < previewStats.totalCost)}
+            disabled={isSubmitting || (!selectedLender && previewStats.totalCost > 0 && (gameState.money || 0) < previewStats.totalCost)}
           >
             {isSubmitting 
               ? (selectedLender ? 'Processing...' : 'Starting...') 
