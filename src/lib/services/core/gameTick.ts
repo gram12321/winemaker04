@@ -3,7 +3,7 @@ import { generateSophisticatedWineOrders, notificationService, progressActivitie
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
-import { GAME_INITIALIZATION } from '@/lib/constants';
+import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 
@@ -60,12 +60,12 @@ const executeGameTick = async (): Promise<void> => {
   // Increment week
   week += 1;
   
-  // Check if season changes (every 12 weeks)
-  if (week > 12) {
+  // Check if season changes (every WEEKS_PER_SEASON weeks)
+  if (week > WEEKS_PER_SEASON) {
     week = 1;
-    const currentSeasonIndex = ['Spring', 'Summer', 'Fall', 'Winter'].indexOf(season);
-    const nextSeasonIndex = (currentSeasonIndex + 1) % 4;
-    season = ['Spring', 'Summer', 'Fall', 'Winter'][nextSeasonIndex] as 'Spring' | 'Summer' | 'Fall' | 'Winter';
+    const currentSeasonIndex = SEASON_ORDER.indexOf(season);
+    const nextSeasonIndex = (currentSeasonIndex + 1) % SEASON_ORDER.length;
+    season = SEASON_ORDER[nextSeasonIndex];
     newSeason = season; // Store the new season for combined notification
     
     // If we're back to Spring, increment year

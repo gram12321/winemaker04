@@ -13,6 +13,7 @@ import { generateDefaultCharacteristics } from '../characteristics/defaultCharac
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../../constants/vineyardConstants';
 import { initializeBatchFeatures, processEventTrigger } from '../features/featureService';
+import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 
 /**
  * Inventory Service
@@ -193,9 +194,9 @@ export async function createWineBatchFromHarvest(
     
     // Helper to compare dates as absolute weeks
     const toAbs = (d: { week: number; season: string; year: number }): number => {
-      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-      const idx = seasons.indexOf(d.season);
-      return (d.year - 2024) * 52 + idx * 13 + (d.week - 1);
+      const idx = SEASON_ORDER.indexOf(d.season as typeof SEASON_ORDER[number]);
+      const safeIdx = idx >= 0 ? idx : 0;
+      return (d.year - 2024) * WEEKS_PER_YEAR + safeIdx * WEEKS_PER_SEASON + (d.week - 1);
     };
     const newStart = toAbs(harvestStartDate) < toAbs(startCandidate) ? harvestStartDate : startCandidate;
     const newEnd = toAbs(harvestEndDate) > toAbs(endCandidate) ? harvestEndDate : endCandidate;

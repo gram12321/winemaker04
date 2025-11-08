@@ -7,6 +7,7 @@ import { getTailwindClasses } from "@/lib/utils/colorMapping";
 import { cn } from "@/lib/utils/utils";
 import { notificationService } from "@/lib/services/core/notificationService";
 import { getGameState } from "@/lib/services/core/gameState";
+import { SEASON_ORDER } from "@/lib/constants";
 
 // Removed NotificationType - using category as the meaningful identifier
 
@@ -127,9 +128,8 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
     .sort((a, b) => {
       // Sort by year, then season, then week (descending)
       if (a.gameYear !== b.gameYear) return b.gameYear - a.gameYear;
-      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-      const aSeasonIndex = seasons.indexOf(a.gameSeason);
-      const bSeasonIndex = seasons.indexOf(b.gameSeason);
+      const aSeasonIndex = SEASON_ORDER.indexOf(a.gameSeason as typeof SEASON_ORDER[number]);
+      const bSeasonIndex = SEASON_ORDER.indexOf(b.gameSeason as typeof SEASON_ORDER[number]);
       if (aSeasonIndex !== bSeasonIndex) return bSeasonIndex - aSeasonIndex;
       return b.gameWeek - a.gameWeek;
     });
@@ -147,9 +147,8 @@ export function NotificationCenter({ onClose, isOpen = false }: NotificationCent
     if (currentYear - gameYear > 1) return true;
     if (currentYear - gameYear === 1) {
       // If exactly 1 year behind, check if it's significantly behind
-      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-      const currentSeasonIndex = seasons.indexOf(currentSeason);
-      const notificationSeasonIndex = seasons.indexOf(gameSeason);
+      const currentSeasonIndex = SEASON_ORDER.indexOf(currentSeason as typeof SEASON_ORDER[number]);
+      const notificationSeasonIndex = SEASON_ORDER.indexOf(gameSeason as typeof SEASON_ORDER[number]);
       
       // If we're in a much later season, it's old
       if (currentSeasonIndex - notificationSeasonIndex > 2) return true;

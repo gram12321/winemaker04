@@ -75,5 +75,9 @@ export const FINANCE_PERIOD_LABELS = {
   year: {
     income: 'YEARLY INCOME',
     expenses: 'YEARLY EXPENSES'
+  },
+  all: {
+    income: 'ALL-TIME INCOME',
+    expenses: 'ALL-TIME EXPENSES'
   }
 } as const;

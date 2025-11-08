@@ -4,6 +4,7 @@ import { Customer, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
 import { Normalize1000To01WithTail } from './calculator';
+import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
@@ -333,16 +334,22 @@ export function calculateAbsoluteWeeks(
   startSeason: string = 'Spring',
   startYear: number = 2024
 ): number {
-  const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-  
-  // Convert start date to absolute weeks
-  const startSeasonIndex = seasons.indexOf(startSeason);
-  const startAbsoluteWeeks = (startYear - 2024) * 52 + startSeasonIndex * 13 + (startWeek - 1);
-  
-  // Convert current date to absolute weeks
-  const currentSeasonIndex = seasons.indexOf(currentSeason);
-  const currentAbsoluteWeeks = (currentYear - 2024) * 52 + currentSeasonIndex * 13 + (currentWeek - 1);
-  
+  const startSeasonIndex = SEASON_ORDER.indexOf(startSeason as typeof SEASON_ORDER[number]);
+  const currentSeasonIndex = SEASON_ORDER.indexOf(currentSeason as typeof SEASON_ORDER[number]);
+
+  const safeStartSeasonIndex = startSeasonIndex >= 0 ? startSeasonIndex : 0;
+  const safeCurrentSeasonIndex = currentSeasonIndex >= 0 ? currentSeasonIndex : 0;
+
+  const startAbsoluteWeeks =
+    (startYear - 2024) * WEEKS_PER_YEAR +
+    safeStartSeasonIndex * WEEKS_PER_SEASON +
+    (startWeek - 1);
+
+  const currentAbsoluteWeeks =
+    (currentYear - 2024) * WEEKS_PER_YEAR +
+    safeCurrentSeasonIndex * WEEKS_PER_SEASON +
+    (currentWeek - 1);
+
   return Math.max(1, currentAbsoluteWeeks - startAbsoluteWeeks + 1);
 }
 

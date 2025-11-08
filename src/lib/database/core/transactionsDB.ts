@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Season, Transaction } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
+import { SEASON_ORDER } from '@/lib/constants';
 
 const TRANSACTIONS_TABLE = 'transactions';
 
@@ -80,8 +81,7 @@ export const loadTransactions = async (): Promise<Transaction[]> => {
     return transactions.sort((a, b) => {
       if (a.date.year !== b.date.year) return b.date.year - a.date.year;
       if (a.date.season !== b.date.season) {
-        const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-        return seasons.indexOf(b.date.season) - seasons.indexOf(a.date.season);
+        return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
       }
       if (a.date.week !== b.date.week) return b.date.week - a.date.week;
       // For same week transactions, sort by created_at timestamp

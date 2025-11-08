@@ -2,13 +2,18 @@ import { formatNumber, getColorClass } from '@/lib/utils';
 import { calculateFinancialData, calculateNetWorth } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
-import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS } from '@/lib/constants';
+import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS, WEEKS_PER_SEASON } from '@/lib/constants';
 import { loadActiveLoans } from '@/lib/database/core/loansDB';
 import { useState, useEffect } from 'react';
 import { Loan } from '@/lib/types/types';
 
 interface IncomeBalanceViewProps {
-  period: 'weekly' | 'season' | 'year';
+  period: 'weekly' | 'season' | 'year' | 'all';
+  filters: {
+    week?: number;
+    season?: string;
+    year?: number;
+  };
 }
 
 const FinancialSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
@@ -28,14 +33,18 @@ const DataRow: React.FC<{ label: string; value: string | number; valueClass?: st
 );
 
 
-export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
+export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
   const financialData = useGameStateWithData(
-    () => calculateFinancialData(period),
+    () => calculateFinancialData(period, filters),
     DEFAULT_FINANCIAL_DATA
   );
   
   const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
   const [loadingLoans, setLoadingLoans] = useState(true);
+
+  const periodLabels = FINANCE_PERIOD_LABELS[period] ?? FINANCE_PERIOD_LABELS.weekly;
+  const periodLabel = period === 'all' ? 'All Time' : `${period.charAt(0).toUpperCase() + period.slice(1)}`;
+  const showLoanPaymentBreakdown = period !== 'all';
 
   // Calculate net worth using centralized function
   const netWorth = useGameStateWithData(
@@ -67,17 +76,21 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
   const getPeriodPaymentAmount = (seasonalPayment: number) => {
     switch (period) {
       case 'weekly':
-        return seasonalPayment / 13; // 13 weeks per season
+        return seasonalPayment / WEEKS_PER_SEASON;
       case 'season':
         return seasonalPayment;
       case 'year':
         return seasonalPayment * 4; // 4 seasons per year
+      case 'all':
+        return seasonalPayment * 4;
       default:
         return seasonalPayment;
     }
   };
   
-  const totalPeriodPayments = activeLoans.reduce((sum, loan) => sum + getPeriodPaymentAmount(loan.seasonalPayment), 0);
+  const totalPeriodPayments = showLoanPaymentBreakdown
+    ? activeLoans.reduce((sum, loan) => sum + getPeriodPaymentAmount(loan.seasonalPayment), 0)
+    : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -85,27 +98,27 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
         title="Income Statement"
         description="Your revenue and expense breakdown"
       >
-          <FinancialSection title={FINANCE_PERIOD_LABELS[period].income}>
+          <FinancialSection title={periodLabels.income}>
             {financialData.incomeDetails.length > 0 ? (
               financialData.incomeDetails.map((item, index) => (
                 <DataRow key={index} label={item.description} value={item.amount} valueClass="text-emerald-600" />
               ))
             ) : (
-              <DataRow label={`Total ${period} Income`} value={financialData.income} valueClass="text-emerald-600" />
+              <DataRow label={`Total ${periodLabel} Income`} value={financialData.income} valueClass="text-emerald-600" />
             )}
           </FinancialSection>
 
-          <FinancialSection title={FINANCE_PERIOD_LABELS[period].expenses}>
+          <FinancialSection title={periodLabels.expenses}>
             {financialData.expenseDetails.length > 0 ? (
               financialData.expenseDetails.map((item, index) => (
                 <DataRow key={index} label={item.description} value={item.amount} valueClass={getColorClass(0.2)} />
               ))
             ) : (
-                <DataRow label={`Total ${period} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
+                <DataRow label={`Total ${periodLabel} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
             )}
             
             {/* Add loan payments if they exist */}
-            {activeLoans.length > 0 && (
+            {showLoanPaymentBreakdown && activeLoans.length > 0 && (
               <>
                 {activeLoans.map((loan) => (
                   <DataRow 
@@ -116,7 +129,7 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
                   />
                 ))}
                 <DataRow 
-                  label={`Total ${period.charAt(0).toUpperCase() + period.slice(1)} Loan Payments`} 
+                  label={`Total ${periodLabel} Loan Payments`} 
                   value={totalPeriodPayments} 
                   valueClass="text-red-600" 
                 />
@@ -125,8 +138,8 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
           </FinancialSection>
 
           <FinancialSection title="NET INCOME">
-            <DataRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} Income`} value={financialData.income} valueClass={getColorClass(0.8)} />
-            <DataRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
+            <DataRow label={`${periodLabel} Income`} value={financialData.income} valueClass={getColorClass(0.8)} />
+            <DataRow label={`${periodLabel} Expenses`} value={financialData.expenses} valueClass={getColorClass(0.2)} />
              <hr className="my-1 border-gray-300" />
              <DataRow label="Net Income" value={financialData.netIncome} valueClass={getColorClass(financialData.netIncome >= 0 ? 0.8 : 0.2)} />
           </FinancialSection>
@@ -175,17 +188,19 @@ export function IncomeBalanceView({ period }: IncomeBalanceViewProps) {
                       valueClass="text-red-600" 
                     />
                     <div className="text-xs text-gray-500 ml-2">
-                      Payment: {formatNumber(getPeriodPaymentAmount(loan.seasonalPayment), { currency: true })}/{period}
+                      Payment: {formatNumber(getPeriodPaymentAmount(loan.seasonalPayment), { currency: true })}/{periodLabel}
                     </div>
                   </div>
                 ))}
                 <hr className="my-2 border-gray-300" />
                 <DataRow label="Total Outstanding Loans" value={totalOutstandingLoans} valueClass="text-red-600" />
-                <DataRow 
-                  label={`Total ${period.charAt(0).toUpperCase() + period.slice(1)} Payments`} 
-                  value={totalPeriodPayments} 
-                  valueClass="text-orange-600" 
-                />
+                {showLoanPaymentBreakdown && (
+                  <DataRow 
+                    label={`Total ${periodLabel} Payments`} 
+                    value={totalPeriodPayments} 
+                    valueClass="text-orange-600" 
+                  />
+                )}
               </>
             ) : (
               <DataRow label="No Active Loans" value="€0" valueClass="text-gray-500" />

@@ -1,13 +1,11 @@
-import { getGameState } from '../core/gameState';
-import { Transaction } from '../../types/types';
+import { getGameState, getCurrentCompany, updateGameState } from '../core/gameState';
+import type { Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
-import { GAME_INITIALIZATION } from '../../constants/constants';
-import { getCurrentCompany, updateGameState } from '../core/gameState';
+import { GAME_INITIALIZATION, SEASON_ORDER, TRANSACTION_CATEGORIES } from '@/lib/constants';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from '../user/companyService';
-import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
 import { calculateTotalOutstandingLoans } from './loanService';
 
@@ -132,8 +130,7 @@ export const addTransaction = async (
     transactionsCache.sort((a, b) => {
       if (a.date.year !== b.date.year) return b.date.year - a.date.year;
       if (a.date.season !== b.date.season) {
-        const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-        return seasons.indexOf(b.date.season) - seasons.indexOf(a.date.season);
+        return SEASON_ORDER.indexOf(b.date.season) - SEASON_ORDER.indexOf(a.date.season);
       }
       if (a.date.week !== b.date.week) return b.date.week - a.date.week;
       // For same week transactions, sort by ID (newer transactions have higher IDs)
@@ -182,7 +179,10 @@ export const calculateNetWorth = async (): Promise<number> => {
 };
 
 // Calculate financial data for income statement and balance sheet
-export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year'): Promise<FinancialData> => {
+export const calculateFinancialData = async (
+  period: 'weekly' | 'season' | 'year' | 'all',
+  options: { week?: number; season?: string; year?: number } = {}
+): Promise<FinancialData> => {
   const gameState = getGameState();
   
   const [transactions, vineyards, wineBatches] = await Promise.all([
@@ -197,8 +197,14 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
     year: gameState.currentYear || 2024
   };
   
-  const filteredTransactions = transactions.filter(transaction => 
-    filterTransactionByPeriod(transaction, currentDate, period)
+  const filterDate = {
+    week: options.week ?? currentDate.week,
+    season: options.season ?? currentDate.season,
+    year: options.year ?? currentDate.year
+  };
+  
+  const filteredTransactions = transactions.filter(transaction =>
+    filterTransactionByPeriod(transaction, period, filterDate, options)
   );
   
   let income = 0;
@@ -293,19 +299,22 @@ export const calculateFinancialData = async (period: 'weekly' | 'season' | 'year
 // Helper function to filter transactions by time period
 function filterTransactionByPeriod(
   transaction: Transaction,
+  period: 'weekly' | 'season' | 'year' | 'all',
   currentDate: { week: number; season: string; year: number },
-  period: 'weekly' | 'season' | 'year'
+  options: { week?: number; season?: string; year?: number }
 ): boolean {
   switch (period) {
     case 'weekly':
-      return transaction.date.week === currentDate.week &&
-             transaction.date.season === currentDate.season &&
-             transaction.date.year === currentDate.year;
+      return transaction.date.week === (options.week ?? currentDate.week) &&
+             transaction.date.season === (options.season ?? currentDate.season) &&
+             transaction.date.year === (options.year ?? currentDate.year);
     case 'season':
-      return transaction.date.season === currentDate.season &&
-             transaction.date.year === currentDate.year;
+      return transaction.date.season === (options.season ?? currentDate.season) &&
+             transaction.date.year === (options.year ?? currentDate.year);
     case 'year':
-      return transaction.date.year === currentDate.year;
+      return transaction.date.year === (options.year ?? currentDate.year);
+    case 'all':
+      return true;
     default:
       return false;
   }

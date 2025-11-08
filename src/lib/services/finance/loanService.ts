@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Loan, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning } from '../../types/types';
 import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES } from '../../constants/loanConstants';
-import { TRANSACTION_CATEGORIES } from '../../constants';
+import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getGameState, updateGameState } from '../core/gameState';
 import { addTransaction } from './financeService';
 import { insertLoan, loadActiveLoans, updateLoan } from '../../database/core/loansDB';
@@ -430,24 +430,16 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
  * Calculate next payment date (next season)
  */
 function calculateNextPaymentDate(currentDate: GameDate): GameDate {
-  const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-  const currentSeasonIndex = seasons.indexOf(currentDate.season);
-  const nextSeasonIndex = (currentSeasonIndex + 1) % 4;
-  const nextSeason = seasons[nextSeasonIndex] as 'Spring' | 'Summer' | 'Fall' | 'Winter';
-  
-  if (nextSeason === 'Spring') {
-    return {
-      week: 1,
-      season: 'Spring',
-      year: currentDate.year + 1
-    };
-  } else {
-    return {
-      week: 1,
-      season: nextSeason,
-      year: currentDate.year
-    };
-  }
+  const currentSeasonIndex = SEASON_ORDER.indexOf(currentDate.season);
+  const nextSeasonIndex = (currentSeasonIndex + 1) % SEASON_ORDER.length;
+  const nextSeason = SEASON_ORDER[nextSeasonIndex];
+  const wrapsToNextYear = nextSeasonIndex === 0;
+
+  return {
+    week: 1,
+    season: nextSeason,
+    year: currentDate.year + (wrapsToNextYear ? 1 : 0)
+  };
 }
 
 /**

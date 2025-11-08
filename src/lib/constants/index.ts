@@ -11,6 +11,7 @@ export * from './loanConstants';
 export * from './financeConstants';
 export * from './staffConstants';
 export * from './achievementConstants';
+export * from './timeConstants';
 
 // Wine features
 export * from './wineFeatures/oxidation';

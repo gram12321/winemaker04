@@ -4,18 +4,20 @@ import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { getGameState, getCurrentPrestige, getTransactions, notificationService } from '@/lib/services';
 import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { NotificationCategory } from '@/lib/types/types';
+import { SEASON_ORDER } from '@/lib/constants';
 
 /**
  * Helper function to get previous season and year
  */
 function getPreviousSeasonAndYear(currentSeason: Season, currentYear: number): { season: Season, year: number } {
-  const seasons: Season[] = ['Spring', 'Summer', 'Fall', 'Winter'];
-  const currentIndex = seasons.indexOf(currentSeason);
-  const prevIndex = (currentIndex - 1 + 4) % 4;
-  const prevSeason = seasons[prevIndex];
+  const totalSeasons = SEASON_ORDER.length;
+  const currentIndex = SEASON_ORDER.indexOf(currentSeason);
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+  const prevIndex = (safeCurrentIndex - 1 + totalSeasons) % totalSeasons;
+  const prevSeason = SEASON_ORDER[prevIndex];
   
-  // If going from Spring to Winter, we go back a year
-  const prevYear = prevIndex === 3 ? currentYear - 1 : currentYear;
+  // If wrapping from first season to last, subtract a year
+  const prevYear = prevIndex > safeCurrentIndex ? currentYear - 1 : currentYear;
   
   return { season: prevSeason, year: prevYear };
 }
