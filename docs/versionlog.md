@@ -27,19 +27,75 @@
 
 
 ---
+## Version 0.07 - Customer Generation & Display Performance Fix
 
-## Version 0.053c - Tooltip Mobile Info Button Opt-In
-**Date:** 2025-11-04 | **Status:** local (uncommitted)
+### Overview
+Fixed critical issues with customer creation and display logic that caused incorrect customer generation (always 200 customers) and poor initial display (0 of 0 customers).
 
-### 🎨 UI Behavior Adjustment
-- `src/components/ui/shadCN/tooltip.tsx` — Added optional prop `showMobileInfoButton` to `TooltipTrigger` (default: `false`).
-  - On mobile, the automatic "(i)" button is now rendered only when explicitly requested by passing `showMobileInfoButton`.
-  - Prevents default UI clutter and interference with layouts.
-  - Added optional subtle hint styling: `showMobileHint` (default `false`) and `mobileHintClassName`.
-    - When enabled, wraps trigger children with a dotted underline and `cursor-help` on mobile only (`md:no-underline`).
-  - Added `mobileHintVariant` with `corner-dot` for non-text elements.
-    - Small non-interactive dot adornment positioned via `mobileHintDotPosition` (top-right by default) and `mobileHintDotClassName`.
+### Changes Made
 
+#### Customer Generation Logic (`src/lib/services/sales/createCustomer.ts`)
+- **FIXED:** `generateCustomersForAllCountries()` - removed pre-generation of 100 customer types per country
+- **NEW FUNCTION:** `selectRandomCustomerType()` - dynamically selects customer types based on regional weights
+- **IMPROVED:** Market share generation now correctly stops at 100% per country instead of generating fixed number
+- **REMOVED:** Unused `generateMarketSharesUntilFull()` function
+
+#### Customer Data Hook (`src/hooks/useCustomerData.ts`)
+- **IMPROVED:** Now loads all customers on mount (not just active) for proper display counts
+- **ADDED:** `allCustomersLoaded` state flag to track loading status
+- **FIXED:** Relationship loading now works correctly when toggling between active/all customers
+
+#### Customers Tab (`src/components/pages/winepedia/CustomersTab.tsx`)
+- **FIXED:** Initial display now shows "Active: X, Total: Y" counts correctly
+- **IMPROVED:** Toggle button behavior - loads relationships only when switching to "All Customers"
+- **ADDED:** `isLoadingRelationships` state for better loading feedback
+
+#### Game Initialization (`src/lib/services/core/gameState.ts`)
+- **ADDED:** Customer initialization in `createNewCompany()` function
+- **IMPROVED:** Customers now created at company creation, not just when company is selected
+
+### Technical Details
+- Customer generation now properly generates varying numbers of customers per country based on market share distribution
+- Active customers (those who have placed orders) are displayed by default
+- All customers are loaded in background for accurate total counts
+- Relationships are calculated on-demand to improve performance
+
+---
+## Version 0.06 - Storyline Documentation & Sidebar Tweaks
+**Date:** 2025-11-08 | **Commit:** 77eaf92f | **Stats:** 2,191 additions, 9 deletions
+
+### 📚 Storyline Expansion
+- **NEW FILE:** `docs/Story/STORY-BACKGROUND.md` (235 lines) — overarching narrative framework
+- **NEW FILE:** `docs/Story/The_De_Luca_Family_Italy.md` (368 lines) — Italian family storyline
+- **NEW FILE:** `docs/Story/The_Latosha_Family_France.md` (546 lines) — French family storyline
+- **NEW FILE:** `docs/Story/The_Mondavi_Family_US.md` (289 lines) — U.S. family storyline
+- **NEW FILE:** `docs/Story/The_Torres_Family_Spain.md` (293 lines) — Spanish family storyline
+- **NEW FILE:** `docs/Story/The_Weissburg_Family_Germany.md` (426 lines) — German family storyline
+- Added reference screenshots under `docs/screenshots/` (`Companyview.png`, `Loginpage.png`, `staff.png`, `vineyards.png`, `winebalance.png`)
+
+### 🧭 UI Adjustment
+- `src/components/ui/shadCN/sidebar.tsx` — Layout fix to support new documentation entries (33 additions, 8 deletions)
+- `src/components/ui/shadCN/tooltip.tsx` — Follow-up tweak (1 addition, 1 deletion)
+
+---
+## Version 0.054-0.054c - Mobile Tooltip Framework & UI Alignment (Combined)
+**Date:** 2025-11-05 to 2025-11-06 | **Commits:** 6c1ba58 (0.054), bd6ae1b (0.054a), 3c91d2b (0.054b), 3cdb464 (0.054c) | **Stats:** Combined 3,640 additions, 4,236 deletions
+
+### 📱 Mobile Tooltip Framework
+- `src/components/ui/shadCN/tooltip.tsx` — Rebuilt tooltip system with mobile-aware API (opt-in info button, hint variants, corner-dot adornments)
+- `src/lib/utils/utils.ts` — New helpers for mobile hint styling and responsive checks (40+ changes across commits)
+
+### 🎨 Component Alignment
+- Updated major views to adopt the new tooltip UX: `src/components/finance/LoansView.tsx`, `src/components/pages/sales/OrdersTab.tsx`, `WineCellarTab.tsx`, `Vineyard.tsx`, `Winery.tsx`
+- Analytics components (`BalanceScoreBreakdown.tsx`, `FeatureDisplay.tsx`, `grapeQualityBreakdown.tsx`) reworked for the hint system
+- Modal suites (prestige, vineyard, wine, fermentation, activity options) refactored for consistent mobile behavior
+- Header, sidebar, toaster, and multiple Winepedia tabs polished to match the new tooltip styling
+
+### 🛠️ Supporting Updates
+- `src/components/ui/shadCN/tooltip.tsx` cleanup in 0.054c reduced legacy branches (30 additions, 256 deletions)
+- `src/lib/utils/icons.tsx` — Icon helper adjustments for hint adornments
+
+---
 ## Version 0.053b - Modal State Utility & System Improvements
 **Date:** 2025-11-03 | **Commit:** ac624656 | **Stats:** 966 additions, 322 deletions
 

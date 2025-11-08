@@ -1,10 +1,12 @@
 // Customer generation service - creates sophisticated customers with regional characteristics
 import { v4 as uuidv4 } from 'uuid';
 import { Customer, CustomerCountry, CustomerType } from '../../types/types';
-import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS } from '../../constants/constants';
+import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS, CUSTOMER_MARKET_SHARE_MULTIPLIERS } from '../../constants/constants';
 import { NAMES } from '../../constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '../../database/customers/customerDB';
+import { calculateRelationshipBreakdown } from './relationshipService';
+import { loadFormattedRelationshipBreakdown } from '../../utils/utils';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -93,85 +95,6 @@ function generateCustomerName(country: CustomerCountry, customerType: CustomerTy
 // ===== BULK CUSTOMER GENERATION (GAME INITIALIZATION) =====
 
 /**
- * Generate market shares using calculateSkewedMultiplier
- * Creates heavily skewed distribution toward small values (0-1 range)
- * Converts to percentage (0-100%) and iterates until 100% total is reached
- */
-function generateMarketSharesUntilFull(customerTypes: CustomerType[]): number[] {
-  const marketShares: number[] = [];
-  let totalMarketShare = 0;
-  
-  
-  // Customer type market share multipliers
-  const marketShareMultipliers: Record<CustomerType, number> = {
-    'Restaurant': 0.12,      // Small restaurants
-    'Private Collector': 0.08, // Very small private collectors
-    'Wine Shop': 0.9,      // Medium wine shops
-    'Chain Store': 1.0      // Large chain stores
-  };
-  
-  // Keep generating customers until we reach 100% market share
-  while (totalMarketShare < 100.0) {
-    const randomValue1 = Math.random();
-    const steppedValue1 = calculateSkewedMultiplier(randomValue1);
-    
-    let steppedValue: number;
-    let numDraws = 1;
-    
-    // Determine how many draws based on the first value
-    // Use 1-5 draws with minimum for entire range
-    if (steppedValue1 >= 0.9) {
-      numDraws = 5; // 0.9+ = 5 draws (rare)
-    } else if (steppedValue1 >= 0.7) {
-      numDraws = 4; // 0.7-0.9 = 4 draws (few)
-    } else if (steppedValue1 >= 0.5) {
-      numDraws = 3; // 0.5-0.7 = 3 draws (some)
-    } else if (steppedValue1 >= 0.1) {
-      numDraws = 2; // 0.1-0.3 = 2 draw (most)
-    } else {
-      numDraws = 1; // 0.0-0.1 = 1 draw (most)
-    }
-    
-    // Perform additional draws if needed
-    // Use minimum for entire range (1-5 draws)
-    let minValue = steppedValue1;
-    for (let i = 1; i < numDraws; i++) {
-      const randomValue = Math.random();
-      const additionalValue = calculateSkewedMultiplier(randomValue);
-      minValue = Math.min(minValue, additionalValue);
-    }
-    
-    steppedValue = minValue;
-    
-    // Get the customer type for this iteration
-    const customerType = customerTypes[marketShares.length] || 'Restaurant';
-    const customermultiplier = marketShareMultipliers[customerType];
-    
-    // Apply customer type multiplier to create realistic market shares
-    const marketShare = steppedValue * customermultiplier * 100;
-    
-    // Add to our list
-    marketShares.push(marketShare);
-    totalMarketShare += marketShare;
-    
-    // Safety check to prevent infinite loops
-    if (marketShares.length > 1000) {
-      break;
-    }
-  }
-  
-  // If we exceeded 100%, adjust the last customer's share
-  if (totalMarketShare > 100.0) {
-    const excess = totalMarketShare - 100.0;
-    marketShares[marketShares.length - 1] -= excess;
-    totalMarketShare = 100.0;
-  }
-  
-  
-  return marketShares;
-}
-
-/**
  * Create a customer with specific parameters (used for bulk generation)
  */
 function createCustomerWithSpecificData(
@@ -214,6 +137,27 @@ function createCustomerWithSpecificData(
 }
 
 /**
+ * Generate a random customer type based on regional weights
+ */
+function selectRandomCustomerType(country: CustomerCountry): CustomerType {
+  const typeWeights = CUSTOMER_REGIONAL_DATA[country].customerTypeWeights;
+  const types = Object.keys(typeWeights) as CustomerType[];
+  const totalWeight = Object.values(typeWeights).reduce((sum, weight) => sum + weight, 0);
+  
+  const randomValue = Math.random() * totalWeight;
+  let cumulativeWeight = 0;
+  
+  for (const type of types) {
+    cumulativeWeight += typeWeights[type];
+    if (randomValue <= cumulativeWeight) {
+      return type;
+    }
+  }
+  
+  return 'Restaurant'; // fallback
+}
+
+/**
  * Generate customers for all countries based on the old iteration logic
  * Now uses the consolidated customer creation logic to avoid duplication
  */
@@ -223,51 +167,73 @@ export function generateCustomersForAllCountries(companyPrestige: number = 1): C
   const countries = Object.keys(CUSTOMER_REGIONAL_DATA) as CustomerCountry[];
   
   countries.forEach(country => {
-    
-    // Get customer type weights for this country
-    const typeWeights = CUSTOMER_REGIONAL_DATA[country].customerTypeWeights;
-    const types = Object.keys(typeWeights) as CustomerType[];
-    
-    // First, generate customer types for this country
+    // Generate customer types dynamically as we create customers
     const customerTypes: CustomerType[] = [];
-    let totalWeight = Object.values(typeWeights).reduce((sum, weight) => sum + weight, 0);
     
+    // Generate market shares until we reach 100% for this country
+    let totalMarketShare = 0;
+    const marketShares: number[] = [];
     
-    // Generate enough customer types (we'll generate more as needed)
-    for (let i = 0; i < 100; i++) { // Generate up to 100 customer types
-      const randomValue = Math.random() * totalWeight;
-      let cumulativeWeight = 0;
-      let selectedType: CustomerType = 'Restaurant'; // fallback
+    // Keep generating customers until we reach 100% market share for this country
+    while (totalMarketShare < 100.0) {
+      // Select customer type dynamically for each customer
+      const customerType = selectRandomCustomerType(country);
+      customerTypes.push(customerType);
       
-      for (const type of types) {
-        cumulativeWeight += typeWeights[type];
-        if (randomValue <= cumulativeWeight) {
-          selectedType = type;
-          break;
-        }
+      // Generate market share for this customer
+      const randomValue1 = Math.random();
+      const steppedValue1 = calculateSkewedMultiplier(randomValue1);
+      
+      let numDraws = 1;
+      if (steppedValue1 >= 0.9) {
+        numDraws = 5;
+      } else if (steppedValue1 >= 0.7) {
+        numDraws = 4;
+      } else if (steppedValue1 >= 0.5) {
+        numDraws = 3;
+      } else if (steppedValue1 >= 0.1) {
+        numDraws = 2;
+      } else {
+        numDraws = 1;
       }
       
-      customerTypes.push(selectedType);
+      // Perform additional draws if needed
+      let minValue = steppedValue1;
+      for (let i = 1; i < numDraws; i++) {
+        const randomValue = Math.random();
+        const additionalValue = calculateSkewedMultiplier(randomValue);
+        minValue = Math.min(minValue, additionalValue);
+      }
+      
+      // Use market share multiplier from constants
+      const customermultiplier = CUSTOMER_MARKET_SHARE_MULTIPLIERS[customerType];
+      const marketShare = minValue * customermultiplier * 100;
+      
+      marketShares.push(marketShare);
+      totalMarketShare += marketShare;
+      
+      // Safety check to prevent infinite loops
+      if (marketShares.length > 1000) {
+        console.warn(`[Customer Generation] Safety limit reached for ${country}: ${marketShares.length} customers`);
+        break;
+      }
     }
     
-    
-    // Generate market shares with customer type modifiers
-    const marketShares = generateMarketSharesUntilFull(customerTypes);
-    const customerCount = marketShares.length;
-    
+    // If we exceeded 100%, adjust the last customer's share
+    if (totalMarketShare > 100.0) {
+      const excess = totalMarketShare - 100.0;
+      marketShares[marketShares.length - 1] -= excess;
+      totalMarketShare = 100.0;
+    }
     
     // Create customers for this country
-    for (let i = 0; i < customerCount; i++) {
+    for (let i = 0; i < marketShares.length; i++) {
       const selectedType = customerTypes[i];
-      
-      // Use the consolidated customer creation logic
       const marketShare = marketShares[i] / 100; // Convert from percentage to 0-1 scale
       const customer = createCustomerWithSpecificData(country, selectedType, marketShare, companyPrestige);
-      
       allCustomers.push(customer);
     }
   });
-  
   
   return allCustomers;
 }
@@ -338,6 +304,49 @@ export async function updateCustomerRelationshipsForPrestige(companyPrestige: nu
   } catch (error) {
     console.error('[Customer Update] Failed to update customer relationships:', error);
     throw error; // Don't fallback to reinitializing all customers
+  }
+}
+
+/**
+ * Pre-load all customer relationships in the background during game initialization
+ * This warms up the cache so "Show All Customers" loads instantly
+ */
+export async function preloadAllCustomerRelationships(): Promise<void> {
+  try {
+    const customers = await getAllCustomers();
+    if (customers.length === 0) return;
+    
+    // Pre-load relationships for all customers in batches to avoid blocking
+    // Process in smaller batches to avoid overwhelming the system
+    const batchSize = 10;
+    for (let i = 0; i < customers.length; i += batchSize) {
+      const batch = customers.slice(i, i + batchSize);
+      
+      // Process batch in parallel
+      await Promise.allSettled(
+        batch.map(async (customer) => {
+          try {
+            // Calculate and cache relationship breakdown
+            await calculateRelationshipBreakdown(customer);
+            // Also pre-load formatted breakdown
+            await loadFormattedRelationshipBreakdown(customer);
+          } catch (error) {
+            // Silently fail for individual customers - don't block initialization
+            console.debug(`[Customer Preload] Failed to preload relationship for ${customer.name}:`, error);
+          }
+        })
+      );
+      
+      // Small delay between batches to avoid blocking the UI
+      if (i + batchSize < customers.length) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+    
+    console.log(`[Customer Preload] Pre-loaded relationships for ${customers.length} customers`);
+  } catch (error) {
+    console.error('[Customer Preload] Failed to preload customer relationships:', error);
+    // Don't throw - this is a background optimization, shouldn't block initialization
   }
 }
 

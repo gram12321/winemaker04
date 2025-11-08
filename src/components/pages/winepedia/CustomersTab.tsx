@@ -11,6 +11,7 @@ export function CustomersTab() {
   const [sortConfig, setSortConfig] = useState<{key: keyof Customer; direction: 'asc' | 'desc'} | null>(null);
   const [page, setPage] = useState<number>(1);
   const [showAllCustomers, setShowAllCustomers] = useState<boolean>(false);
+  const [isLoadingRelationships, setIsLoadingRelationships] = useState<boolean>(false);
   const pageSize = 25;
 
   const { 
@@ -25,9 +26,9 @@ export function CustomersTab() {
     loadRelationshipBreakdown,
     loadAllCustomersWithRelationships,
     isLoadingAllCustomers
-  } = useCustomerData(false); // Always start with active customers only
+  } = useCustomerData(false); // Load all customers on mount
 
-  // Determine which customers to show based on toggle
+  // Determine which customers to show based on toggle (default to active only)
   const displayCustomers = showAllCustomers ? allCustomers : activeCustomers;
 
   const filteredCustomers = React.useMemo(() => {
@@ -101,9 +102,14 @@ export function CustomersTab() {
 
   // Handle toggle between active and all customers
   const handleToggleCustomers = async () => {
-    if (!showAllCustomers) {
-      // Switching to all customers - load them
-      await loadAllCustomersWithRelationships();
+    if (!showAllCustomers && allCustomers.length > 0) {
+      // Switching to all customers - load their relationships
+      setIsLoadingRelationships(true);
+      try {
+        await loadAllCustomersWithRelationships();
+      } finally {
+        setIsLoadingRelationships(false);
+      }
     }
     setShowAllCustomers(!showAllCustomers);
   };
@@ -138,14 +144,18 @@ export function CustomersTab() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleToggleCustomers}
-                disabled={isLoadingAllCustomers}
+                disabled={isLoadingAllCustomers || isLoadingRelationships}
                 className={`px-3 py-1 text-sm rounded transition-colors ${
                   showAllCustomers 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                } ${isLoadingAllCustomers ? 'opacity-50 cursor-not-allowed' : ''}`}
+                } ${(isLoadingAllCustomers || isLoadingRelationships) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {isLoadingAllCustomers ? 'Loading...' : showAllCustomers ? 'Show Active Only' : 'Show All Customers'}
+                {(isLoadingAllCustomers || isLoadingRelationships) 
+                  ? 'Loading...' 
+                  : showAllCustomers 
+                    ? 'Show Active Only' 
+                    : 'Show All Customers'}
               </button>
             </div>
           </div>

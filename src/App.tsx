@@ -22,7 +22,7 @@ import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipU
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
-import { initializeCustomers, initializeActivitySystem } from './lib/services';
+import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
 import { Analytics } from '@vercel/analytics/react';
 
 function App() {
@@ -71,6 +71,12 @@ function App() {
       // Ensure customers are initialized when a company becomes active
       const currentPrestige = await getCurrentPrestige();
       await initializeCustomers(currentPrestige);
+      
+      // Pre-load all customer relationships in the background (non-blocking)
+      // This makes "Show All Customers" load instantly
+      preloadAllCustomerRelationships().catch(error => {
+        console.error('Error preloading customer relationships:', error);
+      });
       
       // Initialize activity system
       await initializeActivitySystem();

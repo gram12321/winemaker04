@@ -24,6 +24,7 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
   }>}>({});
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [isLoadingAllCustomers, setIsLoadingAllCustomers] = useState<boolean>(false);
+  const [allCustomersLoaded, setAllCustomersLoaded] = useState<boolean>(false);
 
   // Helper function to create company-scoped customer key
   const getCustomerKey = useCallback((customerId: string): string => {
@@ -42,14 +43,15 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
 
   const activeCustomers = useGameStateWithData(loadActiveCustomersData, []);
 
-  // Lazy load all customers when needed
+  // Load all customers on mount (for proper customer count display)
   const loadAllCustomersData = useCallback(async () => {
-    if (allCustomers.length > 0) return allCustomers; // Already loaded
+    if (allCustomersLoaded && allCustomers.length > 0) return allCustomers; // Already loaded
     
     setIsLoadingAllCustomers(true);
     try {
       const customers = await getAllCustomers();
       setAllCustomers(customers);
+      setAllCustomersLoaded(true);
       return customers;
     } catch (error) {
       console.error('Error loading all customers:', error);
@@ -57,7 +59,7 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
     } finally {
       setIsLoadingAllCustomers(false);
     }
-  }, [allCustomers.length]);
+  }, [allCustomersLoaded, allCustomers.length]);
 
   // Pre-load relationship breakdowns for active customers on mount
   const loadActiveCustomerRelationships = useCallback(async () => {
@@ -189,9 +191,17 @@ export function useCustomerData(activeCustomersOnly: boolean = false) {
       setRelationshipBoosts({});
       setBoostDetails({});
       setAllCustomers([]); // Clear all customers cache
+      setAllCustomersLoaded(false); // Reset loaded flag
     });
     return () => { unsubscribe(); };
   }, [subscribe]);
+
+  // Load all customers on mount (for proper display in CustomersTab)
+  useEffect(() => {
+    if (!allCustomersLoaded) {
+      loadAllCustomersData();
+    }
+  }, [allCustomersLoaded, loadAllCustomersData]);
 
   // Pre-load active customer relationships on mount
   useEffect(() => {

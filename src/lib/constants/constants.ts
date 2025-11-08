@@ -1,5 +1,7 @@
 // ===== GAME CORE CONSTANTS =====
 
+import { CustomerType } from '../types/types';
+
 // Starting values for new games
 export const GAME_INITIALIZATION = {
   // Starting financial capital (amount added as transaction)
@@ -127,6 +129,15 @@ export const CUSTOMER_REGIONAL_DATA = {
       'Chain Store': 0.02
     }
   }
+} as const;
+
+// Customer type market share multipliers for generation
+// Used when generating customers until 100% market share per country
+export const CUSTOMER_MARKET_SHARE_MULTIPLIERS: Record<CustomerType, number> = {
+  'Restaurant': 0.12,      // Small restaurants
+  'Private Collector': 0.08, // Very small private collectors
+  'Wine Shop': 0.9,        // Medium wine shops
+  'Chain Store': 1.0       // Large chain stores
 } as const;
 
 // Note: Customer name data has been moved to src/lib/constants/names.ts
