@@ -330,7 +330,7 @@ export const MobileDialogWrapper = React.forwardRef<HTMLDivElement, MobileDialog
 // UNIFIED TOOLTIP COMPONENT
 // =============================
 
-type UnifiedTooltipProps = {
+export type UnifiedTooltipProps = {
   children: React.ReactNode;
   content: React.ReactNode;
   title?: string;

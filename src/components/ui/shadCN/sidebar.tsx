@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/shadCN/skeleton"
 import {
   UnifiedTooltip,
 } from "@/components/ui/shadCN/tooltip"
+import type { UnifiedTooltipProps } from "@/components/ui/shadCN/tooltip"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -536,12 +537,16 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
+type SidebarMenuTooltipProps = Partial<Omit<UnifiedTooltipProps, "children">> & {
+  children?: React.ReactNode
+}
+
 const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
     asChild?: boolean
     isActive?: boolean
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>
+    tooltip?: string | SidebarMenuTooltipProps
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -574,24 +579,44 @@ const SidebarMenuButton = React.forwardRef<
       return button
     }
 
-    if (typeof tooltip === "string") {
-      tooltip = {
-        children: tooltip,
-      }
+    const tooltipConfig: SidebarMenuTooltipProps =
+      typeof tooltip === "string"
+        ? { content: tooltip, title: tooltip }
+        : { ...tooltip }
+
+    const resolvedContent =
+      tooltipConfig.content ??
+      tooltipConfig.children ??
+      tooltipConfig.title ??
+      null
+
+    if (!resolvedContent) {
+      return button
     }
+
+    const resolvedTitle =
+      tooltipConfig.title ??
+      (typeof resolvedContent === "string" ? resolvedContent : undefined)
+
+    const {
+      children: _tooltipChildren,
+      content: _tooltipContent,
+      title: _tooltipTitle,
+      ...tooltipRest
+    } = tooltipConfig
 
     // Only show tooltip when sidebar is collapsed and not on mobile
     if (state === "collapsed" && !isMobile) {
       return (
         <UnifiedTooltip
-          content={tooltip.children}
-          title={typeof tooltip.children === 'string' ? tooltip.children : undefined}
           side="right"
           sideOffset={4}
           className="max-w-xs"
           variant="panel"
           density="compact"
-          {...(tooltip as any)}
+          {...tooltipRest}
+          content={resolvedContent}
+          title={resolvedTitle}
         >
           {button}
         </UnifiedTooltip>
