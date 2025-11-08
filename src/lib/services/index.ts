@@ -42,6 +42,7 @@ export * from './wine/winescore/grapeQualityCalculation';
 export * from './wine/winescore/wineScoreCalculation';
 export * from './wine/features/featureService';
 export * from './wine/features/agingService';
+export * from './wine/features/grapeDifficulty';
 
 // Sales services
 export * from './sales/salesService';

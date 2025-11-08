@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, Button, WineCharacteristicsDi
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getColorClass } from '@/lib/utils/utils';
 import { GrapeIcon } from '@/lib/utils/icons';
+import { calculateGrapeDifficulty } from '@/lib/services';
+import { DifficultyTier, GrapeDifficultyComponents } from '@/lib/services/wine/features/grapeDifficulty';
 
 // Utility function for formatting percentage
 const formatPercentage = (value: number): string => `${formatNumber(value * 100, { smartDecimals: true })}%`;
@@ -12,6 +14,20 @@ const formatPercentage = (value: number): string => `${formatNumber(value * 100,
 interface GrapeInfoViewProps extends DialogProps {
   grapeName: GrapeVariety;
 }
+
+const DIFFICULTY_TIER_LABELS: Record<DifficultyTier, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
+const DIFFICULTY_COMPONENT_LABELS: Record<keyof GrapeDifficultyComponents, string> = {
+  handling: 'Handling',
+  yield: 'Yield',
+  balance: 'Balance',
+  aging: 'Aging',
+  regionalSuitability: 'Regional Suitability',
+};
 
 export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose }) => {
   const grapeMetadata = GRAPE_CONST[grapeName];
@@ -25,6 +41,8 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
       </div>
     );
   }
+
+  const difficulty = calculateGrapeDifficulty(grapeName);
 
   const baseInfo = [
     { 
@@ -46,6 +64,11 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
       label: 'Oxidation Prone', 
       value: formatPercentage(grapeMetadata.proneToOxidation), 
       valueClass: getColorClass(1 - grapeMetadata.proneToOxidation) // Invert for resistance display
+    },
+    {
+      label: 'Overall Difficulty',
+      value: `${DIFFICULTY_TIER_LABELS[difficulty.tier]} · ${formatNumber(difficulty.score, { percent: true, percentIsDecimal: true, decimals: 0 })}`,
+      valueClass: getColorClass(difficulty.score),
     },
   ];
 
@@ -134,6 +157,26 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                   </td>
                 </tr>
               )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Difficulty Breakdown */}
+        <div className="md:col-span-2 space-y-3">
+          <h3 className="text-lg font-semibold text-wine-dark">Difficulty Breakdown</h3>
+          <table className="w-full text-sm">
+            <tbody>
+              {(Object.keys(DIFFICULTY_COMPONENT_LABELS) as Array<keyof GrapeDifficultyComponents>).map(componentKey => {
+                const componentScore = difficulty.components[componentKey];
+                return (
+                  <tr key={componentKey} className="border-b last:border-b-0">
+                    <td className="py-2 pr-4">{DIFFICULTY_COMPONENT_LABELS[componentKey]}</td>
+                    <td className={`py-2 font-medium text-right ${getColorClass(componentScore)}`}>
+                      {formatNumber(componentScore, { percent: true, percentIsDecimal: true, decimals: 0 })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -60,6 +60,9 @@ DROP TABLE IF EXISTS wine_orders CASCADE;
 DROP TABLE IF EXISTS wine_batches CASCADE;
 DROP TABLE IF EXISTS vineyards CASCADE;
 DROP TABLE IF EXISTS game_state CASCADE;
+DROP TABLE IF EXISTS loan_warnings CASCADE;
+DROP TABLE IF EXISTS loans CASCADE;
+DROP TABLE IF EXISTS lenders CASCADE;
 
 -- ============================================================
 -- CREATE TABLES (in dependency order)
@@ -73,7 +76,7 @@ CREATE TABLE game_state (
     current_year integer DEFAULT 2024,
     money numeric DEFAULT 0,
     prestige numeric DEFAULT 0,
-    economy_phase text DEFAULT 'Recovery' CHECK (economy_phase IN ('Crash', 'Recession', 'Recovery', 'Expansion', 'Boom')),
+    economy_phase text DEFAULT 'Stable' CHECK (economy_phase IN ('Crash', 'Recession', 'Stable', 'Expansion', 'Boom')),
     updated_at timestamptz DEFAULT now()
 );
 
@@ -101,7 +104,7 @@ CREATE TABLE companies (
     money numeric DEFAULT 0,
     prestige numeric DEFAULT 0,
     credit_rating integer DEFAULT 50 CHECK (credit_rating >= 0 AND credit_rating <= 100),
-    economy_phase text DEFAULT 'Recovery' CHECK (economy_phase IN ('Crash', 'Recession', 'Recovery', 'Expansion', 'Boom')),
+    economy_phase text DEFAULT 'Stable' CHECK (economy_phase IN ('Crash', 'Recession', 'Stable', 'Expansion', 'Boom')),
     last_played timestamptz DEFAULT now(),
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
