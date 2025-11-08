@@ -11,9 +11,10 @@ import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConst
 import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
-import { REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY } from '../../../constants/vineyardConstants';
+import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
 import { initializeBatchFeatures, processEventTrigger } from '../features/featureService';
 import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
+import { calculateGrapeSuitabilityMetrics } from '../../vineyard/vineyardValueCalc';
 
 /**
  * Inventory Service
@@ -144,8 +145,8 @@ export async function createWineBatchFromHarvest(
   const altitude = vineyard.altitude;
   const countryAlt = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] || {} as any;
   const [minAlt, maxAlt] = (countryAlt[region as keyof typeof countryAlt] as [number, number]) || [0, 100];
-  const suitCountry = REGION_GRAPE_SUITABILITY[country as keyof typeof REGION_GRAPE_SUITABILITY] || {} as any;
-  const suitability = (suitCountry[region as keyof typeof suitCountry]?.[grape as any] ?? 0.5) as number;
+  const suitabilityMetrics = calculateGrapeSuitabilityMetrics(grape, region, country, altitude);
+  const suitability = suitabilityMetrics.overall;
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,

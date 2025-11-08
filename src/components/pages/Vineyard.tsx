@@ -727,6 +727,20 @@ const Vineyard: React.FC = () => {
                                     <TooltipSection>
                                       <TooltipRow label="Base (per ha)" value={`€${formatNumber(b.basePerHa, { decimals: 0 })}`} monospaced={true} />
                                       <TooltipRow label="Planted" value={`+${formatNumber(b.plantedBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
+                                      {b.grapeSuitabilityComponents && (
+                                        <>
+                                          <TooltipRow
+                                            label="  Region match"
+                                            value={`${formatNumber(b.grapeSuitabilityComponents.region * 100, { smartDecimals: true })}%`}
+                                            monospaced={true}
+                                          />
+                                          <TooltipRow
+                                            label="  Altitude match"
+                                            value={`${formatNumber(b.grapeSuitabilityComponents.altitude * 100, { smartDecimals: true })}%`}
+                                            monospaced={true}
+                                          />
+                                        </>
+                                      )}
                                       <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
                                       <TooltipRow label="Prestige" value={`+${formatNumber(b.prestigeBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
                                       <TooltipRow label="Total multiplier" value={`×${formatNumber(b.totalMultiplier, { decimals: 3, forceDecimals: true })}`} monospaced={true} />

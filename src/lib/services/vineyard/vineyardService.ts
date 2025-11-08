@@ -4,7 +4,11 @@ import { saveVineyard, loadVineyards } from '../../database/activities/vineyardD
 import { deleteVineyards } from '../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
-import { calculateLandValue, calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
+import {
+  calculateLandValue,
+  calculateGrapeSuitabilityMetrics,
+  type GrapeSuitabilityMetrics
+} from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
 import { getRandomFromArray } from '../../utils';
 import { formatNumber } from '../../utils/utils';
@@ -342,6 +346,7 @@ export interface ExpectedYieldBreakdown {
   breakdown: {
     baseKg: number;
     grapeSuitability: number;
+    grapeSuitabilityComponents: GrapeSuitabilityMetrics;
     naturalYield: number;
     ripeness: number;
     vineYield: number;
@@ -367,7 +372,13 @@ export function calculateVineyardExpectedYield(vineyard: Vineyard): ExpectedYiel
   if (!grapeMetadata) return null;
   
   const naturalYield = grapeMetadata.naturalYield;
-  const grapeSuitability = calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country);
+  const grapeSuitabilityComponents = calculateGrapeSuitabilityMetrics(
+    vineyard.grape,
+    vineyard.region,
+    vineyard.country,
+    vineyard.altitude
+  );
+  const grapeSuitability = grapeSuitabilityComponents.overall;
   
   // Calculate final multipliers
   const finalMultiplier = grapeSuitability * naturalYield * (vineyard.ripeness || 0) * (vineyard.vineYield || 0.02) * (vineyard.vineyardHealth || 1.0);
@@ -380,6 +391,7 @@ export function calculateVineyardExpectedYield(vineyard: Vineyard): ExpectedYiel
     breakdown: {
       baseKg,
       grapeSuitability,
+      grapeSuitabilityComponents,
       naturalYield,
       ripeness: vineyard.ripeness || 0,
       vineYield: vineyard.vineYield || 0.02,

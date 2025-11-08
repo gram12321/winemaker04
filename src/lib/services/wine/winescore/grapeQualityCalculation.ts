@@ -1,5 +1,11 @@
 import { Vineyard, WineBatch } from '../../../types/types';
-import { getAspectRating, getAltitudeRating, normalizePrestige, calculateGrapeSuitabilityContribution } from '../../vineyard/vineyardValueCalc';
+import {
+  getAspectRating,
+  getAltitudeRating,
+  normalizePrestige,
+  calculateGrapeSuitabilityMetrics,
+  type GrapeSuitabilityMetrics
+} from '../../vineyard/vineyardValueCalc';
 import { REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '../../../constants/vineyardConstants';
 import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../utils/calculator';
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
@@ -118,6 +124,7 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
     overgrowthPenalty: string;
     densityPenalty: string;
   };
+  grapeSuitabilityComponents: GrapeSuitabilityMetrics | null;
   grapeQualityScore: number;
 } {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue );
@@ -129,8 +136,10 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
 
   const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
   const aspectRating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
-  const grapeSuitability = vineyard.grape ? 
-    calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country) : 0;
+  const grapeSuitabilityComponents = vineyard.grape
+    ? calculateGrapeSuitabilityMetrics(vineyard.grape, vineyard.region, vineyard.country, vineyard.altitude)
+    : null;
+  const grapeSuitability = grapeSuitabilityComponents ? grapeSuitabilityComponents.overall : 0;
 
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
   const densityPenalty = calculateDensityQualityPenalty(vineyard.density || 0);
@@ -167,6 +176,7 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
       overgrowthPenalty: overgrowthDisplay,
       densityPenalty: densityDisplay
     },
+    grapeSuitabilityComponents,
     grapeQualityScore
   };
 }

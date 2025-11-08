@@ -142,8 +142,9 @@ export function TooltipRow({
   
   return (
     <div className="flex items-center justify-between gap-2">
-      {label && <span className={tooltipStyles.muted}>{label}</span>}
+      {label && <span className={cn(tooltipStyles.text, tooltipStyles.muted)}>{label}</span>}
       <span className={cn(
+        tooltipStyles.text,
         colorClass,
         badge ? badgeClasses.bg : '',
         badge && valueRating !== undefined ? badgeClasses.text : '',

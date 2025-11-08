@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import { SimpleCard } from '@/components/ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, ReferenceLine, Area, ComposedChart } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
-import { calculateVineyardYield, calculateVineYieldProgression, calculateGrapeSuitabilityContribution } from '@/lib/services';
+import { calculateVineyardYield, calculateVineYieldProgression, calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 
 // Use existing constants from vineyardConstants
-import { COUNTRY_REGION_MAP } from '@/lib/constants/vineyardConstants';
+import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
 
 function createVineyard(overrides: Partial<Vineyard>): Vineyard {
   return {
@@ -49,6 +49,15 @@ export function YieldProjectionTab() {
   const [health, setHealth] = useState<number>(1.0);
   const [vineAge, setVineAge] = useState<number>(5);
 
+  const defaultAltitude = useMemo(() => {
+    const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
+    const range = countryData ? (countryData as any)[region] as [number, number] : undefined;
+    if (!range) {
+      throw new Error(`Missing altitude range for ${region}/${country}`);
+    }
+    return Math.round((range[0] + range[1]) / 2);
+  }, [country, region]);
+
   // Calculate baseline vine yield for a given age
   const calculateBaselineVineYield = (age: number): number => {
     let currentYield = 0.02; // Start from age 0
@@ -70,35 +79,47 @@ export function YieldProjectionTab() {
 
   const currentYield = useMemo(() => {
     const baselineVineYield = calculateBaselineVineYield(vineAge);
-    const v = createVineyard({ country, region, grape, hectares, density, ripeness, vineAge: vineyardAge, vineyardHealth: health, vineYield: baselineVineYield });
+    const v = createVineyard({ country, region, grape, hectares, density, ripeness, vineAge: vineyardAge, vineyardHealth: health, vineYield: baselineVineYield, altitude: defaultAltitude });
     return calculateVineyardYield(v);
-  }, [country, region, grape, hectares, density, ripeness, vineyardAge, health, vineAge]);
+  }, [country, region, grape, hectares, density, ripeness, vineyardAge, health, vineAge, defaultAltitude]);
 
-  const suitability = useMemo(() => {
-    return calculateGrapeSuitabilityContribution(grape, region, country);
-  }, [country, region, grape]);
+  const suitabilityMetrics = useMemo(() => {
+    return calculateGrapeSuitabilityMetrics(grape, region, country, defaultAltitude);
+  }, [country, region, grape, defaultAltitude]);
+  const suitability = suitabilityMetrics.overall;
 
   const yieldVsRipeness = useMemo(() => {
     const points = [] as { ripeness: number; yieldKg: number }[];
     const baselineVineYield = calculateBaselineVineYield(vineAge);
     for (let i = 0; i <= 40; i++) {
       const r = i / 40;
-      const v = createVineyard({ country, region, grape, hectares, density, ripeness: r, vineAge: vineyardAge, vineyardHealth: health, vineYield: baselineVineYield });
+      const v = createVineyard({ country, region, grape, hectares, density, ripeness: r, vineAge: vineyardAge, vineyardHealth: health, vineYield: baselineVineYield, altitude: defaultAltitude });
       points.push({ ripeness: r, yieldKg: calculateVineyardYield(v) });
     }
     return points;
-  }, [country, region, grape, hectares, density, vineyardAge, health, vineAge]);
+  }, [country, region, grape, hectares, density, vineyardAge, health, vineAge, defaultAltitude]);
 
   const yieldVsAge = useMemo(() => {
     const points = [] as { age: number; yieldKg: number }[];
     for (let i = 0; i <= 40; i++) {
       const a = (i / 40) * 200;
       const baselineVineYield = calculateBaselineVineYield(a);
-      const v = createVineyard({ country, region, grape, hectares, density, ripeness, vineAge: a, vineyardHealth: health, vineYield: baselineVineYield });
+      const v = createVineyard({
+        country,
+        region,
+        grape,
+        hectares,
+        density,
+        ripeness,
+        vineAge: a,
+        vineyardHealth: health,
+        vineYield: baselineVineYield,
+        altitude: defaultAltitude
+      });
       points.push({ age: a, yieldKg: calculateVineyardYield(v) });
     }
     return points;
-  }, [country, region, grape, hectares, density, ripeness, health]);
+  }, [country, region, grape, hectares, density, ripeness, health, defaultAltitude]);
 
   const yieldVsHectares = useMemo(() => {
     const points = [] as { hectares: number; yieldKg: number }[];
@@ -106,11 +127,22 @@ export function YieldProjectionTab() {
     // Cover a practical range from 0.1 to 20 ha with more resolution at small sizes
     const steps = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 7.5, 10, 12.5, 15, 20];
     for (const h of steps) {
-      const v = createVineyard({ country, region, grape, hectares: h, density, ripeness, vineAge: vineyardAge, vineyardHealth: health, vineYield: baselineVineYield });
+      const v = createVineyard({
+        country,
+        region,
+        grape,
+        hectares: h,
+        density,
+        ripeness,
+        vineAge: vineyardAge,
+        vineyardHealth: health,
+        vineYield: baselineVineYield,
+        altitude: defaultAltitude
+      });
       points.push({ hectares: h, yieldKg: calculateVineyardYield(v) });
     }
     return points;
-  }, [country, region, grape, density, ripeness, vineyardAge, health, vineAge]);
+  }, [country, region, grape, density, ripeness, vineyardAge, health, vineAge, defaultAltitude]);
 
   // Vine Yield Progression with min/max bands - using the exact function from vineyardManager
   const vineYieldProgression = useMemo(() => {
@@ -218,7 +250,12 @@ export function YieldProjectionTab() {
             <div className="flex items-end">
               <div className="text-sm space-y-1">
                 <div>Current Yield: <span className="font-semibold">{formatNumber(currentYield, { decimals: 0 })} kg</span></div>
-                <div>Suitability (grape ↔ region): <span className="font-semibold">{formatNumber(suitability, { decimals: 2, forceDecimals: true })}</span></div>
+                <div>
+                  Suitability (overall): <span className="font-semibold">{formatNumber(suitability, { decimals: 2, forceDecimals: true })}</span>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Region match {formatNumber(suitabilityMetrics.region, { decimals: 2, forceDecimals: true })} • Altitude match {formatNumber(suitabilityMetrics.altitude, { decimals: 2, forceDecimals: true })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

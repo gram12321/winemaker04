@@ -438,16 +438,53 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                         <div className="text-xs text-muted-foreground mb-1">Calculation Formula:</div>
                         <UnifiedTooltip
                           content={
-                            <div className="text-xs">
-                              <div className="font-medium mb-2">Combined Multiplier Formula:</div>
-                              <div className="font-mono">Suitability × Natural Yield × Ripeness × Vine Yield × Health</div>
-                              <div className="mt-2 space-y-1">
-                                <div>Grape Suitability: {formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}</div>
-                                <div>Natural Yield: {formatPercent(yieldBreakdown.breakdown.naturalYield, 1)}</div>
-                                <div>Ripeness: {formatPercent(yieldBreakdown.breakdown.ripeness, 1)}</div>
-                                <div>Vine Yield: {formatPercent(yieldBreakdown.breakdown.vineYield, 1)}</div>
-                                <div>Health: {formatPercent(yieldBreakdown.breakdown.health, 1)}</div>
-                              </div>
+                            <div className={tooltipStyles.text}>
+                              <TooltipSection title="Combined Multiplier">
+                                <TooltipRow
+                                  label="Formula"
+                                  value="Suitability × Natural Yield × Ripeness × Vine Yield × Health"
+                                  monospaced
+                                />
+                                <TooltipRow
+                                  label="Grape Suitability"
+                                  value={formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}
+                                  valueRating={yieldBreakdown.breakdown.grapeSuitability}
+                                />
+                                {yieldBreakdown.breakdown.grapeSuitabilityComponents && (
+                                  <>
+                                    <TooltipRow
+                                      label="Region match"
+                                      value={formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.region, 1)}
+                                      valueRating={yieldBreakdown.breakdown.grapeSuitabilityComponents.region}
+                                    />
+                                    <TooltipRow
+                                      label="Altitude match"
+                                      value={formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude, 1)}
+                                      valueRating={yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude}
+                                    />
+                                  </>
+                                )}
+                                <TooltipRow
+                                  label="Natural Yield"
+                                  value={formatPercent(yieldBreakdown.breakdown.naturalYield, 1)}
+                                  valueRating={yieldBreakdown.breakdown.naturalYield}
+                                />
+                                <TooltipRow
+                                  label="Ripeness"
+                                  value={formatPercent(yieldBreakdown.breakdown.ripeness, 1)}
+                                  valueRating={yieldBreakdown.breakdown.ripeness}
+                                />
+                                <TooltipRow
+                                  label="Vine Yield"
+                                  value={formatPercent(yieldBreakdown.breakdown.vineYield, 1)}
+                                  valueRating={yieldBreakdown.breakdown.vineYield}
+                                />
+                                <TooltipRow
+                                  label="Health"
+                                  value={formatPercent(yieldBreakdown.breakdown.health, 1)}
+                                  valueRating={yieldBreakdown.breakdown.health}
+                                />
+                              </TooltipSection>
                             </div>
                           }
                           title="Yield Calculation Formula"
@@ -472,6 +509,20 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                               {formatPercent(yieldBreakdown.breakdown.grapeSuitability, 1)}
                             </span>
                           </div>
+                          {yieldBreakdown.breakdown.grapeSuitabilityComponents && (
+                            <div className="text-xs flex justify-between pl-2">
+                              <span>Region · Altitude</span>
+                              <span className="font-medium flex items-center gap-2">
+                                <span className={getColorClass(yieldBreakdown.breakdown.grapeSuitabilityComponents.region)}>
+                                  {formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.region, 0)}
+                                </span>
+                                <span className="text-muted-foreground">/</span>
+                                <span className={getColorClass(yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude)}>
+                                  {formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude, 0)}
+                                </span>
+                              </span>
+                            </div>
+                          )}
                           <div className="text-xs flex justify-between">
                             <span>Natural Yield:</span>
                             <span className={`font-medium ${getColorClass(yieldBreakdown.breakdown.naturalYield)}`}>

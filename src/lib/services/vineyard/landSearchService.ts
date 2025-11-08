@@ -1,5 +1,6 @@
 import { Aspect } from '@/lib/types/types';
-import { REGION_PRESTIGE_RANKINGS, COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_GRAPE_SUITABILITY, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { REGION_PRESTIGE_RANKINGS, COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { REGION_GRAPE_SUITABILITY } from '@/lib/constants/grapeConstants';
 import { calculateLandValue } from './vineyardValueCalc';
 import { generateVineyardName } from './vineyardService';
 import { v4 as uuidv4 } from 'uuid';

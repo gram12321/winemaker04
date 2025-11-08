@@ -8,7 +8,7 @@ import { notificationService } from '@/lib/services';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
-import { calculateGrapeSuitabilityContribution } from '@/lib/services';
+import { calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
 
 
@@ -57,10 +57,12 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   ];
 
   // Grape suitability calculation
-  const grapeSuitability = useMemo(() => {
+  const grapeSuitabilityMetrics = useMemo(() => {
     if (!vineyard) return null;
-    return calculateGrapeSuitabilityContribution(options.grape, vineyard.region, vineyard.country);
+    return calculateGrapeSuitabilityMetrics(options.grape, vineyard.region, vineyard.country, vineyard.altitude);
   }, [vineyard, options.grape]);
+
+  const grapeSuitability = grapeSuitabilityMetrics ? grapeSuitabilityMetrics.overall : null;
 
   // Work calculation
   const workCalculation = useMemo((): { workEstimate: ActivityWorkEstimate; workFactors: WorkFactor[] } | null => {
@@ -135,7 +137,7 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
         onOptionsChange={handleOptionsChange}
       >
         {/* Grape Suitability Info */}
-        {grapeSuitability !== null && (() => {
+        {grapeSuitability !== null && grapeSuitabilityMetrics && (() => {
           const colors = getBadgeColorClasses(grapeSuitability);
           return (
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
@@ -157,6 +159,16 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
                  grapeSuitability >= 0.7 ? '👍 Good match - suitable for quality wine production' :
                  grapeSuitability >= 0.5 ? '⚠️ Moderate match - can work but not ideal' :
                  '❌ Poor match - this grape struggles in this region'}
+              </div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600">
+                <div className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2">
+                  <span className="font-medium text-gray-700">Region match</span>
+                  <span>{formatNumber(grapeSuitabilityMetrics.region * 100, { smartDecimals: true })}%</span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2">
+                  <span className="font-medium text-gray-700">Altitude match</span>
+                  <span>{formatNumber(grapeSuitabilityMetrics.altitude * 100, { smartDecimals: true })}%</span>
+                </div>
               </div>
             </div>
           );

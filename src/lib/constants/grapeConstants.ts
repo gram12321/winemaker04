@@ -11,6 +11,75 @@ export const BASE_BALANCED_RANGES = {
   tannins: [0.35, 0.65]
 } as const;
 
+export interface GrapeAltitudeSuitability {
+  preferred: readonly [number, number];
+  tolerance: readonly [number, number];
+}
+
+export const GRAPE_ALTITUDE_SUITABILITY = {
+  Barbera: {
+    preferred: [200, 450],
+    tolerance: [125, 600]
+  },
+  Chardonnay: {
+    preferred: [150, 500],
+    tolerance: [0, 700]
+  },
+  'Pinot Noir': {
+    preferred: [250, 550],
+    tolerance: [120, 650]
+  },
+  Primitivo: {
+    preferred: [60, 250],
+    tolerance: [0, 420]
+  },
+  'Sauvignon Blanc': {
+    preferred: [180, 480],
+    tolerance: [20, 650]
+  }
+} as const satisfies Record<GrapeVariety, GrapeAltitudeSuitability>;
+
+// ===== GRAPE SUITABILITY =====
+
+// Grape variety suitability by region (0-1 scale, where 1.0 is optimal)
+export const REGION_GRAPE_SUITABILITY = {
+  Italy: {
+    Piedmont: { Barbera: 1.0, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.5, 'Sauvignon Blanc': 0.6 },
+    Tuscany: { Barbera: 0.9, Chardonnay: 0.7, 'Pinot Noir': 0.5, Primitivo: 0.7, 'Sauvignon Blanc': 0.7 },
+    Veneto: { Barbera: 0.85, Chardonnay: 0.75, 'Pinot Noir': 0.7, Primitivo: 0.6, 'Sauvignon Blanc': 0.8 },
+    Sicily: { Barbera: 0.8, Chardonnay: 0.6, 'Pinot Noir': 0.3, Primitivo: 0.8, 'Sauvignon Blanc': 0.5 },
+    Puglia: { Barbera: 0.9, Chardonnay: 0.65, 'Pinot Noir': 0.4, Primitivo: 1.0, 'Sauvignon Blanc': 0.4 }
+  },
+  France: {
+    Bordeaux: { Barbera: 0.7, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.6, 'Sauvignon Blanc': 0.9 },
+    Bourgogne: { Barbera: 0.4, Chardonnay: 0.9, 'Pinot Noir': 0.9, Primitivo: 0.3, 'Sauvignon Blanc': 0.7 },
+    Champagne: { Barbera: 0.2, Chardonnay: 0.9, 'Pinot Noir': 0.8, Primitivo: 0.2, 'Sauvignon Blanc': 0.6 },
+    'Rhone Valley': { Barbera: 0.85, Chardonnay: 0.75, 'Pinot Noir': 0.5, Primitivo: 0.7, 'Sauvignon Blanc': 0.7 },
+    Jura: { Barbera: 0.3, Chardonnay: 0.9, 'Pinot Noir': 0.8, Primitivo: 0.2, 'Sauvignon Blanc': 0.6 }
+  },
+  Spain: {
+    Rioja: { Barbera: 0.85, Chardonnay: 0.7, 'Pinot Noir': 0.4, Primitivo: 0.5, 'Sauvignon Blanc': 0.6 },
+    'Ribera del Duero': { Barbera: 0.8, Chardonnay: 0.6, 'Pinot Noir': 0.35, Primitivo: 0.4, 'Sauvignon Blanc': 0.5 },
+    Jumilla: { Barbera: 0.9, Chardonnay: 0.5, 'Pinot Noir': 0.3, Primitivo: 0.85, 'Sauvignon Blanc': 0.4 },
+    'La Mancha': { Barbera: 0.85, Chardonnay: 0.55, 'Pinot Noir': 0.25, Primitivo: 0.8, 'Sauvignon Blanc': 0.5 },
+    Jerez: { Barbera: 0.8, Chardonnay: 0.5, 'Pinot Noir': 0.2, Primitivo: 0.7, 'Sauvignon Blanc': 0.4 }
+  },
+  'United States': {
+    'Napa Valley': { Barbera: 0.9, Chardonnay: 1.0, 'Pinot Noir': 0.7, Primitivo: 0.85, 'Sauvignon Blanc': 0.8 },
+    'Sonoma County': { Barbera: 0.85, Chardonnay: 0.95, 'Pinot Noir': 0.75, Primitivo: 0.8, 'Sauvignon Blanc': 0.7 },
+    'Willamette Valley': { Barbera: 0.4, Chardonnay: 0.85, 'Pinot Noir': 1.0, Primitivo: 0.3, 'Sauvignon Blanc': 0.6 },
+    'Finger Lakes': { Barbera: 0.3, Chardonnay: 0.7, 'Pinot Noir': 0.75, Primitivo: 0.2, 'Sauvignon Blanc': 0.5 },
+    'Central Coast': { Barbera: 0.85, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.75, 'Sauvignon Blanc': 0.7 }
+  },
+  Germany: {
+    Mosel: { Barbera: 0.15, Chardonnay: 0.8, 'Pinot Noir': 1.0, Primitivo: 0.1, 'Sauvignon Blanc': 0.8 },
+    Rheingau: { Barbera: 0.2, Chardonnay: 0.85, 'Pinot Noir': 0.9, Primitivo: 0.15, 'Sauvignon Blanc': 0.85 },
+    Rheinhessen: { Barbera: 0.25, Chardonnay: 0.8, 'Pinot Noir': 0.85, Primitivo: 0.2, 'Sauvignon Blanc': 0.8 },
+    Pfalz: { Barbera: 0.3, Chardonnay: 0.75, 'Pinot Noir': 0.8, Primitivo: 0.25, 'Sauvignon Blanc': 0.75 },
+    Ahr: { Barbera: 0.1, Chardonnay: 0.7, 'Pinot Noir': 0.95, Primitivo: 0.1, 'Sauvignon Blanc': 0.6 }
+  }
+} as const satisfies Record<string, Record<string, Record<GrapeVariety, number>>>;
+
 
 // Unified grape data interface
 export interface GrapeData {

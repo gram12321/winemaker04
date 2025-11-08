@@ -69,7 +69,12 @@ export function calculateVineyardYield(vineyard: Vineyard): number {
   // Get grape metadata for natural yield and suitability
   const grapeMetadata = GRAPE_CONST[vineyard.grape];
   const naturalYield = grapeMetadata.naturalYield; // 0-1 scale
-  const grapeSuitability = calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country);
+  const grapeSuitability = calculateGrapeSuitabilityContribution(
+    vineyard.grape,
+    vineyard.region,
+    vineyard.country,
+    vineyard.altitude
+  );
   
   // Apply multipliers: suitability, natural yield, ripeness, vine yield, and health all affect final yield
   const vineYieldFactor = vineyard.vineYield || 0.02; // Use persistent vine yield factor

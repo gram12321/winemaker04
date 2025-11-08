@@ -2,7 +2,8 @@ import { WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { LandSearchOptions } from '@/lib/services';
-import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_GRAPE_SUITABILITY, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { REGION_GRAPE_SUITABILITY } from '@/lib/constants/grapeConstants';
 import { probabilityMassInRange } from '@/lib/utils/calculator';
 
 /**
