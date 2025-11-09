@@ -462,6 +462,11 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                                       value={formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude, 1)}
                                       valueRating={yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude}
                                     />
+                                    <TooltipRow
+                                      label="Sun exposure match"
+                                      value={formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.sunExposure, 1)}
+                                      valueRating={yieldBreakdown.breakdown.grapeSuitabilityComponents.sunExposure}
+                                    />
                                   </>
                                 )}
                                 <TooltipRow
@@ -511,7 +516,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                           </div>
                           {yieldBreakdown.breakdown.grapeSuitabilityComponents && (
                             <div className="text-xs flex justify-between pl-2">
-                              <span>Region · Altitude</span>
+                              <span>Region · Altitude · Sun</span>
                               <span className="font-medium flex items-center gap-2">
                                 <span className={getColorClass(yieldBreakdown.breakdown.grapeSuitabilityComponents.region)}>
                                   {formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.region, 0)}
@@ -519,6 +524,10 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                                 <span className="text-muted-foreground">/</span>
                                 <span className={getColorClass(yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude)}>
                                   {formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.altitude, 0)}
+                                </span>
+                                <span className="text-muted-foreground">/</span>
+                                <span className={getColorClass(yieldBreakdown.breakdown.grapeSuitabilityComponents.sunExposure)}>
+                                  {formatPercent(yieldBreakdown.breakdown.grapeSuitabilityComponents.sunExposure, 0)}
                                 </span>
                               </span>
                             </div>

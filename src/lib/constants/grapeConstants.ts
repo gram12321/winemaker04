@@ -16,6 +16,12 @@ export interface GrapeAltitudeSuitability {
   tolerance: readonly [number, number];
 }
 
+export interface GrapeSunPreference {
+  optimalHeatMin: number;
+  optimalHeatMax: number;
+  tolerance: number;
+}
+
 export const GRAPE_ALTITUDE_SUITABILITY = {
   Barbera: {
     preferred: [200, 450],
@@ -38,6 +44,34 @@ export const GRAPE_ALTITUDE_SUITABILITY = {
     tolerance: [20, 650]
   }
 } as const satisfies Record<GrapeVariety, GrapeAltitudeSuitability>;
+
+export const GRAPE_SUN_PREFERENCES = {
+  Barbera: {
+    optimalHeatMin: 0.40,
+    optimalHeatMax: 0.65,
+    tolerance: 0.18
+  },
+  Chardonnay: {
+    optimalHeatMin: 0.45,
+    optimalHeatMax: 0.70,
+    tolerance: 0.22
+  },
+  'Pinot Noir': {
+    optimalHeatMin: 0.30,
+    optimalHeatMax: 0.55,
+    tolerance: 0.18
+  },
+  Primitivo: {
+    optimalHeatMin: 0.55,
+    optimalHeatMax: 0.85,
+    tolerance: 0.15
+  },
+  'Sauvignon Blanc': {
+    optimalHeatMin: 0.35,
+    optimalHeatMax: 0.60,
+    tolerance: 0.20
+  }
+} as const satisfies Record<GrapeVariety, GrapeSunPreference>;
 
 // ===== GRAPE SUITABILITY =====
 

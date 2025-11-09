@@ -59,7 +59,13 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   // Grape suitability calculation
   const grapeSuitabilityMetrics = useMemo(() => {
     if (!vineyard) return null;
-    return calculateGrapeSuitabilityMetrics(options.grape, vineyard.region, vineyard.country, vineyard.altitude);
+    return calculateGrapeSuitabilityMetrics(
+      options.grape,
+      vineyard.region,
+      vineyard.country,
+      vineyard.altitude,
+      vineyard.aspect
+    );
   }, [vineyard, options.grape]);
 
   const grapeSuitability = grapeSuitabilityMetrics ? grapeSuitabilityMetrics.overall : null;
@@ -168,6 +174,10 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
                 <div className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2">
                   <span className="font-medium text-gray-700">Altitude match</span>
                   <span>{formatNumber(grapeSuitabilityMetrics.altitude * 100, { smartDecimals: true })}%</span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2">
+                  <span className="font-medium text-gray-700">Sun exposure match</span>
+                  <span>{formatNumber(grapeSuitabilityMetrics.sunExposure * 100, { smartDecimals: true })}%</span>
                 </div>
               </div>
             </div>

@@ -739,6 +739,11 @@ const Vineyard: React.FC = () => {
                                             value={`${formatNumber(b.grapeSuitabilityComponents.altitude * 100, { smartDecimals: true })}%`}
                                             monospaced={true}
                                           />
+                                          <TooltipRow
+                                            label="  Sun exposure match"
+                                            value={`${formatNumber(b.grapeSuitabilityComponents.sunExposure * 100, { smartDecimals: true })}%`}
+                                            monospaced={true}
+                                          />
                                         </>
                                       )}
                                       <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />

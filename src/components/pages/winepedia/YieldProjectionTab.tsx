@@ -3,7 +3,7 @@ import { SimpleCard } from '@/components/ui';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, ReferenceLine, Area, ComposedChart } from 'recharts';
 import { formatNumber } from '@/lib/utils/utils';
 import { calculateVineyardYield, calculateVineYieldProgression, calculateGrapeSuitabilityMetrics } from '@/lib/services';
-import { Vineyard, GrapeVariety } from '@/lib/types/types';
+import { Vineyard, GrapeVariety, Aspect } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 
@@ -84,7 +84,8 @@ export function YieldProjectionTab() {
   }, [country, region, grape, hectares, density, ripeness, vineyardAge, health, vineAge, defaultAltitude]);
 
   const suitabilityMetrics = useMemo(() => {
-    return calculateGrapeSuitabilityMetrics(grape, region, country, defaultAltitude);
+    const defaultAspect: Aspect = 'South';
+    return calculateGrapeSuitabilityMetrics(grape, region, country, defaultAltitude, defaultAspect);
   }, [country, region, grape, defaultAltitude]);
   const suitability = suitabilityMetrics.overall;
 

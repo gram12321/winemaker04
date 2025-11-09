@@ -1,5 +1,12 @@
-import { REGION_ASPECT_RATINGS, REGION_ALTITUDE_RANGES, REGION_PRICE_RANGES } from '../../constants/vineyardConstants';
-import { GRAPE_ALTITUDE_SUITABILITY, REGION_GRAPE_SUITABILITY } from '../../constants/grapeConstants';
+import {
+  REGION_ASPECT_RATINGS,
+  REGION_ALTITUDE_RANGES,
+  REGION_PRICE_RANGES,
+  REGION_HEAT_PROFILE,
+  ASPECT_SUN_EXPOSURE_OFFSETS,
+  ALTITUDE_HEAT_COOLING_FACTOR
+} from '../../constants/vineyardConstants';
+import { GRAPE_ALTITUDE_SUITABILITY, REGION_GRAPE_SUITABILITY, GRAPE_SUN_PREFERENCES } from '../../constants/grapeConstants';
 import { Aspect, GrapeVariety, Vineyard } from '../../types/types';
 import { NormalizeScrewed1000To01WithTail, vineyardAgePrestigeModifier } from '@/lib/utils/calculator';
 import { clamp01 } from '@/lib/utils';
@@ -70,13 +77,15 @@ export function calculateLandValue(
 
 
 const GRAPE_SUITABILITY_WEIGHTS = {
-  region: 0.6,
-  altitude: 0.4
+  region: 0.5,
+  altitude: 0.25,
+  sunExposure: 0.25
 } as const;
 
 export interface GrapeSuitabilityMetrics {
   region: number;
   altitude: number;
+  sunExposure: number;
   overall: number;
 }
 
@@ -117,11 +126,73 @@ function calculateAltitudeSuitability(grape: GrapeVariety, altitude: number): nu
   return clamp01((toleranceMax - altitude) / span);
 }
 
+function getRegionalHeat(country: string, region: string): number {
+  const countryHeat = REGION_HEAT_PROFILE[country as keyof typeof REGION_HEAT_PROFILE] as
+    | Record<string, number>
+    | undefined;
+  if (!countryHeat) {
+    return 0.5;
+  }
+  const regionHeat = countryHeat[region];
+  return regionHeat ?? 0.5;
+}
+
+function getAspectSunOffset(aspect: Aspect): number {
+  return ASPECT_SUN_EXPOSURE_OFFSETS[aspect] ?? 0;
+}
+
+function calculateSunExposureIndex(
+  country: string,
+  region: string,
+  altitude: number,
+  aspect: Aspect
+): number {
+  const baseHeat = getRegionalHeat(country, region);
+  const aspectOffset = getAspectSunOffset(aspect);
+
+  const countryAltitudes = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
+  const altitudeRange = (countryAltitudes as any)?.[region] as [number, number] ?? [0, 100];
+  const normalizedAltitude = normalizeAltitude(altitude, altitudeRange);
+  const altitudeCooling = normalizedAltitude * ALTITUDE_HEAT_COOLING_FACTOR;
+
+  return clamp01(baseHeat + aspectOffset - altitudeCooling);
+}
+
+function calculateSunExposureSuitability(grape: GrapeVariety, sunExposureIndex: number): number {
+  const preference = GRAPE_SUN_PREFERENCES[grape];
+  if (!preference) {
+    throw new Error(`No sun preference data for grape: ${grape}`);
+  }
+
+  const { optimalHeatMin, optimalHeatMax, tolerance } = preference;
+  const lowerBound = clamp01(optimalHeatMin - tolerance);
+  const upperBound = clamp01(optimalHeatMax + tolerance);
+
+  if (sunExposureIndex < lowerBound || sunExposureIndex > upperBound) {
+    return 0;
+  }
+
+  if (sunExposureIndex >= optimalHeatMin && sunExposureIndex <= optimalHeatMax) {
+    return 1;
+  }
+
+  if (sunExposureIndex < optimalHeatMin) {
+    const span = optimalHeatMin - lowerBound;
+    if (span <= 0) return 0;
+    return clamp01((sunExposureIndex - lowerBound) / span);
+  }
+
+  const span = upperBound - optimalHeatMax;
+  if (span <= 0) return 0;
+  return clamp01((upperBound - sunExposureIndex) / span);
+}
+
 export function calculateGrapeSuitabilityMetrics(
   grape: GrapeVariety,
   region: string,
   country: string,
-  altitude: number
+  altitude: number,
+  aspect: Aspect
 ): GrapeSuitabilityMetrics {
   if (!country || !region) {
     throw new Error(`Missing params: ${grape}/${country}/${region}`);
@@ -143,15 +214,23 @@ export function calculateGrapeSuitabilityMetrics(
   }
 
   const altitudeValue = calculateAltitudeSuitability(grape, altitude);
+  const sunExposureIndex = calculateSunExposureIndex(country, region, altitude, aspect);
+  const sunExposureValue = calculateSunExposureSuitability(grape, sunExposureIndex);
 
-  const totalWeight = GRAPE_SUITABILITY_WEIGHTS.region + GRAPE_SUITABILITY_WEIGHTS.altitude;
+  const totalWeight =
+    GRAPE_SUITABILITY_WEIGHTS.region +
+    GRAPE_SUITABILITY_WEIGHTS.altitude +
+    GRAPE_SUITABILITY_WEIGHTS.sunExposure;
   const weighted =
-    (regionalValue * GRAPE_SUITABILITY_WEIGHTS.region + altitudeValue * GRAPE_SUITABILITY_WEIGHTS.altitude) /
+    (regionalValue * GRAPE_SUITABILITY_WEIGHTS.region +
+      altitudeValue * GRAPE_SUITABILITY_WEIGHTS.altitude +
+      sunExposureValue * GRAPE_SUITABILITY_WEIGHTS.sunExposure) /
     totalWeight;
 
   return {
     region: clamp01(regionalValue),
     altitude: clamp01(altitudeValue),
+    sunExposure: clamp01(sunExposureValue),
     overall: clamp01(weighted)
   };
 }
@@ -168,11 +247,12 @@ export function calculateGrapeSuitabilityContribution(
   grape: GrapeVariety | null,
   region: string,
   country: string,
-  altitude: number
+  altitude: number,
+  aspect: Aspect
 ): number {
   // Return neutral suitability (1) if grape is not planted yet (1)=No pendalty for unsuitable grapes (no grapes) (For prestige calculation on notplanted vineyards)
   if (!grape) return 1;
-  return calculateGrapeSuitabilityMetrics(grape, region, country, altitude).overall;
+  return calculateGrapeSuitabilityMetrics(grape, region, country, altitude, aspect).overall;
 }
 
 /**
@@ -192,7 +272,7 @@ export function calculateAdjustedLandValue(
   const base = calculateLandValue(country, region, altitude, aspect);
 
   const plantedBonus = context?.grape
-    ? 0.05 * calculateGrapeSuitabilityContribution(context.grape, region, country, altitude)
+    ? 0.05 * calculateGrapeSuitabilityContribution(context.grape, region, country, altitude, aspect)
     : 0;
 
   const age = Math.max(0, context?.vineAge ?? 0);
@@ -244,10 +324,23 @@ export function calculateAdjustedLandValueBreakdown(vineyard: Vineyard): LandVal
   );
 
   const plantedBonusPct = vineyard.grape
-    ? 0.05 * calculateGrapeSuitabilityContribution(vineyard.grape, vineyard.region, vineyard.country, vineyard.altitude)
+    ? 0.05 *
+      calculateGrapeSuitabilityContribution(
+        vineyard.grape,
+        vineyard.region,
+        vineyard.country,
+        vineyard.altitude,
+        vineyard.aspect
+      )
     : 0;
   const grapeSuitabilityComponents = vineyard.grape
-    ? calculateGrapeSuitabilityMetrics(vineyard.grape, vineyard.region, vineyard.country, vineyard.altitude)
+    ? calculateGrapeSuitabilityMetrics(
+        vineyard.grape,
+        vineyard.region,
+        vineyard.country,
+        vineyard.altitude,
+        vineyard.aspect
+      )
     : null;
 
   const age = Math.max(0, vineyard.vineAge ?? 0);

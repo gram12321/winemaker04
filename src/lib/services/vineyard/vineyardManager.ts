@@ -73,7 +73,8 @@ export function calculateVineyardYield(vineyard: Vineyard): number {
     vineyard.grape,
     vineyard.region,
     vineyard.country,
-    vineyard.altitude
+    vineyard.altitude,
+    vineyard.aspect
   );
   
   // Apply multipliers: suitability, natural yield, ripeness, vine yield, and health all affect final yield

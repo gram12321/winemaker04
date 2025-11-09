@@ -137,7 +137,13 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
   const altitudeRating = getAltitudeRating(vineyard.country, vineyard.region, vineyard.altitude);
   const aspectRating = getAspectRating(vineyard.country, vineyard.region, vineyard.aspect);
   const grapeSuitabilityComponents = vineyard.grape
-    ? calculateGrapeSuitabilityMetrics(vineyard.grape, vineyard.region, vineyard.country, vineyard.altitude)
+    ? calculateGrapeSuitabilityMetrics(
+        vineyard.grape,
+        vineyard.region,
+        vineyard.country,
+        vineyard.altitude,
+        vineyard.aspect
+      )
     : null;
   const grapeSuitability = grapeSuitabilityComponents ? grapeSuitabilityComponents.overall : 0;
 

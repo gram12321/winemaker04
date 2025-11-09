@@ -214,6 +214,60 @@ export const REGION_ASPECT_RATINGS = {
   }
 } as const;
 
+// Regional baseline heat (0 cold – 1 hot) used for sun exposure modelling
+export const REGION_HEAT_PROFILE = {
+  "Italy": {
+    "Piedmont": 0.45,
+    "Puglia": 0.85,
+    "Sicily": 0.80,
+    "Tuscany": 0.60,
+    "Veneto": 0.50
+  },
+  "France": {
+    "Bordeaux": 0.60,
+    "Bourgogne": 0.45,
+    "Champagne": 0.40,
+    "Rhone Valley": 0.70,
+    "Jura": 0.40
+  },
+  "Spain": {
+    "Jumilla": 0.80,
+    "La Mancha": 0.85,
+    "Ribera del Duero": 0.60,
+    "Rioja": 0.65,
+    "Jerez": 0.75
+  },
+  "United States": {
+    "Central Coast": 0.65,
+    "Finger Lakes": 0.35,
+    "Napa Valley": 0.75,
+    "Sonoma County": 0.70,
+    "Willamette Valley": 0.45
+  },
+  "Germany": {
+    "Ahr": 0.40,
+    "Mosel": 0.35,
+    "Pfalz": 0.50,
+    "Rheingau": 0.40,
+    "Rheinhessen": 0.45
+  }
+} as const;
+
+// Aspect-driven sun exposure adjustments (added to regional heat)
+export const ASPECT_SUN_EXPOSURE_OFFSETS = {
+  "North": -0.20,
+  "Northeast": -0.10,
+  "East": -0.05,
+  "Southeast": 0.06,
+  "South": 0.12,
+  "Southwest": 0.08,
+  "West": 0.00,
+  "Northwest": -0.12
+} as const;
+
+// Maximum cooling impact applied when altitude is at the regional maximum
+export const ALTITUDE_HEAT_COOLING_FACTOR = 0.30;
+
 // ===== MARKET DATA =====
 
 // Prestige rankings by region (0-1 scale, where 1.0 is highest prestige)
