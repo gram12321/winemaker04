@@ -5,6 +5,7 @@ import { getCurrentPrestige, getGameState } from '../core/gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
 import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
+import { EconomyPhase } from '../../types/types';
 
 /**
  * Generate a customer based on company prestige
@@ -29,6 +30,8 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
     pendingPenalty: number;
     finalChance: number;
     randomRoll: number;
+    economyPhase: EconomyPhase;
+    economyFrequencyMultiplier: number;
   };
 }> {
   const { dryRun = false } = options;
@@ -39,6 +42,10 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   const bottledWines = allBatches.filter(batch => batch.state === 'bottled' && batch.quantity > 0);
   
   if (bottledWines.length === 0) {
+    const gameState = getGameState();
+    const economyPhase = (gameState.economyPhase || 'Stable') as EconomyPhase;
+    const frequencyMultiplier = ECONOMY_SALES_MULTIPLIERS[economyPhase].frequencyMultiplier;
+
     return {
       customerAcquired: false,
       chanceInfo: {
@@ -48,7 +55,9 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
         baseChance: 0,
         pendingPenalty: 1,
         finalChance: 0,
-        randomRoll: 0
+        randomRoll: 0,
+        economyPhase,
+        economyFrequencyMultiplier: frequencyMultiplier
       }
     };
   }
@@ -70,7 +79,7 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
   const pendingPenalty = Math.pow(PRESTIGE_ORDER_GENERATION.PENDING_ORDER_PENALTY, pendingCount);
   // Apply economy phase frequency multiplier
   const gameState = getGameState();
-  const economyPhase = (gameState.economyPhase ) as keyof typeof ECONOMY_SALES_MULTIPLIERS;
+  const economyPhase = (gameState.economyPhase || 'Stable') as EconomyPhase;
   const frequencyMultiplier = ECONOMY_SALES_MULTIPLIERS[economyPhase].frequencyMultiplier;
   const finalChance = baseChance * pendingPenalty * frequencyMultiplier;
   
@@ -87,7 +96,9 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
       baseChance,
       pendingPenalty,
       finalChance,
-      randomRoll
+      randomRoll,
+      economyPhase,
+      economyFrequencyMultiplier: frequencyMultiplier
     }
   };
 }

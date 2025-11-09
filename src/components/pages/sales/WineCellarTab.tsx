@@ -253,7 +253,7 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
             {weeklyIncreasePercent && (
               <span className="text-gray-600"> (+{weeklyIncreasePercent}%/wk)</span>
             )}
-            {expectedWeeks !== undefined && expectedWeeks < 50 && (
+            {expectedWeeks !== undefined && (
               <span className="text-gray-400 ml-1 text-[10px]">(~{expectedWeeks}w)</span>
             )}
           </div>
@@ -285,7 +285,7 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
                   </p>
                 </div>
               )}
-              {expectedWeeks !== undefined && expectedWeeks < 50 && (
+              {expectedWeeks !== undefined && (
                 <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
               )}
               <p className="mt-2">

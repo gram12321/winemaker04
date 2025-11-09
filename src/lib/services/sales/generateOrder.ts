@@ -237,6 +237,8 @@ export async function generateOrder(
       wineTraditionMultiplier,
       marketShareMultiplier,
       finalPriceMultiplier: customer.priceMultiplier,
+      relationshipBonusMultiplier: relationshipPriceBonus,
+      relationshipAdjustedMultiplier,
       featurePriceMultiplier, // Feature impact on price (oxidation, etc.)
       
       // Quantity calculation

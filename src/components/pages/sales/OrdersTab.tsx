@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType } from '@/lib/types/types';
+import { WineOrder, WineBatch, Customer, CustomerCountry, CustomerType, EconomyPhase } from '@/lib/types/types';
 import { fulfillWineOrder, rejectWineOrder, generateCustomer } from '@/lib/services';
 import { formatNumber, formatPercent, formatGameDateFromObject, getBadgeColorClasses} from '@/lib/utils/utils';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
@@ -61,6 +61,8 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     pendingPenalty: number;
     finalChance: number;
     randomRoll: number;
+    economyPhase: EconomyPhase;
+    economyFrequencyMultiplier: number;
   } | null>(null);
   const [relationshipBreakdowns, setRelationshipBreakdowns] = useState<{[key: string]: string}>({});
   const [computedRelationships, setComputedRelationships] = useState<{[key: string]: number}>({});
@@ -396,9 +398,11 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       <div>Pending Orders: <span className="font-medium">{orderChanceInfo.pendingOrders}</span></div>
                       <div>Base Chance: <span className="font-medium">{formatPercent(orderChanceInfo.baseChance, 1, true)}</span></div>
                       <div>Pending Penalty: <span className="font-medium">{formatNumber(orderChanceInfo.pendingPenalty, { decimals: 2, forceDecimals: true })}x</span></div>
+                      <div>Economy Phase: <span className="font-medium">{orderChanceInfo.economyPhase}</span></div>
+                      <div>Economy Effect: <span className="font-medium">×{formatNumber(orderChanceInfo.economyFrequencyMultiplier, { decimals: 2, forceDecimals: true })}</span></div>
                       <div className="border-t pt-1">
                         <div>Final Chance: <span className="font-bold text-blue-300">{formatPercent(orderChanceInfo.finalChance, 1, true)}</span></div>
-                        <div className="text-[10px] text-gray-400 mt-1">Updated each game tick</div>
+                        <div className="text-[10px] text-gray-400 mt-1">Base × Pending × Economy</div>
                       </div>
                     </div>
                   </div>
@@ -709,6 +713,8 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                 <div className="space-y-1 text-[10px]">
                                   <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
                                   <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                  <div>Relationship Bonus: <span className="font-medium">{formatNumber((order.calculationData.relationshipBonusMultiplier ?? 1), { decimals: 3, forceDecimals: true })}x</span></div>
+                                  <div>Combined Multiplier: <span className="font-medium">{formatNumber((order.calculationData.relationshipAdjustedMultiplier ?? (order.calculationData.finalPriceMultiplier * (order.calculationData.relationshipBonusMultiplier ?? 1))), { decimals: 3, forceDecimals: true })}x</span></div>
                                   {order.calculationData.featurePriceMultiplier !== undefined && order.calculationData.featurePriceMultiplier < 1.0 && (
                                     <div className="text-red-600">
                                       Feature Penalty: <span className="font-medium">{formatNumber(order.calculationData.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span>
@@ -716,7 +722,15 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                     </div>
                                   )}
                                   <div className="border-t pt-1 mt-1">
-                                    <div className="text-[10px] text-gray-500 mb-1">Formula: Asking × Customer × Features</div>
+                                    <div className="text-[10px] text-gray-500 mb-1">
+                                      {(() => {
+                                        const parts = ['Asking', 'Customer', 'Relationship'];
+                                        if (order.calculationData?.featurePriceMultiplier !== undefined) {
+                                          parts.push('Features');
+                                        }
+                                        return `Formula: ${parts.join(' × ')}`;
+                                      })()}
+                                    </div>
                                     <div>Final Bid: <span className="font-bold">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
                                   </div>
                                 </div>

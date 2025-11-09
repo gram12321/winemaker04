@@ -256,6 +256,8 @@ export interface WineOrder {
     marketShareMultiplier: number;
     finalPriceMultiplier: number;
     featurePriceMultiplier?: number; // Feature impact on price (oxidation, etc.)
+    relationshipBonusMultiplier: number;
+    relationshipAdjustedMultiplier: number;
     
     // Quantity calculation
     baseQuantity: number;

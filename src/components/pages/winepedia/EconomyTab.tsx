@@ -75,6 +75,10 @@ export function EconomyTab() {
           Phases transition semi-randomly with higher stickiness at the edges (Crash/Boom) and more
           fluidity in the middle (Recession/Stable/Expansion). Changes are processed during season changes.
         </p>
+        <p>
+        In strong economy phases the customers are more likely to accept a higher asking price, but they will not offer a higher price them self than they would in a weaker economyphase situration. 
+        Strong phases makes the buyers more tolerant higher asking prices. In downturns, they won't bid lower than in a strong phase, yet they walk away more often if you try to charge too much
+        </p>
       </div>
     </div>
   );

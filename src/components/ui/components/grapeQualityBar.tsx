@@ -1,7 +1,7 @@
 import React from 'react';
 import { Vineyard } from '@/lib/types/types';
 import { ChevronDownIcon, ChevronRightIcon, QUALITY_FACTOR_EMOJIS, getColorClass, formatNumber, getColorCategory, formatPercent } from '@/lib/utils';
-import { getRegionalPriceRange } from '@/lib/services';
+import { getRegionalPriceRange, calculateGrapeSuitabilityMetrics } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS } from '@/lib/constants/';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
@@ -49,6 +49,28 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
   const getValueColor = () => {
     return getColorClass(displayValue);
   };
+
+  const grapeSuitabilityComponents = React.useMemo(() => {
+    if (!vineyard?.grape) return null;
+    try {
+      return calculateGrapeSuitabilityMetrics(
+        vineyard.grape,
+        vineyard.region,
+        vineyard.country,
+        vineyard.altitude,
+        vineyard.aspect
+      );
+    } catch (error) {
+      console.error('Failed to calculate grape suitability breakdown:', error);
+      return null;
+    }
+  }, [
+    vineyard?.grape,
+    vineyard?.region,
+    vineyard?.country,
+    vineyard?.altitude,
+    vineyard?.aspect
+  ]);
 
   // Build tooltip content JSX
   const buildTooltipContent = () => {
@@ -166,6 +188,25 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
               <div className="text-xs text-gray-300 mt-2">
                 <strong>Regional Match:</strong> Some grape varieties are naturally suited to specific regions (e.g., Pinot Noir in Burgundy, Cabernet in Bordeaux). Your {formatPercent(displayValue)} suitability indicates how well {vineyard.grape} thrives in {vineyard.region}.
               </div>
+              {grapeSuitabilityComponents && (
+                <TooltipSection title="Component Breakdown">
+                  <TooltipRow
+                    label="Regional match"
+                    value={formatPercent(grapeSuitabilityComponents.region, 1)}
+                    valueRating={grapeSuitabilityComponents.region}
+                  />
+                  <TooltipRow
+                    label="Altitude match"
+                    value={formatPercent(grapeSuitabilityComponents.altitude, 1)}
+                    valueRating={grapeSuitabilityComponents.altitude}
+                  />
+                  <TooltipRow
+                    label="Sun exposure match"
+                    value={formatPercent(grapeSuitabilityComponents.sunExposure, 1)}
+                    valueRating={grapeSuitabilityComponents.sunExposure}
+                  />
+                </TooltipSection>
+              )}
             </div>
           )}
 

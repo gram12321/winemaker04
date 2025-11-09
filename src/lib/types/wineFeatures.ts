@@ -115,6 +115,7 @@ export interface AccumulationConfig {
   
   // Risk multipliers and modifiers
   stateMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>;
+  manifestationMultipliers?: Record<WineBatchState, number | ((batch: any) => number)>;
   riskModifiers?: Array<{
     source: 'vineyard' | 'batch' | 'options';
     parameter: string;  // e.g., 'ripeness', 'fragile', 'pressingIntensity'

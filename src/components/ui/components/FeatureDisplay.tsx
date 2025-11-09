@@ -413,7 +413,7 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
       <span className={riskColorClass}>
         {riskPercent}% risk
       </span>
-      {expectedWeeks !== undefined && expectedWeeks < 50 && (
+      {expectedWeeks !== undefined && (
         <span className="text-gray-400 ml-1">(~{expectedWeeks} weeks)</span>
       )}
     </div>
@@ -433,7 +433,7 @@ function RiskFeatureItem({ feature, config, batch, expectedWeeks }: RiskFeatureI
           monospaced={true}
         />
         <p className={tooltipStyles.muted}>Chance this batch develops {config.name.toLowerCase()}.</p>
-        {expectedWeeks !== undefined && expectedWeeks < 50 && (
+        {expectedWeeks !== undefined && (
           <div className={`${tooltipStyles.warning} mt-1`}>Expected ~{expectedWeeks} weeks (statistical average)</div>
         )}
         <p className="mt-2">

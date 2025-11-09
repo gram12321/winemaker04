@@ -1,5 +1,5 @@
 // Sales order orchestration service - coordinates sophisticated customer acquisition and multiple order generation
-import { WineOrder, Vineyard, NotificationCategory } from '../../types/types';
+import { WineOrder, Vineyard, NotificationCategory, EconomyPhase } from '../../types/types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { getAllCustomers } from './createCustomer';
@@ -30,6 +30,8 @@ export async function generateSophisticatedWineOrders(): Promise<{
     pendingPenalty: number;
     finalChance: number;
     randomRoll: number;
+    economyPhase: EconomyPhase;
+    economyFrequencyMultiplier: number;
   };
 }> {
   // Step 1: Check if company prestige allows customer acquisition

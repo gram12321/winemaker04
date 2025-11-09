@@ -1,5 +1,5 @@
-import { WineBatch, WineCharacteristics, CustomerType, Vineyard } from '../../../types/types';
-import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo } from '../../../types/wineFeatures';
+import { WineBatch, WineCharacteristics, CustomerType, Vineyard, WineBatchState } from '../../../types/types';
+import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, AccumulationConfig } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { isActionAvailable } from '../winery/wineryService';
 import { getColorClass, getColorCategory } from '../../../utils/utils';
@@ -274,7 +274,7 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
       return {
         feature,
         config,
-        expectedWeeks: expectedWeeks && expectedWeeks < 50 ? expectedWeeks : undefined
+        expectedWeeks
       };
     });
 
@@ -1095,19 +1095,31 @@ function getOrCreateFeature(features: WineFeature[], config: FeatureConfig): Win
   return createNewFeature(config);
 }
 
+function resolveStateMultiplier(
+  multipliers: Record<WineBatchState, number | ((batch: WineBatch) => number)> | undefined,
+  batch: WineBatch
+): number {
+  if (!multipliers) return 1.0;
+  
+  const multiplierValue = multipliers[batch.state];
+  
+  if (typeof multiplierValue === 'function') {
+    return multiplierValue(batch);
+  }
+  
+  if (typeof multiplierValue === 'number') {
+    return multiplierValue;
+  }
+  
+  return 1.0;
+}
+
 function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature: WineFeature): number {
   if (config.behavior !== 'accumulation') return 0;
   
-  const behaviorConfig = config.behaviorConfig as any;
+  const behaviorConfig = config.behaviorConfig as AccumulationConfig;
   const baseRate = behaviorConfig.baseRate || 0;
-  
-  let stateMultiplier = 1.0;
-  const multiplierValue = behaviorConfig.stateMultipliers?.[batch.state];
-  if (typeof multiplierValue === 'function') {
-    stateMultiplier = multiplierValue(batch);
-  } else if (typeof multiplierValue === 'number') {
-    stateMultiplier = multiplierValue;
-  }
+  const stateMultiplier = resolveStateMultiplier(behaviorConfig.stateMultipliers, batch);
   
   const compoundMultiplier = behaviorConfig.compound 
     ? (1 + (feature.risk || 0))
@@ -1120,8 +1132,21 @@ function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature:
   return baseRate * stateMultiplier * compoundMultiplier * oxidationMultiplier;
 }
 
-function checkManifestation(risk: number): boolean {
-  return Math.random() < risk;
+function checkManifestation(batch: WineBatch, config: FeatureConfig, risk: number): boolean {
+  if (risk <= 0) return false;
+  
+  let effectiveRisk = risk;
+  
+  if (config.behavior === 'accumulation') {
+    const behaviorConfig = config.behaviorConfig as AccumulationConfig;
+    const manifestationMultipliers = behaviorConfig.manifestationMultipliers ?? behaviorConfig.stateMultipliers;
+    const stateMultiplier = resolveStateMultiplier(manifestationMultipliers, batch);
+    
+    effectiveRisk = risk * stateMultiplier;
+  }
+  
+  const clampedRisk = Math.max(0, Math.min(1, effectiveRisk));
+  return Math.random() < clampedRisk;
 }
 
 async function handleManifestation(
@@ -1165,7 +1190,7 @@ async function processTimeBased(
     let severity = feature.severity;
     
     if (!isPresent) {
-      isPresent = checkManifestation(newRisk);
+      isPresent = checkManifestation(batch, config, newRisk);
       if (isPresent) {
         severity = 1.0;
         await handleManifestation(batch, config, vineyard);
@@ -1266,7 +1291,7 @@ async function applyRiskIncrease(
   let manifested = false;
   
   if (!isPresent) {
-    isPresent = checkManifestation(newRisk);
+    isPresent = checkManifestation(batch, config, newRisk);
     if (isPresent) {
       severity = config.behavior === 'triggered' ? 1.0 : newRisk;
       await handleManifestation(batch, config, vineyard);
@@ -1374,16 +1399,9 @@ export function calculateWeeklyRiskIncrease(batch: WineBatch | undefined, featur
     return undefined;
   }
   
-  const behaviorConfig = config.behaviorConfig as any;
+  const behaviorConfig = config.behaviorConfig as AccumulationConfig;
   const baseRate = behaviorConfig.baseRate || 0;
-  
-  let stateMultiplier = 1.0;
-  const multiplierValue = behaviorConfig.stateMultipliers?.[batch.state];
-  if (typeof multiplierValue === 'function') {
-    stateMultiplier = multiplierValue(batch);
-  } else if (typeof multiplierValue === 'number') {
-    stateMultiplier = multiplierValue;
-  }
+  const stateMultiplier = resolveStateMultiplier(behaviorConfig.stateMultipliers, batch);
   
   const compoundMultiplier = behaviorConfig.compound 
     ? (1 + (feature.currentRisk || 0))
