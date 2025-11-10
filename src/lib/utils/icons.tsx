@@ -3,7 +3,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { getCharacteristicDisplayName, getGrapeIconAsset } from './utils';
+import { getCharacteristicDisplayName, getCharacteristicIconSrc, getGrapeIconSrc } from './utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
 // ===== SVG ICONS =====
@@ -175,7 +175,7 @@ export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
   
   const iconElement = (
     <img
-      src={`/assets/icons/characteristics/${name}.png`}
+      src={getCharacteristicIconSrc(name)}
       alt={alt || `${name} icon`}
       className={`${sizeClass} ${roundedClass} ${tooltip !== false ? 'cursor-help' : ''} ${className}`.trim()}
       style={style}
@@ -283,7 +283,7 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
   alt,
   tooltip = true
 }) => {
-  const iconFile = getGrapeIconAsset(variety);
+  const iconSrc = getGrapeIconSrc(variety);
   const sizeClass = ICON_SIZES[size];
   const roundedClass = rounded ? 'rounded-full' : '';
   // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
@@ -291,7 +291,7 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
   
   const iconElement = (
     <img
-      src={`/assets/icons/grape/${iconFile}`}
+      src={iconSrc}
       alt={alt || `${variety} icon`}
       className={`${sizeClass} ${roundedClass} ${tooltip !== false ? 'cursor-help' : ''} ${className}`.trim()}
       style={style}

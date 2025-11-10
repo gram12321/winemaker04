@@ -1,8 +1,9 @@
 // Customer database service - handles Supabase CRUD operations for customers
 import { supabase } from '../core/supabase';
-import { Customer } from '../../types/types';
+import { Customer, CustomerType } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { getCompanyQuery } from '../../utils/companyUtils';
+import { SALES_CONSTANTS } from '../../constants/constants';
 
 /**
  * Save customers to database for a specific company
@@ -81,18 +82,22 @@ export async function loadCustomers(): Promise<Customer[] | null> {
 
     
     // Map from database format to Customer interface
-    const customers: Customer[] = data.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      country: row.country,
-      customerType: row.customer_type,
-      marketShare: row.market_share,
-      purchasingPower: row.purchasing_power,
-      wineTradition: row.wine_tradition,
-      priceMultiplier: row.price_multiplier,
-      relationship: row.relationship,
-      activeCustomer: row.active_customer || false
-    }));
+    const customers: Customer[] = data.map((row: any) => {
+      const typeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[row.customer_type as CustomerType];
+      return {
+        id: row.id,
+        name: row.name,
+        country: row.country,
+        customerType: row.customer_type,
+        marketShare: row.market_share,
+        purchasingPower: row.purchasing_power,
+        wineTradition: row.wine_tradition,
+        priceMultiplier: row.price_multiplier,
+        relationship: row.relationship,
+        activeCustomer: row.active_customer || false,
+        difficultyPreference: typeConfig?.difficultyPreference
+      };
+    });
     
     return customers;
   } catch (error) {
@@ -199,18 +204,22 @@ export async function loadActiveCustomers(): Promise<Customer[]> {
     }
 
     // Map from database format to Customer interface
-    const customers: Customer[] = data.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      country: row.country,
-      customerType: row.customer_type,
-      marketShare: row.market_share,
-      purchasingPower: row.purchasing_power,
-      wineTradition: row.wine_tradition,
-      priceMultiplier: row.price_multiplier,
-      relationship: row.company_customers.relationship,
-      activeCustomer: row.company_customers.active_customer
-    }));
+    const customers: Customer[] = data.map((row: any) => {
+      const typeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[row.customer_type as CustomerType];
+      return {
+        id: row.id,
+        name: row.name,
+        country: row.country,
+        customerType: row.customer_type,
+        marketShare: row.market_share,
+        purchasingPower: row.purchasing_power,
+        wineTradition: row.wine_tradition,
+        priceMultiplier: row.price_multiplier,
+        relationship: row.company_customers.relationship,
+        activeCustomer: row.company_customers.active_customer,
+        difficultyPreference: typeConfig?.difficultyPreference
+      };
+    });
     
     return customers;
   } catch (error) {

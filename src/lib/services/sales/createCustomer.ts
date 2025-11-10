@@ -132,7 +132,8 @@ function createCustomerWithSpecificData(
     marketShare,
     priceMultiplier: finalPriceMultiplier,
     relationship: calculateCustomerRelationship(marketShare, companyPrestige),
-    activeCustomer: false // Default to inactive until first order
+    activeCustomer: false, // Default to inactive until first order
+    difficultyPreference: customerTypeConfig.difficultyPreference
   };
 }
 

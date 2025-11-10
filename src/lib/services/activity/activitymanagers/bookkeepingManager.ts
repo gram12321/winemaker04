@@ -80,7 +80,13 @@ export async function checkAndTriggerBookkeeping(
       if (seasonData.loanPenaltyWork > 0) {
         const updatedGameState = { ...gameState, loanPenaltyWork: 0 };
         updateGameState(updatedGameState);
-        console.log(`🔔 Cleared ${seasonData.loanPenaltyWork} loan penalty work units from game state`);
+        
+        await notificationService.addMessage(
+          `Added ${seasonData.loanPenaltyWork} loan administration work units to this season's bookkeeping.`,
+          'bookkeeping.loanPenaltyCleared',
+          'Loan Administration Work',
+          NotificationCategory.ADMINISTRATION
+        );
       }
     }
     

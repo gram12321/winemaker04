@@ -1,10 +1,11 @@
-import React from 'react';
-import { Staff } from '@/lib/types/types';
+import React, { useMemo } from 'react';
+import { Activity, Staff } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
-import { getWageColorClass, getAllTeams } from '@/lib/services';
-import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
+import { calculateStaffWorkContribution, getWageColorClass, getAllTeams, getAllActivities } from '@/lib/services';
+import { WORK_CATEGORY_INFO, getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
 import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
+import { useGameState, useGameStateWithData } from '@/hooks';
 
 interface StaffModalProps extends DialogProps {
   staff: Staff | null;
@@ -12,6 +13,31 @@ interface StaffModalProps extends DialogProps {
 }
 
 const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire }) => {
+  const gameState = useGameState();
+  const activities = useGameStateWithData(getAllActivities, []);
+  const allStaffMembers = gameState.staff ?? [];
+  const { activeAssignments, staffTaskCounts } = useMemo(() => {
+    const counts = new Map<string, number>();
+    const assignments: Activity[] = [];
+
+    activities.forEach(activity => {
+      const assignedIds = activity.params?.assignedStaffIds;
+      if (!Array.isArray(assignedIds) || assignedIds.length === 0) {
+        return;
+      }
+
+      assignedIds.forEach(id => {
+        counts.set(id, (counts.get(id) || 0) + 1);
+      });
+
+      if (staff?.id && assignedIds.includes(staff.id)) {
+        assignments.push(activity);
+      }
+    });
+
+    return { activeAssignments: assignments, staffTaskCounts: counts };
+  }, [activities, staff?.id]);
+
   if (!isOpen || !staff) return null;
 
   const skillInfo = getSkillLevelInfo(staff.skillLevel);
@@ -155,6 +181,109 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Active Assignments */}
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="font-semibold text-white mb-4">Active Assignments</h3>
+              {activeAssignments.length > 0 ? (
+                <div className="space-y-3">
+                  {activeAssignments.map(activity => {
+                    const categoryInfo = WORK_CATEGORY_INFO[activity.category];
+                    const assignmentProgress = activity.totalWork > 0
+                      ? Math.min(100, Math.round((activity.completedWork / activity.totalWork) * 100))
+                      : 0;
+                    const assignedCount = Array.isArray(activity.params?.assignedStaffIds)
+                      ? activity.params.assignedStaffIds.length
+                      : 0;
+                    const relevantSkillKey = (categoryInfo?.skill ?? 'field') as keyof Staff['skills'];
+                    const assignedIds = activity.params?.assignedStaffIds || [];
+                    const assignedStaff = allStaffMembers.filter(member => assignedIds.includes(member.id));
+                    const teamWorkPerWeek = assignedStaff.length > 0
+                      ? calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts)
+                      : 0;
+
+                    const totalIndividualWork = assignedStaff.reduce((total, member) => {
+                      const memberSkill = member.skills[relevantSkillKey] ?? 0;
+                      const hasSpecialization = member.specializations.includes(relevantSkillKey);
+                      const effectiveSkill = hasSpecialization ? memberSkill * 1.2 : memberSkill;
+                      const memberTaskCount = staffTaskCounts.get(member.id) || 1;
+                      return total + (member.workforce * effectiveSkill) / memberTaskCount;
+                    }, 0);
+
+                    const personalSkillValue = staff.skills[relevantSkillKey] ?? 0;
+                    const personalSpecialization = staff.specializations.includes(relevantSkillKey);
+                    const personalEffectiveSkill = personalSpecialization ? personalSkillValue * 1.2 : personalSkillValue;
+                    const personalTaskCount = staffTaskCounts.get(staff.id) || 1;
+                    const personalBaseContribution = (staff.workforce * personalEffectiveSkill) / personalTaskCount;
+                    const personalWorkPerWeek = totalIndividualWork > 0
+                      ? (personalBaseContribution / totalIndividualWork) * teamWorkPerWeek
+                      : 0;
+                    const attentionShare = 1 / Math.max(1, personalTaskCount);
+
+                    return (
+                      <div
+                        key={activity.id}
+                        className="rounded-md border border-gray-700 bg-gray-900/60 p-3"
+                      >
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-white">{activity.title}</p>
+                            <p className="text-xs text-gray-400">
+                              {categoryInfo?.displayName ?? activity.category}
+                            </p>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Week {activity.gameWeek}, {activity.gameSeason} {activity.gameYear}
+                          </p>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-300">
+                          <span>
+                            Progress:{' '}
+                            <span className="font-semibold text-white">
+                              {formatNumber(assignmentProgress, { decimals: 0 })}%
+                            </span>
+                          </span>
+                          <span>
+                            Work:{' '}
+                            <span className="font-semibold text-white">
+                              {formatNumber(activity.completedWork, { decimals: 0 })}
+                            </span>
+                            {' / '}
+                            {formatNumber(activity.totalWork, { decimals: 0 })}
+                          </span>
+                          <span>
+                            Team Size:{' '}
+                            <span className="font-semibold text-white">{assignedCount}</span>
+                          </span>
+                          <span>
+                            Attention:{' '}
+                            <span className="font-semibold text-white">
+                              {formatNumber(attentionShare, { percent: true, decimals: 0 })}
+                            </span>
+                            <span className="text-gray-500">
+                              {' '}
+                              ({personalTaskCount} task{personalTaskCount === 1 ? '' : 's'})
+                            </span>
+                          </span>
+                          <span>
+                            Contribution:{' '}
+                            <span className="font-semibold text-white">
+                              {formatNumber(personalWorkPerWeek, { decimals: 0 })}
+                            </span>
+                            {' / '}
+                            {formatNumber(teamWorkPerWeek, { decimals: 0 })} wk
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">
+                  This employee is not assigned to any active tasks.
+                </p>
+              )}
             </div>
           </div>
         </div>

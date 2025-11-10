@@ -200,7 +200,9 @@ CREATE TABLE wine_batches (
     bottled_season text,
     bottled_year integer,
     features jsonb DEFAULT '[]'::jsonb,
-    aging_progress integer DEFAULT 0
+    aging_progress integer DEFAULT 0,
+    batch_number integer,
+    batch_group_size integer
 );
 
 COMMENT ON COLUMN wine_batches.features IS 'JSONB array of wine features and faults (oxidation, green flavor, terroir, etc). Each feature has id, risk, isPresent, severity, name, type, and icon fields.';

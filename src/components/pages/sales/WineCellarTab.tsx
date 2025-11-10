@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
@@ -12,6 +12,21 @@ import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncreas
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
+
+const BatchBadge: React.FC<{ batch: WineBatch; className?: string }> = ({ batch, className = '' }) => {
+  const groupSize = batch.batchGroupSize ?? 0;
+  const batchNumber = batch.batchNumber ?? 0;
+
+  if (groupSize <= 1 || batchNumber <= 0) {
+    return null;
+  }
+
+  return (
+    <span className={`inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium text-purple-700 ${className}`}>
+      Batch {batchNumber}/{groupSize}
+    </span>
+  );
+};
 
 
 // Component for combined balance and quality display
@@ -394,7 +409,7 @@ const CurrentEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
             >
               <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
                 <img 
-                  src={`/assets/icons/characteristics/${effectData.key}.png`} 
+                  src={getCharacteristicIconSrc(effectData.key)} 
                   alt={effectData.key}
                   className="w-3 h-3"
                 />
@@ -447,7 +462,7 @@ const WeeklyEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
           >
             <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
               <img 
-                src={`/assets/icons/characteristics/${char}.png`} 
+                src={getCharacteristicIconSrc(char)} 
                 alt={char}
                 className="w-3 h-3"
               />
@@ -948,7 +963,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                           {vintageWines.map((wine) => (
                             <TableRow key={wine.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onWineDetailsClick(wine.id)}>
                       <TableCell className="font-medium text-gray-900">
-                        <div>{wine.grape}</div>
+                        <div className="flex items-center gap-2">
+                          <span>{wine.grape}</span>
+                          <BatchBadge batch={wine} />
+                        </div>
                         <div className="text-xs text-gray-500">{wine.vineyardName}</div>
                       </TableCell>
                               <TableCell className="text-gray-600">
@@ -1079,7 +1097,10 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
               <div className="bg-gradient-to-r from-purple-50 to-amber-50 p-4 border-b">
                 <div className="flex justify-between items-start">
                         <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900">{wine.grape}</h3>
+                    <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                      {wine.grape}
+                      <BatchBadge batch={wine} />
+                    </h3>
                     <div className="text-sm text-gray-600 mt-1">{wine.vineyardName}</div>
                     <div className="text-xs text-gray-500 mt-1">
                             Vintage {wine.harvestStartDate.year}

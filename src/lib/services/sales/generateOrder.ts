@@ -1,6 +1,6 @@
 // Order generation service - handles wine order creation with pricing and rejection logic
 import { v4 as uuidv4 } from 'uuid';
-import { WineOrder, Customer, WineBatch, Vineyard } from '../../types/types';
+import { WineOrder, Customer, WineBatch, Vineyard, GrapeVariety, DifficultyPreference } from '../../types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { saveWineOrder } from '../../database/customers/salesDB';
 import { getGameState } from '../core/gameState';
@@ -14,10 +14,66 @@ import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoosts } from './relationshipService';
 import { getCurrentPrestige } from '../core/gameState';
 import { activateCustomer } from '../../database/customers/customerDB';
-import { calculateFeaturePriceMultiplier } from '@/lib/services/';
+import { calculateFeaturePriceMultiplier, calculateGrapeDifficulty } from '@/lib/services/';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+interface DifficultyImpact {
+  grapeDifficulty: number | null;
+  affinity: number;
+  priceFactor: number;
+  quantityFactor: number;
+  rejectionFactor: number;
+}
+
+function resolveDifficultyPreference(customer: Customer): DifficultyPreference | undefined {
+  return customer.difficultyPreference ?? CUSTOMER_TYPE_CONFIG[customer.customerType]?.difficultyPreference;
+}
+
+function evaluateDifficultyImpact(grape: GrapeVariety, preference?: DifficultyPreference): DifficultyImpact {
+  if (!preference || preference.weight <= 0) {
+    return {
+      grapeDifficulty: null,
+      affinity: 0.5,
+      priceFactor: 1,
+      quantityFactor: 1,
+      rejectionFactor: 1
+    };
+  }
+
+  const breakdown = calculateGrapeDifficulty(grape);
+  const difficulty = breakdown.score;
+  const tolerance = preference.tolerance > 0 ? preference.tolerance : 0.0001;
+  const delta = difficulty - preference.target;
+  const normalized = Math.abs(delta) / tolerance;
+
+  let affinity = Math.exp(-normalized * normalized);
+  const directionalBias = clamp(preference.bias, 0, 1) - 0.5;
+  if (delta >= 0) {
+    affinity *= 1 + directionalBias;
+  } else {
+    affinity *= 1 - directionalBias;
+  }
+  affinity = clamp(affinity, 0, 1);
+
+  const weight = clamp(preference.weight, 0, 1);
+  const centered = (affinity - 0.5) * weight;
+
+  const priceFactor = clamp(1 + centered * 0.4, 0.6, 1.4);
+  const quantityFactor = clamp(1 + centered * 0.6, 0.5, 1.6);
+  const rejectionFactor = clamp(1 - centered * 0.7, 0.5, 1.6);
+
+  return {
+    grapeDifficulty: difficulty,
+    affinity,
+    priceFactor,
+    quantityFactor,
+    rejectionFactor
+  };
+}
 
 // ===== REJECTION CALCULATIONS =====
 
@@ -81,6 +137,8 @@ export async function generateOrder(
   
   // Use customer's order type and characteristics
   const config = CUSTOMER_TYPE_CONFIG[customer.customerType];
+const difficultyPreference = resolveDifficultyPreference(customer);
+const difficultyImpact = evaluateDifficultyImpact(specificWineBatch.grape, difficultyPreference);
   
   // Get asking price (user-set or default) and base calculated price
   const askingPrice = specificWineBatch.askingPrice ?? specificWineBatch.estimatedPrice;
@@ -100,13 +158,14 @@ export async function generateOrder(
   const featurePriceMultiplier = calculateFeaturePriceMultiplier(specificWineBatch, customer.customerType);
   
   // Use customer's individual price multiplier with relationship bonus and feature sensitivity
-  let bidPrice = Math.round(askingPrice * relationshipAdjustedMultiplier * featurePriceMultiplier * 100) / 100;
+let bidPrice = askingPrice * relationshipAdjustedMultiplier * featurePriceMultiplier;
+bidPrice *= difficultyImpact.priceFactor;
+bidPrice = Math.round(bidPrice * 100) / 100;
+bidPrice = Math.max(0, Math.min(bidPrice, SALES_CONSTANTS.MAX_PRICE));
   
-  // Cap the bid price to prevent database overflow
-  bidPrice = Math.min(bidPrice, SALES_CONSTANTS.MAX_PRICE);
-  
-  // Check for outright rejection based on price ratio
-  let rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
+// Check for outright rejection based on price ratio
+let rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
+rejectionProbability = clamp(rejectionProbability * difficultyImpact.rejectionFactor, 0, 1);
   
   // Apply relationship modifier to rejection probability (better relationships = less likely to reject)
   const relationshipRejectionModifier = 1 - currentRelationship * 0.005; // 0.5% reduction per relationship point
@@ -156,11 +215,13 @@ export async function generateOrder(
   
   // Calculate order amount adjustment based on price difference
   // Use customer's bid price vs our asking price to determine quantity sensitivity
-  const orderAmountMultiplier = calculateOrderAmount(
+const orderAmountMultiplier = Math.max(0,
+  calculateOrderAmount(
     { askingPrice: bidPrice }, // Customer's actual bid price
     askingPrice,               // Our asking price (what we want to charge)
     customer.customerType
-  );
+  ) * difficultyImpact.quantityFactor
+);
   
   // Generate baseline quantity from order type range, then scale by price sensitivity and customer characteristics
   // The range acts as a baseline market appetite; calculateOrderAmount and customer quantityMultiplier scale this.
@@ -252,7 +313,14 @@ export async function generateOrder(
       multipleOrderModifier,
       finalRejectionProbability: rejectionProbability,
       randomValue: rejectionRandomValue,
-      wasRejected: false // This order was accepted
+      wasRejected: false, // This order was accepted
+      difficulty: difficultyImpact.grapeDifficulty !== null ? {
+        grapeDifficulty: difficultyImpact.grapeDifficulty,
+        affinity: difficultyImpact.affinity,
+        priceFactor: difficultyImpact.priceFactor,
+        quantityFactor: difficultyImpact.quantityFactor,
+        rejectionFactor: difficultyImpact.rejectionFactor
+      } : undefined
     }
   };
   

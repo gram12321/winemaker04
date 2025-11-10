@@ -1124,3 +1124,30 @@ export function getGrapeIconAsset(
 
   return `${fileBase}.png`;
 }
+
+/**
+ * Resolve the icon filename for a wine characteristic. Uses the new icon_* naming scheme by default.
+ */
+export function getCharacteristicIconAsset(characteristic: keyof WineCharacteristics | string): string {
+  const sanitizedName = sanitizeIconNameForFile(characteristic) || 'characteristic';
+  return `icon_${sanitizedName}.png`;
+}
+
+/**
+ * Convenience helper returning the absolute asset path for a grape icon.
+ */
+export function getGrapeIconSrc(
+  variety: GrapeVariety,
+  preferredFormat: GrapeIconFormat = 'png'
+): string {
+  const fileName = getGrapeIconAsset(variety, preferredFormat);
+  return `/assets/icons/grape/${fileName}`;
+}
+
+/**
+ * Convenience helper returning the absolute asset path for a characteristic icon.
+ */
+export function getCharacteristicIconSrc(characteristic: keyof WineCharacteristics | string): string {
+  const fileName = getCharacteristicIconAsset(characteristic);
+  return `/assets/icons/characteristics/${fileName}`;
+}

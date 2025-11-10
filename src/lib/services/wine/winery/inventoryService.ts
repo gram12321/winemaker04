@@ -266,6 +266,23 @@ export async function getAllWineBatches(): Promise<WineBatch[]> {
   return await loadWineBatches();
 }
 
+const getBatchSuffix = (batch: WineBatch): string | null => {
+  const groupSize = batch.batchGroupSize ?? 0;
+  const batchNumber = batch.batchNumber ?? 0;
+
+  if (groupSize <= 1 || batchNumber <= 0) {
+    return null;
+  }
+
+  return `Batch ${batchNumber}/${groupSize}`;
+};
+
+export function getWineBatchDisplayName(batch: WineBatch): string {
+  const baseName = `${batch.grape} - ${batch.vineyardName}`;
+  const suffix = getBatchSuffix(batch);
+  return suffix ? `${baseName} (${suffix})` : baseName;
+}
+
 // Update wine batch
 export async function updateInventoryBatch(batchId: string, updates: Partial<WineBatch>): Promise<boolean> {
   const success = await updateWineBatch(batchId, updates);
@@ -278,9 +295,11 @@ export async function updateInventoryBatch(batchId: string, updates: Partial<Win
 // Format completed wine name
 export function formatCompletedWineName(batch: WineBatch): string {
   if (batch.state === 'bottled') {
-    return `${batch.grape}, ${batch.vineyardName}, ${batch.harvestStartDate.year}`;
+    const baseName = `${batch.grape}, ${batch.vineyardName}, ${batch.harvestStartDate.year}`;
+    const suffix = getBatchSuffix(batch);
+    return suffix ? `${baseName} (${suffix})` : baseName;
   }
-  return `${batch.grape} (${batch.state})`;
+  return getWineBatchDisplayName(batch);
 }
 
 /**

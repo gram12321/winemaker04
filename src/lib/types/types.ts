@@ -131,6 +131,8 @@ export interface WineBatch {
   vineyardName: string;
   grape: GrapeVariety;
   quantity: number; // in kg or bottles
+  batchNumber?: number; // Sequential identifier for duplicate vintage/vineyard batches
+  batchGroupSize?: number; // Total batches sharing the same vintage/vineyard combination
   state: WineBatchState;
   fermentationProgress?: number; // 0-100% for fermentation tracking
   
@@ -207,6 +209,13 @@ export type CustomerType = 'Restaurant' | 'Wine Shop' | 'Private Collector' | 'C
 // Customer countries and regional data
 export type CustomerCountry = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
 
+export interface DifficultyPreference {
+  target: number;    // Target difficulty score (0-1) this customer type is most comfortable with.
+  tolerance: number; // How wide the comfort band is around the target (0-1). Smaller values mean sharper preferences.
+  weight: number;    // How strongly the customer type cares about difficulty (0-1). 0 ignores difficulty, 1 makes it dominant.
+  bias: number;      // Bias toward easier (0) or harder (1) grapes, 0.5 represents neutral.
+}
+
 // Customer characteristics for sophisticated order generation
 export interface Customer {
   id: string;
@@ -225,6 +234,7 @@ export interface Customer {
   // Relationship tracking (for future contract system)
   relationship?: number; // 0-100 scale for relationship strength
   activeCustomer?: boolean; // True if customer has placed orders (actively interacting with company)
+  difficultyPreference?: DifficultyPreference; // Difficulty affinity used when valuing wines
 }
 
 // Wine order interface for sales operations
@@ -272,6 +282,13 @@ export interface WineOrder {
     finalRejectionProbability: number;
     randomValue: number;
     wasRejected: boolean;
+    difficulty?: {
+      grapeDifficulty: number;
+      affinity: number;
+      priceFactor: number;
+      quantityFactor: number;
+      rejectionFactor: number;
+    };
   };
 }
 

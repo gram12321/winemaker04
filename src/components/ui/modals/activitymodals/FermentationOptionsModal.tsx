@@ -7,7 +7,7 @@ import { getFermentationMethodInfo, getFermentationTemperatureInfo, Fermentation
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber, getCharacteristicDisplayName, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { formatNumber, getCharacteristicDisplayName, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
@@ -303,7 +303,7 @@ Note: These effects apply each week while fermentation is active.`
                   >
                     <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
                       <img
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`}
+                        src={getCharacteristicIconSrc(effect.characteristic)}
                         alt={effect.characteristic}
                         className="w-3 h-3 mr-1"
                       />
@@ -348,7 +348,7 @@ Note: These effects apply each week while fermentation is active.`
                   >
                     <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
                       <img
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`}
+                        src={getCharacteristicIconSrc(effect.characteristic)}
                         alt={effect.characteristic}
                         className="w-3 h-3 mr-1"
                       />
@@ -393,7 +393,7 @@ Note: These effects apply each week while fermentation is active.`
                   >
                     <div className={`flex items-center ${bgClass} px-2 py-1 rounded text-xs cursor-help`}>
                       <img
-                        src={`/assets/icons/characteristics/${effect.characteristic}.png`}
+                        src={getCharacteristicIconSrc(effect.characteristic)}
                         alt={effect.characteristic}
                         className="w-3 h-3 mr-1"
                       />

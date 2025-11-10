@@ -1,7 +1,7 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
-import { getAllWineBatches, bottleWine, isActionAvailable } from '@/lib/services';
+import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
 import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
@@ -232,12 +232,14 @@ const Winery: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {activeBatches.map((batch) => (
-                <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
+              {activeBatches.map((batch) => {
+                const displayName = getWineBatchDisplayName(batch);
+                return (
+                  <div key={batch.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   {/* Wine Batch Header */}
                   <div className="flex justify-between items-start mb-3">
                     <h5 className="font-semibold text-gray-900 text-base">
-                      {batch.grape} - {batch.vineyardName}
+                      {displayName}
                     </h5>
                     
                     {/* Action Buttons */}
@@ -336,9 +338,9 @@ const Winery: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -362,7 +364,7 @@ const Winery: React.FC = () => {
         isOpen={!!modals.wine}
         onClose={() => closeModal('wine')}
         wineBatch={modals.wine}
-        wineName={modals.wine ? `${modals.wine.grape} - ${modals.wine.vineyardName}` : "Wine"}
+        wineName={modals.wine ? getWineBatchDisplayName(modals.wine) : 'Wine'}
       />
     </div>
   );

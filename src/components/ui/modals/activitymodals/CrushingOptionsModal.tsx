@@ -7,7 +7,7 @@ import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManage
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { FeatureDisplay } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { formatNumber, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
@@ -413,7 +413,7 @@ MAX PRESSURE BY METHOD:
                   
                   return (
                     <div key={effect.characteristic} className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} flex items-center gap-1`}>
-                      <img src={`/assets/icons/characteristics/${effect.characteristic}.png`} alt={`${effect.characteristic} icon`} className="w-3 h-3 opacity-80" />
+                      <img src={getCharacteristicIconSrc(effect.characteristic)} alt={`${effect.characteristic} icon`} className="w-3 h-3 opacity-80" />
                       <span>{effect.characteristic}: {sign}{percentage}%</span>
                     </div>
                   );

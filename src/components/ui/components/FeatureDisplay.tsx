@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { formatNumber, getRangeColor, getRatingForRange, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { formatNumber, getRangeColor, getRatingForRange, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { UnifiedTooltip, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
@@ -551,7 +551,7 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }
                   {isQuality ? (
                     <span>⭐</span>
                   ) : (
-                    <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-3 h-3" />
+                    <img src={getCharacteristicIconSrc(key)} alt={`${key} icon`} className="w-3 h-3" />
                   )}
                   <span className="font-medium">{sign}{percentage}%</span>
                 </div>
@@ -622,7 +622,7 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
                 mobileHintVariant="underline"
               >
                 <div className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} flex items-center gap-1 cursor-help`}>
-                  <img src={`/assets/icons/characteristics/${characteristic}.png`} alt={`${characteristic} icon`} className="w-3 h-3 opacity-80" />
+                  <img src={getCharacteristicIconSrc(characteristic)} alt={`${characteristic} icon`} className="w-3 h-3 opacity-80" />
                   <span>{characteristic}: {sign}{percentage}%</span>
                 </div>
               </UnifiedTooltip>

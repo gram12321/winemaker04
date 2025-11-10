@@ -3,7 +3,7 @@ import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../sh
 import { getRatingForRange } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { WineCharacteristics } from '@/lib/types/types';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, getCharacteristicIconSrc } from '@/lib/utils';
 
 interface CharacteristicSliderProps {
   value: number;
@@ -95,7 +95,7 @@ export function CharacteristicSliderGrid({
           value={value}
           onChange={(newValue) => onChange(key, newValue)}
           label={key.charAt(0).toUpperCase() + key.slice(1)}
-          icon={`/assets/icons/characteristics/${key}.png`}
+          icon={getCharacteristicIconSrc(key)}
         />
       ))}
     </div>

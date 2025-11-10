@@ -7,14 +7,14 @@ import { Badge } from '../../shadCN/badge';
 import { TooltipSection, TooltipRow, tooltipStyles, UnifiedTooltip } from '../../shadCN/tooltip';
 import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
-import { formatNumber, getFlagIcon } from '@/lib/utils';
+import { formatNumber, getFlagIcon, getCharacteristicIconSrc } from '@/lib/utils';
 import { getGrapeQualityCategory, getGrapeQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreakdown';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { getWineAgeFromHarvest } from '@/lib/services';
+import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBalance } from '@/hooks';
 
 interface WineModalProps extends DialogProps {
@@ -61,19 +61,19 @@ export const WineModal: React.FC<WineModalProps> = ({
   // Early return AFTER all hooks are called
   if (!wineBatch) return null;
 
-  const displayName = wineName || `${wineBatch.grape} - ${wineBatch.vineyardName}`;
+  const displayName = wineName || getWineBatchDisplayName(wineBatch);
   // Use current grape quality (feature effects are already applied)
   const currentGrapeQuality: number = wineBatch.grapeQuality || 0;
   const grapeQualityCategory = getGrapeQualityCategory(currentGrapeQuality);
   const grapeQualityColorClass = getColorClass(currentGrapeQuality);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
   const characteristicIconSrc: Record<string,string> = {
-    body: '/assets/icons/characteristics/body.png',
-    aroma: '/assets/icons/characteristics/aroma.png',
-    spice: '/assets/icons/characteristics/spice.png',
-    acidity: '/assets/icons/characteristics/acidity.png',
-    sweetness: '/assets/icons/characteristics/sweetness.png',
-    tannins: '/assets/icons/characteristics/tannins.png'
+    body: getCharacteristicIconSrc('body'),
+    aroma: getCharacteristicIconSrc('aroma'),
+    spice: getCharacteristicIconSrc('spice'),
+    acidity: getCharacteristicIconSrc('acidity'),
+    sweetness: getCharacteristicIconSrc('sweetness'),
+    tannins: getCharacteristicIconSrc('tannins')
   };
 
   return (

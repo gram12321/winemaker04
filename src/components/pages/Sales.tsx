@@ -7,6 +7,7 @@ import { WineModal } from '../ui';
 import { NavigationProps } from '../../lib/types/UItypes';
 import WineCellarTab from './sales/WineCellarTab';
 import OrdersTab from './sales/OrdersTab';
+import { getWineBatchDisplayName } from '@/lib/services';
 
 interface SalesProps extends NavigationProps {
   // Inherits onNavigateToWinepedia from NavigationProps
@@ -126,7 +127,7 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         isOpen={wineModalOpen}
         onClose={handleWineModalClose}
         wineBatch={selectedWineBatch}
-        wineName={selectedWineBatch ? `${selectedWineBatch.grape} - ${selectedWineBatch.vineyardName}` : "Wine"}
+        wineName={selectedWineBatch ? getWineBatchDisplayName(selectedWineBatch) : 'Wine'}
       />
     </div>
   );

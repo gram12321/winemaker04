@@ -4,7 +4,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
-import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
+import { formatNumber, ChevronDownIcon, ChevronRightIcon, getCharacteristicIconSrc } from '@/lib/utils';
 import { getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 
 
@@ -104,7 +104,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                 onClick={() => handleCharacteristicClick(key)}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <img src={`/assets/icons/characteristics/${key}.png`} alt={`${key} icon`} className="w-3 h-3 md:w-4 md:h-4 opacity-80" />
+                  <img src={getCharacteristicIconSrc(key)} alt={`${key} icon`} className="w-3 h-3 md:w-4 md:h-4 opacity-80" />
                   <span className="font-medium capitalize text-xs md:text-sm">{key}</span>
                   <span className="text-xs md:text-sm text-gray-600">({formatNumber(value, { decimals: 2, forceDecimals: true })})</span>
                 </div>
@@ -378,7 +378,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                       >
                                         <div className="flex items-center gap-1">
                                           <img 
-                                            src={`/assets/icons/characteristics/${char}.png`} 
+                                            src={getCharacteristicIconSrc(char)} 
                                             alt={`${char} icon`} 
                                             className="w-3 h-3 opacity-80 cursor-help" 
                                           />
@@ -435,7 +435,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                     {rule.targets.map((target, targetIdx) => (
                                       <React.Fragment key={target}>
                                         <img 
-                                          src={`/assets/icons/characteristics/${target}.png`} 
+                                          src={getCharacteristicIconSrc(target)} 
                                           alt={`${target} icon`} 
                                           className="w-3 h-3 opacity-80 cursor-help" 
                                         />
@@ -614,7 +614,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                         >
                                           <div className="flex items-center gap-1">
                                             <img 
-                                              src={`/assets/icons/characteristics/${char}.png`} 
+                                              src={getCharacteristicIconSrc(char)} 
                                               alt={`${char} icon`} 
                                               className="w-3 h-3 opacity-80 cursor-help" 
                                             />
@@ -661,7 +661,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                       >
                                         <div className="flex items-center gap-1">
                                           <img 
-                                            src={`/assets/icons/characteristics/${char}.png`} 
+                                            src={getCharacteristicIconSrc(char)} 
                                             alt={`${char} icon`} 
                                             className="w-3 h-3 opacity-80 cursor-help" 
                                           />
@@ -847,7 +847,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                     }`}
                   >
                     <img 
-                      src={`/assets/icons/characteristics/${key}.png`} 
+                      src={getCharacteristicIconSrc(key)} 
                       alt={`${key} icon`} 
                       className="w-4 h-4 opacity-80" 
                     />
@@ -933,7 +933,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                 <div key={idx} className="flex items-center gap-1">
                                   {idx > 0 && <span>,</span>}
                                   <img 
-                                    src={`/assets/icons/characteristics/${charName}.png`} 
+                                    src={getCharacteristicIconSrc(charName)} 
                                     alt={charName} 
                                     className="w-3 h-3" 
                                   />
@@ -1014,7 +1014,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                 <div key={idx} className="flex items-center gap-1">
                                   {idx > 0 && <span>,</span>}
                                   <img 
-                                    src={`/assets/icons/characteristics/${charName}.png`} 
+                                    src={getCharacteristicIconSrc(charName)} 
                                     alt={charName} 
                                     className="w-3 h-3" 
                                   />

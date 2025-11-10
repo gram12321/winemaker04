@@ -688,14 +688,34 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       {order.wineName}
                     </TableCell>
                     <TableCell className="text-gray-500">
-                      <div className="flex flex-col">
-                        <span>{order.requestedQuantity} bottles</span>
-                        {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
-                          <span className="text-[10px] text-orange-600">
-                            (Can fulfill: {order.fulfillableQuantity})
-                          </span>
-                        )}
-                      </div>
+                      <UnifiedTooltip
+                        content={
+                          <div className="text-xs space-y-1">
+                            <div className="font-semibold">Requested Quantity</div>
+                            <div className="text-[10px] space-y-1">
+                              <div>Base Quantity: <span className="font-medium">{order.calculationData?.baseQuantity ?? '—'}</span></div>
+                              <div>Price Sensitivity: <span className="font-medium">{order.calculationData ? formatNumber(order.calculationData.priceSensitivity, { decimals: 3, forceDecimals: true }) : '—'}x</span></div>
+                              <div>Market & Relationship: <span className="font-medium">{order.calculationData ? formatNumber(order.calculationData.quantityMarketShareMultiplier, { decimals: 3, forceDecimals: true }) : '—'}x</span></div>
+                              {order.calculationData?.difficulty && (
+                                <div>Difficulty Factor: <span className="font-medium">{formatNumber(order.calculationData.difficulty.quantityFactor, { decimals: 3, forceDecimals: true })}x</span></div>
+                              )}
+                              <div className="border-t pt-1">
+                                <div className="font-medium">Final Quantity: <span className="font-bold">{order.requestedQuantity}</span></div>
+                              </div>
+                            </div>
+                            {order.fulfillableQuantity !== undefined && order.fulfillableQuantity !== null && order.fulfillableQuantity < order.requestedQuantity && (
+                              <div className="text-[10px] text-orange-600">
+                                Inventory limited to {order.fulfillableQuantity} bottles
+                              </div>
+                            )}
+                          </div>
+                        }
+                        variant="default"
+                      >
+                        <span className="cursor-help">
+                          {order.requestedQuantity} bottles
+                        </span>
+                      </UnifiedTooltip>
                     </TableCell>
                     <TableCell className="text-gray-500">
                       {getInventoryForOrder(order)}
@@ -714,7 +734,16 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                   <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
                                   <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
                                   <div>Relationship Bonus: <span className="font-medium">{formatNumber((order.calculationData.relationshipBonusMultiplier ?? 1), { decimals: 3, forceDecimals: true })}x</span></div>
-                                  <div>Combined Multiplier: <span className="font-medium">{formatNumber((order.calculationData.relationshipAdjustedMultiplier ?? (order.calculationData.finalPriceMultiplier * (order.calculationData.relationshipBonusMultiplier ?? 1))), { decimals: 3, forceDecimals: true })}x</span></div>
+                                  {order.calculationData?.difficulty && (
+                                    <div>Difficulty Factor: <span className="font-medium">{formatNumber(order.calculationData.difficulty.priceFactor, { decimals: 3, forceDecimals: true })}x</span></div>
+                                  )}
+                                  <div>Combined Multiplier: <span className="font-medium">
+                                    {formatNumber(
+                                      (order.calculationData.relationshipAdjustedMultiplier ?? (order.calculationData.finalPriceMultiplier * (order.calculationData.relationshipBonusMultiplier ?? 1)))
+                                      * (order.calculationData?.difficulty?.priceFactor ?? 1),
+                                      { decimals: 3, forceDecimals: true }
+                                    )}x
+                                  </span></div>
                                   {order.calculationData.featurePriceMultiplier !== undefined && order.calculationData.featurePriceMultiplier < 1.0 && (
                                     <div className="text-red-600">
                                       Feature Penalty: <span className="font-medium">{formatNumber(order.calculationData.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span>
@@ -727,6 +756,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                         const parts = ['Asking', 'Customer', 'Relationship'];
                                         if (order.calculationData?.featurePriceMultiplier !== undefined) {
                                           parts.push('Features');
+                                        }
+                                        if (order.calculationData?.difficulty) {
+                                          parts.push('Difficulty');
                                         }
                                         return `Formula: ${parts.join(' × ')}`;
                                       })()}
@@ -762,6 +794,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                             <div className="text-[10px] space-y-1">
                               <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
                               <div>Bid Price: <span className="font-medium">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
+                              {order.calculationData?.difficulty && (
+                                <div>Difficulty Rejection Factor: <span className="font-medium">{formatNumber(order.calculationData.difficulty.rejectionFactor, { decimals: 3, forceDecimals: true })}x</span></div>
+                              )}
                               <div className="border-t pt-1">
                                 <div className="font-medium">
                                   {order.offeredPrice > getAskingPriceForOrder(order) ? (
@@ -780,10 +815,10 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       >
                         <span className={`cursor-help font-medium ${
                           order.offeredPrice > getAskingPriceForOrder(order)
-                            ? 'text-green-600' // Above asking price
+                            ? 'text-green-600'
                             : order.offeredPrice < getAskingPriceForOrder(order)
-                            ? 'text-red-600' // Below asking price
-                            : 'text-gray-600' // Equal to asking price
+                            ? 'text-red-600'
+                            : 'text-gray-600'
                         }`}>
                           {order.offeredPrice > getAskingPriceForOrder(order) ? '+' : ''}
                           {formatPercent((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order), 1, true)}

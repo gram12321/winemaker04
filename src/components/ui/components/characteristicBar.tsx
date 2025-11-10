@@ -1,6 +1,6 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
@@ -32,12 +32,12 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   showIcon = true
 }) => {
   const ICON_SRC: Record<keyof WineCharacteristics, string> = {
-    acidity: '/assets/icons/characteristics/acidity.png',
-    aroma: '/assets/icons/characteristics/aroma.png',
-    body: '/assets/icons/characteristics/body.png',
-    spice: '/assets/icons/characteristics/spice.png',
-    sweetness: '/assets/icons/characteristics/sweetness.png',
-    tannins: '/assets/icons/characteristics/tannins.png'
+    acidity: getCharacteristicIconSrc('acidity'),
+    aroma: getCharacteristicIconSrc('aroma'),
+    body: getCharacteristicIconSrc('body'),
+    spice: getCharacteristicIconSrc('spice'),
+    sweetness: getCharacteristicIconSrc('sweetness'),
+    tannins: getCharacteristicIconSrc('tannins')
   };
 
   // Clamp value to 0-1 range

@@ -4,7 +4,7 @@ import { WineCharacteristicsDisplay, CharacteristicSliderGrid } from '@/componen
 import { WineCharacteristics } from '@/lib/types/types';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { RANGE_ADJUSTMENTS } from '@/lib/balance';
-import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
+import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES, getCharacteristicIconSrc } from '@/lib/utils';
 
 export function DynamicRangeTab() {
   const baseRanges = BASE_BALANCED_RANGES;
@@ -123,7 +123,7 @@ export function DynamicRangeTab() {
                     variant="panel"
                     density="compact"
                   >
-                    <img src={`/assets/icons/characteristics/${source}.png`} alt={`${source} icon`} className="w-4 h-4 opacity-80 cursor-help" />
+                    <img src={getCharacteristicIconSrc(source)} alt={`${source} icon`} className="w-4 h-4 opacity-80 cursor-help" />
                   </UnifiedTooltip>
                   <span>{source}</span>
                 </div>
@@ -147,7 +147,7 @@ export function DynamicRangeTab() {
                                 variant="panel"
                                 density="compact"
                               >
-                                <img src={`/assets/icons/characteristics/${r.target}.png`} className="w-3 h-3 opacity-80 cursor-help" />
+                                <img src={getCharacteristicIconSrc(r.target)} className="w-3 h-3 opacity-80 cursor-help" />
                               </UnifiedTooltip>
                               <span className="capitalize">{r.target}</span>
                             </span>

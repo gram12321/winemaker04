@@ -5,6 +5,56 @@ import { GRAPE_CONST } from '../../constants/grapeConstants';
 
 const WINE_BATCHES_TABLE = 'wine_batches';
 
+const ensureBatchNumber = async (batch: WineBatch): Promise<void> => {
+  if (batch.batchNumber !== undefined) {
+    return;
+  }
+
+  const companyId = getCurrentCompanyId();
+  if (!companyId) {
+    return;
+  }
+
+  const harvestYear = Math.round(batch.harvestStartDate.year);
+
+  const { data, error } = await supabase
+    .from(WINE_BATCHES_TABLE)
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('vineyard_id', batch.vineyardId)
+    .eq('grape_variety', batch.grape)
+    .eq('harvest_start_year', harvestYear)
+    .order('harvest_start_week', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  const existing = data || [];
+  const nextNumber = existing.length + 1;
+
+  batch.batchNumber = nextNumber;
+  batch.batchGroupSize = nextNumber;
+
+  if (existing.length === 0) {
+    return;
+  }
+
+  const updatePromises = existing.map((row, index) =>
+    supabase
+      .from(WINE_BATCHES_TABLE)
+      .update({
+        batch_number: index + 1,
+        batch_group_size: nextNumber
+      })
+      .eq('id', row.id)
+      .eq('company_id', companyId)
+  );
+
+  await Promise.all(updatePromises);
+};
+
 /**
  * Inventory Database Operations
  * Pure CRUD operations for wine batch/inventory data persistence
@@ -12,6 +62,8 @@ const WINE_BATCHES_TABLE = 'wine_batches';
 
 export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
   try {
+    await ensureBatchNumber(batch);
+
     const { error } = await supabase
       .from(WINE_BATCHES_TABLE)
       .upsert({
@@ -38,6 +90,8 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         harvest_start_week: Math.round(batch.harvestStartDate.week),
         harvest_start_season: batch.harvestStartDate.season,
         harvest_start_year: Math.round(batch.harvestStartDate.year),
+        batch_number: batch.batchNumber ?? null,
+        batch_group_size: batch.batchGroupSize ?? null,
         harvest_end_week: Math.round(batch.harvestEndDate.week),
         harvest_end_season: batch.harvestEndDate.season,
         harvest_end_year: Math.round(batch.harvestEndDate.year),
@@ -116,7 +170,9 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
           year: row.bottled_year
         } : undefined,
         
-        agingProgress: row.aging_progress || 0
+        agingProgress: row.aging_progress || 0,
+        batchNumber: row.batch_number ?? undefined,
+        batchGroupSize: row.batch_group_size ?? undefined
       };
     });
   } catch (error) {
@@ -200,6 +256,8 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           harvest_start_week: Math.round(updatedBatch.harvestStartDate.week),
           harvest_start_season: updatedBatch.harvestStartDate.season,
           harvest_start_year: Math.round(updatedBatch.harvestStartDate.year),
+          batch_number: updatedBatch.batchNumber ?? null,
+          batch_group_size: updatedBatch.batchGroupSize ?? null,
           harvest_end_week: Math.round(updatedBatch.harvestEndDate.week),
           harvest_end_season: updatedBatch.harvestEndDate.season,
           harvest_end_year: Math.round(updatedBatch.harvestEndDate.year),
