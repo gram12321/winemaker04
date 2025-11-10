@@ -26,7 +26,8 @@ export async function insertLoan(loan: Loan): Promise<void> {
       next_payment_season: loan.nextPaymentDue.season,
       next_payment_year: loan.nextPaymentDue.year,
       missed_payments: loan.missedPayments,
-      status: loan.status
+      status: loan.status,
+      is_forced: loan.isForced ?? false
     };
 
     const { error } = await supabase
@@ -83,7 +84,8 @@ export async function loadLoans(): Promise<Loan[]> {
         year: row.next_payment_year
       },
       missedPayments: row.missed_payments,
-      status: row.status
+      status: row.status,
+      isForced: row.is_forced ?? false
     }));
   } catch (error) {
     console.error('Failed to load loans:', error);
@@ -104,6 +106,9 @@ export async function updateLoan(loanId: string, updates: Partial<Loan>): Promis
       updateData.next_payment_week = updates.nextPaymentDue.week;
       updateData.next_payment_season = updates.nextPaymentDue.season;
       updateData.next_payment_year = updates.nextPaymentDue.year;
+    }
+    if (updates.isForced !== undefined) {
+      updateData.is_forced = updates.isForced;
     }
 
     const { error } = await supabase
@@ -163,7 +168,8 @@ export async function loadActiveLoans(): Promise<Loan[]> {
         year: row.next_payment_year
       },
       missedPayments: row.missed_payments,
-      status: row.status
+      status: row.status,
+      isForced: row.is_forced ?? false
     }));
   } catch (error) {
     console.error('Failed to load active loans:', error);

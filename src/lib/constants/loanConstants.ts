@@ -209,3 +209,39 @@ export const LOAN_MISSED_PAYMENT_PENALTIES = {
     // Plus full LOAN_DEFAULT penalties above
   }
 } as const;
+
+// Emergency quick loan enforcement settings
+export const EMERGENCY_QUICK_LOAN = {
+  NEGATIVE_BALANCE_BUFFER: 0.10, // 10% buffer on top of negative balance
+  BASE_INTEREST_PENALTY_MULTIPLIER: 1.5, // Base interest penalty
+  DISQUALIFIED_INTEREST_PENALTY_MULTIPLIER: 1.9, // Applied if borrower wouldn't normally qualify
+  ORIGINATION_FEE_PENALTY_MULTIPLIER: 1.4, // Origination fee penalty
+  MAX_ADJUSTMENT_ITERATIONS: 4 // Attempts to increase principal to cover deficit after fees
+} as const;
+
+// Emergency loan restructuring settings (triggered at new year)
+export const EMERGENCY_RESTRUCTURE = {
+  CELLAR_STEP_PERCENT_OF_DEBT: 0.20, // Attempt to liquidate up to 20% of debt from cellar each pass
+  MAX_SEIZURE_PERCENT_OF_DEBT: 0.50, // Never seize more than 50% of the combined forced loan balance
+  SALE_PENALTY_RATE: 0.25, // Forced sales yield 25% less than book value
+  CONSOLIDATED_DURATION_SEASONS: 48, // 12 years payoff horizon for restructured loan
+  INTEREST_PENALTY_MULTIPLIER: 1.25, // Consolidated loan has higher base interest than lender default
+  ORIGINATION_PENALTY_MULTIPLIER: 1.35, // Origination fee is harsher during restructure
+  PRESTIGE_PENALTY: -35, // Prestige hit when restructure fires
+  PRESTIGE_DECAY_RATE: 0.95 // Slow decay, mirrors warning prestige decay
+} as const;
+
+// Extra payment configuration
+export const LOAN_EXTRA_PAYMENT = {
+  ADMIN_FEE_RATE: 0.08, // 8% of seasonal payment as administration fee
+  MIN_ADMIN_FEE: 250 // Minimum fee to keep the penalty noticeable
+} as const;
+
+// Administrative penalty work units applied to next season's bookkeeping task after loan operations
+export const ADMINISTRATION_LOAN_PENALTIES = {
+  LOAN_TAKEN: 12,
+  LOAN_EXTRA_PAYMENT: 6,
+  LOAN_FULL_REPAYMENT: 10,
+  LOAN_FORCED: 16,
+  LOAN_RESTRUCTURE: 22
+} as const;

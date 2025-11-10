@@ -58,7 +58,8 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
         vineyard.region,
         vineyard.country,
         vineyard.altitude,
-        vineyard.aspect
+        vineyard.aspect,
+        vineyard.soil
       );
     } catch (error) {
       console.error('Failed to calculate grape suitability breakdown:', error);
@@ -69,7 +70,8 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
     vineyard?.region,
     vineyard?.country,
     vineyard?.altitude,
-    vineyard?.aspect
+    vineyard?.aspect,
+    vineyard?.soil
   ]);
 
   // Build tooltip content JSX
@@ -204,6 +206,11 @@ export const GrapeQualityFactorBar: React.FC<GrapeQualityFactorBarProps> = ({
                     label="Sun exposure match"
                     value={formatPercent(grapeSuitabilityComponents.sunExposure, 1)}
                     valueRating={grapeSuitabilityComponents.sunExposure}
+                  />
+                  <TooltipRow
+                    label="Soil match"
+                    value={formatPercent(grapeSuitabilityComponents.soil, 1)}
+                    valueRating={grapeSuitabilityComponents.soil}
                   />
                 </TooltipSection>
               )}

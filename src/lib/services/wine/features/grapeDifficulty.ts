@@ -4,10 +4,13 @@ import {
   REGION_GRAPE_SUITABILITY,
   REGION_ALTITUDE_RANGES,
   REGION_ASPECT_RATINGS,
+  REGION_SOIL_TYPES,
   GRAPE_ALTITUDE_SUITABILITY,
   GRAPE_SUN_PREFERENCES,
+  GRAPE_SOIL_PREFERENCES,
   REGION_HEAT_PROFILE,
-  ASPECT_SUN_EXPOSURE_OFFSETS
+  ASPECT_SUN_EXPOSURE_OFFSETS,
+  ALL_SOIL_TYPES
 } from '@/lib/constants';
 import { GrapeVariety, WineCharacteristics, Aspect } from '@/lib/types/types';
 import { clamp01 } from '@/lib/utils';
@@ -37,6 +40,8 @@ export interface RegionSuitabilityDetail {
   altitudeRange?: readonly [number, number];
   sunMatch: number | null;
   sunIndex?: number;
+  soilMatch: number | null;
+  soils?: readonly string[];
 }
 
 export interface GrapeSuitabilityDetails {
@@ -45,6 +50,8 @@ export interface GrapeSuitabilityDetails {
   altitudeCoverage: number;
   sunAverage: number;
   sunCoverage: number;
+  soilAverage: number;
+  soilCoverage: number;
   combinedSuitability: number;
   regions: RegionSuitabilityDetail[];
 }
@@ -113,6 +120,7 @@ type RegionContext = {
   altitudeRange?: readonly [number, number];
   aspectRatings?: Record<Aspect, number>;
   baseHeat?: number;
+  soils?: readonly string[];
 };
 
 function forEachGrapeRegion(grape: GrapeVariety, callback: (context: RegionContext) => void): void {
@@ -126,6 +134,9 @@ function forEachGrapeRegion(grape: GrapeVariety, callback: (context: RegionConte
     const heatCountry = REGION_HEAT_PROFILE[countryName as keyof typeof REGION_HEAT_PROFILE] as
       | Record<string, number>
       | undefined;
+    const soilCountry = REGION_SOIL_TYPES[countryName as keyof typeof REGION_SOIL_TYPES] as
+      | Record<string, readonly string[]>
+      | undefined;
 
     Object.entries(regions).forEach(([regionName, grapeMap]) => {
       const suitability = grapeMap[grape as keyof typeof grapeMap];
@@ -134,6 +145,7 @@ function forEachGrapeRegion(grape: GrapeVariety, callback: (context: RegionConte
       const altitudeRange = altitudeCountry?.[regionName];
       const aspectRatings = aspectCountry?.[regionName];
       const baseHeat = heatCountry?.[regionName];
+      const soils = soilCountry?.[regionName];
 
       callback({
         country: countryName,
@@ -141,7 +153,8 @@ function forEachGrapeRegion(grape: GrapeVariety, callback: (context: RegionConte
         suitability,
         altitudeRange,
         aspectRatings,
-        baseHeat
+        baseHeat,
+        soils
       });
     });
   });
@@ -206,6 +219,7 @@ function calculateSunMatchValue(
 function calculateGrapeSuitabilityData(grape: GrapeVariety): { componentValue: number; details: GrapeSuitabilityDetails } {
   const altitudePreference = GRAPE_ALTITUDE_SUITABILITY[grape];
   const sunPreference = GRAPE_SUN_PREFERENCES[grape];
+  const soilPreference = GRAPE_SOIL_PREFERENCES[grape];
 
   const [altToleranceMin, altToleranceMax] = altitudePreference?.tolerance ?? [0, 0];
   const altitudeToleranceSpan = Math.max(0, altToleranceMax - altToleranceMin);
@@ -214,6 +228,15 @@ function calculateGrapeSuitabilityData(grape: GrapeVariety): { componentValue: n
   const sunLower = sunPreference ? clamp01(sunPreference.optimalHeatMin - sunPreference.tolerance) : 0;
   const sunUpper = sunPreference ? clamp01(sunPreference.optimalHeatMax + sunPreference.tolerance) : 0;
   const sunCoverage = sunPreference ? clamp01(Math.max(0, sunUpper - sunLower)) : 0;
+
+  const preferredSoils = soilPreference ? new Set(soilPreference.preferred) : new Set<string>();
+  const toleratedSoils = soilPreference?.tolerated ? new Set(soilPreference.tolerated) : new Set<string>();
+  const soilCoverage = soilPreference
+    ? clamp01(
+        (preferredSoils.size + 0.5 * toleratedSoils.size) /
+          Math.max(1, ALL_SOIL_TYPES.length)
+      )
+    : 0.5;
 
   let regionSum = 0;
   let regionCount = 0;
@@ -224,9 +247,12 @@ function calculateGrapeSuitabilityData(grape: GrapeVariety): { componentValue: n
   let sunSum = 0;
   let sunCount = 0;
 
+  let soilSum = 0;
+  let soilCount = 0;
+
   const regionDetails: RegionSuitabilityDetail[] = [];
 
-  forEachGrapeRegion(grape, ({ country, region, suitability, altitudeRange, aspectRatings, baseHeat }) => {
+  forEachGrapeRegion(grape, ({ country, region, suitability, altitudeRange, aspectRatings, baseHeat, soils }) => {
     const regionMatch = clamp01(suitability);
     regionSum += regionMatch;
     regionCount += 1;
@@ -266,6 +292,26 @@ function calculateGrapeSuitabilityData(grape: GrapeVariety): { componentValue: n
       }
     }
 
+    let soilMatch: number | null = null;
+    if (soilPreference && soils && soils.length > 0) {
+      const uniqueSoils = Array.from(new Set(soils));
+      if (uniqueSoils.length > 0) {
+        const soilScore = uniqueSoils.reduce((total, soil) => {
+          if (preferredSoils.has(soil)) {
+            return total + 1;
+          }
+          if (toleratedSoils.has(soil)) {
+            return total + 0.5;
+          }
+          return total;
+        }, 0);
+        const normalized = clamp01(soilScore / uniqueSoils.length);
+        soilMatch = normalized;
+        soilSum += normalized;
+        soilCount += 1;
+      }
+    }
+
     regionDetails.push({
       country,
       region,
@@ -273,28 +319,34 @@ function calculateGrapeSuitabilityData(grape: GrapeVariety): { componentValue: n
       altitudeMatch,
       altitudeRange,
       sunMatch,
-      sunIndex
+      sunIndex,
+      soilMatch,
+      soils
     });
   });
 
   const regionAverage = regionCount > 0 ? clamp01(regionSum / regionCount) : 0.5;
   const altitudeAverage = altitudeCount > 0 ? clamp01(altitudeSum / altitudeCount) : 0.5;
   const sunAverage = sunCount > 0 ? clamp01(sunSum / sunCount) : 0.5;
+  const soilAverage = soilCount > 0 ? clamp01(soilSum / soilCount) : 0.5;
 
   const combinedAltitude = clamp01((altitudeAverage + altitudeCoverage) / 2);
   const combinedSun = clamp01((sunAverage + sunCoverage) / 2);
+  const combinedSoil = clamp01((soilAverage + soilCoverage) / 2);
 
   const suitabilityWeights = {
-    region: 0.5,
-    altitude: 0.25,
-    sun: 0.25
+    region: 0.4,
+    altitude: 0.2,
+    sun: 0.2,
+    soil: 0.2
   } as const;
 
   const weightedSuitability =
     (regionAverage * suitabilityWeights.region +
       combinedAltitude * suitabilityWeights.altitude +
-      combinedSun * suitabilityWeights.sun) /
-    (suitabilityWeights.region + suitabilityWeights.altitude + suitabilityWeights.sun);
+      combinedSun * suitabilityWeights.sun +
+      combinedSoil * suitabilityWeights.soil) /
+    (suitabilityWeights.region + suitabilityWeights.altitude + suitabilityWeights.sun + suitabilityWeights.soil);
 
   const combinedSuitability = clamp01(weightedSuitability);
 
@@ -306,6 +358,8 @@ function calculateGrapeSuitabilityData(grape: GrapeVariety): { componentValue: n
       altitudeCoverage,
       sunAverage,
       sunCoverage,
+      soilAverage,
+      soilCoverage,
       combinedSuitability,
       regions: regionDetails.sort((a, b) => b.regionMatch - a.regionMatch),
     }

@@ -3,7 +3,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { getCharacteristicDisplayName } from './utils';
+import { getCharacteristicDisplayName, getGrapeIconAsset } from './utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
 // ===== SVG ICONS =====
@@ -264,15 +264,6 @@ export const ActivityIcon: React.FC<ActivityIconProps> = ({
 };
 
 // Grape Icon
-const GRAPE_ICON_MAP: Record<GrapeVariety, string> = {
-  'Barbera': 'icon_barbera.webp',
-  'Chardonnay': 'icon_chardonnay.webp',
-  'Pinot Noir': 'icon_pinot noir.webp',
-  'Primitivo': 'icon_primitivo.webp',
-  'Sauvignon Blanc': 'icon_sauvignon blanc.webp',
-  'Tempranillo': 'icon_primitivo.webp'
-};
-
 interface GrapeIconProps {
   variety: GrapeVariety;
   size?: IconSize;
@@ -292,7 +283,7 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
   alt,
   tooltip = true
 }) => {
-  const iconFile = GRAPE_ICON_MAP[variety];
+  const iconFile = getGrapeIconAsset(variety);
   const sizeClass = ICON_SIZES[size];
   const roundedClass = rounded ? 'rounded-full' : '';
   // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)

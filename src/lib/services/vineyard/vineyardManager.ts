@@ -74,7 +74,8 @@ export function calculateVineyardYield(vineyard: Vineyard): number {
     vineyard.region,
     vineyard.country,
     vineyard.altitude,
-    vineyard.aspect
+    vineyard.aspect,
+    vineyard.soil
   );
   
   // Apply multipliers: suitability, natural yield, ripeness, vine yield, and health all affect final yield
@@ -539,7 +540,12 @@ export async function recalculateVineyardValues(): Promise<void> {
         v.region,
         v.altitude,
         v.aspect,
-        { grape: v.grape, vineAge: v.vineAge ?? 0, vineyardPrestige: v.vineyardPrestige ?? 0 }
+        {
+          grape: v.grape,
+          vineAge: v.vineAge ?? 0,
+          vineyardPrestige: v.vineyardPrestige ?? 0,
+          soil: v.soil
+        }
       );
       const adjustedTotal = Math.round(adjustedPerHa * v.hectares);
       return { ...v, vineyardTotalValue: adjustedTotal } as Vineyard;

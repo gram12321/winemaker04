@@ -507,6 +507,7 @@ CREATE TABLE loans (
     next_payment_year integer NOT NULL,
     missed_payments integer DEFAULT 0,
     status text NOT NULL CHECK (status IN ('active', 'paid_off', 'defaulted')),
+    is_forced boolean DEFAULT false,
     pending_warning_id uuid,
     warning_severity varchar CHECK (warning_severity IN ('warning', 'error', 'critical')),
     warning_title text,

@@ -1,17 +1,17 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Separator } from '@/components/ui';
-import { Loan, LenderType } from '@/lib/types/types';
+import { Loan, LenderType, NotificationCategory } from '@/lib/types/types';
 import { loadActiveLoans } from '@/lib/database/core/loansDB';
-import { getGameState, getAvailableLenders, calculateLenderAvailability } from '@/lib/services';
+import { getGameState, getAvailableLenders, calculateLenderAvailability, notificationService } from '@/lib/services';
 import { loadLenders } from '@/lib/database/core/lendersDB';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
-import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull } from '@/lib/services/finance/loanService';
+import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull, makeExtraLoanPayment } from '@/lib/services/finance/loanService';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from '@/components/ui';
 // LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
 import { calculateCreditRating } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
-import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants';
+import { LENDER_TYPE_DISTRIBUTION, LOAN_EXTRA_PAYMENT } from '@/lib/constants';
 
 // Helper type for combined loans data
 type LoansData = {
@@ -145,6 +145,21 @@ export default function LoansView() {
     }
   };
 
+  const handleExtraPayment = async (loanId: string) => {
+    try {
+      await makeExtraLoanPayment(loanId);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to apply extra payment. Please try again.';
+      await notificationService.addMessage(
+        message,
+        'loansView.extraPaymentError',
+        'Extra Payment Failed',
+        NotificationCategory.FINANCE
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Active Loans Section */}
@@ -185,6 +200,15 @@ export default function LoansView() {
                   const remainingInterest = calculateRemainingInterest(loan);
                   const missedPayments = loan.missedPayments || 0;
                   const hasWarnings = missedPayments > 0;
+                  const seasonalPaymentBase = Math.max(0, Math.round(loan.seasonalPayment));
+                  const extraAdminFee = Math.max(
+                    Math.round(seasonalPaymentBase * LOAN_EXTRA_PAYMENT.ADMIN_FEE_RATE),
+                    LOAN_EXTRA_PAYMENT.MIN_ADMIN_FEE
+                  );
+                  const extraTotalPayment = seasonalPaymentBase + extraAdminFee;
+                  const seasonalPaymentDisplay = formatNumber(loan.seasonalPayment, { currency: true });
+                  const extraAdminFeeDisplay = formatNumber(extraAdminFee, { currency: true });
+                  const extraTotalPaymentDisplay = formatNumber(extraTotalPayment, { currency: true });
                   
                   return (
                     <TableRow 
@@ -264,14 +288,36 @@ export default function LoansView() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          onClick={() => handleRepayLoan(loan.id)}
-                          size="sm"
-                          variant="outline"
-                          className="text-green-600 border-green-600 hover:bg-green-50"
-                        >
-                          Repay in Full
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                          <UnifiedTooltip
+                            content={
+                              <div className="text-xs space-y-1">
+                                <div>Total: {extraTotalPaymentDisplay}</div>
+                                <div>Seasonal payment: {seasonalPaymentDisplay}</div>
+                                <div>Administration fee: {extraAdminFeeDisplay}</div>
+                              </div>
+                            }
+                            side="top"
+                            sideOffset={6}
+                          >
+                            <Button
+                              onClick={() => handleExtraPayment(loan.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                            >
+                              Make Extra Payment
+                            </Button>
+                          </UnifiedTooltip>
+                          <Button
+                            onClick={() => handleRepayLoan(loan.id)}
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600 border-green-600 hover:bg-green-50"
+                          >
+                            Repay in Full
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -26,7 +26,7 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.LAND_SEARCH]: 15,   // properties/week
   [WorkCategory.LENDER_SEARCH]: 2.0, // lender offers/week
   [WorkCategory.TAKE_LOAN]: 0.5,    // loans/week
-  [WorkCategory.ADMINISTRATION]: 25 // transactions/week; with BASE_WORK_UNITS 25 => 1 work unit per transaction
+  [WorkCategory.ADMINISTRATION]: 250 // transactions/week; with BASE_WORK_UNITS 25 => 10 work unit per transaction
 };
 
 // Harvest yield rate - how much grapes can be harvested per week
@@ -81,7 +81,7 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.LAND_SEARCH]: 75,
   [WorkCategory.LENDER_SEARCH]: 50,
   [WorkCategory.TAKE_LOAN]: 50,
-  [WorkCategory.ADMINISTRATION]: 25
+  [WorkCategory.ADMINISTRATION]: 5
 };
 
 // ===== WORK CATEGORY INFO =====

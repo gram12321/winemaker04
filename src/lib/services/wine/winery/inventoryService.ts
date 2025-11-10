@@ -145,7 +145,14 @@ export async function createWineBatchFromHarvest(
   const altitude = vineyard.altitude;
   const countryAlt = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES] || {} as any;
   const [minAlt, maxAlt] = (countryAlt[region as keyof typeof countryAlt] as [number, number]) || [0, 100];
-  const suitabilityMetrics = calculateGrapeSuitabilityMetrics(grape, region, country, altitude, vineyard.aspect);
+  const suitabilityMetrics = calculateGrapeSuitabilityMetrics(
+    grape,
+    region,
+    country,
+    altitude,
+    vineyard.aspect,
+    vineyard.soil
+  );
   const suitability = suitabilityMetrics.overall;
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,

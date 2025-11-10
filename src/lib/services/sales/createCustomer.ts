@@ -342,8 +342,6 @@ export async function preloadAllCustomerRelationships(): Promise<void> {
         await new Promise(resolve => setTimeout(resolve, 10));
       }
     }
-    
-    console.log(`[Customer Preload] Pre-loaded relationships for ${customers.length} customers`);
   } catch (error) {
     console.error('[Customer Preload] Failed to preload customer relationships:', error);
     // Don't throw - this is a background optimization, shouldn't block initialization

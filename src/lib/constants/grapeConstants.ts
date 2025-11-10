@@ -1,5 +1,6 @@
 // Grape constants - fragility, natural yield, color, oxidation, base characteristics, and descriptions
 import { GrapeVariety, WineCharacteristics } from '@/lib/types/types';
+import { SoilType } from './vineyardConstants';
 
 // Base balanced ranges for wine characteristics (ported from v3 ranges)
 export const BASE_BALANCED_RANGES = {
@@ -21,6 +22,38 @@ export interface GrapeSunPreference {
   optimalHeatMax: number;
   tolerance: number;
 }
+
+export interface GrapeSoilPreference {
+  preferred: readonly SoilType[];
+  tolerated?: readonly SoilType[];
+}
+
+export const GRAPE_SOIL_PREFERENCES: Record<GrapeVariety, GrapeSoilPreference> = {
+  Barbera: {
+    preferred: ['Clay', 'Limestone', 'Marl'],
+    tolerated: ['Sand', 'Clay-Limestone', 'Loam', 'Alluvial', 'Gravel'],
+  },
+  Chardonnay: {
+    preferred: ['Chalk', 'Clay', 'Limestone', 'Marl', 'Sandstone', 'Granite', 'Loam'],
+    tolerated: ['Clay-Limestone', 'Sand', 'Galestro'],
+  },
+  'Pinot Noir': {
+    preferred: ['Clay', 'Clay-Limestone', 'Limestone', 'Marl', 'Slate', 'Shale', 'Loess', 'Devonian Slate', 'Blue Devonian Slate', 'Red Devonian Slate'],
+    tolerated: ['Sand', 'Quartzite', 'Quartz'],
+  },
+  Primitivo: {
+    preferred: ['Red Earth', 'Clay', 'Limestone', 'Sand', 'Alluvial', 'Volcanic Soil', 'Volcanic', 'Basalt'],
+    tolerated: ['Loam', 'Schist', 'Arenas'],
+  },
+  'Sauvignon Blanc': {
+    preferred: ['Gravel', 'Limestone', 'Clay', 'Flint', 'Sand', 'Loam', 'Quartzite', 'Quartz'],
+    tolerated: ['Clay-Limestone', 'Marine Sediment', 'Albariza', 'Barros'],
+  },
+  Tempranillo: {
+    preferred: ['Clay-Limestone', 'Limestone', 'Alluvial', 'Clay', 'Ferrous Clay', 'Sandstone', 'Greywacke', 'Phyllite', 'Schist', 'Marine Sediment', 'Galestro'],
+    tolerated: ['Sand', 'Loess', 'Devonian Slate'],
+  },
+} as const;
 
 export const GRAPE_ALTITUDE_SUITABILITY = {
   Barbera: {

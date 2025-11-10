@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Customer, WineCharacteristics } from '../types/types';
+import { Customer, GrapeVariety, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
 import { BASE_BALANCED_RANGES } from '../constants/grapeConstants';
 import { Normalize1000To01WithTail } from './calculator';
@@ -1070,4 +1070,57 @@ export function getCharacteristicEffectColorClass(
       : Math.max(0.0, 0.4 - (intensity - 0.2) * 0.4 / 0.8); // Map [0.2,1.0] to [0.4,0.0]
     return getColorClass(rating);
   }
+}
+
+// ========================================
+// SECTION 10: ICON ASSET HELPERS
+// ========================================
+
+export type GrapeIconFormat = 'png' | 'webp';
+
+const GRAPE_ICON_FILE_OVERRIDES: Partial<Record<GrapeVariety, Partial<Record<GrapeIconFormat, string>>>> = {
+  Chardonnay: {
+    png: 'icon_chardonney.png'
+  },
+  Tempranillo: {
+    png: 'icon_temperanillo.png'
+  }
+};
+
+const ICON_NAME_SANITIZE_REGEX = /[^a-z0-9\s-]/g;
+
+const sanitizeIconNameForFile = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(ICON_NAME_SANITIZE_REGEX, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+/**
+ * Resolve the icon filename for a grape variety. Prefers PNG assets (the new default),
+ * while still allowing callers to request WEBP assets when available. Falls back to PNG
+ * if a WEBP variant is requested but missing.
+ */
+export function getGrapeIconAsset(
+  variety: GrapeVariety,
+  preferredFormat: GrapeIconFormat = 'png'
+): string {
+  const overrides = GRAPE_ICON_FILE_OVERRIDES[variety];
+  const sanitizedName = sanitizeIconNameForFile(variety) || 'grape';
+  const fileBase = `icon_${sanitizedName}`;
+
+  if (preferredFormat === 'webp') {
+    if (overrides?.webp) {
+      return overrides.webp;
+    }
+    return overrides?.png ?? `${fileBase}.png`;
+  }
+
+  const pngOverride = overrides?.png;
+  if (pngOverride) {
+    return pngOverride;
+  }
+
+  return `${fileBase}.png`;
 }

@@ -64,7 +64,8 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
       vineyard.region,
       vineyard.country,
       vineyard.altitude,
-      vineyard.aspect
+      vineyard.aspect,
+      vineyard.soil
     );
   }, [vineyard, options.grape]);
 

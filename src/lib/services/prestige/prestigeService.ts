@@ -88,7 +88,8 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
     vineyard.region,
     vineyard.country,
     vineyard.altitude,
-    vineyard.aspect
+    vineyard.aspect,
+    vineyard.soil
   );
 
   const ageBase01 = vineyardAgePrestigeModifier(vineyard.vineAge || 0);
@@ -146,7 +147,7 @@ export function BoundedVineyardPrestigeFactor(v: Vineyard): {
   boundedFactor: number;
 } {
   const suitability = v.grape
-    ? calculateGrapeSuitabilityContribution(v.grape as any, v.region, v.country, v.altitude, v.aspect)
+    ? calculateGrapeSuitabilityContribution(v.grape as any, v.region, v.country, v.altitude, v.aspect, v.soil)
     : 0;
 
   const ageBase01 = vineyardAgePrestigeModifier(v.vineAge || 0);

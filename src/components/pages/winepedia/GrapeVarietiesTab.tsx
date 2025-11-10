@@ -49,7 +49,6 @@ export function GrapeVarietiesTab() {
                 variety={grape.name} 
                 size="xl" 
                 className="w-16 h-16"
-                rounded={true}
               />
             }
             title={grape.name}

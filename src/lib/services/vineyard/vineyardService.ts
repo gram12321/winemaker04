@@ -377,7 +377,8 @@ export function calculateVineyardExpectedYield(vineyard: Vineyard): ExpectedYiel
     vineyard.region,
     vineyard.country,
     vineyard.altitude,
-    vineyard.aspect
+    vineyard.aspect,
+    vineyard.soil
   );
   const grapeSuitability = grapeSuitabilityComponents.overall;
   

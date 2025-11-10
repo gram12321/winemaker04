@@ -459,6 +459,7 @@ export interface Loan {
   
   missedPayments: number;
   status: 'active' | 'paid_off' | 'defaulted';
+  isForced?: boolean;
 }
 
 // Lender Search Options (for activity system)

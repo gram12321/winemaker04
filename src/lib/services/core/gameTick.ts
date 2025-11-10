@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, enforceEmergencyQuickLoanIfNeeded, restructureForcedLoansIfNeeded } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
@@ -130,6 +130,7 @@ const onSeasonChange = async (_previousSeason: string, _newSeason: string, skipN
  */
 const onNewYear = async (_previousYear: number, _newYear: number): Promise<void> => {
   // New year notification is handled in the main processGameTick function
+  await restructureForcedLoansIfNeeded();
   
   // Update vineyard ages
   await updateVineyardAges();
@@ -162,12 +163,9 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     // Enhanced automatic customer acquisition and sophisticated order generation
     (async () => {
       try {
-        const result = await generateSophisticatedWineOrders();
+        await generateSophisticatedWineOrders();
         
-        if (result.totalOrdersCreated > 0) {
-          console.log(`[Weekly Orders] Generated ${result.totalOrdersCreated} orders from ${result.customersGenerated} customers`);
-          // Order notifications are handled inside salesOrderService
-        }
+        // Order notifications are handled inside salesOrderService
       } catch (error) {
         console.warn('Error during sophisticated order generation:', error);
       }
@@ -279,6 +277,12 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   
   // OPTIMIZATION: Wait for all tasks to complete in parallel
   await Promise.all(weeklyTasks);
+  
+  try {
+    await enforceEmergencyQuickLoanIfNeeded();
+  } catch (error) {
+    console.warn('Error enforcing emergency quick loan:', error);
+  }
   
   return wageMessage;
 };

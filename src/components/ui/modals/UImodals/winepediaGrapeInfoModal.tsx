@@ -3,15 +3,12 @@ import { GrapeVariety } from '@/lib/types/types';
 import { GRAPE_CONST, REGION_ALTITUDE_RANGES, REGION_HEAT_PROFILE } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent, WineCharacteristicsDisplay, UnifiedTooltip, tooltipStyles } from '@/components/ui';
 import { DialogProps } from '@/lib/types/UItypes';
-import { formatNumber, getColorClass, getGrapeDifficultyCategory, getGrapeDifficultyDescription } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getColorClass, getGrapeDifficultyCategory, getGrapeDifficultyDescription } from '@/lib/utils';
 import { GrapeIcon } from '@/lib/utils/icons';
 import { calculateGrapeDifficulty } from '@/lib/services';
 import { GrapeDifficultyComponents } from '@/lib/services/wine/features/grapeDifficulty';
-import { GRAPE_ALTITUDE_SUITABILITY, GRAPE_SUN_PREFERENCES } from '@/lib/constants/grapeConstants';
+import { GRAPE_ALTITUDE_SUITABILITY, GRAPE_SUN_PREFERENCES, GRAPE_SOIL_PREFERENCES } from '@/lib/constants/grapeConstants';
 import { REGION_GRAPE_SUITABILITY as REGION_MATCHES } from '@/lib/constants/grapeConstants';
-
-// Utility function for formatting percentage
-const formatPercentage = (value: number): string => `${formatNumber(value * 100, { smartDecimals: true })}%`;
 
 interface GrapeInfoViewProps extends DialogProps {
   grapeName: GrapeVariety;
@@ -55,6 +52,16 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
   const difficultyDescription = getGrapeDifficultyDescription(difficulty.score);
   const altitudeProfile = GRAPE_ALTITUDE_SUITABILITY[grapeName];
   const sunProfile = GRAPE_SUN_PREFERENCES[grapeName];
+  const soilPreference = GRAPE_SOIL_PREFERENCES[grapeName];
+
+  const preferredSoilSet = useMemo<Set<string>>(
+    () => new Set(soilPreference?.preferred ?? []),
+    [soilPreference]
+  );
+  const toleratedSoilSet = useMemo<Set<string>>(
+    () => new Set(soilPreference?.tolerated ?? []),
+    [soilPreference]
+  );
 
   function getTopRegions(count: number = 3): Array<{ country: string; region: string; score: number }> {
     const entries: Array<{ country: string; region: string; score: number }> = [];
@@ -145,6 +152,13 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
         .sort((a, b) => (b.sunMatch ?? 0) - (a.sunMatch ?? 0)),
     [regionSuitabilityDetails]
   );
+  const regionsBySoil = useMemo(
+    () =>
+      regionSuitabilityDetails
+        .filter(detail => detail.soilMatch !== null && detail.soilMatch !== undefined)
+        .sort((a, b) => (b.soilMatch ?? 0) - (a.soilMatch ?? 0)),
+    [regionSuitabilityDetails]
+  );
 
   const suitabilityCountries = useMemo(
     () => Array.from(new Set(regionSuitabilityDetails.map(detail => detail.country))),
@@ -188,6 +202,13 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
       ),
     [regionsBySun, suitabilityCountry]
   );
+  const filteredRegionsBySoil = useMemo(
+    () =>
+      regionsBySoil.filter(detail =>
+        suitabilityCountry ? detail.country === suitabilityCountry : true
+      ),
+    [regionsBySoil, suitabilityCountry]
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -199,7 +220,6 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
               variety={grapeName} 
               size="xl" 
               className="w-12 h-12"
-              rounded={true}
             />
           </div>
           <div>
@@ -247,25 +267,25 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
           <h3 className="text-lg font-semibold text-wine-dark">Grape Overview</h3>
           <p className="text-sm text-gray-700 leading-relaxed">
             <span className="font-medium">{grapeMetadata.name}</span> is a <span className={`font-medium ${colorClass}`}>{grapeMetadata.grapeColor}</span> variety with a natural yield of{' '}
-            <span className={getColorClass(grapeMetadata.naturalYield)}>{formatPercentage(grapeMetadata.naturalYield)}</span>. It
+            <span className={getColorClass(grapeMetadata.naturalYield)}>{formatPercent(grapeMetadata.naturalYield, 0, true)}</span>. It
             {grapeMetadata.fragile > 0.5 ? ' tends to be delicate' : ' is relatively sturdy'} (fragility{' '}
-            <span className={getColorClass(1 - grapeMetadata.fragile)}>{formatPercentage(grapeMetadata.fragile)}</span>) and is{' '}
+            <span className={getColorClass(1 - grapeMetadata.fragile)}>{formatPercent(grapeMetadata.fragile, 0, true)}</span>) and is{' '}
             {grapeMetadata.proneToOxidation > 0.5 ? 'highly sensitive' : 'fairly resistant'} to oxidation (
-            <span className={getColorClass(1 - grapeMetadata.proneToOxidation)}>{formatPercentage(grapeMetadata.proneToOxidation)}</span>). These base traits feed directly into the difficulty breakdown.
+            <span className={getColorClass(1 - grapeMetadata.proneToOxidation)}>{formatPercent(grapeMetadata.proneToOxidation, 0, true)}</span>). These base traits feed directly into the difficulty breakdown.
           </p>
           {topRegions.length > 0 && (
             <p className="text-sm text-gray-700 leading-relaxed">
               Top growing conditions include {topRegions.map(({ region, country, score }, index) => (
                 <span key={`${country}-${region}`}>
                   {index > 0 ? (index === topRegions.length - 1 ? ' and ' : ', ') : ' '}
-                  <span className="font-medium">{region}</span>, {country} ({formatPercentage(score)} match)
+                  <span className="font-medium">{region}</span>, {country} ({formatPercent(score, 0, true)} match)
                 </span>
               ))}.
             </p>
           )}
           {altitudeProfile && sunProfile && (
             <p className="text-sm text-gray-700 leading-relaxed">
-              It thrives in {describeAltitude(altitudeProfile.preferred)} around {altitudeProfile.preferred[0]}–{altitudeProfile.preferred[1]} m, yet stays comfortable anywhere between {altitudeProfile.tolerance[0]} and {altitudeProfile.tolerance[1]} m. Pair it with {describeSun(sunProfile.optimalHeatMin, sunProfile.optimalHeatMax)}—heat index {formatPercentage(sunProfile.optimalHeatMin)}–{formatPercentage(sunProfile.optimalHeatMax)} with ±{formatPercentage(sunProfile.tolerance)} flex—and the grape settles in happily.
+              It thrives in {describeAltitude(altitudeProfile.preferred)} around {altitudeProfile.preferred[0]}–{altitudeProfile.preferred[1]} m, yet stays comfortable anywhere between {altitudeProfile.tolerance[0]} and {altitudeProfile.tolerance[1]} m. Pair it with {describeSun(sunProfile.optimalHeatMin, sunProfile.optimalHeatMax)}—heat index {formatPercent(sunProfile.optimalHeatMin, 0, true)}–{formatPercent(sunProfile.optimalHeatMax, 0, true)} with ±{formatPercent(sunProfile.tolerance, 0, true)} flex—and the grape settles in happily.
               {altitudeExample && (
                 <>
                   {' '}Think <span className="font-medium">{altitudeExample.region}</span>, {altitudeExample.country} ({altitudeExample.range[0]}–{altitudeExample.range[1]} m) for altitude,
@@ -273,9 +293,15 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
               )}
               {sunExample && (
                 <>
-                  {' '}and <span className="font-medium">{sunExample.region}</span>, {sunExample.country} (heat index ~{formatPercentage(sunExample.heat)}) for sunshine.
+                  {' '}and <span className="font-medium">{sunExample.region}</span>, {sunExample.country} (heat index ~{formatPercent(sunExample.heat, 0, true)}) for sunshine.
                 </>
               )}
+            </p>
+          )}
+          {soilPreference && soilPreference.preferred.length > 0 && (
+            <p className="text-sm text-gray-700 leading-relaxed">
+              It shows its best on soils like {soilPreference.preferred.join(', ')}
+              {soilPreference.tolerated && soilPreference.tolerated.length > 0 ? `, while still tolerating ${soilPreference.tolerated.join(', ')}` : ''}.
             </p>
           )}
         </div>
@@ -332,14 +358,14 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                               <p>Grape suitability blends regional fit with altitude tolerance and sun exposure requirements to show how forgiving the grape is when scouting sites.</p>
                               <hr className="my-2 border-muted-foreground/40" />
                               <p>
-                                <strong>Coverage</strong> looks only at the grape. It measures how wide the grape’s tolerance band is relative to the full range we model (global altitude span, or 0–1 heat scale). Wider tolerance → higher coverage → easier grape because it can cope with more conditions in theory.
+                                <strong>Coverage</strong> looks only at the grape. It measures how wide the grape’s tolerance band is relative to the full range we model (global altitude span, 0–1 heat scale, or the available soil palette). Wider tolerance → higher coverage → easier grape because it can cope with more conditions in theory.
                               </p>
                               <p className="mt-2">
                                 <strong>Match</strong> looks at the world. For each region/aspect, we ask “how much of this region’s actual conditions fall inside the grape’s band?” and average those overlaps. A grape can have huge coverage but low match if vineyards rarely fall inside that band.
                               </p>
                               <hr className="my-2 border-muted-foreground/40" />
                               <p>
-                                Suitability score = weighted average of Region match (50%), Altitude match (25%), and Sun match (25%).
+                                Suitability score = weighted average of Region match (40%), Altitude match (20%), Sun match (20%), and Soil match (20%).
                               </p>
                             </div>
                           }
@@ -459,6 +485,16 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                               {formatNumber(suitabilityDetails.sunCoverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
                             </span>
                           </div>
+                          <div className="flex justify-end items-center gap-2">
+                            <span className="text-muted-foreground">Soil match:</span>
+                            <span className={`font-medium ${getColorClass(suitabilityDetails.soilAverage)}`}>
+                              {formatNumber(suitabilityDetails.soilAverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
+                            </span>
+                            <span className="text-muted-foreground">Coverage:</span>
+                            <span className={`font-medium ${getColorClass(suitabilityDetails.soilCoverage)}`}>
+                              {formatNumber(suitabilityDetails.soilCoverage, { percent: true, percentIsDecimal: true, decimals: 0 })}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </td>
@@ -472,10 +508,11 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
             <div className="space-y-3">
               <h4 className="text-md font-semibold text-wine-dark">Grape Suitability</h4>
               <Tabs defaultValue="region">
-              <TabsList className="grid grid-cols-3 w-full md:w-auto">
+              <TabsList className="grid grid-cols-4 w-full md:w-auto">
                 <TabsTrigger value="region">Regions</TabsTrigger>
                 <TabsTrigger value="altitude">Altitude</TabsTrigger>
                 <TabsTrigger value="sun">Sun Exposure</TabsTrigger>
+                <TabsTrigger value="soil">Soils</TabsTrigger>
               </TabsList>
 
               {suitabilityCountries.length > 0 && (
@@ -496,7 +533,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
 
               <TabsContent value="region">
                 {filteredRegionsBySuitability.length > 0 ? (
-                  <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                  <div className="mt-3 pr-1">
                     <table className="w-full text-sm">
                       <tbody>
                         {filteredRegionsBySuitability.map(detail => (
@@ -520,7 +557,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
 
               <TabsContent value="altitude">
                 {filteredRegionsByAltitude.length > 0 ? (
-                  <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                  <div className="mt-3 pr-1">
                     <table className="w-full text-sm">
                       <tbody>
                         {filteredRegionsByAltitude.map(detail => (
@@ -549,7 +586,7 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
 
               <TabsContent value="sun">
                 {filteredRegionsBySun.length > 0 ? (
-                  <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                  <div className="mt-3 pr-1">
                     <table className="w-full text-sm">
                       <tbody>
                         {filteredRegionsBySun.map(detail => (
@@ -575,6 +612,54 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                   </div>
                 ) : (
                   <p className="mt-3 text-sm text-muted-foreground">No sun exposure data available.</p>
+                )}
+              </TabsContent>
+              <TabsContent value="soil">
+                {filteredRegionsBySoil.length > 0 ? (
+                  <div className="mt-3 pr-1">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {filteredRegionsBySoil.map(detail => (
+                          <tr key={`${detail.country}-${detail.region}`} className="border-b last:border-b-0 align-top">
+                            <td className="py-2 pr-4">
+                              <span className="font-medium">{detail.region}</span>
+                              <span className="text-muted-foreground">, {detail.country}</span>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {(detail.soils ?? []).map(soil => {
+                                  const state = preferredSoilSet.has(soil)
+                                    ? 'preferred'
+                                    : toleratedSoilSet.has(soil)
+                                      ? 'tolerated'
+                                      : 'other';
+                                  const colors =
+                                    state === 'preferred'
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : state === 'tolerated'
+                                        ? 'bg-amber-100 text-amber-700'
+                                        : 'bg-slate-100 text-slate-600';
+                                  return (
+                                    <span
+                                      key={soil}
+                                      className={`px-2 py-0.5 rounded text-[11px] font-medium ${colors}`}
+                                    >
+                                      {soil}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                            <td className={`py-2 text-right font-semibold ${getColorClass(detail.soilMatch ?? 0)}`}>
+                              {detail.soilMatch !== null
+                                ? formatNumber(detail.soilMatch ?? 0, { percent: true, percentIsDecimal: true, decimals: 0 })
+                                : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">No soil overlap data available.</p>
                 )}
               </TabsContent>
               </Tabs>

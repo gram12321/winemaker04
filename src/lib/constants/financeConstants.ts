@@ -42,7 +42,8 @@ export const TRANSACTION_CATEGORIES = {
   // Loan categories
   LOAN_RECEIVED: 'Loan Received',
   LOAN_PAYMENT: 'Loan Payment',
-  LOAN_ORIGINATION_FEE: 'Loan Origination Fee'
+  LOAN_ORIGINATION_FEE: 'Loan Origination Fee',
+  LOAN_EXTRA_PAYMENT_FEE: 'Loan Extra Payment Fee'
 } as const;
 
 // Default financial data structure for components

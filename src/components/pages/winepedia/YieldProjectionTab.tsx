@@ -8,7 +8,7 @@ import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 import { GRAPE_VARIETIES } from '@/lib/types/types';
 
 // Use existing constants from vineyardConstants
-import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
+import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 
 function createVineyard(overrides: Partial<Vineyard>): Vineyard {
   return {
@@ -85,7 +85,9 @@ export function YieldProjectionTab() {
 
   const suitabilityMetrics = useMemo(() => {
     const defaultAspect: Aspect = 'South';
-    return calculateGrapeSuitabilityMetrics(grape, region, country, defaultAltitude, defaultAspect);
+    const regionSoils =
+      (REGION_SOIL_TYPES as Record<string, Record<string, readonly string[]>>)[country]?.[region] ?? [];
+    return calculateGrapeSuitabilityMetrics(grape, region, country, defaultAltitude, defaultAspect, regionSoils);
   }, [country, region, grape, defaultAltitude]);
   const suitability = suitabilityMetrics.overall;
 
