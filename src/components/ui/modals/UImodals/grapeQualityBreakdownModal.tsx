@@ -19,7 +19,7 @@ export const GrapeQualityBreakdownModal: React.FC<GrapeQualityBreakdownModalProp
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-styled">
         <DialogHeader>
           <DialogTitle>Grape Quality Analysis - {wineName}</DialogTitle>
           <DialogDescription>

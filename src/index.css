@@ -115,7 +115,7 @@
 @layer utilities {
   .scrollbar-styled {
     scrollbar-width: thin;
-    scrollbar-color: rgba(34, 211, 238, 0.6) rgba(31, 41, 55, 0.7);
+    scrollbar-color: rgba(120, 23, 39, 0.85) rgba(30, 21, 26, 0.75);
   }
   
   .scrollbar-styled::-webkit-scrollbar {
@@ -123,20 +123,20 @@
   }
   
   .scrollbar-styled::-webkit-scrollbar-track {
-    background: rgba(31, 41, 55, 0.7);
+    background: rgba(30, 21, 26, 0.75);
     border-radius: 3px;
   }
   
   .scrollbar-styled::-webkit-scrollbar-thumb {
-    background: rgba(34, 211, 238, 0.6);
+    background: rgba(120, 23, 39, 0.85);
     border-radius: 3px;
   }
   
   .scrollbar-styled::-webkit-scrollbar-thumb:hover {
-    background: rgba(34, 211, 238, 0.8);
+    background: rgba(153, 27, 45, 0.95);
   }
   
   .scrollbar-styled::-webkit-scrollbar-thumb:active {
-    background: rgba(34, 211, 238, 1);
+    background: rgba(185, 28, 50, 1);
   }
 }

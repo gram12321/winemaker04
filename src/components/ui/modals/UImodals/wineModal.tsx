@@ -78,7 +78,7 @@ export const WineModal: React.FC<WineModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-y-auto scrollbar-styled">
         {/* Header with wine image */}
         <div
           className="h-32 bg-cover bg-center relative"

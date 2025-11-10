@@ -25,6 +25,13 @@
 
 ---
 
+## Unreleased - High Altitude Grape Coverage
+
+### Changes
+- Expanded altitude tolerance bands for Barbera, Chardonnay, Pinot Noir, Primitivo, and Sauvignon Blanc to overlap with mountainous vineyard ranges.
+- Introduced Tempranillo across grape constants (altitude, sun, base characteristics) and added it to the shared grape variety registry.
+- Extended regional suitability tables to score Tempranillo for every country/region combination.
+- Mapped Tempranillo to the existing Primitivo grape icon as a placeholder until bespoke artwork is available.
 
 ---
 ## Version 0.07 - Customer Generation & Display Performance Fix

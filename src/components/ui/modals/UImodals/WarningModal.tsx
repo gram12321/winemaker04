@@ -81,8 +81,8 @@ export const WarningModal: React.FC<WarningModalProps> = ({
   const config = getSeverityConfig();
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] p-4">
-      <div className={`${config.bgColor} rounded-lg shadow-2xl w-full max-w-md border-2 ${config.borderColor} animate-in fade-in zoom-in duration-200 relative`}>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] p-4 scrollbar-styled">
+      <div className={`${config.bgColor} rounded-lg shadow-2xl w-full max-w-md border-2 ${config.borderColor} animate-in fade-in zoom-in duration-200 relative max-h-[90vh] overflow-y-auto scrollbar-styled`}>
         {/* Header buttons */}
         {(showMinimizeButton || onMinimize) && (
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10">

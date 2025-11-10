@@ -36,7 +36,8 @@ export const GRAPE_VARIETIES = [
   'Chardonnay',
   'Pinot Noir',
   'Primitivo',
-  'Sauvignon Blanc'
+  'Sauvignon Blanc',
+  'Tempranillo'
 ] as const;
 export type GrapeVariety = typeof GRAPE_VARIETIES[number];
 

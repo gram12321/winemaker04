@@ -134,7 +134,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-700">
           <div>
@@ -149,7 +149,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-styled">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Region Selection */}
             <div className="space-y-6">

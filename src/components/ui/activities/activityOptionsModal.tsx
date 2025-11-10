@@ -95,7 +95,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
   return (
     <div>
       <div 
-        className={`bg-white rounded-lg shadow-lg overflow-y-auto ${maxWidthClasses[maxWidth]} w-full`}
+        className={`bg-white rounded-lg shadow-lg overflow-y-auto scrollbar-styled ${maxWidthClasses[maxWidth]} w-full`}
         style={{ maxHeight }}
       >
       <div className="p-4 md:p-6">

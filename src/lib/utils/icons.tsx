@@ -269,7 +269,8 @@ const GRAPE_ICON_MAP: Record<GrapeVariety, string> = {
   'Chardonnay': 'icon_chardonnay.webp',
   'Pinot Noir': 'icon_pinot noir.webp',
   'Primitivo': 'icon_primitivo.webp',
-  'Sauvignon Blanc': 'icon_sauvignon blanc.webp'
+  'Sauvignon Blanc': 'icon_sauvignon blanc.webp',
+  'Tempranillo': 'icon_primitivo.webp'
 };
 
 interface GrapeIconProps {

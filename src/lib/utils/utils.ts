@@ -454,6 +454,30 @@ export function getWineBalanceDescription(balance: number): string {
   return "A masterpiece of balance representing the pinnacle of winemaking harmony";
 }
 
+const GRAPE_DIFFICULTY_LEVELS: Array<{ max: number; category: string; description: string }> = [
+  { max: 0.1, category: 'Carte Blanche', description: 'Practically tends itself—point it at a vineyard and relax.' },
+  { max: 0.2, category: 'Easy Rider', description: 'Low-maintenance and forgiving; almost any site will do the trick.' },
+  { max: 0.3, category: 'Comfort Zone', description: 'Happy in most conditions, but appreciates a little attention.' },
+  { max: 0.4, category: 'Needs Attention', description: 'Thrives when you nudge it toward its preferred conditions.' },
+  { max: 0.5, category: 'Requires Finesse', description: 'Rewards careful site selection and well-timed intervention.' },
+  { max: 0.6, category: 'Temperamental', description: 'Picky about climate and pampering—expect some mood swings.' },
+  { max: 0.7, category: 'Prima Donna', description: 'Demands the best of everything, and lets you know when it isn’t happy.' },
+  { max: 0.8, category: 'High-Wire Act', description: 'Success feels like a stunt; one misstep and quality nosedives.' },
+  { max: 0.9, category: 'Freaking Impossible', description: 'For masochists only. Everything has to line up perfectly.' },
+];
+
+export function getGrapeDifficultyCategory(difficulty: number): string {
+  const level = GRAPE_DIFFICULTY_LEVELS.find(entry => difficulty <= entry.max);
+  return level ? level.category : 'Winemaker\'s Nightmare';
+}
+
+export function getGrapeDifficultyDescription(difficulty: number): string {
+  const level = GRAPE_DIFFICULTY_LEVELS.find(entry => difficulty <= entry.max);
+  return level
+    ? level.description
+    : 'Only the bravest winemakers dare attempt this—prepare for constant fires to put out.';
+}
+
 // ========================================
 // SECTION 6: COLOR & BADGE UTILITIES
 // ========================================

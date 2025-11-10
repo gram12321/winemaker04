@@ -51,7 +51,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[90vh] flex flex-col sm:max-h-[85vh]">
+      <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[90vh] flex flex-col sm:max-h-[85vh] scrollbar-styled">
         {/* Top image bar */}
         <div
           className="h-36 bg-cover bg-center relative"
@@ -78,7 +78,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
           </div>
         </div>
 
-        <div className="p-4 pb-6 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 pb-6 space-y-4 overflow-y-auto flex-1 scrollbar-styled">
           <DialogHeader>
             <DialogTitle className="text-base">Vineyard Details</DialogTitle>
             <DialogDescription className="text-xs">

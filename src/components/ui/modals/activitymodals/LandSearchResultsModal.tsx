@@ -111,7 +111,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-700">
           <div>
@@ -141,7 +141,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
         {/* Two Column Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Column - Property List */}
-          <div className="w-1/2 border-r border-gray-700 overflow-y-auto">
+          <div className="w-1/2 border-r border-gray-700 overflow-y-auto scrollbar-styled">
             <div className="p-4">
               <h3 className="text-lg font-semibold text-white mb-4">Available Properties</h3>
               <div className="space-y-3">
@@ -203,7 +203,7 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
           </div>
 
           {/* Right Column - Property Preview */}
-          <div className="w-1/2 overflow-y-auto">
+          <div className="w-1/2 overflow-y-auto scrollbar-styled">
             {selectedProperty ? (
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-white mb-6">Property Preview</h3>
