@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useLoadingState } from '@/hooks';
-import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui';
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import {
-  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminClearAllAchievements, adminFullDatabaseReset
+  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate
 } from '@/lib/services';
+import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
+import type { Season } from '@/lib/types/types';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces
@@ -15,6 +17,11 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const { isLoading, withLoading } = useLoadingState();
   const [goldAmount, setGoldAmount] = useState('10000');
   const [prestigeAmount, setPrestigeAmount] = useState('100');
+  const [gameWeek, setGameWeek] = useState(String(GAME_INITIALIZATION.STARTING_WEEK));
+  const [gameSeason, setGameSeason] = useState<Season>(GAME_INITIALIZATION.STARTING_SEASON);
+  const [gameYear, setGameYear] = useState(String(GAME_INITIALIZATION.STARTING_YEAR));
+
+  const weekOptions = Array.from({ length: WEEKS_PER_SEASON }, (_, index) => index + 1);
 
   // Cheat functions (for development/testing)
   const handleSetGold = () => withLoading(async () => {
@@ -25,6 +32,28 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const handleAddPrestige = () => withLoading(async () => {
     const amount = parseFloat(prestigeAmount) || 100;
     await adminAddPrestigeToCompany(amount);
+  });
+
+  const handleSetGameDate = () => withLoading(async () => {
+    const parsedWeek = Number.parseInt(gameWeek, 10);
+    const safeWeek = Number.isNaN(parsedWeek)
+      ? GAME_INITIALIZATION.STARTING_WEEK
+      : Math.min(Math.max(parsedWeek, 1), WEEKS_PER_SEASON);
+
+    const parsedYear = Number.parseInt(gameYear, 10);
+    const minimumYear = GAME_INITIALIZATION.STARTING_YEAR;
+    const safeYear = Number.isNaN(parsedYear)
+      ? minimumYear
+      : Math.max(parsedYear, minimumYear);
+
+    await adminSetGameDate({
+      week: safeWeek,
+      season: gameSeason,
+      year: safeYear
+    });
+
+    setGameWeek(String(safeWeek));
+    setGameYear(String(safeYear));
   });
 
   const handleClearAllHighscores = () => withLoading(async () => {
@@ -306,6 +335,69 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   </div>
               </SimpleCard>
 
+              <SimpleCard
+                title="Game Date Control"
+                description="Adjust the current in-game timeline"
+              >
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="game-season-select">Season</Label>
+                    <Select
+                      value={gameSeason}
+                      onValueChange={(value) => setGameSeason(value as Season)}
+                    >
+                      <SelectTrigger id="game-season-select">
+                        <SelectValue placeholder="Select season" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SEASONS.map(season => (
+                          <SelectItem key={season} value={season}>
+                            {season}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="game-week-select">Week</Label>
+                    <Select
+                      value={gameWeek}
+                      onValueChange={(value) => setGameWeek(value)}
+                    >
+                      <SelectTrigger id="game-week-select">
+                        <SelectValue placeholder="Select week" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {weekOptions.map(week => (
+                          <SelectItem key={week} value={String(week)}>
+                            Week {week}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="game-year-input">Year</Label>
+                    <Input
+                      id="game-year-input"
+                      type="number"
+                      value={gameYear}
+                      onChange={(e) => setGameYear(e.target.value)}
+                      min={GAME_INITIALIZATION.STARTING_YEAR}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSetGameDate}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    Set Game Date
+                  </Button>
+                </div>
+              </SimpleCard>
             </div>
           </TabsContent>
 

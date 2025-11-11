@@ -1151,3 +1151,59 @@ export function getCharacteristicIconSrc(characteristic: keyof WineCharacteristi
   const fileName = getCharacteristicIconAsset(characteristic);
   return `/assets/icons/characteristics/${fileName}`;
 }
+
+const STORY_IMAGE_BASE_PATH = '/assets/pic/storypic';
+const DEFAULT_STORY_IMAGE_FALLBACK = 'pierre_bg.webp';
+
+export function getStoryImageSrc(
+  image?: string | null,
+  options: { fallback?: string | null | false } = {}
+): string | null {
+  const resolved = resolveStoryImage(image);
+  if (resolved) {
+    return resolved;
+  }
+
+  const { fallback } = options;
+
+  if (fallback === false) {
+    return null;
+  }
+
+  if (fallback !== undefined) {
+    return resolveStoryImage(fallback);
+  }
+
+  return resolveStoryImage(DEFAULT_STORY_IMAGE_FALLBACK);
+}
+
+function resolveStoryImage(image?: string | null): string | null {
+  if (!image) return null;
+
+  const trimmed = image.trim();
+  if (!trimmed) return null;
+
+  if (/^(https?:|data:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  let normalized = trimmed.replace(/^\/+/g, '');
+
+  if (normalized.startsWith('assets/')) {
+    return `/${normalized}`;
+  }
+
+  if (normalized.startsWith('pic/')) {
+    return `/assets/${normalized}`;
+  }
+
+  if (normalized.startsWith('storypic/')) {
+    normalized = normalized.replace(/^storypic\//, '');
+  }
+
+  if (normalized.startsWith('assets/pic/storypic/')) {
+    return `/${normalized}`;
+  }
+
+  return `${STORY_IMAGE_BASE_PATH}/${normalized}`;
+}

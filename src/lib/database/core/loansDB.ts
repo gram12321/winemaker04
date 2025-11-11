@@ -27,7 +27,8 @@ export async function insertLoan(loan: Loan): Promise<void> {
       next_payment_year: loan.nextPaymentDue.year,
       missed_payments: loan.missedPayments,
       status: loan.status,
-      is_forced: loan.isForced ?? false
+      is_forced: loan.isForced ?? false,
+      loan_category: loan.loanCategory ?? (loan.isForced ? 'emergency' : 'standard')
     };
 
     const { error } = await supabase
@@ -85,7 +86,8 @@ export async function loadLoans(): Promise<Loan[]> {
       },
       missedPayments: row.missed_payments,
       status: row.status,
-      isForced: row.is_forced ?? false
+      isForced: row.is_forced ?? false,
+      loanCategory: row.loan_category ?? (row.is_forced ? 'emergency' : 'standard')
     }));
   } catch (error) {
     console.error('Failed to load loans:', error);
@@ -109,6 +111,9 @@ export async function updateLoan(loanId: string, updates: Partial<Loan>): Promis
     }
     if (updates.isForced !== undefined) {
       updateData.is_forced = updates.isForced;
+    }
+    if (updates.loanCategory !== undefined) {
+      updateData.loan_category = updates.loanCategory;
     }
 
     const { error } = await supabase
@@ -169,7 +174,8 @@ export async function loadActiveLoans(): Promise<Loan[]> {
       },
       missedPayments: row.missed_payments,
       status: row.status,
-      isForced: row.is_forced ?? false
+      isForced: row.is_forced ?? false,
+      loanCategory: row.loan_category ?? (row.is_forced ? 'emergency' : 'standard')
     }));
   } catch (error) {
     console.error('Failed to load active loans:', error);
@@ -191,6 +197,7 @@ export async function setLoanWarning(loanId: string, warning: PendingLoanWarning
         warning_message: warning.message,
         warning_details: warning.details,
         warning_penalties: warning.penalties,
+        warning_decision: warning.decision ?? null,
         warning_acknowledged: false,
         warning_created_at: new Date().toISOString()
       })
@@ -312,6 +319,7 @@ export async function getFirstUnacknowledgedLoanWarning(): Promise<PendingLoanWa
       title: loan.warning_title,
       message: loan.warning_message,
       details: loan.warning_details || '',
+      decision: loan.warning_decision || undefined,
       penalties: loan.warning_penalties || {}
     };
   } catch (error) {
@@ -355,6 +363,7 @@ export async function clearLoanWarning(loanId: string): Promise<void> {
         warning_message: null,
         warning_details: null,
         warning_penalties: null,
+        warning_decision: null,
         warning_acknowledged: false,
         warning_created_at: null,
         warning_acknowledged_at: null

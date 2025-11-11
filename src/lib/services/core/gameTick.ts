@@ -54,7 +54,7 @@ const executeGameTick = async (): Promise<void> => {
   
   const previousSeason = season;
   const previousYear = currentYear;
-  let newSeason: string | undefined;
+let newSeason: string | undefined;
   let economyPhaseMessage: string | null = null;
   
   // Increment week
@@ -105,6 +105,13 @@ const executeGameTick = async (): Promise<void> => {
   // Submit highscores for company progress assessment (weekly)
   await submitWeeklyHighscores();
 
+  const isNewYearTick = newSeason === 'Spring' && week === 1;
+
+  if (isNewYearTick) {
+    triggerGameUpdate();
+    await restructureForcedLoansIfNeeded();
+  }
+
   // Trigger final UI refresh after all weekly effects are processed
   // This ensures components reload data that was updated during processWeeklyEffects()
   // (e.g., wine batch feature risks, fermentation progress, etc.)
@@ -130,8 +137,6 @@ const onSeasonChange = async (_previousSeason: string, _newSeason: string, skipN
  */
 const onNewYear = async (_previousYear: number, _newYear: number): Promise<void> => {
   // New year notification is handled in the main processGameTick function
-  await restructureForcedLoansIfNeeded();
-  
   // Update vineyard ages
   await updateVineyardAges();
   

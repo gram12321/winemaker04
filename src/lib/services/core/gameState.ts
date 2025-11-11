@@ -6,7 +6,7 @@ import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyVa
 import { companyService } from '../user/companyService';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
 import { initializeStartingCapital } from '../finance/financeService';
-import { initializeStaffSystem, createStartingStaff } from '../user/staffService';
+import { initializeStaffSystem } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { initializeEconomyPhase } from '../finance/economyService';
@@ -210,11 +210,10 @@ export const createNewCompany = async (companyName: string, associateWithUser: b
       
       // Create starting staff for new companies (after teams are initialized)
       try {
-        await createStartingStaff();
+        // Starting staff are now managed via starting conditions.
       } catch (error) {
-        console.error('Error creating starting staff:', error);
+        console.error('Error initializing staff system for new company:', error);
       }
-      
 
       return result.company;
     } else {

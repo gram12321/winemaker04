@@ -199,7 +199,10 @@ export default function LoansView() {
                   const totalExpenses = calculateTotalExpenses(loan);
                   const remainingInterest = calculateRemainingInterest(loan);
                   const missedPayments = loan.missedPayments || 0;
+                  const loanCategory = loan.loanCategory ?? (loan.isForced ? 'emergency' : 'standard');
                   const hasWarnings = missedPayments > 0;
+                  const isEmergencyLoan = loanCategory === 'emergency';
+                  const isRestructuredLoan = loanCategory === 'restructured';
                   const seasonalPaymentBase = Math.max(0, Math.round(loan.seasonalPayment));
                   const extraAdminFee = Math.max(
                     Math.round(seasonalPaymentBase * LOAN_EXTRA_PAYMENT.ADMIN_FEE_RATE),
@@ -271,21 +274,45 @@ export default function LoansView() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {hasWarnings ? (
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-red-100 text-red-800 border-red-200">
-                              {missedPayments}
-                            </Badge>
-                            <span className="text-sm text-red-600 font-medium">
-                              {missedPayments === 1 ? 'Warning #1' : 
-                               missedPayments === 2 ? 'Warning #2' : 
-                               missedPayments === 3 ? 'Warning #3' : 
-                               'Critical'}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-green-600 text-sm font-medium">✓ Good Standing</span>
-                        )}
+                        <div className="space-y-2">
+                          {isEmergencyLoan && (
+                            <UnifiedTooltip
+                              content="Forced issuance due to negative balance"
+                              side="top"
+                              sideOffset={6}
+                            >
+                              <Badge className="bg-amber-100 text-amber-900 border border-amber-200">
+                                Emergency Loan
+                              </Badge>
+                            </UnifiedTooltip>
+                          )}
+                          {isRestructuredLoan && (
+                            <UnifiedTooltip
+                              content="Consolidated emergency loans into long-term debt"
+                              side="top"
+                              sideOffset={6}
+                            >
+                              <Badge className="bg-indigo-100 text-indigo-900 border border-indigo-200">
+                                Restructured Debt
+                              </Badge>
+                            </UnifiedTooltip>
+                          )}
+                          {hasWarnings ? (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-red-100 text-red-800 border-red-200">
+                                {missedPayments}
+                              </Badge>
+                              <span className="text-sm text-red-600 font-medium">
+                                {missedPayments === 1 ? 'Warning #1' : 
+                                 missedPayments === 2 ? 'Warning #2' : 
+                                 missedPayments === 3 ? 'Warning #3' : 
+                                 'Critical'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-green-600 text-sm font-medium">✓ Good Standing</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-2">

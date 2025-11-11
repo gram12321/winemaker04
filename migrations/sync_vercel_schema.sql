@@ -105,6 +105,7 @@ CREATE TABLE companies (
     prestige numeric DEFAULT 0,
     credit_rating integer DEFAULT 50 CHECK (credit_rating >= 0 AND credit_rating <= 100),
     economy_phase text DEFAULT 'Stable' CHECK (economy_phase IN ('Crash', 'Recession', 'Stable', 'Expansion', 'Boom')),
+    starting_country text,
     last_played timestamptz DEFAULT now(),
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
@@ -202,7 +203,9 @@ CREATE TABLE wine_batches (
     features jsonb DEFAULT '[]'::jsonb,
     aging_progress integer DEFAULT 0,
     batch_number integer,
-    batch_group_size integer
+    batch_group_size integer,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
 );
 
 COMMENT ON COLUMN wine_batches.features IS 'JSONB array of wine features and faults (oxidation, green flavor, terroir, etc). Each feature has id, risk, isPresent, severity, name, type, and icon fields.';
@@ -510,12 +513,14 @@ CREATE TABLE loans (
     missed_payments integer DEFAULT 0,
     status text NOT NULL CHECK (status IN ('active', 'paid_off', 'defaulted')),
     is_forced boolean DEFAULT false,
+    loan_category text NOT NULL DEFAULT 'standard',
     pending_warning_id uuid,
     warning_severity varchar CHECK (warning_severity IN ('warning', 'error', 'critical')),
     warning_title text,
     warning_message text,
     warning_details text,
     warning_penalties jsonb DEFAULT '{}'::jsonb,
+    warning_decision jsonb,
     warning_acknowledged boolean DEFAULT false,
     warning_created_at timestamptz,
     warning_acknowledged_at timestamptz,

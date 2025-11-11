@@ -62,11 +62,11 @@ function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<V
   };
 }
 
-function getRandomAspect(): Aspect {
+export function getRandomAspect(): Aspect {
   return getRandomFromArray(ASPECTS);
 }
 
-function getRandomSoils(country: string, region: string): string[] {
+export function getRandomSoils(country: string, region: string): string[] {
   const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
   const soils = countryData ? (countryData[region as keyof typeof countryData] as readonly string[] || []) : [];
   
@@ -80,7 +80,7 @@ function getRandomSoils(country: string, region: string): string[] {
   return Array.from(selectedSoils);
 }
 
-function getRandomAltitude(country: string, region: string): number {
+export function getRandomAltitude(country: string, region: string): number {
   const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
   const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
   const [min, max] = altitudeRange;

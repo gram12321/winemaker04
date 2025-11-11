@@ -453,6 +453,8 @@ export interface Lender {
   blacklisted?: boolean; // If player defaulted on this lender
 }
 
+export type LoanCategory = 'standard' | 'emergency' | 'restructured';
+
 export interface Loan {
   id: string;
   lenderId: string;
@@ -477,6 +479,7 @@ export interface Loan {
   missedPayments: number;
   status: 'active' | 'paid_off' | 'defaulted';
   isForced?: boolean;
+  loanCategory?: LoanCategory;
 }
 
 // Lender Search Options (for activity system)
@@ -785,6 +788,51 @@ export interface AchievementWithStatus extends AchievementConfig {
  * Pending loan warning modal
  * Queued when a loan payment fails, displayed on next render
  */
+export interface PendingLoanWarningDecision {
+  type: 'forcedLoanRestructure';
+  offerId: string;
+}
+
+export interface ForcedLoanRestructureStep {
+  order: number;
+  type: 'cellar' | 'vineyard';
+  description: string;
+  valueRecovered: number;
+  saleProceeds: number;
+}
+
+export interface ForcedLoanRestructureOffer {
+  id: string;
+  createdAt: string;
+  forcedLoanIds: string[];
+  totalForcedBalance: number;
+  maxSeizureValue: number;
+  steps: ForcedLoanRestructureStep[];
+  estimatedCellarLots: Array<{
+    label: string;
+    proceeds: number;
+    valueRecovered: number;
+  }>;
+  estimatedVineyards: Array<{
+    id: string;
+    name: string;
+    valueRecovered: number;
+    saleProceeds: number;
+  }>;
+  consolidatedPrincipalEstimate: number;
+  lender?: {
+    id: string | null;
+    name: string;
+    type: LenderType;
+    effectiveRate: number;
+    durationSeasons: number;
+    originationFeeEstimate: number;
+    isEmergencyOverride: boolean;
+  } | null;
+  prestigePenalty: number;
+  summaryLines: string[];
+}
+
 export interface PendingLoanWarning {
   loanId: string;
   lenderName: string;
@@ -793,6 +841,7 @@ export interface PendingLoanWarning {
   title: string;
   message: string;
   details: string;
+  decision?: PendingLoanWarningDecision;
   penalties: {
     lateFee?: number;
     interestRateIncrease?: number;
@@ -824,4 +873,5 @@ export interface GameState {
   pendingLandSearchResults?: PendingLandSearchResults;
   pendingLenderSearchResults?: PendingLenderSearchResults;
   loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
+  pendingForcedLoanRestructure?: ForcedLoanRestructureOffer | null;
 }

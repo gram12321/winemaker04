@@ -3,7 +3,7 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { getCharacteristicDisplayName, getCharacteristicIconSrc, getGrapeIconSrc } from './utils';
+import { cn, getCharacteristicDisplayName, getCharacteristicIconSrc, getGrapeIconSrc, getStoryImageSrc } from './utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 
 // ===== SVG ICONS =====
@@ -79,20 +79,13 @@ export const AVATAR_OPTIONS = [
   { id: 'default', emoji: '👤', label: 'Default' },
   { id: 'businessman', emoji: '👨‍💼', label: 'Businessman' },
   { id: 'businesswoman', emoji: '👩‍💼', label: 'Businesswoman' },
-  { id: 'scientist', emoji: '🧑‍🔬', label: 'Scientist' },
-  { id: 'farmer', emoji: '👨‍🌾', label: 'Farmer' },
-  { id: 'chef', emoji: '👩‍🍳', label: 'Chef' },
-  { id: 'astronaut', emoji: '👨‍🚀', label: 'Astronaut' },
-  { id: 'construction', emoji: '👷', label: 'Construction' },
-  { id: 'mechanic', emoji: '🧑‍🔧', label: 'Mechanic' },
-  { id: 'office', emoji: '🧑‍💻', label: 'Office Worker' },
-  { id: 'teacher', emoji: '👨‍🏫', label: 'Teacher' },
-  { id: 'artist', emoji: '👩‍🎨', label: 'Artist' },
+  { id: 'royal', emoji: '👑', label: 'Royal' },
   { id: 'superhero', emoji: '🦸', label: 'Superhero' },
   { id: 'ninja', emoji: '🥷', label: 'Ninja' },
-  { id: 'royal', emoji: '👑', label: 'Royal' },
-  { id: 'mage', emoji: '🧙', label: 'Mage' }
-] as const;
+  { id: 'sommelier', emoji: '🍷', label: 'Sommelier' },
+  { id: 'winemaker', emoji: '🍇', label: 'Winemaker' },
+  { id: 'farmer', emoji: '🚜', label: 'Farmer' }
+];
 
 export const NAVIGATION_EMOJIS = {
   dashboard: '🏠',
@@ -316,5 +309,49 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
     >
       {iconElement}
     </UnifiedTooltip>
+  );
+};
+
+interface StoryPortraitProps {
+  image?: string | null;
+  alt?: string;
+  className?: string;
+  rounded?: boolean;
+  fit?: 'cover' | 'contain';
+  fallback?: string | null | false;
+  onError?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+}
+
+export const StoryPortrait: React.FC<StoryPortraitProps> = ({
+  image,
+  alt = 'Story portrait',
+  className,
+  rounded = true,
+  fit = 'cover',
+  fallback,
+  onError
+}) => {
+  const src = getStoryImageSrc(image, { fallback });
+  if (!src) {
+    return null;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={cn(
+        'block',
+        fit === 'cover' ? 'object-cover' : 'object-contain',
+        rounded ? 'rounded-lg' : '',
+        className
+      )}
+      onError={(event) => {
+        event.currentTarget.style.display = 'none';
+        if (onError) {
+          onError(event);
+        }
+      }}
+    />
   );
 };

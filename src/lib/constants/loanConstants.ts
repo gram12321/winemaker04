@@ -227,6 +227,9 @@ export const EMERGENCY_RESTRUCTURE = {
   CONSOLIDATED_DURATION_SEASONS: 48, // 12 years payoff horizon for restructured loan
   INTEREST_PENALTY_MULTIPLIER: 1.25, // Consolidated loan has higher base interest than lender default
   ORIGINATION_PENALTY_MULTIPLIER: 1.35, // Origination fee is harsher during restructure
+  OVERRIDE_INTEREST_MULTIPLIER: 1.55, // Additional multiplier when lender normally declines
+  OVERRIDE_ORIGINATION_MULTIPLIER: 1.6, // Additional origination penalty under forced override
+  OVERRIDE_DURATION_SEASONS: 60, // 15 years if override required
   PRESTIGE_PENALTY: -35, // Prestige hit when restructure fires
   PRESTIGE_DECAY_RATE: 0.95 // Slow decay, mirrors warning prestige decay
 } as const;

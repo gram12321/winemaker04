@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Loan, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning } from '../../types/types';
+import { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '../../types/types';
 import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '../../constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getGameState, updateGameState } from '../core/gameState';
@@ -81,7 +81,7 @@ export async function applyForLoan(
   amount: number,
   durationSeasons: number,
   lender: Lender,
-  options: { isForced?: boolean; skipAdministrationPenalty?: boolean } = {}
+  options: { isForced?: boolean; skipAdministrationPenalty?: boolean; loanCategory?: LoanCategory } = {}
 ): Promise<string> {
   try {
     const gameState = getGameState();
@@ -107,6 +107,12 @@ export async function applyForLoan(
     const originationFee = calculateOriginationFee(amount, lender, gameState.creditRating || CREDIT_RATING.DEFAULT_RATING, durationSeasons);
     
     // Create loan object
+    const derivedCategory: LoanCategory = options.loanCategory
+      ? options.loanCategory
+      : options.isForced
+        ? 'emergency'
+        : 'standard';
+
     const loan: Loan = {
       id: uuidv4(),
       lenderId,
@@ -125,7 +131,8 @@ export async function applyForLoan(
       nextPaymentDue: calculateNextPaymentDate(currentDate), // First payment due next season
       missedPayments: 0,
       status: 'active',
-      isForced: options.isForced ?? false
+      isForced: options.isForced ?? false,
+      loanCategory: derivedCategory
     };
     
     // Add loan to database
@@ -389,7 +396,7 @@ export async function enforceEmergencyQuickLoanIfNeeded(): Promise<void> {
     principalAmount,
     durationSeasons,
     penalizedLender,
-    { isForced: true, skipAdministrationPenalty: true }
+    { isForced: true, skipAdministrationPenalty: true, loanCategory: 'emergency' }
   );
 
   const netDeposit = principalAmount - originationFee;
@@ -415,9 +422,191 @@ export async function enforceEmergencyQuickLoanIfNeeded(): Promise<void> {
 /**
  * Attempt to liquidate bottled cellar inventory for forced debt repayment
  */
-async function liquidateCellarForRestructure(
+type SimCellarBatch = {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type SimVineyardEntry = {
+  id: string;
+  name: string;
+  value: number;
+};
+
+type SimCellarStepResult = {
+  valueRecovered: number;
+  saleProceeds: number;
+  lots: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    valueRecovered: number;
+    saleProceeds: number;
+  }>;
+};
+
+type SimVineyardStepResult = {
+  valueRecovered: number;
+  saleProceeds: number;
+  vineyard?: {
+    id: string;
+    name: string;
+    valueRecovered: number;
+    saleProceeds: number;
+  };
+};
+
+interface ForcedLoanRestructureExecutionResult {
+  totalForcedBalance: number;
+  totalValueRecovered: number;
+  totalSaleProceeds: number;
+  consolidatedPrincipal: number;
+  consolidatedLoanId: string | null;
+  lenderName?: string | null;
+  lenderType?: LenderType | null;
+  lenderInterestRate?: number | null;
+  lenderDurationSeasons?: number | null;
+  lenderOriginationFee?: number | null;
+  cellarSummaries: string[];
+  vineyardSummaries: string[];
+  isEmergencyOverride: boolean;
+}
+
+async function selectRestructureLender(
+  amount: number,
+  lenders?: Lender[]
+): Promise<{ lender: Lender | null; isEmergencyOverride: boolean }> {
+  const source = lenders ?? await loadLenders();
+  const candidatePool = source.filter(
+    lender => !lender.blacklisted && (lender.type === 'Bank' || lender.type === 'Investment Fund')
+  );
+
+  if (candidatePool.length === 0) {
+    return { lender: null, isEmergencyOverride: false };
+  }
+
+  const pickRandom = <T>(list: T[]): T => list[Math.floor(Math.random() * list.length)];
+
+  const withinRange = candidatePool.filter(
+    lender => amount >= lender.minLoanAmount && amount <= lender.maxLoanAmount
+  );
+
+  if (withinRange.length > 0) {
+    const bankMatches = withinRange.filter(l => l.type === 'Bank');
+    if (bankMatches.length > 0) {
+      return { lender: pickRandom(bankMatches), isEmergencyOverride: false };
+    }
+    return { lender: pickRandom(withinRange), isEmergencyOverride: false };
+  }
+
+  return { lender: pickRandom(candidatePool), isEmergencyOverride: true };
+}
+
+function simulateCellarLiquidationStep(
+  batches: SimCellarBatch[],
   targetValue: number,
   penaltyRate: number
+): SimCellarStepResult {
+  if (targetValue <= 0 || batches.length === 0) {
+    return { valueRecovered: 0, saleProceeds: 0, lots: [] };
+  }
+
+  const sorted = [...batches].sort((a, b) => (b.unitPrice * b.quantity) - (a.unitPrice * a.quantity));
+  const lots: SimCellarStepResult['lots'] = [];
+  let totalRecovered = 0;
+  let totalProceeds = 0;
+  let remainingTarget = targetValue;
+
+  for (const batch of sorted) {
+    if (remainingTarget <= 1) {
+      break;
+    }
+
+    if (batch.quantity <= 0 || batch.unitPrice <= 0) {
+      continue;
+    }
+
+    const batchValue = batch.unitPrice * batch.quantity;
+    if (batchValue <= 0) {
+      continue;
+    }
+
+    let quantityToSell = batch.quantity;
+    if (batchValue > remainingTarget && batch.quantity > 1) {
+      const ratio = Math.min(1, remainingTarget / batchValue);
+      quantityToSell = Math.max(1, Math.floor(batch.quantity * ratio));
+    }
+
+    if (quantityToSell <= 0) {
+      continue;
+    }
+
+    const recoveredValue = batch.unitPrice * quantityToSell;
+    const proceeds = recoveredValue * (1 - penaltyRate);
+
+    lots.push({
+      id: batch.id,
+      name: batch.name,
+      quantity: quantityToSell,
+      valueRecovered: recoveredValue,
+      saleProceeds: proceeds
+    });
+
+    totalRecovered += recoveredValue;
+    totalProceeds += proceeds;
+    remainingTarget = Math.max(0, targetValue - totalRecovered);
+
+    batch.quantity = Math.max(0, batch.quantity - quantityToSell);
+  }
+
+  return {
+    valueRecovered: totalRecovered,
+    saleProceeds: totalProceeds,
+    lots
+  };
+}
+
+function simulateVineyardSeizureStep(
+  vineyards: SimVineyardEntry[],
+  maxValue: number,
+  penaltyRate: number
+): SimVineyardStepResult {
+  if (maxValue <= 0 || vineyards.length === 0) {
+    return { valueRecovered: 0, saleProceeds: 0 };
+  }
+
+  const sorted = [...vineyards].sort((a, b) => a.value - b.value);
+  const target = sorted.find(v => v.value > 0 && v.value <= maxValue);
+
+  if (!target) {
+    return { valueRecovered: 0, saleProceeds: 0 };
+  }
+
+  const saleProceeds = target.value * (1 - penaltyRate);
+
+  const index = vineyards.findIndex(v => v.id === target.id);
+  if (index >= 0) {
+    vineyards.splice(index, 1);
+  }
+
+  return {
+    valueRecovered: target.value,
+    saleProceeds,
+    vineyard: {
+      id: target.id,
+      name: target.name,
+      valueRecovered: target.value,
+      saleProceeds
+    }
+  };
+}
+
+async function liquidateBottledInventory(
+  targetValue: number,
+  penaltyRate: number,
+  transactionLabel: string
 ): Promise<{ valueRecovered: number; saleProceeds: number; batchSummaries: string[] }> {
   if (targetValue <= 0) {
     return { valueRecovered: 0, saleProceeds: 0, batchSummaries: [] };
@@ -457,7 +646,6 @@ async function liquidateCellarForRestructure(
       continue;
     }
 
-    // Sell the entire batch unless it greatly exceeds the target
     let quantityToSell = batch.quantity;
     if (batchValue > remainingTarget && batch.quantity > 1) {
       const ratio = Math.min(1, remainingTarget / batchValue);
@@ -497,7 +685,7 @@ async function liquidateCellarForRestructure(
     for (const entry of soldEntries) {
       await addTransaction(
         entry.proceeds,
-        `Forced cellar liquidation: ${entry.summary}`,
+        `${transactionLabel}: ${entry.summary}`,
         TRANSACTION_CATEGORIES.WINE_SALES,
         false
       );
@@ -511,9 +699,6 @@ async function liquidateCellarForRestructure(
   };
 }
 
-/**
- * Seize a single vineyard for restructure
- */
 async function seizeVineyardForRestructure(
   maxValue: number,
   penaltyRate: number
@@ -553,26 +738,331 @@ async function seizeVineyardForRestructure(
   };
 }
 
-/**
- * Restructure all forced quick loans at the start of a new year
- */
-export async function restructureForcedLoansIfNeeded(): Promise<void> {
+function buildRestructureOfferDetails(offer: ForcedLoanRestructureOffer): { message: string; details: string } {
+  const baseMessage = offer.lender
+    ? offer.lender.isEmergencyOverride
+      ? `No lender would normally approve this balance, but a ${offer.lender.type} (${offer.lender.name}) is willing to consolidate it under punitive emergency terms.`
+      : `A ${offer.lender.type} (${offer.lender.name}) is willing to consolidate your forced quick loans with harsh terms.`
+    : 'Asset liquidation alone may cover the forced quick loans.';
+
+  const summaryLines = offer.summaryLines.length
+    ? offer.summaryLines.map(line => `• ${line}`)
+    : [];
+
+  const stepLines = offer.steps.length
+    ? [
+        'Proposed sequence:',
+        ...offer.steps.map(step =>
+          `  ${step.order}. ${step.description} → recovers ${formatNumber(step.valueRecovered, { currency: true })} (${formatNumber(step.saleProceeds, { currency: true })} after penalties)`
+        )
+      ]
+    : ['Proposed sequence:', '  1. No qualifying assets found for liquidation.'];
+
+  const cellarLines = offer.estimatedCellarLots.length
+    ? [
+        'Targeted cellar lots:',
+        ...offer.estimatedCellarLots.map(lot =>
+          `  • ${lot.label} → proceeds ${formatNumber(lot.proceeds, { currency: true })}`
+        )
+      ]
+    : ['Targeted cellar lots: none available.'];
+
+  const vineyardLines = offer.estimatedVineyards.length
+    ? [
+        'Vineyards at risk:',
+        ...offer.estimatedVineyards.map(vineyard =>
+          `  • ${vineyard.name} → value ${formatNumber(vineyard.valueRecovered, { currency: true })} (${formatNumber(vineyard.saleProceeds, { currency: true })} after penalties)`
+        )
+      ]
+    : ['Vineyards at risk: none within seizure threshold.'];
+
+  const decisionLines = [
+    '',
+    'Accept → Liquidate assets and consolidate debt under the proposed loan.',
+    'Decline → Keep the forced quick loans active and continue managing warnings manually.'
+  ];
+
+  return {
+    message: `${baseMessage} Decide whether to accept the restructure or keep managing the forced loans yourself.`,
+    details: [
+      'Offer summary:',
+      ...summaryLines,
+      '',
+      ...stepLines,
+      '',
+      ...cellarLines,
+      '',
+      ...vineyardLines,
+      ...decisionLines
+    ].join('\n')
+  };
+}
+
+async function createForcedLoanRestructureOffer(forcedLoans: Loan[]): Promise<ForcedLoanRestructureOffer | null> {
+  if (forcedLoans.length === 0) {
+    return null;
+  }
+
+  const totalForcedBalance = forcedLoans.reduce((sum, loan) => sum + (loan.remainingBalance || 0), 0);
+  if (totalForcedBalance <= 0) {
+    return null;
+  }
+
+  const {
+    CELLAR_STEP_PERCENT_OF_DEBT,
+    MAX_SEIZURE_PERCENT_OF_DEBT,
+    SALE_PENALTY_RATE,
+    CONSOLIDATED_DURATION_SEASONS,
+    INTEREST_PENALTY_MULTIPLIER,
+    ORIGINATION_PENALTY_MULTIPLIER,
+    PRESTIGE_PENALTY
+  } = EMERGENCY_RESTRUCTURE;
+
+  const gameState = getGameState();
+  const creditRating = gameState.creditRating ?? CREDIT_RATING.DEFAULT_RATING;
+  const economyPhase = (gameState.economyPhase as EconomyPhase) ?? 'Stable';
+
+  const wineBatches = await loadWineBatches();
+  const vineyards = await loadVineyards();
+
+  const cellarPool: SimCellarBatch[] = wineBatches
+    .filter(batch => batch.state === 'bottled' && batch.quantity > 0)
+    .map(batch => ({
+      id: batch.id,
+      name: batch.vineyardName ?? 'Cellar Batch',
+      quantity: batch.quantity,
+      unitPrice: batch.estimatedPrice ?? batch.askingPrice ?? 10
+    }));
+
+  const vineyardPool: SimVineyardEntry[] = vineyards
+    .filter(vineyard => vineyard.vineyardTotalValue > 0)
+    .map(vineyard => ({
+      id: vineyard.id,
+      name: vineyard.name,
+      value: vineyard.vineyardTotalValue
+    }));
+
+  const totalPortfolioValue = vineyardPool.reduce((sum, entry) => sum + entry.value, 0);
+  const portfolioAllowance =
+    totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+  const debtAllowance = totalForcedBalance * MAX_SEIZURE_PERCENT_OF_DEBT;
+  const maxSeizureValue = Math.max(0, Math.min(debtAllowance, portfolioAllowance));
+  let remainingAllowance = maxSeizureValue;
+  let totalValueRecovered = 0;
+  let totalSaleProceeds = 0;
+  let stepIndex = 0;
+  let consecutiveMisses = 0;
+
+  const steps: ForcedLoanRestructureStep[] = [];
+  const estimatedCellarLots: ForcedLoanRestructureOffer['estimatedCellarLots'] = [];
+  const estimatedVineyards: ForcedLoanRestructureOffer['estimatedVineyards'] = [];
+
+  while (remainingAllowance > 1 && consecutiveMisses < 2) {
+    if (stepIndex % 2 === 0) {
+      const target = Math.min(remainingAllowance, totalForcedBalance * CELLAR_STEP_PERCENT_OF_DEBT);
+      const result = simulateCellarLiquidationStep(cellarPool, target, SALE_PENALTY_RATE);
+
+      if (result.valueRecovered > 0) {
+        totalValueRecovered += result.valueRecovered;
+        totalSaleProceeds += result.saleProceeds;
+        remainingAllowance = Math.max(0, maxSeizureValue - totalValueRecovered);
+        steps.push({
+          order: steps.length + 1,
+          type: 'cellar',
+          description: `Liquidate bottled cellar inventory (target ${formatNumber(target, { currency: true })})`,
+          valueRecovered: result.valueRecovered,
+          saleProceeds: result.saleProceeds
+        });
+        result.lots.forEach(lot => {
+          estimatedCellarLots.push({
+            label: `${lot.name} (${lot.quantity} units)`,
+            proceeds: lot.saleProceeds,
+            valueRecovered: lot.valueRecovered
+          });
+        });
+        consecutiveMisses = 0;
+      } else {
+        consecutiveMisses += 1;
+      }
+    } else {
+      const result = simulateVineyardSeizureStep(vineyardPool, remainingAllowance, SALE_PENALTY_RATE);
+
+      if (result.valueRecovered > 0 && result.vineyard) {
+        totalValueRecovered += result.valueRecovered;
+        totalSaleProceeds += result.saleProceeds;
+        remainingAllowance = Math.max(0, maxSeizureValue - totalValueRecovered);
+        steps.push({
+          order: steps.length + 1,
+          type: 'vineyard',
+          description: `Seize lowest-value vineyard (${result.vineyard.name})`,
+          valueRecovered: result.valueRecovered,
+          saleProceeds: result.saleProceeds
+        });
+        estimatedVineyards.push({
+          id: result.vineyard.id,
+          name: result.vineyard.name,
+          valueRecovered: result.vineyard.valueRecovered,
+          saleProceeds: result.vineyard.saleProceeds
+        });
+        consecutiveMisses = 0;
+      } else {
+        consecutiveMisses += 1;
+      }
+    }
+
+    if (remainingAllowance <= 1) {
+      break;
+    }
+
+    stepIndex += 1;
+  }
+
+  const consolidatedPrincipalEstimate = Math.max(0, totalForcedBalance - totalSaleProceeds);
+
+  const lenders = await loadLenders();
+
+  let lenderSummary: ForcedLoanRestructureOffer['lender'] = null;
+
+  if (consolidatedPrincipalEstimate > 0) {
+    const { lender: restructureLender, isEmergencyOverride } = await selectRestructureLender(
+      consolidatedPrincipalEstimate,
+      lenders
+    );
+
+    if (restructureLender) {
+      const interestMultiplier =
+        INTEREST_PENALTY_MULTIPLIER *
+        (isEmergencyOverride ? EMERGENCY_RESTRUCTURE.OVERRIDE_INTEREST_MULTIPLIER : 1);
+      const originationMultiplier =
+        ORIGINATION_PENALTY_MULTIPLIER *
+        (isEmergencyOverride ? EMERGENCY_RESTRUCTURE.OVERRIDE_ORIGINATION_MULTIPLIER : 1);
+
+      const penalizedLender: Lender = {
+        ...restructureLender,
+        baseInterestRate: restructureLender.baseInterestRate * interestMultiplier,
+        originationFee: {
+          ...restructureLender.originationFee,
+          basePercent: restructureLender.originationFee.basePercent * originationMultiplier,
+          minFee: restructureLender.originationFee.minFee * originationMultiplier,
+          maxFee: restructureLender.originationFee.maxFee * originationMultiplier
+        }
+      };
+
+      const targetDuration = isEmergencyOverride
+        ? Math.max(CONSOLIDATED_DURATION_SEASONS, EMERGENCY_RESTRUCTURE.OVERRIDE_DURATION_SEASONS)
+        : CONSOLIDATED_DURATION_SEASONS;
+
+      const durationSeasons = Math.min(
+        Math.max(penalizedLender.minDurationSeasons, targetDuration),
+        penalizedLender.maxDurationSeasons
+      );
+
+      const effectiveRate = calculateEffectiveInterestRate(
+        penalizedLender.baseInterestRate,
+        economyPhase,
+        penalizedLender.type,
+        creditRating,
+        durationSeasons
+      );
+
+      const originationEstimate = calculateOriginationFee(
+        Math.round(consolidatedPrincipalEstimate),
+        penalizedLender,
+        creditRating,
+        durationSeasons
+      );
+
+      lenderSummary = {
+        id: penalizedLender.id,
+        name: penalizedLender.name,
+        type: penalizedLender.type,
+        effectiveRate,
+        durationSeasons,
+        originationFeeEstimate: originationEstimate,
+        isEmergencyOverride
+      };
+    }
+  }
+
+  const summaryLines: string[] = [
+    `Total forced loan balance: ${formatNumber(totalForcedBalance, { currency: true })}`,
+    `Asset seizure cap (50%): ${formatNumber(maxSeizureValue, { currency: true })}`,
+    `Estimated liquidation proceeds: ${formatNumber(totalSaleProceeds, { currency: true })}`,
+    consolidatedPrincipalEstimate > 0
+      ? `Remaining debt to consolidate: ${formatNumber(consolidatedPrincipalEstimate, { currency: true })}`
+      : 'Remaining debt to consolidate: 0 (assets expected to cover balance)'
+  ];
+
+  summaryLines.push(
+    `Seizure cap factors — debt allowance: ${formatNumber(debtAllowance, { currency: true })}, ` +
+    `portfolio allowance: ${formatNumber(portfolioAllowance, { currency: true })}`
+  );
+
+  if (lenderSummary) {
+    const years = Math.round((lenderSummary.durationSeasons / 4) * 10) / 10;
+    summaryLines.push(
+      `Proposed lender: ${lenderSummary.name} (${lenderSummary.type}) at ${formatPercent(lenderSummary.effectiveRate)} over approximately ${years} years`
+    );
+    summaryLines.push(
+      `Estimated origination fee: ${formatNumber(lenderSummary.originationFeeEstimate, { currency: true })}`
+    );
+    if (lenderSummary.isEmergencyOverride) {
+      summaryLines.push('Emergency override applied: lender is only willing to proceed with more punitive rates, extended duration, and amplified fees.');
+    }
+  } else {
+    summaryLines.push('No bank or investment fund qualified; forced loans remain active and must be managed manually.');
+  }
+
+  summaryLines.push(`Prestige impact if accepted: ${PRESTIGE_PENALTY}`);
+
+  return {
+    id: uuidv4(),
+    createdAt: new Date().toISOString(),
+    forcedLoanIds: forcedLoans.map(loan => loan.id),
+    totalForcedBalance,
+    maxSeizureValue,
+    steps,
+    estimatedCellarLots,
+    estimatedVineyards,
+    consolidatedPrincipalEstimate,
+    lender: lenderSummary,
+    prestigePenalty: PRESTIGE_PENALTY,
+    summaryLines
+  };
+}
+
+async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): Promise<ForcedLoanRestructureExecutionResult> {
   const activeLoans = await loadActiveLoans();
   const forcedLoans = activeLoans.filter(loan => loan.isForced);
 
   if (forcedLoans.length === 0) {
-    return;
+    throw new Error('No forced loans available for restructure.');
   }
 
   const totalForcedBalance = forcedLoans.reduce((sum, loan) => sum + (loan.remainingBalance || 0), 0);
-
   if (totalForcedBalance <= 0) {
     await Promise.all(
       forcedLoans.map(loan =>
-        updateLoan(loan.id, { isForced: false, status: 'paid_off', remainingBalance: 0, seasonsRemaining: 0, missedPayments: 0 })
+        updateLoan(loan.id, {
+          status: 'paid_off',
+          remainingBalance: 0,
+          seasonsRemaining: 0,
+          missedPayments: 0,
+          isForced: false
+        })
       )
     );
-    return;
+
+    return {
+      totalForcedBalance,
+      totalValueRecovered: 0,
+      totalSaleProceeds: 0,
+      consolidatedPrincipal: 0,
+      consolidatedLoanId: null,
+      cellarSummaries: [],
+      vineyardSummaries: [],
+      isEmergencyOverride: false
+    };
   }
 
   const {
@@ -586,7 +1076,13 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
     PRESTIGE_DECAY_RATE
   } = EMERGENCY_RESTRUCTURE;
 
-  const maxSeizureValue = totalForcedBalance * MAX_SEIZURE_PERCENT_OF_DEBT;
+  const portfolioVineyards = await loadVineyards();
+  const totalPortfolioValue = portfolioVineyards.reduce((sum, vineyard) => sum + vineyard.vineyardTotalValue, 0);
+  const portfolioAllowance =
+    totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+  const debtAllowance = totalForcedBalance * MAX_SEIZURE_PERCENT_OF_DEBT;
+  const maxSeizureValue = Math.max(0, Math.min(debtAllowance, portfolioAllowance));
+
   let remainingAllowance = maxSeizureValue;
   let totalValueRecovered = 0;
   let totalSaleProceeds = 0;
@@ -598,7 +1094,11 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
   while (remainingAllowance > 1 && consecutiveMisses < 2) {
     if (stepIndex % 2 === 0) {
       const cellarTarget = Math.min(remainingAllowance, totalForcedBalance * CELLAR_STEP_PERCENT_OF_DEBT);
-      const cellarResult = await liquidateCellarForRestructure(cellarTarget, SALE_PENALTY_RATE);
+      const cellarResult = await liquidateBottledInventory(
+        cellarTarget,
+        SALE_PENALTY_RATE,
+        'Forced cellar liquidation'
+      );
 
       if (cellarResult.valueRecovered > 0) {
         totalValueRecovered += cellarResult.valueRecovered;
@@ -617,7 +1117,9 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
         totalSaleProceeds += vineyardResult.saleProceeds;
         remainingAllowance = Math.max(0, maxSeizureValue - totalValueRecovered);
         if (vineyardResult.vineyardName) {
-          vineyardSummaries.push(`${vineyardResult.vineyardName} (${formatNumber(vineyardResult.saleProceeds, { currency: true })})`);
+          vineyardSummaries.push(
+            `${vineyardResult.vineyardName} (${formatNumber(vineyardResult.saleProceeds, { currency: true })})`
+          );
         }
         consecutiveMisses = 0;
       } else {
@@ -648,35 +1150,81 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
   );
 
   let consolidatedLoanId: string | null = null;
+  let lenderName: string | null = null;
+  let lenderType: LenderType | null = null;
+  let lenderInterestRate: number | null = null;
+  let lenderDurationSeasons: number | null = null;
+  let lenderOriginationFee: number | null = null;
+  let isEmergencyOverride = offer.lender?.isEmergencyOverride ?? false;
 
   if (consolidatedPrincipal > 0) {
     const lenders = await loadLenders();
-    const restructureLender =
-      lenders.find(l => l.type === 'Bank' && !l.blacklisted) ||
-      lenders.find(l => l.type === 'Investment Fund' && !l.blacklisted) ||
-      lenders.find(l => !l.blacklisted) ||
-      lenders[0];
+    let restructureLender: Lender | null = null;
+
+    if (offer.lender?.id) {
+      restructureLender = lenders.find(l => l.id === offer.lender?.id) ?? null;
+    }
+
+    if (!restructureLender) {
+      const selection = await selectRestructureLender(consolidatedPrincipal, lenders);
+      restructureLender = selection.lender;
+      if (selection.lender) {
+        isEmergencyOverride = offer.lender?.isEmergencyOverride ? true : selection.isEmergencyOverride;
+      }
+    }
 
     if (restructureLender) {
+      const creditRating = getGameState().creditRating ?? CREDIT_RATING.DEFAULT_RATING;
+      const economyPhase = (getGameState().economyPhase as EconomyPhase) ?? 'Stable';
+
+      const interestMultiplier =
+        INTEREST_PENALTY_MULTIPLIER *
+        (isEmergencyOverride ? EMERGENCY_RESTRUCTURE.OVERRIDE_INTEREST_MULTIPLIER : 1);
+      const originationMultiplier =
+        ORIGINATION_PENALTY_MULTIPLIER *
+        (isEmergencyOverride ? EMERGENCY_RESTRUCTURE.OVERRIDE_ORIGINATION_MULTIPLIER : 1);
+
       const penalizedLender: Lender = {
         ...restructureLender,
-        baseInterestRate: restructureLender.baseInterestRate * INTEREST_PENALTY_MULTIPLIER,
+        baseInterestRate: restructureLender.baseInterestRate * interestMultiplier,
         originationFee: {
           ...restructureLender.originationFee,
-          basePercent: restructureLender.originationFee.basePercent * ORIGINATION_PENALTY_MULTIPLIER,
-          minFee: restructureLender.originationFee.minFee * ORIGINATION_PENALTY_MULTIPLIER,
-          maxFee: restructureLender.originationFee.maxFee * ORIGINATION_PENALTY_MULTIPLIER
+          basePercent: restructureLender.originationFee.basePercent * originationMultiplier,
+          minFee: restructureLender.originationFee.minFee * originationMultiplier,
+          maxFee: restructureLender.originationFee.maxFee * originationMultiplier
         }
       };
 
+      const targetDuration = isEmergencyOverride
+        ? Math.max(CONSOLIDATED_DURATION_SEASONS, EMERGENCY_RESTRUCTURE.OVERRIDE_DURATION_SEASONS)
+        : CONSOLIDATED_DURATION_SEASONS;
+
       const durationSeasons = Math.min(
-        Math.max(penalizedLender.minDurationSeasons, CONSOLIDATED_DURATION_SEASONS),
+        Math.max(penalizedLender.minDurationSeasons, targetDuration),
         penalizedLender.maxDurationSeasons
       );
 
-      const adjustedPrincipal = Math.min(
-        penalizedLender.maxLoanAmount,
-        Math.max(penalizedLender.minLoanAmount, Math.round(consolidatedPrincipal))
+      let adjustedPrincipal = Math.round(consolidatedPrincipal);
+      if (!isEmergencyOverride) {
+        adjustedPrincipal = Math.min(
+          penalizedLender.maxLoanAmount,
+          Math.max(penalizedLender.minLoanAmount, adjustedPrincipal)
+        );
+      }
+
+      lenderInterestRate = calculateEffectiveInterestRate(
+        penalizedLender.baseInterestRate,
+        economyPhase,
+        penalizedLender.type,
+        creditRating,
+        durationSeasons
+      );
+
+      lenderOriginationFee = calculateOriginationFee(
+        adjustedPrincipal,
+        penalizedLender,
+        creditRating,
+        durationSeasons
       );
 
       consolidatedLoanId = await applyForLoan(
@@ -684,8 +1232,12 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
         adjustedPrincipal,
         durationSeasons,
         penalizedLender,
-        { skipAdministrationPenalty: true }
+        { skipAdministrationPenalty: true, loanCategory: 'restructured' }
       );
+
+      lenderName = penalizedLender.name;
+      lenderType = penalizedLender.type;
+      lenderDurationSeasons = durationSeasons;
     }
   }
 
@@ -699,8 +1251,8 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
     source_id: null,
     payload: {
       reason: 'Forced Loan Restructure',
-      lenderName: consolidatedLoanId ? 'Consolidated Lender' : 'Asset Liquidation',
-      lenderType: 'Bank',
+      lenderName: consolidatedLoanId ? lenderName ?? 'Consolidated Lender' : 'Asset Liquidation',
+      lenderType: lenderType ?? 'Bank',
       loanAmount: consolidatedPrincipal,
       missedPaymentAmount: totalForcedBalance
     }
@@ -708,38 +1260,183 @@ export async function restructureForcedLoansIfNeeded(): Promise<void> {
 
   await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_RESTRUCTURE);
 
-  const summaryParts: string[] = [];
+  triggerGameUpdate();
 
-  if (totalSaleProceeds > 0) {
-    summaryParts.push(
-      `Assets liquidated for ${formatNumber(totalSaleProceeds, { currency: true })} (pre-penalty value ${formatNumber(totalValueRecovered, { currency: true })}).`
+  return {
+    totalForcedBalance,
+    totalValueRecovered,
+    totalSaleProceeds,
+    consolidatedPrincipal,
+    consolidatedLoanId,
+    lenderName,
+    lenderType,
+    lenderInterestRate,
+    lenderDurationSeasons,
+    lenderOriginationFee,
+    cellarSummaries,
+    vineyardSummaries,
+    isEmergencyOverride
+  };
+}
+
+function buildRestructureCompletionMessage(
+  result: ForcedLoanRestructureExecutionResult,
+  prestigePenalty: number
+): string {
+  const lines: string[] = [
+    'Restructure accepted. Summary:',
+    `• Forced loan balance entering restructure: ${formatNumber(result.totalForcedBalance, { currency: true })}`,
+    `• Assets liquidated: ${formatNumber(result.totalSaleProceeds, { currency: true })} (pre-penalty value ${formatNumber(result.totalValueRecovered, { currency: true })})`
+  ];
+
+  if (result.cellarSummaries.length > 0) {
+    lines.push('• Cellar lots sold:');
+    result.cellarSummaries.forEach(summary => {
+      lines.push(`   ◦ ${summary}`);
+    });
+  } else {
+    lines.push('• Cellar lots sold: none');
+  }
+
+  if (result.vineyardSummaries.length > 0) {
+    lines.push('• Vineyards seized:');
+    result.vineyardSummaries.forEach(summary => {
+      lines.push(`   ◦ ${summary}`);
+    });
+  } else {
+    lines.push('• Vineyards seized: none');
+  }
+
+  if (result.consolidatedLoanId) {
+    const years = result.lenderDurationSeasons
+      ? Math.round((result.lenderDurationSeasons / 4) * 10) / 10
+      : null;
+    const rateLabel = result.lenderInterestRate !== null && result.lenderInterestRate !== undefined
+      ? formatPercent(result.lenderInterestRate)
+      : null;
+
+    lines.push(
+      `• Consolidated loan: ${formatNumber(result.consolidatedPrincipal, { currency: true })}` +
+        (result.lenderName ? ` with ${result.lenderName}` : '') +
+        (rateLabel ? ` at ${rateLabel}` : '') +
+        (years ? ` over ≈${years} years` : '') +
+        (result.lenderType ? ` (${result.lenderType})` : '')
     );
+
+    if (result.lenderOriginationFee) {
+      lines.push(`• Origination fee charged: ${formatNumber(result.lenderOriginationFee, { currency: true })}`);
+    }
+    if (result.isEmergencyOverride) {
+      lines.push('• Emergency override terms applied: lender proceeded only with punitive rates, extended duration, and amplified fees.');
+    }
   } else {
-    summaryParts.push('No assets were available for liquidation.');
+    lines.push('• All forced debt cleared via asset liquidation.');
   }
 
-  if (cellarSummaries.length > 0) {
-    summaryParts.push(`Cellar lots sold: ${cellarSummaries.join('; ')}.`);
+  lines.push(`• Prestige impact applied: ${prestigePenalty}`);
+
+  return lines.join('\n');
+}
+
+/**
+ * Offer a forced loan restructure to the player (triggered at New Year)
+ */
+export async function restructureForcedLoansIfNeeded(): Promise<void> {
+  const activeLoans = await loadActiveLoans();
+  const forcedLoans = activeLoans.filter(loan => loan.isForced);
+  const gameState = getGameState();
+  const existingOffer = gameState.pendingForcedLoanRestructure;
+
+  if (forcedLoans.length === 0) {
+    if (existingOffer) {
+      await updateGameState({ pendingForcedLoanRestructure: null });
+    }
+    return;
   }
 
-  if (vineyardSummaries.length > 0) {
-    summaryParts.push(`Vineyards seized: ${vineyardSummaries.join('; ')}.`);
+  const offer = await createForcedLoanRestructureOffer(forcedLoans);
+
+  if (!offer) {
+    await updateGameState({ pendingForcedLoanRestructure: null });
+    return;
   }
 
-  if (consolidatedLoanId) {
-    summaryParts.push(`Consolidated loan balance: ${formatNumber(Math.max(0, consolidatedPrincipal), { currency: true })}.`);
-  } else {
-    summaryParts.push('Forced loan balance fully retired through asset seizure.');
+  if (!existingOffer || existingOffer.id !== offer.id) {
+    await updateGameState({ pendingForcedLoanRestructure: offer });
+
+    const { message, details } = buildRestructureOfferDetails(offer);
+    const primaryLoan = forcedLoans[0];
+
+    await queueLoanWarningModal({
+      loanId: primaryLoan.id,
+      lenderName: primaryLoan.lenderName,
+      missedPayments: primaryLoan.missedPayments ?? 0,
+      severity: 'error',
+      title: 'Emergency Restructure Offer',
+      message,
+      details,
+      decision: {
+        type: 'forcedLoanRestructure',
+        offerId: offer.id
+      },
+      penalties: {}
+    });
   }
+}
+
+export async function acceptForcedLoanRestructure(offerId: string): Promise<void> {
+  const gameState = getGameState();
+  const offer = gameState.pendingForcedLoanRestructure;
+
+  if (!offer || offer.id !== offerId) {
+    await notificationService.addMessage(
+      'No restructure offer is currently available. Forced loans remain active.',
+      'loan.emergencyRestructureMissing',
+      'Forced Loan Restructure',
+      NotificationCategory.FINANCE
+    );
+    return;
+  }
+
+  try {
+    const result = await executeForcedLoanRestructure(offer);
+    await updateGameState({ pendingForcedLoanRestructure: null });
+
+    const summaryMessage = buildRestructureCompletionMessage(result, offer.prestigePenalty);
+
+    await notificationService.addMessage(
+      summaryMessage,
+      'loan.emergencyRestructureAccepted',
+      'Forced Loan Restructure',
+      NotificationCategory.FINANCE
+    );
+  } catch (error) {
+    console.error('Error applying forced loan restructure:', error);
+    await notificationService.addMessage(
+      'Restructure failed to apply. Forced quick loans remain active.',
+      'loan.emergencyRestructureFailed',
+      'Forced Loan Restructure',
+      NotificationCategory.FINANCE
+    );
+  }
+}
+
+export async function declineForcedLoanRestructure(offerId: string): Promise<void> {
+  const gameState = getGameState();
+  const offer = gameState.pendingForcedLoanRestructure;
+
+  if (!offer || offer.id !== offerId) {
+    return;
+  }
+
+  await updateGameState({ pendingForcedLoanRestructure: null });
 
   await notificationService.addMessage(
-    summaryParts.join(' '),
-    'loan.emergencyRestructure',
+    'You declined the restructuring offer. Forced quick loans remain active and will progress through the normal warning cycle.',
+    'loan.emergencyRestructureDeclined',
     'Forced Loan Restructure',
     NotificationCategory.FINANCE
   );
-
-  triggerGameUpdate();
 }
 
 /**
@@ -1050,7 +1747,18 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
     const availableMoney = gameState.money || 0;
     
     if (availableMoney < loan.remainingBalance) {
-      throw new Error('Insufficient funds to repay loan in full');
+      const shortfall = loan.remainingBalance - availableMoney;
+      await notificationService.addMessage(
+        [
+          `Unable to repay loan from ${loan.lenderName}.`,
+          `You are short by ${formatNumber(shortfall, { currency: true })}.`,
+          'Add funds or wait for additional income before attempting a full payoff.'
+        ].join(' '),
+        'loan.earlyPayoffInsufficientFunds',
+        'Insufficient Balance',
+        NotificationCategory.FINANCE
+      );
+      return;
     }
     
     // Deduct remaining balance from company money
@@ -1235,31 +1943,37 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
  */
 async function applyWarning3Penalties(loan: Loan): Promise<void> {
   const penalties = LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3;
-  
+
+  const inventoryResult = await liquidateBottledInventory(
+    loan.remainingBalance * penalties.MAX_VINEYARD_SEIZURE_PERCENT,
+    EMERGENCY_RESTRUCTURE.SALE_PENALTY_RATE,
+    'Forced cellar liquidation'
+  );
+
   // Seize vineyards to cover debt (up to 50% of portfolio VALUE)
   const seizureResult = await seizeVineyardsForDebt(loan);
-  
-  // Now use ALL available money (including vineyard sale proceeds) to repay loan
+
+  // Now use ALL available money (including liquidation proceeds) to repay loan
   const gameState = getGameState();
   const availableMoney = gameState.money || 0;
-  
+
   if (availableMoney > 0) {
     // Use all available money to repay loan
     const paymentAmount = Math.min(availableMoney, loan.remainingBalance);
-    
+
     await addTransaction(
       -paymentAmount,
       `Emergency loan payment to ${loan.lenderName} using all available funds`,
       TRANSACTION_CATEGORIES.LOAN_PAYMENT,
       false
     );
-    
+
     // Update loan balance
     const newBalance = Math.max(0, loan.remainingBalance - paymentAmount);
     await updateLoan(loan.id, {
       remainingBalance: newBalance
     });
-    
+
     await notificationService.addMessage(
       `Emergency payment of ${formatNumber(paymentAmount, { currency: true })} made to ${loan.lenderName} using all available funds.`,
       'loan.emergencyPayment',
@@ -1267,10 +1981,20 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
       NotificationCategory.FINANCE
     );
   }
-  
+
   // Queue bookkeeping penalty work
   await queueLoanPenaltyWork(penalties.BOOKKEEPING_WORK, loan.lenderName, 3);
-  
+
+  const inventoryDetails =
+    inventoryResult.valueRecovered > 0
+      ? `• Cellar lots sold: ${inventoryResult.batchSummaries.join('; ')}`
+      : '• No bottled inventory available for liquidation';
+
+  const vineyardDetails =
+    seizureResult.vineyardsSeized > 0
+      ? `• ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold`
+      : '• Attempted to seize vineyards but none available';
+
   // Queue warning modal
   const warning: PendingLoanWarning = {
     loanId: loan.id,
@@ -1279,7 +2003,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
     severity: 'critical',
     title: 'Missed Loan Payment - Warning #3: VINEYARD SEIZURE',
     message: `You have missed 3 consecutive payments to ${loan.lenderName}. Emergency measures are being taken.`,
-    details: `Penalties Applied:\n• ${seizureResult.vineyardsSeized > 0 ? `${seizureResult.vineyardsSeized} vineyard(s) forcibly sold` : 'Attempted to seize vineyards but none available'}\n• Vineyard value seized: ${formatNumber(seizureResult.valueRecovered, { currency: true })}\n• Sale proceeds (after 25% penalty): ${formatNumber(seizureResult.saleProceeds, { currency: true })}\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\n${seizureResult.vineyardNames.length > 0 ? `Vineyards Sold:\n${seizureResult.vineyardNames.map(name => `• ${name}`).join('\n')}` : 'No vineyards available for seizure'}\n\nRemaining loan balance: ${formatNumber(loan.remainingBalance, { currency: true })}\n\n🚨 FINAL WARNING: One more missed payment will result in FULL DEFAULT with permanent lender blacklist!`,
+    details: `Penalties Applied:\n${inventoryDetails}\n${vineyardDetails}\n• Vineyard value seized: ${formatNumber(seizureResult.valueRecovered, { currency: true })}\n• Sale proceeds (after 25% penalty): ${formatNumber(seizureResult.saleProceeds, { currency: true })}\n• Credit rating decreased by ${Math.abs(penalties.CREDIT_RATING_LOSS * 100).toFixed(0)}%\n• Additional ${penalties.BOOKKEEPING_WORK} work units added to next bookkeeping\n\n${inventoryResult.batchSummaries.length > 0 ? `Cellar Lots Liquidated:\n${inventoryResult.batchSummaries.map(summary => `• ${summary}`).join('\n')}` : 'No bottled inventory liquidated'}\n\n${seizureResult.vineyardNames.length > 0 ? `Vineyards Sold:\n${seizureResult.vineyardNames.map(name => `• ${name}`).join('\n')}` : 'No vineyards available for seizure'}\n\nRemaining loan balance: ${formatNumber(loan.remainingBalance, { currency: true })}\n\n🚨 FINAL WARNING: One more missed payment will result in FULL DEFAULT with permanent lender blacklist!`,
     penalties: {
       vineyardsSeized: seizureResult.vineyardsSeized,
       vineyardNames: seizureResult.vineyardNames,
@@ -1287,16 +2011,21 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
       bookkeepingWork: penalties.BOOKKEEPING_WORK
     }
   };
-  
+
   await queueLoanWarningModal(warning);
-  
+
+  const inventorySummary =
+    inventoryResult.valueRecovered > 0
+      ? `${inventoryResult.batchSummaries.length} cellar lot(s) liquidated for ${formatNumber(inventoryResult.saleProceeds, { currency: true })}`
+      : 'No bottled inventory available for liquidation';
+
   await notificationService.addMessage(
-    `THIRD missed payment to ${loan.lenderName}! ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold for ${formatNumber(seizureResult.valueRecovered, { currency: true })}. WARNING #3 - FINAL WARNING!`,
+    `THIRD missed payment to ${loan.lenderName}! ${inventorySummary}. ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold for ${formatNumber(seizureResult.valueRecovered, { currency: true })}. WARNING #3 - FINAL WARNING!`,
     'loan.missedPayment3',
     'Loan Warning',
     NotificationCategory.FINANCE
   );
-  
+
   // Trigger UI update to reflect vineyard seizure and other changes
   triggerGameUpdate();
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea } from '../ui';
+import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
 import { companyService, highscoreService, createNewCompany, authService } from '@/lib/services';
 import { type Company, type HighscoreEntry, type AuthUser, getUserById, insertUser } from '@/lib/database';
@@ -10,6 +10,12 @@ import ReactMarkdown from 'react-markdown';
 import readmeContent from '../../../readme.md?raw';
 import versionLogContent from '../../../docs/versionlog.md?raw';
 import { CompanyProps } from '../../lib/types/UItypes';
+
+type MentorWelcomeData = {
+  mentorName: string | null;
+  mentorMessage: string;
+  mentorImage: string | null | undefined;
+};
 
 interface LoginProps extends CompanyProps {
   onCompanySelected: (company: Company) => void;
@@ -40,6 +46,9 @@ export function Login({ onCompanySelected }: LoginProps) {
   const [deletingCompany, setDeletingCompany] = useState<string | null>(null);
   const [isReadmeOpen, setIsReadmeOpen] = useState(false);
   const [isVersionLogOpen, setIsVersionLogOpen] = useState(false);
+  const [showStartingConditions, setShowStartingConditions] = useState(false);
+  const [pendingCompany, setPendingCompany] = useState<Company | null>(null);
+  const [pendingMentorWelcome, setPendingMentorWelcome] = useState<MentorWelcomeData | null>(null);
 
   useEffect(() => {
     // Set up auth state listener
@@ -222,6 +231,27 @@ export function Login({ onCompanySelected }: LoginProps) {
       setCreateUserProfile(false);
       setShowCreateCompany(false);
       
+      // Store pending company and show starting conditions modal
+      setPendingCompany(company);
+      setShowStartingConditions(true);
+    } else {
+      setError('Failed to create company');
+    }
+  });
+  
+  const handleStartingConditionsComplete = async () => {
+    setShowStartingConditions(false);
+
+    if (pendingMentorWelcome) {
+      try {
+        sessionStorage.setItem('mentorWelcome', JSON.stringify(pendingMentorWelcome));
+      } catch (storageError) {
+        console.error('Failed to persist mentor welcome:', storageError);
+      }
+      setPendingMentorWelcome(null);
+    }
+    
+    if (pendingCompany) {
       // Reload appropriate company list
       if (currentUser) {
         await loadUserCompanies();
@@ -229,12 +259,11 @@ export function Login({ onCompanySelected }: LoginProps) {
         await loadAllCompanies();
       }
       
-      // Select the new company
-      onCompanySelected(company);
-    } else {
-      setError('Failed to create company');
+      // Select the company and navigate to game
+      onCompanySelected(pendingCompany);
+      setPendingCompany(null);
     }
-  });
+  };
 
   const handleSelectCompany = (company: Company) => {
     onCompanySelected(company);
@@ -792,6 +821,22 @@ export function Login({ onCompanySelected }: LoginProps) {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Starting Conditions Modal */}
+      {pendingCompany && (
+        <StartingConditionsModal
+          isOpen={showStartingConditions}
+          onClose={() => {
+            setShowStartingConditions(false);
+            setPendingCompany(null);
+            setPendingMentorWelcome(null);
+          }}
+          companyId={pendingCompany.id}
+          companyName={pendingCompany.name}
+          onComplete={handleStartingConditionsComplete}
+          onMentorReady={setPendingMentorWelcome}
+        />
+      )}
     </div>
   );
 }

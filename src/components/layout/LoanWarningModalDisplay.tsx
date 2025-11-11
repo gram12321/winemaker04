@@ -3,6 +3,7 @@ import { WarningModal } from '@/components/ui';
 import { PendingLoanWarning } from '@/lib/types/types';
 import { getFirstUnacknowledgedLoanWarning, acknowledgeLoanWarning } from '@/lib/database/core/loansDB';
 import { setModalMinimized, isModalMinimized } from '@/lib/utils';
+import { acceptForcedLoanRestructure, declineForcedLoanRestructure } from '@/lib/services/finance/loanService';
 
 /**
  * Display loan warning modals from database only
@@ -92,6 +93,28 @@ export function LoanWarningModalDisplay() {
   // If minimized, don't render the modal (will be handled by restore button in GlobalSearchResultsDisplay)
   if (isMinimized) return null;
 
+  const restructureOfferId =
+    warning.decision?.type === 'forcedLoanRestructure' ? warning.decision.offerId : undefined;
+
+  const warningActions =
+    warning.decision?.type === 'forcedLoanRestructure' && restructureOfferId
+      ? [
+          {
+            label: 'Accept Restructure',
+            onClick: () => {
+              void acceptForcedLoanRestructure(restructureOfferId);
+            }
+          },
+          {
+            label: 'Decline Offer',
+            onClick: () => {
+              void declineForcedLoanRestructure(restructureOfferId);
+            },
+            variant: 'destructive' as const
+          }
+        ]
+      : undefined;
+
   return (
     <WarningModal
       isOpen={!isModalMinimized('loan')}
@@ -102,6 +125,7 @@ export function LoanWarningModalDisplay() {
       details={warning.details}
       onMinimize={handleMinimize}
       showMinimizeButton={true}
+      actions={warningActions}
     />
   );
 }

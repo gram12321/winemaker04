@@ -1,14 +1,20 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '../ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui';
 import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
-import { formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory } from '@/lib/utils';
+import { formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory, StoryPortrait } from '@/lib/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
 import { getCurrentCompany, highscoreService } from '@/lib/services';
 import { type ScoreType } from '@/lib/database';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { NavigationProps } from '../../lib/types/UItypes';
+
+type MentorWelcomeData = {
+  mentorName: string | null;
+  mentorMessage: string;
+  mentorImage: string | null | undefined;
+};
 
 interface CompanyOverviewProps extends NavigationProps {
   // Inherits onNavigate from NavigationProps
@@ -33,6 +39,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     lowest_price: { position: 0, total: 0 }
   });
 
+  const [mentorWelcome, setMentorWelcome] = useState<MentorWelcomeData | null>(null);
   const [selectedScoreType, setSelectedScoreType] = useState<ScoreType>('company_value');
   const [contextLoading, setContextLoading] = useState(false);
   const [contextEntries, setContextEntries] = useState<{ entries: any[]; startIndex: number } | null>(null);
@@ -58,6 +65,32 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     }
   }, [company?.id]);
   
+  useEffect(() => {
+    const storedWelcome = (() => {
+      try {
+        return sessionStorage.getItem('mentorWelcome');
+      } catch (error) {
+        console.error('Failed to read mentor welcome payload:', error);
+        return null;
+      }
+    })();
+
+    if (storedWelcome) {
+      try {
+        const parsed: MentorWelcomeData = JSON.parse(storedWelcome);
+        setMentorWelcome(parsed);
+      } catch (parseError) {
+        console.error('Failed to parse mentor welcome payload:', parseError);
+      } finally {
+        try {
+          sessionStorage.removeItem('mentorWelcome');
+        } catch (error) {
+          console.error('Failed to clear mentor welcome payload:', error);
+        }
+      }
+    }
+  }, []);
+
   // Reactive update for cellar stats when game state changes
   const { subscribe } = useGameUpdates();
   useEffect(() => {
@@ -231,6 +264,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   }, [company, gameState.money]);
 
   return (
+    <>
     <div className="space-y-3">
       {/* Company Banner */}
       <div 
@@ -528,6 +562,39 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
           </Card>
         </div>
     </div>
+
+    <Dialog open={!!mentorWelcome} onOpenChange={(open) => { if (!open) setMentorWelcome(null); }}>
+      <DialogContent className="max-w-2xl md:max-w-3xl">
+        {mentorWelcome && (
+          <div className="space-y-6">
+            <DialogHeader className="pb-0">
+              <DialogTitle>{mentorWelcome.mentorName || 'Welcome to your new winery'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_240px]">
+              <div>
+                <StoryPortrait
+                  image={mentorWelcome.mentorImage}
+                  alt={mentorWelcome.mentorName ? `${mentorWelcome.mentorName} portrait` : 'Mentor portrait'}
+                  className="w-full h-64 rounded-lg"
+                  fallback={false}
+                />
+              </div>
+              <div className="flex flex-col justify-between">
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {mentorWelcome.mentorMessage}
+                </p>
+                <div className="flex justify-end mt-6">
+                  <Button onClick={() => setMentorWelcome(null)} className="bg-wine hover:bg-wine-dark text-white">
+                    Begin your journey
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

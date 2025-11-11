@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../../database/core/supabase';
-import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, highscoreService, initializeCustomers } from '../index';
+import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, highscoreService, initializeCustomers, updateGameState } from '../index';
 import { insertPrestigeEvent } from '../../database';
 import { calculateAbsoluteWeeks, formatNumber } from '@/lib/utils';
+import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
+import type { Season } from '@/lib/types/types';
 
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
@@ -156,6 +158,33 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
 export async function adminClearAllAchievements(): Promise<void> {
   const { error } = await supabase.from('achievements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (error) throw error;
+}
+
+interface AdminGameDatePayload {
+  week: number;
+  season: Season;
+  year: number;
+}
+
+/**
+ * Set the game date (week, season, year) for the active company
+ */
+export async function adminSetGameDate({ week, season, year }: AdminGameDatePayload): Promise<void> {
+  const normalizedWeek = Number.isFinite(week)
+    ? Math.min(Math.max(Math.floor(week), 1), WEEKS_PER_SEASON)
+    : GAME_INITIALIZATION.STARTING_WEEK;
+
+  const normalizedSeason = SEASONS.includes(season) ? season : GAME_INITIALIZATION.STARTING_SEASON;
+
+  const normalizedYear = Number.isFinite(year)
+    ? Math.max(Math.floor(year), GAME_INITIALIZATION.STARTING_YEAR)
+    : GAME_INITIALIZATION.STARTING_YEAR;
+
+  await updateGameState({
+    week: normalizedWeek,
+    season: normalizedSeason,
+    currentYear: normalizedYear
+  });
 }
 
 /**
