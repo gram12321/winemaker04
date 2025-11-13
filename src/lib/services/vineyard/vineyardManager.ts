@@ -137,6 +137,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       
       let newStatus = vineyard.status;
       let newRipeness = vineyard.ripeness || 0;
+      let isRipenessDeclining = vineyard.isRipenessDeclining ?? false;
       
       // Handle seasonal status transitions
       if (season === 'Spring' && week === 1) {
@@ -162,6 +163,27 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
             if (vineyard.density > 0 && vineyard.grape) {
               newStatus = 'Growing';
             }
+          }
+        }
+        
+        // Spring week 1 reset: Reset ripeness to 0 for any vineyard transitioning to Growing
+        // This ensures a clean start for the new vintage, even if winter decay didn't reach 0%
+        if (newStatus === 'Growing') {
+          newRipeness = 0;
+          isRipenessDeclining = false;
+          
+          // Cancel any remaining harvest activities on this vineyard
+          // Harvest activities should not continue into the new vintage
+          const harvestingActivity = activities.find(
+            (a) => a.category === WorkCategory.HARVESTING && 
+                   a.status === 'active' && 
+                   a.targetId === vineyard.id
+          );
+          
+          if (harvestingActivity && harvestingActivity.isCancellable !== false) {
+            // Collect activity to cancel (will process after loop)
+            activitiesToCancel.push(harvestingActivity.id);
+            cancelledActivityVineyards.push(vineyard.name);
           }
         }
       } else if (season === 'Winter' && week === 1) {
@@ -195,6 +217,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       if (newStatus === 'Growing' || vineyard.status === 'Growing' || vineyard.status === 'Planting') {
         const ripenessIncrease = calculateDynamicRipenessIncrease(vineyard, season);
         if (ripenessIncrease > 0) {
+          isRipenessDeclining = false;
           // Check if vineyard is currently being planted (partial planting)
           const plantingActivity = activities.find(
             (a) => a.category === WorkCategory.PLANTING && 
@@ -220,6 +243,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       
       // Handle winter ripeness penalties - calibrated exponential-style ramp
       if (season === 'Winter' && newRipeness > 0) {
+        isRipenessDeclining = true;
         // Calculate winter ripeness degradation using calibrated base + acceleration factors
         // Base degradation: ~3% per week, increasing by ~1% each week (week 12 ≈ -14%)
         const weeksIntoWinter = week;
@@ -247,6 +271,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       if (season === 'Winter' && newRipeness <= 0 && vineyard.status !== 'Dormant') {
         newStatus = 'Dormant';
         newRipeness = 0; // Ensure ripeness is exactly 0
+        isRipenessDeclining = false;
         
         // Clear pendingFeatures when vineyard goes dormant (features reset for next season)
         // This ensures features like Noble Rot don't carry over to next season
@@ -255,6 +280,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
             ...vineyard,
             status: newStatus,
             ripeness: newRipeness,
+            isRipenessDeclining,
             pendingFeatures: [] // Clear all pending features
           };
           vineyardsToUpdate.push(updatedVineyard);
@@ -292,18 +318,24 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       if ((vineyard.status === 'Harvested' || vineyard.status === 'Dormant') && vineyard.pendingFeatures && vineyard.pendingFeatures.length > 0) {
         const updatedVineyard = {
           ...vineyard,
-          pendingFeatures: []
+          pendingFeatures: [],
+          isRipenessDeclining
         };
         vineyardsToUpdate.push(updatedVineyard);
         continue; // Skip the update below since we already added it
       }
       
       // Only update if there are changes
-      if (newStatus !== vineyard.status || newRipeness !== vineyard.ripeness) {
+      if (
+        newStatus !== vineyard.status ||
+        newRipeness !== vineyard.ripeness ||
+        isRipenessDeclining !== vineyard.isRipenessDeclining
+      ) {
         const updatedVineyard = {
           ...vineyard,
           status: newStatus,
-          ripeness: newRipeness
+          ripeness: newRipeness,
+          isRipenessDeclining
         };
         
         vineyardsToUpdate.push(updatedVineyard);
@@ -315,7 +347,7 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       await bulkUpdateVineyards(vineyardsToUpdate);
     }
     
-    // Cancel all harvesting activities for vineyards that went dormant
+    // Cancel all harvesting activities for vineyards that went dormant or Spring reset
     if (activitiesToCancel.length > 0) {
       for (let i = 0; i < activitiesToCancel.length; i++) {
         const activityId = activitiesToCancel[i];
@@ -324,8 +356,13 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
         const success = await updateActivityInDb(activityId, { status: 'cancelled' });
         
         if (success) {
+          // Use different messages for Winter vs Spring cancellations
+          const message = (season === 'Spring' && week === 1)
+            ? `Harvest activity on ${vineyardName} has been cancelled due to Spring reset. The new vintage has started with ripeness reset to zero.`
+            : `Harvest activity on ${vineyardName} has been cancelled due to winter dormancy. The vineyard's ripeness has degraded to zero.`;
+          
           await notificationService.addMessage(
-            `Harvest activity on ${vineyardName} has been cancelled due to winter dormancy. The vineyard's ripeness has degraded to zero.`,
+            message,
             'vineyardManager.harvestCancelled',
             'Harvest Cancelled',
             NotificationCategory.VINEYARD_OPERATIONS

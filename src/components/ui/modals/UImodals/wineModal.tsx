@@ -586,7 +586,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                             <div className="text-xs text-muted-foreground mb-2">{wineBatch.grape} Base: {formatNumber(baseVal,{decimals:2,forceDecimals:true})}</div>
                             <div className="space-y-1">
                               {effects.length === 0 ? (
-                                <div className="text-xs text-muted-foreground">No harvest effects.</div>
+                                <div className="text-xs text-muted-foreground">No effects.</div>
                               ) : (
                                 <>
                                   {effects.map((e, idx) => (

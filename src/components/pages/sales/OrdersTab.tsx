@@ -52,7 +52,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   withLoading,
   onNavigateToWinepedia
 }) => {
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected'>('pending');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'fulfilled' | 'rejected' | 'expired'>('pending');
   const [orderChanceInfo, setOrderChanceInfo] = useState<{
     companyPrestige: number;
     availableWines: number;
@@ -199,6 +199,12 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
       label: 'Ordered', 
       sortable: true,
       accessor: (order) => `${order.orderedAt.year}-${order.orderedAt.season}-${order.orderedAt.week}`
+    },
+    { 
+      key: 'expiresAt', 
+      label: 'Expires', 
+      sortable: true,
+      accessor: (order) => order.expiresAt
     }
   ];
 
@@ -376,7 +382,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
             <p className="text-gray-500 text-xs">Filter orders by status</p>
           </div>
           <div className="flex space-x-2 text-xs">
-            {(['all', 'pending', 'fulfilled', 'rejected'] as const).map((status) => (
+            {(['all', 'pending', 'fulfilled', 'rejected', 'expired'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setOrderStatusFilter(status)}
@@ -554,7 +560,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                   sortIndicator={getOrderSortIndicator('premiumDiscount' as keyof WineOrder)}
                   isSorted={isOrderColumnSorted('premiumDiscount' as keyof WineOrder)}
                 >
-                  Premium/Discount
+                  Premium
                 </TableHead>
                 <TableHead 
                   sortable 
@@ -580,6 +586,14 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 >
                   Ordered
                 </TableHead>
+                <TableHead 
+                  sortable 
+                  onSort={() => handleOrderSort('expiresAt')}
+                  sortIndicator={getOrderSortIndicator('expiresAt')}
+                  isSorted={isOrderColumnSorted('expiresAt')}
+                >
+                  Expires
+                </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -587,7 +601,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
             <TableBody>
               {paginatedOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={14} className="text-center text-gray-500 py-6">
+                  <TableCell colSpan={15} className="text-center text-gray-500 py-6">
                     {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                   </TableCell>
                 </TableRow>
@@ -889,10 +903,18 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                     <TableCell className="text-gray-500">
                       {formatGameDateFromObject(order.orderedAt)}
                     </TableCell>
+                    <TableCell className="text-gray-500">
+                      {formatGameDateFromObject({
+                        week: order.expiresWeek,
+                        season: order.expiresSeason,
+                        year: order.expiresYear
+                      })}
+                    </TableCell>
                     <TableCell>
                       <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         order.status === 'fulfilled' ? 'bg-green-100 text-green-800' :
+                        order.status === 'expired' ? 'bg-gray-100 text-gray-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}

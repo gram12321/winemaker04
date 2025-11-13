@@ -234,6 +234,10 @@ CREATE TABLE wine_orders (
     customer_id text,
     customer_name text,
     customer_country text,
+    expires_at integer NOT NULL DEFAULT 100,
+    expires_week integer NOT NULL DEFAULT 1 CHECK (expires_week >= 1 AND expires_week <= 12),
+    expires_season text NOT NULL DEFAULT 'Spring' CHECK (expires_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    expires_year integer NOT NULL DEFAULT 2024,
     calculation_data jsonb
 );
 

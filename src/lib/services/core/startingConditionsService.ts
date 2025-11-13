@@ -289,7 +289,7 @@ async function applyStartingLoan(config: StartingLoanConfig): Promise<StartingLo
     }
 
     const { principal, durationSeasons } = config;
-  const interestOverride = config.interestRate;
+    const interestOverride = config.interestRate;
 
     if (principal < lender.minLoanAmount || principal > lender.maxLoanAmount) {
       return {
@@ -312,10 +312,11 @@ async function applyStartingLoan(config: StartingLoanConfig): Promise<StartingLo
       lender,
       {
         loanCategory: 'standard',
-      skipAdministrationPenalty: config.skipAdministrationPenalty ?? true,
-      skipTransactions: true,
-      overrideBaseRate: interestOverride,
-      overrideEffectiveRate: interestOverride
+        skipAdministrationPenalty: config.skipAdministrationPenalty ?? true,
+        skipTransactions: true,
+        overrideBaseRate: interestOverride,
+        overrideEffectiveRate: interestOverride,
+        skipLimitCheck: true
       }
     );
 

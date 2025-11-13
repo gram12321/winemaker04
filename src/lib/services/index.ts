@@ -54,6 +54,7 @@ export * from './sales/generateOrder';
 export * from './sales/relationshipService';
 export * from './sales/contractGenerationService';
 export * from './sales/contractService';
+export * from './sales/expirationService';
 
 // Prestige services
 export * from './prestige/prestigeService';

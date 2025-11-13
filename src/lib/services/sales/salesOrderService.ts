@@ -7,9 +7,13 @@ import { notificationService } from '../core/notificationService';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { SALES_CONSTANTS } from '../../constants/constants';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
 import { getGameState } from '../core/gameState';
+import { getPendingOrders } from './salesService';
+import { createRelationshipBoost } from './relationshipService';
+import { updateWineOrderStatus } from '../../database/customers/salesDB';
+import { calculateAbsoluteWeeks } from '../../utils/utils';
 
 
 /**
@@ -154,6 +158,63 @@ export async function generateSophisticatedWineOrders(): Promise<{
       totalOrdersCreated: 0,
       chanceInfo
     };
+  }
+}
+
+/**
+ * Check and expire old wine orders
+ * Called during game tick to mark orders as expired when they pass their expiration date
+ * Applies small relationship penalty for expired orders
+ * 
+ * @returns Number of orders expired
+ */
+export async function expireOldOrders(): Promise<number> {
+  try {
+    const pendingOrders = await getPendingOrders();
+    const gameState = getGameState();
+    
+    // Calculate current absolute week for simple comparison
+    const currentAbsoluteWeek = calculateAbsoluteWeeks(
+      gameState.week || 1,
+      gameState.season || 'Spring',
+      gameState.currentYear || 2024
+    );
+    
+    let expiredCount = 0;
+    
+    for (const order of pendingOrders) {
+      // Simple integer comparison - order expired if current week is past expiration
+      if (currentAbsoluteWeek > order.expiresAt) {
+        await updateWineOrderStatus(order.id, 'expired');
+        
+        // Apply small relationship penalty (less than contract penalty)
+        await createRelationshipBoost(
+          order.customerId,
+          -2,
+          0,
+          'Order expired (not fulfilled)'
+        );
+        
+        expiredCount++;
+      }
+    }
+    
+    if (expiredCount > 0) {
+      await notificationService.addMessage(
+        `${expiredCount} wine order${expiredCount > 1 ? 's' : ''} expired`,
+        'salesOrderService.expireOldOrders',
+        'Orders Expired',
+        NotificationCategory.SALES_ORDERS
+      );
+      
+      triggerGameUpdate();
+      triggerTopicUpdate('orders');
+    }
+    
+    return expiredCount;
+  } catch (error) {
+    console.error('Error expiring orders:', error);
+    return 0;
   }
 }
 

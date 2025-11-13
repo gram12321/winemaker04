@@ -6,6 +6,9 @@ import { X } from 'lucide-react';
 import { getGameState, calculateLoanTerms } from '@/lib/services';
 import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services';
 import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
+import { getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/services/finance/loanService';
+import { calculateTotalAssets } from '@/lib/services/finance/financeService';
+import { loadLenders } from '@/lib/database/core/lendersDB';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 interface LenderSearchOptionsModalProps {
@@ -58,6 +61,10 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
     searchWork: 0
   });
 
+  // Dynamic max loan amount based on credit rating and assets
+  const [maxAllowedLoanAmount, setMaxAllowedLoanAmount] = useState<number>(LOAN_AMOUNT_RANGES.MAX);
+  const [isCalculatingMax, setIsCalculatingMax] = useState(false);
+
   // Sync local state with options
   const [loanAmountRange, setLoanAmountRange] = useState<[number, number]>([LOAN_AMOUNT_RANGES.MIN, LOAN_AMOUNT_RANGES.MAX]);
   const [durationRange, setDurationRange] = useState<[number, number]>([LOAN_DURATION_RANGES.MIN, LOAN_DURATION_RANGES.MAX]);
@@ -104,6 +111,71 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
     totalExpenses
   } = loanTerms;
 
+  // Calculate max allowed loan amount based on credit rating and assets
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const calculateMaxAllowed = async () => {
+      try {
+        setIsCalculatingMax(true);
+        const [creditRating, totalAssets] = await Promise.all([
+          getCurrentCreditRating(),
+          calculateTotalAssets()
+        ]);
+
+        let maxAllowed: number;
+
+        if (selectedLender) {
+          // For selected lender mode, calculate max for this specific lender
+          const limitInfo = await getScaledLoanAmountLimit(selectedLender, creditRating, { totalAssets });
+          maxAllowed = Math.min(limitInfo.maxAllowed, selectedLender.maxLoanAmount);
+        } else {
+          // For lender search mode, calculate max across all lenders
+          const allLenders = await loadLenders();
+          const maxAllowedPromises = allLenders
+            .filter(lender => !lender.blacklisted)
+            .map(lender => getScaledLoanAmountLimit(lender, creditRating, { totalAssets }));
+
+          const limits = await Promise.all(maxAllowedPromises);
+          maxAllowed = limits.length > 0
+            ? Math.max(...limits.map(limit => limit.maxAllowed))
+            : LOAN_AMOUNT_RANGES.MAX;
+        }
+
+        // Ensure it's at least the minimum, and cap at the theoretical max
+        const finalMax = Math.max(
+          LOAN_AMOUNT_RANGES.MIN,
+          Math.min(maxAllowed, LOAN_AMOUNT_RANGES.MAX)
+        );
+
+        setMaxAllowedLoanAmount(finalMax);
+
+        // Update loan amount range if current max exceeds the new limit (only for search mode)
+        if (!selectedLender && loanAmountRange[1] > finalMax) {
+          const newRange: [number, number] = [
+            Math.min(loanAmountRange[0], finalMax),
+            finalMax
+          ];
+          setLoanAmountRange(newRange);
+          setOptions(prev => ({ ...prev, loanAmountRange: newRange }));
+        }
+
+        // Update loan amount if it exceeds the limit (for selected lender mode)
+        if (selectedLender && loanAmount > finalMax) {
+          setLoanAmount(Math.min(loanAmount, finalMax));
+        }
+      } catch (error) {
+        console.error('Error calculating max allowed loan amount:', error);
+        // Fallback to default max
+        setMaxAllowedLoanAmount(selectedLender ? selectedLender.maxLoanAmount : LOAN_AMOUNT_RANGES.MAX);
+      } finally {
+        setIsCalculatingMax(false);
+      }
+    };
+
+    calculateMaxAllowed();
+  }, [isOpen, selectedLender]);
+
   // Calculate preview stats whenever options change
   useEffect(() => {
     const totalCost = calculateLenderSearchCost(options);
@@ -111,14 +183,12 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
     
     // Apply loan constraint multipliers - smooth scaling based on range restriction
     const amountRange = loanAmountRange[1] - loanAmountRange[0];
+    const maxAmountRange = maxAllowedLoanAmount - LOAN_AMOUNT_RANGES.MIN;
     const durationRangeValue = durationRange[1] - durationRange[0];
-    
-    // Calculate maximum possible ranges for normalization
-    const maxAmountRange = LOAN_AMOUNT_RANGES.MAX - LOAN_AMOUNT_RANGES.MIN;
     const maxDurationRange = LOAN_DURATION_RANGES.MAX - LOAN_DURATION_RANGES.MIN;
     
     // Calculate restriction ratios (0 = no restriction, 1 = maximum restriction)
-    const amountRestrictionRatio = 1 - (amountRange / maxAmountRange);
+    const amountRestrictionRatio = maxAmountRange > 0 ? 1 - (amountRange / maxAmountRange) : 0;
     const durationRestrictionRatio = 1 - (durationRangeValue / maxDurationRange);
     
     // Smooth scaling: 1.0x (no restriction) to 2.0x (maximum restriction)
@@ -132,7 +202,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
       totalCost: adjustedCost,
       totalWork: adjustedWork
     });
-  }, [options, loanAmountRange, durationRange]);
+  }, [options, loanAmountRange, durationRange, maxAllowedLoanAmount]);
 
   // Handle submit
   const handleSubmit = async () => {
@@ -256,19 +326,32 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                 <div>
                   <Label className="text-base font-medium text-white">Loan Amount</Label>
                   <div className="mt-2 space-y-2">
-                    <Slider
-                      value={[loanAmount]}
-                      onValueChange={(value) => setLoanAmount(value[0])}
-                      min={selectedLender.minLoanAmount}
-                      max={selectedLender.maxLoanAmount}
-                      step={1000}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-sm text-gray-400">
-                      <span>{formatNumber(selectedLender.minLoanAmount, { currency: true })}</span>
-                      <span className="font-medium text-white">{formatNumber(loanAmount, { currency: true })}</span>
-                      <span>{formatNumber(selectedLender.maxLoanAmount, { currency: true })}</span>
-                    </div>
+                    {isCalculatingMax ? (
+                      <div className="text-xs text-gray-400 py-2">Calculating borrowing limit...</div>
+                    ) : (
+                      <>
+                        <Slider
+                          value={[loanAmount]}
+                          onValueChange={(value) => setLoanAmount(value[0])}
+                          min={selectedLender.minLoanAmount}
+                          max={maxAllowedLoanAmount}
+                          step={1000}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-sm text-gray-400">
+                          <span>{formatNumber(selectedLender.minLoanAmount, { currency: true })}</span>
+                          <span className="font-medium text-white">{formatNumber(loanAmount, { currency: true })}</span>
+                          <span className="font-medium text-blue-400">
+                            Max: {formatNumber(maxAllowedLoanAmount, { currency: true })}
+                          </span>
+                        </div>
+                        {maxAllowedLoanAmount < selectedLender.maxLoanAmount && (
+                          <p className="text-xs text-amber-400 mt-1">
+                            Your borrowing limit is {formatNumber(maxAllowedLoanAmount, { currency: true })} based on your credit rating and total assets (lender max: {formatNumber(selectedLender.maxLoanAmount, { currency: true })}).
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -402,20 +485,33 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
                       <label className="block text-sm font-medium text-white mb-2">
                         Loan Amount Range: {formatNumber(loanAmountRange[0], { currency: true })} - {formatNumber(loanAmountRange[1], { currency: true })}
                       </label>
-                      <DualSlider
-                        value={loanAmountRange}
-                        min={LOAN_AMOUNT_RANGES.MIN}
-                        max={LOAN_AMOUNT_RANGES.MAX}
-                        step={LOAN_AMOUNT_RANGES.STEP}
-                        onChange={(value) => {
-                          setLoanAmountRange([value[0], value[1]]);
-                          setOptions(prev => ({ ...prev, loanAmountRange: [value[0], value[1]] }));
-                        }}
-                      />
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>{formatNumber(LOAN_AMOUNT_RANGES.MIN, { currency: true })}</span>
-                        <span>{formatNumber(LOAN_AMOUNT_RANGES.MAX, { currency: true })}</span>
-                      </div>
+                      {isCalculatingMax ? (
+                        <div className="text-xs text-gray-400 py-2">Calculating borrowing limit...</div>
+                      ) : (
+                        <>
+                          <DualSlider
+                            value={loanAmountRange}
+                            min={LOAN_AMOUNT_RANGES.MIN}
+                            max={maxAllowedLoanAmount}
+                            step={LOAN_AMOUNT_RANGES.STEP}
+                            onChange={(value) => {
+                              setLoanAmountRange([value[0], value[1]]);
+                              setOptions(prev => ({ ...prev, loanAmountRange: [value[0], value[1]] }));
+                            }}
+                          />
+                          <div className="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>{formatNumber(LOAN_AMOUNT_RANGES.MIN, { currency: true })}</span>
+                            <span className="font-medium text-blue-400">
+                              Max: {formatNumber(maxAllowedLoanAmount, { currency: true })}
+                            </span>
+                          </div>
+                          {maxAllowedLoanAmount < LOAN_AMOUNT_RANGES.MAX && (
+                            <p className="text-xs text-amber-400 mt-2">
+                              Your borrowing limit is {formatNumber(maxAllowedLoanAmount, { currency: true })} based on your credit rating and total assets.
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
 
                     {/* Duration Range */}

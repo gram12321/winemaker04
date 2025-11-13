@@ -178,6 +178,16 @@ export const calculateNetWorth = async (): Promise<number> => {
   }
 };
 
+export const calculateTotalAssets = async (): Promise<number> => {
+  try {
+    const financialData = await calculateFinancialData('year');
+    return financialData.totalAssets;
+  } catch (error) {
+    console.error('Error calculating total assets:', error);
+    return 0;
+  }
+};
+
 // Calculate financial data for income statement and balance sheet
 export const calculateFinancialData = async (
   period: 'weekly' | 'season' | 'year' | 'all',

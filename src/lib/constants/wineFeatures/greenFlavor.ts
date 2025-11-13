@@ -39,6 +39,9 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
         condition: (context: { options: Vineyard; batch?: any }) => {
           // Trigger if grapes are significantly underripe
           const vineyard = context.options;
+          if (vineyard.isRipenessDeclining) {
+            return false;
+          }
           return (vineyard.ripeness || 0) < 0.5;
         },
         riskIncrease: (context: { options: Vineyard; batch?: any }) => {
@@ -46,6 +49,9 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
           // Base formula: (0.5 - ripeness) × 0.6
           // White grapes show green/vegetal notes more prominently (lack tannin masking)
           const vineyard = context.options;
+          if (vineyard.isRipenessDeclining) {
+            return 0;
+          }
           const ripeness = vineyard.ripeness || 0;
           const baseRisk = Math.max(0, (0.5 - ripeness) * 0.6);
           

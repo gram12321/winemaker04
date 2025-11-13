@@ -12,6 +12,7 @@ import { getBottleAgingSeverity } from './agingService';
 import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
+import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 
 // ===== CORE INTERFACES =====
 
@@ -344,25 +345,74 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
 // ===== EFFECT CALCULATIONS =====
 
 /**
- * Apply feature effects directly to wine batch quality and balance
+ * Apply feature effects directly to wine batch quality, characteristics, and balance
  * This modifies the batch in-place and should be called during game ticks
  */
 export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   const configs = getAllFeatureConfigs();
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
   
-  let currentGrapeQuality = batch.bornGrapeQuality;
+  // Get all feature names to identify feature effects in breakdown
+  const featureNames = new Set(configs.map(c => c.name));
   
+  // Start with base characteristics (before feature effects)
+  // We need to reverse-engineer base characteristics by removing existing feature effects
+  let baseCharacteristics = { ...batch.characteristics };
+  const existingBreakdownEffects = batch.breakdown?.effects || [];
+  
+  // Remove feature effects from base characteristics to get true base
+  for (const effect of existingBreakdownEffects) {
+    if (featureNames.has(effect.description)) {
+      // This is a feature effect - remove it from base characteristics
+      baseCharacteristics[effect.characteristic as keyof WineCharacteristics] = 
+        Math.max(0, Math.min(1, baseCharacteristics[effect.characteristic as keyof WineCharacteristics] - effect.modifier));
+    }
+  }
+  
+  // Filter out feature effects from breakdown (we'll add fresh ones)
+  const nonFeatureEffects = existingBreakdownEffects.filter(e => !featureNames.has(e.description));
+  
+  let currentGrapeQuality = batch.bornGrapeQuality;
+  let modifiedCharacteristics = { ...baseCharacteristics };
+  const breakdownEffects = [...nonFeatureEffects];
+  
+  // Apply quality and characteristic effects from all present features
   for (const feature of presentFeatures) {
     const config = configs.find(c => c.id === feature.id);
     if (!config) continue;
     
+    // Apply quality effect
     currentGrapeQuality = applyQualityEffect(currentGrapeQuality, batch, config, feature.severity);
+    
+    // Apply characteristic effects
+    if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
+      for (const effect of config.effects.characteristics) {
+        const modifier = applyModifier(effect.modifier, feature.severity);
+        
+        const currentValue = modifiedCharacteristics[effect.characteristic];
+        modifiedCharacteristics[effect.characteristic] = Math.max(0, Math.min(1, currentValue + modifier));
+        
+        // Add fresh feature effect to breakdown
+        breakdownEffects.push({
+          characteristic: effect.characteristic,
+          modifier,
+          description: config.name
+        });
+      }
+    }
   }
+  
+  // Recalculate balance with modified characteristics
+  const balanceResult = calculateWineBalance(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   
   return {
     ...batch,
-    grapeQuality: Math.max(0, Math.min(1, currentGrapeQuality))
+    grapeQuality: Math.max(0, Math.min(1, currentGrapeQuality)),
+    characteristics: modifiedCharacteristics,
+    balance: balanceResult.score,
+    breakdown: {
+      effects: breakdownEffects
+    }
   };
 }
 
@@ -427,44 +477,6 @@ export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Parti
   return modifiers;
 }
 
-/**
- * Apply feature characteristic effects to wine batch characteristics
- * Modifies characteristics and adds effects to breakdown for UI display
- */
-export function applyFeatureCharacteristicEffects(batch: WineBatch, featureConfig: FeatureConfig): WineBatch {
-  if (!featureConfig.effects.characteristics) {
-    return batch;
-  }
-  
-  const feature = (batch.features || []).find(f => f.id === featureConfig.id);
-  if (!feature || !feature.isPresent) {
-    return batch;
-  }
-  
-  let modifiedCharacteristics = { ...batch.characteristics };
-  const breakdownEffects = [...(batch.breakdown?.effects || [])];
-  
-  for (const effect of featureConfig.effects.characteristics) {
-    const modifier = applyModifier(effect.modifier, feature.severity);
-    
-    const currentValue = modifiedCharacteristics[effect.characteristic];
-    modifiedCharacteristics[effect.characteristic] = Math.max(0, Math.min(1, currentValue + modifier));
-    
-    breakdownEffects.push({
-      characteristic: effect.characteristic,
-      modifier,
-      description: featureConfig.name
-    });
-  }
-  
-  return {
-    ...batch,
-    characteristics: modifiedCharacteristics,
-    breakdown: {
-      effects: breakdownEffects
-    }
-  };
-}
 
 // ===== RISK CALCULATIONS =====
 
@@ -841,6 +853,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
 /**
  * Process event-triggered features
  * For harvest events, also merges vineyard pendingFeatures into batch features
+ * Applies feature effects to ALL present features after event processing
  */
 export async function processEventTrigger(
   batch: WineBatch,
@@ -867,6 +880,7 @@ export async function processEventTrigger(
     }
   }
   
+  // Process event triggers (manifestation logic)
   for (const config of eventConfigs) {
     let triggers: any[] = [];
     if (config.behavior === 'triggered') {
@@ -884,7 +898,7 @@ export async function processEventTrigger(
             ? trigger.riskIncrease(triggerContext)
             : trigger.riskIncrease;
           
-          const { features: newFeatures, manifested } = await applyRiskIncrease(
+          const { features: newFeatures } = await applyRiskIncrease(
             updatedBatch, 
             config, 
             updatedFeatures, 
@@ -893,16 +907,18 @@ export async function processEventTrigger(
           );
           updatedFeatures = newFeatures;
           
-          if (manifested) {
-            updatedBatch = applyFeatureEffectsToBatch({ ...updatedBatch, features: updatedFeatures });
-            updatedBatch = applyFeatureCharacteristicEffects({ ...updatedBatch, features: updatedFeatures }, config);
-          }
+          // Note: Don't apply effects here - we'll apply ALL feature effects at the end
         }
       }
     }
   }
   
-  return { ...updatedBatch, features: updatedFeatures };
+  // Apply ALL feature effects (including newly manifested and already-present features)
+  // This ensures that features that spawned active or were merged from vineyard pendingFeatures
+  // have their effects applied immediately, not just at the next weekly tick
+  updatedBatch = applyFeatureEffectsToBatch({ ...updatedBatch, features: updatedFeatures });
+  
+  return updatedBatch;
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -1191,11 +1207,19 @@ function previewEventRisksInternal(
         const triggerContext = { options: context, batch };
         const conditionMet = trigger.condition(triggerContext);
 
-        const riskIncrease = conditionMet 
-          ? (typeof trigger.riskIncrease === 'function'
-              ? trigger.riskIncrease(triggerContext)
-              : trigger.riskIncrease)
-          : 0;
+        // Skip this feature entirely if condition is not met (e.g., ripeness declining)
+        if (!conditionMet) {
+          continue;
+        }
+
+        const riskIncrease = typeof trigger.riskIncrease === 'function'
+          ? trigger.riskIncrease(triggerContext)
+          : trigger.riskIncrease;
+        
+        // Also check if riskIncrease returns 0 (additional safeguard)
+        if (riskIncrease <= 0) {
+          continue;
+        }
         
         let newRisk: number;
         
@@ -1366,6 +1390,22 @@ async function processTimeBased(
     
     // If already manifested and can't evolve, skip processing
     if (feature.isPresent) return features;
+    
+    // Check if accumulation is still possible for this state
+    const stateMultiplier = resolveStateMultiplier(accumulationConfig.stateMultipliers, batch);
+    
+    // If state multiplier is 0, this feature can no longer accumulate risk
+    // Clear the risk value entirely (e.g., Grey Rot can only develop on grapes, not processed must/wine)
+    if (stateMultiplier <= 0) {
+      // Only clear risk if it's currently > 0 (avoid unnecessary updates)
+      if ((feature.risk || 0) > 0) {
+        return updateFeatureInArray(features, {
+          ...feature,
+          risk: 0
+        });
+      }
+      return features; // No change needed
+    }
     
     const riskIncrease = calculateRiskIncrease(batch, config, feature);
     const newRisk = Math.min(1.0, (feature.risk || 0) + riskIncrease);
@@ -1781,8 +1821,12 @@ function getFeatureRiskCombinations(
       let contextForRisk: any;
       if (event === 'harvest') {
         if (optionSet.season && optionSet.week !== undefined) {
+          // For season/week options, still provide vineyard as 'options' for condition checks
+          // Some features (like green_flavor) need vineyard.isRipenessDeclining
           contextForRisk = { 
-            vineyard: vineyard || batch, 
+            options: vineyard || batch,  // Use 'options' to match condition function expectations
+            vineyard: vineyard || batch, // Also include as 'vineyard' for compatibility
+            batch: batch || vineyard,
             season: optionSet.season, 
             week: optionSet.week 
           };
@@ -1793,7 +1837,19 @@ function getFeatureRiskCombinations(
         contextForRisk = { options: optionSet, batch: batch || vineyard };
       }
       
+      // Check condition first - skip if condition is not met (e.g., ripeness declining)
+      const conditionMet = trigger.condition ? trigger.condition(contextForRisk) : true;
+      if (!conditionMet) {
+        continue; // Skip this combination entirely
+      }
+      
       const riskValue = trigger.riskIncrease(contextForRisk);
+      
+      // Skip combinations with zero or negative risk
+      if (riskValue <= 0) {
+        continue;
+      }
+      
       const label = generateOptionLabel(optionSet, event);
       
       combinations.push({

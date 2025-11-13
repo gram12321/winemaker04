@@ -3,7 +3,7 @@ import { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, Pending
 import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '../../constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getGameState, updateGameState } from '../core/gameState';
-import { addTransaction } from './financeService';
+import { addTransaction, calculateTotalAssets } from './financeService';
 import { insertLoan, loadActiveLoans, updateLoan, clearLoanWarning } from '../../database/core/loansDB';
 import { loadLenders, updateLenderBlacklist } from '../../database/core/lendersDB';
 import { notificationService } from '../core/notificationService';
@@ -73,6 +73,75 @@ export async function getCurrentCreditRating(): Promise<number> {
   }
 }
 
+const LOAN_LIMIT_SCALING = {
+  MIN_ASSET_FACTOR: 0.2,
+  MAX_ASSET_FACTOR: 0.65,
+  MIN_RATING_MULTIPLIER: 0.8,
+  MAX_RATING_MULTIPLIER: 1.5,
+  ROUNDING_STEP: 1000
+} as const;
+
+export interface LoanAmountLimit {
+  maxAllowed: number;
+  assetCap: number;
+  ratingCap: number;
+  totalAssets: number;
+}
+
+interface LoanAmountLimitOptions {
+  totalAssets?: number;
+  roundingStep?: number;
+}
+
+export async function getScaledLoanAmountLimit(
+  lender: Lender,
+  creditRating: number,
+  options: LoanAmountLimitOptions = {}
+): Promise<LoanAmountLimit> {
+  const normalizedRating = Math.max(0, Math.min(1, creditRating));
+  const roundingStep = options.roundingStep ?? LOAN_LIMIT_SCALING.ROUNDING_STEP;
+
+  let totalAssets = options.totalAssets;
+  if (totalAssets === undefined) {
+    totalAssets = await calculateTotalAssets();
+  }
+
+  const safeTotalAssets = Math.max(0, totalAssets ?? 0);
+
+  const assetFactor =
+    LOAN_LIMIT_SCALING.MIN_ASSET_FACTOR +
+    (LOAN_LIMIT_SCALING.MAX_ASSET_FACTOR - LOAN_LIMIT_SCALING.MIN_ASSET_FACTOR) * normalizedRating;
+
+  const assetCap = Math.max(
+    lender.minLoanAmount,
+    safeTotalAssets * assetFactor
+  );
+
+  const ratingMultiplier =
+    LOAN_LIMIT_SCALING.MIN_RATING_MULTIPLIER +
+    (LOAN_LIMIT_SCALING.MAX_RATING_MULTIPLIER - LOAN_LIMIT_SCALING.MIN_RATING_MULTIPLIER) * normalizedRating;
+
+  const ratingCap = Math.max(
+    lender.minLoanAmount,
+    lender.maxLoanAmount * ratingMultiplier
+  );
+
+  const rawMax = Math.min(ratingCap, assetCap);
+  const roundedMax =
+    roundingStep > 0
+      ? Math.floor(rawMax / roundingStep) * roundingStep
+      : rawMax;
+
+  const maxAllowed = Math.max(lender.minLoanAmount, roundedMax);
+
+  return {
+    maxAllowed,
+    assetCap,
+    ratingCap,
+    totalAssets: safeTotalAssets
+  };
+}
+
 /**
  * Apply for a loan from a specific lender
  */
@@ -88,15 +157,36 @@ export async function applyForLoan(
     skipTransactions?: boolean;
     overrideBaseRate?: number;
     overrideEffectiveRate?: number;
+    skipLimitCheck?: boolean;
   } = {}
 ): Promise<string> {
   try {
     const gameState = getGameState();
+    const creditRating = gameState.creditRating ?? CREDIT_RATING.DEFAULT_RATING;
     const currentDate: GameDate = {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024
     };
+
+    const requestedAmount = amount;
+    let principalAmount = requestedAmount;
+
+    // Only apply scaling limits for normal loans (not forced, not starting conditions)
+    if (!options.skipLimitCheck && !options.isForced) {
+      const limitInfo = await getScaledLoanAmountLimit(lender, creditRating);
+
+      if (requestedAmount > limitInfo.maxAllowed) {
+        throw new Error(
+          [
+            `Requested loan amount ${formatNumber(requestedAmount, { currency: true })} exceeds your current borrowing limit of ${formatNumber(limitInfo.maxAllowed, { currency: true })}.`,
+            `The limit is determined by your credit rating (${formatPercent(creditRating)}) and total assets of ${formatNumber(limitInfo.totalAssets, { currency: true })}.`
+          ].join(' ')
+        );
+      }
+
+      principalAmount = Math.min(requestedAmount, limitInfo.maxAllowed);
+    }
     
     // Calculate effective interest rate
     const baseInterestRate = options.overrideBaseRate ?? lender.baseInterestRate;
@@ -105,15 +195,15 @@ export async function applyForLoan(
       baseInterestRate,
       gameState.economyPhase || 'Stable',
       lender.type,
-      gameState.creditRating || CREDIT_RATING.DEFAULT_RATING,
+      creditRating,
       durationSeasons
     );
     
     // Calculate seasonal payment using loan amortization
-    const seasonalPayment = calculateSeasonalPayment(amount, effectiveRate, durationSeasons);
+    const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveRate, durationSeasons);
     
     // Calculate origination fee
-    const originationFee = calculateOriginationFee(amount, lender, gameState.creditRating || CREDIT_RATING.DEFAULT_RATING, durationSeasons);
+    const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
     
     // Create loan object
     const derivedCategory: LoanCategory = options.loanCategory
@@ -127,12 +217,12 @@ export async function applyForLoan(
       lenderId,
       lenderName: lender.name,
       lenderType: lender.type,
-      principalAmount: amount,
+      principalAmount: principalAmount,
       baseInterestRate: baseInterestRate,
       economyPhaseAtCreation: gameState.economyPhase || 'Stable',
       effectiveInterestRate: effectiveRate,
       originationFee,
-      remainingBalance: amount,
+      remainingBalance: principalAmount,
       seasonalPayment,
       seasonsRemaining: durationSeasons,
       totalSeasons: durationSeasons,
@@ -150,7 +240,7 @@ export async function applyForLoan(
     if (!options.skipTransactions) {
       // Add principal amount to company money
       await addTransaction(
-        amount,
+        principalAmount,
         `Loan received from ${lender.name}`,
         TRANSACTION_CATEGORIES.LOAN_RECEIVED,
         false
@@ -1174,6 +1264,7 @@ async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): 
   }
 
   const consolidatedPrincipal = Math.max(0, totalForcedBalance - totalSaleProceeds);
+  let effectiveConsolidatedPrincipal = consolidatedPrincipal;
 
   await Promise.all(
     forcedLoans.map(async loan => {
@@ -1249,7 +1340,14 @@ async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): 
           penalizedLender.maxLoanAmount,
           Math.max(penalizedLender.minLoanAmount, adjustedPrincipal)
         );
+      } else {
+        adjustedPrincipal = Math.min(
+          penalizedLender.maxLoanAmount,
+          Math.max(penalizedLender.minLoanAmount, adjustedPrincipal)
+        );
       }
+
+      effectiveConsolidatedPrincipal = adjustedPrincipal;
 
       lenderInterestRate = calculateEffectiveInterestRate(
         penalizedLender.baseInterestRate,
@@ -1305,7 +1403,7 @@ async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): 
     totalForcedBalance,
     totalValueRecovered,
     totalSaleProceeds,
-    consolidatedPrincipal,
+    consolidatedPrincipal: effectiveConsolidatedPrincipal,
     consolidatedLoanId,
     lenderName,
     lenderType,

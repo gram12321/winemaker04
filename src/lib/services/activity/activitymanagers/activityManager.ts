@@ -9,6 +9,7 @@ import { completeStaffSearch, completeHiringProcess } from './staffSearchManager
 import { completeLenderSearch } from './lenderSearchManager';
 import { completeTakeLoan } from './takeLoanManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
+import { formatNumber } from '@/lib/utils';
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -196,9 +197,11 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
       // Only send default notification if not skipped
       if (!options.skipNotification) {
         const assignedCount = activity.params.assignedStaffIds?.length || 0;
+        const formattedTotalWork = formatNumber(activity.totalWork, { smartDecimals: true, smartMaxDecimals: true });
+        const formattedAssignedCount = formatNumber(assignedCount, { smartDecimals: true, smartMaxDecimals: true });
         const baseAssignmentMessage = assignedCount > 0 
-          ? `Started ${activity.title} - ${activity.totalWork} work units required (${assignedCount} staff auto-assigned)`
-          : `Started ${activity.title} - ${activity.totalWork} work units required`;
+          ? `Started ${activity.title} - ${formattedTotalWork} work units required (${formattedAssignedCount} staff auto-assigned)`
+          : `Started ${activity.title} - ${formattedTotalWork} work units required`;
 
         // Optional activity details provided as a typed option
         const assignmentMessage = options.activityDetails

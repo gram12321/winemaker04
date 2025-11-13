@@ -8,6 +8,7 @@ import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
+import { calculateAbsoluteWeeks } from '../../utils/utils';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { calculateCustomerRelationship } from './createCustomer';
@@ -15,6 +16,7 @@ import { calculateCustomerRelationshipBoosts } from './relationshipService';
 import { getCurrentPrestige } from '../core/gameState';
 import { activateCustomer } from '../../database/customers/customerDB';
 import { calculateEstimatedPrice, calculateFeaturePriceMultiplier, calculateGrapeDifficulty } from '@/lib/services';
+import { calculateExpiration } from './expirationService';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
@@ -280,13 +282,25 @@ export async function generateOrder(
   fulfillableValue = Math.min(fulfillableValue, SALES_CONSTANTS.MAX_PRICE);
   
   const gameState = getGameState();
+  const currentDate = {
+    week: gameState.week || 1,
+    season: gameState.season || 'Spring',
+    year: gameState.currentYear || 2024
+  };
+  
+  // Calculate order expiration using shared service (same logic as contracts)
+  const expirationDate = calculateExpiration(currentDate, customer.customerType, currentRelationship);
+  
+  // Convert expiration date to absolute week number for efficient comparison
+  const expiresAt = calculateAbsoluteWeeks(
+    expirationDate.week,
+    expirationDate.season,
+    expirationDate.year
+  );
+  
   const order: WineOrder = {
     id: uuidv4(),
-    orderedAt: {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
-    },
+    orderedAt: currentDate,
     customerType: customer.customerType,
     wineBatchId: specificWineBatch.id,
     wineName: formatCompletedWineName(specificWineBatch),
@@ -297,6 +311,12 @@ export async function generateOrder(
     fulfillableValue,
     askingPriceAtOrderTime: askingPrice, // Store the asking price at order time
     status: 'pending',
+    
+    // Order expiration
+    expiresAt, // Absolute week number for comparison
+    expiresWeek: expirationDate.week, // Display components
+    expiresSeason: expirationDate.season,
+    expiresYear: expirationDate.year,
     
     // Customer information for sophisticated order tracking
     customerId: customer.id,

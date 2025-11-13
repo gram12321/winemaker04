@@ -108,7 +108,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
         }
       }}
     >
-      <DialogContent className="max-w-7xl max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-7xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
         <DialogHeader className="sr-only">
           <DialogTitle>{modalTitle}</DialogTitle>
           <DialogDescription>{modalDescription}</DialogDescription>
@@ -118,7 +118,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
           <p className="text-sm text-white/80 mt-1">{modalDescription}</p>
         </div>
 
-        <div className="px-6 py-6">
+        <div className="flex-1 min-h-0 px-6 py-6 overflow-y-auto">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1.4fr)_320px]">
             {/* Country Selection */}
             <div className="space-y-3">

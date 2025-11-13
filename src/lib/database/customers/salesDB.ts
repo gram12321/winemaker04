@@ -30,6 +30,10 @@ export const saveWineOrder = async (order: WineOrder): Promise<void> => {
         ordered_week: order.orderedAt.week,
         ordered_season: order.orderedAt.season,
         ordered_year: order.orderedAt.year,
+        expires_at: order.expiresAt,
+        expires_week: order.expiresWeek,
+        expires_season: order.expiresSeason,
+        expires_year: order.expiresYear,
         calculation_data: order.calculationData || null
       });
 
@@ -87,6 +91,10 @@ export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
         season: (row.ordered_season || 'Spring') as Season,
         year: row.ordered_year || 2024
       },
+      expiresAt: row.expires_at || 100,
+      expiresWeek: row.expires_week || 1,
+      expiresSeason: (row.expires_season || 'Spring') as Season,
+      expiresYear: row.expires_year || 2024,
       calculationData: row.calculation_data || undefined
     }));
   } catch (error) {
@@ -134,7 +142,7 @@ export const getOrderById = async (orderId: string): Promise<WineOrder | null> =
   }
 };
 
-export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected'): Promise<void> => {
+export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled' | 'rejected' | 'expired'): Promise<void> => {
   try {
     const { error } = await supabase
       .from(WINE_ORDERS_TABLE)

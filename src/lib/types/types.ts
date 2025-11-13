@@ -76,6 +76,7 @@ export interface Vineyard {
   vineyardTotalValue: number; // Calculated as landValue * hectares
   status: string;
   ripeness: number; // Grape ripeness (0-1 scale, affects harvest readiness)
+  isRipenessDeclining?: boolean; // Indicates ripeness is currently trending downward (e.g., winter decay)
   vineyardPrestige: number;
   vineYield: number; // Persistent vine yield factor (0-1+ scale, can exceed 1.0)
   overgrowth?: {
@@ -252,7 +253,13 @@ export interface WineOrder {
   fulfillableQuantity?: number; // bottles that can actually be fulfilled (calculated at fulfillment time)
   fulfillableValue?: number; // fulfillableQuantity × offeredPrice
   askingPriceAtOrderTime?: number; // asking price at the time the order was placed
-  status: 'pending' | 'fulfilled' | 'rejected' | 'partially_fulfilled';
+  status: 'pending' | 'fulfilled' | 'rejected' | 'partially_fulfilled' | 'expired';
+  
+  // Order expiration
+  expiresAt: number; // Absolute week number for efficient comparison (used in expireOldOrders)
+  expiresWeek: number; // Week component for display
+  expiresSeason: Season; // Season component for display
+  expiresYear: number; // Year component for display
   
   // Customer information
   customerId: string; // Reference to the Customer who placed this order

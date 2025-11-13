@@ -196,6 +196,16 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
     
+    // Expire old pending wine orders that have passed their expiration date
+    (async () => {
+      try {
+        const { expireOldOrders } = await import('@/lib/services/sales/salesOrderService');
+        await expireOldOrders();
+      } catch (error) {
+        console.warn('Error during order expiration check:', error);
+      }
+    })(),
+    
     // Process weekly fermentation effects for all fermenting batches
     (async () => {
       try {
@@ -339,13 +349,16 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
       // Only include batches that actually changed
       const originalBatch = activeBatches[index];
       return updatedBatch.grapeQuality !== originalBatch.grapeQuality || 
-             updatedBatch.balance !== originalBatch.balance;
+             updatedBatch.balance !== originalBatch.balance ||
+             JSON.stringify(updatedBatch.characteristics) !== JSON.stringify(originalBatch.characteristics);
     })
     .map(updatedBatch => ({
       id: updatedBatch.id,
       updates: {
         grapeQuality: updatedBatch.grapeQuality,
-        balance: updatedBatch.balance
+        balance: updatedBatch.balance,
+        characteristics: updatedBatch.characteristics,
+        breakdown: updatedBatch.breakdown
       }
     }));
   

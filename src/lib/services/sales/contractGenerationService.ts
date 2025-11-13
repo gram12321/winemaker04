@@ -5,19 +5,18 @@ import { saveWineContract, getPendingContracts } from '../../database/sales/cont
 import { getGameState, getCurrentPrestige } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
+import { calculateExpiration } from './expirationService';
 import { v4 as uuidv4 } from 'uuid';
 
 // ===== CONFIGURATION =====
 
 interface ContractGenerationConfig {
   maxPendingContracts: number;
-  expirationWeeks: number; // How many weeks until contract expires
   baseGenerationChance: number; // Base chance per tick
 }
 
 const CONTRACT_CONFIG: ContractGenerationConfig = {
   maxPendingContracts: 5,
-  expirationWeeks: 8, // ~2 months to accept/reject
   baseGenerationChance: 0.005 // 0.5% base chance per eligible customer per tick
   // With 50 eligible customers: ~23% chance per tick, ~95% chance per season (12 ticks)
   // With 10 eligible customers: ~5% chance per tick, ~46% chance per season
@@ -542,8 +541,8 @@ export async function generateContractForCustomer(customer: Customer): Promise<W
   // Calculate contract pricing based on requirements
   const { pricePerBottle, quantity } = await calculateContractPricing(customer, requirements);
   
-  // Calculate expiration date
-  const expiresAt = calculateExpirationDate(currentDate, CONTRACT_CONFIG.expirationWeeks);
+  // Calculate expiration date using shared service (considers customer type and relationship)
+  const expiresAt = calculateExpiration(currentDate, customer.customerType, customer.relationship || 0);
   
   // Determine if this is a multi-year contract (10% chance for high-relationship customers)
   const terms = (customer.relationship || 0) > 70 && Math.random() < 0.1
@@ -897,31 +896,6 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   const quantity = Math.round(baseQuantity * customer.marketShare * (0.8 + Math.random() * 0.4));
   
   return { pricePerBottle, quantity: Math.max(20, quantity) };
-}
-
-/**
- * Calculate expiration date
- */
-function calculateExpirationDate(currentDate: GameDate, weeksToAdd: number): GameDate {
-  let { week, season, year } = currentDate;
-  
-  for (let i = 0; i < weeksToAdd; i++) {
-    week++;
-    if (week > 4) {
-      week = 1;
-      // Advance season
-      const seasons: Array<'Spring' | 'Summer' | 'Fall' | 'Winter'> = ['Spring', 'Summer', 'Fall', 'Winter'];
-      const currentSeasonIndex = seasons.indexOf(season);
-      const nextSeasonIndex = (currentSeasonIndex + 1) % 4;
-      season = seasons[nextSeasonIndex];
-      
-      if (season === 'Spring') {
-        year++;
-      }
-    }
-  }
-  
-  return { week, season, year };
 }
 
 /**

@@ -8,8 +8,9 @@ import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
 import { calculateLenderSearchWork, calculateLenderSearchCost } from '../workcalculators/lenderSearchWorkCalculator';
 import { loadLenders } from '../../../database/core/lendersDB';
 import { calculateLenderAvailability } from '../../finance/lenderService';
-import { calculateEffectiveInterestRate, calculateOriginationFee, getCurrentCreditRating } from '../../finance/loanService';
+import { calculateEffectiveInterestRate, calculateOriginationFee, getCurrentCreditRating, getScaledLoanAmountLimit } from '../../finance/loanService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
+import { calculateTotalAssets } from '../../finance/financeService';
 
 /**
  * Start a lender search activity
@@ -133,6 +134,7 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
   
   // Get current credit rating
   const creditRating = await getCurrentCreditRating();
+  const totalAssets = await calculateTotalAssets();
   
   // Generate offers
   const offers: LoanOffer[] = [];
@@ -142,8 +144,9 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
     const availability = calculateLenderAvailability(lender, creditRating * 100, gameState.prestige || 0);
     
     // Generate random loan parameters within lender's ranges AND user constraints
+    const limitInfo = await getScaledLoanAmountLimit(lender, creditRating, { totalAssets });
     const minAmount = Math.max(lender.minLoanAmount, options.loanAmountRange[0]);
-    const maxAmount = Math.min(lender.maxLoanAmount, options.loanAmountRange[1]);
+    const maxAmount = Math.min(lender.maxLoanAmount, options.loanAmountRange[1], limitInfo.maxAllowed);
     const minDuration = Math.max(lender.minDurationSeasons, options.durationRange[0]);
     const maxDuration = Math.min(lender.maxDurationSeasons, options.durationRange[1]);
     
