@@ -1,7 +1,7 @@
 import { getGameState } from '../core/gameState';
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
-import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail } from '../../utils/calculator';
+import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -130,6 +130,8 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
 }
 
 // Bounded 0-1 prestige factor (and full breakdown) derived from permanent components + decaying events (no DB access)
+// NOTE: This function is ONLY for quality calculations. It normalizes unbounded vineyard prestige to 0-1.
+// The actual vineyard.vineyardPrestige value is unbounded (sum of all events) and should remain so for prestige system.
 export function BoundedVineyardPrestigeFactor(v: Vineyard): {
   suitability: number;
   ageBase01: number;
@@ -150,6 +152,7 @@ export function BoundedVineyardPrestigeFactor(v: Vineyard): {
     ? calculateGrapeSuitabilityContribution(v.grape as any, v.region, v.country, v.altitude, v.aspect, v.soil)
     : 0;
 
+  // Calculate normalized permanent component (age + land) for quality calculations
   const ageBase01 = vineyardAgePrestigeModifier(v.vineAge || 0);
   const ageWithSuitability01 = ageBase01 * suitability;
   const ageScaledRaw = Math.max(0, calculateAsymmetricalMultiplier(Math.min(0.98, ageWithSuitability01)) - 1);
@@ -169,11 +172,21 @@ export function BoundedVineyardPrestigeFactor(v: Vineyard): {
 
   const landScaledRaw = landPerHa * sizeFactor;
   const landScaled = landScaledRaw;
-  const permanentRaw = ageScaled + landScaled;
+  const permanentRaw = ageScaled + landScaled; // Normalized permanent component (0-1 range)
+  
+  // Get total prestige (unbounded - sum of all events including achievements, sales, etc.)
   const currentTotal = v.vineyardPrestige || 0;
-  const decayingComponent = Math.max(0, currentTotal - permanentRaw);
+  
+  // Normalize the total unbounded prestige to 0-1 for quality calculations
+  // This allows vineyards with high prestige (from achievements, sales) to still contribute meaningfully to quality
+  const normalizedTotal = NormalizeScrewed1000To01WithTail(currentTotal);
+  
+  // Calculate decaying component as the difference between normalized total and permanent component
+  // This represents prestige from decaying events (sales, achievements) that have been normalized
+  const decayingComponent = Math.max(0, normalizedTotal - permanentRaw);
   const combinedRaw = permanentRaw + decayingComponent;
-  // Since general prestige is now normalized at creation, just cap at 0.99 for quality usage
+  
+  // Cap at 0.99 for quality usage (prevents hitting exactly 1.0)
   const boundedFactor = Math.max(0, Math.min(combinedRaw, 0.99));
 
   return {

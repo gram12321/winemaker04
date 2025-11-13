@@ -1,7 +1,7 @@
 import { AchievementConfig, AchievementWithStatus, AchievementUnlock, AchievementCategory, AchievementLevel, Transaction } from '../../types/types';
 import { ALL_ACHIEVEMENTS, achievementLevels } from '../../constants/achievementConstants';
-import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked } from '../../database/core/achievementsDB';
-import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
+import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked, getAchievementUnlock } from '../../database/core/achievementsDB';
+import { insertPrestigeEvent, listPrestigeEvents } from '../../database/customers/prestigeEventsDB';
 import { getGameState, calculateFinancialData, calculateNetWorth, loadTransactions } from '../index';
 import { calculateAbsoluteWeeks } from '../../utils';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
@@ -171,9 +171,10 @@ export function createTieredAchievements(
     };
     
     // Add vineyard prestige if requested
+    // Scale down vineyard achievements to 1/100 of company achievements to match other vineyard event scales
     if (options.includeVineyard) {
       prestigeConfig.vineyard = {
-        baseAmount: levelInfo.prestige,
+        baseAmount: levelInfo.prestige / 100, // 1/100 of company achievement prestige
         decayRate: vineyardDecayRate
       };
     }
@@ -752,48 +753,63 @@ async function spawnAchievementPrestigeEvents(
     });
   }
   
-  // Spawn vineyard prestige event
+  // Spawn vineyard prestige events for ALL qualifying vineyards (one per vineyard that meets the condition)
   if (achievement.prestige.vineyard && context) {
-    // Find the best performing vineyard for this achievement type
-    let bestVineyard = null;
+    // Get existing prestige events to check which vineyard+achievement combinations already have events
+    const existingEvents = await listPrestigeEvents();
+    const existingVineyardAchievements = new Set<string>();
     
-    if (achievement.condition.type.includes('vineyard_time_same_grape')) {
-      bestVineyard = context.vineyards.reduce((best, current) => 
-        current.yearsWithSameGrape > best.yearsWithSameGrape ? current : best
-      );
-    } else if (achievement.condition.type.includes('vineyard_wine_variety_count')) {
-      bestVineyard = context.vineyards.reduce((best, current) => 
-        current.grapeVarietiesProduced.length > best.grapeVarietiesProduced.length ? current : best
-      );
-    } else if (achievement.condition.type.includes('vineyard_bottles_produced')) {
-      bestVineyard = context.vineyards.reduce((best, current) => 
-        current.bottlesProduced > best.bottlesProduced ? current : best
-      );
-    } else if (achievement.condition.type.includes('vineyard_sales_count')) {
-      bestVineyard = context.vineyards.reduce((best, current) => 
-        current.salesCount > best.salesCount ? current : best
-      );
-    } else if (achievement.condition.type.includes('vineyard_prestige_threshold')) {
-      bestVineyard = context.vineyards.reduce((best, current) => 
-        current.prestige > best.prestige ? current : best
-      );
+    // Build set of existing vineyard+achievement combinations
+    for (const event of existingEvents) {
+      if (event.type === 'vineyard_achievement' && event.source_id && event.payload) {
+        const metadata: any = event.payload;
+        if (metadata.achievementId === achievement.id) {
+          existingVineyardAchievements.add(event.source_id);
+        }
+      }
     }
     
-    if (bestVineyard) {
+    // Find ALL qualifying vineyards for this achievement type (not just the best one)
+    const qualifyingVineyards: typeof context.vineyards = [];
+    
+    if (achievement.condition.type.includes('vineyard_time_same_grape')) {
+      const threshold = achievement.condition.threshold || 0;
+      qualifyingVineyards.push(...context.vineyards.filter(v => v.yearsWithSameGrape >= threshold));
+    } else if (achievement.condition.type.includes('vineyard_wine_variety_count')) {
+      const threshold = achievement.condition.threshold || 0;
+      qualifyingVineyards.push(...context.vineyards.filter(v => v.grapeVarietiesProduced.length >= threshold));
+    } else if (achievement.condition.type.includes('vineyard_bottles_produced')) {
+      const threshold = achievement.condition.threshold || 0;
+      qualifyingVineyards.push(...context.vineyards.filter(v => v.bottlesProduced >= threshold));
+    } else if (achievement.condition.type.includes('vineyard_sales_count')) {
+      const threshold = achievement.condition.threshold || 0;
+      qualifyingVineyards.push(...context.vineyards.filter(v => v.salesCount >= threshold));
+    } else if (achievement.condition.type.includes('vineyard_prestige_threshold')) {
+      const threshold = achievement.condition.threshold || 0;
+      qualifyingVineyards.push(...context.vineyards.filter(v => v.prestige >= threshold));
+    }
+    
+    // Create prestige events for all qualifying vineyards that don't already have one
+    for (const vineyard of qualifyingVineyards) {
+      // Skip if this vineyard+achievement combination already has a prestige event
+      if (existingVineyardAchievements.has(vineyard.id)) {
+        continue;
+      }
+      
       await insertPrestigeEvent({
         id: uuidv4(),
         type: 'vineyard_achievement',
         amount_base: achievement.prestige.vineyard.baseAmount,
         created_game_week: currentWeek,
         decay_rate: achievement.prestige.vineyard.decayRate,
-        source_id: bestVineyard.id,
+        source_id: vineyard.id,
         payload: {
           achievementId: achievement.id,
           achievementName: achievement.name,
           achievementIcon: achievement.icon,
           achievementCategory: achievement.category,
           achievementLevel: achievement.achievementLevel,
-          vineyardName: bestVineyard.name,
+          vineyardName: vineyard.name,
           event: 'achievement_unlock'
         }
       });
@@ -885,6 +901,7 @@ export async function checkAndUnlockAchievement(
 
 /**
  * Check all achievements and unlock any that are met
+ * Also checks for new qualifying vineyards on already-unlocked vineyard achievements
  */
 export async function checkAllAchievements(companyId?: string): Promise<AchievementUnlock[]> {
   const targetCompanyId = companyId || getCurrentCompanyId();
@@ -894,11 +911,21 @@ export async function checkAllAchievements(companyId?: string): Promise<Achievem
   const newUnlocks: AchievementUnlock[] = [];
   
   for (const achievement of ALL_ACHIEVEMENTS) {
-    // Skip if already unlocked
     const alreadyUnlocked = await isAchievementUnlocked(achievement.id, targetCompanyId);
-    if (alreadyUnlocked) continue;
     
-    // Check condition
+    if (alreadyUnlocked) {
+      // Achievement already unlocked - check for new qualifying vineyards
+      if (achievement.prestige?.vineyard) {
+        const existingUnlock = await getAchievementUnlock(achievement.id, targetCompanyId);
+        if (existingUnlock) {
+          // Check for new qualifying vineyards and create events for them
+          await spawnAchievementPrestigeEvents(achievement, existingUnlock, context);
+        }
+      }
+      continue;
+    }
+    
+    // Check condition for new achievement unlock
     const conditionResult = checkAchievementCondition(achievement, context);
     
     if (conditionResult.isMet) {
