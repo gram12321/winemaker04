@@ -7,7 +7,7 @@ import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '
 import { WorkCategory } from '../../services/activity';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
-import { getGameState } from '../core/gameState';
+import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
 import { calculateAdjustedLandValue } from './vineyardValueCalc';
 
@@ -129,6 +129,8 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
     const vineyards = await loadVineyards();
     const activities = await loadActivitiesFromDb();
     const vineyardsToUpdate: Vineyard[] = [];
+    const activitiesToCancel: string[] = [];
+    const cancelledActivityVineyards: string[] = [];
     
     for (const vineyard of vineyards) {
       if (!vineyard.grape) continue; // Skip vineyards without grapes
@@ -216,17 +218,16 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
         }
       }
       
-      // Handle winter ripeness penalties - drastic degradation with increasing speed
+      // Handle winter ripeness penalties - calibrated exponential-style ramp
       if (season === 'Winter' && newRipeness > 0) {
-        // Calculate winter ripeness degradation
-        // Base degradation: 15% per week, increasing by 5% each week
+        // Calculate winter ripeness degradation using calibrated base + acceleration factors
+        // Base degradation: ~3% per week, increasing by ~1% each week (week 12 ≈ -14%)
         const weeksIntoWinter = week;
-        const baseDegradation = 0.15; // 15% base degradation
-        const accelerationFactor = 0.05; // 5% additional degradation per week
+        const baseDegradation = 0.03; // 3% base degradation
+        const accelerationFactor = 0.01; // Additional 1% per week
         const weeklyDegradation = baseDegradation + (accelerationFactor * (weeksIntoWinter - 1));
-        
-        // Apply degradation (more severe as winter progresses)
-        newRipeness = Math.max(0, newRipeness - weeklyDegradation);
+        const ripenessLoss = Math.min(newRipeness, weeklyDegradation);
+        newRipeness = Math.max(0, newRipeness - ripenessLoss);
         
         // Add notification for significant ripeness loss
         if (weeklyDegradation > 0.1 && newRipeness < vineyard.ripeness) {
@@ -246,7 +247,55 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
       if (season === 'Winter' && newRipeness <= 0 && vineyard.status !== 'Dormant') {
         newStatus = 'Dormant';
         newRipeness = 0; // Ensure ripeness is exactly 0
-
+        
+        // Clear pendingFeatures when vineyard goes dormant (features reset for next season)
+        // This ensures features like Noble Rot don't carry over to next season
+        if (vineyard.pendingFeatures && vineyard.pendingFeatures.length > 0) {
+          const updatedVineyard = {
+            ...vineyard,
+            status: newStatus,
+            ripeness: newRipeness,
+            pendingFeatures: [] // Clear all pending features
+          };
+          vineyardsToUpdate.push(updatedVineyard);
+          
+          // Cancel any active harvesting activities on this vineyard
+          const harvestingActivity = activities.find(
+            (a) => a.category === WorkCategory.HARVESTING && 
+                   a.status === 'active' && 
+                   a.targetId === vineyard.id
+          );
+          
+          if (harvestingActivity && harvestingActivity.isCancellable !== false) {
+            activitiesToCancel.push(harvestingActivity.id);
+            cancelledActivityVineyards.push(vineyard.name);
+          }
+          
+          continue; // Skip the update below since we already added it
+        }
+        
+        // Cancel any active harvesting activities on this vineyard
+        const harvestingActivity = activities.find(
+          (a) => a.category === WorkCategory.HARVESTING && 
+                 a.status === 'active' && 
+                 a.targetId === vineyard.id
+        );
+        
+        if (harvestingActivity && harvestingActivity.isCancellable !== false) {
+          // Collect activity to cancel (will process after loop)
+          activitiesToCancel.push(harvestingActivity.id);
+          cancelledActivityVineyards.push(vineyard.name);
+        }
+      }
+      
+      // Also clear pendingFeatures if vineyard is already harvested or dormant (handles edge cases)
+      if ((vineyard.status === 'Harvested' || vineyard.status === 'Dormant') && vineyard.pendingFeatures && vineyard.pendingFeatures.length > 0) {
+        const updatedVineyard = {
+          ...vineyard,
+          pendingFeatures: []
+        };
+        vineyardsToUpdate.push(updatedVineyard);
+        continue; // Skip the update below since we already added it
       }
       
       // Only update if there are changes
@@ -264,6 +313,30 @@ export async function updateVineyardRipeness(season: string, week: number = 1): 
     // OPTIMIZATION: Bulk update all vineyards at once instead of individual saves
     if (vineyardsToUpdate.length > 0) {
       await bulkUpdateVineyards(vineyardsToUpdate);
+    }
+    
+    // Cancel all harvesting activities for vineyards that went dormant
+    if (activitiesToCancel.length > 0) {
+      for (let i = 0; i < activitiesToCancel.length; i++) {
+        const activityId = activitiesToCancel[i];
+        const vineyardName = cancelledActivityVineyards[i];
+        
+        const success = await updateActivityInDb(activityId, { status: 'cancelled' });
+        
+        if (success) {
+          await notificationService.addMessage(
+            `Harvest activity on ${vineyardName} has been cancelled due to winter dormancy. The vineyard's ripeness has degraded to zero.`,
+            'vineyardManager.harvestCancelled',
+            'Harvest Cancelled',
+            NotificationCategory.VINEYARD_OPERATIONS
+          );
+        }
+      }
+      
+      // Update game state once after all cancellations
+      const currentActivities = await loadActivitiesFromDb();
+      const activeActivities = currentActivities.filter(a => a.status === 'active');
+      await updateGameState({ activities: activeActivities });
     }
   } catch (error) {
     console.error('Error updating vineyard ripeness:', error);

@@ -58,6 +58,11 @@ return (
 - **Business logic in services**: Never put calculations in components
 - **Reactive updates**: Services trigger global updates, components auto-refresh
 
+### 🪜 Starting Conditions Calibration
+- Target net starting assets of roughly €100,000 calculated as `starting cash + starting vineyard value − starting loan principal`
+- Adjust target by ±€10,000 for each starting staff member relative to a two-person baseline
+- Example: a setup with three starting staff should land near €110,000, while a solo founder should be closer to €90,000
+
 **Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
 - Import from `@/lib/constants` (barrel). It re-exports:
   - `constants.ts` - Game initialization, sales constants, grape quality, customer regional data

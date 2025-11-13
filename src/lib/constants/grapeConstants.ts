@@ -53,6 +53,10 @@ export const GRAPE_SOIL_PREFERENCES: Record<GrapeVariety, GrapeSoilPreference> =
     preferred: ['Clay-Limestone', 'Limestone', 'Alluvial', 'Clay', 'Ferrous Clay', 'Sandstone', 'Greywacke', 'Phyllite', 'Schist', 'Marine Sediment', 'Galestro'],
     tolerated: ['Sand', 'Loess', 'Devonian Slate'],
   },
+  Sangiovese: {
+    preferred: ['Clay', 'Limestone', 'Marl', 'Sandstone', 'Galestro'],
+    tolerated: ['Clay-Limestone', 'Sand', 'Alluvial', 'Schist', 'Loam'],
+  },
 } as const;
 
 export const GRAPE_ALTITUDE_SUITABILITY = {
@@ -79,6 +83,10 @@ export const GRAPE_ALTITUDE_SUITABILITY = {
   Tempranillo: {
     preferred: [350, 760],
     tolerance: [200, 900]
+  },
+  Sangiovese: {
+    preferred: [150, 520],
+    tolerance: [80, 720]
   }
 } as const satisfies Record<GrapeVariety, GrapeAltitudeSuitability>;
 
@@ -112,6 +120,11 @@ export const GRAPE_SUN_PREFERENCES = {
     optimalHeatMin: 0.45,
     optimalHeatMax: 0.75,
     tolerance: 0.18
+  },
+  Sangiovese: {
+    optimalHeatMin: 0.50,
+    optimalHeatMax: 0.78,
+    tolerance: 0.20
   }
 } as const satisfies Record<GrapeVariety, GrapeSunPreference>;
 
@@ -120,39 +133,39 @@ export const GRAPE_SUN_PREFERENCES = {
 // Grape variety suitability by region (0-1 scale, where 1.0 is optimal)
 export const REGION_GRAPE_SUITABILITY = {
   Italy: {
-    Piedmont: { Barbera: 1.0, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.5, 'Sauvignon Blanc': 0.6, Tempranillo: 0.4 },
-    Tuscany: { Barbera: 0.9, Chardonnay: 0.7, 'Pinot Noir': 0.5, Primitivo: 0.7, 'Sauvignon Blanc': 0.7, Tempranillo: 0.5 },
-    Veneto: { Barbera: 0.85, Chardonnay: 0.75, 'Pinot Noir': 0.7, Primitivo: 0.6, 'Sauvignon Blanc': 0.8, Tempranillo: 0.35 },
-    Sicily: { Barbera: 0.8, Chardonnay: 0.6, 'Pinot Noir': 0.3, Primitivo: 0.8, 'Sauvignon Blanc': 0.5, Tempranillo: 0.3 },
-    Puglia: { Barbera: 0.9, Chardonnay: 0.65, 'Pinot Noir': 0.4, Primitivo: 1.0, 'Sauvignon Blanc': 0.4, Tempranillo: 0.6 }
+    Piedmont: { Barbera: 1.0, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.5, 'Sauvignon Blanc': 0.6, Tempranillo: 0.4, Sangiovese: 0.5 },
+    Tuscany: { Barbera: 0.9, Chardonnay: 0.7, 'Pinot Noir': 0.5, Primitivo: 0.7, 'Sauvignon Blanc': 0.7, Tempranillo: 0.5, Sangiovese: 1.0 },
+    Veneto: { Barbera: 0.85, Chardonnay: 0.75, 'Pinot Noir': 0.7, Primitivo: 0.6, 'Sauvignon Blanc': 0.8, Tempranillo: 0.35, Sangiovese: 0.55 },
+    Sicily: { Barbera: 0.8, Chardonnay: 0.6, 'Pinot Noir': 0.3, Primitivo: 0.8, 'Sauvignon Blanc': 0.5, Tempranillo: 0.3, Sangiovese: 0.65 },
+    Puglia: { Barbera: 0.9, Chardonnay: 0.65, 'Pinot Noir': 0.4, Primitivo: 1.0, 'Sauvignon Blanc': 0.4, Tempranillo: 0.6, Sangiovese: 0.7 }
   },
   France: {
-    Bordeaux: { Barbera: 0.7, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.6, 'Sauvignon Blanc': 0.9, Tempranillo: 0.5 },
-    Bourgogne: { Barbera: 0.4, Chardonnay: 0.9, 'Pinot Noir': 0.9, Primitivo: 0.3, 'Sauvignon Blanc': 0.7, Tempranillo: 0.3 },
-    Champagne: { Barbera: 0.2, Chardonnay: 0.9, 'Pinot Noir': 0.8, Primitivo: 0.2, 'Sauvignon Blanc': 0.6, Tempranillo: 0.1 },
-    'Rhone Valley': { Barbera: 0.85, Chardonnay: 0.75, 'Pinot Noir': 0.5, Primitivo: 0.7, 'Sauvignon Blanc': 0.7, Tempranillo: 0.5 },
-    Jura: { Barbera: 0.3, Chardonnay: 0.9, 'Pinot Noir': 0.8, Primitivo: 0.2, 'Sauvignon Blanc': 0.6, Tempranillo: 0.2 }
+    Bordeaux: { Barbera: 0.7, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.6, 'Sauvignon Blanc': 0.9, Tempranillo: 0.5, Sangiovese: 0.4 },
+    Bourgogne: { Barbera: 0.4, Chardonnay: 0.9, 'Pinot Noir': 0.9, Primitivo: 0.3, 'Sauvignon Blanc': 0.7, Tempranillo: 0.3, Sangiovese: 0.25 },
+    Champagne: { Barbera: 0.2, Chardonnay: 0.9, 'Pinot Noir': 0.8, Primitivo: 0.2, 'Sauvignon Blanc': 0.6, Tempranillo: 0.1, Sangiovese: 0.1 },
+    'Rhone Valley': { Barbera: 0.85, Chardonnay: 0.75, 'Pinot Noir': 0.5, Primitivo: 0.7, 'Sauvignon Blanc': 0.7, Tempranillo: 0.5, Sangiovese: 0.6 },
+    Jura: { Barbera: 0.3, Chardonnay: 0.9, 'Pinot Noir': 0.8, Primitivo: 0.2, 'Sauvignon Blanc': 0.6, Tempranillo: 0.2, Sangiovese: 0.2 }
   },
   Spain: {
-    Rioja: { Barbera: 0.85, Chardonnay: 0.7, 'Pinot Noir': 0.4, Primitivo: 0.5, 'Sauvignon Blanc': 0.6, Tempranillo: 0.95 },
-    'Ribera del Duero': { Barbera: 0.8, Chardonnay: 0.6, 'Pinot Noir': 0.35, Primitivo: 0.4, 'Sauvignon Blanc': 0.5, Tempranillo: 1.0 },
-    Jumilla: { Barbera: 0.9, Chardonnay: 0.5, 'Pinot Noir': 0.3, Primitivo: 0.85, 'Sauvignon Blanc': 0.4, Tempranillo: 0.7 },
-    'La Mancha': { Barbera: 0.85, Chardonnay: 0.55, 'Pinot Noir': 0.25, Primitivo: 0.8, 'Sauvignon Blanc': 0.5, Tempranillo: 0.9 },
-    Jerez: { Barbera: 0.8, Chardonnay: 0.5, 'Pinot Noir': 0.2, Primitivo: 0.7, 'Sauvignon Blanc': 0.4, Tempranillo: 0.4 }
+    Rioja: { Barbera: 0.85, Chardonnay: 0.7, 'Pinot Noir': 0.4, Primitivo: 0.5, 'Sauvignon Blanc': 0.6, Tempranillo: 0.95, Sangiovese: 0.7 },
+    'Ribera del Duero': { Barbera: 0.8, Chardonnay: 0.6, 'Pinot Noir': 0.35, Primitivo: 0.4, 'Sauvignon Blanc': 0.5, Tempranillo: 1.0, Sangiovese: 0.65 },
+    Jumilla: { Barbera: 0.9, Chardonnay: 0.5, 'Pinot Noir': 0.3, Primitivo: 0.85, 'Sauvignon Blanc': 0.4, Tempranillo: 0.7, Sangiovese: 0.6 },
+    'La Mancha': { Barbera: 0.85, Chardonnay: 0.55, 'Pinot Noir': 0.25, Primitivo: 0.8, 'Sauvignon Blanc': 0.5, Tempranillo: 0.9, Sangiovese: 0.55 },
+    Jerez: { Barbera: 0.8, Chardonnay: 0.5, 'Pinot Noir': 0.2, Primitivo: 0.7, 'Sauvignon Blanc': 0.4, Tempranillo: 0.4, Sangiovese: 0.35 }
   },
   'United States': {
-    'Napa Valley': { Barbera: 0.9, Chardonnay: 1.0, 'Pinot Noir': 0.7, Primitivo: 0.85, 'Sauvignon Blanc': 0.8, Tempranillo: 0.6 },
-    'Sonoma County': { Barbera: 0.85, Chardonnay: 0.95, 'Pinot Noir': 0.75, Primitivo: 0.8, 'Sauvignon Blanc': 0.7, Tempranillo: 0.5 },
-    'Willamette Valley': { Barbera: 0.4, Chardonnay: 0.85, 'Pinot Noir': 1.0, Primitivo: 0.3, 'Sauvignon Blanc': 0.6, Tempranillo: 0.3 },
-    'Finger Lakes': { Barbera: 0.3, Chardonnay: 0.7, 'Pinot Noir': 0.75, Primitivo: 0.2, 'Sauvignon Blanc': 0.5, Tempranillo: 0.25 },
-    'Central Coast': { Barbera: 0.85, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.75, 'Sauvignon Blanc': 0.7, Tempranillo: 0.55 }
+    'Napa Valley': { Barbera: 0.9, Chardonnay: 1.0, 'Pinot Noir': 0.7, Primitivo: 0.85, 'Sauvignon Blanc': 0.8, Tempranillo: 0.6, Sangiovese: 0.7 },
+    'Sonoma County': { Barbera: 0.85, Chardonnay: 0.95, 'Pinot Noir': 0.75, Primitivo: 0.8, 'Sauvignon Blanc': 0.7, Tempranillo: 0.5, Sangiovese: 0.65 },
+    'Willamette Valley': { Barbera: 0.4, Chardonnay: 0.85, 'Pinot Noir': 1.0, Primitivo: 0.3, 'Sauvignon Blanc': 0.6, Tempranillo: 0.3, Sangiovese: 0.3 },
+    'Finger Lakes': { Barbera: 0.3, Chardonnay: 0.7, 'Pinot Noir': 0.75, Primitivo: 0.2, 'Sauvignon Blanc': 0.5, Tempranillo: 0.25, Sangiovese: 0.2 },
+    'Central Coast': { Barbera: 0.85, Chardonnay: 0.8, 'Pinot Noir': 0.6, Primitivo: 0.75, 'Sauvignon Blanc': 0.7, Tempranillo: 0.55, Sangiovese: 0.6 }
   },
   Germany: {
-    Mosel: { Barbera: 0.15, Chardonnay: 0.8, 'Pinot Noir': 1.0, Primitivo: 0.1, 'Sauvignon Blanc': 0.8, Tempranillo: 0.15 },
-    Rheingau: { Barbera: 0.2, Chardonnay: 0.85, 'Pinot Noir': 0.9, Primitivo: 0.15, 'Sauvignon Blanc': 0.85, Tempranillo: 0.2 },
-    Rheinhessen: { Barbera: 0.25, Chardonnay: 0.8, 'Pinot Noir': 0.85, Primitivo: 0.2, 'Sauvignon Blanc': 0.8, Tempranillo: 0.25 },
-    Pfalz: { Barbera: 0.3, Chardonnay: 0.75, 'Pinot Noir': 0.8, Primitivo: 0.25, 'Sauvignon Blanc': 0.75, Tempranillo: 0.3 },
-    Ahr: { Barbera: 0.1, Chardonnay: 0.7, 'Pinot Noir': 0.95, Primitivo: 0.1, 'Sauvignon Blanc': 0.6, Tempranillo: 0.1 }
+    Mosel: { Barbera: 0.15, Chardonnay: 0.8, 'Pinot Noir': 1.0, Primitivo: 0.1, 'Sauvignon Blanc': 0.8, Tempranillo: 0.15, Sangiovese: 0.1 },
+    Rheingau: { Barbera: 0.2, Chardonnay: 0.85, 'Pinot Noir': 0.9, Primitivo: 0.15, 'Sauvignon Blanc': 0.85, Tempranillo: 0.2, Sangiovese: 0.15 },
+    Rheinhessen: { Barbera: 0.25, Chardonnay: 0.8, 'Pinot Noir': 0.85, Primitivo: 0.2, 'Sauvignon Blanc': 0.8, Tempranillo: 0.25, Sangiovese: 0.2 },
+    Pfalz: { Barbera: 0.3, Chardonnay: 0.75, 'Pinot Noir': 0.8, Primitivo: 0.25, 'Sauvignon Blanc': 0.75, Tempranillo: 0.3, Sangiovese: 0.25 },
+    Ahr: { Barbera: 0.1, Chardonnay: 0.7, 'Pinot Noir': 0.95, Primitivo: 0.1, 'Sauvignon Blanc': 0.6, Tempranillo: 0.1, Sangiovese: 0.1 }
   }
 } as const satisfies Record<string, Record<string, Record<GrapeVariety, number>>>;
 
@@ -268,6 +281,22 @@ export const GRAPE_CONST: Record<GrapeVariety, GrapeData> = {
     agingProfile: {
       earlyPeak: 3,
       latePeak: 8,
+      ageWorthiness: 'high'
+    }
+  },
+  'Sangiovese': {
+    name: 'Sangiovese',
+    naturalYield: 0.7,
+    fragile: 0.5,
+    proneToOxidation: 0.5,
+    grapeColor: 'red',
+    baseCharacteristics: {
+      acidity: 0.6, aroma: 0.55, body: 0.6, spice: 0.5, sweetness: 0.45, tannins: 0.6
+    },
+    description: 'A classic Italian grape delivering vibrant acidity, savory aromas, and firm tannins ideal for structured wines.',
+    agingProfile: {
+      earlyPeak: 3,
+      latePeak: 9,
       ageWorthiness: 'high'
     }
   }

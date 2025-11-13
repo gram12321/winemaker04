@@ -159,6 +159,7 @@ CREATE TABLE vineyards (
     overgrowth jsonb DEFAULT '{"vegetation": 0, "debris": 0, "uproot": 0, "replant": 0}'::jsonb,
     planting_health_bonus numeric DEFAULT 0,
     health_trend jsonb,
+    pending_features jsonb,
     years_since_last_clearing integer DEFAULT 0,
     last_clearing_year integer DEFAULT 0,
     last_clear_vegetation_year integer DEFAULT 0,
@@ -285,9 +286,10 @@ CREATE TABLE company_customers (
 -- Prestige events table
 CREATE TABLE prestige_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    type text NOT NULL CHECK (type IN ('sale', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region', 'company_finance', 'wine_feature', 'cellar_collection', 'achievement', 'penalty')),
+    type text NOT NULL CHECK (type IN ('sale', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region', 'company_finance', 'wine_feature', 'cellar_collection', 'achievement', 'penalty', 'company_story')),
     amount_base numeric NOT NULL,
     decay_rate numeric DEFAULT 0,
+    description text,
     source_id text,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now(),

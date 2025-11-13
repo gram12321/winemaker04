@@ -7,7 +7,8 @@ import { GREEN_FLAVOR_FEATURE } from './greenFlavor';
 import { STUCK_FERMENTATION_FEATURE } from './stuckFermentation';
 import { TERROIR_FEATURE } from './terroir';
 import { BOTTLE_AGING_FEATURE } from './bottleAging';
-import { LATE_HARVEST_FEATURE } from './lateHarvest';
+import { NOBLE_ROT_FEATURE } from './nobleRot';
+import { GREY_ROT_FEATURE } from './greyRot';
 
 // ===== FEATURE REGISTRY FUNCTIONS =====
 
@@ -21,7 +22,8 @@ export const ACTIVE_FEATURES: FeatureConfig[] = [
   STUCK_FERMENTATION_FEATURE, // Triggered behavior
   TERROIR_FEATURE,            // Evolving behavior
   BOTTLE_AGING_FEATURE,       // Evolving behavior
-  LATE_HARVEST_FEATURE,       // Triggered behavior
+  NOBLE_ROT_FEATURE,          // Accumulation + Evolving behavior
+  GREY_ROT_FEATURE,           // Conditional Accumulation behavior
 ];
 
 /**
@@ -42,13 +44,21 @@ export function getFeatureConfig(featureId: string): FeatureConfig | undefined {
 }
 
 /**
- * Get features that use time-based behavior (evolving or accumulation)
+ * Get features that use time-based behavior (evolving, accumulation, or triggered with evolution)
  * Called by game tick system
  */
 export function getTimeBasedFeatures(): FeatureConfig[] {
-  return ACTIVE_FEATURES.filter(
-    config => config.behavior === 'evolving' || config.behavior === 'accumulation'
-  );
+  return ACTIVE_FEATURES.filter(config => {
+    if (config.behavior === 'evolving' || config.behavior === 'accumulation') {
+      return true;
+    }
+    // Include triggered features that can evolve after manifestation
+    if (config.behavior === 'triggered') {
+      const triggeredConfig = config.behaviorConfig as any;
+      return triggeredConfig.canEvolveAfterManifestation === true;
+    }
+    return false;
+  });
 }
 
 /**

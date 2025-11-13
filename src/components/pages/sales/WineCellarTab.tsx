@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { WineBatch } from '@/lib/types/types';
+import { WineBatch, Vineyard } from '@/lib/types/types';
 import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
@@ -8,7 +8,8 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, 
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useEstimatedPrice } from '@/hooks';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
+import { loadVineyards } from '@/lib/database/activities/vineyardDB';
+import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, getCurrentPrestige } from '@/lib/services';
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
@@ -332,97 +333,6 @@ const RiskFeatures: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 };
 
 // Component for current effects display (separate column)
-const CurrentEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
-  if (wine.state !== 'bottled') return null;
-  
-  const displayData = getFeatureDisplayData(wine);
-  
-  // Get significant effects (filtered by threshold)
-  const activeEffects = Object.entries(displayData.combinedActiveEffects).filter(([_, effect]) => Math.abs(effect) > 0.001);
-  const hasQualityEffect = Math.abs(displayData.totalQualityEffect) > 0.001;
-  
-  if (!hasQualityEffect && activeEffects.length === 0) {
-    return <span className="text-[10px] text-gray-400">—</span>;
-  }
-  
-  // Collect all effects into a single array for grid distribution
-  type EffectData = 
-    | { type: 'quality'; content: number }
-    | { type: 'characteristic'; key: string; content: number };
-  
-  const allEffects: EffectData[] = [];
-  if (hasQualityEffect) {
-    allEffects.push({
-      type: 'quality',
-      content: displayData.totalQualityEffect
-    });
-  }
-  activeEffects.forEach(([char, effect]) => {
-    allEffects.push({
-      type: 'characteristic',
-      key: char,
-      content: effect
-    });
-  });
-
-  // Determine grid columns based on effect count
-  const effectCount = allEffects.length;
-  let gridCols = 'grid-cols-1';
-  if (effectCount >= 4 && effectCount <= 6) {
-    gridCols = 'grid-cols-2';
-  } else if (effectCount >= 7) {
-    gridCols = 'grid-cols-3';
-  }
-
-  return (
-    <div className={`grid ${gridCols} gap-1`}>
-      {allEffects.map((effectData, index) => {
-        if (effectData.type === 'quality') {
-          return (
-            <UnifiedTooltip
-              key={`quality-${index}`}
-              content={<div className="text-xs">Quality Effect: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>}
-              side="top"
-              className="max-w-xs"
-              variant="default"
-            >
-              <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${
-                effectData.content > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-              }`}>
-                <span>⭐</span>
-                <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
-              </span>
-            </UnifiedTooltip>
-          );
-        } else {
-          const currentValue = wine.characteristics[effectData.key as keyof typeof wine.characteristics] || 0;
-          const balancedRange = BASE_BALANCED_RANGES[effectData.key as keyof typeof BASE_BALANCED_RANGES];
-          const colorInfo = getCharacteristicEffectColorInfo(currentValue, effectData.content, balancedRange);
-          const bgClass = colorInfo.isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-          return (
-            <UnifiedTooltip
-              key={effectData.key}
-              content={<div className="text-xs capitalize">{effectData.key}: {effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</div>}
-              side="top"
-              className="max-w-xs"
-              variant="default"
-            >
-              <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] w-full ${bgClass}`}>
-                <img 
-                  src={getCharacteristicIconSrc(effectData.key)} 
-                  alt={effectData.key}
-                  className="w-3 h-3"
-                />
-                <span>{effectData.content > 0 ? '+' : ''}{formatNumber(effectData.content * 100, { smartDecimals: true })}%</span>
-              </span>
-            </UnifiedTooltip>
-          );
-        }
-      })}
-    </div>
-  );
-};
-
 // Component for weekly effects display (separate column)
 const WeeklyEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
   if (wine.state !== 'bottled') return null;
@@ -592,7 +502,6 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
     { key: 'quantity', label: 'Bottles', sortable: true },
     { key: 'manifested' as any, label: 'Manifested', sortable: false },
     { key: 'risk' as any, label: 'Risk', sortable: false },
-    { key: 'currentEffects' as any, label: 'Current Effects', sortable: false },
     { key: 'weeklyEffects' as any, label: 'Weekly Effects', sortable: false }
   ];
 
@@ -603,14 +512,41 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
     isColumnSorted: isCellarColumnSorted
   } = useTableSortWithAccessors(filteredWines, cellarColumns);
 
-  // Precompute estimated prices per wine using service calculation
+  // Load prestige and vineyards for accurate price calculation
+  const [priceCalcData, setPriceCalcData] = React.useState<{
+    prestige: number;
+    vineyards: Vineyard[];
+  }>({ prestige: 0, vineyards: [] });
+  
+  React.useEffect(() => {
+    const loadPriceData = async () => {
+      try {
+        const [currentPrestige, vineyardsData] = await Promise.all([
+          getCurrentPrestige(),
+          loadVineyards()
+        ]);
+        setPriceCalcData({ prestige: currentPrestige, vineyards: vineyardsData });
+      } catch (error) {
+        console.error('Error loading price calculation data:', error);
+      }
+    };
+    loadPriceData();
+  }, []);
+
+  // Precompute estimated prices per wine using service calculation (with prestige bonuses)
   const estimatedPriceById = useMemo(() => {
     const map: Record<string, number> = {};
     sortedBottledWines.forEach((w) => {
-      map[w.id] = calculateEstimatedPrice(w as any, undefined as any);
+      const vineyard = priceCalcData.vineyards.find(v => v.id === w.vineyardId);
+      map[w.id] = calculateEstimatedPrice(
+        w as any,
+        vineyard as any,
+        priceCalcData.prestige,
+        vineyard?.vineyardPrestige
+      );
     });
     return map;
-  }, [sortedBottledWines]);
+  }, [sortedBottledWines, priceCalcData]);
 
   // Group wines by vintage year for hierarchical display
   const winesByVintage = useMemo(() => {
@@ -714,10 +650,13 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
   const filterStats = useMemo(() => {
     const total = filteredWines.length;
     const totalBottles = filteredWines.reduce((sum, w) => sum + w.quantity, 0);
-    const totalValue = filteredWines.reduce((sum, w) => sum + (w.quantity * (w.askingPrice ?? calculateEstimatedPrice(w as any, undefined as any))), 0);
+    const totalValue = filteredWines.reduce((sum, w) => {
+      const price = w.askingPrice ?? estimatedPriceById[w.id] ?? 0;
+      return sum + (w.quantity * price);
+    }, 0);
     
     return { total, totalBottles, totalValue };
-  }, [filteredWines]);
+  }, [filteredWines, estimatedPriceById]);
 
   return (
     <div className="space-y-3">
@@ -955,7 +894,6 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 </TableHead>
                             <TableHead>Manifested</TableHead>
                             <TableHead>Risk</TableHead>
-                            <TableHead>Current Effects</TableHead>
                             <TableHead>Weekly Effects</TableHead>
               </TableRow>
             </TableHeader>
@@ -1052,9 +990,6 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                                 <RiskFeatures wine={wine} />
                               </TableCell>
                               <TableCell className="text-gray-600">
-                                <CurrentEffectsDisplay wine={wine} />
-                              </TableCell>
-                              <TableCell className="text-gray-600">
                                 <WeeklyEffectsDisplay wine={wine} />
                               </TableCell>
                       </TableRow>
@@ -1142,10 +1077,6 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
                       {/* Effects (for bottled wines) */}
                       <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-xs text-gray-500 uppercase mb-1">Current Effects</div>
-                          <CurrentEffectsDisplay wine={wine} />
-                        </div>
                         <div>
                           <div className="text-xs text-gray-500 uppercase mb-1">Weekly Effects</div>
                           <WeeklyEffectsDisplay wine={wine} />

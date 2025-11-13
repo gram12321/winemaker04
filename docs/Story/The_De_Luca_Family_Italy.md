@@ -5,6 +5,10 @@ The De Luca family embodies the passion and artistry of Italian winemaking — w
 Their story unfolds in the **rolling hills of Tuscany**, where ancient olive trees stand guard over terraced vineyards, and where the sun paints the landscape in warm golds and deep greens.  
 Here, winemaking is not just craft — it's an act of love, a dialogue with the land, a gift to be shared.
 
+- **Starting Capital**: €55,000  
+- **Starting Loan**: €50,000 Tuscan Founders Loan (8-year bank term)  
+- **Starting Prestige**: +12 Heritage Estate Recognition (slow decay)
+
 ---
 
 ## The Family

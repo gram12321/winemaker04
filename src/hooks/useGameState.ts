@@ -38,7 +38,7 @@ export function useGameStateWithData<T>(
   // Request deduplication - prevent multiple simultaneous requests
   const isLoadingRef = useRef(false);
   const lastLoadTime = useRef(0);
-  const CACHE_DURATION = 500; // Fixed 200ms cache to reduce egress
+  const CACHE_DURATION = 100; // 100ms cache to reduce egress while keeping UI responsive
 
   const refreshData = useCallback(async () => {
     try {

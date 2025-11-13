@@ -5,6 +5,10 @@ The Latosha family represents the soul of French winemaking — centuries of pat
 Their story begins in the **rolling hills of Burgundy (Bourgogne)**, where limestone soils and soft morning light shape wines that whisper of their land.  
 Here, winemaking is not just a trade — it’s a philosophy, a rhythm of life.
 
+- **Starting Capital**: €40,000  
+- **Starting Loan**: €85,000 Founders’ Bank Note (10-year bank term)  
+- **Starting Prestige**: +15 Vineyard Legacy Prestige (slow decay)
+
 ---
 
 ---

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../../database/core/supabase';
-import { addTransaction, getCurrentPrestige, clearPrestigeCache, generateSophisticatedWineOrders, getGameState, highscoreService, initializeCustomers, updateGameState } from '../index';
+import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '../index';
 import { insertPrestigeEvent } from '../../database';
 import { calculateAbsoluteWeeks, formatNumber } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
@@ -139,16 +139,144 @@ export async function adminRecreateCustomers(): Promise<void> {
 }
 
 /**
- * Generate test orders
+ * Admin force: Generate test orders bypassing prestige checks
+ * Uses the real sophisticated order generation logic with full wine evaluation
  */
 export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: number; customersGenerated: number }> {
-  const result = await generateSophisticatedWineOrders();
-  if (result.totalOrdersCreated > 0) {
-    console.log(`Generated ${result.totalOrdersCreated} order(s) from ${result.customersGenerated} customer(s)`);
-  } else {
-    console.log('No orders generated (insufficient prestige or no wines available)');
+  // Import needed functions
+  const { generateOrder } = await import('../sales/generateOrder');
+  const { getAllCustomers } = await import('../sales/createCustomer');
+  const { getAllWineBatches } = await import('../wine/winery/inventoryService');
+  const { loadVineyards } = await import('../../database/activities/vineyardDB');
+  const { getCurrentPrestige } = await import('../core/gameState');
+  const { SALES_CONSTANTS } = await import('../../constants/constants');
+  
+  // Get or create customers
+  let allCustomers = await getAllCustomers();
+  if (allCustomers.length === 0) {
+    console.log('No customers found, creating them...');
+    await initializeCustomers();
+    allCustomers = await getAllCustomers();
   }
-  return result;
+  
+  if (allCustomers.length === 0) {
+    console.log('❌ Failed to create customers');
+    return { totalOrdersCreated: 0, customersGenerated: 0 };
+  }
+  
+  // Select random customer
+  const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
+  const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
+  
+  // Load all available wines and vineyards (like real order generation)
+  const [allBatches, allVineyards] = await Promise.all([
+    getAllWineBatches(),
+    loadVineyards()
+  ]);
+  const availableWines = allBatches.filter((batch: any) => batch.state === 'bottled' && batch.quantity > 0);
+  
+  if (availableWines.length === 0) {
+    console.log('❌ No bottled wines available for orders');
+    return { totalOrdersCreated: 0, customersGenerated: 0 };
+  }
+  
+  // Get current prestige for realistic order evaluation
+  const currentPrestige = await getCurrentPrestige();
+  
+  // Try to generate orders using the sophisticated flow (with diminishing returns)
+  const orders = [];
+  
+  for (let i = 0; i < availableWines.length && orders.length < 3; i++) {
+    const wineBatch = availableWines[i];
+    const ordersPlaced = orders.length;
+    
+    // Calculate diminishing returns (same as real flow)
+    const gameState = getGameState();
+    const economyPhase = (gameState.economyPhase || 'Stable');
+    const ECONOMY_SALES_MULTIPLIERS: Record<string, { multipleOrderPenaltyMultiplier: number }> = {
+      Crash: { multipleOrderPenaltyMultiplier: 0.5 },
+      Recession: { multipleOrderPenaltyMultiplier: 0.7 },
+      Stable: { multipleOrderPenaltyMultiplier: 1.0 },
+      Expansion: { multipleOrderPenaltyMultiplier: 1.2 },
+      Boom: { multipleOrderPenaltyMultiplier: 1.5 }
+    };
+    const multiplePenaltyBoost = ECONOMY_SALES_MULTIPLIERS[economyPhase]?.multipleOrderPenaltyMultiplier || 1.0;
+    const effectivePenalty = customerTypeConfig.multipleOrderPenalty * multiplePenaltyBoost;
+    const multipleOrderModifier = Math.pow(effectivePenalty, ordersPlaced);
+    
+    // Find vineyard
+    const vineyard = allVineyards.find((v: any) => v.id === wineBatch.vineyardId);
+    if (!vineyard) continue;
+    
+    // Generate order using real logic (includes rejection probability, pricing, etc.)
+    const order = await generateOrder(customer, wineBatch, multipleOrderModifier, vineyard, currentPrestige);
+    
+    if (order) {
+      orders.push(order);
+    }
+  }
+  
+  if (orders.length > 0) {
+    console.log('✅ Admin orders generated:', {
+      customer: customer.name,
+      customerType: customer.customerType,
+      ordersCreated: orders.length,
+      totalValue: orders.reduce((sum, o) => sum + o.totalValue, 0).toFixed(2),
+      wines: orders.map(o => o.wineName)
+    });
+  } else {
+    console.log('❌ No orders generated (all wines rejected by customer)');
+  }
+  
+  return { 
+    totalOrdersCreated: orders.length, 
+    customersGenerated: 0 
+  };
+}
+
+/**
+ * Admin force: Generate test contract bypassing all checks
+ * Uses the real contract generation logic for authentic requirements
+ */
+export async function adminGenerateTestContract(): Promise<{ success: boolean; message: string }> {
+  const { getAllCustomers } = await import('../sales/createCustomer');
+  const { generateContractForCustomer } = await import('../sales/contractGenerationService');
+  const { saveWineContract } = await import('../../database/sales/contractDB');
+  
+  // Get or create customers
+  let allCustomers = await getAllCustomers();
+  if (allCustomers.length === 0) {
+    console.log('No customers found, creating them...');
+    await initializeCustomers();
+    allCustomers = await getAllCustomers();
+  }
+  
+  if (allCustomers.length === 0) {
+    return { success: false, message: 'No customers available' };
+  }
+  
+  // Select a random customer
+  const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
+  
+  // Use the real contract generation logic (bypasses eligibility/chance checks)
+  const contract = await generateContractForCustomer(customer);
+  
+  // Save to database
+  await saveWineContract(contract);
+  
+  console.log('✅ Admin contract generated:', {
+    customer: customer.name,
+    type: customer.customerType,
+    requirements: contract.requirements.map(r => `${r.type}: ${r.value}`),
+    quantity: contract.requestedQuantity,
+    value: contract.totalValue.toFixed(2),
+    multiYear: contract.terms ? `${contract.terms.durationYears} years` : 'single'
+  });
+  
+  return { 
+    success: true, 
+    message: `Contract generated for ${customer.name}: ${contract.requestedQuantity} bottles @ $${contract.offeredPrice.toFixed(2)}/bottle` 
+  };
 }
 
 

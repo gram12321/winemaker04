@@ -4,7 +4,7 @@ import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrig
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import {
-  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate
+  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate
 } from '@/lib/services';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
@@ -113,7 +113,9 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     await adminGenerateTestOrders();
   });
 
-
+  const handleGenerateTestContract = () => withLoading(async () => {
+    await adminGenerateTestContract();
+  });
 
   const handleClearAllAchievements = () => withLoading(async () => {
     await adminClearAllAchievements();
@@ -417,7 +419,23 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   🛒 Generate Test Order
                 </Button>
                 <p className="text-xs text-gray-500 mt-2">
-                  Simulates the automatic customer acquisition process and order generation
+                  Bypasses prestige checks to force order generation
+                </p>
+              </SimpleCard>
+
+              <SimpleCard
+                title="Contract Testing"
+                description="Generate test contracts for development and testing"
+              >
+                <Button
+                  onClick={handleGenerateTestContract}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  📋 Generate Test Contract
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Bypasses relationship/prestige checks to force contract generation
                 </p>
               </SimpleCard>
 

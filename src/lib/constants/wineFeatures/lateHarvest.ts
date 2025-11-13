@@ -1,4 +1,87 @@
 import { FeatureConfig } from '../../types/wineFeatures';
+import { GameDate, Season } from '../../types/types';
+
+type HarvestTiming = {
+  season: Season;
+  week: number;
+};
+
+const clampWeek = (week: number, min: number, max: number): number => {
+  if (!Number.isFinite(week)) return min;
+  return Math.max(min, Math.min(max, week));
+};
+
+const extractTimingFromGameDate = (date?: GameDate | null): HarvestTiming | null => {
+  if (!date) return null;
+  if (!date.season || typeof date.week !== 'number') return null;
+  return {
+    season: date.season,
+    week: date.week
+  };
+};
+
+const resolveHarvestTiming = (context: any): HarvestTiming | null => {
+  if (!context) return null;
+
+  // Direct season/week on context (used by risk previews)
+  if (typeof context.season === 'string' && typeof context.week === 'number') {
+    return {
+      season: context.season as Season,
+      week: context.week
+    };
+  }
+
+  // Batch harvest dates (check first - most reliable for actual processing)
+  // Check both context.batch and context.options?.batch
+  const batch = context.batch || context.options?.batch;
+  if (batch) {
+    const batchHarvestDate = extractTimingFromGameDate(batch.harvestEndDate) || extractTimingFromGameDate(batch.harvestStartDate);
+    if (batchHarvestDate) {
+      return batchHarvestDate;
+    }
+  }
+
+  // Nested options (standard triggerContext shape { options, batch })
+  if (context.options) {
+    const { season, week } = context.options;
+    if (typeof season === 'string' && typeof week === 'number') {
+      return {
+        season: season as Season,
+        week
+      };
+    }
+
+    const optionHarvestDate = extractTimingFromGameDate(context.options.harvestEndDate || context.options.harvestStartDate);
+    if (optionHarvestDate) {
+      return optionHarvestDate;
+    }
+  }
+
+  return null;
+};
+
+const calculateLatenessFactor = (timing: HarvestTiming | null): number => {
+  if (!timing) return 0;
+  const { season, week } = timing;
+
+  if (season === 'Fall') {
+    if (week < LATE_HARVEST_CONSTANTS.FALL_LATE_START) {
+      return 0;
+    }
+    const clampedWeek = clampWeek(week, LATE_HARVEST_CONSTANTS.FALL_LATE_START, LATE_HARVEST_CONSTANTS.FALL_LATE_END);
+    const progress = (clampedWeek - LATE_HARVEST_CONSTANTS.FALL_LATE_START) /
+      (LATE_HARVEST_CONSTANTS.FALL_LATE_END - LATE_HARVEST_CONSTANTS.FALL_LATE_START);
+    return Math.min(0.5, progress * 0.5);
+  }
+
+  if (season === 'Winter') {
+    const clampedWeek = clampWeek(week, 1, LATE_HARVEST_CONSTANTS.WINTER_LATE_END);
+    const progress = (clampedWeek - 1) / (LATE_HARVEST_CONSTANTS.WINTER_LATE_END - 1 || 1);
+    return Math.min(1.0, 0.5 + progress * 0.5);
+  }
+
+  return 0;
+};
 
 /**
  * Late Harvest Feature
@@ -23,36 +106,19 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
   behavior: 'triggered',
   
   behaviorConfig: {
+    severityFromRisk: true,
     eventTriggers: [
       {
         event: 'harvest',
-        condition: (context: { vineyard: any; season: string; week: number }) => {
-          // Late harvest condition: harvest in Fall (weeks 7-12) or Winter (weeks 1-12)
-          const { season, week } = context;
-          return (season === 'Fall' && week >= 7) || season === 'Winter';
+        condition: (context: any) => {
+          const timing = resolveHarvestTiming(context);
+          if (!timing) return false;
+          const { season, week } = timing;
+          return (season === 'Fall' && week >= LATE_HARVEST_CONSTANTS.FALL_LATE_START) || season === 'Winter';
         },
-        riskIncrease: (context: { vineyard: any; season: string; week: number }) => {
-          const { season, week } = context;
-          
-          // Calculate lateness factor (0-1 scale) across Fall weeks 7-12 and Winter weeks 1-12
-          let latenessFactor = 0;
-          
-          if (season === 'Fall') {
-            // Fall weeks 7-12: increasing lateness
-            // Week 7 = 0.0, Week 12 = 0.5 (halfway through harvest period)
-            // Scale from 0 to 0.5 over 6 weeks (weeks 7-12)
-            latenessFactor = (week - 7) / 5 * 0.5; // Scale to 0-0.5
-          } else if (season === 'Winter') {
-            // Winter weeks 1-12: continuing lateness progression
-            // Week 1 = 0.5, Week 12 = 1.0 (completing harvest period)
-            // Use (week - 1) / 11 to scale from 0 to 1 across 12 weeks, then add 0.5
-            latenessFactor = 0.5 + ((week - 1) / 11) * 0.5; // Scale from 0.5 to 1.0
-          }
-          
-          // Base risk increase (becomes severity for features)
-          // 0.0 lateness = 0% feature, 1.0 lateness = 100% feature
-          // Cap at 1.0 to prevent exceeding 100%
-          return Math.min(1.0, latenessFactor);
+        riskIncrease: (context: any) => {
+          const timing = resolveHarvestTiming(context);
+          return Math.min(1.0, calculateLatenessFactor(timing));
         }
       }
     ]
@@ -67,8 +133,8 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
       type: 'customer_sensitivity'  // No direct price premium
     },
     characteristics: [
-      { 
-        characteristic: 'sweetness', 
+      {
+        characteristic: 'sweetness',
         modifier: (severity: number) => {
           // Sweetness boost: 0-90% based on severity
           return severity * 0.90;
@@ -96,18 +162,7 @@ export const LATE_HARVEST_FEATURE: FeatureConfig = {
   
   // Risk Display Configuration
   riskDisplay: {
-    showAsRange: false,  // Show single current value instead of range
-    customOptionCombinations: (event: 'harvest' | 'crushing' | 'fermentation' | 'bottling') => {
-      if (event !== 'harvest') return [];
-      
-      // Generate min/max combinations for Fall and Winter ranges
-      return [
-        { season: 'Fall', week: 7, _isMin: true, _label: 'Fall Week 7' },
-        { season: 'Fall', week: 12, _isMax: true, _label: 'Fall Week 12' },
-        { season: 'Winter', week: 1, _isMin: true, _label: 'Winter Week 1' },
-        { season: 'Winter', week: 12, _isMax: true, _label: 'Winter Week 12' }
-      ];
-    }
+    showAsRange: false  // Show single current value instead of range
   }
 };
 

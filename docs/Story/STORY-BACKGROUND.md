@@ -123,48 +123,45 @@ Klara manages the administrative aspects of the winery, ensuring smooth operatio
 Each country offers a unique starting experience:
 
 ### France
-- **Location**: Burgundy (Bourgogne), in the rolling hills of the Côte de Beaune
-- **Starting Capital**: €7,000,000
+- **Location**: Burgundy (Bourgogne), Côte de Beaune slopes near Beaune
+- **Starting Capital**: €40,000
+- **Starting Loan**: €85,000 bank note over 10 years (Founders’ Bank Note)
+- **Starting Prestige**: +15 Vineyard Legacy Prestige (gradual decay)
 - **Starting Staff**: Pierre Latosha (Winery Operations) & Camille Latosha (Administration)
 - **Theme**: Tradition, heritage, and the art of French winemaking
 
 ### Italy
-- **Location**: Tuscany, in the rolling hills near Montalcino
-- **Starting Capital**: €5,000,000
+- **Location**: Tuscany, rolling hills near Montalcino
+- **Starting Capital**: €55,000
+- **Starting Loan**: €50,000 Tuscan Founders Loan over 8 years
+- **Starting Prestige**: +12 Heritage Estate Recognition (gradual decay)
 - **Starting Staff**: Roberto De Luca (Winery Operations) & Bianca De Luca (Vineyard Operations)
 - **Theme**: Artistry, tradition, and listening to the land
 
 ### Germany
-- **Location**: Along the Mosel River, in the Bernkastel region
-- **Starting Capital**: €3,000,000
+- **Location**: Mosel River, Bernkastel-Kues steep slopes
+- **Starting Capital**: €60,000
 - **Starting Staff**: Johann Weissburg (Winery Operations), Lukas Weissburg (Building & Maintenance), Elsa Weissburg (Sales), Klara Weissburg (Administration)
 - **Theme**: Family legacy, tradition meeting innovation, multi-generational cooperation
 
 ### Spain
-- **Location**: La Rioja, in the sun-drenched hills near Haro
-- **Starting Capital**: €2,000,000
-- **Starting Staff**: Miguel Torres (Winery Operations) & Isabella Torres (Administration / Marketing)
-- **Theme**: Creating your bodega in the Spanish tradition
+- **Location**: Ribera del Duero plateau overlooking the Duero River
+- **Starting Capital**: €95,000
+- **Starting Staff**: Miguel Torres (Winery Operations & Steward of the Bodega)
+- **Theme**: Embracing high-altitude Tempranillo tradition
+
+### United States
+- **Location**: Napa Valley, California
+- **Starting Capital**: €70,000
+- **Starting Staff**: Sarah Mondavi (Winery Operations) & Robert Mondavi (Business Development / Marketing)
+- **Theme**: Building a winery in the New World wine region
 
 #### Miguel Torres
 **Role**: Winemaster & Guide  
 **Specialization**: Winery Operations  
 **Image**: `assets/storypic/roberto.webp` (placeholder - need Spanish image)
 
-Miguel Torres represents the Spanish winemaking tradition, bringing expertise in creating bodegas and managing Spanish wine production. He embodies the passion and intensity of Spanish winemaking, believing that great Spanish wine comes from embracing the land's intensity rather than fighting it. He works alongside Isabella in their family operation.
-
-#### Isabella Torres
-**Role**: Family Member & Assistant  
-**Specialization**: Administration / Marketing  
-**Image**: `assets/storypic/bianca.webp` (placeholder - need Spanish image)
-
-Isabella Torres works alongside Miguel, bringing modern business practices and international marketing expertise to the family bodega. She combines traditional values with contemporary methods, helping share the Torres passion with the world. Together, they represent the collaborative spirit of Spanish family bodegas.
-
-### United States
-- **Location**: Napa Valley, California
-- **Starting Capital**: €7,000,000
-- **Starting Staff**: Sarah Mondavi (Winery Operations) & Robert Mondavi (Business Development / Marketing)
-- **Theme**: Building a winery in the New World wine region
+Miguel Torres represents the Spanish winemaking tradition, bringing expertise in creating bodegas and managing high-altitude Tempranillo production. He embodies the passion and intensity of Spanish winemaking, believing that great Spanish wine comes from embracing the land's intensity rather than fighting it. While his extended family supports him during harvest, Miguel now runs the day-to-day bodega operations on his own, inviting the player to become his first full-time partner.
 
 #### Sarah Mondavi
 **Role**: Winemaster & Guide  

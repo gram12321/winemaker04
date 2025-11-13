@@ -19,6 +19,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { UnifiedTooltip, TooltipSection, TooltipRow, TooltipScrollableContent, tooltipStyles } from '../shadCN/tooltip';
 import { Badge } from '../shadCN/badge';
 import { getFeatureDisplayData, FeatureRiskDisplayData, FeatureRiskContext, getFeatureRisksForDisplay, getRiskSeverityLabel, getRiskColorClass, getNextWineryAction, getFeatureDisplaySeverity } from '@/lib/services/wine/features/featureService';
+import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 
 interface FeatureDisplayProps {
   batch?: WineBatch;
@@ -55,7 +56,7 @@ export function FeatureDisplay({
 }: FeatureDisplayProps) {
   // Preview risk mode (vineyard or winery preview)
   if (showPreviewRisks && (vineyard || batch)) {
-    const context: FeatureRiskContext = vineyard 
+          const context: FeatureRiskContext = vineyard 
       ? {
           type: 'vineyard',
           event: 'harvest',
@@ -69,9 +70,33 @@ export function FeatureDisplay({
           nextAction: batch ? getNextWineryAction(batch) || undefined : undefined
         };
 
-    const featureData = getFeatureRisksForDisplay(context);
+           const featureData = getFeatureRisksForDisplay(context);
+           
+           const isVineyardDormantOrHarvested = vineyard ? (vineyard.status === 'Dormant' || vineyard.status === 'Harvested') : false;
+           const filteredFeatures = isVineyardDormantOrHarvested
+             ? featureData.features.filter(feature => feature.isPresent)
+             : featureData.features;
+           const featureDataWithFilter = {
+             ...featureData,
+             features: filteredFeatures
+           };
     
-    if (featureData.features.length === 0) {
+    // For vineyards, also show actual pendingFeatures that have manifested
+    let manifestedPendingFeatures: Array<{ feature: any; config: any }> = [];
+    if (vineyard && vineyard.pendingFeatures) {
+      const allConfigs = getAllFeatureConfigs();
+      manifestedPendingFeatures = vineyard.pendingFeatures
+        .filter(f => f.isPresent && f.severity > 0)
+        .map(feature => {
+          const config = allConfigs.find(c => c.id === feature.id);
+          return config ? { feature, config } : null;
+        })
+        .filter(Boolean) as Array<{ feature: any; config: any }>;
+    }
+    
+           const hasAnyFeatures = featureDataWithFilter.features.length > 0 || manifestedPendingFeatures.length > 0;
+    
+    if (!hasAnyFeatures) {
       if (compact) return null;
       
       return (
@@ -96,9 +121,29 @@ export function FeatureDisplay({
           </div>
         )}
 
-        {featureData.features.length > 0 && (
-          <div className="space-y-1">
-            {featureData.features.map((feature) => (
+        {/* Show manifested pendingFeatures first (actual state) */}
+        {manifestedPendingFeatures.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-emerald-700 uppercase tracking-wide">Active Features</div>
+            {manifestedPendingFeatures.map(({ feature, config }) => (
+              <ActiveFeatureItem
+                key={feature.id}
+                feature={feature}
+                config={config}
+                qualityImpact={0} // Will be calculated when batch is created
+                characteristicEffects={{}}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Then show preview risks */}
+               {featureDataWithFilter.features.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                    {context.type === 'vineyard' ? 'Upcoming Risks' : 'Process Risks'}
+                  </div>
+                  {featureDataWithFilter.features.map((feature) => (
               <PreviewRiskFeatureItem
                 key={feature.featureId}
                 feature={feature}
@@ -953,25 +998,40 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
         
         {config?.effects?.characteristics && config.effects.characteristics.length > 0 && (
           <div className="border-t border-gray-600 pt-2">
-            <p className={tooltipStyles.subtitle}>Characteristic Effects:</p>
+            <p className={tooltipStyles.subtitle}>
+              Characteristic Effects{(feature.newRisk > 0 && feature.newRisk < 1) ? ' (if manifests)' : ''}:
+            </p>
             <div className={`${tooltipStyles.text} ${tooltipStyles.muted} space-y-1`}>
               {config.effects.characteristics.map((effect: any) => {
-                const baseModifier = typeof effect.modifier === 'function' 
-                  ? effect.modifier(1.0)
-                  : effect.modifier;
+                // For preview risks, calculate the actual effect based on the newRisk value
+                // For triggered features with severityFromRisk, severity = risk
+                // Otherwise, use 1.0 (full severity) for display
+                const effectiveSeverity = (config.behavior === 'triggered' && (config.behaviorConfig as any)?.severityFromRisk)
+                  ? feature.newRisk
+                  : (feature.newRisk > 0 ? 1.0 : 0);
                 
                 let displayText: string;
                 if (typeof effect.modifier === 'function') {
-                  const minModifier = effect.modifier(0);
-                  const maxModifier = effect.modifier(1.0);
-                  const minPercent = formatNumber(minModifier * 100, { smartDecimals: true });
-                  const maxPercent = formatNumber(maxModifier * 100, { smartDecimals: true });
-                  displayText = minModifier === maxModifier 
-                    ? `${maxModifier > 0 ? '+' : ''}${maxPercent}%`
-                    : `${minModifier > 0 ? '+' : ''}${minPercent}% to ${maxModifier > 0 ? '+' : ''}${maxPercent}%`;
+                  // Calculate actual modifier at the effective severity
+                  const actualModifier = effect.modifier(effectiveSeverity);
+                  const actualPercent = formatNumber(actualModifier * 100, { smartDecimals: true });
+                  
+                  // If severity is between 0 and 1, show the actual value
+                  // Otherwise show the range
+                  if (effectiveSeverity > 0 && effectiveSeverity < 1) {
+                    displayText = `${actualModifier > 0 ? '+' : ''}${actualPercent}%`;
+                  } else {
+                    const minModifier = effect.modifier(0);
+                    const maxModifier = effect.modifier(1.0);
+                    const minPercent = formatNumber(minModifier * 100, { smartDecimals: true });
+                    const maxPercent = formatNumber(maxModifier * 100, { smartDecimals: true });
+                    displayText = minModifier === maxModifier 
+                      ? `${maxModifier > 0 ? '+' : ''}${maxPercent}%`
+                      : `${minModifier > 0 ? '+' : ''}${minPercent}% to ${maxModifier > 0 ? '+' : ''}${maxPercent}%`;
+                  }
                 } else {
-                  const percent = formatNumber(baseModifier * 100, { smartDecimals: true });
-                  displayText = `${baseModifier > 0 ? '+' : ''}${percent}%`;
+                  const percent = formatNumber((effect.modifier * effectiveSeverity) * 100, { smartDecimals: true });
+                  displayText = `${(effect.modifier * effectiveSeverity) > 0 ? '+' : ''}${percent}%`;
                 }
                 
                 return (
@@ -1027,16 +1087,36 @@ function PreviewRiskTooltipContent({ feature }: { feature: PreviewRiskFeatureIte
             <p className="font-medium">Customer Price Sensitivity:</p>
             <div className="text-xs text-gray-300 space-y-1">
               {Object.entries(config.customerSensitivity).map(([customerType, sensitivity]: [string, any]) => {
-                const percentChange = (sensitivity - 1.0) * 100;
+                // Calculate effective sensitivity based on severity for features that scale
+                // For preview risks, use newRisk as the effective severity if it would manifest
+                const shouldScaleWithSeverity = 
+                  (config.behavior === 'evolving') ||
+                  (config.behavior === 'triggered' && (config.behaviorConfig as any)?.canEvolveAfterManifestation);
+                
+                let effectiveSensitivity = sensitivity;
+                if (shouldScaleWithSeverity && feature.newRisk > 0) {
+                  // Scale sensitivity: 1.0 + (sensitivity - 1.0) * severity
+                  // For preview, use newRisk as the severity if it manifests
+                  const effectiveSeverity = feature.newRisk;
+                  effectiveSensitivity = 1.0 + (sensitivity - 1.0) * effectiveSeverity;
+                }
+                
+                const percentChange = (effectiveSensitivity - 1.0) * 100;
                 const percentChangeFixed = formatNumber(Math.abs(percentChange), { smartDecimals: true });
-                const sensitivityText = sensitivity === 1.0 
+                const sensitivityText = effectiveSensitivity === 1.0 
                   ? 'No change'
-                  : sensitivity < 1.0 
+                  : effectiveSensitivity < 1.0 
                     ? `-${percentChangeFixed}%`
                     : `+${percentChangeFixed}%`;
+                
+                // Add note if scaling is applied and severity is less than 100%
+                const scalingNote = shouldScaleWithSeverity && feature.newRisk > 0 && feature.newRisk < 1
+                  ? ` (at ${formatNumber(feature.newRisk * 100, { smartDecimals: true })}% severity)`
+                  : '';
+                
                 return (
                   <p key={customerType}>
-                    • {customerType}: {sensitivityText}
+                    • {customerType}: {sensitivityText}{scalingNote}
                   </p>
                 );
               })}

@@ -81,7 +81,14 @@ export async function applyForLoan(
   amount: number,
   durationSeasons: number,
   lender: Lender,
-  options: { isForced?: boolean; skipAdministrationPenalty?: boolean; loanCategory?: LoanCategory } = {}
+  options: {
+    isForced?: boolean;
+    skipAdministrationPenalty?: boolean;
+    loanCategory?: LoanCategory;
+    skipTransactions?: boolean;
+    overrideBaseRate?: number;
+    overrideEffectiveRate?: number;
+  } = {}
 ): Promise<string> {
   try {
     const gameState = getGameState();
@@ -92,8 +99,10 @@ export async function applyForLoan(
     };
     
     // Calculate effective interest rate
-    const effectiveRate = calculateEffectiveInterestRate(
-      lender.baseInterestRate,
+    const baseInterestRate = options.overrideBaseRate ?? lender.baseInterestRate;
+
+    const effectiveRate = options.overrideEffectiveRate ?? calculateEffectiveInterestRate(
+      baseInterestRate,
       gameState.economyPhase || 'Stable',
       lender.type,
       gameState.creditRating || CREDIT_RATING.DEFAULT_RATING,
@@ -119,7 +128,7 @@ export async function applyForLoan(
       lenderName: lender.name,
       lenderType: lender.type,
       principalAmount: amount,
-      baseInterestRate: lender.baseInterestRate,
+      baseInterestRate: baseInterestRate,
       economyPhaseAtCreation: gameState.economyPhase || 'Stable',
       effectiveInterestRate: effectiveRate,
       originationFee,
@@ -138,21 +147,23 @@ export async function applyForLoan(
     // Add loan to database
     await insertLoan(loan);
     
-    // Add principal amount to company money
-    await addTransaction(
-      amount,
-      `Loan received from ${lender.name}`,
-      TRANSACTION_CATEGORIES.LOAN_RECEIVED,
-      false
-    );
-    
-    // Deduct origination fee from company money
-    await addTransaction(
-      -originationFee,
-      `Origination fee for loan from ${lender.name}`,
-      TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE,
-      false
-    );
+    if (!options.skipTransactions) {
+      // Add principal amount to company money
+      await addTransaction(
+        amount,
+        `Loan received from ${lender.name}`,
+        TRANSACTION_CATEGORIES.LOAN_RECEIVED,
+        false
+      );
+      
+      // Deduct origination fee from company money
+      await addTransaction(
+        -originationFee,
+        `Origination fee for loan from ${lender.name}`,
+        TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE,
+        false
+      );
+    }
     
     // Trigger UI update
     triggerGameUpdate();
@@ -406,6 +417,22 @@ export async function enforceEmergencyQuickLoanIfNeeded(): Promise<void> {
 
   await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_FORCED);
 
+  await insertPrestigeEvent({
+    id: uuidv4(),
+    type: 'company_finance',
+    amount_base: EMERGENCY_QUICK_LOAN.PRESTIGE_PENALTY,
+    created_game_week: calculateAbsoluteWeeks(gameState.week || 1, gameState.season || 'Spring', gameState.currentYear || 2024),
+    decay_rate: EMERGENCY_QUICK_LOAN.PRESTIGE_DECAY_RATE,
+    source_id: null,
+    payload: {
+      reason: 'Emergency Quick Loan',
+      lenderName: penalizedLender.name,
+      lenderType: penalizedLender.type,
+      loanAmount: principalAmount,
+      missedPaymentAmount: negativeBalance
+    }
+  });
+
   await notificationService.addMessage(
     [
       `Emergency quick loan secured from ${penalizedLender.name}.`,
@@ -608,14 +635,22 @@ async function liquidateBottledInventory(
   penaltyRate: number,
   transactionLabel: string
 ): Promise<{ valueRecovered: number; saleProceeds: number; batchSummaries: string[] }> {
-  if (targetValue <= 0) {
-    return { valueRecovered: 0, saleProceeds: 0, batchSummaries: [] };
-  }
-
   const batches = await loadWineBatches();
   const eligibleBatches = batches.filter(batch => batch.state === 'bottled' && batch.quantity > 0);
 
   if (eligibleBatches.length === 0) {
+    return { valueRecovered: 0, saleProceeds: 0, batchSummaries: [] };
+  }
+
+  const totalInventoryValue = eligibleBatches.reduce((sum, batch) => {
+    const unitPrice = batch.estimatedPrice ?? batch.askingPrice ?? 10;
+    return sum + unitPrice * batch.quantity;
+  }, 0);
+  const inventoryAllowance =
+    totalInventoryValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+  const cappedTarget = Math.min(targetValue, inventoryAllowance);
+
+  if (cappedTarget <= 0) {
     return { valueRecovered: 0, saleProceeds: 0, batchSummaries: [] };
   }
 
@@ -627,7 +662,7 @@ async function liquidateBottledInventory(
 
   const updates: Array<{ id: string; quantity: number }> = [];
   const soldEntries: Array<{ summary: string; proceeds: number }> = [];
-  let remainingTarget = targetValue;
+  let remainingTarget = cappedTarget;
   let totalRecovered = 0;
   let totalProceeds = 0;
 
@@ -661,7 +696,7 @@ async function liquidateBottledInventory(
 
     totalRecovered += recoveredValue;
     totalProceeds += proceeds;
-    remainingTarget = Math.max(0, targetValue - totalRecovered);
+    remainingTarget = Math.max(0, cappedTarget - totalRecovered);
 
     updates.push({
       id: batch.id,
@@ -842,6 +877,9 @@ async function createForcedLoanRestructureOffer(forcedLoans: Loan[]): Promise<Fo
       value: vineyard.vineyardTotalValue
     }));
 
+  const totalInventoryValue = cellarPool.reduce((sum, entry) => sum + entry.unitPrice * entry.quantity, 0);
+  const inventoryAllowance =
+    totalInventoryValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
   const totalPortfolioValue = vineyardPool.reduce((sum, entry) => sum + entry.value, 0);
   const portfolioAllowance =
     totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
@@ -995,7 +1033,8 @@ async function createForcedLoanRestructureOffer(forcedLoans: Loan[]): Promise<Fo
 
   summaryLines.push(
     `Seizure cap factors — debt allowance: ${formatNumber(debtAllowance, { currency: true })}, ` +
-    `portfolio allowance: ${formatNumber(portfolioAllowance, { currency: true })}`
+    `portfolio allowance: ${formatNumber(portfolioAllowance, { currency: true })}, ` +
+    `inventory allowance: ${formatNumber(inventoryAllowance, { currency: true })}`
   );
 
   if (lenderSummary) {

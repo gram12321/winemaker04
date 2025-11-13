@@ -16,6 +16,7 @@ export interface CompanyUpdateData {
   currentYear?: number;
   money?: number;
   prestige?: number;
+  startingCountry?: string;
 }
 
 export interface CompanyStats {
@@ -126,6 +127,7 @@ class CompanyService {
     if (updates.currentYear !== undefined) updateData.current_year = updates.currentYear;
     if (updates.money !== undefined) updateData.money = updates.money;
     if (updates.prestige !== undefined) updateData.prestige = updates.prestige;
+    if (updates.startingCountry !== undefined) updateData.starting_country = updates.startingCountry;
 
     return await updateCompanyInDB(companyId, updateData);
   }

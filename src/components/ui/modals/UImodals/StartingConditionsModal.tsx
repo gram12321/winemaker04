@@ -2,9 +2,9 @@
 // Allows users to select their starting country and preview starting conditions
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '../shadCN/dialog';
-import { Button } from '../shadCN/button';
-import { ScrollArea } from '../shadCN/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
+import { Button } from '../../shadCN/button';
+import { ScrollArea } from '../../shadCN/scroll-area';
 import { StartingCountry, STARTING_CONDITIONS, getStartingCountries } from '@/lib/constants/startingConditions';
 import {
   generateVineyardPreview,
@@ -25,7 +25,7 @@ interface StartingConditionsModalProps {
   onClose: () => void;
   companyId: string;
   companyName: string;
-  onComplete: () => void;
+  onComplete: (startingMoney?: number) => void;
   onMentorReady?: (welcome: MentorWelcomeData) => void;
 }
 
@@ -75,6 +75,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
       );
       
       if (result.success) {
+        const appliedStartingMoney = result.startingMoney ?? selectedCondition.startingMoney;
         if (result.mentorMessage) {
           const condition = STARTING_CONDITIONS[selectedCountry];
           onMentorReady?.({
@@ -83,7 +84,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
             mentorImage: result.mentorImage ?? condition.mentorImage ?? null
           });
         }
-        onComplete();
+        onComplete(appliedStartingMoney);
       } else {
         alert(result.error || 'Failed to apply starting conditions. Please try again.');
       }
@@ -108,6 +109,10 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
       }}
     >
       <DialogContent className="max-w-7xl max-h-[90vh] p-0 overflow-hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{modalTitle}</DialogTitle>
+          <DialogDescription>{modalDescription}</DialogDescription>
+        </DialogHeader>
         <div className="bg-wine text-white px-6 py-4">
           <h2 className="text-2xl font-semibold">{modalTitle}</h2>
           <p className="text-sm text-white/80 mt-1">{modalDescription}</p>
@@ -163,6 +168,25 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       {formatNumber(selectedCondition.startingMoney, { currency: true })}
                     </span>
                   </div>
+
+                  {selectedCondition.startingLoan && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Starting Loan:</span>
+                      <span className="font-semibold text-right text-red-600">
+                        {formatNumber(selectedCondition.startingLoan.principal, { currency: true })} ·{' '}
+                        {selectedCondition.startingLoan.durationSeasons} seasons
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedCondition.startingPrestige && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Starting Prestige:</span>
+                      <span className="font-semibold text-right text-purple-600">
+                        +{formatNumber(selectedCondition.startingPrestige.amount, { decimals: 0 })} pts
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Location:</span>
@@ -249,6 +273,20 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                 <p>
                   Each family comes with its own starting capital, staff talents, and land profile. Take your time to explore the differences before committing to your legacy.
                 </p>
+                {selectedCondition.startingLoan && (
+                  <p className="mt-2 text-gray-600">
+                    You will also begin with a {selectedCondition.startingLoan.label ?? selectedCondition.startingLoan.lenderType.replace(/([A-Z])/g, ' $1').toLowerCase()} loan worth{' '}
+                    {formatNumber(selectedCondition.startingLoan.principal, { currency: true })}, scheduled over{' '}
+                    {selectedCondition.startingLoan.durationSeasons} seasons. Plan your cash flow accordingly from day one.
+                  </p>
+                )}
+                {selectedCondition.startingPrestige && (
+                  <p className="mt-2 text-gray-600">
+                    A {selectedCondition.startingPrestige.description ?? 'prestige event'} grants{' '}
+                    {formatNumber(selectedCondition.startingPrestige.amount, { decimals: 0 })} immediate prestige to honor the
+                    company’s legacy.
+                  </p>
+                )}
               </div>
             </div>
           </div>

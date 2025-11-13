@@ -14,7 +14,7 @@ import { calculateCustomerRelationship } from './createCustomer';
 import { calculateCustomerRelationshipBoosts } from './relationshipService';
 import { getCurrentPrestige } from '../core/gameState';
 import { activateCustomer } from '../../database/customers/customerDB';
-import { calculateFeaturePriceMultiplier, calculateGrapeDifficulty } from '@/lib/services/';
+import { calculateEstimatedPrice, calculateFeaturePriceMultiplier, calculateGrapeDifficulty } from '@/lib/services';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
@@ -137,15 +137,28 @@ export async function generateOrder(
   
   // Use customer's order type and characteristics
   const config = CUSTOMER_TYPE_CONFIG[customer.customerType];
-const difficultyPreference = resolveDifficultyPreference(customer);
-const difficultyImpact = evaluateDifficultyImpact(specificWineBatch.grape, difficultyPreference);
-  
-  // Get asking price (user-set or default) and base calculated price
-  const askingPrice = specificWineBatch.askingPrice ?? specificWineBatch.estimatedPrice;
-  const basePrice = specificWineBatch.estimatedPrice; // Calculated by the pricing service
+  const difficultyPreference = resolveDifficultyPreference(customer);
+  const difficultyImpact = evaluateDifficultyImpact(specificWineBatch.grape, difficultyPreference);
   
   // Calculate current relationship using provided prestige or fresh lookup
   const prestigeValue = currentPrestige ?? await getCurrentPrestige();
+  
+  // Recalculate estimated price to include post-bottling developments and prestige effects
+  const basePrice = calculateEstimatedPrice(
+    specificWineBatch,
+    vineyardData,
+    prestigeValue,
+    vineyardData.vineyardPrestige
+  );
+
+  // Resolve asking price (user-set overrides calculated price)
+  const resolvedAskingPrice = clamp(
+    specificWineBatch.askingPrice ?? basePrice,
+    0.01,
+    SALES_CONSTANTS.MAX_PRICE
+  );
+  const askingPrice = Math.round(resolvedAskingPrice * 100) / 100;
+  
   const baseRelationship = calculateCustomerRelationship(customer.marketShare, prestigeValue);
   const relationshipBoosts = await calculateCustomerRelationshipBoosts(customer.id);
   const currentRelationship = baseRelationship + relationshipBoosts;
@@ -158,14 +171,14 @@ const difficultyImpact = evaluateDifficultyImpact(specificWineBatch.grape, diffi
   const featurePriceMultiplier = calculateFeaturePriceMultiplier(specificWineBatch, customer.customerType);
   
   // Use customer's individual price multiplier with relationship bonus and feature sensitivity
-let bidPrice = askingPrice * relationshipAdjustedMultiplier * featurePriceMultiplier;
-bidPrice *= difficultyImpact.priceFactor;
-bidPrice = Math.round(bidPrice * 100) / 100;
-bidPrice = Math.max(0, Math.min(bidPrice, SALES_CONSTANTS.MAX_PRICE));
+  let bidPrice = askingPrice * relationshipAdjustedMultiplier * featurePriceMultiplier;
+  bidPrice *= difficultyImpact.priceFactor;
+  bidPrice = Math.round(bidPrice * 100) / 100;
+  bidPrice = Math.max(0, Math.min(bidPrice, SALES_CONSTANTS.MAX_PRICE));
   
-// Check for outright rejection based on price ratio
-let rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
-rejectionProbability = clamp(rejectionProbability * difficultyImpact.rejectionFactor, 0, 1);
+  // Check for outright rejection based on price ratio
+  let rejectionProbability = calculateRejectionProbability(bidPrice, basePrice);
+  rejectionProbability = clamp(rejectionProbability * difficultyImpact.rejectionFactor, 0, 1);
   
   // Apply relationship modifier to rejection probability (better relationships = less likely to reject)
   const relationshipRejectionModifier = 1 - currentRelationship * 0.005; // 0.5% reduction per relationship point
@@ -215,13 +228,14 @@ rejectionProbability = clamp(rejectionProbability * difficultyImpact.rejectionFa
   
   // Calculate order amount adjustment based on price difference
   // Use customer's bid price vs our asking price to determine quantity sensitivity
-const orderAmountMultiplier = Math.max(0,
-  calculateOrderAmount(
-    { askingPrice: bidPrice }, // Customer's actual bid price
-    askingPrice,               // Our asking price (what we want to charge)
-    customer.customerType
-  ) * difficultyImpact.quantityFactor
-);
+  const orderAmountMultiplier = Math.max(
+    0,
+    calculateOrderAmount(
+      { askingPrice: bidPrice }, // Customer's actual bid price
+      askingPrice,               // Our asking price (what we want to charge)
+      customer.customerType
+    ) * difficultyImpact.quantityFactor
+  );
   
   // Generate baseline quantity from order type range, then scale by price sensitivity and customer characteristics
   // The range acts as a baseline market appetite; calculateOrderAmount and customer quantityMultiplier scale this.

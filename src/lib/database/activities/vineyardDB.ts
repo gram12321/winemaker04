@@ -35,7 +35,8 @@ export const saveVineyard = async (vineyard: Vineyard): Promise<void> => {
         vine_yield: vineyard.vineYield || 0.02, // Default to 0.02 if not set
         overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
         planting_health_bonus: vineyard.plantingHealthBonus || 0, // Default to 0 (no gradual improvement)
-        health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null // Store health trend as JSON
+        health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null, // Store health trend as JSON
+        pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null // Store pending features as JSON
       });
 
     if (error) throw error;
@@ -73,7 +74,8 @@ export const loadVineyards = async (): Promise<Vineyard[]> => {
       vineYield: row.vine_yield ?? 0.02, // Default to 0.02 if not set (will be 0.02 for existing records)
       overgrowth: row.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 }, // Track overgrowth for each task type
       plantingHealthBonus: row.planting_health_bonus ?? 0, // Default to 0 (no gradual improvement)
-      healthTrend: row.health_trend ? JSON.parse(row.health_trend) : undefined // Parse health trend from JSON
+      healthTrend: row.health_trend ? JSON.parse(row.health_trend) : undefined, // Parse health trend from JSON
+      pendingFeatures: row.pending_features ? JSON.parse(row.pending_features) : undefined // Parse pending features from JSON
     }));
   } catch (error) {
     return [];
@@ -113,6 +115,7 @@ export const bulkUpdateVineyards = async (vineyards: Vineyard[]): Promise<void> 
       overgrowth: vineyard.overgrowth || { vegetation: 0, debris: 0, uproot: 0, replant: 0 },
       planting_health_bonus: vineyard.plantingHealthBonus || 0,
       health_trend: vineyard.healthTrend ? JSON.stringify(vineyard.healthTrend) : null,
+      pending_features: vineyard.pendingFeatures ? JSON.stringify(vineyard.pendingFeatures) : null,
       updated_at: new Date().toISOString()
     }));
     

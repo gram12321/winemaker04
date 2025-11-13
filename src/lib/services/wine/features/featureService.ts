@@ -1,5 +1,5 @@
 import { WineBatch, WineCharacteristics, CustomerType, Vineyard, WineBatchState } from '../../../types/types';
-import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, AccumulationConfig } from '../../../types/wineFeatures';
+import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, AccumulationConfig, TriggeredConfig } from '../../../types/wineFeatures';
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { isActionAvailable } from '../winery/wineryService';
 import { getColorClass, getColorCategory } from '../../../utils/utils';
@@ -9,6 +9,9 @@ import { notificationService } from '../../core/notificationService';
 import { NotificationCategory } from '../../../types/types';
 import { addFeaturePrestigeEvent } from '../../prestige/prestigeService';
 import { getBottleAgingSeverity } from './agingService';
+import { getGameState } from '../../core/gameState';
+import { Season } from '../../../types/types';
+import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
 
 // ===== CORE INTERFACES =====
 
@@ -381,10 +384,20 @@ export function calculateFeaturePriceMultiplier(
     
     const sensitivity = config.customerSensitivity[customerType];
     
-    if (config.behavior === 'evolving' && feature.severity > 0) {
+    // Scale price sensitivity with severity for features that have variable severity
+    // This includes evolving features, triggered features that can evolve, and accumulation features that can evolve
+    const shouldScaleWithSeverity = 
+      (config.behavior === 'evolving' && feature.severity > 0) ||
+      (config.behavior === 'triggered' && (config.behaviorConfig as TriggeredConfig)?.canEvolveAfterManifestation && feature.severity > 0) ||
+      (config.behavior === 'accumulation' && (config.behaviorConfig as AccumulationConfig)?.canEvolveAfterManifestation && feature.severity > 0);
+    
+    if (shouldScaleWithSeverity) {
+      // Scale sensitivity based on severity: 1.0 + (sensitivity - 1.0) * severity
+      // Example: sensitivity = 1.20, severity = 0.5 → 1.0 + 0.20 * 0.5 = 1.10 (half the premium)
       const adjustedSensitivity = 1.0 + (sensitivity - 1.0) * feature.severity;
       multiplier *= adjustedSensitivity;
     } else {
+      // Binary features (triggered without evolution) apply full sensitivity
       multiplier *= sensitivity;
     }
   }
@@ -463,8 +476,28 @@ export function previewFeatureRisks(
   event: 'harvest' | 'crushing' | 'fermentation' | 'bottling',
   context: any
 ): FeatureRiskInfo[] {
-  const targetBatch = batch || {
-    features: [],
+  // For harvest previews, use current game date if batch doesn't exist
+  let previewHarvestDate: { week: number; season: Season; year: number } | undefined;
+  if (!batch && event === 'harvest') {
+    const gameState = getGameState();
+    if (gameState.week && gameState.season && gameState.currentYear) {
+      previewHarvestDate = {
+        week: gameState.week,
+        season: gameState.season as Season,
+        year: gameState.currentYear
+      };
+    }
+  }
+  
+  // For harvest events with vineyards, merge pendingFeatures into the preview batch
+  // This ensures preview risks account for already-manifested features
+  let previewFeatures: WineFeature[] = [];
+  if (!batch && event === 'harvest' && context.pendingFeatures) {
+    previewFeatures = [...context.pendingFeatures];
+  }
+  
+  const targetBatch: WineBatch = batch || {
+    features: previewFeatures,
     id: 'preview',
     vineyardId: context.id,
     vineyardName: context.name,
@@ -481,8 +514,8 @@ export function previewFeatureRisks(
     naturalYield: 0,
     fragile: 0,
     proneToOxidation: 0,
-    harvestStartDate: { week: 1, season: 'Spring' as const, year: 2024 },
-    harvestEndDate: { week: 1, season: 'Spring' as const, year: 2024 }
+    harvestStartDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
+    harvestEndDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 }
   };
   
   const risks = previewEventRisksInternal(targetBatch, event, context);
@@ -496,6 +529,10 @@ export function previewFeatureRisks(
       qualityImpact = qualityEffect.amount;
     }
     
+    // Check if feature has already manifested (from pendingFeatures for vineyards)
+    const existingFeature = targetBatch.features?.find(f => f.id === risk.featureId);
+    const isAlreadyManifested = existingFeature?.isPresent || false;
+    
     return {
       featureId: risk.featureId,
       featureName: risk.featureName,
@@ -503,8 +540,8 @@ export function previewFeatureRisks(
       currentRisk: risk.currentRisk,
       newRisk: risk.newRisk,
       riskIncrease: risk.riskIncrease,
-      isPresent: false,
-      severity: 0,
+      isPresent: isAlreadyManifested,
+      severity: existingFeature?.severity || 0,
       qualityImpact,
       description: config?.description
     };
@@ -606,14 +643,21 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
       const behaviorConfig = config.behaviorConfig as any;
       
       const spawnsAtCurrentEvent = behaviorConfig.spawnActive === true && behaviorConfig.spawnEvent === targetEvent;
+      
+      // Check both batch features and vineyard pendingFeatures
       const existingFeature = batch?.features?.find((f: any) => f.id === config.id);
-      const alreadySpawned = existingFeature !== undefined;
+      const vineyardFeature = vineyard?.pendingFeatures?.find((f: any) => f.id === config.id);
+      const alreadySpawned = existingFeature !== undefined || vineyardFeature !== undefined;
       
       return spawnsAtCurrentEvent || alreadySpawned;
     })
     .map((config: any) => {
+      // Check both batch features and vineyard pendingFeatures (vineyard takes precedence for harvest previews)
       const existingFeature = batch?.features?.find((f: any) => f.id === config.id);
-      const currentRisk = existingFeature?.risk || 0;
+      const vineyardFeature = vineyard?.pendingFeatures?.find((f: any) => f.id === config.id);
+      const feature = vineyardFeature || existingFeature;
+      
+      const currentRisk = feature?.risk || 0;
       
       return {
         featureId: config.id,
@@ -622,8 +666,8 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
         currentRisk,
         newRisk: currentRisk,
         riskIncrease: 0,
-        isPresent: existingFeature?.isPresent || false,
-        severity: existingFeature?.severity || 0,
+        isPresent: feature?.isPresent || false,
+        severity: feature?.severity || 0,
         qualityImpact: config.effects.quality ? 
           (typeof config.effects.quality.amount === 'number' ? config.effects.quality.amount : 0) : 
           undefined,
@@ -656,23 +700,45 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
   
   const shouldUseRanges = targetEvent === 'crushing' || targetEvent === 'harvest';
   
-  const featuresWithContext = filteredFeatures.map(feature => {
-    const combinations = getFeatureRiskCombinations(feature, context, targetEvent);
-    
-    const config = feature.config || getFeatureConfig(feature.featureId);
-    const showAsRange = config?.riskDisplay?.showAsRange ?? true;
-    const useRangesForDisplay = shouldUseRanges && showAsRange;
-    
-    const weeklyRiskIncrease = calculateWeeklyRiskIncrease(batch, feature);
-    
-    return {
-      ...feature,
-      contextInfo: getContextInfo(feature, context),
-      riskCombinations: useRangesForDisplay ? null : combinations,
-      riskRanges: useRangesForDisplay ? calculateRiskRangesForCombinations(feature, context, targetEvent) : null,
-      weeklyRiskIncrease
-    };
-  });
+  const featuresWithContext = filteredFeatures
+    .map(feature => {
+      const combinations = getFeatureRiskCombinations(feature, context, targetEvent);
+      
+      const config = feature.config || getFeatureConfig(feature.featureId);
+      const showAsRange = config?.riskDisplay?.showAsRange ?? true;
+      const useRangesForDisplay = shouldUseRanges && showAsRange;
+      
+      const weeklyRiskIncrease = calculateWeeklyRiskIncrease(batch, feature);
+      
+      return {
+        ...feature,
+        contextInfo: getContextInfo(feature, context),
+        riskCombinations: useRangesForDisplay ? null : combinations,
+        riskRanges: useRangesForDisplay ? calculateRiskRangesForCombinations(feature, context, targetEvent) : null,
+        weeklyRiskIncrease
+      };
+    })
+    .filter(feature => {
+      const MIN_DISPLAYABLE_RISK = 0.0001;
+      const config = feature.config || getFeatureConfig(feature.featureId);
+      if (!config) return false;
+      
+      if (feature.riskRanges && feature.riskRanges.length > 0) {
+        return feature.riskRanges.some((range: any) => (range?.maxRisk ?? 0) > MIN_DISPLAYABLE_RISK);
+      }
+      
+      if (feature.riskCombinations && feature.riskCombinations.length > 0) {
+        return feature.riskCombinations.some((combo: any) => (combo?.risk ?? 0) > MIN_DISPLAYABLE_RISK);
+      }
+      
+      if (config.behavior === 'accumulation') {
+        return ((feature.currentRisk ?? 0) > MIN_DISPLAYABLE_RISK) ||
+               ((feature.weeklyRiskIncrease ?? 0) > MIN_DISPLAYABLE_RISK);
+      }
+      
+      return ((feature.newRisk ?? 0) > MIN_DISPLAYABLE_RISK) ||
+             ((feature.riskIncrease ?? 0) > MIN_DISPLAYABLE_RISK);
+    });
   
   return {
     features: featuresWithContext,
@@ -685,6 +751,7 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
 
 /**
  * Process weekly risk accumulation for all time-based features
+ * Also processes pendingFeatures on vineyards (features that develop before harvest)
  */
 export async function processWeeklyFeatureRisks(): Promise<void> {
   try {
@@ -692,8 +759,10 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
     const vineyards = await loadVineyards();
     const timeBasedConfigs = getTimeBasedFeatures();
     
-    const updates: Array<{ id: string; updates: Partial<WineBatch> }> = [];
+    const batchUpdates: Array<{ id: string; updates: Partial<WineBatch> }> = [];
+    const vineyardUpdates: Array<{ id: string; updates: Partial<Vineyard> }> = [];
     
+    // Process batch features
     for (const batch of batches) {
       if (batch.state === 'bottled' && batch.quantity === 0) continue;
       
@@ -705,15 +774,64 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
       }
       
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
-        updates.push({
+        batchUpdates.push({
           id: batch.id,
           updates: { features: updatedFeatures }
         });
       }
     }
     
-    if (updates.length > 0) {
-      await bulkUpdateWineBatches(updates);
+    // Process vineyard pendingFeatures (features that develop before harvest)
+    const gameState = getGameState();
+    const gameStateContext = {
+      season: gameState.season || 'Spring',
+      week: gameState.week || 1,
+      year: gameState.currentYear || 2024
+    };
+    
+    for (const vineyard of vineyards) {
+      // Only process vineyards that are in harvest-ready state (Growing or Harvested)
+      if (vineyard.status !== 'Growing') continue;
+      if (!vineyard.grape) continue; // Must have grapes planted
+      
+      let updatedPendingFeatures = [...(vineyard.pendingFeatures || [])];
+      
+      // Initialize pendingFeatures array if needed
+      if (!updatedPendingFeatures.length) {
+        updatedPendingFeatures = initializeBatchFeatures();
+      }
+      
+      // Process all features that have vineyard processing hooks
+      const allConfigs = getAllFeatureConfigs();
+      for (const config of allConfigs) {
+        if (config.processVineyardFeatures) {
+          updatedPendingFeatures = config.processVineyardFeatures(
+            updatedPendingFeatures,
+            vineyard,
+            gameStateContext
+          );
+        }
+      }
+      
+      if (JSON.stringify(updatedPendingFeatures) !== JSON.stringify(vineyard.pendingFeatures || [])) {
+        vineyardUpdates.push({
+          id: vineyard.id,
+          updates: { pendingFeatures: updatedPendingFeatures }
+        });
+      }
+    }
+    
+    if (batchUpdates.length > 0) {
+      await bulkUpdateWineBatches(batchUpdates);
+    }
+    
+    if (vineyardUpdates.length > 0) {
+     
+      const updatedVineyards = vineyards.map(v => {
+        const update = vineyardUpdates.find(u => u.id === v.id);
+        return update ? { ...v, ...update.updates } : v;
+      });
+      await bulkUpdateVineyards(updatedVineyards);
     }
   } catch (error) {
     console.error('Error processing weekly feature risks:', error);
@@ -722,6 +840,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
 
 /**
  * Process event-triggered features
+ * For harvest events, also merges vineyard pendingFeatures into batch features
  */
 export async function processEventTrigger(
   batch: WineBatch,
@@ -733,6 +852,20 @@ export async function processEventTrigger(
   let updatedBatch = { ...batch };
   
   const vineyard = event === 'harvest' ? context : undefined;
+  
+  // For harvest events, merge vineyard pendingFeatures into batch features
+  if (event === 'harvest' && vineyard && vineyard.pendingFeatures) {
+    // Merge pendingFeatures with batch features
+    // If a feature exists in both, prefer the batch version (more recent)
+    const batchFeatureIds = new Set(updatedFeatures.map((f: WineFeature) => f.id));
+    
+    // Add pending features that don't exist in batch
+    for (const pendingFeature of vineyard.pendingFeatures) {
+      if (!batchFeatureIds.has(pendingFeature.id)) {
+        updatedFeatures.push(pendingFeature);
+      }
+    }
+  }
   
   for (const config of eventConfigs) {
     let triggers: any[] = [];
@@ -1049,7 +1182,8 @@ function previewEventRisksInternal(
       const behaviorConfig = config.behaviorConfig as any;
       triggers = behaviorConfig.eventTriggers || [];
     } else if (config.behavior === 'accumulation') {
-      triggers = [];
+      // For accumulation features, skip preview (they're handled separately in getFeatureRisksForDisplay)
+      continue;
     }
     
     for (const trigger of triggers) {
@@ -1118,6 +1252,23 @@ function calculateRiskIncrease(batch: WineBatch, config: FeatureConfig, feature:
   if (config.behavior !== 'accumulation') return 0;
   
   const behaviorConfig = config.behaviorConfig as AccumulationConfig;
+  
+  // Check conditional accumulation (e.g., Grey Rot only if Noble Rot present)
+  if (behaviorConfig.conditionalAccumulation) {
+    const { requiresFeature, requiresFeaturePresent } = behaviorConfig.conditionalAccumulation;
+    const requiredFeature = (batch.features || []).find(f => f.id === requiresFeature);
+    
+    if (!requiredFeature) return 0; // Required feature doesn't exist
+    
+    if (requiresFeaturePresent && !requiredFeature.isPresent) {
+      return 0; // Required feature must be manifested but isn't
+    }
+    
+    if (!requiresFeaturePresent && (requiredFeature.risk || 0) === 0) {
+      return 0; // Required feature must have risk > 0 but doesn't
+    }
+  }
+  
   const baseRate = behaviorConfig.baseRate || 0;
   const stateMultiplier = resolveStateMultiplier(behaviorConfig.stateMultipliers, batch);
   
@@ -1146,7 +1297,8 @@ function checkManifestation(batch: WineBatch, config: FeatureConfig, risk: numbe
   }
   
   const clampedRisk = Math.max(0, Math.min(1, effectiveRisk));
-  return Math.random() < clampedRisk;
+  // At 100% risk, always manifest (deterministic)
+  return clampedRisk >= 1.0 || Math.random() < clampedRisk;
 }
 
 async function handleManifestation(
@@ -1161,7 +1313,7 @@ async function handleManifestation(
   }
 }
 
-function updateFeatureInArray(features: WineFeature[], updatedFeature: WineFeature): WineFeature[] {
+export function updateFeatureInArray(features: WineFeature[], updatedFeature: WineFeature): WineFeature[] {
   const index = features.findIndex(f => f.id === updatedFeature.id);
   if (index >= 0) {
     const updated = [...features];
@@ -1180,6 +1332,39 @@ async function processTimeBased(
   const feature = getOrCreateFeature(features, config);
   
   if (config.behavior === 'accumulation') {
+    const accumulationConfig = config.behaviorConfig as AccumulationConfig;
+    
+    // If already manifested, check if it can evolve
+    if (feature.isPresent && accumulationConfig.canEvolveAfterManifestation) {
+      // Check if another feature stops this feature's evolution
+      const stopsEvolution = (batch.features || []).some(f => {
+        if (!f.isPresent) return false;
+        const otherConfig = getFeatureConfig(f.id);
+        return otherConfig?.stopsEvolutionOf?.includes(config.id);
+      });
+      
+      if (stopsEvolution) {
+        // Evolution stopped by another feature (e.g., Grey Rot stops Noble Rot)
+        return features;
+      }
+      
+      // Apply evolution rate
+      const evolutionRate = accumulationConfig.evolutionRate || 0;
+      const evolutionCap = accumulationConfig.evolutionCap || 1.0;
+      
+      // State multiplier: only evolve while in 'grapes' state (before processing)
+      const stateMultiplier = batch.state === 'grapes' ? 1.0 : 0;
+      
+      const effectiveGrowthRate = evolutionRate * stateMultiplier;
+      const newSeverity = Math.min(evolutionCap, feature.severity + effectiveGrowthRate);
+      
+      return updateFeatureInArray(features, {
+        ...feature,
+        severity: newSeverity
+      });
+    }
+    
+    // If already manifested and can't evolve, skip processing
     if (feature.isPresent) return features;
     
     const riskIncrease = calculateRiskIncrease(batch, config, feature);
@@ -1192,7 +1377,8 @@ async function processTimeBased(
     if (!isPresent) {
       isPresent = checkManifestation(batch, config, newRisk);
       if (isPresent) {
-        severity = 1.0;
+        // Use severityFromRisk if specified, otherwise default to 1.0
+        severity = accumulationConfig.severityFromRisk ? newRisk : 1.0;
         await handleManifestation(batch, config, vineyard);
       }
     }
@@ -1248,6 +1434,18 @@ async function processTimeBased(
     // For other evolving features, skip if not present
     if (!feature.isPresent) return features;
     
+    // Check if another feature stops this feature's evolution
+    const stopsEvolution = (batch.features || []).some(f => {
+      if (!f.isPresent) return false;
+      const otherConfig = getFeatureConfig(f.id);
+      return otherConfig?.stopsEvolutionOf?.includes(config.id);
+    });
+    
+    if (stopsEvolution) {
+      // Evolution stopped by another feature (e.g., Grey Rot stops Noble Rot)
+      return features;
+    }
+    
     const behaviorConfig = config.behaviorConfig as any;
     const baseGrowthRate = behaviorConfig.severityGrowth?.rate || 0;
     
@@ -1262,6 +1460,43 @@ async function processTimeBased(
     const effectiveGrowthRate = baseGrowthRate * stateMultiplier;
     const cap = behaviorConfig.severityGrowth?.cap || 1.0;
     const newSeverity = Math.min(cap, feature.severity + effectiveGrowthRate);
+    
+    return updateFeatureInArray(features, {
+      ...feature,
+      severity: newSeverity
+    });
+  }
+  
+  // Handle triggered features that can evolve after manifestation (e.g., Noble Rot)
+  if (config.behavior === 'triggered') {
+    const triggeredConfig = config.behaviorConfig as TriggeredConfig;
+    
+    // Only process if feature is manifested and can evolve
+    if (!feature.isPresent || !triggeredConfig.canEvolveAfterManifestation) {
+      return features;
+    }
+    
+    // Check if another feature stops this feature's evolution
+    const stopsEvolution = (batch.features || []).some(f => {
+      if (!f.isPresent) return false;
+      const otherConfig = getFeatureConfig(f.id);
+      return otherConfig?.stopsEvolutionOf?.includes(config.id);
+    });
+    
+    if (stopsEvolution) {
+      // Evolution stopped by another feature (e.g., Grey Rot stops Noble Rot)
+      return features;
+    }
+    
+    // Apply evolution rate
+    const evolutionRate = triggeredConfig.evolutionRate || 0;
+    const evolutionCap = triggeredConfig.evolutionCap || 1.0;
+    
+    // State multiplier: only evolve while in 'grapes' state (before processing)
+    const stateMultiplier = batch.state === 'grapes' ? 1.0 : 0;
+    
+    const effectiveGrowthRate = evolutionRate * stateMultiplier;
+    const newSeverity = Math.min(evolutionCap, feature.severity + effectiveGrowthRate);
     
     return updateFeatureInArray(features, {
       ...feature,
@@ -1293,7 +1528,12 @@ async function applyRiskIncrease(
   if (!isPresent) {
     isPresent = checkManifestation(batch, config, newRisk);
     if (isPresent) {
-      severity = config.behavior === 'triggered' ? 1.0 : newRisk;
+      if (config.behavior === 'triggered') {
+        const triggeredConfig = config.behaviorConfig as TriggeredConfig;
+        severity = triggeredConfig?.severityFromRisk ? newRisk : 1.0;
+      } else {
+        severity = newRisk;
+      }
       await handleManifestation(batch, config, vineyard);
       manifested = true;
     }

@@ -133,6 +133,26 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     return wineBatch.askingPrice ?? computed;
   };
 
+  const getCurrentAskingPriceForOrder = useCallback((order: WineOrder): number => {
+    const batchFromInventory = allBatches.find(b => b.id === order.wineBatchId);
+    if (batchFromInventory) {
+      if (typeof batchFromInventory.askingPrice === 'number') {
+        return batchFromInventory.askingPrice;
+      }
+      return calculateEstimatedPrice(batchFromInventory as any, undefined as any);
+    }
+
+    const bottledMatch = bottledWines.find(batch => batch.id === order.wineBatchId);
+    if (bottledMatch) {
+      if (typeof bottledMatch.askingPrice === 'number') {
+        return bottledMatch.askingPrice;
+      }
+      return calculateEstimatedPrice(bottledMatch as any, undefined as any);
+    }
+
+    return getAskingPriceForOrder(order);
+  }, [allBatches, bottledWines]);
+
   // Define sortable columns for orders
   const orderColumns: SortableColumn<WineOrder>[] = [
     { key: 'customerName', label: 'Customer', sortable: true },
@@ -572,7 +592,17 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedOrders.map((order) => (
+                paginatedOrders.map((order) => {
+                  const orderAskingPrice = getAskingPriceForOrder(order);
+                  const currentAskingPrice = getCurrentAskingPriceForOrder(order);
+                  const effectiveAskingPrice = orderAskingPrice || currentAskingPrice;
+                  const hasAskingPriceShift = Math.abs(currentAskingPrice - orderAskingPrice) > 0.005;
+                  const premiumPercent = effectiveAskingPrice > 0
+                    ? (order.offeredPrice - effectiveAskingPrice) / effectiveAskingPrice
+                    : 0;
+                  const inventoryQuantity = getInventoryForOrder(order);
+
+                  return (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium text-gray-900">
                       <UnifiedTooltip
@@ -718,10 +748,20 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       </UnifiedTooltip>
                     </TableCell>
                     <TableCell className="text-gray-500">
-                      {getInventoryForOrder(order)}
+                      {inventoryQuantity}
                     </TableCell>
                     <TableCell className="text-gray-500 font-medium">
-                      {formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}
+                      <div className="flex flex-col">
+                        <span>
+                          {formatNumber(orderAskingPrice, { currency: true, decimals: 2 })}
+                          <span className="ml-1 text-[10px] text-gray-500 uppercase tracking-wide">order</span>
+                        </span>
+                        {hasAskingPriceShift && (
+                          <span className="text-[10px] text-blue-600">
+                            Now: {formatNumber(currentAskingPrice, { currency: true, decimals: 2 })}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-gray-500">
                       <UnifiedTooltip
@@ -731,7 +771,10 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                               <>
                                 <div className="font-semibold">Bid Price Calculation</div>
                                 <div className="space-y-1 text-[10px]">
-                                  <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
+                                  <div>Order Asking Price: <span className="font-medium">{formatNumber(orderAskingPrice, { currency: true, decimals: 2 })}</span></div>
+                                  {hasAskingPriceShift && (
+                                    <div>Current Asking Price: <span className="font-medium">{formatNumber(currentAskingPrice, { currency: true, decimals: 2 })}</span></div>
+                                  )}
                                   <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
                                   <div>Relationship Bonus: <span className="font-medium">{formatNumber((order.calculationData.relationshipBonusMultiplier ?? 1), { decimals: 3, forceDecimals: true })}x</span></div>
                                   {order.calculationData?.difficulty && (
@@ -760,6 +803,8 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                         if (order.calculationData?.difficulty) {
                                           parts.push('Difficulty');
                                         }
+                                        const label = hasAskingPriceShift ? 'Order Asking' : 'Asking';
+                                        parts[0] = label;
                                         return `Formula: ${parts.join(' × ')}`;
                                       })()}
                                     </div>
@@ -776,11 +821,11 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         variant="default"
                       >
                         <span className={`cursor-help ${
-                          order.offeredPrice > getAskingPriceForOrder(order)
-                            ? 'text-green-600 font-medium' // Above asking price
-                            : order.offeredPrice < getAskingPriceForOrder(order)
-                            ? 'text-red-600 font-medium' // Below asking price
-                            : 'text-gray-900' // Equal to asking price
+                          premiumPercent > 0
+                            ? 'text-green-600 font-medium'
+                            : premiumPercent < 0
+                            ? 'text-red-600 font-medium'
+                            : 'text-gray-900'
                         }`}>
                           {formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}
                         </span>
@@ -792,16 +837,19 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                           <div className="text-xs space-y-1">
                             <div className="font-semibold">Price Difference Analysis</div>
                             <div className="text-[10px] space-y-1">
-                              <div>Asking Price: <span className="font-medium">{formatNumber(getAskingPriceForOrder(order), { currency: true, decimals: 2 })}</span></div>
+                              <div>Order Asking: <span className="font-medium">{formatNumber(orderAskingPrice, { currency: true, decimals: 2 })}</span></div>
+                              {hasAskingPriceShift && (
+                                <div>Current Asking: <span className="font-medium">{formatNumber(currentAskingPrice, { currency: true, decimals: 2 })}</span></div>
+                              )}
                               <div>Bid Price: <span className="font-medium">{formatNumber(order.offeredPrice, { currency: true, decimals: 2 })}</span></div>
                               {order.calculationData?.difficulty && (
                                 <div>Difficulty Rejection Factor: <span className="font-medium">{formatNumber(order.calculationData.difficulty.rejectionFactor, { decimals: 3, forceDecimals: true })}x</span></div>
                               )}
                               <div className="border-t pt-1">
                                 <div className="font-medium">
-                                  {order.offeredPrice > getAskingPriceForOrder(order) ? (
+                                  {premiumPercent > 0 ? (
                                     <span className="text-green-600">Customer is paying premium</span>
-                                  ) : order.offeredPrice < getAskingPriceForOrder(order) ? (
+                                  ) : premiumPercent < 0 ? (
                                     <span className="text-red-600">Customer wants discount</span>
                                   ) : (
                                     <span className="text-gray-600">Customer accepts asking price</span>
@@ -814,14 +862,14 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         variant="default"
                       >
                         <span className={`cursor-help font-medium ${
-                          order.offeredPrice > getAskingPriceForOrder(order)
+                          premiumPercent > 0
                             ? 'text-green-600'
-                            : order.offeredPrice < getAskingPriceForOrder(order)
+                            : premiumPercent < 0
                             ? 'text-red-600'
                             : 'text-gray-600'
                         }`}>
-                          {order.offeredPrice > getAskingPriceForOrder(order) ? '+' : ''}
-                          {formatPercent((order.offeredPrice - getAskingPriceForOrder(order)) / getAskingPriceForOrder(order), 1, true)}
+                          {premiumPercent > 0 ? '+' : ''}
+                          {formatPercent(premiumPercent, 1, true)}
                         </span>
                       </UnifiedTooltip>
                     </TableCell>
@@ -875,7 +923,8 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       )}
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -919,9 +968,15 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
         ) : (
           <>
             {paginatedOrders.map((order) => {
-              const askingPrice = getAskingPriceForOrder(order);
+              const orderAskingPrice = getAskingPriceForOrder(order);
+              const currentAskingPrice = getCurrentAskingPriceForOrder(order);
+              const effectiveAskingPrice = orderAskingPrice || currentAskingPrice;
               const inventory = getInventoryForOrder(order);
               const customerKey = getCustomerKey(order.customerId);
+              const hasAskingPriceShift = Math.abs(currentAskingPrice - orderAskingPrice) > 0.005;
+              const premiumPercent = effectiveAskingPrice > 0
+                ? (order.offeredPrice - effectiveAskingPrice) / effectiveAskingPrice
+                : 0;
               
               return (
                 <div key={order.id} className="bg-white rounded-lg shadow overflow-hidden">
@@ -1013,14 +1068,22 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Asking Price:</span>
-                        <span className="font-medium">{formatNumber(askingPrice, { currency: true, decimals: 2 })}</span>
+                      <span className="font-medium">
+                        {formatNumber(orderAskingPrice, { currency: true, decimals: 2 })}
+                        <span className="ml-1 text-[10px] text-gray-500 uppercase tracking-wide">order</span>
+                        {hasAskingPriceShift && (
+                          <span className="block text-[10px] text-blue-600">
+                            Now: {formatNumber(currentAskingPrice, { currency: true, decimals: 2 })}
+                          </span>
+                        )}
+                      </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Bid Price:</span>
                         <span className={`font-medium ${
-                          order.offeredPrice > askingPrice
+                          premiumPercent > 0
                             ? 'text-green-600'
-                            : order.offeredPrice < askingPrice
+                            : premiumPercent < 0
                             ? 'text-red-600'
                             : 'text-gray-900'
                         }`}>
@@ -1030,11 +1093,11 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Premium/Discount:</span>
                         <span className={`font-medium ${
-                          order.offeredPrice > askingPrice ? 'text-green-600' : 
-                          order.offeredPrice < askingPrice ? 'text-red-600' : 'text-gray-600'
+                          premiumPercent > 0 ? 'text-green-600' : 
+                          premiumPercent < 0 ? 'text-red-600' : 'text-gray-600'
                         }`}>
-                          {order.offeredPrice > askingPrice ? '+' : ''}
-                          {formatPercent((order.offeredPrice - askingPrice) / askingPrice, 1, true)}
+                          {premiumPercent > 0 ? '+' : ''}
+                          {formatPercent(premiumPercent, 1, true)}
                         </span>
                       </div>
                       <div className="bg-green-50 rounded-lg p-3 text-center mt-2">

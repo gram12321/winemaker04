@@ -1,6 +1,8 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, enforceEmergencyQuickLoanIfNeeded, restructureForcedLoansIfNeeded } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
+import { generateContracts } from '@/lib/services/sales/contractGenerationService';
+import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
@@ -173,6 +175,24 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
         // Order notifications are handled inside salesOrderService
       } catch (error) {
         console.warn('Error during sophisticated order generation:', error);
+      }
+    })(),
+    
+    // Generate new wine contracts from eligible customers
+    (async () => {
+      try {
+        await generateContracts();
+      } catch (error) {
+        console.warn('Error during contract generation:', error);
+      }
+    })(),
+    
+    // Expire old pending contracts that have passed their expiration date
+    (async () => {
+      try {
+        await expireOldContracts();
+      } catch (error) {
+        console.warn('Error during contract expiration check:', error);
       }
     })(),
     

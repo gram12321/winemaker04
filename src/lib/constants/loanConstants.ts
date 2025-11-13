@@ -171,7 +171,7 @@ export const DURATION_INTEREST_MODIFIERS = {
 // Loan default configuration
 export const LOAN_DEFAULT = {
   PRESTIGE_PENALTY: -75, // Immediate prestige hit
-  PRESTIGE_DECAY_RATE: 0.95, // Slow decay (permanent impact)
+  PRESTIGE_DECAY_RATE: 0.999334, // ~20-year half-life (very slow decay)
   INTEREST_PENALTY_SEASONS: 12, // Other lenders increase rates for 3 years
   INTEREST_PENALTY_MULTIPLIER: 1.3 // 30% rate increase from other lenders
 } as const;
@@ -191,7 +191,7 @@ export const LOAN_MISSED_PAYMENT_PENALTIES = {
     BALANCE_PENALTY_PERCENT: 0.05, // +5% of outstanding balance
     CREDIT_RATING_LOSS: -0.05, // -5% credit rating (cumulative: -10% total)
     PRESTIGE_PENALTY: -25, // Negative prestige event
-    PRESTIGE_DECAY_RATE: 0.95, // Slow decay
+    PRESTIGE_DECAY_RATE: 0.998667, // ~10-year half-life (slow decay)
     BOOKKEEPING_WORK: 50, // +50 work units to next bookkeeping
   },
   
@@ -216,7 +216,9 @@ export const EMERGENCY_QUICK_LOAN = {
   BASE_INTEREST_PENALTY_MULTIPLIER: 1.5, // Base interest penalty
   DISQUALIFIED_INTEREST_PENALTY_MULTIPLIER: 1.9, // Applied if borrower wouldn't normally qualify
   ORIGINATION_FEE_PENALTY_MULTIPLIER: 1.4, // Origination fee penalty
-  MAX_ADJUSTMENT_ITERATIONS: 4 // Attempts to increase principal to cover deficit after fees
+  MAX_ADJUSTMENT_ITERATIONS: 4, // Attempts to increase principal to cover deficit after fees
+  PRESTIGE_PENALTY: -15,
+  PRESTIGE_DECAY_RATE: 0.99735 // ~5-year half-life
 } as const;
 
 // Emergency loan restructuring settings (triggered at new year)
@@ -231,7 +233,7 @@ export const EMERGENCY_RESTRUCTURE = {
   OVERRIDE_ORIGINATION_MULTIPLIER: 1.6, // Additional origination penalty under forced override
   OVERRIDE_DURATION_SEASONS: 60, // 15 years if override required
   PRESTIGE_PENALTY: -35, // Prestige hit when restructure fires
-  PRESTIGE_DECAY_RATE: 0.95 // Slow decay, mirrors warning prestige decay
+  PRESTIGE_DECAY_RATE: 0.998667 // ~10-year half-life
 } as const;
 
 // Extra payment configuration

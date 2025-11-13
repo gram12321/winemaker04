@@ -7,7 +7,9 @@ import { WineModal } from '../ui';
 import { NavigationProps } from '../../lib/types/UItypes';
 import WineCellarTab from './sales/WineCellarTab';
 import OrdersTab from './sales/OrdersTab';
+import ContractsTab from './sales/ContractsTab';
 import { getWineBatchDisplayName } from '@/lib/services';
+import { loadWineContracts } from '@/lib/database/sales/contractDB';
 
 interface SalesProps extends NavigationProps {
   // Inherits onNavigateToWinepedia from NavigationProps
@@ -16,7 +18,7 @@ interface SalesProps extends NavigationProps {
 const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   const { isLoading, withLoading } = useLoadingState();
   
-  const [activeTab, setActiveTab] = useState<'cellar' | 'orders'>('cellar');
+  const [activeTab, setActiveTab] = useState<'cellar' | 'orders' | 'contracts'>('cellar');
   const [showSoldOut, setShowSoldOut] = useState<boolean>(false);
 
   // Wine modal state
@@ -33,6 +35,12 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     () => loadWineBatches(),
     [],
     { topic: 'wine_batches' }
+  );
+
+  const allContracts = useGameStateWithData(
+    () => loadWineContracts(),
+    [],
+    { topic: 'contracts' }
   );
 
 
@@ -70,7 +78,9 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
       >
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-900 to-transparent p-2.5">
           <h3 className="text-white text-sm font-semibold">
-            {activeTab === 'cellar' ? 'Wine Cellar Inventory' : 'Pending Orders'}
+            {activeTab === 'cellar' && 'Wine Cellar Inventory'}
+            {activeTab === 'orders' && 'Pending Orders'}
+            {activeTab === 'contracts' && 'Wine Contracts'}
           </h3>
         </div>
       </div>
@@ -99,6 +109,16 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         >
           Orders ({allOrders.filter(o => o.status === 'pending').length})
         </button>
+        <button 
+          onClick={() => setActiveTab('contracts')}
+          className={`px-3 py-1.5 rounded ${
+            activeTab === 'contracts' 
+              ? 'bg-amber-600 text-white' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Contracts ({allContracts.filter(c => c.status === 'pending').length})
+        </button>
       </div>
 
       {/* Content based on active tab */}
@@ -119,6 +139,14 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
           isLoading={isLoading}
           withLoading={withLoading as any}
           onNavigateToWinepedia={onNavigateToWinepedia}
+        />
+      )}
+
+      {activeTab === 'contracts' && (
+        <ContractsTab
+          contracts={allContracts}
+          isLoading={isLoading}
+          withLoading={withLoading as any}
         />
       )}
 

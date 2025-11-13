@@ -1,10 +1,19 @@
-import { StartingCountry, StartingCondition, STARTING_CONDITIONS } from '@/lib/constants/startingConditions';
+import { v4 as uuidv4 } from 'uuid';
+import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanConfig } from '@/lib/constants/startingConditions';
 import { createStaff, addStaff } from '../user/staffService';
+import { assignStaffToTeam, getAllTeams } from '../user/teamService';
 import { supabase } from '@/lib/database';
 import type { Staff } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName } from '../vineyard/vineyardService';
-import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
-import { getStoryImageSrc } from '@/lib/utils';
+import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
+import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
+import { addTransaction } from '../finance/financeService';
+import { companyService } from '../user/companyService';
+import { getAllLenders } from '../finance/lenderService';
+import { applyForLoan } from '../finance/loanService';
+import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
+import { getGameState } from './gameState';
+import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -24,22 +33,46 @@ export interface ApplyStartingConditionsResult {
   mentorMessage?: string;
   mentorName?: string;
   mentorImage?: string;
+  startingMoney?: number;
+  startingLoanId?: string;
+  startingPrestige?: number;
 }
+
+const SPECIALIZATION_TEAM_TASKS: Record<string, string[]> = {
+  administration: ['administration'],
+  maintenance: ['maintenance'],
+  field: ['planting', 'harvesting', 'clearing'],
+  winery: ['fermentation', 'crushing'],
+  sales: ['sales']
+};
 
 /**
  * Generate a preview vineyard for a starting condition
  * This is called before the user confirms the selection
  */
 export function generateVineyardPreview(condition: StartingCondition): VineyardPreview {
-  const { country, region, minHectares, maxHectares } = condition.startingVineyard;
+  const {
+    country,
+    region,
+    minHectares,
+    maxHectares,
+    minAltitude,
+    maxAltitude,
+    preferredAspects
+  } = condition.startingVineyard;
   
   // Generate random hectares within range
   const hectares = Number((minHectares + Math.random() * (maxHectares - minHectares)).toFixed(2));
   
   // Generate random vineyard properties
-  const aspect = getRandomAspect();
+  const aspect = preferredAspects && preferredAspects.length > 0
+    ? getRandomFromArray(preferredAspects)
+    : getRandomAspect();
   const name = generateVineyardName(country, aspect);
-  const altitude = getRandomAltitude(country, region);
+  const altitude =
+    minAltitude !== undefined && maxAltitude !== undefined
+      ? Math.round(minAltitude + Math.random() * (maxAltitude - minAltitude))
+      : getRandomAltitude(country, region);
   const soil = getRandomSoils(country, region);
   const density = DEFAULT_VINE_DENSITY; // Use shared default density
   
@@ -50,7 +83,7 @@ export function generateVineyardPreview(condition: StartingCondition): VineyardP
     hectares,
     soil,
     altitude,
-    aspect: aspect as string, // Convert Aspect type to string for preview
+    aspect: aspect as string,
     density
   };
 }
@@ -70,24 +103,47 @@ export async function applyStartingConditions(
       return { success: false, error: 'Invalid starting country' };
     }
     
-    // 1. Update company with starting country
-    const { error: companyError } = await supabase
-      .from('companies')
-      .update({ starting_country: country })
-      .eq('id', companyId);
-      
-    if (companyError) {
-      console.error('Error updating company starting country:', companyError);
+    const startingMoney = condition.startingMoney;
+    let startingLoanId: string | undefined;
+    const availableTeams = getAllTeams();
+
+    // 1. Update company metadata via service (starting country)
+    const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
+      startingCountry: country
+    });
+
+    if (!companyUpdateSuccess) {
+      console.error('Error updating company starting country:', companyUpdateError);
       return { success: false, error: 'Failed to update company' };
     }
-    
-    // 2. Set starting money on company (finance system will handle starting capital via initializeStartingCapital)
-    // The starting capital is already set by GAME_INITIALIZATION.STARTING_MONEY constant
-    // and applied by initializeStartingCapital in gameState.ts
-    // We just need to update the company record with the starting_country
-    // The actual money value doesn't change - it's already set to GAME_INITIALIZATION.STARTING_MONEY
-    
-    // 3. Create starting staff
+
+    // 2. Adjust starting capital using finance service utilities
+    const moneyDifference = startingMoney - GAME_INITIALIZATION.STARTING_MONEY;
+    if (moneyDifference !== 0) {
+      try {
+        await addTransaction(
+          moneyDifference,
+          'Starting Capital Adjustment',
+          TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
+          false,
+          companyId
+        );
+      } catch (transactionError) {
+        console.error('Error adjusting starting capital:', transactionError);
+        return { success: false, error: 'Failed to adjust starting capital' };
+      }
+    }
+
+    // 3. Apply optional starting loan before staffing to ensure capital reflects loan
+    if (condition.startingLoan) {
+      const loanResult = await applyStartingLoan(condition.startingLoan);
+      if (!loanResult.success) {
+        return { success: false, error: loanResult.error ?? 'Failed to apply starting loan' };
+      }
+      startingLoanId = loanResult.loanId;
+    }
+
+    // 4. Create starting staff
     const createdStaff: Staff[] = [];
     for (const staffConfig of condition.staff) {
       const staff = createStaff(
@@ -101,10 +157,34 @@ export async function applyStartingConditions(
       const addedStaff = await addStaff(staff);
       if (addedStaff) {
         createdStaff.push(addedStaff);
+        
+        if (availableTeams.length > 0 && staffConfig.specializations?.length) {
+          const teamIdsToAssign = new Set<string>();
+          
+          for (const specialization of staffConfig.specializations) {
+            const taskTypes = SPECIALIZATION_TEAM_TASKS[specialization];
+            if (!taskTypes) continue;
+            
+            const matchingTeam = availableTeams.find((team) =>
+              taskTypes.some((task) => team.defaultTaskTypes.includes(task))
+            );
+            
+            if (matchingTeam) {
+              teamIdsToAssign.add(matchingTeam.id);
+            }
+          }
+          
+          for (const teamId of teamIdsToAssign) {
+            const success = await assignStaffToTeam(addedStaff.id, teamId);
+            if (!success) {
+              console.warn(`Failed to assign starting staff ${addedStaff.name} to team ${teamId}`);
+            }
+          }
+        }
       }
     }
     
-    // 4. Create starting vineyard from preview
+    // 5. Create starting vineyard from preview
     const { error: vineyardError } = await supabase
       .from('vineyards')
       .insert({
@@ -133,17 +213,116 @@ export async function applyStartingConditions(
       return { success: false, error: 'Failed to create starting vineyard' };
     }
     
+    // Refresh company money after all financial adjustments (capital + loan)
+    let resolvedStartingMoney = startingMoney;
+    try {
+      const updatedCompany = await companyService.getCompany(companyId);
+      if (updatedCompany) {
+        resolvedStartingMoney = updatedCompany.money;
+      }
+    } catch (moneyError) {
+      console.warn('Unable to resolve updated company money after starting conditions:', moneyError);
+    }
+
+    if (condition.startingPrestige) {
+      try {
+        const gameState = getGameState();
+        const createdWeek = calculateAbsoluteWeeks(
+          gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+          gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON,
+          gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR
+        );
+
+        const prestigeConfig = condition.startingPrestige;
+        await insertPrestigeEvent({
+          id: uuidv4(),
+          type: prestigeConfig.type ?? 'company_story',
+          amount_base: prestigeConfig.amount,
+          created_game_week: createdWeek,
+          decay_rate: prestigeConfig.decayRate ?? 0.98,
+          description: prestigeConfig.description ?? 'Vineyard Legacy Prestige',
+          source_id: null,
+          payload: {
+            event: 'starting_conditions',
+            country: condition.id,
+            ...(prestigeConfig.payload ?? {})
+          }
+        });
+      } catch (prestigeError) {
+        console.error('Error creating starting prestige event:', prestigeError);
+      }
+    }
+
     const mentorMessage = buildMentorWelcomeMessage(condition, vineyardPreview);
     const mentorImageSrc = getStoryImageSrc(condition.mentorImage, { fallback: false }) ?? undefined;
     return {
       success: true,
       mentorMessage: mentorMessage ?? undefined,
       mentorName: condition.mentorName,
-      mentorImage: mentorImageSrc
+      mentorImage: mentorImageSrc,
+      startingMoney: resolvedStartingMoney,
+      startingLoanId,
+      startingPrestige: condition.startingPrestige?.amount
     };
   } catch (error) {
     console.error('Error applying starting conditions:', error);
     return { success: false, error: 'Failed to apply starting conditions' };
+  }
+}
+
+interface StartingLoanResult {
+  success: boolean;
+  error?: string;
+  loanId?: string;
+}
+
+async function applyStartingLoan(config: StartingLoanConfig): Promise<StartingLoanResult> {
+  try {
+    const lenders = await getAllLenders();
+    if (!lenders || lenders.length === 0) {
+      return { success: false, error: 'No lenders available for starting loan' };
+    }
+
+    const lender = lenders.find((entry) => entry.type === config.lenderType && !entry.blacklisted);
+    if (!lender) {
+      return { success: false, error: `No ${config.lenderType} lenders available for starting loan` };
+    }
+
+    const { principal, durationSeasons } = config;
+  const interestOverride = config.interestRate;
+
+    if (principal < lender.minLoanAmount || principal > lender.maxLoanAmount) {
+      return {
+        success: false,
+        error: `Starting loan principal must be between ${lender.minLoanAmount} and ${lender.maxLoanAmount}`
+      };
+    }
+
+    if (durationSeasons < lender.minDurationSeasons || durationSeasons > lender.maxDurationSeasons) {
+      return {
+        success: false,
+        error: `Starting loan duration must be between ${lender.minDurationSeasons} and ${lender.maxDurationSeasons} seasons`
+      };
+    }
+
+    const loanId = await applyForLoan(
+      lender.id,
+      principal,
+      durationSeasons,
+      lender,
+      {
+        loanCategory: 'standard',
+      skipAdministrationPenalty: config.skipAdministrationPenalty ?? true,
+      skipTransactions: true,
+      overrideBaseRate: interestOverride,
+      overrideEffectiveRate: interestOverride
+      }
+    );
+
+    return { success: true, loanId };
+  } catch (error) {
+    console.error('Error applying starting loan:', error);
+    return { success: false, error: 'Failed to apply starting loan' };
   }
 }
 

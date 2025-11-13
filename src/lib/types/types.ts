@@ -37,7 +37,8 @@ export const GRAPE_VARIETIES = [
   'Pinot Noir',
   'Primitivo',
   'Sauvignon Blanc',
-  'Tempranillo'
+  'Tempranillo',
+  'Sangiovese'
 ] as const;
 export type GrapeVariety = typeof GRAPE_VARIETIES[number];
 
@@ -89,6 +90,7 @@ export interface Vineyard {
     plantingImprovement: number; // Health gained from planting/replanting this season
     netChange: number; // Total health change this season
   };
+  pendingFeatures?: WineFeature[]; // Features that develop before harvest (e.g., Noble Rot)
   // annualYieldFactor: number; // Random value simulating vintage yield Commented out as per request
   // annualQualityFactor: number; // Random value simulating vintage quality Commented out as per request
   // farmingMethod: FarmingMethod; // Commented out as per request
@@ -290,6 +292,83 @@ export interface WineOrder {
       rejectionFactor: number;
     };
   };
+}
+
+// ===== CONTRACT TYPES =====
+
+// Requirement types for contracts
+export type ContractRequirementType = 'quality' | 'vintage' | 'balance' | 'landValue' | 'grape';
+
+// Individual contract requirement
+export interface ContractRequirement {
+  type: ContractRequirementType;
+  value: number; // For quality/balance/landValue: minimum threshold (0-1), for vintage: minimum age in years
+  params?: {
+    minAge?: number; // For vintage requirements
+    maxAge?: number; // For vintage requirements (optional)
+    targetGrape?: GrapeVariety; // For grape requirements (future use)
+  };
+}
+
+// Contract status types
+export type ContractStatus = 'pending' | 'fulfilled' | 'rejected' | 'expired';
+
+// Multi-year contract terms
+export interface ContractTerms {
+  durationYears: number; // Total contract duration (1-5 years)
+  deliveriesPerYear: number; // How many deliveries per year (1-4, once per season)
+  totalDeliveries: number; // Total number of expected deliveries
+  deliveriesCompleted: number; // How many deliveries have been fulfilled
+  nextDeliveryDate?: GameDate; // When the next delivery is expected
+}
+
+// Wine contract interface
+export interface WineContract {
+  id: string;
+  companyId: string;
+  customerId: string;
+  customerName: string;
+  customerCountry: CustomerCountry;
+  customerType: CustomerType;
+  
+  // Contract requirements
+  requirements: ContractRequirement[];
+  requestedQuantity: number; // bottles per delivery
+  offeredPrice: number; // price per bottle
+  totalValue: number; // requestedQuantity × offeredPrice (per delivery)
+  
+  // Contract status
+  status: ContractStatus;
+  
+  // Date tracking (decomposed GameDate for database compatibility)
+  createdWeek: number;
+  createdSeason: Season;
+  createdYear: number;
+  
+  expiresWeek: number;
+  expiresSeason: Season;
+  expiresYear: number;
+  
+  fulfilledWeek?: number;
+  fulfilledSeason?: Season;
+  fulfilledYear?: number;
+  
+  rejectedWeek?: number;
+  rejectedSeason?: Season;
+  rejectedYear?: number;
+  
+  // Multi-year terms (optional, if undefined it's a single delivery)
+  terms?: ContractTerms;
+  
+  // Fulfillment tracking
+  fulfilledWineBatchIds?: string[]; // Track which wine batches were used
+  
+  // Relationship context
+  relationshipAtCreation: number; // Customer relationship when contract was offered
+  
+  // Metadata
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // ===== PRESTIGE TYPES =====
@@ -697,7 +776,8 @@ export type AchievementConditionType =
   | 'single_contract_value'         // Check if single contract value >= threshold
   | 'cellar_value'                  // Check if cellar wine value >= threshold
   | 'total_assets'                  // Check if total company assets >= threshold
-  | 'vineyard_value'                // Check if total vineyard value >= threshold
+  | 'vineyard_value'                // Check if highest single vineyard value >= threshold
+  | 'total_vineyard_value'          // Check if combined vineyard value >= threshold
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
   | 'wine_grape_quality_threshold'        // Check if wine grape quality >= threshold

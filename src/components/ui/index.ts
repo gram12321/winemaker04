@@ -39,7 +39,7 @@ export * from './modals/UImodals/WarningModal';
 export * from './modals/activitymodals/StaffSearchOptionsModal';
 export * from './modals/activitymodals/StaffSearchResultsModal';
 export * from './modals/activitymodals/HireStaffModal';
-export * from './modals/StartingConditionsModal';
+export * from './modals/UImodals/StartingConditionsModal';
 
 // Default exports (must use named export syntax)
 export { default as WineModal } from './modals/UImodals/wineModal';

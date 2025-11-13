@@ -72,11 +72,23 @@ export const CELLAR_VALUE_ACHIEVEMENTS = createTieredAchievements(
 export const VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
   'vineyard_value',
   'Land Baron',
-  'Own {threshold} worth of vineyard land',
+  'Own a single vineyard worth {threshold}',
   '🌾',
   'financial',
   'vineyard_value',
-  [50000, 250000, 1000000, 5000000, 50000000], // Smaller than company: 50k, 250k, 1M, 5M, 50M euros
+  [50000, 250000, 1000000, 5000000, 50000000], // Single property milestones: 50k, 250k, 1M, 5M, 50M euros
+  []
+);
+
+// Combined Vineyard Value (sum across all holdings)
+export const TOTAL_VINEYARD_VALUE_ACHIEVEMENTS = createTieredAchievements(
+  'total_vineyard_value',
+  'Estate Mogul',
+  'Own vineyards totaling {threshold} in value',
+  '🏡',
+  'financial',
+  'total_vineyard_value',
+  [100000, 500000, 2000000, 10000000, 50000000], // Aggregate holdings: 100k, 500k, 2M, 10M, 50M euros
   []
 );
 
@@ -444,6 +456,7 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...TOTAL_ASSETS_ACHIEVEMENTS,
   ...CELLAR_VALUE_ACHIEVEMENTS,
   ...VINEYARD_VALUE_ACHIEVEMENTS,
+  ...TOTAL_VINEYARD_VALUE_ACHIEVEMENTS,
   
   // ===== CONTRACT ACHIEVEMENTS =====
   ...SINGLE_CONTRACT_BOTTLES_ACHIEVEMENTS,

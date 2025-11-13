@@ -76,7 +76,8 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
         const updatedVineyard = {
           ...vineyard,
           status: finalStatus,
-          ripeness: 0 // Reset ripeness after harvest
+          ripeness: 0, // Reset ripeness after harvest
+          pendingFeatures: [] // Clear any vineyard features (e.g., Noble Rot) post-harvest
         };
         await saveVineyard(updatedVineyard);
 

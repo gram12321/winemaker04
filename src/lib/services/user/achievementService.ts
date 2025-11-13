@@ -1,8 +1,8 @@
-import { AchievementConfig, AchievementWithStatus, AchievementUnlock, AchievementCategory, AchievementLevel } from '../../types/types';
+import { AchievementConfig, AchievementWithStatus, AchievementUnlock, AchievementCategory, AchievementLevel, Transaction } from '../../types/types';
 import { ALL_ACHIEVEMENTS, achievementLevels } from '../../constants/achievementConstants';
 import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked } from '../../database/core/achievementsDB';
 import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
-import { getGameState, calculateFinancialData, calculateNetWorth } from '../index';
+import { getGameState, calculateFinancialData, calculateNetWorth, loadTransactions } from '../index';
 import { calculateAbsoluteWeeks } from '../../utils';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { loadVineyards } from '../../database/activities/vineyardDB';
@@ -12,6 +12,32 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatNumber as formatNumberUtil, getBadgeColorClasses } from '../../utils/utils';
+
+const EXCLUDED_REVENUE_DESCRIPTIONS = new Set(['Starting Capital', 'Starting Capital Adjustment']);
+
+function calculateAdjustedYearlyRevenue(
+  baseIncome: number,
+  transactions: Transaction[],
+  currentYear?: number
+): number {
+  if (!transactions?.length) {
+    return baseIncome;
+  }
+
+  const targetYear = currentYear ?? new Date().getFullYear();
+  const excludedRevenue = transactions.reduce((sum, transaction) => {
+    if (
+      transaction.amount > 0 &&
+      EXCLUDED_REVENUE_DESCRIPTIONS.has(transaction.description) &&
+      transaction.date?.year === targetYear
+    ) {
+      return sum + transaction.amount;
+    }
+    return sum;
+  }, 0);
+
+  return Math.max(0, baseIncome - excludedRevenue);
+}
 
 // ===== ACHIEVEMENT BUSINESS LOGIC FUNCTIONS =====
 
@@ -54,6 +80,7 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
     case 'cellar_value':
     case 'total_assets':
     case 'vineyard_value':
+    case 'total_vineyard_value':
     case 'revenue_by_year':
     case 'assets_by_year':
     case 'average_hectare_value':
@@ -223,9 +250,10 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   const companyAgeInYears = gameState.currentYear! - gameState.foundedYear!;
   
   // Load financial data
-  const [financialData, netWorth] = await Promise.all([
+  const [financialData, netWorth, transactions] = await Promise.all([
     calculateFinancialData('year'),
-    calculateNetWorth()
+    calculateNetWorth(),
+    loadTransactions()
   ]);
   
   // OPTIMIZATION: Use lightweight summary queries instead of loading full datasets
@@ -327,7 +355,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     totalAssets: financialData.totalAssets,
     cellarValue: financialData.wineValue,
     totalVineyardValue: financialData.allVineyardsValue,
-    yearlyRevenue: financialData.income,
+    yearlyRevenue: calculateAdjustedYearlyRevenue(financialData.income, transactions, gameState.currentYear),
     completedAchievementsCount,
     totalAchievementsCount,
     vineyards: vineyardData,
@@ -533,7 +561,20 @@ function checkAchievementCondition(
       };
       
     case 'vineyard_value':
-      // Check if total vineyard value meets threshold
+      // Check if any individual vineyard value meets threshold
+      const maxSingleVineyardValue = Math.max(
+        ...context.vineyards.map(v => v.vineyardTotalValue),
+        0
+      );
+      return {
+        isMet: maxSingleVineyardValue >= (condition.threshold || 0),
+        progress: maxSingleVineyardValue,
+        target: condition.threshold,
+        unit: 'euros'
+      };
+      
+    case 'total_vineyard_value':
+      // Check if combined vineyard value meets threshold
       return {
         isMet: context.totalVineyardValue >= (condition.threshold || 0),
         progress: context.totalVineyardValue,

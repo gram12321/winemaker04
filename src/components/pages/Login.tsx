@@ -239,7 +239,7 @@ export function Login({ onCompanySelected }: LoginProps) {
     }
   });
   
-  const handleStartingConditionsComplete = async () => {
+  const handleStartingConditionsComplete = async (startingMoney?: number) => {
     setShowStartingConditions(false);
 
     if (pendingMentorWelcome) {
@@ -252,17 +252,21 @@ export function Login({ onCompanySelected }: LoginProps) {
     }
     
     if (pendingCompany) {
-      // Reload appropriate company list
-      if (currentUser) {
-        await loadUserCompanies();
-      } else {
-        await loadAllCompanies();
-      }
-      
-      // Select the company and navigate to game
-      onCompanySelected(pendingCompany);
-      setPendingCompany(null);
-    }
+      const companyToSelect = startingMoney !== undefined
+        ? { ...pendingCompany, money: startingMoney }
+        : pendingCompany;
+ 
+       // Reload appropriate company list
+       if (currentUser) {
+         await loadUserCompanies();
+       } else {
+         await loadAllCompanies();
+       }
+ 
+       // Select the company and navigate to game
+       onCompanySelected(companyToSelect);
+       setPendingCompany(null);
+     }
   };
 
   const handleSelectCompany = (company: Company) => {

@@ -770,6 +770,17 @@ export function getEventDisplayData(event: PrestigeEvent): {
   if (event.metadata) {
     const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
     
+    if (event.type === 'company_story') {
+      return {
+        title: metadata.title ?? metadata.description ?? 'Legacy Prestige',
+        titleBase: 'Company Story',
+        amountText: metadata.summary ?? `${event.amount.toFixed(2)} prestige`,
+        displayInfo: metadata.family
+          ? `${metadata.family} family legacy${metadata.origin ? ` • Origin: ${metadata.origin}` : ''}`
+          : undefined
+      };
+    }
+    
     if (event.type === 'vineyard_age' && metadata.vineyardName && metadata.vineAge !== undefined) {
       const ageBase = Number(metadata.ageBase01 ?? 0);
       const ageSuitAdj = Number(metadata.ageWithSuitability01 ?? 0);

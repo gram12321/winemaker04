@@ -71,6 +71,30 @@ export interface FeatureConfig {
     // If not provided, uses default behavior based on event type
     customOptionCombinations?: (event: 'harvest' | 'crushing' | 'fermentation' | 'bottling') => any[];
   };
+  
+  // Feature Interaction (optional)
+  /**
+   * List of feature IDs whose evolution should stop when this feature manifests.
+   * Used for features like Grey Rot that stop Noble Rot evolution.
+   */
+  stopsEvolutionOf?: string[];
+  
+  // Vineyard Processing (optional)
+  /**
+   * Process this feature on a vineyard's pendingFeatures array.
+   * Called weekly for vineyards in Growing/Harvested status.
+   * Returns updated features array.
+   * 
+   * @param features - Current pendingFeatures array
+   * @param vineyard - The vineyard being processed
+   * @param gameState - Current game state (season, week, year)
+   * @returns Updated features array
+   */
+  processVineyardFeatures?: (
+    features: WineFeature[],
+    vineyard: any,
+    gameState: { season: string; week: number; year: number }
+  ) => WineFeature[];
 }
 
 // ===== BEHAVIOR CONFIGURATIONS =====
@@ -100,6 +124,26 @@ export interface TriggeredConfig {
     condition: (context: any) => boolean;           // When does this trigger?
     riskIncrease: number | ((context: any) => number);  // Risk from this event
   }>;
+  /**
+   * When true, manifested severity will match the resolved risk value (0-1).
+   * Defaults to 1.0 for triggered features when omitted.
+   */
+  severityFromRisk?: boolean;
+  /**
+   * When true, feature can evolve (increase severity) after manifestation.
+   * Used for features like Noble Rot that continue developing.
+   */
+  canEvolveAfterManifestation?: boolean;
+  /**
+   * Weekly severity growth rate when canEvolveAfterManifestation is true.
+   * Applied after manifestation to increase severity over time.
+   */
+  evolutionRate?: number;
+  /**
+   * Maximum severity cap for evolving triggered features.
+   * Defaults to 1.0 if not specified.
+   */
+  evolutionCap?: number;
 }
 
 /**
@@ -123,6 +167,39 @@ export interface AccumulationConfig {
   }>;
   
   compound: boolean;  // If true, risk accelerates: rate × (1 + currentRisk)
+  
+  /**
+   * Conditional accumulation: only accumulates if another feature is present.
+   * Used for features like Grey Rot that only develop when Noble Rot is present.
+   */
+  conditionalAccumulation?: {
+    requiresFeature: string;  // Feature ID that must be present
+    requiresFeaturePresent: boolean;  // true = feature must be manifested, false = just needs risk > 0
+  };
+  
+  /**
+   * When true, manifested severity will match the resolved risk value (0-1).
+   * Defaults to 1.0 for accumulation features when omitted.
+   */
+  severityFromRisk?: boolean;
+  
+  /**
+   * When true, feature can evolve (increase severity) after manifestation.
+   * Used for features like Noble Rot that continue developing.
+   */
+  canEvolveAfterManifestation?: boolean;
+  
+  /**
+   * Weekly severity growth rate when canEvolveAfterManifestation is true.
+   * Applied after manifestation to increase severity over time.
+   */
+  evolutionRate?: number;
+  
+  /**
+   * Maximum severity cap for evolving accumulation features.
+   * Defaults to 1.0 if not specified.
+   */
+  evolutionCap?: number;
 }
 
 // ===== EFFECTS CONFIGURATION =====

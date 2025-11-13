@@ -1,17 +1,16 @@
 // Staff Management Page
 // Main page for viewing and managing staff members
 
-import React, { useState } from 'react';
-import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam } from '@/lib/services';
+import React, { useMemo, useState } from 'react';
+import { removeStaff, assignStaffToTeam, removeStaffFromTeam, createTeam, addTeam, updateTeam, removeTeam, getWageColorClass, getAllActivities } from '@/lib/services';
 import type { Staff } from '@/lib/types/types';
 import { formatNumber, getSpecializationIcon, EMOJI_OPTIONS, getColorClass } from '@/lib/utils';
-import { getWageColorClass } from '@/lib/services';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, Label, Input, StaffSearchOptionsModal, StaffSearchResultsModal, StaffModal, StaffSkillBarsList } from '@/components/ui';
 import { Users, Search, Edit3, Plus, Check, X } from 'lucide-react';
 import { getTaskTypeDisplayName } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/types/types';
-import { useGameState } from '@/hooks';
+import { useGameState, useGameStateWithData } from '@/hooks';
 
 interface StaffPageProps {
   title: string;
@@ -45,9 +44,31 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   });
   
   const { staff: gameStaff, teams: gameTeams } = useGameState();
+  const activities = useGameStateWithData(getAllActivities, []);
   const allStaff = gameStaff || [];
   const allTeams = gameTeams || [];
   const totalWages = allStaff.reduce((sum, staff) => sum + staff.wage, 0);
+  const { staffTaskCounts, totalActiveTasks } = useMemo(() => {
+    const counts = new Map<string, number>();
+    const activityList = Array.isArray(activities) ? activities : [];
+
+    activityList.forEach(activity => {
+      const assignedIds = activity.params?.assignedStaffIds;
+
+      if (!Array.isArray(assignedIds) || assignedIds.length === 0) {
+        return;
+      }
+
+      assignedIds.forEach(id => {
+        counts.set(id, (counts.get(id) || 0) + 1);
+      });
+    });
+
+    return {
+      staffTaskCounts: counts,
+      totalActiveTasks: activityList.length
+    };
+  }, [activities]);
   
   // Filter staff based on selected team
   const filteredStaff = selectedTeamFilter === 'all' 
@@ -678,6 +699,8 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3">
             {filteredStaff.map(staff => {
               const skillInfo = getSkillLevelInfo(staff.skillLevel);
+              const assignedTaskCount = staffTaskCounts.get(staff.id) ?? 0;
+              const taskLabel = totalActiveTasks === 1 ? 'task' : 'tasks';
               
               return (
                 <div
@@ -723,6 +746,9 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                             <Edit3 className="h-3 w-3" />
                           </Button>
                         </div>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Assigned to {assignedTaskCount}/{totalActiveTasks} {taskLabel}.
                       </div>
                     </div>
                     <Button
