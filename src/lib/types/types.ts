@@ -376,6 +376,7 @@ export interface WineContract {
 // Discriminated union payloads for prestige events
 export type PrestigeEventType =
   | 'company_finance'
+  | 'company_story'
   | 'sale'
   | 'contract'
   | 'penalty'
@@ -435,8 +436,17 @@ export interface PrestigePayloadVineyardAchievement extends PrestigePayloadViney
   event: 'planting' | 'aging' | 'improvement' | 'harvest';
 }
 
+export interface PrestigePayloadCompanyStory extends PrestigePayloadBase {
+  title?: string;
+  description?: string;
+  summary?: string;
+  origin?: string;
+  family?: string;
+}
+
 export type PrestigeEventPayload =
   | { type: 'company_finance'; payload: PrestigePayloadCompanyFinance }
+  | { type: 'company_story'; payload: PrestigePayloadCompanyStory }
   | { type: 'sale'; payload: { customerName: string; wineName: string; saleValue: number } }
   | { type: 'contract'; payload: Record<string, unknown> }
   | { type: 'penalty'; payload: Record<string, unknown> }
