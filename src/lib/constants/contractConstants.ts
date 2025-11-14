@@ -54,14 +54,59 @@ export const CUSTOMER_CONTRACT_REQUIREMENTS: Record<CustomerType, CustomerContra
 // ===== REQUIREMENT TYPE PREFERENCES =====
 
 /**
- * Available requirement types by customer preference
- * Each customer type has different priorities for what they care about in contracts
+ * Requirement type with weight (higher weight = more likely to be selected)
  */
-export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, ContractRequirementType[]> = {
-  'Restaurant': ['quality', 'balance', 'minimumVintage', 'grapeColor'],
-  'Wine Shop': ['quality', 'minimumVintage', 'specificVintage', 'grape', 'grapeColor'],
-  'Private Collector': ['quality', 'minimumVintage', 'specificVintage', 'balance', 'landValue', 'grape'],
-  'Chain Store': ['quality', 'grape', 'grapeColor']
+export interface WeightedRequirementType {
+  type: ContractRequirementType;
+  weight: number; // 1 = normal, 0.5 = half as likely, 2 = twice as likely
+}
+
+/**
+ * Available requirement types by customer preference with weights
+ * Each customer type has different priorities for what they care about in contracts
+ * Characteristics are weighted lower (0.3) to make them less common than general requirements
+ */
+export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequirementType[]> = {
+  'Restaurant': [
+    { type: 'quality', weight: 1 },
+    { type: 'balance', weight: 1 },
+    { type: 'minimumVintage', weight: 1 },
+    { type: 'grapeColor', weight: 1 },
+    { type: 'characteristicMin', weight: 0.3 },
+    { type: 'characteristicMax', weight: 0.3 },
+    { type: 'characteristicBalance', weight: 0.3 }
+  ],
+  'Wine Shop': [
+    { type: 'quality', weight: 1 },
+    { type: 'minimumVintage', weight: 1 },
+    { type: 'specificVintage', weight: 1 },
+    { type: 'grape', weight: 1 },
+    { type: 'grapeColor', weight: 1 },
+    { type: 'altitude', weight: 1 },
+    { type: 'aspect', weight: 1 },
+    { type: 'characteristicMin', weight: 0.3 },
+    { type: 'characteristicMax', weight: 0.3 },
+    { type: 'characteristicBalance', weight: 0.3 }
+  ],
+  'Private Collector': [
+    { type: 'quality', weight: 1 },
+    { type: 'minimumVintage', weight: 1 },
+    { type: 'specificVintage', weight: 1 },
+    { type: 'balance', weight: 1 },
+    { type: 'landValue', weight: 1 },
+    { type: 'grape', weight: 1 },
+    { type: 'altitude', weight: 1 },
+    { type: 'aspect', weight: 1 },
+    { type: 'characteristicMin', weight: 0.3 },
+    { type: 'characteristicMax', weight: 0.3 },
+    { type: 'characteristicBalance', weight: 0.3 }
+  ],
+  'Chain Store': [
+    { type: 'quality', weight: 1 },
+    { type: 'grape', weight: 1 },
+    { type: 'grapeColor', weight: 1 },
+    { type: 'minimumVintage', weight: 1 }
+  ]
 };
 
 // ===== REQUIREMENT BASE QUANTITIES =====
@@ -119,6 +164,18 @@ export const AVAILABLE_GRAPES = [
  * Available grape colors for color-specific requirements
  */
 export const AVAILABLE_GRAPE_COLORS: ('red' | 'white')[] = ['red', 'white'];
+
+/**
+ * Available wine characteristics for characteristic requirements
+ */
+export const AVAILABLE_CHARACTERISTICS: (keyof import('../types/types').WineCharacteristics)[] = [
+  'acidity',
+  'aroma',
+  'body',
+  'spice',
+  'sweetness',
+  'tannins'
+];
 
 // ===== PRICING CONFIGURATION =====
 

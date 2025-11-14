@@ -103,19 +103,20 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       break;
       
     case 'landValue':
-      // Land value thresholds: <0.4 easy, 0.4-0.6 medium, 0.6-0.8 hard, >0.8 expert
-      if (requirement.value < 0.4) {
+      // Land value thresholds (absolute €/ha): <€35k easy, €35k-€100k medium, €100k-€2M hard, >€2M expert
+      const landValueK = requirement.value / 1000; // Convert to thousands for easier thresholds
+      if (landValueK < 35) {
         difficulty = 'easy';
-        score = requirement.value * 0.5; // 0-0.2
-      } else if (requirement.value < 0.6) {
+        score = (landValueK / 35) * 0.2; // 0-0.2
+      } else if (landValueK < 100) {
         difficulty = 'medium';
-        score = 0.2 + (requirement.value - 0.4) * 1.0; // 0.2-0.4
-      } else if (requirement.value < 0.8) {
+        score = 0.2 + ((landValueK - 35) / 65) * 0.2; // 0.2-0.4
+      } else if (landValueK < 2000) {
         difficulty = 'hard';
-        score = 0.4 + (requirement.value - 0.6) * 1.5; // 0.4-0.7
+        score = 0.4 + ((landValueK - 100) / 1900) * 0.3; // 0.4-0.7
       } else {
         difficulty = 'expert';
-        score = 0.7 + (requirement.value - 0.8) * 1.5; // 0.7-1.0
+        score = 0.7 + Math.min(((landValueK - 2000) / 1000), 0.3); // 0.7-1.0
       }
       break;
       
@@ -129,6 +130,94 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       // Grape color requirement is easy (red/white split)
       difficulty = 'easy';
       score = 0.2;
+      break;
+      
+    case 'altitude':
+      // Altitude thresholds: <50% easy, 50-70% medium, 70-85% hard, >85% expert
+      // Higher altitude (top % of region) is more difficult
+      if (requirement.value < 0.5) {
+        difficulty = 'easy';
+        score = requirement.value * 0.4; // 0-0.2
+      } else if (requirement.value < 0.7) {
+        difficulty = 'medium';
+        score = 0.2 + (requirement.value - 0.5) * 1.0; // 0.2-0.4
+      } else if (requirement.value < 0.85) {
+        difficulty = 'hard';
+        score = 0.4 + (requirement.value - 0.7) * 2.0; // 0.4-0.7
+      } else {
+        difficulty = 'expert';
+        score = 0.7 + (requirement.value - 0.85) * 2.0; // 0.7-1.0
+      }
+      break;
+      
+    case 'aspect':
+      // Aspect thresholds: <50% easy, 50-70% medium, 70-85% hard, >85% expert
+      // Higher aspect rating (better sun exposure for region) is more difficult
+      if (requirement.value < 0.5) {
+        difficulty = 'easy';
+        score = requirement.value * 0.4; // 0-0.2
+      } else if (requirement.value < 0.7) {
+        difficulty = 'medium';
+        score = 0.2 + (requirement.value - 0.5) * 1.0; // 0.2-0.4
+      } else if (requirement.value < 0.85) {
+        difficulty = 'hard';
+        score = 0.4 + (requirement.value - 0.7) * 2.0; // 0.4-0.7
+      } else {
+        difficulty = 'expert';
+        score = 0.7 + (requirement.value - 0.85) * 2.0; // 0.7-1.0
+      }
+      break;
+      
+    case 'characteristicMin':
+      // Minimum characteristic thresholds: <70% easy, 70-80% medium, 80-90% hard, >90% expert
+      if (requirement.value < 0.7) {
+        difficulty = 'easy';
+        score = (requirement.value - 0.6) * 2.0; // 0-0.2
+      } else if (requirement.value < 0.8) {
+        difficulty = 'medium';
+        score = 0.2 + (requirement.value - 0.7) * 2.0; // 0.2-0.4
+      } else if (requirement.value < 0.9) {
+        difficulty = 'hard';
+        score = 0.4 + (requirement.value - 0.8) * 3.0; // 0.4-0.7
+      } else {
+        difficulty = 'expert';
+        score = 0.7 + (requirement.value - 0.9) * 6.0; // 0.7-1.0
+      }
+      break;
+      
+    case 'characteristicMax':
+      // Maximum characteristic thresholds (lower = harder): >30% easy, 20-30% medium, 10-20% hard, <10% expert
+      if (requirement.value > 0.3) {
+        difficulty = 'easy';
+        score = (0.4 - requirement.value) * 2.0; // 0-0.2
+      } else if (requirement.value > 0.2) {
+        difficulty = 'medium';
+        score = 0.2 + (0.3 - requirement.value) * 2.0; // 0.2-0.4
+      } else if (requirement.value > 0.1) {
+        difficulty = 'hard';
+        score = 0.4 + (0.2 - requirement.value) * 3.0; // 0.4-0.7
+      } else {
+        difficulty = 'expert';
+        score = 0.7 + (0.1 - requirement.value) * 6.0; // 0.7-1.0
+      }
+      break;
+      
+    case 'characteristicBalance':
+      // Balance distance thresholds (lower = harder): >15% easy, 5-15% medium, 2-5% hard, <2% expert
+      const distancePercent = requirement.value * 100; // Convert to percentage
+      if (distancePercent > 15) {
+        difficulty = 'easy';
+        score = (25 - distancePercent) / 10 * 0.2; // 0-0.2
+      } else if (distancePercent > 5) {
+        difficulty = 'medium';
+        score = 0.2 + (15 - distancePercent) / 10 * 0.2; // 0.2-0.4
+      } else if (distancePercent > 2) {
+        difficulty = 'hard';
+        score = 0.4 + (5 - distancePercent) / 3 * 0.3; // 0.4-0.7
+      } else {
+        difficulty = 'expert';
+        score = 0.7 + (2 - distancePercent) / 2 * 0.3; // 0.7-1.0
+      }
       break;
       
     default:
@@ -616,17 +705,28 @@ async function generateRequirements(customer: Customer): Promise<ContractRequire
     Math.random() * (complexity.maxRequirements - complexity.minRequirements + 1)
   ) + complexity.minRequirements;
   
-  // Available requirement types by customer preference (imported from constants)
+  // Available requirement types by customer preference with weights (imported from constants)
   const availableTypes = [...CUSTOMER_REQUIREMENT_PREFERENCES[customer.customerType]];
   
   // Generate requirements targeting the difficulty score
   for (let i = 0; i < numRequirements; i++) {
     if (availableTypes.length === 0) break;
     
-    // Pick a random type
-    const typeIndex = Math.floor(Math.random() * availableTypes.length);
-    const reqType = availableTypes[typeIndex];
-    availableTypes.splice(typeIndex, 1); // Remove to avoid duplicates
+    // Pick a weighted random type
+    const totalWeight = availableTypes.reduce((sum, item) => sum + item.weight, 0);
+    let random = Math.random() * totalWeight;
+    let selectedIndex = 0;
+    
+    for (let j = 0; j < availableTypes.length; j++) {
+      random -= availableTypes[j].weight;
+      if (random <= 0) {
+        selectedIndex = j;
+        break;
+      }
+    }
+    
+    const reqType = availableTypes[selectedIndex].type;
+    availableTypes.splice(selectedIndex, 1); // Remove to avoid duplicates
     
     // Generate requirement with target difficulty
     const requirement = generateRequirementWithDifficulty(reqType, complexity.targetDifficultyScore, customer);
@@ -667,6 +767,16 @@ function generateRequirementWithDifficulty(
       return generateGrapeRequirement(customer);
     case 'grapeColor':
       return generateGrapeColorRequirement(customer);
+    case 'altitude':
+      return generateAltitudeRequirement(customer, actualDifficulty);
+    case 'aspect':
+      return generateAspectRequirement(customer, actualDifficulty);
+    case 'characteristicMin':
+      return generateCharacteristicMinRequirement(customer, actualDifficulty);
+    case 'characteristicMax':
+      return generateCharacteristicMaxRequirement(customer, actualDifficulty);
+    case 'characteristicBalance':
+      return generateCharacteristicBalanceRequirement(customer, actualDifficulty);
     default:
       return generateQualityRequirement(customer, actualDifficulty);
   }
@@ -828,29 +938,205 @@ function generateGrapeColorRequirement(_customer: Customer): ContractRequirement
  * Generate land value requirement with target difficulty
  */
 function generateLandValueRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  // Map difficulty to land value thresholds
-  // 0.0-0.2 = 0.2-0.4 land value (easy)
-  // 0.2-0.4 = 0.4-0.6 land value (medium)
-  // 0.4-0.7 = 0.6-0.8 land value (hard)
-  // 0.7-1.0 = 0.8-0.95 land value (expert)
+  // Map difficulty to absolute land value thresholds (€/ha)
+  // Realistic vineyard values with altitude/aspect bonuses (top regions can exceed €3M/ha):
+  // 0.0-0.2 = €5k-€35k/ha (easy - low-end land)
+  // 0.2-0.4 = €35k-€100k/ha (medium - mid-range land)
+  // 0.4-0.7 = €100k-€2M/ha (hard - premium land, no gap)
+  // 0.7-1.0 = €2M-€3M+/ha (expert - top-tier regions)
   
-  let minLandValue = 0.2;
+  let minLandValue = 5000;
   if (targetDifficulty < 0.2) {
-    minLandValue = 0.2 + targetDifficulty * 1.0; // 0.2-0.4
+    minLandValue = 5000 + targetDifficulty * 150000; // €5k-€35k
   } else if (targetDifficulty < 0.4) {
-    minLandValue = 0.4 + (targetDifficulty - 0.2) * 1.0; // 0.4-0.6
+    minLandValue = 35000 + (targetDifficulty - 0.2) * 325000; // €35k-€100k
   } else if (targetDifficulty < 0.7) {
-    minLandValue = 0.6 + (targetDifficulty - 0.4) * 0.67; // 0.6-0.8
+    minLandValue = 100000 + (targetDifficulty - 0.4) * 6333333; // €100k-€2M
   } else {
-    minLandValue = 0.8 + (targetDifficulty - 0.7) * 0.5; // 0.8-0.95
+    minLandValue = 2000000 + (targetDifficulty - 0.7) * 3333333; // €2M-€3M+
   }
   
-  const variance = Math.random() * 0.05 - 0.025;
-  minLandValue = Math.max(0.15, Math.min(0.95, minLandValue + variance));
+  // Add some variance (±10%)
+  const variance = (Math.random() * 0.2 - 0.1) * minLandValue;
+  minLandValue = Math.max(3000, Math.round(minLandValue + variance));
   
   return {
     type: 'landValue',
-    value: Math.round(minLandValue * 100) / 100
+    value: minLandValue // Absolute value in €/ha
+  };
+}
+
+/**
+ * Generate altitude requirement with target difficulty
+ * Uses normalized altitude (0-1 scale relative to region)
+ */
+function generateAltitudeRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  // Map difficulty to altitude thresholds (normalized 0-1)
+  // 0.0-0.2 = 0.3-0.5 altitude (easy - lower/mid altitude)
+  // 0.2-0.4 = 0.5-0.7 altitude (medium - mid/high altitude)
+  // 0.4-0.7 = 0.7-0.85 altitude (hard - high altitude)
+  // 0.7-1.0 = 0.85-0.95 altitude (expert - top altitude)
+  
+  let minAltitude = 0.3;
+  if (targetDifficulty < 0.2) {
+    minAltitude = 0.3 + targetDifficulty * 1.0; // 0.3-0.5
+  } else if (targetDifficulty < 0.4) {
+    minAltitude = 0.5 + (targetDifficulty - 0.2) * 1.0; // 0.5-0.7
+  } else if (targetDifficulty < 0.7) {
+    minAltitude = 0.7 + (targetDifficulty - 0.4) * 0.5; // 0.7-0.85
+  } else {
+    minAltitude = 0.85 + (targetDifficulty - 0.7) * 0.33; // 0.85-0.95
+  }
+  
+  const variance = Math.random() * 0.05 - 0.025;
+  minAltitude = Math.max(0.2, Math.min(0.95, minAltitude + variance));
+  
+  return {
+    type: 'altitude',
+    value: Math.round(minAltitude * 100) / 100
+  };
+}
+
+/**
+ * Generate aspect requirement with target difficulty
+ * Uses normalized aspect rating (0-1 scale relative to region)
+ * Aspect rating considers regional sun exposure preferences (e.g., South-facing in cool regions)
+ */
+function generateAspectRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  // Map difficulty to aspect thresholds (normalized 0-1)
+  // 0.0-0.2 = 0.3-0.5 aspect (easy - moderate exposure)
+  // 0.2-0.4 = 0.5-0.7 aspect (medium - good exposure)
+  // 0.4-0.7 = 0.7-0.85 aspect (hard - excellent exposure)
+  // 0.7-1.0 = 0.85-0.95 aspect (expert - optimal exposure)
+  
+  let minAspect = 0.3;
+  if (targetDifficulty < 0.2) {
+    minAspect = 0.3 + targetDifficulty * 1.0; // 0.3-0.5
+  } else if (targetDifficulty < 0.4) {
+    minAspect = 0.5 + (targetDifficulty - 0.2) * 1.0; // 0.5-0.7
+  } else if (targetDifficulty < 0.7) {
+    minAspect = 0.7 + (targetDifficulty - 0.4) * 0.5; // 0.7-0.85
+  } else {
+    minAspect = 0.85 + (targetDifficulty - 0.7) * 0.33; // 0.85-0.95
+  }
+  
+  const variance = Math.random() * 0.05 - 0.025;
+  minAspect = Math.max(0.2, Math.min(0.95, minAspect + variance));
+  
+  return {
+    type: 'aspect',
+    value: Math.round(minAspect * 100) / 100
+  };
+}
+
+/**
+ * Generate minimum characteristic requirement (e.g., "Sweetness ≥ 60%")
+ * Requires wine to have at least X amount of a specific characteristic
+ */
+function generateCharacteristicMinRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  const { AVAILABLE_CHARACTERISTICS } = require('../../constants/contractConstants');
+  const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
+  
+  // Map difficulty to minimum thresholds (inverse of max - higher minimum = harder)
+  // 0.0-0.2 = 0.6-0.7 (easy - low floor)
+  // 0.2-0.4 = 0.7-0.8 (medium - moderate floor)
+  // 0.4-0.7 = 0.8-0.9 (hard - high floor)
+  // 0.7-1.0 = ≥0.9 (expert - very high floor)
+  
+  let minValue = 0.7;
+  if (targetDifficulty < 0.2) {
+    minValue = 0.6 + targetDifficulty * 0.5; // 0.6-0.7
+  } else if (targetDifficulty < 0.4) {
+    minValue = 0.7 + (targetDifficulty - 0.2) * 0.5; // 0.7-0.8
+  } else if (targetDifficulty < 0.7) {
+    minValue = 0.8 + (targetDifficulty - 0.4) * 0.33; // 0.8-0.9
+  } else {
+    minValue = 0.9 + (targetDifficulty - 0.7) * 0.33; // 0.9-1.0
+  }
+  
+  const variance = Math.random() * 0.02 - 0.01;
+  minValue = Math.max(0.6, Math.min(1.0, minValue + variance));
+  
+  return {
+    type: 'characteristicMin',
+    value: Math.round(minValue * 100) / 100,
+    params: {
+      targetCharacteristic: characteristic
+    }
+  };
+}
+
+/**
+ * Generate maximum characteristic requirement (e.g., "Tannins ≤ 40%")
+ * Requires wine to have at most X amount of a specific characteristic
+ */
+function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  const { AVAILABLE_CHARACTERISTICS } = require('../../constants/contractConstants');
+  const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
+  
+  // Map difficulty to maximum thresholds (lower max = harder)
+  // 0.0-0.2 = 0.3-0.4 (easy - high ceiling)
+  // 0.2-0.4 = 0.2-0.3 (medium - moderate ceiling)
+  // 0.4-0.7 = 0.1-0.2 (hard - low ceiling)
+  // 0.7-1.0 = ≤0.1 (expert - very low ceiling)
+  
+  let maxValue = 0.4;
+  if (targetDifficulty < 0.2) {
+    maxValue = 0.4 - targetDifficulty * 0.5; // 0.3-0.4
+  } else if (targetDifficulty < 0.4) {
+    maxValue = 0.3 - (targetDifficulty - 0.2) * 0.5; // 0.2-0.3
+  } else if (targetDifficulty < 0.7) {
+    maxValue = 0.2 - (targetDifficulty - 0.4) * 0.33; // 0.1-0.2
+  } else {
+    maxValue = 0.1 - (targetDifficulty - 0.7) * 0.33; // 0.0-0.1
+  }
+  
+  const variance = Math.random() * 0.02 - 0.01;
+  maxValue = Math.max(0.0, Math.min(0.4, maxValue + variance));
+  
+  return {
+    type: 'characteristicMax',
+    value: Math.round(maxValue * 100) / 100,
+    params: {
+      targetCharacteristic: characteristic
+    }
+  };
+}
+
+/**
+ * Generate characteristic balance requirement (e.g., "Sweetness Balance: maxDistance ≤ 0.15")
+ * Requires the wine's characteristic to be within a certain distance from ideal for that characteristic
+ */
+function generateCharacteristicBalanceRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  const { AVAILABLE_CHARACTERISTICS } = require('../../constants/contractConstants');
+  const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
+  
+  // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter balance required)
+  // 0.0-0.2 = 0.25-0.15 (easy - loose balance)
+  // 0.2-0.4 = 0.15-0.05 (medium - moderate balance)
+  // 0.4-0.7 = 0.05-0.02 (hard - tight balance)
+  // 0.7-1.0 = smaller than 0.02 (expert - very tight balance)
+  
+  let maxDistance = 0.25;
+  if (targetDifficulty < 0.2) {
+    maxDistance = 0.25 - targetDifficulty * 0.5; // 0.15-0.25
+  } else if (targetDifficulty < 0.4) {
+    maxDistance = 0.15 - (targetDifficulty - 0.2) * 0.5; // 0.05-0.15
+  } else if (targetDifficulty < 0.7) {
+    maxDistance = 0.05 - (targetDifficulty - 0.4) * 0.1; // 0.02-0.05
+  } else {
+    maxDistance = 0.02 - (targetDifficulty - 0.7) * 0.04; // 0.008-0.02
+  }
+  
+  const variance = Math.random() * 0.02 - 0.01;
+  maxDistance = Math.max(0.05, Math.min(0.30, maxDistance + variance));
+  
+  return {
+    type: 'characteristicBalance',
+    value: Math.round(maxDistance * 100) / 100,
+    params: {
+      targetCharacteristic: characteristic
+    }
   };
 }
 

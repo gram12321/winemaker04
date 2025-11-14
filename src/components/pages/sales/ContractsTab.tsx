@@ -139,12 +139,25 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
       case 'balance':
         return `Balance ≥ ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
-        return `Land Value ≥ ${req.value.toFixed(2)}`;
+        return `Land Value ≥ €${(req.value / 1000).toFixed(0)}k/ha`;
       case 'grape':
         return `Grape: ${req.params?.grape || 'Any'}`;
       case 'grapeColor':
         const color = req.params?.targetGrapeColor || 'any';
         return `Color: ${color.charAt(0).toUpperCase() + color.slice(1)}`;
+      case 'altitude':
+        return `Altitude ≥ ${(req.value * 100).toFixed(0)}% (regional)`;
+      case 'aspect':
+        return `Aspect ≥ ${(req.value * 100).toFixed(0)}% (sun exposure)`;
+      case 'characteristicMin':
+        const minChar = req.params?.targetCharacteristic || 'characteristic';
+        return `${minChar.charAt(0).toUpperCase() + minChar.slice(1)} ≥ ${(req.value * 100).toFixed(0)}%`;
+      case 'characteristicMax':
+        const maxChar = req.params?.targetCharacteristic || 'characteristic';
+        return `${maxChar.charAt(0).toUpperCase() + maxChar.slice(1)} ≤ ${(req.value * 100).toFixed(0)}%`;
+      case 'characteristicBalance':
+        const balChar = req.params?.targetCharacteristic || 'characteristic';
+        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} Balance ≤ ${(req.value * 100).toFixed(0)}%`;
       default:
         return 'Unknown';
     }

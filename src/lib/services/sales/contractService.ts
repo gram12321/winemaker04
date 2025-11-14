@@ -17,14 +17,14 @@ import { formatCompletedWineName } from '../wine/winery/inventoryService';
 /**
  * Check if a wine batch meets all contract requirements
  */
-export function validateWineAgainstContract(wine: WineBatch, contract: WineContract): {
+export async function validateWineAgainstContract(wine: WineBatch, contract: WineContract): Promise<{
   isValid: boolean;
   failedRequirements: string[];
-} {
+}> {
   const failedRequirements: string[] = [];
   
   for (const requirement of contract.requirements) {
-    const validation = validateRequirement(wine, requirement);
+    const validation = await validateRequirement(wine, requirement);
     if (!validation.isValid) {
       failedRequirements.push(validation.reason);
     }
@@ -39,10 +39,10 @@ export function validateWineAgainstContract(wine: WineBatch, contract: WineContr
 /**
  * Validate a single requirement
  */
-function validateRequirement(wine: WineBatch, requirement: ContractRequirement): {
+async function validateRequirement(wine: WineBatch, requirement: ContractRequirement): Promise<{
   isValid: boolean;
   reason: string;
-} {
+}> {
   const gameState = getGameState();
   const currentYear = gameState.currentYear || 2024;
   
@@ -95,9 +95,22 @@ function validateRequirement(wine: WineBatch, requirement: ContractRequirement):
       return { isValid: true, reason: '' };
       
     case 'landValue':
-      // Need to fetch vineyard to get land value
-      // For now, we'll use a placeholder - this will be resolved async in the UI
-      // The validation will happen server-side when fulfilling
+      // Check absolute land value per hectare
+      if (!wine.vineyardId) {
+        return { isValid: false, reason: 'Wine has no vineyard data' };
+      }
+      const vineyardsForLandValue = await loadVineyards();
+      const vineyardForLandValue = vineyardsForLandValue.find((v: Vineyard) => v.id === wine.vineyardId);
+      if (!vineyardForLandValue) {
+        return { isValid: false, reason: 'Vineyard not found' };
+      }
+      // requirement.value is in euros per hectare (e.g., 10000 = €10,000/ha)
+      if (vineyardForLandValue.landValue < requirement.value) {
+        return {
+          isValid: false,
+          reason: `Land Value €${vineyardForLandValue.landValue.toLocaleString()}/ha < required €${requirement.value.toLocaleString()}/ha`
+        };
+      }
       return { isValid: true, reason: '' };
       
     case 'grape':
@@ -118,6 +131,92 @@ function validateRequirement(wine: WineBatch, requirement: ContractRequirement):
       }
       return { isValid: true, reason: '' };
       
+    case 'altitude':
+      // Fetch vineyard to get altitude and normalize it
+      if (!wine.vineyardId) {
+        return { isValid: false, reason: 'Wine has no vineyard data' };
+      }
+      const vineyardsForAltitude = await loadVineyards();
+      const vineyardForAltitude = vineyardsForAltitude.find((v: Vineyard) => v.id === wine.vineyardId);
+      if (!vineyardForAltitude) {
+        return { isValid: false, reason: 'Vineyard not found' };
+      }
+      const { getAltitudeRating } = await import('../../services/vineyard/vineyardValueCalc');
+      const normalizedAltitude = getAltitudeRating(vineyardForAltitude.country, vineyardForAltitude.region, vineyardForAltitude.altitude);
+      if (normalizedAltitude < requirement.value) {
+        return {
+          isValid: false,
+          reason: `Altitude ${(normalizedAltitude * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
+    case 'aspect':
+      // Fetch vineyard to get aspect and normalize it
+      if (!wine.vineyardId) {
+        return { isValid: false, reason: 'Wine has no vineyard data' };
+      }
+      const vineyardsForAspect = await loadVineyards();
+      const vineyardForAspect = vineyardsForAspect.find((v: Vineyard) => v.id === wine.vineyardId);
+      if (!vineyardForAspect) {
+        return { isValid: false, reason: 'Vineyard not found' };
+      }
+      const { getAspectRating } = await import('../../services/vineyard/vineyardValueCalc');
+      const normalizedAspect = getAspectRating(vineyardForAspect.country, vineyardForAspect.region, vineyardForAspect.aspect);
+      if (normalizedAspect < requirement.value) {
+        return {
+          isValid: false,
+          reason: `Aspect ${(normalizedAspect * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
+    case 'characteristicMin':
+      // Minimum characteristic requirement (e.g., "Sweetness ≥ 60%")
+      if (!wine.characteristics || !requirement.params?.targetCharacteristic) {
+        return { isValid: false, reason: 'Wine has no characteristics data' };
+      }
+      const minCharValue = wine.characteristics[requirement.params.targetCharacteristic];
+      if (minCharValue < requirement.value) {
+        return {
+          isValid: false,
+          reason: `${requirement.params.targetCharacteristic} ${(minCharValue * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
+    case 'characteristicMax':
+      // Maximum characteristic requirement (e.g., "Tannins ≤ 40%")
+      if (!wine.characteristics || !requirement.params?.targetCharacteristic) {
+        return { isValid: false, reason: 'Wine has no characteristics data' };
+      }
+      const maxCharValue = wine.characteristics[requirement.params.targetCharacteristic];
+      if (maxCharValue > requirement.value) {
+        return {
+          isValid: false,
+          reason: `${requirement.params.targetCharacteristic} ${(maxCharValue * 100).toFixed(0)}% > allowed ${(requirement.value * 100).toFixed(0)}%`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
+    case 'characteristicBalance':
+      // Characteristic balance requirement (max distance from ideal)
+      if (!wine.characteristics || !requirement.params?.targetCharacteristic) {
+        return { isValid: false, reason: 'Wine has no characteristics data' };
+      }
+      // Get the wine's characteristic value
+      const charValue = wine.characteristics[requirement.params.targetCharacteristic];
+      // Assume ideal is 0.5 (middle of range) - distance from ideal
+      const idealValue = 0.5;
+      const distance = Math.abs(charValue - idealValue);
+      if (distance > requirement.value) {
+        return {
+          isValid: false,
+          reason: `${requirement.params.targetCharacteristic} distance ${(distance * 100).toFixed(0)}% > allowed ${(requirement.value * 100).toFixed(0)}%`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
     default:
       return { isValid: true, reason: '' };
   }
@@ -128,7 +227,7 @@ function validateRequirement(wine: WineBatch, requirement: ContractRequirement):
  */
 export async function getEligibleWinesForContract(contract: WineContract): Promise<{
   wine: WineBatch;
-  validation: ReturnType<typeof validateWineAgainstContract>;
+  validation: Awaited<ReturnType<typeof validateWineAgainstContract>>;
 }[]> {
   // Import here to avoid circular dependency
   const { loadWineBatches } = await import('../../database/activities/inventoryDB');
@@ -139,26 +238,12 @@ export async function getEligibleWinesForContract(contract: WineContract): Promi
   // Validate each wine against contract and check land value requirement
   const eligibleWines: {
     wine: WineBatch;
-    validation: ReturnType<typeof validateWineAgainstContract>;
+    validation: Awaited<ReturnType<typeof validateWineAgainstContract>>;
   }[] = [];
   
-  // Load all vineyards once for efficiency
-  const allVineyards = await loadVineyards();
-  
+  // Validate all wines against contract requirements
   for (const wine of bottledWines) {
-    // Check land value requirement if present
-    const landValueReq = contract.requirements.find(r => r.type === 'landValue');
-    if (landValueReq && wine.vineyardId) {
-      const vineyard = allVineyards.find((v: Vineyard) => v.id === wine.vineyardId);
-      if (vineyard) {
-        const normalizedLandValue = Math.min(1.0, vineyard.landValue / 10000); // Normalize to 0-1
-        if (normalizedLandValue < landValueReq.value) {
-          continue; // Skip this wine
-        }
-      }
-    }
-    
-    const validation = validateWineAgainstContract(wine, contract);
+    const validation = await validateWineAgainstContract(wine, contract);
     eligibleWines.push({ wine, validation });
   }
   
@@ -213,7 +298,7 @@ export async function fulfillContract(
         };
       }
       
-      const validation = validateWineAgainstContract(wineBatch, contract);
+      const validation = await validateWineAgainstContract(wineBatch, contract);
       if (!validation.isValid) {
         const wineName = formatCompletedWineName(wineBatch);
         return {

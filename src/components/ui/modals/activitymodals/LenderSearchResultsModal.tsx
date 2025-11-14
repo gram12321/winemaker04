@@ -6,6 +6,8 @@ import { X, Minimize2 } from 'lucide-react';
 import { startTakeLoan, getGameState, calculateLoanTerms } from '@/lib/services';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { WarningModal } from '@/components/ui';
+import { getScaledLoanAmountLimit } from '@/lib/services/finance/loanService';
+import { calculateTotalAssets } from '@/lib/services/finance/financeService';
 
 interface LenderSearchResultsModalProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
   const [durationSeasons, setDurationSeasons] = useState(8);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loanAmountCap, setLoanAmountCap] = useState<number | null>(null);
   
   // Update loan parameters when selected offer changes
   useEffect(() => {
@@ -65,13 +68,50 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
     }
   }, [availableOffers, selectedOfferId]);
 
-  if (!isOpen || !offers || offers.length === 0) return null;
-
-
   // Loan calculations for third column
   const selectedOffer = selectedOfferId 
     ? offers.find(o => o.id === selectedOfferId)
     : null;
+
+  // Resolve borrower-specific cap for the selected lender
+  useEffect(() => {
+    let isMounted = true;
+
+    async function resolveLoanCap() {
+      if (!selectedOffer) {
+        if (isMounted) {
+          setLoanAmountCap(null);
+        }
+        return;
+      }
+
+      try {
+        const totalAssets = await calculateTotalAssets();
+        const limitInfo = await getScaledLoanAmountLimit(
+          selectedOffer.lender,
+          gameState.creditRating ?? 0.5,
+          { totalAssets }
+        );
+        if (!isMounted) return;
+
+        const cap = Math.min(limitInfo.maxAllowed, selectedOffer.lender.maxLoanAmount);
+        setLoanAmountCap(cap);
+        setLoanAmount(prev => Math.min(prev, cap));
+      } catch (capError) {
+        if (!isMounted) return;
+        console.error('Unable to resolve loan cap for selected offer:', capError);
+        setLoanAmountCap(selectedOffer.lender.maxLoanAmount);
+      }
+    }
+
+    resolveLoanCap();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOffer, gameState.creditRating]);
+
+  if (!isOpen || !offers || offers.length === 0) return null;
 
   const loanTerms = selectedOffer ? calculateLoanTerms(
     selectedOffer.lender,
@@ -309,15 +349,24 @@ export const LenderSearchResultsModal: React.FC<LenderSearchResultsModalProps> =
                             value={[loanAmount]}
                             onValueChange={(value) => setLoanAmount(value[0])}
                             min={selectedOffer.lender.minLoanAmount}
-                            max={selectedOffer.lender.maxLoanAmount}
+                            max={loanAmountCap ?? selectedOffer.lender.maxLoanAmount}
                             step={1000}
                             className="w-full"
                           />
                           <div className="flex justify-between text-sm text-gray-400">
                             <span>{formatNumber(selectedOffer.lender.minLoanAmount, { currency: true })}</span>
                             <span className="font-medium text-white">{formatNumber(loanAmount, { currency: true })}</span>
-                            <span>{formatNumber(selectedOffer.lender.maxLoanAmount, { currency: true })}</span>
+                            <span>
+                              {loanAmountCap && loanAmountCap < selectedOffer.lender.maxLoanAmount
+                                ? `${formatNumber(loanAmountCap, { currency: true })} cap`
+                                : formatNumber(selectedOffer.lender.maxLoanAmount, { currency: true })}
+                            </span>
                           </div>
+                          {loanAmountCap && loanAmountCap < selectedOffer.lender.maxLoanAmount && (
+                            <p className="text-xs text-amber-400">
+                              Limited by company borrowing capacity to {formatNumber(loanAmountCap, { currency: true })}.
+                            </p>
+                          )}
                         </div>
                       </div>
 

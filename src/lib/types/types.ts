@@ -304,18 +304,19 @@ export interface WineOrder {
 // ===== CONTRACT TYPES =====
 
 // Requirement types for contracts
-export type ContractRequirementType = 'quality' | 'minimumVintage' | 'specificVintage' | 'balance' | 'landValue' | 'grape' | 'grapeColor';
+export type ContractRequirementType = 'quality' | 'minimumVintage' | 'specificVintage' | 'balance' | 'landValue' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicBalance';
 
 // Individual contract requirement
 export interface ContractRequirement {
   type: ContractRequirementType;
-  value: number; // For quality/balance/landValue: minimum threshold (0-1), for minimumVintage: minimum age in years, for specificVintage: target year
+  value: number; // For quality/balance/altitude: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
   params?: {
     minAge?: number; // For minimumVintage requirements
     maxAge?: number; // For minimumVintage requirements (optional)
     targetYear?: number; // For specificVintage requirements
     targetGrape?: GrapeVariety; // For grape requirements
     targetGrapeColor?: 'red' | 'white'; // For grapeColor requirements
+    targetCharacteristic?: keyof WineCharacteristics; // For characteristic requirements (acidity, aroma, body, spice, sweetness, tannins)
   };
 }
 
