@@ -555,13 +555,91 @@ CREATE TABLE loan_warnings (
 );
 
 -- ============================================================
--- ROW LEVEL SECURITY SETUP (matches dev database exactly)
+-- SECURITY HELPERS & ROW LEVEL SECURITY
 -- ============================================================
 
--- Disable RLS on all tables except staff and loan_warnings (matches dev database)
--- In dev database, only staff and loan_warnings tables have RLS enabled
+-- Helper to detect service-role callers
+CREATE OR REPLACE FUNCTION public.is_service_role()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role';
+$$;
 
--- First drop any existing RLS policies (critical for 406 error fix)
+REVOKE ALL ON FUNCTION public.is_service_role() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_service_role() TO anon, authenticated, service_role;
+
+-- Helper to determine company membership (owner or via user_settings)
+CREATE OR REPLACE FUNCTION public.is_company_member(target_company_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT CASE
+    WHEN target_company_id IS NULL THEN FALSE
+    WHEN public.is_service_role() THEN TRUE
+    WHEN auth.uid() IS NULL THEN EXISTS (
+      SELECT 1
+      FROM public.companies c
+      WHERE c.id = target_company_id
+        AND c.user_id IS NULL
+    )
+    ELSE EXISTS (
+      SELECT 1
+      FROM public.user_settings us
+      WHERE us.company_id = target_company_id
+        AND us.user_id = auth.uid()
+    ) OR EXISTS (
+      SELECT 1
+      FROM public.companies c
+      WHERE c.id = target_company_id
+        AND c.user_id = auth.uid()
+    )
+  END;
+$$;
+
+REVOKE ALL ON FUNCTION public.is_company_member(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_company_member(uuid) TO anon, authenticated, service_role;
+
+-- Helper for legacy tables storing company_id as text
+CREATE OR REPLACE FUNCTION public.is_company_member_text(target_company_id text)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  company_uuid uuid;
+BEGIN
+  IF target_company_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  BEGIN
+    company_uuid := target_company_id::uuid;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RETURN FALSE;
+  END;
+
+  RETURN public.is_company_member(company_uuid);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.is_company_member_text(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_company_member_text(text) TO anon, authenticated, service_role;
+
+-- Harden helper functions flagged by Supabase advisor
+ALTER FUNCTION public.update_updated_at_column() SET search_path = public, pg_temp;
+ALTER FUNCTION public.clear_table(text) SET search_path = public, pg_temp;
+ALTER FUNCTION public.admin_clear_all_tables() SET search_path = public, pg_temp;
+
+-- Drop legacy permissive policies
 DROP POLICY IF EXISTS "Anyone can view achievements" ON achievements;
 DROP POLICY IF EXISTS "Anyone can insert achievements" ON achievements;
 DROP POLICY IF EXISTS "Anyone can update achievements" ON achievements;
@@ -584,70 +662,236 @@ DROP POLICY IF EXISTS "Users can insert own profile" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
 DROP POLICY IF EXISTS "Users can view own profile" ON users;
 DROP POLICY IF EXISTS "Users can manage their own wine batches" ON wine_batches;
-
--- Then disable RLS
-ALTER TABLE achievements DISABLE ROW LEVEL SECURITY;
-ALTER TABLE activities DISABLE ROW LEVEL SECURITY;
-ALTER TABLE companies DISABLE ROW LEVEL SECURITY;
-ALTER TABLE company_customers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE highscores DISABLE ROW LEVEL SECURITY;
-ALTER TABLE notification_filters DISABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE prestige_events DISABLE ROW LEVEL SECURITY;
-ALTER TABLE relationship_boosts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE teams DISABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE vineyards DISABLE ROW LEVEL SECURITY;
-ALTER TABLE wine_batches DISABLE ROW LEVEL SECURITY;
-ALTER TABLE wine_log DISABLE ROW LEVEL SECURITY;
-ALTER TABLE wine_orders DISABLE ROW LEVEL SECURITY;
-
--- Enable RLS only on staff and loan_warnings tables (matches dev database)
-ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loan_warnings ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policies for staff table (matches dev database)
--- Drop existing policies first to avoid conflicts
 DROP POLICY IF EXISTS "Allow read access to all users" ON staff;
 DROP POLICY IF EXISTS "Allow insert for authenticated users" ON staff;
 DROP POLICY IF EXISTS "Allow update for authenticated users" ON staff;
 DROP POLICY IF EXISTS "Allow delete for authenticated users" ON staff;
-
--- Create new policies
-CREATE POLICY "Allow read access to all users" ON staff
-    FOR SELECT TO public USING (true);
-
-CREATE POLICY "Allow insert for authenticated users" ON staff
-    FOR INSERT TO public WITH CHECK (true);
-
-CREATE POLICY "Allow update for authenticated users" ON staff
-    FOR UPDATE TO public USING (true);
-
-CREATE POLICY "Allow delete for authenticated users" ON staff
-    FOR DELETE TO public USING (true);
-
--- Create RLS policies for loan_warnings table (matches dev database)
--- Drop existing policies first to avoid conflicts
 DROP POLICY IF EXISTS "Allow read access to all users" ON loan_warnings;
 DROP POLICY IF EXISTS "Allow insert for authenticated users" ON loan_warnings;
 DROP POLICY IF EXISTS "Allow update for authenticated users" ON loan_warnings;
 DROP POLICY IF EXISTS "Allow delete for authenticated users" ON loan_warnings;
+DROP POLICY IF EXISTS "Allow read access to all users" ON wine_contracts;
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON wine_contracts;
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON wine_contracts;
+DROP POLICY IF EXISTS "Allow delete for authenticated users" ON wine_contracts;
+DROP POLICY IF EXISTS "Users can access their own company loan warnings" ON loan_warnings;
 
--- Create new policies
-CREATE POLICY "Allow read access to all users" ON loan_warnings
-    FOR SELECT TO public USING (true);
+-- Companies table (owners + members)
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_companies" ON companies;
+DROP POLICY IF EXISTS "company_members_update_companies" ON companies;
+DROP POLICY IF EXISTS "owners_delete_companies" ON companies;
+DROP POLICY IF EXISTS "owners_create_companies" ON companies;
 
-CREATE POLICY "Allow insert for authenticated users" ON loan_warnings
-    FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "company_members_manage_companies"
+ON companies
+FOR SELECT
+USING (public.is_service_role() OR public.is_company_member(id));
 
-CREATE POLICY "Allow update for authenticated users" ON loan_warnings
-    FOR UPDATE TO public USING (true);
+CREATE POLICY "company_members_update_companies"
+ON companies
+FOR UPDATE
+USING (public.is_service_role() OR public.is_company_member(id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(id));
 
-CREATE POLICY "Allow delete for authenticated users" ON loan_warnings
-    FOR DELETE TO public USING (true);
+CREATE POLICY "owners_delete_companies"
+ON companies
+FOR DELETE
+USING (public.is_service_role() OR (select auth.uid()) = user_id);
+
+CREATE POLICY "owners_create_companies"
+ON companies
+FOR INSERT
+WITH CHECK (public.is_service_role() OR (select auth.uid()) = user_id);
+
+-- Users manage their own profile
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users_manage_self" ON users;
+CREATE POLICY "users_manage_self"
+ON users
+FOR ALL
+USING (public.is_service_role() OR (select auth.uid()) = id)
+WITH CHECK (public.is_service_role() OR (select auth.uid()) = id);
+
+-- User settings scoped to current user
+ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "user_settings_self_access" ON user_settings;
+CREATE POLICY "user_settings_self_access"
+ON user_settings
+FOR ALL
+USING (public.is_service_role() OR (select auth.uid()) = user_id)
+WITH CHECK (public.is_service_role() OR (select auth.uid()) = user_id);
+
+-- Game state scoped by company id (stored in id column)
+ALTER TABLE game_state ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_game_state" ON game_state;
+CREATE POLICY "company_members_manage_game_state"
+ON game_state
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(id));
+
+-- UUID-based company scoped tables
+ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_achievements" ON achievements;
+CREATE POLICY "company_members_manage_achievements"
+ON achievements
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_activities" ON activities;
+CREATE POLICY "company_members_manage_activities"
+ON activities
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE company_customers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_company_customers" ON company_customers;
+CREATE POLICY "company_members_manage_company_customers"
+ON company_customers
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_customers" ON customers;
+CREATE POLICY "company_members_manage_customers"
+ON customers
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE highscores ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_highscores" ON highscores;
+CREATE POLICY "company_members_manage_highscores"
+ON highscores
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE lenders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_lenders" ON lenders;
+CREATE POLICY "company_members_manage_lenders"
+ON lenders
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_loans" ON loans;
+CREATE POLICY "company_members_manage_loans"
+ON loans
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_notifications" ON notifications;
+CREATE POLICY "company_members_manage_notifications"
+ON notifications
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE notification_filters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_notification_filters" ON notification_filters;
+CREATE POLICY "company_members_manage_notification_filters"
+ON notification_filters
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE prestige_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_prestige_events" ON prestige_events;
+CREATE POLICY "company_members_manage_prestige_events"
+ON prestige_events
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE relationship_boosts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_relationship_boosts" ON relationship_boosts;
+CREATE POLICY "company_members_manage_relationship_boosts"
+ON relationship_boosts
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_teams" ON teams;
+CREATE POLICY "company_members_manage_teams"
+ON teams
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE vineyards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_vineyards" ON vineyards;
+CREATE POLICY "company_members_manage_vineyards"
+ON vineyards
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE wine_batches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_wine_batches" ON wine_batches;
+CREATE POLICY "company_members_manage_wine_batches"
+ON wine_batches
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE wine_orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_wine_orders" ON wine_orders;
+CREATE POLICY "company_members_manage_wine_orders"
+ON wine_orders
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_staff" ON staff;
+CREATE POLICY "company_members_manage_staff"
+ON staff
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE loan_warnings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_loan_warnings" ON loan_warnings;
+CREATE POLICY "company_members_manage_loan_warnings"
+ON loan_warnings
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+ALTER TABLE wine_contracts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_wine_contracts" ON wine_contracts;
+CREATE POLICY "company_members_manage_wine_contracts"
+ON wine_contracts
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+
+-- Tables storing company_id as text
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_transactions" ON transactions;
+CREATE POLICY "company_members_manage_transactions"
+ON transactions
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member_text(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member_text(company_id));
+
+ALTER TABLE wine_log ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_wine_log" ON wine_log;
+CREATE POLICY "company_members_manage_wine_log"
+ON wine_log
+FOR ALL
+USING (public.is_service_role() OR public.is_company_member_text(company_id))
+WITH CHECK (public.is_service_role() OR public.is_company_member_text(company_id));
 
 -- ============================================================
 -- CREATE INDEXES FOR PERFORMANCE

@@ -242,6 +242,12 @@ export const LOAN_EXTRA_PAYMENT = {
   MIN_ADMIN_FEE: 250 // Minimum fee to keep the penalty noticeable
 } as const;
 
+// Prepayment penalty configuration (modeled after EU indemnity rules)
+export const LOAN_PREPAYMENT = {
+  REMAINING_INTEREST_FACTOR: 0.25, // Pay 25% of the remaining scheduled interest (~one season)
+  MIN_PENALTY: 1000
+} as const;
+
 // Administrative penalty work units applied to next season's bookkeeping task after loan operations
 export const ADMINISTRATION_LOAN_PENALTIES = {
   LOAN_TAKEN: 12,

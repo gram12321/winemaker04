@@ -5,13 +5,13 @@ import { loadActiveLoans } from '@/lib/database/core/loansDB';
 import { getGameState, getAvailableLenders, calculateLenderAvailability, notificationService } from '@/lib/services';
 import { loadLenders } from '@/lib/database/core/lendersDB';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
-import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, repayLoanInFull, makeExtraLoanPayment } from '@/lib/services/finance/loanService';
+import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty, repayLoanInFull, makeExtraLoanPayment } from '@/lib/services/finance/loanService';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from '@/components/ui';
 // LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
 import { calculateCreditRating } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
-import { LENDER_TYPE_DISTRIBUTION, LOAN_EXTRA_PAYMENT } from '@/lib/constants';
+import { LENDER_TYPE_DISTRIBUTION, LOAN_EXTRA_PAYMENT, LOAN_PREPAYMENT } from '@/lib/constants';
 
 // Helper type for combined loans data
 type LoansData = {
@@ -198,6 +198,8 @@ export default function LoansView() {
                   const totalInterest = calculateTotalInterest(loan);
                   const totalExpenses = calculateTotalExpenses(loan);
                   const remainingInterest = calculateRemainingInterest(loan);
+                  const estimatedPrepaymentPenalty = estimatePrepaymentPenalty(loan);
+                  const totalRepayInFull = loan.remainingBalance + estimatedPrepaymentPenalty;
                   const missedPayments = loan.missedPayments || 0;
                   const loanCategory = loan.loanCategory ?? (loan.isForced ? 'emergency' : 'standard');
                   const hasWarnings = missedPayments > 0;
@@ -212,6 +214,8 @@ export default function LoansView() {
                   const seasonalPaymentDisplay = formatNumber(loan.seasonalPayment, { currency: true });
                   const extraAdminFeeDisplay = formatNumber(extraAdminFee, { currency: true });
                   const extraTotalPaymentDisplay = formatNumber(extraTotalPayment, { currency: true });
+                  const prepaymentPenaltyDisplay = formatNumber(estimatedPrepaymentPenalty, { currency: true });
+                  const repayInFullDisplay = formatNumber(totalRepayInFull, { currency: true });
                   
                   return (
                     <TableRow 
@@ -336,14 +340,29 @@ export default function LoansView() {
                               Make Extra Payment
                             </Button>
                           </UnifiedTooltip>
-                          <Button
-                            onClick={() => handleRepayLoan(loan.id)}
-                            size="sm"
-                            variant="outline"
-                            className="text-green-600 border-green-600 hover:bg-green-50"
+                          <UnifiedTooltip
+                            content={
+                              <div className="text-xs space-y-1">
+                                <div>Total payoff: {repayInFullDisplay}</div>
+                                <div>Principal: {formatNumber(loan.remainingBalance, { currency: true })}</div>
+                                <div>Prepayment indemnity: {prepaymentPenaltyDisplay}</div>
+                                <div>
+                                  (≈{Math.round(LOAN_PREPAYMENT.REMAINING_INTEREST_FACTOR * 100)}% of remaining interest, min {formatNumber(LOAN_PREPAYMENT.MIN_PENALTY, { currency: true })})
+                                </div>
+                              </div>
+                            }
+                            side="top"
+                            sideOffset={6}
                           >
-                            Repay in Full
-                          </Button>
+                            <Button
+                              onClick={() => handleRepayLoan(loan.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-600 hover:bg-green-50"
+                            >
+                              Repay in Full
+                            </Button>
+                          </UnifiedTooltip>
                         </div>
                       </TableCell>
                     </TableRow>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Vineyard, WineBatch } from '@/lib/types/types';
 import { GrapeQualityFactorsDisplay } from './grapeQualityBar';
 import { getVineyardGrapeQualityFactors, getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
+import { getFeatureImpacts } from '@/lib/services/wine/features/featureService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
@@ -9,7 +10,6 @@ import { formatNumber, formatPercent, ChevronDownIcon, ChevronRightIcon } from '
 import { getGrapeQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
-import { getAllFeatureConfigs } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 
 interface GrapeQualityFactorsBreakdownProps {
   vineyard?: Vineyard;
@@ -70,6 +70,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
 
   // Get grape quality factors with error handling
   let factors: any, rawValues: any, grapeQualityScore: number, grapeQualityCategory: string;
+  const baseQualityFromBatch = wineBatch?.bornGrapeQuality;
   
   try {
     const grapeQualityData = getGrapeQualityFactors();
@@ -183,7 +184,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
         {wineBatch && (
           <FeatureImpactsSection 
             wineBatch={wineBatch}
-            baseQuality={grapeQualityScore}
+            baseQuality={baseQualityFromBatch ?? grapeQualityScore}
           />
         )}
 
@@ -669,42 +670,18 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
 // Feature Impacts Section Component
 interface FeatureImpactsSectionProps {
   wineBatch: WineBatch;
-  baseQuality: number;
+  baseQuality?: number;
 }
 
 function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSectionProps) {
-  // Use current grape quality (feature effects are already applied)
-  const currentGrapeQuality = wineBatch.grapeQuality;
-  const qualityDifference = currentGrapeQuality - baseQuality;
-  const presentFeatures = (wineBatch.features || []).filter(f => f.isPresent);
-  const configs = getAllFeatureConfigs();
+  const baselineQuality = baseQuality ?? wineBatch.bornGrapeQuality ?? 0;
+  const currentGrapeQuality = wineBatch.grapeQuality ?? baselineQuality;
+  const qualityDifference = currentGrapeQuality - baselineQuality;
+  const featureImpacts = getFeatureImpacts(wineBatch).filter(
+    (impact) => Math.abs(impact.qualityImpact) >= 0.001
+  );
   
-  // Calculate which features have non-zero impact
-  const featuresWithImpact = presentFeatures.filter(feature => {
-    const config = configs.find(c => c.id === feature.id);
-    if (!config?.effects.quality) return false;
-    
-    const qualityEffect = config.effects.quality;
-    let impactValue = 0;
-    
-    if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-      impactValue = qualityEffect.amount * feature.severity;
-    } else if (qualityEffect.type === 'power') {
-      const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
-      impactValue = -scaledPenalty;
-    } else if (qualityEffect.type === 'bonus') {
-      const bonusAmount = typeof qualityEffect.amount === 'function' 
-        ? qualityEffect.amount(feature.severity)
-        : qualityEffect.amount;
-      if (bonusAmount !== undefined) {
-        impactValue = bonusAmount;
-      }
-    }
-    
-    return Math.abs(impactValue) >= 0.001;
-  });
-  
-  if (featuresWithImpact.length === 0) {
+  if (featureImpacts.length === 0) {
     return (
       <div className="p-3 bg-white rounded border border-gray-300">
         <div className="text-sm">
@@ -723,8 +700,18 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
       <div className="text-sm space-y-3">
         <div className="flex justify-between">
           <span className="font-medium">Feature Impacts:</span>
-          <span className={`font-mono ${qualityDifference !== 0 ? (qualityDifference > 0 ? 'text-green-600' : 'text-red-600') : 'text-gray-500'}`}>
-            {qualityDifference !== 0 ? `${qualityDifference > 0 ? '+' : ''}${formatPercent(Math.abs(qualityDifference))}` : 'No impact'}
+          <span
+            className={`font-mono ${
+              qualityDifference !== 0
+                ? qualityDifference > 0
+                  ? 'text-green-600'
+                  : 'text-red-600'
+                : 'text-gray-500'
+            }`}
+          >
+            {qualityDifference !== 0
+              ? `${qualityDifference > 0 ? '+' : ''}${formatPercent(Math.abs(qualityDifference))}`
+              : 'No impact'}
           </span>
         </div>
         
@@ -732,46 +719,25 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
           <span>Final Grape Quality:</span>
           <span className={`font-mono ${getColorClass(currentGrapeQuality)}`}>
             {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
-            <span className="text-sm font-normal ml-2">({getGrapeQualityCategory(currentGrapeQuality)})</span>
+            <span className="text-sm font-normal ml-2">
+              ({getGrapeQualityCategory(currentGrapeQuality)})
+            </span>
           </span>
         </div>
         
         <div className="space-y-2">
-          {featuresWithImpact.map(feature => {
-            const config = configs.find(c => c.id === feature.id);
-            if (!config) return null;
-            
-            const qualityEffect = config.effects.quality;
-            if (!qualityEffect) return null;
-            
-            let impactText = '';
-            let impactValue = 0;
-            
-            if (qualityEffect.type === 'linear' && typeof qualityEffect.amount === 'number') {
-              impactValue = qualityEffect.amount * feature.severity;
-            } else if (qualityEffect.type === 'power') {
-              const scaledPenalty = qualityEffect.basePenalty! * (1 + Math.pow(baseQuality, qualityEffect.exponent!));
-              impactValue = -scaledPenalty;
-            } else if (qualityEffect.type === 'bonus') {
-              const bonusAmount = typeof qualityEffect.amount === 'function' 
-                ? qualityEffect.amount(feature.severity)
-                : qualityEffect.amount;
-              if (bonusAmount !== undefined) {
-                impactValue = bonusAmount;
-              }
-            }
-            if (impactValue !== 0) {
-              impactText = `${impactValue > 0 ? '+' : ''}${formatPercent(Math.abs(impactValue))}`;
-            }
-            
-            const isBonus = qualityEffect.type === 'bonus';
-            const colorClass = isBonus ? 'text-green-600' : 'text-red-600';
+          {featureImpacts.map((impact) => {
+            const isPositive = impact.qualityImpact >= 0;
+            const impactText = `${isPositive ? '+' : ''}${formatPercent(
+              Math.abs(impact.qualityImpact)
+            )}`;
+            const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
             
             return (
-              <div key={config.id} className="flex justify-between text-xs">
+              <div key={impact.featureId} className="flex justify-between text-xs">
                 <span className="flex items-center gap-1">
-                  <span>{config.icon}</span>
-                  <span>{config.name}:</span>
+                  <span>{impact.icon}</span>
+                  <span>{impact.featureName}:</span>
                 </span>
                 <span className={`${colorClass} font-mono`}>{impactText}</span>
               </div>

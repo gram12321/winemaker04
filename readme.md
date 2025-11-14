@@ -99,6 +99,12 @@ return (
 3. Run chosen migration in Vercel Supabase SQL Editor
 4. Verify Vercel deployment works
 
+### 🔐 Row Level Security & Access Controls
+- All company-scoped tables now enforce RLS. Access requires either the company owner (`companies.user_id`) or a membership row in `user_settings` for the target `company_id`.
+- Helper functions (`public.is_service_role`, `public.is_company_member`, `public.is_company_member_text`) centralize membership checks and must remain in sync across dev/Vercel databases.
+- Maintenance helpers (`update_updated_at_column`, `clear_table`, `admin_clear_all_tables`) run with an explicit `public, pg_temp` search path to avoid hijacking.
+- Migrations must be applied to both databases (MCP dev first, then Vercel SQL files) whenever RLS policies or helper functions change.
+
 **Legacy Reference Documentation:**
 - `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
 - `@docs/old_iterations/v3/` - Previous React/TypeScript iteration with different architecture

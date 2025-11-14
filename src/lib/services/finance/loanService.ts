@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '../../types/types';
-import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES } from '../../constants/loanConstants';
+import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES, LOAN_PREPAYMENT } from '../../constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getGameState, updateGameState } from '../core/gameState';
 import { addTransaction, calculateTotalAssets } from './financeService';
@@ -1856,6 +1856,25 @@ export function calculateRemainingInterest(loan: Loan): number {
   return remainingPayments - loan.remainingBalance;
 }
 
+export function estimatePrepaymentPenalty(loan: Loan): number {
+  const remainingInterest = Math.max(0, calculateRemainingInterest(loan));
+  return calculatePrepaymentPenalty(remainingInterest);
+}
+
+function calculatePrepaymentPenalty(remainingInterest: number): number {
+  if (remainingInterest <= 0) {
+    return 0;
+  }
+
+  const rawPenalty = remainingInterest * LOAN_PREPAYMENT.REMAINING_INTEREST_FACTOR;
+  const boundedPenalty = Math.min(
+    remainingInterest,
+    Math.max(LOAN_PREPAYMENT.MIN_PENALTY, rawPenalty)
+  );
+
+  return Math.round(boundedPenalty);
+}
+
 /**
  * Calculate total outstanding loan balance across all active loans
  */
@@ -1882,9 +1901,12 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
     
     const gameState = getGameState();
     const availableMoney = gameState.money || 0;
+    const remainingInterest = Math.max(0, calculateRemainingInterest(loan));
+    const prepaymentPenalty = calculatePrepaymentPenalty(remainingInterest);
+    const totalPayoffCost = loan.remainingBalance + prepaymentPenalty;
     
-    if (availableMoney < loan.remainingBalance) {
-      const shortfall = loan.remainingBalance - availableMoney;
+    if (availableMoney < totalPayoffCost) {
+      const shortfall = totalPayoffCost - availableMoney;
       await notificationService.addMessage(
         [
           `Unable to repay loan from ${loan.lenderName}.`,
@@ -1905,6 +1927,15 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
       TRANSACTION_CATEGORIES.LOAN_PAYMENT,
       false
     );
+
+    if (prepaymentPenalty > 0) {
+      await addTransaction(
+        -prepaymentPenalty,
+        `Early payoff indemnity for ${loan.lenderName}`,
+        TRANSACTION_CATEGORIES.LOAN_PREPAYMENT_FEE,
+        false
+      );
+    }
     
     // Update loan status to paid off
     await updateLoan(loanId, {
@@ -1917,7 +1948,13 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
     // Early payoff typically improves credit rating
     
     await notificationService.addMessage(
-      `Loan from ${loan.lenderName} paid off early! Credit rating improved.`,
+      [
+        `Loan from ${loan.lenderName} paid off early!`,
+        prepaymentPenalty > 0
+          ? `Prepayment indemnity charged: ${formatNumber(prepaymentPenalty, { currency: true })}.`
+          : '',
+        'Credit rating improved.'
+      ].filter(Boolean).join(' '),
       'loan.earlyPayoff',
       'Loan Update',
       NotificationCategory.FINANCE

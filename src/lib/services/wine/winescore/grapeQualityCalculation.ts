@@ -219,8 +219,8 @@ export function getGrapeQualityBreakdown(batch: WineBatch): GrapeQualityBreakdow
     featureId: impact.featureId,
     featureName: impact.featureName,
     icon: impact.icon,
-    impact: impact.grapeQualityImpact,
-    impactType: impact.grapeQualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
+    impact: impact.qualityImpact,
+    impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
   }));
   
   const totalFeatureImpact = currentGrapeQuality - bornGrapeQuality;
