@@ -34,12 +34,14 @@
 - Mapped Tempranillo to the existing Primitivo grape icon as a placeholder until bespoke artwork is available.
 - Added Sangiovese to core grape registries (soil, altitude, sun, and base characteristic constants) and exposed it via `GRAPE_VARIETIES`.
 - Updated every regional suitability table to include Sangiovese scores and added `public/assets/icons/grape/icon_sangiovese.png` (placeholder clone of the Primitivo icon).
+- Fixed grape-quality compounding: `wine_batches` now stores immutable `born_grape_quality` / `born_balance` snapshots and the inventory loader consumes them so feature effects no longer restack to 1.0 after reloads.
 
 ### Security & Database Hardening
 - Applied Supabase migration `2025-11-14_enable_company_rls` to enable RLS on every company-scoped table, add guarded helper functions (`is_service_role`, `is_company_member`, `is_company_member_text`), and lock down maintenance helpers with an explicit search_path.
 - Replaced permissive public policies on `staff`, `loan_warnings`, and `wine_contracts` with company-scoped access controls (authenticated members + service role override).
 - Updated `migrations/vercel_migration_preserve_data.sql` and `migrations/sync_vercel_schema.sql` to mirror the new helper functions, search_path settings, and RLS policies so the Vercel database stays aligned with dev.
 - Addressed Supabase advisor performance warnings by wrapping `auth.uid()` calls in `(select auth.uid())` inside `owners_*`, `users_manage_self`, and `user_settings_self_access` policies, and removed the legacy `Users can access their own company loan warnings` policy to avoid redundant permissive rules.
+- Added `born_grape_quality` / `born_balance` columns (with automatic backfill) to `wine_batches` so production data retains its harvest baseline even when feature-driven updates are persisted.
 
 ---
 ## Version 0.071a - Build Fix
