@@ -674,12 +674,22 @@ interface FeatureImpactsSectionProps {
 }
 
 function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSectionProps) {
-  const baselineQuality = baseQuality ?? wineBatch.bornGrapeQuality ?? 0;
-  const currentGrapeQuality = wineBatch.grapeQuality ?? baselineQuality;
-  const qualityDifference = currentGrapeQuality - baselineQuality;
+  const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
   const featureImpacts = getFeatureImpacts(wineBatch).filter(
     (impact) => Math.abs(impact.qualityImpact) >= 0.001
   );
+  
+  const currentGrapeQuality = wineBatch.grapeQuality ?? 0;
+  const totalFeatureImpact = featureImpacts.reduce((sum, impact) => sum + impact.qualityImpact, 0);
+  const derivedBaseline = clamp01(currentGrapeQuality - totalFeatureImpact);
+  
+  const providedBaseline = baseQuality ?? wineBatch.bornGrapeQuality ?? derivedBaseline;
+  const shouldFallbackToDerived = 
+    Math.abs(currentGrapeQuality - providedBaseline) < 0.0005 &&
+    Math.abs(totalFeatureImpact) >= 0.0005;
+  
+  const baselineQuality = clamp01(shouldFallbackToDerived ? derivedBaseline : providedBaseline);
+  const qualityDifference = currentGrapeQuality - baselineQuality;
   
   if (featureImpacts.length === 0) {
     return (
