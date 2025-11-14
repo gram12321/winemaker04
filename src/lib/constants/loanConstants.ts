@@ -45,7 +45,7 @@ export const LENDER_PARAMS: Record<LenderType, {
   },
   'Investment Fund': {
     baseInterestRange: [0.05, 0.10], // 5-10%
-    loanAmountRange: [100000, 1000000],
+    loanAmountRange: [50000, 1000000],
     durationRange: [4, 240], // 1-60 years
     riskToleranceRange: [0.4, 0.7],
     flexibilityRange: [0.6, 0.9],

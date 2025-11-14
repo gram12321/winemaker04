@@ -109,14 +109,19 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
     switch (req.type) {
       case 'quality':
         return `Quality ≥ ${(req.value * 100).toFixed(0)}%`;
-      case 'vintage':
+      case 'minimumVintage':
         return `Age ≥ ${req.params?.minAge || 0} years`;
+      case 'specificVintage':
+        return `Vintage: ${req.params?.targetYear || req.value}`;
       case 'balance':
         return `Balance ≥ ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
         return `Land Value ≥ ${req.value.toFixed(2)}`;
       case 'grape':
         return `Grape: ${req.params?.grape || 'Any'}`;
+      case 'grapeColor':
+        const color = req.params?.targetGrapeColor || 'any';
+        return `Color: ${color.charAt(0).toUpperCase() + color.slice(1)}`;
       default:
         return 'Unknown';
     }

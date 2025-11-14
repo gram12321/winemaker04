@@ -45,6 +45,12 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
     return contracts.filter(c => c.status === contractStatusFilter);
   }, [contracts, contractStatusFilter]);
 
+  // Get pending contracts for bulk actions
+  const pendingContracts = useMemo(() => 
+    contracts.filter(c => c.status === 'pending'),
+    [contracts]
+  );
+
   // Define sortable columns for contracts
   const contractColumns: SortableColumn<WineContract>[] = [
     { key: 'customerName', label: 'Customer', sortable: true },
@@ -113,19 +119,32 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
     });
   };
 
+  // Handle rejecting all pending contracts
+  const handleRejectAll = () => withLoading(async () => {
+    if (pendingContracts.length === 0) return;
+
+    await Promise.all(pendingContracts.map(contract => rejectContract(contract.id)));
+    // Data will be automatically refreshed by the reactive hooks
+  });
+
   // Format requirement for display
   const formatRequirement = (req: any): string => {
     switch (req.type) {
       case 'quality':
         return `Quality ≥ ${(req.value * 100).toFixed(0)}%`;
-      case 'vintage':
+      case 'minimumVintage':
         return `Age ≥ ${req.params?.minAge || 0} years`;
+      case 'specificVintage':
+        return `Vintage: ${req.params?.targetYear || req.value}`;
       case 'balance':
         return `Balance ≥ ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
         return `Land Value ≥ ${req.value.toFixed(2)}`;
       case 'grape':
         return `Grape: ${req.params?.grape || 'Any'}`;
+      case 'grapeColor':
+        const color = req.params?.targetGrapeColor || 'any';
+        return `Color: ${color.charAt(0).toUpperCase() + color.slice(1)}`;
       default:
         return 'Unknown';
     }
@@ -273,6 +292,27 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Contract Management */}
+      {pendingContracts.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-sm font-semibold">Contract Management</h3>
+              <p className="text-gray-500 text-xs">Manage pending contracts</p>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={handleRejectAll}
+                disabled={isLoading}
+                className="bg-red-600 text-white px-2.5 py-1.5 rounded hover:bg-red-700 disabled:bg-gray-400 text-xs"
+              >
+                Reject All ({pendingContracts.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">

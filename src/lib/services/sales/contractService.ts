@@ -58,7 +58,7 @@ function validateRequirement(wine: WineBatch, requirement: ContractRequirement):
       }
       return { isValid: true, reason: '' };
       
-    case 'vintage':
+    case 'minimumVintage':
       // Use harvestStartDate.year for vintage (year grapes were harvested)
       const vintageYear = wine.harvestStartDate.year;
       const wineAge = currentYear - vintageYear;
@@ -67,6 +67,18 @@ function validateRequirement(wine: WineBatch, requirement: ContractRequirement):
         return {
           isValid: false,
           reason: `Vintage ${vintageYear} (${wineAge} years old) < required ${minAge} years`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
+    case 'specificVintage':
+      // Must match exact vintage year
+      const wineVintageYear = wine.harvestStartDate.year;
+      const targetYear = requirement.params?.targetYear || requirement.value;
+      if (wineVintageYear !== targetYear) {
+        return {
+          isValid: false,
+          reason: `Vintage ${wineVintageYear} != required ${targetYear}`
         };
       }
       return { isValid: true, reason: '' };
@@ -93,6 +105,15 @@ function validateRequirement(wine: WineBatch, requirement: ContractRequirement):
         return {
           isValid: false,
           reason: `Grape ${wine.grape} != required ${requirement.params.targetGrape}`
+        };
+      }
+      return { isValid: true, reason: '' };
+      
+    case 'grapeColor':
+      if (requirement.params?.targetGrapeColor && wine.grapeColor !== requirement.params.targetGrapeColor) {
+        return {
+          isValid: false,
+          reason: `Color ${wine.grapeColor} != required ${requirement.params.targetGrapeColor}`
         };
       }
       return { isValid: true, reason: '' };

@@ -7,56 +7,19 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { calculateExpiration } from './expirationService';
 import { v4 as uuidv4 } from 'uuid';
-
-// ===== CONFIGURATION =====
-
-interface ContractGenerationConfig {
-  maxPendingContracts: number;
-  baseGenerationChance: number; // Base chance per tick
-}
-
-const CONTRACT_CONFIG: ContractGenerationConfig = {
-  maxPendingContracts: 5,
-  baseGenerationChance: 0.005 // 0.5% base chance per eligible customer per tick
-  // With 50 eligible customers: ~23% chance per tick, ~95% chance per season (12 ticks)
-  // With 10 eligible customers: ~5% chance per tick, ~46% chance per season
-  // With 1 eligible customer: 0.5% chance per tick, ~6% chance per season
-};
-
-// Customer type specific requirements for contracts
-interface CustomerContractRequirements {
-  minRelationship: number; // Minimum relationship (0-100) to be eligible
-  minPrestige: number; // Minimum prestige to be eligible
-  relationshipWeight: number; // How much relationship affects contract chance (0-1)
-  prestigeWeight: number; // How much prestige affects contract chance (0-1)
-}
-
-const CUSTOMER_CONTRACT_REQUIREMENTS: Record<CustomerType, CustomerContractRequirements> = {
-  'Restaurant': {
-    minRelationship: 5, // Restaurants need moderate relationship
-    minPrestige: 1.5, // Need some prestige for restaurants
-    relationshipWeight: 0.7, // Relationship very important
-    prestigeWeight: 0.8 // Prestige very important for restaurants
-  },
-  'Wine Shop': {
-    minRelationship: 0.1, // Wine shops easiest to work with
-    minPrestige: 0.1, // Very low prestige threshold - accessible from start
-    relationshipWeight: 0.6,
-    prestigeWeight: 0.4 // Lower prestige importance for early game
-  },
-  'Private Collector': {
-    minRelationship: 10, // Collectors need strong relationship
-    minPrestige: 5, // Need good prestige for collectors
-    relationshipWeight: 0.8, // Relationship critical
-    prestigeWeight: 0.9 // Prestige critical
-  },
-  'Chain Store': {
-    minRelationship: 12, // Chains need good relationship
-    minPrestige: 0.3, // Don't care much about prestige
-    relationshipWeight: 0.9, // Almost entirely relationship-based
-    prestigeWeight: 0.2 // Low prestige importance
-  }
-};
+import {
+  CONTRACT_CONFIG,
+  CUSTOMER_CONTRACT_REQUIREMENTS,
+  CUSTOMER_REQUIREMENT_PREFERENCES,
+  CONTRACT_BASE_QUANTITIES,
+  CONTRACT_MIN_QUANTITIES,
+  AVAILABLE_GRAPES,
+  AVAILABLE_GRAPE_COLORS,
+  CONTRACT_PRICING,
+  MULTI_YEAR_CONFIG,
+  COMPLEXITY_THRESHOLDS,
+  CUSTOMER_MAX_WINE_AGE
+} from '../../constants/contractConstants';
 
 // ===== REQUIREMENT DIFFICULTY SYSTEM =====
 
@@ -98,7 +61,7 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       }
       break;
       
-    case 'vintage':
+    case 'minimumVintage':
       // Age thresholds: <3y easy, 3-7y medium, 7-12y hard, >12y expert
       const age = requirement.value;
       if (age < 3) {
@@ -114,6 +77,12 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
         difficulty = 'expert';
         score = 0.9 + Math.min((age - 12) / 20, 0.1); // 0.9-1.0
       }
+      break;
+      
+    case 'specificVintage':
+      // Specific vintage year is hard difficulty (must match exactly)
+      difficulty = 'hard';
+      score = 0.6;
       break;
       
     case 'balance':
@@ -154,6 +123,12 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       // Specific grape requirement is moderately difficult
       difficulty = 'medium';
       score = 0.3;
+      break;
+      
+    case 'grapeColor':
+      // Grape color requirement is easy (red/white split)
+      difficulty = 'easy';
+      score = 0.2;
       break;
       
     default:
@@ -544,15 +519,15 @@ export async function generateContractForCustomer(customer: Customer): Promise<W
   // Calculate expiration date using shared service (considers customer type and relationship)
   const expiresAt = calculateExpiration(currentDate, customer.customerType, customer.relationship || 0);
   
-  // Determine if this is a multi-year contract (10% chance for high-relationship customers)
-  const terms = (customer.relationship || 0) > 70 && Math.random() < 0.1
+  // Determine if this is a multi-year contract (from constants)
+  const terms = (customer.relationship || 0) > MULTI_YEAR_CONFIG.minRelationshipForMultiYear && Math.random() < MULTI_YEAR_CONFIG.chanceForMultiYear
     ? generateMultiYearTerms()
     : undefined;
   
-  // Apply multi-year premium (20% premium per year beyond first year)
+  // Apply multi-year premium (from constants)
   let finalPricePerBottle = pricePerBottle;
   if (terms) {
-    const multiYearPremium = 1 + ((terms.durationYears - 1) * 0.2);
+    const multiYearPremium = 1 + ((terms.durationYears - 1) * CONTRACT_PRICING.multiYearPremiumPerYear);
     finalPricePerBottle = Math.round(pricePerBottle * multiYearPremium * 100) / 100;
   }
   
@@ -603,31 +578,27 @@ async function calculateRequirementComplexity(customer: Customer): Promise<{
   // Combined score: weight relationship more heavily (70/30 split)
   const combinedScore = relationshipNormalized * 0.7 + prestigeNormalized * 0.3;
   
-  // Low score (0-0.3): 1-2 easy requirements
-  // Medium score (0.3-0.6): 2-3 medium requirements
-  // High score (0.6-0.8): 3-4 hard requirements
-  // Expert score (0.8-1.0): 4-5 expert requirements
+  // Use complexity thresholds from constants
+  let minReq = COMPLEXITY_THRESHOLDS.low.requirements.min;
+  let maxReq = COMPLEXITY_THRESHOLDS.low.requirements.max;
+  let targetDifficulty = COMPLEXITY_THRESHOLDS.low.targetDifficulty;
   
-  let minReq = 1;
-  let maxReq = 2;
-  let targetDifficulty = 0.15; // Easy by default
-  
-  if (combinedScore < 0.3) {
-    minReq = 1;
-    maxReq = 2;
-    targetDifficulty = 0.15; // Easy
-  } else if (combinedScore < 0.6) {
-    minReq = 2;
-    maxReq = 3;
-    targetDifficulty = 0.35; // Medium
-  } else if (combinedScore < 0.8) {
-    minReq = 3;
-    maxReq = 4;
-    targetDifficulty = 0.60; // Hard
+  if (combinedScore < COMPLEXITY_THRESHOLDS.low.maxScore) {
+    minReq = COMPLEXITY_THRESHOLDS.low.requirements.min;
+    maxReq = COMPLEXITY_THRESHOLDS.low.requirements.max;
+    targetDifficulty = COMPLEXITY_THRESHOLDS.low.targetDifficulty;
+  } else if (combinedScore < COMPLEXITY_THRESHOLDS.medium.maxScore) {
+    minReq = COMPLEXITY_THRESHOLDS.medium.requirements.min;
+    maxReq = COMPLEXITY_THRESHOLDS.medium.requirements.max;
+    targetDifficulty = COMPLEXITY_THRESHOLDS.medium.targetDifficulty;
+  } else if (combinedScore < COMPLEXITY_THRESHOLDS.high.maxScore) {
+    minReq = COMPLEXITY_THRESHOLDS.high.requirements.min;
+    maxReq = COMPLEXITY_THRESHOLDS.high.requirements.max;
+    targetDifficulty = COMPLEXITY_THRESHOLDS.high.targetDifficulty;
   } else {
-    minReq = 4;
-    maxReq = 5;
-    targetDifficulty = 0.85; // Expert
+    minReq = COMPLEXITY_THRESHOLDS.expert.requirements.min;
+    maxReq = COMPLEXITY_THRESHOLDS.expert.requirements.max;
+    targetDifficulty = COMPLEXITY_THRESHOLDS.expert.targetDifficulty;
   }
   
   return { minRequirements: minReq, maxRequirements: maxReq, targetDifficultyScore: targetDifficulty };
@@ -645,15 +616,8 @@ async function generateRequirements(customer: Customer): Promise<ContractRequire
     Math.random() * (complexity.maxRequirements - complexity.minRequirements + 1)
   ) + complexity.minRequirements;
   
-  // Available requirement types by customer preference
-  const typePreferences: Record<CustomerType, ContractRequirementType[]> = {
-    'Restaurant': ['quality', 'balance', 'vintage'],
-    'Wine Shop': ['quality', 'vintage', 'grape'],
-    'Private Collector': ['quality', 'vintage', 'balance', 'landValue'],
-    'Chain Store': ['quality', 'grape']
-  };
-  
-  const availableTypes = [...typePreferences[customer.customerType]];
+  // Available requirement types by customer preference (imported from constants)
+  const availableTypes = [...CUSTOMER_REQUIREMENT_PREFERENCES[customer.customerType]];
   
   // Generate requirements targeting the difficulty score
   for (let i = 0; i < numRequirements; i++) {
@@ -691,14 +655,18 @@ function generateRequirementWithDifficulty(
   switch (type) {
     case 'quality':
       return generateQualityRequirement(customer, actualDifficulty);
-    case 'vintage':
-      return generateVintageRequirement(customer, actualDifficulty);
+    case 'minimumVintage':
+      return generateMinimumVintageRequirement(customer, actualDifficulty);
+    case 'specificVintage':
+      return generateSpecificVintageRequirement(customer);
     case 'balance':
       return generateBalanceRequirement(customer, actualDifficulty);
     case 'landValue':
       return generateLandValueRequirement(customer, actualDifficulty);
     case 'grape':
       return generateGrapeRequirement(customer);
+    case 'grapeColor':
+      return generateGrapeColorRequirement(customer);
     default:
       return generateQualityRequirement(customer, actualDifficulty);
   }
@@ -737,9 +705,9 @@ function generateQualityRequirement(_customer: Customer, targetDifficulty: numbe
 }
 
 /**
- * Generate vintage requirement with target difficulty
+ * Generate minimum vintage requirement with target difficulty
  */
-function generateVintageRequirement(customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+function generateMinimumVintageRequirement(customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
   // Map difficulty to age requirements
   // 0.0-0.2 = 0-3 years (easy)
   // 0.2-0.4 = 3-7 years (medium)
@@ -757,21 +725,39 @@ function generateVintageRequirement(customer: Customer, targetDifficulty: number
     minAge = 12 + Math.floor((targetDifficulty - 0.7) * 26.67); // 12-20 years
   }
   
-  // Customer type affects acceptable range
-  const maxAgeByType: Record<CustomerType, number> = {
-    'Private Collector': 20,
-    'Restaurant': 12,
-    'Wine Shop': 10,
-    'Chain Store': 7
-  };
-  
-  minAge = Math.min(minAge, maxAgeByType[customer.customerType]);
+  // Customer type affects acceptable range (imported from constants)
+  minAge = Math.min(minAge, CUSTOMER_MAX_WINE_AGE[customer.customerType]);
   
   return {
-    type: 'vintage',
+    type: 'minimumVintage',
     value: minAge,
     params: {
       minAge
+    }
+  };
+}
+
+/**
+ * Generate specific vintage requirement (must match exact year)
+ */
+function generateSpecificVintageRequirement(customer: Customer): ContractRequirement {
+  // Generate a vintage year within acceptable range for customer type
+  const maxAge = CUSTOMER_MAX_WINE_AGE[customer.customerType];
+  const minAge = 2; // Minimum 2 years old for specific vintage requests
+  
+  // Pick a random age within the range
+  const targetAge = minAge + Math.floor(Math.random() * (maxAge - minAge + 1));
+  
+  // Calculate target year (current year - age)
+  const gameState = getGameState();
+  const currentYear = gameState.currentYear || 2024;
+  const targetYear = currentYear - targetAge;
+  
+  return {
+    type: 'specificVintage',
+    value: targetYear, // Store the year as value
+    params: {
+      targetYear
     }
   };
 }
@@ -810,17 +796,30 @@ function generateBalanceRequirement(_customer: Customer, targetDifficulty: numbe
  * Generate grape requirement (specific grape type)
  */
 function generateGrapeRequirement(_customer: Customer): ContractRequirement {
-  // Pick a random grape from available types
-  const grapes: Array<'Chardonnay' | 'Pinot Noir' | 'Sauvignon Blanc' | 'Sangiovese' | 'Tempranillo' | 'Barbera' | 'Primitivo'> = [
-    'Chardonnay', 'Pinot Noir', 'Sauvignon Blanc', 'Sangiovese', 'Tempranillo', 'Barbera', 'Primitivo'
-  ];
-  const targetGrape = grapes[Math.floor(Math.random() * grapes.length)];
+  // Pick a random grape from available types (imported from constants)
+  const targetGrape = AVAILABLE_GRAPES[Math.floor(Math.random() * AVAILABLE_GRAPES.length)];
   
   return {
     type: 'grape',
     value: 1, // Binary: must match
     params: {
       targetGrape
+    }
+  };
+}
+
+/**
+ * Generate grape color requirement (red or white)
+ */
+function generateGrapeColorRequirement(_customer: Customer): ContractRequirement {
+  // Pick a random color from available types (imported from constants)
+  const targetGrapeColor = AVAILABLE_GRAPE_COLORS[Math.floor(Math.random() * AVAILABLE_GRAPE_COLORS.length)] as 'red' | 'white';
+  
+  return {
+    type: 'grapeColor',
+    value: 1, // Binary: must match
+    params: {
+      targetGrapeColor
     }
   };
 }
@@ -863,7 +862,7 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   quantity: number;
 }> {
   // Base price depends on customer purchasing power and market share
-  const basePrice = 15 + (customer.purchasingPower * 85); // €15-€100 base
+  const basePrice = CONTRACT_PRICING.baseMin + (customer.purchasingPower * (CONTRACT_PRICING.baseMax - CONTRACT_PRICING.baseMin));
   
   // Calculate total difficulty score
   let totalDifficultyScore = 0;
@@ -876,12 +875,9 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   
   const avgDifficulty = requirementCount > 0 ? totalDifficultyScore / requirementCount : 0;
   
-  // Premium multiplier based on difficulty and number of requirements
-  // Base: 1.0x
-  // Difficulty contribution: 0-1 difficulty → 1.0x-2.5x multiplier
-  // Count contribution: Each additional requirement adds +15%
-  const difficultyMultiplier = 1.0 + (avgDifficulty * 1.5);
-  const countMultiplier = 1.0 + ((requirementCount - 1) * 0.15);
+  // Premium multiplier based on difficulty and number of requirements (from constants)
+  const difficultyMultiplier = 1.0 + (avgDifficulty * (CONTRACT_PRICING.difficultyMultiplierMax - 1.0));
+  const countMultiplier = 1.0 + ((requirementCount - 1) * CONTRACT_PRICING.requirementCountBonus);
   
   const premiumMultiplier = difficultyMultiplier * countMultiplier;
   
@@ -892,22 +888,15 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   // Use square root scaling to give smaller customers more reasonable quantities
   const marketShareScaled = Math.sqrt(customer.marketShare);
   
-  // Base quantities tuned for sqrt-scaled market share
-  // With sqrt: 0.01 market share → 0.1 scaled, 0.005 → 0.071, 0.02 → 0.141
-  const baseQuantity = customer.customerType === 'Chain Store' ? 800 :
-                       customer.customerType === 'Restaurant' ? 400 :
-                       customer.customerType === 'Wine Shop' ? 300 :
-                       200; // Private Collector
+  // Base quantities from imported constants
+  const baseQuantity = CONTRACT_BASE_QUANTITIES[customer.customerType];
   
   // Market share scaling with high randomness (0.25-1.75x variation, ±75%)
   const randomFactor = 0.25 + Math.random() * 1.5;
   const quantity = Math.round(baseQuantity * marketShareScaled * randomFactor);
   
-  // Minimum quantities by customer type (lower minimums with sqrt scaling)
-  const minQuantity = customer.customerType === 'Chain Store' ? 60 :
-                      customer.customerType === 'Restaurant' ? 40 :
-                      customer.customerType === 'Wine Shop' ? 30 :
-                      20; // Private Collector
+  // Minimum quantities from imported constants
+  const minQuantity = CONTRACT_MIN_QUANTITIES[customer.customerType];
   
   return { pricePerBottle, quantity: Math.max(minQuantity, quantity) };
 }
@@ -916,8 +905,8 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
  * Generate multi-year contract terms
  */
 function generateMultiYearTerms() {
-  const durationYears = Math.floor(Math.random() * 3) + 2; // 2-4 years
-  const deliveriesPerYear = Math.floor(Math.random() * 2) + 1; // 1-2 per year
+  const durationYears = Math.floor(Math.random() * (MULTI_YEAR_CONFIG.maxYears - MULTI_YEAR_CONFIG.minYears + 1)) + MULTI_YEAR_CONFIG.minYears;
+  const deliveriesPerYear = Math.floor(Math.random() * (MULTI_YEAR_CONFIG.maxDeliveriesPerYear - MULTI_YEAR_CONFIG.minDeliveriesPerYear + 1)) + MULTI_YEAR_CONFIG.minDeliveriesPerYear;
   
   return {
     durationYears,
