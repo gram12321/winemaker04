@@ -291,20 +291,6 @@ async function applyStartingLoan(config: StartingLoanConfig): Promise<StartingLo
     const { principal, durationSeasons } = config;
     const interestOverride = config.interestRate;
 
-    if (principal < lender.minLoanAmount || principal > lender.maxLoanAmount) {
-      return {
-        success: false,
-        error: `Starting loan principal must be between ${lender.minLoanAmount} and ${lender.maxLoanAmount}`
-      };
-    }
-
-    if (durationSeasons < lender.minDurationSeasons || durationSeasons > lender.maxDurationSeasons) {
-      return {
-        success: false,
-        error: `Starting loan duration must be between ${lender.minDurationSeasons} and ${lender.maxDurationSeasons} seasons`
-      };
-    }
-
     const loanId = await applyForLoan(
       lender.id,
       principal,

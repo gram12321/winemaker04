@@ -55,7 +55,8 @@ export async function completeTakeLoan(activity: Activity): Promise<void> {
       offer.lender.id,
       offer.principalAmount,
       offer.durationSeasons,
-      offer.lender
+      offer.lender,
+      { skipLimitCheck: true }
     );
     
     await notificationService.addMessage(

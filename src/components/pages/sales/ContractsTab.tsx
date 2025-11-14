@@ -6,8 +6,9 @@ import { formatNumber, formatGameDateFromObject, formatPercent } from '@/lib/uti
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedTooltip } from '../../ui';
 import { getFlagIcon } from '@/lib/utils';
 import { LoadingProps } from '@/lib/types/UItypes';
-import { Info, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import AssignWineModal from './AssignWineModal';
+import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 
 interface ContractsTabProps extends LoadingProps {
   contracts: WineContract[];
@@ -44,13 +45,42 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
     return contracts.filter(c => c.status === contractStatusFilter);
   }, [contracts, contractStatusFilter]);
 
+  // Define sortable columns for contracts
+  const contractColumns: SortableColumn<WineContract>[] = [
+    { key: 'customerName', label: 'Customer', sortable: true },
+    { key: 'customerType', label: 'Customer Type', sortable: true },
+    { key: 'requestedQuantity', label: 'Quantity', sortable: true },
+    { key: 'offeredPrice', label: 'Price/Bottle', sortable: true },
+    { key: 'totalValue', label: 'Total Value', sortable: true },
+    { 
+      key: 'createdWeek' as keyof WineContract, 
+      label: 'Created', 
+      sortable: true,
+      accessor: (contract) => `${contract.createdYear}-${contract.createdSeason}-${contract.createdWeek}`
+    },
+    { 
+      key: 'expiresWeek' as keyof WineContract, 
+      label: 'Expires', 
+      sortable: true,
+      accessor: (contract) => `${contract.expiresYear}-${contract.expiresSeason}-${contract.expiresWeek}`
+    }
+  ];
+
+  // Use sorting hooks
+  const {
+    sortedData: sortedContracts,
+    handleSort: handleContractSort,
+    getSortIndicator: getContractSortIndicator,
+    isColumnSorted: isContractColumnSorted
+  } = useTableSortWithAccessors(filteredContracts, contractColumns);
+
   // Pagination
   const paginatedContracts = useMemo(() => {
     const startIdx = (contractsPage - 1) * contractsPageSize;
-    return filteredContracts.slice(startIdx, startIdx + contractsPageSize);
-  }, [filteredContracts, contractsPage]);
+    return sortedContracts.slice(startIdx, startIdx + contractsPageSize);
+  }, [sortedContracts, contractsPage]);
 
-  const totalPages = Math.ceil(filteredContracts.length / contractsPageSize);
+  const totalPages = Math.ceil(sortedContracts.length / contractsPageSize);
 
   // Load contract generation chance info
   const loadContractChance = async () => {
@@ -98,22 +128,6 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
         return `Grape: ${req.params?.grape || 'Any'}`;
       default:
         return 'Unknown';
-    }
-  };
-
-  // Get status icon and color
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return { icon: Clock, color: 'text-blue-500', label: 'Pending' };
-      case 'fulfilled':
-        return { icon: CheckCircle2, color: 'text-green-500', label: 'Fulfilled' };
-      case 'rejected':
-        return { icon: XCircle, color: 'text-red-500', label: 'Rejected' };
-      case 'expired':
-        return { icon: AlertCircle, color: 'text-gray-500', label: 'Expired' };
-      default:
-        return { icon: Info, color: 'text-gray-500', label: status };
     }
   };
 
@@ -276,25 +290,80 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
 
       {/* Contracts Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <Table>
+        <Table className="text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[140px]">Customer</TableHead>
-              <TableHead className="w-[100px]">Type</TableHead>
-              <TableHead className="w-[80px]">Quantity</TableHead>
-              <TableHead className="w-[80px]">Price/Bottle</TableHead>
-              <TableHead className="w-[100px]">Total Value</TableHead>
+              <TableHead 
+                className="w-[140px]"
+                sortable 
+                onSort={() => handleContractSort('customerName')}
+                sortIndicator={getContractSortIndicator('customerName')}
+                isSorted={isContractColumnSorted('customerName')}
+              >
+                Customer
+              </TableHead>
+              <TableHead 
+                className="w-[100px]"
+                sortable 
+                onSort={() => handleContractSort('customerType')}
+                sortIndicator={getContractSortIndicator('customerType')}
+                isSorted={isContractColumnSorted('customerType')}
+              >
+                Type
+              </TableHead>
+              <TableHead 
+                className="w-[80px]"
+                sortable 
+                onSort={() => handleContractSort('requestedQuantity')}
+                sortIndicator={getContractSortIndicator('requestedQuantity')}
+                isSorted={isContractColumnSorted('requestedQuantity')}
+              >
+                Quantity
+              </TableHead>
+              <TableHead 
+                className="w-[80px]"
+                sortable 
+                onSort={() => handleContractSort('offeredPrice')}
+                sortIndicator={getContractSortIndicator('offeredPrice')}
+                isSorted={isContractColumnSorted('offeredPrice')}
+              >
+                Price/Bottle
+              </TableHead>
+              <TableHead 
+                className="w-[100px]"
+                sortable 
+                onSort={() => handleContractSort('totalValue')}
+                sortIndicator={getContractSortIndicator('totalValue')}
+                isSorted={isContractColumnSorted('totalValue')}
+              >
+                Total Value
+              </TableHead>
               <TableHead className="w-[180px]">Requirements</TableHead>
-              <TableHead className="w-[100px]">Created</TableHead>
-              <TableHead className="w-[100px]">Expires</TableHead>
-              <TableHead className="w-[80px]">Status</TableHead>
+              <TableHead 
+                className="w-[100px]"
+                sortable 
+                onSort={() => handleContractSort('createdWeek' as keyof WineContract)}
+                sortIndicator={getContractSortIndicator('createdWeek' as keyof WineContract)}
+                isSorted={isContractColumnSorted('createdWeek' as keyof WineContract)}
+              >
+                Created
+              </TableHead>
+              <TableHead 
+                className="w-[100px]"
+                sortable 
+                onSort={() => handleContractSort('expiresWeek' as keyof WineContract)}
+                sortIndicator={getContractSortIndicator('expiresWeek' as keyof WineContract)}
+                isSorted={isContractColumnSorted('expiresWeek' as keyof WineContract)}
+              >
+                Expires
+              </TableHead>
               <TableHead className="w-[120px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedContracts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                   {contractStatusFilter === 'pending' 
                     ? 'No pending contracts. New contracts appear as customers reach higher relationship levels.'
                     : `No ${contractStatusFilter} contracts.`}
@@ -302,9 +371,6 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
               </TableRow>
             ) : (
               paginatedContracts.map((contract) => {
-                const statusDisplay = getStatusDisplay(contract.status);
-                const StatusIcon = statusDisplay.icon;
-                
                 return (
                   <TableRow key={contract.id}>
                     <TableCell>
@@ -319,7 +385,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">{formatNumber(contract.requestedQuantity)}</TableCell>
-                    <TableCell className="text-right">${formatNumber(contract.offeredPrice, { decimals: 2 })}</TableCell>
+                    <TableCell className="text-right">{formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}</TableCell>
                     <TableCell className="text-right font-semibold text-green-600">
                       ${formatNumber(contract.totalValue, { decimals: 2 })}
                     </TableCell>
@@ -365,12 +431,6 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                       })}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <StatusIcon className={`w-4 h-4 ${statusDisplay.color}`} />
-                        <span className="text-xs">{statusDisplay.label}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       {contract.status === 'pending' && (
                         <div className="flex gap-1">
                           <button
@@ -399,25 +459,30 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-4">
-          <button
-            onClick={() => setContractsPage(p => Math.max(1, p - 1))}
-            disabled={contractsPage === 1}
-            className="px-3 py-1 bg-gray-200 rounded text-xs disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="text-xs text-gray-600">
-            Page {contractsPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setContractsPage(p => Math.min(totalPages, p + 1))}
-            disabled={contractsPage === totalPages}
-            className="px-3 py-1 bg-gray-200 rounded text-xs disabled:opacity-50"
-          >
-            Next
-          </button>
+      {sortedContracts.length > contractsPageSize && (
+        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 text-xs bg-white rounded-b-lg">
+          <div className="text-gray-500">
+            Showing {((contractsPage - 1) * contractsPageSize) + 1} to {Math.min(contractsPage * contractsPageSize, sortedContracts.length)} of {sortedContracts.length} contracts
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-2.5 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={contractsPage <= 1}
+              onClick={() => setContractsPage(p => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <span>
+              Page {contractsPage} of {totalPages}
+            </span>
+            <button
+              className="px-2.5 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={contractsPage >= totalPages}
+              onClick={() => setContractsPage(p => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 

@@ -888,14 +888,28 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
   const pricePerBottle = Math.round(basePrice * premiumMultiplier * customer.priceMultiplier * 100) / 100;
   
   // Quantity based on customer market share and type
-  const baseQuantity = customer.customerType === 'Chain Store' ? 500 :
-                       customer.customerType === 'Restaurant' ? 200 :
-                       customer.customerType === 'Wine Shop' ? 150 :
-                       50; // Private Collector
+  // Most customers have 0.5-2% market share (0.005-0.02 on 0-1 scale)
+  // Use square root scaling to give smaller customers more reasonable quantities
+  const marketShareScaled = Math.sqrt(customer.marketShare);
   
-  const quantity = Math.round(baseQuantity * customer.marketShare * (0.8 + Math.random() * 0.4));
+  // Base quantities tuned for sqrt-scaled market share
+  // With sqrt: 0.01 market share → 0.1 scaled, 0.005 → 0.071, 0.02 → 0.141
+  const baseQuantity = customer.customerType === 'Chain Store' ? 800 :
+                       customer.customerType === 'Restaurant' ? 400 :
+                       customer.customerType === 'Wine Shop' ? 300 :
+                       200; // Private Collector
   
-  return { pricePerBottle, quantity: Math.max(20, quantity) };
+  // Market share scaling with high randomness (0.25-1.75x variation, ±75%)
+  const randomFactor = 0.25 + Math.random() * 1.5;
+  const quantity = Math.round(baseQuantity * marketShareScaled * randomFactor);
+  
+  // Minimum quantities by customer type (lower minimums with sqrt scaling)
+  const minQuantity = customer.customerType === 'Chain Store' ? 60 :
+                      customer.customerType === 'Restaurant' ? 40 :
+                      customer.customerType === 'Wine Shop' ? 30 :
+                      20; // Private Collector
+  
+  return { pricePerBottle, quantity: Math.max(minQuantity, quantity) };
 }
 
 /**

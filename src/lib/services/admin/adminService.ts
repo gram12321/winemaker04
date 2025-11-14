@@ -236,7 +236,11 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
 
 /**
  * Admin force: Generate test contract bypassing all checks
- * Uses the real contract generation logic for authentic requirements
+ * Uses the EXACT SAME contract generation logic as normal gameplay:
+ * - Quantity calculation based on customer market share and type
+ * - Requirement generation based on customer type and relationship
+ * - Pricing based on difficulty and customer purchasing power
+ * Only difference: bypasses eligibility and chance checks
  */
 export async function adminGenerateTestContract(): Promise<{ success: boolean; message: string }> {
   const { getAllCustomers } = await import('../sales/createCustomer');
@@ -258,7 +262,8 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
   // Select a random customer
   const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
   
-  // Use the real contract generation logic (bypasses eligibility/chance checks)
+  // Use the real contract generation logic (same quantity/pricing as normal contracts)
+  // This shares the exact same calculateContractPricing function as normal gameplay
   const contract = await generateContractForCustomer(customer);
   
   // Save to database

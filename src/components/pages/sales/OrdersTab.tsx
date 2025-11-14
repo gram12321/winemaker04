@@ -7,10 +7,9 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedT
 import { getFlagIcon, loadFormattedRelationshipBreakdown } from '@/lib/utils';
 import { calculateRelationshipBreakdown, clearRelationshipBreakdownCache } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
-import { useGameUpdates } from '@/hooks';
+import { useGameUpdates, useWinePriceCalculator } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
 import { getCurrentCompany } from '@/lib/services';
-import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { SALES_CONSTANTS } from '@/lib/constants';
 
 /**
@@ -77,6 +76,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   const [ordersPage, setOrdersPage] = useState<number>(1);
   const ordersPageSize = 20;
 
+  // Use shared price calculator hook for consistent pricing with prestige bonuses
+  const { getAskingPrice } = useWinePriceCalculator();
+
   // Helper function to create company-scoped customer key
   const getCustomerKey = (customerId: string): string => {
     try {
@@ -129,29 +131,24 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
     // Fallback to current asking price for old orders without stored asking price
     const wineBatch = bottledWines.find(batch => batch.id === order.wineBatchId);
     if (!wineBatch) return 0;
-    const computed = calculateEstimatedPrice(wineBatch as any, undefined as any);
-    return wineBatch.askingPrice ?? computed;
+    
+    // Use the shared price calculator (includes prestige bonuses)
+    return getAskingPrice(wineBatch);
   };
 
   const getCurrentAskingPriceForOrder = useCallback((order: WineOrder): number => {
     const batchFromInventory = allBatches.find(b => b.id === order.wineBatchId);
     if (batchFromInventory) {
-      if (typeof batchFromInventory.askingPrice === 'number') {
-        return batchFromInventory.askingPrice;
-      }
-      return calculateEstimatedPrice(batchFromInventory as any, undefined as any);
+      return getAskingPrice(batchFromInventory);
     }
 
     const bottledMatch = bottledWines.find(batch => batch.id === order.wineBatchId);
     if (bottledMatch) {
-      if (typeof bottledMatch.askingPrice === 'number') {
-        return bottledMatch.askingPrice;
-      }
-      return calculateEstimatedPrice(bottledMatch as any, undefined as any);
+      return getAskingPrice(bottledMatch);
     }
 
     return getAskingPriceForOrder(order);
-  }, [allBatches, bottledWines]);
+  }, [allBatches, bottledWines, getAskingPrice]);
 
   // Define sortable columns for orders
   const orderColumns: SortableColumn<WineOrder>[] = [
@@ -594,14 +591,13 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 >
                   Expires
                 </TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={15} className="text-center text-gray-500 py-6">
+                  <TableCell colSpan={14} className="text-center text-gray-500 py-6">
                     {orderStatusFilter === 'all' ? 'No orders found' : `No ${orderStatusFilter} orders`}
                   </TableCell>
                 </TableRow>
@@ -909,16 +905,6 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                         season: order.expiresSeason,
                         year: order.expiresYear
                       })}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex px-2 py-1 text-[10px] font-semibold rounded-full ${
-                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === 'fulfilled' ? 'bg-green-100 text-green-800' :
-                        order.status === 'expired' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
                     </TableCell>
                     <TableCell className="text-xs font-medium space-x-2">
                       {order.status === 'pending' ? (

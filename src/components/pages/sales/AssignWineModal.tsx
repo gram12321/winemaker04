@@ -3,6 +3,7 @@ import { WineContract, WineBatch } from '@/lib/types/types';
 import { fulfillContract, getEligibleWinesForContract } from '@/lib/services/sales/contractService';
 import { formatNumber } from '@/lib/utils/utils';
 import { formatCompletedWineName } from '@/lib/services/wine/winery/inventoryService';
+import { useWinePriceCalculator } from '@/hooks';
 import { X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LoadingProps } from '@/lib/types/UItypes';
 
@@ -28,6 +29,9 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
   const [selectedWines, setSelectedWines] = useState<SelectedWine[]>([]);
   const [eligibleWines, setEligibleWines] = useState<Array<{ wine: WineBatch; validation: any }>>([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
+
+  // Use shared price calculator hook for consistent pricing with prestige bonuses
+  const { getAskingPrice: getAskingPriceForWine } = useWinePriceCalculator();
 
   // Load eligible wines when modal opens
   useEffect(() => {
@@ -209,6 +213,10 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                   const selected = selectedWines.find(sw => sw.wineBatchId === wine.id);
                   const selectedQty = selected?.quantity || 0;
                   
+                  // Get asking price using helper function (follows OrdersTab pattern)
+                  const wineAskingPrice = getAskingPriceForWine(wine);
+                  const premiumPercent = ((contract.offeredPrice - wineAskingPrice) / wineAskingPrice) * 100;
+                  
                   return (
                     <div
                       key={wine.id}
@@ -228,12 +236,29 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                             <span>Quality: {(wine.grapeQuality * 100).toFixed(0)}%</span>
                             <span>Balance: {(wine.balance * 100).toFixed(0)}%</span>
                           </div>
-                          {validation.isValid && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <CheckCircle2 className="w-3 h-3 text-green-600" />
-                              <span className="text-xs text-green-700">Meets all requirements</span>
+                          <div className="flex items-center gap-3 mt-1">
+                            <div className="text-xs">
+                              <span className="text-gray-600">
+                                {wine.askingPrice ? 'Asking' : 'Est. Value'}: 
+                              </span>
+                              <span className="font-semibold text-gray-900"> ${formatNumber(wineAskingPrice, { decimals: 2 })}</span>
+                              <span className="text-gray-600"> vs </span>
+                              <span className="font-semibold text-green-700">${formatNumber(contract.offeredPrice, { decimals: 2 })}</span>
+                              <span className={`ml-1 font-medium ${
+                                premiumPercent > 0 ? 'text-green-600' : 
+                                premiumPercent < 0 ? 'text-red-600' : 'text-gray-600'
+                              }`}>
+                                ({premiumPercent > 0 ? '+' : ''}
+                                {formatNumber(premiumPercent, { decimals: 1 })}%)
+                              </span>
                             </div>
-                          )}
+                            {validation.isValid && (
+                              <div className="flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                <span className="text-xs text-green-700">Meets requirements</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
                         <div className="flex items-center gap-2">

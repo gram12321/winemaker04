@@ -1,16 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { WineBatch, Vineyard } from '@/lib/types/types';
+import { WineBatch } from '@/lib/types/types';
 import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange, getCharacteristicIconSrc } from '@/lib/utils/utils';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
-import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useEstimatedPrice } from '@/hooks';
+import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, getCurrentPrestige } from '@/lib/services';
-import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 
@@ -101,10 +99,9 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 
 
 // Component for estimated price display with tooltip
-const EstimatedPriceDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
+const EstimatedPriceDisplay: React.FC<{ wine: WineBatch; estimatedPrice: number }> = ({ wine, estimatedPrice }) => {
   const wineScoreData = useWineCombinedScore(wine);
   const featureDetails = useWineFeatureDetails(wine);
-  const estimatedPrice = useEstimatedPrice(wine);
   
   if (!wineScoreData || !featureDetails) return null;
   
@@ -512,41 +509,17 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
     isColumnSorted: isCellarColumnSorted
   } = useTableSortWithAccessors(filteredWines, cellarColumns);
 
-  // Load prestige and vineyards for accurate price calculation
-  const [priceCalcData, setPriceCalcData] = React.useState<{
-    prestige: number;
-    vineyards: Vineyard[];
-  }>({ prestige: 0, vineyards: [] });
-  
-  React.useEffect(() => {
-    const loadPriceData = async () => {
-      try {
-        const [currentPrestige, vineyardsData] = await Promise.all([
-          getCurrentPrestige(),
-          loadVineyards()
-        ]);
-        setPriceCalcData({ prestige: currentPrestige, vineyards: vineyardsData });
-      } catch (error) {
-        console.error('Error loading price calculation data:', error);
-      }
-    };
-    loadPriceData();
-  }, []);
+  // Use shared price calculator hook for consistent pricing with prestige bonuses
+  const { calculatePrice } = useWinePriceCalculator();
 
-  // Precompute estimated prices per wine using service calculation (with prestige bonuses)
+  // Precompute estimated prices per wine using the shared calculator
   const estimatedPriceById = useMemo(() => {
     const map: Record<string, number> = {};
     sortedBottledWines.forEach((w) => {
-      const vineyard = priceCalcData.vineyards.find(v => v.id === w.vineyardId);
-      map[w.id] = calculateEstimatedPrice(
-        w as any,
-        vineyard as any,
-        priceCalcData.prestige,
-        vineyard?.vineyardPrestige
-      );
+      map[w.id] = calculatePrice(w);
     });
     return map;
-  }, [sortedBottledWines, priceCalcData]);
+  }, [sortedBottledWines, calculatePrice]);
 
   // Group wines by vintage year for hierarchical display
   const winesByVintage = useMemo(() => {
@@ -1087,7 +1060,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Estimated Price:</span>
-                    <EstimatedPriceDisplay wine={wine} />
+                    <EstimatedPriceDisplay wine={wine} estimatedPrice={estimatedPriceById[wine.id] || 0} />
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Asking Price:</span>
