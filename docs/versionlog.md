@@ -41,6 +41,7 @@
 - Replaced permissive public policies on `staff`, `loan_warnings`, and `wine_contracts` with company-scoped access controls (authenticated members + service role override).
 - Updated `migrations/vercel_migration_preserve_data.sql` and `migrations/sync_vercel_schema.sql` to mirror the new helper functions, search_path settings, and RLS policies so the Vercel database stays aligned with dev.
 - Addressed Supabase advisor performance warnings by wrapping `auth.uid()` calls in `(select auth.uid())` inside `owners_*`, `users_manage_self`, and `user_settings_self_access` policies, and removed the legacy `Users can access their own company loan warnings` policy to avoid redundant permissive rules.
+- Replaced `migrations/vercel_migration_preserve_data.sql` with a lightweight delta template so future Vercel updates only include incremental, idempotent changes (use `sync_vercel_schema.sql` for full resets).
 - Added `born_grape_quality` / `born_balance` columns (with automatic backfill) to `wine_batches` so production data retains its harvest baseline even when feature-driven updates are persisted.
 
 ---

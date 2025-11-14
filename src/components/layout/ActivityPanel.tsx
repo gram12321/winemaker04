@@ -165,7 +165,7 @@ export const ActivityPanel: React.FC = () => {
               </Button>
             </div>
             
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto scrollbar-styled">
               {activities.length === 0 ? (
                 <div className="text-center text-gray-500 mt-8">
                   <p>No active activities</p>
@@ -229,7 +229,7 @@ export const ActivityPanel: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-2 overflow-y-auto h-[calc(100vh-44px)] pb-2">
+            <div className="p-2 overflow-y-auto h-[calc(100vh-44px)] pb-2 scrollbar-styled">
               {panelState === 'full' ? (
                 <>
                   {activities.length === 0 ? (

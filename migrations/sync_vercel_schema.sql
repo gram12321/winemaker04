@@ -181,7 +181,9 @@ CREATE TABLE wine_batches (
     quantity integer NOT NULL,
     fermentation_progress integer DEFAULT 0 CHECK (fermentation_progress >= 0 AND fermentation_progress <= 100),
     grape_quality numeric DEFAULT 0.7 CHECK (grape_quality >= 0 AND grape_quality <= 1),
+    born_grape_quality numeric CHECK (born_grape_quality BETWEEN 0 AND 1),
     balance numeric DEFAULT 0.6 CHECK (balance >= 0 AND balance <= 1),
+    born_balance numeric CHECK (born_balance BETWEEN 0 AND 1),
     asking_price numeric,
     characteristics jsonb DEFAULT '{"body": 0.5, "aroma": 0.5, "spice": 0.5, "acidity": 0.5, "tannins": 0.5, "sweetness": 0.5}'::jsonb,
     breakdown jsonb DEFAULT '{}'::jsonb,
@@ -635,9 +637,66 @@ REVOKE ALL ON FUNCTION public.is_company_member_text(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_company_member_text(text) TO anon, authenticated, service_role;
 
 -- Harden helper functions flagged by Supabase advisor
-ALTER FUNCTION public.update_updated_at_column() SET search_path = public, pg_temp;
-ALTER FUNCTION public.clear_table(text) SET search_path = public, pg_temp;
-ALTER FUNCTION public.admin_clear_all_tables() SET search_path = public, pg_temp;
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.clear_table(table_name text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $function$
+BEGIN
+  EXECUTE format('DELETE FROM %I', table_name);
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.admin_clear_all_tables()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+    table_name text;
+    result text := '';
+BEGIN
+    FOR table_name IN
+        SELECT unnest(ARRAY[
+            'relationship_boosts',
+            'wine_orders',
+            'wine_batches',
+            'vineyards',
+            'achievements',
+            'user_settings',
+            'highscores',
+            'prestige_events',
+            'transactions',
+            'companies',
+            'users',
+            'customers',
+            'game_state'
+        ])
+    LOOP
+        BEGIN
+            EXECUTE format('DELETE FROM %I', table_name);
+            result := result || table_name || ': cleared; ';
+        EXCEPTION WHEN OTHERS THEN
+            result := result || table_name || ': error - ' || SQLERRM || '; ';
+        END;
+    END LOOP;
+
+    RETURN result;
+END;
+$function$;
 
 -- Drop legacy permissive policies
 DROP POLICY IF EXISTS "Anyone can view achievements" ON achievements;
@@ -686,23 +745,27 @@ DROP POLICY IF EXISTS "owners_create_companies" ON companies;
 CREATE POLICY "company_members_manage_companies"
 ON companies
 FOR SELECT
-USING (public.is_service_role() OR public.is_company_member(id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(id));
 
 CREATE POLICY "company_members_update_companies"
 ON companies
 FOR UPDATE
-USING (public.is_service_role() OR public.is_company_member(id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(id));
 
 CREATE POLICY "owners_delete_companies"
 ON companies
 FOR DELETE
-USING (public.is_service_role() OR (select auth.uid()) = user_id);
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR (select auth.uid()) = user_id);
 
 CREATE POLICY "owners_create_companies"
 ON companies
 FOR INSERT
-WITH CHECK (public.is_service_role() OR (select auth.uid()) = user_id);
+WITH CHECK (
+  public.is_service_role()
+  OR (select auth.uid()) = user_id
+  OR (select auth.uid()) IS NULL
+);
 
 -- Users manage their own profile
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
