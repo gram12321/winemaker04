@@ -773,8 +773,8 @@ DROP POLICY IF EXISTS "users_manage_self" ON users;
 CREATE POLICY "users_manage_self"
 ON users
 FOR ALL
-USING (public.is_service_role() OR (select auth.uid()) = id)
-WITH CHECK (public.is_service_role() OR (select auth.uid()) = id);
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR (select auth.uid()) = id)
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR (select auth.uid()) = id);
 
 -- User settings scoped to current user
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
@@ -791,8 +791,8 @@ DROP POLICY IF EXISTS "company_members_manage_game_state" ON game_state;
 CREATE POLICY "company_members_manage_game_state"
 ON game_state
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(id));
 
 -- UUID-based company scoped tables
 ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
@@ -800,144 +800,144 @@ DROP POLICY IF EXISTS "company_members_manage_achievements" ON achievements;
 CREATE POLICY "company_members_manage_achievements"
 ON achievements
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_activities" ON activities;
 CREATE POLICY "company_members_manage_activities"
 ON activities
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE company_customers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_company_customers" ON company_customers;
 CREATE POLICY "company_members_manage_company_customers"
 ON company_customers
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_customers" ON customers;
 CREATE POLICY "company_members_manage_customers"
 ON customers
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE highscores ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_highscores" ON highscores;
 CREATE POLICY "company_members_manage_highscores"
 ON highscores
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE lenders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_lenders" ON lenders;
 CREATE POLICY "company_members_manage_lenders"
 ON lenders
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_loans" ON loans;
 CREATE POLICY "company_members_manage_loans"
 ON loans
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_notifications" ON notifications;
 CREATE POLICY "company_members_manage_notifications"
 ON notifications
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE notification_filters ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_notification_filters" ON notification_filters;
 CREATE POLICY "company_members_manage_notification_filters"
 ON notification_filters
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE prestige_events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_prestige_events" ON prestige_events;
 CREATE POLICY "company_members_manage_prestige_events"
 ON prestige_events
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE relationship_boosts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_relationship_boosts" ON relationship_boosts;
 CREATE POLICY "company_members_manage_relationship_boosts"
 ON relationship_boosts
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_teams" ON teams;
 CREATE POLICY "company_members_manage_teams"
 ON teams
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE vineyards ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_vineyards" ON vineyards;
 CREATE POLICY "company_members_manage_vineyards"
 ON vineyards
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE wine_batches ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_wine_batches" ON wine_batches;
 CREATE POLICY "company_members_manage_wine_batches"
 ON wine_batches
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE wine_orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_wine_orders" ON wine_orders;
 CREATE POLICY "company_members_manage_wine_orders"
 ON wine_orders
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_staff" ON staff;
 CREATE POLICY "company_members_manage_staff"
 ON staff
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE loan_warnings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_loan_warnings" ON loan_warnings;
 CREATE POLICY "company_members_manage_loan_warnings"
 ON loan_warnings
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 ALTER TABLE wine_contracts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_wine_contracts" ON wine_contracts;
 CREATE POLICY "company_members_manage_wine_contracts"
 ON wine_contracts
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
 
 -- Tables storing company_id as text
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
@@ -945,16 +945,16 @@ DROP POLICY IF EXISTS "company_members_manage_transactions" ON transactions;
 CREATE POLICY "company_members_manage_transactions"
 ON transactions
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member_text(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member_text(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member_text(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member_text(company_id));
 
 ALTER TABLE wine_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_wine_log" ON wine_log;
 CREATE POLICY "company_members_manage_wine_log"
 ON wine_log
 FOR ALL
-USING (public.is_service_role() OR public.is_company_member_text(company_id))
-WITH CHECK (public.is_service_role() OR public.is_company_member_text(company_id));
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member_text(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member_text(company_id));
 
 -- ============================================================
 -- CREATE INDEXES FOR PERFORMANCE

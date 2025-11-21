@@ -13,9 +13,9 @@ import { getAllFeatureConfigs } from '../../constants/wineFeatures/commonFeature
 
 // ===== ORDER MANAGEMENT =====
 
-// Get all pending wine orders
+// Get only pending wine orders (used by expiration logic)
 export async function getPendingOrders(): Promise<WineOrder[]> {
-  return await loadWineOrders();
+  return await loadWineOrders('pending');
 }
 
 // Fulfill a wine order (sell the wine) - supports partial fulfillment

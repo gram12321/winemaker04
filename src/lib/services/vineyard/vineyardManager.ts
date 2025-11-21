@@ -1,6 +1,6 @@
 import { Vineyard, Activity, GameDate } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
-import { calculateGrapeSuitabilityContribution } from './vineyardValueCalc';
+import { calculateGrapeSuitabilityContribution, calculateAdjustedLandValue, calculateLandValue } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
 import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '../../database/activities/vineyardDB';
 import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '../../database/activities/activityDB';
@@ -9,9 +9,8 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
-import { calculateAdjustedLandValue } from './vineyardValueCalc';
-
-
+ 
+ 
 /**
  * Terminate a planting activity due to winter and finalize vineyard with current density
  */
@@ -645,6 +644,12 @@ export async function recalculateVineyardValues(): Promise<void> {
     if (vineyards.length === 0) return;
 
     const updated = vineyards.map(v => {
+      const baselinePerHa = calculateLandValue(
+        v.country,
+        v.region,
+        v.altitude,
+        v.aspect
+      );
       const adjustedPerHa = calculateAdjustedLandValue(
         v.country,
         v.region,
@@ -658,7 +663,7 @@ export async function recalculateVineyardValues(): Promise<void> {
         }
       );
       const adjustedTotal = Math.round(adjustedPerHa * v.hectares);
-      return { ...v, vineyardTotalValue: adjustedTotal } as Vineyard;
+      return { ...v, landValue: baselinePerHa, vineyardTotalValue: adjustedTotal } as Vineyard;
     });
 
     await bulkUpdateVineyards(updated);

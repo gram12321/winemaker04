@@ -3,7 +3,7 @@ import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanCo
 import { createStaff, addStaff } from '../user/staffService';
 import { assignStaffToTeam, getAllTeams } from '../user/teamService';
 import { supabase } from '@/lib/database';
-import type { Staff } from '@/lib/types/types';
+import type { Aspect, Staff } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
@@ -14,6 +14,7 @@ import { applyForLoan } from '../finance/loanService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
+import { calculateLandValue } from '../vineyard/vineyardValueCalc';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -185,6 +186,15 @@ export async function applyStartingConditions(
     }
     
     // 5. Create starting vineyard from preview
+    const previewAspect = (vineyardPreview.aspect as Aspect) || 'South';
+    const landValuePerHectare = calculateLandValue(
+      vineyardPreview.country,
+      vineyardPreview.region,
+      vineyardPreview.altitude,
+      previewAspect
+    );
+    const baseTotalValue = Math.round(landValuePerHectare * vineyardPreview.hectares);
+
     const { error: vineyardError } = await supabase
       .from('vineyards')
       .insert({
@@ -195,7 +205,7 @@ export async function applyStartingConditions(
         hectares: vineyardPreview.hectares,
         soil: vineyardPreview.soil,
         altitude: vineyardPreview.altitude,
-        aspect: vineyardPreview.aspect,
+        aspect: previewAspect,
         density: 0, // Not yet planted
         status: 'Barren',
         grape_variety: null,
@@ -204,7 +214,8 @@ export async function applyStartingConditions(
         vine_yield: 0.02,
         vineyard_health: 0.6, // Default starting health
         vineyard_prestige: 0,
-        vineyard_total_value: 0,
+        land_value: landValuePerHectare,
+        vineyard_total_value: baseTotalValue,
         created_at: new Date().toISOString()
       });
       
