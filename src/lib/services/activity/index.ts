@@ -8,6 +8,7 @@ export * from './activitymanagers/bookkeepingManager';
 export * from './activitymanagers/landSearchManager';
 export * from './activitymanagers/lenderSearchManager';
 export * from './activitymanagers/takeLoanManager';
+export * from './activitymanagers/researchManager';
 
 // Work calculators
 export * from './workcalculators/workCalculator';
@@ -22,3 +23,4 @@ export * from './workcalculators/lenderSearchWorkCalculator';
 export * from './workcalculators/takeLoanWorkCalculator';
 export * from './workcalculators/plantingWorkCalculator';
 export * from './workcalculators/harvestingWorkCalculator';
+export * from './workcalculators/researchWorkCalculator';

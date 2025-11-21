@@ -4,7 +4,6 @@ import {
   calculateSeasonalPayment,
   calculateCreditRatingModifier
 } from '@/lib/services/finance/loanService';
-import type { EconomyPhase, LenderType } from '@/lib/types/types';
 
 describe('calculateEffectiveInterestRate', () => {
   const baseRate = 0.05; // 5% base rate

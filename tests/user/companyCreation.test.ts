@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { companyService } from '@/lib/services/user/companyService';
-import { getCompanyById, getCompanyByName, getUserCompanies, getAllCompanies, deleteCompany, type Company } from '@/lib/database/core/companiesDB';
-import { insertUser, getUserById, deleteUser, type AuthUser } from '@/lib/database/core/usersDB';
+import { getCompanyById, getCompanyByName, getUserCompanies, getAllCompanies, deleteCompany } from '@/lib/database/core/companiesDB';
+import { getUserById, deleteUser } from '@/lib/database/core/usersDB';
 import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 
 /**

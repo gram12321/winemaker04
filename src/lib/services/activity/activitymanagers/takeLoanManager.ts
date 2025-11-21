@@ -12,12 +12,12 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
     // Use adjusted parameters if provided, otherwise use original offer values
     const amount = adjustedAmount ?? offer.principalAmount;
     const duration = adjustedDurationSeasons ?? offer.durationSeasons;
-    
+
     const { totalWork } = calculateTakeLoanWork(offer, amount, duration);
-    
+
     // Create the take loan activity
     const title = 'Processing Loan';
-    
+
     const activityId = await createActivity({
       category: WorkCategory.TAKE_LOAN,
       title,
@@ -29,7 +29,7 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
       },
       isCancellable: true
     });
-    
+
     return activityId;
   } catch (error) {
     console.error('Error starting take loan:', error);
@@ -44,12 +44,12 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
 export async function completeTakeLoan(activity: Activity): Promise<void> {
   try {
     const offer = activity.params.offer as LoanOffer;
-    
+
     if (!offer) {
       console.error('No loan offer found in activity params');
       return;
     }
-    
+
     // Apply for the loan
     await applyForLoan(
       offer.lender.id,
@@ -58,12 +58,12 @@ export async function completeTakeLoan(activity: Activity): Promise<void> {
       offer.lender,
       { skipLimitCheck: true }
     );
-    
+
     await notificationService.addMessage(
       `Loan from ${offer.lender.name} successfully processed! €${offer.principalAmount.toFixed(2)} added to your account.`,
       'takeLoanManager.completeTakeLoan',
       'Loan Processed',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
   } catch (error) {
     console.error('Error completing take loan:', error);
@@ -71,7 +71,7 @@ export async function completeTakeLoan(activity: Activity): Promise<void> {
       `Failed to process loan: ${error instanceof Error ? error.message : 'Unknown error'}`,
       'takeLoanManager.completeTakeLoan',
       'Loan Processing Failed',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
   }
 }

@@ -17,9 +17,9 @@ const createStaff = (overrides: Partial<Staff> = {}): Staff => {
   const defaultSkills = {
     field: 0.5,
     winery: 0.5,
-    administration: 0.5,
+    administrationAndResearch: 0.5,
     sales: 0.5,
-    maintenance: 0.5
+    financeAndStaff: 0.5
   };
 
   const { skills, ...rest } = overrides;
@@ -87,9 +87,9 @@ describe('calculateStaffWorkContribution', () => {
       skills: {
         field: 0.8,
         winery: 0.4,
-        administration: 0.2,
+        administrationAndResearch: 0.2,
         sales: 0.3,
-        maintenance: 0.3
+        financeAndStaff: 0.3
       }
     });
 
@@ -100,9 +100,9 @@ describe('calculateStaffWorkContribution', () => {
       skills: {
         field: 0.5,
         winery: 0.6,
-        administration: 0.4,
+        administrationAndResearch: 0.4,
         sales: 0.3,
-        maintenance: 0.2
+        financeAndStaff: 0.2
       }
     });
 
@@ -129,9 +129,9 @@ describe('calculateEstimatedWeeks', () => {
         skills: {
           field: 0.8,
           winery: 0.4,
-          administration: 0.2,
+          administrationAndResearch: 0.2,
           sales: 0.3,
-          maintenance: 0.3
+          financeAndStaff: 0.3
         }
       }),
       createStaff({
@@ -141,9 +141,9 @@ describe('calculateEstimatedWeeks', () => {
         skills: {
           field: 0.5,
           winery: 0.6,
-          administration: 0.4,
+          administrationAndResearch: 0.4,
           sales: 0.3,
-          maintenance: 0.2
+          financeAndStaff: 0.2
         }
       })
     ];

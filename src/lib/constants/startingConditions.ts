@@ -78,7 +78,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Latosha',
         nationality: 'France',
         skillLevel: 0.5,
-        specializations: ['administration']
+        specializations: ['administrationAndResearch']
       }
     ],
     startingVineyard: {
@@ -107,7 +107,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       payload: { origin: 'starting_conditions', family: 'Latosha' }
     }
   },
-  
+
   'Italy': {
     id: 'Italy',
     name: 'Italy',
@@ -159,7 +159,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       payload: { origin: 'starting_conditions', family: 'De Luca' }
     }
   },
-  
+
   'Germany': {
     id: 'Germany',
     name: 'Germany',
@@ -182,7 +182,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.5,
-        specializations: ['maintenance']
+        specializations: ['buildingAndMaintenance']
       },
       {
         firstName: 'Elsa',
@@ -196,7 +196,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.2,
-        specializations: ['administration']
+        specializations: ['administrationAndResearch']
       }
     ],
     startingVineyard: {
@@ -216,7 +216,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       payload: { origin: 'starting_conditions', family: 'Weissburg' }
     }
   },
-  
+
   'Spain': {
     id: 'Spain',
     name: 'Spain',
@@ -254,7 +254,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       interestRate: 0.017
     }
   },
-  
+
   'United States': {
     id: 'United States',
     name: 'United States',
@@ -277,7 +277,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Mondavi',
         nationality: 'United States',
         skillLevel: 0.5,
-        specializations: ['administration']
+        specializations: ['administrationAndResearch']
       }
     ],
     startingVineyard: {

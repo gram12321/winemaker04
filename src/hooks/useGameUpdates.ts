@@ -6,7 +6,7 @@ const listeners = new Set<() => void>();
 const topicListeners = new Map<string, Set<() => void>>();
 
 // Debouncing state
-let debounceTimeout: NodeJS.Timeout | null = null;
+let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 let pendingUpdate = false;
 
 export const useGameUpdates = () => {

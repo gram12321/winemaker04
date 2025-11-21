@@ -89,8 +89,8 @@ export function calculateHiringWorkRange(
   const maxWeeklyWage = (BASE_WEEKLY_WAGE + (maxSkill * SKILL_WAGE_MULTIPLIER)) * specializationBonus;
 
   // Base work factors for hiring
-  const rate = TASK_RATES[WorkCategory.ADMINISTRATION];
-  const initialWork = INITIAL_WORK[WorkCategory.ADMINISTRATION];
+  const rate = TASK_RATES[WorkCategory.STAFF_HIRING];
+  const initialWork = INITIAL_WORK[WorkCategory.STAFF_HIRING];
   
   // Calculate modifiers
   const skillModifier = Math.pow(skillLevel * 2, 2) - 1;     // Skill impact
@@ -131,16 +131,16 @@ export function calculateHiringWorkRange(
  * Based on their skills and wage
  */
 export function calculateHiringWorkForCandidate(candidate: Staff): number {
-  const rate = TASK_RATES[WorkCategory.ADMINISTRATION];
-  const initialWork = INITIAL_WORK[WorkCategory.ADMINISTRATION];
+  const rate = TASK_RATES[WorkCategory.STAFF_HIRING];
+  const initialWork = INITIAL_WORK[WorkCategory.STAFF_HIRING];
   
   // Calculate modifiers based on candidate
   const avgSkill = (
     candidate.skills.field +
     candidate.skills.winery +
-    candidate.skills.administration +
+    candidate.skills.administrationAndResearch +
     candidate.skills.sales +
-    candidate.skills.maintenance
+    candidate.skills.financeAndStaff
   ) / 5;
   
   const skillModifier = Math.pow(avgSkill * 2, 2) - 1;

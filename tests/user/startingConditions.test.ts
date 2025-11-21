@@ -11,8 +11,6 @@ import { loadLoans } from '@/lib/database/core/loansDB';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
 import { getCompanyById } from '@/lib/database/core/companiesDB';
-import type { Staff } from '@/lib/types/types';
-import { GAME_INITIALIZATION } from '@/lib/constants/constants';
 
 /**
  * Human Automation Test: Starting Conditions - Country-Specific Setup

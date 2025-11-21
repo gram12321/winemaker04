@@ -20,7 +20,7 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
     const gameState = getGameState();
     const searchCost = calculateLenderSearchCost(options);
     const { totalWork } = calculateLenderSearchWork(options);
-    
+
     // Check if we have enough money (skip for free searches)
     const currentMoney = gameState.money || 0;
     if (searchCost > 0 && currentMoney < searchCost) {
@@ -28,11 +28,11 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
         `Insufficient funds for lender search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
         'lenderSearchManager.startLenderSearch',
         'Insufficient Funds',
-        NotificationCategory.FINANCE
+        NotificationCategory.FINANCE_AND_STAFF
       );
       return null;
     }
-    
+
     // Deduct search cost immediately (only when cost > 0)
     if (searchCost > 0) {
       await addTransaction(
@@ -42,10 +42,10 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
         false
       );
     }
-    
+
     // Create the search activity
     const title = 'Lender Search';
-    
+
     const activityId = await createActivity({
       category: WorkCategory.LENDER_SEARCH,
       title,
@@ -57,7 +57,7 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
       },
       isCancellable: true
     });
-    
+
     return activityId;
   } catch (error) {
     console.error('Error starting lender search:', error);
@@ -72,15 +72,15 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
 export async function completeLenderSearch(activity: Activity): Promise<void> {
   try {
     const searchOptions = activity.params.searchOptions as LenderSearchOptions;
-    
+
     if (!searchOptions) {
       console.error('No search options found in activity params');
       return;
     }
-    
+
     // Generate loan offers
     const offers = await generateLoanOffers(searchOptions);
-    
+
     // Store results in game state for modal to access
     updateGameState({
       pendingLenderSearchResults: {
@@ -90,12 +90,12 @@ export async function completeLenderSearch(activity: Activity): Promise<void> {
         timestamp: Date.now()
       }
     });
-    
+
     // Trigger UI update to open results modal
     triggerGameUpdate();
-    
+
     const availableCount = offers.filter(o => o.isAvailable).length;
-    
+
     await notificationService.addMessage(
       `Lender search complete! Found ${availableCount} of ${offers.length} lender${offers.length > 1 ? 's' : ''} willing to offer loans.`,
       'lenderSearchManager.completeLenderSearch',
@@ -119,51 +119,51 @@ export async function completeLenderSearch(activity: Activity): Promise<void> {
 async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOffer[]> {
   const gameState = getGameState();
   const allLenders = await loadLenders();
-  
+
   // Filter by lender types if specified
   let eligibleLenders = allLenders;
   const totalLenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION).length;
   if (options.lenderTypes.length > 0 && options.lenderTypes.length < totalLenderTypes) {
     eligibleLenders = allLenders.filter(lender => options.lenderTypes.includes(lender.type));
   }
-  
+
   // Randomly select lenders
   const numberOfOffers = Math.min(options.numberOfOffers, eligibleLenders.length);
   const shuffled = [...eligibleLenders].sort(() => Math.random() - 0.5);
   const selectedLenders = shuffled.slice(0, numberOfOffers);
-  
+
   // Get current credit rating
   const creditRating = await getCurrentCreditRating();
   const totalAssets = await calculateTotalAssets();
-  
+
   // Generate offers
   const offers: LoanOffer[] = [];
-  
+
   for (const lender of selectedLenders) {
     // Check if lender is available (credit check)
     const availability = calculateLenderAvailability(lender, creditRating * 100, gameState.prestige || 0);
-    
+
     // Generate random loan parameters within lender's ranges AND user constraints
     const limitInfo = await getScaledLoanAmountLimit(lender, creditRating, { totalAssets });
     const minAmount = Math.max(lender.minLoanAmount, options.loanAmountRange[0]);
     const maxAmount = Math.min(lender.maxLoanAmount, options.loanAmountRange[1], limitInfo.maxAllowed);
     const minDuration = Math.max(lender.minDurationSeasons, options.durationRange[0]);
     const maxDuration = Math.min(lender.maxDurationSeasons, options.durationRange[1]);
-    
+
     // Check if there's any overlap between lender ranges and user constraints
     if (minAmount > maxAmount || minDuration > maxDuration) {
       // No overlap - skip this lender
       continue;
     }
-    
+
     const principalAmount = Math.round(
       minAmount + Math.random() * (maxAmount - minAmount)
     );
-    
+
     const durationSeasons = Math.round(
       minDuration + Math.random() * (maxDuration - minDuration)
     );
-    
+
     // Calculate loan terms
     const effectiveRate = calculateEffectiveInterestRate(
       lender.baseInterestRate,
@@ -172,12 +172,12 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
       creditRating,
       durationSeasons
     );
-    
+
     const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveRate, durationSeasons);
     const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
     const totalInterest = (seasonalPayment * durationSeasons) - principalAmount;
     const totalExpenses = originationFee + totalInterest;
-    
+
     offers.push({
       id: uuidv4(),
       lender,
@@ -189,14 +189,14 @@ async function generateLoanOffers(options: LenderSearchOptions): Promise<LoanOff
       totalInterest,
       totalExpenses,
       isAvailable: availability.isAvailable && !lender.blacklisted,
-      unavailableReason: lender.blacklisted 
-        ? 'Blacklisted due to previous default' 
-        : !availability.isAvailable 
-          ? `Credit rating too low (need ${Math.round(availability.adjustedRequirement)}%, have ${Math.round(creditRating * 100)}%)` 
+      unavailableReason: lender.blacklisted
+        ? 'Blacklisted due to previous default'
+        : !availability.isAvailable
+          ? `Credit rating too low (need ${Math.round(availability.adjustedRequirement)}%, have ${Math.round(creditRating * 100)}%)`
           : undefined
     });
   }
-  
+
   return offers;
 }
 

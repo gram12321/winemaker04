@@ -59,40 +59,40 @@ export function getSkillLevelInfo(skillLevel: number): { name: string; descripti
 // ===== SPECIALIZATION DEFINITIONS =====
 
 // Specialization roles (reserved for future implementation)
-export const SPECIALIZED_ROLES: Record<string, { 
-  title: string; 
-  description: string; 
+export const SPECIALIZED_ROLES: Record<string, {
+  title: string;
+  description: string;
   skillBonus: keyof StaffSkills;
   bonusAmount: number;
 }> = {
-  field: { 
-    title: 'Vineyard Manager', 
-    description: 'Expert in vineyard operations', 
+  field: {
+    title: 'Vineyard Manager',
+    description: 'Expert in vineyard operations',
     skillBonus: 'field',
     bonusAmount: 0.2
   },
-  winery: { 
-    title: 'Master Winemaker', 
-    description: 'Specialist in wine production', 
+  winery: {
+    title: 'Master Winemaker',
+    description: 'Specialist in wine production',
     skillBonus: 'winery',
     bonusAmount: 0.2
   },
-  administration: { 
-    title: 'Estate Administrator', 
-    description: 'Expert in business operations', 
-    skillBonus: 'administration',
+  administrationAndResearch: {
+    title: 'Estate Administrator',
+    description: 'Expert in business operations and research',
+    skillBonus: 'administrationAndResearch',
     bonusAmount: 0.2
   },
-  sales: { 
-    title: 'Sales Director', 
-    description: 'Specialist in wine marketing and sales', 
+  sales: {
+    title: 'Sales Director',
+    description: 'Specialist in wine marketing and sales',
     skillBonus: 'sales',
     bonusAmount: 0.2
   },
-  maintenance: { 
-    title: 'Technical Director', 
-    description: 'Expert in facility maintenance', 
-    skillBonus: 'maintenance',
+  financeAndStaff: {
+    title: 'Finance Director',
+    description: 'Expert in finance and staff management',
+    skillBonus: 'financeAndStaff',
     bonusAmount: 0.2
   }
 };
@@ -106,7 +106,7 @@ export function getStaffRoleDisplayName(specializations: string[]): string {
   if (specializations.length === 0) {
     return 'General Worker';
   }
-  
+
   // Get the first specialization and use its display name
   const firstSpecialization = specializations[0];
   return SPECIALIZED_ROLES[firstSpecialization]?.title || firstSpecialization;

@@ -57,6 +57,7 @@ DROP TABLE IF EXISTS prestige_events CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS wine_orders CASCADE;
+DROP TABLE IF EXISTS wine_contracts CASCADE;
 DROP TABLE IF EXISTS wine_batches CASCADE;
 DROP TABLE IF EXISTS vineyards CASCADE;
 DROP TABLE IF EXISTS game_state CASCADE;
@@ -110,6 +111,8 @@ CREATE TABLE companies (
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
+
+COMMENT ON COLUMN companies.starting_country IS 'Starting country selected during company creation (France, Italy, Germany, Spain, United States)';
 
 -- User settings table
 CREATE TABLE user_settings (
@@ -241,6 +244,38 @@ CREATE TABLE wine_orders (
     expires_season text NOT NULL DEFAULT 'Spring' CHECK (expires_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
     expires_year integer NOT NULL DEFAULT 2024,
     calculation_data jsonb
+);
+
+-- Wine contracts table
+CREATE TABLE wine_contracts (
+    id text PRIMARY KEY,
+    company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id text NOT NULL,
+    customer_name text NOT NULL,
+    customer_country text NOT NULL,
+    customer_type text NOT NULL CHECK (customer_type IN ('Restaurant', 'Wine Shop', 'Private Collector', 'Chain Store')),
+    requirements jsonb NOT NULL DEFAULT '[]'::jsonb,
+    requested_quantity integer NOT NULL CHECK (requested_quantity > 0),
+    offered_price numeric NOT NULL CHECK (offered_price >= 0),
+    total_value numeric NOT NULL CHECK (total_value >= 0),
+    status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'fulfilled', 'rejected', 'expired')),
+    terms jsonb,
+    created_week integer NOT NULL CHECK (created_week IS NULL OR (created_week >= 1 AND created_week <= 12)),
+    created_season text NOT NULL CHECK (created_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    created_year integer NOT NULL,
+    expires_week integer NOT NULL CHECK (expires_week IS NULL OR (expires_week >= 1 AND expires_week <= 12)),
+    expires_season text NOT NULL CHECK (expires_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    expires_year integer NOT NULL,
+    fulfilled_week integer CHECK (fulfilled_week IS NULL OR (fulfilled_week >= 1 AND fulfilled_week <= 12)),
+    fulfilled_season text CHECK (fulfilled_season IS NULL OR fulfilled_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    fulfilled_year integer,
+    rejected_week integer CHECK (rejected_week IS NULL OR (rejected_week >= 1 AND rejected_week <= 12)),
+    rejected_season text CHECK (rejected_season IS NULL OR rejected_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    rejected_year integer,
+    fulfilled_wine_batch_ids text[],
+    relationship_at_creation numeric NOT NULL DEFAULT 0 CHECK (relationship_at_creation >= 0 AND relationship_at_creation <= 100),
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
 );
 
 -- Transactions table
@@ -405,7 +440,7 @@ CREATE TABLE notifications (
 CREATE TABLE activities (
     id text PRIMARY KEY,
     company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
-    category text NOT NULL CHECK (category IN ('PLANTING', 'HARVESTING', 'CRUSHING', 'FERMENTATION', 'CLEARING', 'UPROOTING', 'BUILDING', 'UPGRADING', 'MAINTENANCE', 'STAFF_SEARCH', 'STAFF_HIRING', 'LAND_SEARCH', 'LENDER_SEARCH', 'TAKE_LOAN', 'ADMINISTRATION')),
+    category text NOT NULL CHECK (category IN ('PLANTING', 'HARVESTING', 'CRUSHING', 'FERMENTATION', 'CLEARING', 'UPROOTING', 'BUILDING', 'UPGRADING', 'ADMINISTRATION_AND_RESEARCH', 'STAFF_SEARCH', 'STAFF_HIRING', 'LAND_SEARCH', 'LENDER_SEARCH', 'TAKE_LOAN', 'FINANCE_AND_STAFF')),
     title text NOT NULL,
     total_work numeric NOT NULL CHECK (total_work > 0),
     completed_work numeric DEFAULT 0 CHECK (completed_work >= 0),
@@ -975,6 +1010,13 @@ CREATE INDEX IF NOT EXISTS idx_wine_batches_state ON wine_batches(state);
 -- Wine orders indexes
 CREATE INDEX IF NOT EXISTS idx_wine_orders_company_id ON wine_orders(company_id);
 CREATE INDEX IF NOT EXISTS idx_wine_orders_status ON wine_orders(status);
+
+-- Wine contracts indexes
+CREATE INDEX IF NOT EXISTS idx_wine_contracts_company_id ON wine_contracts(company_id);
+CREATE INDEX IF NOT EXISTS idx_wine_contracts_customer_id ON wine_contracts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_wine_contracts_status ON wine_contracts(status);
+CREATE INDEX IF NOT EXISTS idx_wine_contracts_created_date ON wine_contracts(created_year DESC, created_season DESC, created_week DESC);
+CREATE INDEX IF NOT EXISTS idx_wine_contracts_company_status ON wine_contracts(company_id, status);
 
 -- Customers indexes
 CREATE INDEX IF NOT EXISTS idx_customers_company_id ON customers(company_id);

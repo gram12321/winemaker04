@@ -15,26 +15,26 @@ export async function checkAndTriggerBookkeeping(
 ): Promise<void> {
   const gameState = getGameState();
   const { week } = gameState;
-  
+
   if (week !== 1) return;
-  
+
   try {
     const calculation = await calculateTotalBookkeepingWork();
     const { totalWork, spilloverData, seasonData } = calculation;
-    
+
     if (spilloverData.incompleteTaskCount > 0) {
       await handleSpilloverPenalties(spilloverData);
     }
-    
+
     // Build notification message parts
     let seasonChangeMessage: string | null = null;
     let bookkeepingMessage: string | null = null;
-    
+
     // Always start with season change if it happened
     if (newSeason) {
       seasonChangeMessage = `The season has changed to ${newSeason}!`;
     }
-    
+
     // Add bookkeeping activity if needed
     if (seasonData.transactionCount > 0 || spilloverData.spilloverWork > 0 || seasonData.loanPenaltyWork > 0) {
       // Create activity details including loan penalty work
@@ -46,10 +46,10 @@ export async function checkAndTriggerBookkeeping(
         activityDetails += `. Loan penalty work: ${seasonData.loanPenaltyWork} units`;
       }
       activityDetails += '.';
-      
+
       // Create activity with skipNotification flag if we're combining with season change
       const activityId = await createActivity({
-        category: WorkCategory.ADMINISTRATION,
+        category: WorkCategory.ADMINISTRATION_AND_RESEARCH,
         title: `Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear}`,
         totalWork,
         activityDetails,
@@ -64,32 +64,32 @@ export async function checkAndTriggerBookkeeping(
         isCancellable: true,
         skipNotification: !!newSeason // Skip default notification if season changed
       });
-      
+
       if (activityId) {
         // Get the actual assigned staff count from the created activity
         const activities = await loadActivitiesFromDb();
         const createdActivity = activities.find(a => a.id === activityId);
         const assignedCount = createdActivity?.params.assignedStaffIds?.length || 0;
-        
-        bookkeepingMessage = assignedCount > 0 
+
+        bookkeepingMessage = assignedCount > 0
           ? `Started Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear} - ${totalWork} work units required (${assignedCount} staff auto-assigned). ${activityDetails}`
           : `Started Bookkeeping for ${seasonData.prevSeason} ${seasonData.prevYear} - ${totalWork} work units required. ${activityDetails}`;
       }
-      
+
       // Clear loan penalty work from game state after creating the activity
       if (seasonData.loanPenaltyWork > 0) {
         const updatedGameState = { ...gameState, loanPenaltyWork: 0 };
         updateGameState(updatedGameState);
-        
+
         await notificationService.addMessage(
           `Added ${seasonData.loanPenaltyWork} loan administration work units to this season's bookkeeping.`,
           'bookkeeping.loanPenaltyCleared',
           'Loan Administration Work',
-          NotificationCategory.ADMINISTRATION
+          NotificationCategory.ADMINISTRATION_AND_RESEARCH
         );
       }
     }
-    
+
     // Send combined notification if season changed, otherwise send individual notifications
     if (newSeason && seasonChangeMessage) {
       const formattedMessage = formatSeasonChangeNotification(
@@ -98,7 +98,7 @@ export async function checkAndTriggerBookkeeping(
         economyPhaseMessage,
         wageMessage
       );
-      
+
       await notificationService.addMessage(
         formattedMessage,
         'time.seasonChange',
@@ -114,7 +114,7 @@ export async function checkAndTriggerBookkeeping(
         NotificationCategory.ACTIVITIES_TASKS
       );
     }
-    
+
   } catch (error) {
     console.error('Error in checkAndTriggerBookkeeping:', error);
   }
@@ -128,16 +128,16 @@ async function handleSpilloverPenalties(spilloverData: {
 }): Promise<void> {
   try {
     await applyPrestigePenalty(spilloverData.prestigePenalty, spilloverData.incompleteTaskCount);
-    
+
     await cleanupIncompleteBookkeeping();
-    
+
     await notificationService.addMessage(
       `Incomplete bookkeeping from previous seasons has affected company prestige! ` +
       `Lost ${spilloverData.prestigePenalty.toFixed(2)} prestige points. ` +
       `${spilloverData.spilloverWork.toFixed(0)} extra work units added to new bookkeeping task.`,
       'bookkeepingManager.handleSpillovers',
       'Bookkeeping Penalty',
-      NotificationCategory.ADMINISTRATION
+      NotificationCategory.ADMINISTRATION_AND_RESEARCH
     );
   } catch (error) {
     console.error('Error handling spillover penalties:', error);
@@ -147,7 +147,7 @@ async function handleSpilloverPenalties(spilloverData: {
 // Apply prestige penalty for incomplete bookkeeping
 async function applyPrestigePenalty(penalty: number, taskCount: number): Promise<void> {
   const gameState = getGameState();
-  
+
   await insertPrestigeEvent({
     id: uuidv4(),
     type: 'penalty',
@@ -166,15 +166,13 @@ async function applyPrestigePenalty(penalty: number, taskCount: number): Promise
 // Clean up incomplete bookkeeping tasks
 async function cleanupIncompleteBookkeeping(): Promise<void> {
   const activities = await loadActivitiesFromDb();
-  const incompleteBookkeeping = activities.filter(activity => 
-    activity.category === WorkCategory.ADMINISTRATION && 
+  const incompleteBookkeeping = activities.filter(activity =>
+    activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH &&
     activity.title.includes('Bookkeeping') &&
     activity.status === 'active'
   );
-  
+
   await Promise.all(
     incompleteBookkeeping.map(task => removeActivityFromDb(task.id))
   );
 }
-
-

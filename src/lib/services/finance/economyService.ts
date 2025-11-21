@@ -12,10 +12,10 @@ import { NotificationCategory } from '../../types/types';
 export function calculateNextEconomyPhase(currentPhase: EconomyPhase): EconomyPhase {
   const currentIndex = ECONOMY_PHASES.indexOf(currentPhase);
   const isEdge = currentIndex === 0 || currentIndex === 4; // Crash or Boom
-  
+
   const prob = isEdge ? ECONOMY_TRANSITION.EDGE_PHASES : ECONOMY_TRANSITION.MIDDLE_PHASES;
   const roll = Math.random();
-  
+
   if (roll < prob.SHIFT_PROBABILITY) {
     // Shift left (toward Crash)
     return ECONOMY_PHASES[Math.max(0, currentIndex - 1)];
@@ -50,12 +50,12 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
       // No economy phase present; nothing to transition yet
       return null;
     }
-    
+
     const newPhase = calculateNextEconomyPhase(currentPhase);
-    
+
     if (newPhase !== currentPhase) {
       await updateGameState({ economyPhase: newPhase });
-      
+
       // Prepare notification for phase change
       const phaseDescriptions = {
         'Crash': 'Economic crisis with high interest rates',
@@ -64,9 +64,9 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
         'Expansion': 'Growing economy with favorable rates',
         'Boom': 'Economic boom with low interest rates'
       };
-      
+
       const message = `Economy phase changed to ${newPhase}: ${phaseDescriptions[newPhase]}`;
-      
+
       if (skipNotification) {
         return message;
       } else {
@@ -74,7 +74,7 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
           message,
           'economy.phaseChange',
           'Economy Update',
-          NotificationCategory.FINANCE
+          NotificationCategory.FINANCE_AND_STAFF
         );
       }
     }

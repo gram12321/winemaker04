@@ -69,7 +69,7 @@ export function getRandomAspect(): Aspect {
 export function getRandomSoils(country: string, region: string): string[] {
   const countryData = REGION_SOIL_TYPES[country as keyof typeof REGION_SOIL_TYPES];
   const soils = countryData ? (countryData[region as keyof typeof countryData] as readonly string[] || []) : [];
-  
+
   const numberOfSoils = Math.floor(Math.random() * 3) + 1; // 1-3 soil types
   const selectedSoils = new Set<string>();
 
@@ -84,7 +84,7 @@ export function getRandomAltitude(country: string, region: string): number {
   const countryData = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
   const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
   const [min, max] = altitudeRange;
-  
+
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -92,19 +92,19 @@ export function getRandomAltitude(country: string, region: string): number {
 export function generateVineyardName(country: string, aspect: Aspect): string {
   const isFemaleAspect = ["East", "Southeast", "South", "Southwest"].includes(aspect);
   const nameData = NAMES[country as keyof typeof NAMES];
-  
+
   if (!nameData) {
     console.error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
     throw new Error(`No name data found for country: ${country}. Cannot generate vineyard name.`);
   }
-  
+
   // Select appropriate name list based on aspect gender
   const names = isFemaleAspect ? nameData.firstNames.female : nameData.firstNames.male;
-  
+
   // Select a random name
   const randomIndex = Math.floor(Math.random() * names.length);
   const selectedName = names[randomIndex];
-  
+
   // Construct the name like "[Random Name]'s [Aspect] Vineyard"
   return `${selectedName}'s ${aspect} Vineyard`;
 }
@@ -118,13 +118,13 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
   const hectares = getRandomHectares();
   const soil = getRandomSoils(country, region);
   const altitude = getRandomAltitude(country, region);
-  
+
   // Generate vineyard name if not provided
   const vineyardName = name || generateVineyardName(country, aspect);
-  
+
   // Calculate land value using new calculation service
   const landValue = calculateLandValue(country, region, altitude, aspect);
-  
+
   // Generate realistic health with some variation (0.4 to 0.8)
   const baseHealth = DEFAULT_VINEYARD_HEALTH;
   const healthVariation = (Math.random() - 0.5) * 0.4; // ±20% variation
@@ -159,21 +159,21 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
 
 
   await saveVineyard(vineyard);
-  
+
   // Ensure base vineyard prestige events exist immediately upon creation
   try {
     await updateBaseVineyardPrestigeEvent(vineyard.id);
-    
+
     // Calculate prestige for this specific vineyard only (more efficient than full recalculation)
     const vineyardPrestige = await calculateVineyardPrestigeFromEvents(vineyard.id);
-    
+
     // Update the vineyard with the calculated prestige
     const updatedVineyard = { ...vineyard, vineyardPrestige };
     await saveVineyard(updatedVineyard);
   } catch (error) {
     console.error('Failed to initialize base vineyard prestige on creation:', error);
   }
-  
+
   triggerGameUpdate();
   return vineyard;
 }
@@ -182,7 +182,7 @@ export async function createVineyard(name?: string): Promise<Vineyard> {
 export async function initializePlanting(vineyardId: string, grape: GrapeVariety): Promise<boolean> {
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
-  
+
   if (!vineyard) {
     return false;
   }
@@ -252,7 +252,7 @@ export async function sellVineyard(
       `Sold ${vineyard.name} for ${formatNumber(proceeds, { currency: true })} (after ${Math.round(penaltyRate * 100)}% fee).`,
       'vineyardService.sellVineyard',
       'Vineyard Sale',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
 
     triggerGameUpdate();
@@ -274,7 +274,7 @@ export async function sellVineyard(
 export async function completePlanting(vineyardId: string, targetDensity: number): Promise<boolean> {
   const vineyards = await loadVineyards();
   const vineyard = vineyards.find(v => v.id === vineyardId);
-  
+
   if (!vineyard) {
     return false;
   }
@@ -292,7 +292,7 @@ export async function completePlanting(vineyardId: string, targetDensity: number
   };
 
   await saveVineyard(updatedVineyard);
-  
+
   // Add achievement prestige event for planting (uses base vineyard prestige as multiplier)
   try {
     // Ensure base vineyard prestige events exist/are up to date first
@@ -307,7 +307,7 @@ export async function completePlanting(vineyardId: string, targetDensity: number
   } catch (error) {
     console.error('Failed to create planting prestige event:', error);
   }
-  
+
   triggerGameUpdate();
   return true;
 }
@@ -323,7 +323,7 @@ export async function getAllVineyards(): Promise<Vineyard[]> {
   try {
     // First, ensure prestige calculations are up to date
     await calculateCurrentPrestige();
-    
+
     // Then load the vineyards (which should now have updated prestige values)
     return await loadVineyards();
   } catch (error) {
@@ -361,16 +361,16 @@ export interface ExpectedYieldBreakdown {
  */
 export function calculateVineyardExpectedYield(vineyard: Vineyard): ExpectedYieldBreakdown | null {
   if (!vineyard.grape) return null;
-  
+
   // Base yield: ~1.5 kg per vine (realistic baseline for mature vines)
   const baseYieldPerVine = 1.5;
   const totalVines = vineyard.hectares * vineyard.density;
   const baseKg = totalVines * baseYieldPerVine;
-  
+
   // Get grape metadata and suitability
   const grapeMetadata = GRAPE_CONST[vineyard.grape];
   if (!grapeMetadata) return null;
-  
+
   const naturalYield = grapeMetadata.naturalYield;
   const grapeSuitabilityComponents = calculateGrapeSuitabilityMetrics(
     vineyard.grape,
@@ -381,11 +381,11 @@ export function calculateVineyardExpectedYield(vineyard: Vineyard): ExpectedYiel
     vineyard.soil
   );
   const grapeSuitability = grapeSuitabilityComponents.overall;
-  
+
   // Calculate final multipliers
   const finalMultiplier = grapeSuitability * naturalYield * (vineyard.ripeness || 0) * (vineyard.vineYield || 0.02) * (vineyard.vineyardHealth || 1.0);
   const totalYield = Math.round(baseKg * finalMultiplier);
-  
+
   return {
     totalYield,
     baseYieldPerVine,
@@ -411,9 +411,9 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     const currentMoney = gameState.money || 0;
     if (currentMoney < option.totalPrice) {
       const errorMsg = `Insufficient funds. You have ${formatNumber(currentMoney, { currency: true })} but need ${formatNumber(option.totalPrice, { currency: true })}.`;
-      await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', NotificationCategory.FINANCE);
-      return { 
-        success: false, 
+      await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Insufficient Funds', NotificationCategory.FINANCE_AND_STAFF);
+      return {
+        success: false,
         error: errorMsg
       };
     }
@@ -445,16 +445,16 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     }
 
     triggerGameUpdate();
-    
+
     // Add success notification
-    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatNumber(option.totalPrice, { currency: true })}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', NotificationCategory.FINANCE);
-    
+    await notificationService.addMessage(`Successfully purchased ${option.name} for ${formatNumber(option.totalPrice, { currency: true })}!`, 'vineyardService.purchaseVineyard', 'Vineyard Purchase', NotificationCategory.FINANCE_AND_STAFF);
+
     return { success: true, vineyard };
   } catch (error) {
     console.error('Error purchasing vineyard:', error);
     const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: errorMsg
     };
   }

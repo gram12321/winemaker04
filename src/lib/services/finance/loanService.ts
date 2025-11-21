@@ -532,7 +532,7 @@ export async function enforceEmergencyQuickLoanIfNeeded(): Promise<void> {
     ].join(' '),
     'loan.emergencyQuickLoan',
     'Emergency Loan Applied',
-    NotificationCategory.FINANCE
+    NotificationCategory.FINANCE_AND_STAFF
   );
 }
 
@@ -1542,7 +1542,7 @@ export async function acceptForcedLoanRestructure(offerId: string): Promise<void
       'No restructure offer is currently available. Forced loans remain active.',
       'loan.emergencyRestructureMissing',
       'Forced Loan Restructure',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
     return;
   }
@@ -1557,7 +1557,7 @@ export async function acceptForcedLoanRestructure(offerId: string): Promise<void
       summaryMessage,
       'loan.emergencyRestructureAccepted',
       'Forced Loan Restructure',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
   } catch (error) {
     console.error('Error applying forced loan restructure:', error);
@@ -1565,7 +1565,7 @@ export async function acceptForcedLoanRestructure(offerId: string): Promise<void
       'Restructure failed to apply. Forced quick loans remain active.',
       'loan.emergencyRestructureFailed',
       'Forced Loan Restructure',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
   }
 }
@@ -1584,7 +1584,7 @@ export async function declineForcedLoanRestructure(offerId: string): Promise<voi
     'You declined the restructuring offer. Forced quick loans remain active and will progress through the normal warning cycle.',
     'loan.emergencyRestructureDeclined',
     'Forced Loan Restructure',
-    NotificationCategory.FINANCE
+    NotificationCategory.FINANCE_AND_STAFF
   );
 }
 
@@ -1654,7 +1654,7 @@ export async function makeExtraLoanPayment(loanId: string): Promise<void> {
     `Extra payment of ${formatNumber(totalPayment, { currency: true })} applied to ${loan.lenderName}. Loan warnings cleared.`,
     'loan.extraPayment',
     'Loan Extra Payment',
-    NotificationCategory.FINANCE
+    NotificationCategory.FINANCE_AND_STAFF
   );
 
   await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_EXTRA_PAYMENT);
@@ -1735,7 +1735,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
           `Loan from ${loan.lenderName} has been paid off! Credit rating improved.`,
           'loan.paidOff',
           'Loan Update',
-          NotificationCategory.FINANCE
+          NotificationCategory.FINANCE_AND_STAFF
         );
       } else {
         // Continue loan
@@ -1753,7 +1753,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
             `You've caught up on payments for ${loan.lenderName}! Warning status cleared.`,
             'loan.warningCleared',
             'Loan Update',
-            NotificationCategory.FINANCE
+            NotificationCategory.FINANCE_AND_STAFF
           );
         }
       }
@@ -1797,7 +1797,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
         `Partial loan payment made to ${loan.lenderName}. ${formatNumber(loan.seasonalPayment - availableMoney, { currency: true })} still owed. Warning level: ${newMissedPayments}`,
         'loan.partialPayment',
         'Partial Loan Payment',
-        NotificationCategory.FINANCE
+        NotificationCategory.FINANCE_AND_STAFF
       );
     } else {
       // No funds available - apply graduated penalties based on missed payments
@@ -1927,7 +1927,7 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
         ].join(' '),
         'loan.earlyPayoffInsufficientFunds',
         'Insufficient Balance',
-        NotificationCategory.FINANCE
+        NotificationCategory.FINANCE_AND_STAFF
       );
       return;
     }
@@ -1969,7 +1969,7 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
       ].filter(Boolean).join(' '),
       'loan.earlyPayoff',
       'Loan Update',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
 
     await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_FULL_REPAYMENT);
@@ -2039,7 +2039,7 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
     `Missed payment to ${loan.lenderName}! Late fee of ${formatNumber(lateFee, { currency: true })} applied. WARNING #1 - check loan details.`,
     'loan.missedPayment1',
     'Loan Warning',
-    NotificationCategory.FINANCE
+    NotificationCategory.FINANCE_AND_STAFF
   );
 
   // Trigger UI update to reflect balance changes
@@ -2114,7 +2114,7 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
     `Second missed payment to ${loan.lenderName}! Interest rate increased, ${formatNumber(balancePenalty, { currency: true })} penalty applied. WARNING #2 - CRITICAL!`,
     'loan.missedPayment2',
     'Loan Warning',
-    NotificationCategory.FINANCE
+    NotificationCategory.FINANCE_AND_STAFF
   );
 
   // Trigger UI update to reflect interest rate change
@@ -2164,7 +2164,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
       `Emergency payment of ${formatNumber(paymentAmount, { currency: true })} made to ${loan.lenderName} using all available funds.`,
       'loan.emergencyPayment',
       'Emergency Loan Payment',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
   }
 
@@ -2209,7 +2209,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
     `THIRD missed payment to ${loan.lenderName}! ${inventorySummary}. ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold for ${formatNumber(seizureResult.valueRecovered, { currency: true })}. WARNING #3 - FINAL WARNING!`,
     'loan.missedPayment3',
     'Loan Warning',
-    NotificationCategory.FINANCE
+    NotificationCategory.FINANCE_AND_STAFF
   );
 
   // Trigger UI update to reflect vineyard seizure and other changes
@@ -2315,7 +2315,7 @@ async function queueLoanPenaltyWork(workUnits: number, lenderName: string, warni
     `Additional ${workUnits} work units will be added to next bookkeeping task due to missed payment (${lenderName}, Warning #${warningLevel}).`,
     'loan.bookkeepingPenalty',
     'Bookkeeping Penalty',
-    NotificationCategory.ADMINISTRATION
+    NotificationCategory.ADMINISTRATION_AND_RESEARCH
   );
 }
 
@@ -2366,7 +2366,7 @@ async function defaultOnLoan(loanId: string): Promise<void> {
       `Loan payment missed! You have been blacklisted by ${loan.lenderName}. Prestige and credit rating severely impacted.`,
       'loan.default',
       'Loan Default',
-      NotificationCategory.FINANCE
+      NotificationCategory.FINANCE_AND_STAFF
     );
 
     triggerGameUpdate();

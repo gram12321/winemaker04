@@ -13,7 +13,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
     const gameState = getGameState();
     const searchCost = calculateLandSearchCost(options, gameState.prestige || 0);
     const { totalWork } = calculateLandSearchWork(options, gameState.prestige || 0);
-    
+
     // Check if we have enough money
     const currentMoney = gameState.money || 0;
     if (currentMoney < searchCost) {
@@ -21,11 +21,11 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
         `Insufficient funds for land search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
         'landSearchManager.startLandSearch',
         'Insufficient Funds',
-        NotificationCategory.FINANCE
+        NotificationCategory.FINANCE_AND_STAFF
       );
       return null;
     }
-    
+
     // Deduct search cost immediately
     await addTransaction(
       -searchCost,
@@ -33,10 +33,10 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
       TRANSACTION_CATEGORIES.LAND_SEARCH,
       false
     );
-    
+
     // Create the search activity
     const title = 'Land Search';
-    
+
     const activityId = await createActivity({
       category: WorkCategory.LAND_SEARCH,
       title,
@@ -49,7 +49,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
       },
       isCancellable: true
     });
-    
+
     return activityId;
   } catch (error) {
     console.error('Error starting land search:', error);
@@ -64,15 +64,15 @@ export async function completeLandSearch(activity: Activity): Promise<void> {
   try {
     const searchOptions = activity.params.searchOptions as LandSearchOptions;
     const companyPrestige = activity.params.companyPrestige as number;
-    
+
     if (!searchOptions) {
       console.error('No search options found in activity params');
       return;
     }
-    
+
     // Generate results based on search parameters
     const results = generateVineyardSearchResults(searchOptions, companyPrestige);
-    
+
     // Store results in game state for modal to access
     updateGameState({
       pendingLandSearchResults: {
@@ -82,7 +82,7 @@ export async function completeLandSearch(activity: Activity): Promise<void> {
         timestamp: Date.now()
       }
     });
-    
+
     await notificationService.addMessage(
       `Land search complete! Found ${results.length} propert${results.length > 1 ? 'ies' : 'y'} matching your criteria.`,
       'landSearchManager.completeLandSearch',

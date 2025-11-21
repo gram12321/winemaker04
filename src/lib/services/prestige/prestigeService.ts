@@ -35,7 +35,7 @@ export async function initializeBasePrestigeEvents(): Promise<void> {
   const netWorth = await calculateNetWorth();
 
   const companyValuePrestige = Math.log((netWorth || 0) / maxLandValue + 1);
-  
+
   await updateBasePrestigeEvent(
     'company_finance',
     'company_net_worth',
@@ -46,7 +46,7 @@ export async function initializeBasePrestigeEvents(): Promise<void> {
       prestigeBase01: companyValuePrestige,
     }
   );
-  
+
   await createBaseVineyardPrestigeEvents();
 }
 
@@ -68,17 +68,17 @@ export async function createBaseVineyardPrestigeEvents(): Promise<void> {
  */
 function calculateDensityPrestigeModifier(density: number): number {
   if (!density || density <= 0) return 1.0; // No vines = neutral
-  
+
   const minDensity = 1500;  // Max bonus at this density
   const maxDensity = 10000; // Max penalty at this density
-  
+
   // Clamp density to reasonable range
   const clampedDensity = Math.max(minDensity, Math.min(maxDensity, density));
-  
+
   // Linear progression from 1.5 (max bonus) at 1500 to 0.5 (max penalty) at 10000
   // Formula: modifier = 1.5 - (density - 1500) / (10000 - 1500) * 1.0
   const modifier = 1.5 - ((clampedDensity - minDensity) / (maxDensity - minDensity)) * 1.0;
-  
+
   return Math.max(0.5, Math.min(1.5, modifier));
 }
 
@@ -95,7 +95,7 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
   const ageBase01 = vineyardAgePrestigeModifier(vineyard.vineAge || 0);
   const ageWithSuitability01 = ageBase01 * grapeSuitability;
   const ageScaledRaw = Math.max(0, calculateAsymmetricalMultiplier(ageWithSuitability01) - 1);
-  
+
   // Apply density modifier to age prestige (lower density = higher prestige)
   const densityModifier = calculateDensityPrestigeModifier(vineyard.density || 0);
   const ageScaled = ageScaledRaw * densityModifier;
@@ -109,7 +109,7 @@ export function computeVineyardPrestigeFactors(vineyard: Vineyard): VineyardPres
   const landScaledPerHa = Math.max(0, calculateAsymmetricalMultiplier(landWithSuitability01) - 1);
   const landSizeFactor = Math.sqrt(vineyard.hectares || 0);
   const landScaledRaw = landScaledPerHa * landSizeFactor;
-  
+
   // Apply density modifier to land prestige (lower density = higher prestige)
   const landScaled = landScaledRaw * densityModifier;
 
@@ -173,19 +173,19 @@ export function BoundedVineyardPrestigeFactor(v: Vineyard): {
   const landScaledRaw = landPerHa * sizeFactor;
   const landScaled = landScaledRaw;
   const permanentRaw = ageScaled + landScaled; // Normalized permanent component (0-1 range)
-  
+
   // Get total prestige (unbounded - sum of all events including achievements, sales, etc.)
   const currentTotal = v.vineyardPrestige || 0;
-  
+
   // Normalize the total unbounded prestige to 0-1 for quality calculations
   // This allows vineyards with high prestige (from achievements, sales) to still contribute meaningfully to quality
   const normalizedTotal = NormalizeScrewed1000To01WithTail(currentTotal);
-  
+
   // Calculate decaying component as the difference between normalized total and permanent component
   // This represents prestige from decaying events (sales, achievements) that have been normalized
   const decayingComponent = Math.max(0, normalizedTotal - permanentRaw);
   const combinedRaw = permanentRaw + decayingComponent;
-  
+
   // Cap at 0.99 for quality usage (prevents hitting exactly 1.0)
   const boundedFactor = Math.max(0, Math.min(combinedRaw, 0.99));
 
@@ -223,7 +223,7 @@ export async function calculateCurrentPrestige(): Promise<{
   if (!events) {
     return { totalPrestige: 1, companyPrestige: 1, vineyardPrestige: 0, eventBreakdown: [], vineyards: [] };
   }
-  
+
   const vineyardEventTypes = ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'wine_feature'];
   const eventBreakdown = events.map(event => ({
     ...event,
@@ -233,7 +233,7 @@ export async function calculateCurrentPrestige(): Promise<{
   const companyPrestige = eventBreakdown
     .filter(event => event.category === 'company')
     .reduce((sum, event) => sum + (event.currentAmount ?? event.amount), 0);
-    
+
   const vineyardPrestige = eventBreakdown
     .filter(event => event.category === 'vineyard')
     .reduce((sum, event) => sum + (event.currentAmount ?? event.amount), 0);
@@ -242,16 +242,16 @@ export async function calculateCurrentPrestige(): Promise<{
 
   const vineyards = await loadVineyards();
   const vineyardEvents = eventBreakdown.filter(event => event.category === 'vineyard');
-  
+
   const vineyardData = vineyards.map(vineyard => {
-    const vineyardEventList = vineyardEvents.filter(event => 
+    const vineyardEventList = vineyardEvents.filter(event =>
       event.sourceId?.startsWith(vineyard.id)
     );
-    
-    const vineyardPrestigeTotal = vineyardEventList.reduce((sum, event) => 
+
+    const vineyardPrestigeTotal = vineyardEventList.reduce((sum, event) =>
       sum + (event.currentAmount ?? event.amount), 0
     );
-    
+
     return {
       id: vineyard.id,
       name: vineyard.name,
@@ -285,10 +285,10 @@ export async function calculateVineyardPrestigeFromEvents(vineyardId: string): P
   try {
     const events = await listPrestigeEvents();
     const vineyardEventTypes = ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'];
-    const vineyardEvents = events.filter(event => 
+    const vineyardEvents = events.filter(event =>
       event.source_id === vineyardId && vineyardEventTypes.includes(event.type)
     );
-    
+
     const totalVineyardPrestige = vineyardEvents.reduce((sum: number, event: any) => sum + (event.amount || 0), 0);
     return Math.max(0.1, totalVineyardPrestige);
   } catch (error) {
@@ -299,7 +299,7 @@ export async function calculateVineyardPrestigeFromEvents(vineyardId: string): P
 
 export async function getBaseVineyardPrestige(vineyardId: string): Promise<number> {
   const events = await listPrestigeEvents();
-  const baseEvents = events.filter(event => 
+  const baseEvents = events.filter(event =>
     (event.type === 'vineyard_age' || event.type === 'vineyard_land') &&
     (event.source_id === `${vineyardId}_age` || event.source_id === `${vineyardId}_land`)
   );
@@ -403,12 +403,12 @@ export async function updateBaseVineyardPrestigeEvent(vineyardId: string): Promi
   try {
     const vineyards = await loadVineyards();
     const vineyard = vineyards.find(v => v.id === vineyardId);
-    
+
     if (!vineyard) {
       console.warn(`Vineyard ${vineyardId} not found for prestige update`);
       return;
     }
-    
+
     await createVineyardFactorPrestigeEvents(vineyard);
   } catch (error) {
     console.error('Failed to update base vineyard prestige event:', error);
@@ -428,21 +428,21 @@ export async function updateCellarCollectionPrestige(): Promise<void> {
   try {
     const { loadWineBatches } = await import('../../database/activities/inventoryDB');
     const allBatches = await loadWineBatches();
-    
+
     // Filter aged wines (5+ years, bottled, not oxidized, still in inventory)
     const agedWines = allBatches.filter(batch => {
       const ageInYears = (batch.agingProgress || 0) / 52;
       if (ageInYears < 5) return false;  // Must be 5+ years
       if (batch.state !== 'bottled') return false;  // Must be in cellar
       if (batch.quantity === 0) return false;  // Must still be in inventory (sold-out wines don't count)
-      
+
       // Check for oxidation feature
       const oxidationFeature = batch.features?.find(f => f.id === 'oxidation');
       if (oxidationFeature?.isPresent) return false;  // Exclude oxidized wines (x0 multiplier)
-      
+
       return true;
     });
-    
+
     if (agedWines.length === 0) {
       // No aged wines - set prestige to 0
       await updateBasePrestigeEvent(
@@ -453,38 +453,38 @@ export async function updateCellarCollectionPrestige(): Promise<void> {
       );
       return;
     }
-    
+
     // Calculate prestige with gentle power function for age
     let totalPrestige = 0;
-    
+
     for (const batch of agedWines) {
       const ageInYears = (batch.agingProgress || 0) / 52;
       const bottleCount = batch.quantity;
       const bottleValue = batch.estimatedPrice;
-      
+
       // Gentle power function: sqrt(age - 4) * 0.1
       // This gives ~0.1 at year 5, ~0.2 at year 8, ~0.5 at year 29, ~1.0 at year 104
       // Much gentler scaling suitable for wines up to 100 years
       const ageFactor = Math.sqrt(ageInYears - 4) * 0.1;
-      
+
       // Volume and value contribute logarithmically
       const volumeFactor = Math.log(bottleCount + 1);
       const valueFactor = Math.log(bottleValue * 10 + 1);
-      
+
       const batchPrestige = ageFactor * volumeFactor * valueFactor * 0.01;
       totalPrestige += batchPrestige;
     }
-    
+
     // Apply diminishing returns to total
     const finalPrestige = Math.sqrt(totalPrestige);
-    
+
     // Calculate metadata
     const totalBottles = agedWines.reduce((sum, b) => sum + b.quantity, 0);
     const totalValue = agedWines.reduce((sum, b) => sum + (b.quantity * b.estimatedPrice), 0);
     const vintageCount = agedWines.length;
     const averageAge = agedWines.reduce((sum, b) => sum + (b.agingProgress || 0), 0) / agedWines.length / 52;
     const oldestAge = Math.max(...agedWines.map(b => (b.agingProgress || 0) / 52));
-    
+
     // Update permanent prestige event
     await updateBasePrestigeEvent(
       'cellar_collection',
@@ -498,7 +498,7 @@ export async function updateCellarCollectionPrestige(): Promise<void> {
         oldestAge
       }
     );
-    
+
   } catch (error) {
     console.error('Failed to update cellar collection prestige:', error);
   }
@@ -513,7 +513,7 @@ export async function addSalePrestigeEvent(
   const gameState = getGameState();
   const companyAssets = gameState.money || 0;
   const baseAmount = saleValue / 10000;  // Base calculation
-  
+
   // Calculate dynamic prestige based on company ASSETS (business size)
   const prestigeAmount = calculateSalePrestigeWithAssets(
     baseAmount,
@@ -521,7 +521,7 @@ export async function addSalePrestigeEvent(
     saleVolume || 0,
     companyAssets
   );
-  
+
   await insertPrestigeEvent({
     id: uuidv4(),
     type: 'sale',
@@ -550,13 +550,13 @@ export async function addVineyardSalePrestigeEvent(
   vineyardPrestigeFactor: number
 ): Promise<void> {
   const basePrestigeAmount = saleValue / 10000;
-  
+
   // Calculate dynamic prestige using vineyard prestige multiplier
   const prestigeAmount = calculateVineyardSalePrestige(
     basePrestigeAmount,
     vineyardPrestigeFactor
   );
-  
+
   await insertPrestigeEvent({
     id: uuidv4(),
     type: 'vineyard_sale',
@@ -582,7 +582,7 @@ export async function addVineyardAchievementPrestigeEvent(
   baseVineyardPrestige: number
 ): Promise<void> {
   const prestigeAmount = baseVineyardPrestige * 0.1;
-  
+
   await insertPrestigeEvent({
     id: uuidv4(),
     type: 'vineyard_achievement',
@@ -616,25 +616,25 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
   try {
     const events = await listPrestigeEvents();
     const vineyardEventTypes = ['vineyard_sale', 'vineyard_base', 'vineyard_achievement', 'vineyard_age', 'vineyard_land', 'vineyard_region'];
-    const vineyardEvents = events.filter(event => 
+    const vineyardEvents = events.filter(event =>
       event.source_id !== null && vineyardEventTypes.includes(event.type)
     );
 
     const breakdown: { [vineyardId: string]: any } = {};
-    
+
     for (const event of vineyardEvents) {
       let vineyardId = event.source_id!;
       if (vineyardId.includes('_')) {
         vineyardId = vineyardId.split('_')[0];
       }
-      
+
       if (!breakdown[vineyardId]) {
         breakdown[vineyardId] = {
           totalPrestige: 0,
           events: []
         };
       }
-      
+
       breakdown[vineyardId].totalPrestige += event.amount_base;
       breakdown[vineyardId].events.push({
         type: event.type,
@@ -646,7 +646,7 @@ export async function getVineyardPrestigeBreakdown(): Promise<{
         metadata: event.payload
       });
     }
-    
+
     return breakdown;
   } catch (error) {
     console.error('Failed to load vineyard prestige breakdown:', error);
@@ -684,57 +684,57 @@ export interface ConsolidatedWineFeatureEvent {
  */
 export function consolidateWineFeatureEvents(events: PrestigeEvent[]): ConsolidatedWineFeatureEvent[] {
   const wineFeatureEvents = events.filter(e => e.type === 'wine_feature');
-  
+
   // Group by vineyard + grape + vintage combination
   const wineGroups = new Map<string, PrestigeEvent[]>();
-  
+
   for (const event of wineFeatureEvents) {
     const metadata: any = event.metadata ?? {};
-    
+
     // Use proper fields from metadata (no string parsing needed!)
     const vineyardName = metadata.vineyardName || 'Unknown Vineyard';
     const grape = metadata.grape || 'Unknown Grape';
     const vintage = metadata.vintage || 0;
-    
+
     const key = `${vineyardName}_${grape}_${vintage}`;
-    
+
     if (!wineGroups.has(key)) {
       wineGroups.set(key, []);
     }
     wineGroups.get(key)!.push(event);
   }
-  
+
   // Convert groups to consolidated events
   const consolidated: ConsolidatedWineFeatureEvent[] = [];
-  
+
   for (const [, wineEvents] of wineGroups) {
     if (wineEvents.length === 0) continue;
-    
+
     const firstEvent = wineEvents[0];
     const metadata: any = firstEvent.metadata ?? {};
-    
+
     // Group features within this wine
     const featureGroups = new Map<string, PrestigeEvent[]>();
-    
+
     for (const event of wineEvents) {
       const eventMetadata: any = event.metadata ?? {};
       const featureKey = `${eventMetadata.featureId || 'unknown'}_${eventMetadata.level || 'unknown'}_${eventMetadata.eventType || 'unknown'}`;
-      
+
       if (!featureGroups.has(featureKey)) {
         featureGroups.set(featureKey, []);
       }
       featureGroups.get(featureKey)!.push(event);
     }
-    
+
     // Convert feature groups to feature summaries
     const features = [];
     for (const [, featureEvents] of featureGroups) {
       const featureFirstEvent = featureEvents[0];
       const featureMetadata: any = featureFirstEvent.metadata ?? {};
-      
+
       const totalAmount = featureEvents.reduce((sum, e) => sum + (e.currentAmount ?? e.amount), 0);
       const totalOriginalAmount = featureEvents.reduce((sum, e) => sum + (e.originalAmount ?? e.amount), 0);
-      
+
       features.push({
         featureId: featureMetadata.featureId || 'unknown',
         featureName: featureMetadata.featureName || 'Unknown Feature',
@@ -748,11 +748,11 @@ export function consolidateWineFeatureEvents(events: PrestigeEvent[]): Consolida
         recentEvents: featureEvents.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       });
     }
-    
+
     // Calculate wine totals
     const wineTotalAmount = wineEvents.reduce((sum, e) => sum + (e.currentAmount ?? e.amount), 0);
     const wineTotalOriginalAmount = wineEvents.reduce((sum, e) => sum + (e.originalAmount ?? e.amount), 0);
-    
+
     // Use proper fields from metadata (no string parsing needed!)
     consolidated.push({
       vineyardId: metadata.vineyardId || 'unknown',
@@ -764,7 +764,7 @@ export function consolidateWineFeatureEvents(events: PrestigeEvent[]): Consolida
       totalOriginalAmount: wineTotalOriginalAmount
     });
   }
-  
+
   // Sort by total amount (highest first)
   return consolidated.sort((a, b) => b.totalAmount - a.totalAmount);
 }
@@ -782,7 +782,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
 } {
   if (event.metadata) {
     const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
-    
+
     if (event.type === 'company_story') {
       return {
         title: metadata.title ?? metadata.description ?? 'Legacy Prestige',
@@ -793,7 +793,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
           : undefined
       };
     }
-    
+
     if (event.type === 'vineyard_age' && metadata.vineyardName && metadata.vineAge !== undefined) {
       const ageBase = Number(metadata.ageBase01 ?? 0);
       const ageSuitAdj = Number(metadata.ageWithSuitability01 ?? 0);
@@ -812,12 +812,12 @@ export function getEventDisplayData(event: PrestigeEvent): {
           density: metadata.density,
           finalPrestige: event.amount
         },
-        displayInfo: metadata.density !== undefined 
+        displayInfo: metadata.density !== undefined
           ? `Density: ${formatNumber(Number(metadata.density) || 0, { decimals: 0 })} vines/ha (modifier ×${formatNumber(densityMod, { decimals: 2, forceDecimals: true })})`
           : undefined,
       };
     }
-    
+
     if (event.type === 'vineyard_land' && metadata.vineyardName && (metadata.totalValue !== undefined || metadata.landValuePerHectare !== undefined)) {
       const lvh = formatNumber(Number(metadata.landValuePerHectare ?? 0), { currency: true });
       const landBase01 = Number(metadata.landBase01 ?? 0);
@@ -848,7 +848,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
         displayInfo: `${lvh}/ha × ${formatNumber(Number(metadata.hectares ?? 0), { decimals: 2, forceDecimals: true })} ha • Density: ${formatNumber(Number(metadata.density ?? 0), { decimals: 0 })} vines/ha (modifier ×${formatNumber(densityMod, { decimals: 2, forceDecimals: true })})`,
       };
     }
-    
+
     if (event.type === 'sale' && metadata.customerName && metadata.wineName) {
       return {
         title: `Sale to ${metadata.customerName}: ${metadata.wineName}`,
@@ -871,14 +871,14 @@ export function getEventDisplayData(event: PrestigeEvent): {
         },
       };
     }
-    
+
     if (event.type === 'cellar_collection') {
       const totalBottles = metadata.totalBottles || 0;
       const vintageCount = metadata.vintageCount || 0;
       const averageAge = metadata.averageAge || 0;
       const oldestAge = metadata.oldestAge || 0;
       const totalValue = metadata.totalValue || 0;
-      
+
       return {
         title: `Cellar Collection: ${vintageCount} aged vintage${vintageCount !== 1 ? 's' : ''} (${totalBottles} bottles)`,
         titleBase: 'Cellar Collection',
@@ -913,10 +913,10 @@ export function getEventDisplayData(event: PrestigeEvent): {
     const wineName = metadata.wineName || 'Unknown Wine';
     const eventType = metadata.eventType || 'unknown';
     const level = metadata.level || 'unknown';
-    
+
     let title = '';
     let amountText = '';
-    
+
     if (eventType === 'manifestation') {
       title = `${featureName} Manifestation: ${wineName}`;
       amountText = `${featureName} fault detected`;
@@ -927,7 +927,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
       title = `${featureName} Event: ${wineName}`;
       amountText = `${featureName} event`;
     }
-    
+
     return {
       title,
       titleBase: `${featureName} (${level})`,
@@ -950,18 +950,18 @@ export function getEventDisplayData(event: PrestigeEvent): {
     const metadata: any = event.metadata;
     const reason = metadata.reason || 'Financial Event';
     const lenderName = metadata.lenderName || '';
-    
+
     if (reason === 'Loan Default') {
       return {
         title: `Loan Default: ${lenderName}`,
         titleBase: 'Loan Default',
         amountText: `${event.amount.toFixed(2)} prestige`,
-        displayInfo: metadata.loanAmount 
+        displayInfo: metadata.loanAmount
           ? `Loan: ${metadata.loanAmount.toLocaleString()} | Missed Payment: ${metadata.missedPaymentAmount?.toLocaleString() || 'N/A'}`
           : undefined
       };
     }
-    
+
     return {
       title: reason,
       titleBase: 'Financial Event',
@@ -1013,36 +1013,36 @@ export async function addFeaturePrestigeEvent(
   const prestigeConfig = eventType === 'manifestation'
     ? config.effects.prestige?.onManifestation
     : config.effects.prestige?.onSale;
-  
+
   if (!prestigeConfig) return;
-  
+
   const gameState = getGameState();
   const currentWeek = calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!);
   const eventContext = context || {};
-  
+
   // Helper to calculate prestige amount based on config
   const calculateAmount = (
     levelConfig: typeof prestigeConfig.company | typeof prestigeConfig.vineyard,
     isCompany: boolean
   ): number => {
     if (!levelConfig) return 0;
-    
+
     switch (levelConfig.calculation) {
       case 'fixed':
         return levelConfig.baseAmount;
-        
+
       case 'dynamic':
         // Dynamic calculations vary by event type
         if (eventType === 'sale' && eventContext.order) {
           return isCompany
             ? calculateFeatureSalePrestigeWithReputation(
-                levelConfig.baseAmount,
-                eventContext.order.totalValue || 0,
-                eventContext.order.requestedQuantity || 0,
-                eventContext.currentCompanyPrestige || 1,
-                levelConfig.scalingFactors,
-                levelConfig.maxImpact
-              )
+              levelConfig.baseAmount,
+              eventContext.order.totalValue || 0,
+              eventContext.order.requestedQuantity || 0,
+              eventContext.currentCompanyPrestige || 1,
+              levelConfig.scalingFactors,
+              levelConfig.maxImpact
+            )
             : levelConfig.baseAmount;
         } else if (eventType === 'manifestation') {
           if (isCompany) {
@@ -1066,12 +1066,12 @@ export async function addFeaturePrestigeEvent(
           }
         }
         return levelConfig.baseAmount;
-        
+
       default:
         return levelConfig.baseAmount;
     }
   };
-  
+
   // Create company prestige event
   if (prestigeConfig.company) {
     const amount = calculateAmount(prestigeConfig.company, true);
@@ -1101,7 +1101,7 @@ export async function addFeaturePrestigeEvent(
       }
     });
   }
-  
+
   // Create vineyard prestige event
   if (prestigeConfig.vineyard) {
     const amount = calculateAmount(prestigeConfig.vineyard, false);
@@ -1133,6 +1133,36 @@ export async function addFeaturePrestigeEvent(
       }
     });
   }
-  
+
+  triggerGameUpdate();
+}
+
+/**
+ * Add prestige event for completed research
+ * Research grants prestige based on the project's prestige reward value
+ * Decays slowly over time (0.98 retention = 2% weekly decay)
+ */
+export async function addResearchPrestigeEvent(
+  projectTitle: string,
+  projectId: string,
+  prestigeAmount: number
+): Promise<void> {
+  const gameState = getGameState();
+
+  await insertPrestigeEvent({
+    id: uuidv4(),
+    type: 'achievement',
+    amount_base: prestigeAmount,
+    created_game_week: calculateAbsoluteWeeks(gameState.week!, gameState.season!, gameState.currentYear!),
+    decay_rate: 0.98,  // Slow decay - research achievements last longer
+    source_id: `research_${projectId}`,
+    payload: {
+      projectTitle,
+      projectId,
+      category: 'research',
+      description: `Completed research: ${projectTitle}`
+    },
+  });
+
   triggerGameUpdate();
 }

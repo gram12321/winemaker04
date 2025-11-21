@@ -658,8 +658,8 @@ export type SkillKey = 'field' | 'winery' | 'financeAndStaff' | 'sales' | 'admin
  * Notification categories - unified system for all notification types
  * 
  * Maps to COLOR_MAPPING keys:
- * - 6 main categories: system, field, winery, administration, sales, maintenance
- * - 4 sub-categories: time, staff, finance, tasks
+ * - 6 main categories: system, field, winery, financeAndStaff, sales, administrationAndResearch
+ * - 3 sub-categories: time, staff, tasks
  */
 export enum NotificationCategory {
   // System notifications
@@ -668,7 +668,7 @@ export enum NotificationCategory {
   // Activity-related notifications (map to core skills)
   VINEYARD_OPERATIONS = 'field',
   WINEMAKING_PROCESS = 'winery',
-  ADMINISTRATION = 'financeAndStaff',
+  FINANCE_AND_STAFF = 'financeAndStaff',
   SALES_ORDERS = 'sales',
   ADMINISTRATION_AND_RESEARCH = 'administrationAndResearch',
 
@@ -685,9 +685,9 @@ export enum NotificationCategory {
 export interface StaffSkills {
   field: number;        // Vineyard work
   winery: number;       // Wine production
-  financeAndStaff: number; // Administrative tasks
+  financeAndStaff: number; // Finance and staff management
   sales: number;        // Sales and marketing
-  administrationAndResearch: number;  // Building and equipment maintenance
+  administrationAndResearch: number;  // Administration and research
 }
 
 // Staff member interface

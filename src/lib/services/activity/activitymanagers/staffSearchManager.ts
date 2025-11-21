@@ -20,12 +20,12 @@ import {
 export function generateStaffCandidates(options: StaffSearchOptions): Staff[] {
   const { numberOfCandidates, skillLevel, specializations } = options;
   const candidates: Staff[] = [];
-  
+
   for (let i = 0; i < numberOfCandidates; i++) {
     const nationality = getRandomNationality();
     const firstName = getRandomFirstName(nationality);
     const lastName = getRandomLastName(nationality);
-    
+
     // Create staff with the search parameters
     const staff = createStaff(
       firstName,
@@ -34,10 +34,10 @@ export function generateStaffCandidates(options: StaffSearchOptions): Staff[] {
       specializations,
       nationality
     );
-    
+
     candidates.push(staff);
   }
-  
+
   return candidates;
 }
 
@@ -50,7 +50,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
     const gameState = getGameState();
     const searchCost = calculateStaffSearchCost(options);
     const totalWork = calculateSearchWork(options);
-    
+
     // Check if we have enough money
     const currentMoney = gameState.money || 0;
     if (currentMoney < searchCost) {
@@ -58,11 +58,11 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
         `Insufficient funds for staff search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
         'staffSearchManager.startStaffSearch',
         'Insufficient Funds',
-        NotificationCategory.FINANCE
+        NotificationCategory.FINANCE_AND_STAFF
       );
       return null;
     }
-    
+
     // Deduct search cost immediately
     await addTransaction(
       -searchCost,
@@ -70,8 +70,8 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
       TRANSACTION_CATEGORIES.STAFF_SEARCH,
       false
     );
-    
-  
+
+
     // Create the search activity
     const activityId = await createActivity({
       category: WorkCategory.STAFF_SEARCH,
@@ -85,7 +85,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
       },
       isCancellable: true
     });
-    
+
     return activityId;
   } catch (error) {
     console.error('Error starting staff search:', error);
@@ -101,15 +101,15 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
 export async function completeStaffSearch(activity: Activity): Promise<void> {
   try {
     const searchOptions = activity.params.searchOptions as StaffSearchOptions;
-    
+
     if (!searchOptions) {
       console.error('No search options found in activity params');
       return;
     }
-    
+
     // Generate candidates based on search parameters
     const candidates = generateStaffCandidates(searchOptions);
-    
+
     // Store candidates in game state for modal to access
     updateGameState({
       pendingStaffCandidates: {
@@ -119,7 +119,7 @@ export async function completeStaffSearch(activity: Activity): Promise<void> {
         timestamp: Date.now()
       }
     });
-    
+
     const skillInfo = getSkillLevelInfo(searchOptions.skillLevel);
     await notificationService.addMessage(
       `Staff search complete! Found ${candidates.length} ${skillInfo.name}-level candidate${candidates.length > 1 ? 's' : ''}.`,
@@ -139,7 +139,7 @@ export async function completeStaffSearch(activity: Activity): Promise<void> {
 export async function startHiringProcess(candidate: Staff): Promise<string | null> {
   try {
     const gameState = getGameState();
-    
+
     // Check if we have enough money for first month's wage
     const currentMoney = gameState.money || 0;
     if (currentMoney < candidate.wage) {
@@ -147,14 +147,14 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
         `Insufficient funds to hire ${candidate.name}. Need €${candidate.wage.toFixed(2)} for first month's wage.`,
         'staffSearchManager.startHiringProcess',
         'Insufficient Funds',
-        NotificationCategory.FINANCE
+        NotificationCategory.FINANCE_AND_STAFF
       );
       return null;
     }
-    
+
     // Calculate work required for hiring this specific candidate
     const hiringWork = calculateHiringWorkForCandidate(candidate);
-    
+
     // Create the hiring activity
     const activityId = await createActivity({
       category: WorkCategory.STAFF_HIRING,
@@ -167,7 +167,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
       },
       isCancellable: true
     });
-    
+
     return activityId;
   } catch (error) {
     console.error('Error starting hiring process:', error);
@@ -184,20 +184,20 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
   try {
     const candidateData = activity.params.candidateData as Staff;
     const hiringCost = activity.params.hiringCost as number;
-    
+
     if (!candidateData) {
       console.error('No candidate data found in hiring activity');
       return;
     }
-    
+
     // Add the staff member to the company
     const addedStaff = await addStaff(candidateData);
-    
+
     if (!addedStaff) {
       console.error(`Failed to hire ${candidateData.name}`);
       return;
     }
-    
+
     // Deduct first month's wage
     await addTransaction(
       -hiringCost,
@@ -205,12 +205,12 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
       TRANSACTION_CATEGORIES.STAFF_WAGES,
       false
     );
-    
+
     // Build specialization text
     const specText = candidateData.specializations.length > 0
       ? ` specializing in ${candidateData.specializations.join(', ')}`
       : '';
-    
+
     await notificationService.addMessage(
       `${candidateData.name} has joined your winery${specText}! Monthly wage: €${candidateData.wage.toFixed(2)}`,
       'staffSearchManager.completeHiringProcess',
@@ -233,7 +233,7 @@ export function clearPendingCandidates(): void {
 
 // Re-export types and functions from calculator for convenience
 export type { StaffSearchOptions, SearchWorkEstimate, HiringWorkEstimate, SearchPreviewStats };
-export { 
+export {
   calculateStaffSearchCost,
   calculateSearchWork,
   calculateHiringWorkRange,

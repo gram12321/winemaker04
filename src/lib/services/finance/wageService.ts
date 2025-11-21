@@ -229,7 +229,7 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
           insufficientFundsMessage,
           'wageService.processSeasonalWages',
           'Insufficient Funds',
-          NotificationCategory.ADMINISTRATION
+          NotificationCategory.FINANCE_AND_STAFF
         );
       }
       // Still process the transaction to show negative balance
