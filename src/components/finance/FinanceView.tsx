@@ -15,7 +15,7 @@ import {
 } from "@/components/ui";
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
-import { UpgradesPlaceholder } from './UpgradesPlaceholder';
+import { ResearchPanel } from './ResearchPanel';
 import { StaffWageSummary } from './StaffWageSummary';
 import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
@@ -208,7 +208,7 @@ export default function FinanceView() {
 
   return (
     <div className="space-y-6">
-      <div 
+      <div
         className="h-48 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&h=400&fit=crop')"
@@ -229,26 +229,26 @@ export default function FinanceView() {
           </div>
         </div>
       </div>
-      
+
       <Tabs defaultValue="income" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-transparent p-0 mb-4 space-x-2">
-          <TabsTrigger 
-            value="income" 
+          <TabsTrigger
+            value="income"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'income' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Income/Balance
           </TabsTrigger>
-          <TabsTrigger 
-            value="cashflow" 
+          <TabsTrigger
+            value="cashflow"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'cashflow' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Cash Flow
           </TabsTrigger>
-          <TabsTrigger 
-            value="loans" 
+          <TabsTrigger
+            value="loans"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'loans' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Loans
           </TabsTrigger>
-          <TabsTrigger 
-            value="upgrades" 
+          <TabsTrigger
+            value="upgrades"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'upgrades' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Research and Upgrades
           </TabsTrigger>
@@ -257,27 +257,27 @@ export default function FinanceView() {
         {activeTab === 'income' && (
           <>
             <div className="mb-4 flex flex-wrap gap-2">
-            <Button 
-              onClick={() => setActivePeriod('weekly')} 
-              className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'weekly' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
-              Weekly
-            </Button>
-            <Button 
-              onClick={() => setActivePeriod('season')} 
-              className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'season' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
-              Season
-            </Button>
-            <Button 
-              onClick={() => setActivePeriod('year')} 
-              className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'year' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
-              Year
-            </Button>
-              <Button 
-                onClick={() => setActivePeriod('all')} 
+              <Button
+                onClick={() => setActivePeriod('weekly')}
+                className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'weekly' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
+                Weekly
+              </Button>
+              <Button
+                onClick={() => setActivePeriod('season')}
+                className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'season' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
+                Season
+              </Button>
+              <Button
+                onClick={() => setActivePeriod('year')}
+                className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'year' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
+                Year
+              </Button>
+              <Button
+                onClick={() => setActivePeriod('all')}
                 className={`${FINANCE_BUTTON_STYLES.period} ${activePeriod === 'all' ? FINANCE_BUTTON_STYLES.periodActive : FINANCE_BUTTON_STYLES.periodInactive}`}>
                 All Time
               </Button>
-          </div>
+            </div>
             {renderPeriodSelectors()}
           </>
         )}
@@ -297,7 +297,7 @@ export default function FinanceView() {
           <LoansView />
         </TabsContent>
         <TabsContent value="upgrades">
-          <UpgradesPlaceholder />
+          <ResearchPanel />
         </TabsContent>
       </Tabs>
     </div>

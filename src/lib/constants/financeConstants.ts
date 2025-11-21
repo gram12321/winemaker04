@@ -24,7 +24,7 @@ export const TRANSACTION_CATEGORIES = {
   GRAPE_SALES: 'Grape Sales',
   INITIAL_INVESTMENT: 'Initial Investment',
   VINEYARD_SALE: 'Vineyard Sale', // Forced vineyard seizure/sale
-  
+
   // Expense categories
   STAFF_WAGES: 'Staff Wages',
   STAFF_SEARCH: 'Staff Search',
@@ -37,8 +37,9 @@ export const TRANSACTION_CATEGORIES = {
   MAINTENANCE: 'Maintenance',
   SUPPLIES: 'Supplies',
   UTILITIES: 'Utilities',
+  RESEARCH: 'Research',
   OTHER: 'Other',
-  
+
   // Loan categories
   LOAN_RECEIVED: 'Loan Received',
   LOAN_PAYMENT: 'Loan Payment',
@@ -71,7 +72,7 @@ export const FINANCE_PERIOD_LABELS = {
     expenses: 'WEEKLY EXPENSES'
   },
   season: {
-    income: 'SEASON INCOME', 
+    income: 'SEASON INCOME',
     expenses: 'SEASON EXPENSES'
   },
   year: {

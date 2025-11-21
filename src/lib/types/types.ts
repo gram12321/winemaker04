@@ -11,13 +11,13 @@ export enum WorkCategory {
   CLEARING = 'CLEARING',
   BUILDING = 'BUILDING',
   UPGRADING = 'UPGRADING',
-  MAINTENANCE = 'MAINTENANCE',
+  ADMINISTRATION_AND_RESEARCH = 'ADMINISTRATION_AND_RESEARCH',
   STAFF_SEARCH = 'STAFF_SEARCH',
   STAFF_HIRING = 'STAFF_HIRING',
   LAND_SEARCH = 'LAND_SEARCH',
   LENDER_SEARCH = 'LENDER_SEARCH',
   TAKE_LOAN = 'TAKE_LOAN',
-  ADMINISTRATION = 'ADMINISTRATION'
+  FINANCE_AND_STAFF = 'FINANCE_AND_STAFF'
 }
 
 // Time System
@@ -121,7 +121,7 @@ export interface BalanceResult {
 }
 
 // Wine batch state - unified system replacing separate stage/process
-export type WineBatchState = 
+export type WineBatchState =
   | 'grapes'           // Ready for crushing
   | 'must_ready'       // Ready for fermentation  
   | 'must_fermenting'  // Currently fermenting
@@ -138,7 +138,7 @@ export interface WineBatch {
   batchGroupSize?: number; // Total batches sharing the same vintage/vineyard combination
   state: WineBatchState;
   fermentationProgress?: number; // 0-100% for fermentation tracking
-  
+
   // Wine quality properties (0-1 scale)
   // Quality lifecycle: born (harvest) → current (evolving) → bottled (snapshot)
   bornGrapeQuality: number; // Original vineyard quality at harvest (immutable)
@@ -148,12 +148,12 @@ export interface WineBatch {
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
-  
+
   // Bottling snapshots (frozen values at bottling time for WineLog)
   bottledGrapeQuality?: number; // Grape quality at bottling (snapshot for historical records)
   bottledBalance?: number; // Balance at bottling (snapshot for historical records)
   bottledWineScore?: number; // Wine score at bottling (snapshot for historical records)
-  
+
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {
     effects: Array<{
@@ -162,26 +162,26 @@ export interface WineBatch {
       description: string; // Shows effect name (e.g., "Ripeness", "Altitude") not source
     }>;
   };
-  
+
   // Fermentation options (stored when fermentation starts)
   fermentationOptions?: {
     method: 'Basic' | 'Temperature Controlled' | 'Extended Maceration';
     temperature: 'Ambient' | 'Cool' | 'Warm';
   };
-  
+
   // Grape metadata (0-1 scale unless specified)
   grapeColor: 'red' | 'white';
   naturalYield: number; // 0-1 scale, affects harvest yield
   fragile: number; // 0-1 scale, affects work requirements (0=robust, 1=fragile)
   proneToOxidation: number; // 0-1 scale, affects wine stability
-  
+
   // Wine Features Framework (faults and positive features)
   features: WineFeature[];
-  
+
   harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
   harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch
   bottledDate?: GameDate; // When bottling is completed
-  
+
   // Aging tracking (weeks since bottling)
   agingProgress?: number; // Weeks aged in bottle (0 if not bottled)
 }
@@ -225,15 +225,15 @@ export interface Customer {
   name: string;
   country: CustomerCountry;
   customerType: CustomerType;
-  
+
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
   wineTradition: number; // Affects wine grape quality preferences and price premiums
   marketShare: number; // Affects order size multipliers (0-1 scale)
-  
+
   // Behavioral multipliers (calculated from characteristics)
   priceMultiplier: number; // How much they're willing to pay relative to base price
-  
+
   // Relationship tracking (for future contract system)
   relationship?: number; // 0-100 scale for relationship strength
   activeCustomer?: boolean; // True if customer has placed orders (actively interacting with company)
@@ -254,19 +254,19 @@ export interface WineOrder {
   fulfillableValue?: number; // fulfillableQuantity × offeredPrice
   askingPriceAtOrderTime?: number; // asking price at the time the order was placed
   status: 'pending' | 'fulfilled' | 'rejected' | 'partially_fulfilled' | 'expired';
-  
+
   // Order expiration
   expiresAt: number; // Absolute week number for efficient comparison (used in expireOldOrders)
   expiresWeek: number; // Week component for display
   expiresSeason: Season; // Season component for display
   expiresYear: number; // Year component for display
-  
+
   // Customer information
   customerId: string; // Reference to the Customer who placed this order
   customerName: string; // For display purposes
   customerCountry: CustomerCountry; // For display and regional analysis
   customerRelationship?: number; // Customer relationship strength (0-100)
-  
+
   // Calculation data for tooltips and analysis
   calculationData?: {
     // Price multiplier calculation
@@ -278,13 +278,13 @@ export interface WineOrder {
     featurePriceMultiplier?: number; // Feature impact on price (oxidation, etc.)
     relationshipBonusMultiplier: number;
     relationshipAdjustedMultiplier: number;
-    
+
     // Quantity calculation
     baseQuantity: number;
     priceSensitivity: number;
     quantityMarketShareMultiplier: number;
     finalQuantity: number;
-    
+
     // Rejection analysis
     baseRejectionProbability: number;
     multipleOrderModifier: number;
@@ -340,42 +340,42 @@ export interface WineContract {
   customerName: string;
   customerCountry: CustomerCountry;
   customerType: CustomerType;
-  
+
   // Contract requirements
   requirements: ContractRequirement[];
   requestedQuantity: number; // bottles per delivery
   offeredPrice: number; // price per bottle
   totalValue: number; // requestedQuantity × offeredPrice (per delivery)
-  
+
   // Contract status
   status: ContractStatus;
-  
+
   // Date tracking (decomposed GameDate for database compatibility)
   createdWeek: number;
   createdSeason: Season;
   createdYear: number;
-  
+
   expiresWeek: number;
   expiresSeason: Season;
   expiresYear: number;
-  
+
   fulfilledWeek?: number;
   fulfilledSeason?: Season;
   fulfilledYear?: number;
-  
+
   rejectedWeek?: number;
   rejectedSeason?: Season;
   rejectedYear?: number;
-  
+
   // Multi-year terms (optional, if undefined it's a single delivery)
   terms?: ContractTerms;
-  
+
   // Fulfillment tracking
   fulfilledWineBatchIds?: string[]; // Track which wine batches were used
-  
+
   // Relationship context
   relationshipAtCreation: number; // Customer relationship when contract was offered
-  
+
   // Metadata
   createdAt?: Date;
   updatedAt?: Date;
@@ -406,7 +406,7 @@ export interface PrestigePayloadCompanyFinance extends PrestigePayloadBase {
   companyNetWorth?: number;
   maxLandValue?: number;
   prestigeBase01?: number;
-  
+
   // For loan default events
   reason?: string;
   lenderName?: string;
@@ -477,17 +477,17 @@ export interface PrestigeEvent {
   sourceId?: string; // vineyard ID, etc.
   created_at?: string;
   updated_at?: string;
-  
+
   // UI-required fields (calculated by service layer)
   originalAmount?: number; // Original amount when created
   currentAmount?: number;  // Current amount after decay
-  
+
   // Structured metadata for UI display (computed at event creation)
   metadata?: PrestigeEventPayload extends { type: infer T; payload: infer P }
-    ? T extends PrestigeEventType
-      ? P
-      : never
-    : never;
+  ? T extends PrestigeEventType
+  ? P
+  : never
+  : never;
 }
 
 export interface RelationshipBoost {
@@ -524,21 +524,21 @@ export interface Lender {
   id: string;
   name: string;
   type: LenderType;
-  
+
   // Financial characteristics (0-1 scale)
   riskTolerance: number; // Higher = lends to lower credit ratings
   flexibility: number; // Higher = better terms, longer durations
   marketPresence: number; // Affects availability/visibility
-  
+
   // Calculated multipliers
   baseInterestRate: number; // Base rate (e.g., 0.05 = 5%)
-  
+
   // Loan parameters
   minLoanAmount: number;
   maxLoanAmount: number;
   minDurationSeasons: number;
   maxDurationSeasons: number;
-  
+
   // Origination fee configuration
   originationFee: {
     basePercent: number; // Base fee as percentage of loan amount (e.g., 0.015 = 1.5%)
@@ -547,7 +547,7 @@ export interface Lender {
     creditRatingModifier: number; // How much credit rating affects fees (0.7 = 30% discount for excellent credit)
     durationModifier: number; // How much duration affects fees (1.2 = 20% premium for long-term)
   };
-  
+
   // Relationship tracking
   blacklisted?: boolean; // If player defaulted on this lender
 }
@@ -559,22 +559,22 @@ export interface Loan {
   lenderId: string;
   lenderName: string;
   lenderType: LenderType;
-  
+
   principalAmount: number;
   baseInterestRate: number; // Original base rate
   economyPhaseAtCreation: EconomyPhase; // For display/reference
   effectiveInterestRate: number; // Actual rate after all modifiers
-  
+
   originationFee: number; // One-time fee paid when loan is taken
-  
+
   remainingBalance: number;
   seasonalPayment: number;
   seasonsRemaining: number;
   totalSeasons: number;
-  
+
   startDate: GameDate;
   nextPaymentDue: GameDate;
-  
+
   missedPayments: number;
   status: 'active' | 'paid_off' | 'defaulted';
   isForced?: boolean;
@@ -650,7 +650,7 @@ export interface ActivityProgress {
 export type Nationality = 'Italy' | 'Germany' | 'France' | 'Spain' | 'United States';
 
 // Skill key type - the 5 core skills in the game
-export type SkillKey = 'field' | 'winery' | 'administration' | 'sales' | 'maintenance';
+export type SkillKey = 'field' | 'winery' | 'financeAndStaff' | 'sales' | 'administrationAndResearch';
 
 // ===== NOTIFICATION TYPES =====
 
@@ -664,18 +664,20 @@ export type SkillKey = 'field' | 'winery' | 'administration' | 'sales' | 'mainte
 export enum NotificationCategory {
   // System notifications
   SYSTEM = 'system',
-  
+
   // Activity-related notifications (map to core skills)
   VINEYARD_OPERATIONS = 'field',
   WINEMAKING_PROCESS = 'winery',
-  ADMINISTRATION = 'administration',
+  ADMINISTRATION = 'financeAndStaff',
   SALES_ORDERS = 'sales',
-  MAINTENANCE = 'maintenance',
-  
-  // Sub-category notifications (distinct colors, hierarchically under administration)
+  ADMINISTRATION_AND_RESEARCH = 'administrationAndResearch',
+
+  // Sub-category notifications (distinct colors)
+  // Under Finance & Staff
   TIME_CALENDAR = 'time',          // Cyan - scheduling and calendar
   STAFF_MANAGEMENT = 'staff',      // Teal - HR and people management
-  FINANCE = 'finance',             // Yellow/Gold - money and budgets
+
+  // Under Administration & Research
   ACTIVITIES_TASKS = 'tasks'       // Indigo - task and activity management
 }
 
@@ -683,9 +685,9 @@ export enum NotificationCategory {
 export interface StaffSkills {
   field: number;        // Vineyard work
   winery: number;       // Wine production
-  administration: number; // Administrative tasks
+  financeAndStaff: number; // Administrative tasks
   sales: number;        // Sales and marketing
-  maintenance: number;  // Building and equipment maintenance
+  administrationAndResearch: number;  // Building and equipment maintenance
 }
 
 // Staff member interface
@@ -778,7 +780,7 @@ export type AchievementLevel = 1 | 2 | 3 | 4 | 5;
 /**
  * Achievement condition types
  */
-export type AchievementConditionType = 
+export type AchievementConditionType =
   | 'money_threshold'       // Check if company money >= threshold
   | 'prestige_threshold'    // Check if company prestige >= threshold
   | 'time_threshold'        // Check if company age >= threshold (in years)

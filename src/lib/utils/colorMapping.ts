@@ -25,7 +25,7 @@ export interface ColorScheme {
  */
 export const COLOR_MAPPING: Record<string, ColorScheme> = {
   // ===== CORE SKILLS (5) =====
-  
+
   // Field Work / Vineyard Operations - Green
   'field': {
     primary: '#10b981',      // green-500
@@ -36,7 +36,7 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     badge: 'bg-green-100 text-green-700 border-green-200',
     ring: 'ring-green-200'
   },
-  
+
   // Winery Work / Winemaking Process - Purple
   'winery': {
     primary: '#8b5cf6',      // purple-500
@@ -47,9 +47,9 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     badge: 'bg-purple-100 text-purple-700 border-purple-200',
     ring: 'ring-purple-200'
   },
-  
-  // Administration - Blue
-  'administration': {
+
+  // Finance & Staff (formerly Administration) - Blue
+  'financeAndStaff': {
     primary: '#2563eb',      // blue-600
     background: 'bg-blue-50',
     border: 'border-blue-200',
@@ -58,7 +58,7 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     badge: 'bg-blue-100 text-blue-700 border-blue-200',
     ring: 'ring-blue-200'
   },
-  
+
   // Sales & Orders - Orange/Amber
   'sales': {
     primary: '#f59e0b',      // amber-500
@@ -69,9 +69,9 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     badge: 'bg-orange-100 text-orange-700 border-orange-200',
     ring: 'ring-orange-200'
   },
-  
-  // Maintenance - Red
-  'maintenance': {
+
+  // Administration & Research (formerly Maintenance) - Red
+  'administrationAndResearch': {
     primary: '#ef4444',      // red-500
     background: 'bg-red-50',
     border: 'border-red-200',
@@ -80,9 +80,9 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     badge: 'bg-red-100 text-red-700 border-red-200',
     ring: 'ring-red-200'
   },
-  
+
   // ===== SYSTEM CATEGORY =====
-  
+
   // System (UI-only, not a game skill) - Gray
   'system': {
     primary: '#6b7280',      // gray-500
@@ -93,10 +93,10 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     badge: 'bg-gray-100 text-gray-700 border-gray-200',
     ring: 'ring-gray-200'
   },
-  
+
   // ===== SUB-CATEGORIES =====
-  
-  // Time & Calendar - Cyan (variant of administration)
+
+  // Time & Calendar - Cyan (variant of Finance & Staff)
   'time': {
     primary: '#0ea5e9',      // cyan-500
     background: 'bg-cyan-50',
@@ -105,10 +105,10 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     icon: 'text-cyan-500',
     badge: 'bg-cyan-100 text-cyan-700 border-cyan-200',
     ring: 'ring-cyan-200',
-    parent: 'administration'
+    parent: 'financeAndStaff'
   },
-  
-  // Staff Management - Amber (variant of administration, people-focused, sibling to finance)
+
+  // Staff Management - Amber (variant of Finance & Staff)
   'staff': {
     primary: '#f59e0b',      // amber-500
     background: 'bg-amber-50',
@@ -117,22 +117,10 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     icon: 'text-amber-500',
     badge: 'bg-amber-100 text-amber-700 border-amber-200',
     ring: 'ring-amber-200',
-    parent: 'administration'
+    parent: 'financeAndStaff'
   },
-  
-  // Finance - Yellow/Gold (variant of administration, money-focused)
-  'finance': {
-    primary: '#eab308',      // yellow-500
-    background: 'bg-yellow-50',
-    border: 'border-yellow-200',
-    text: 'text-yellow-700',
-    icon: 'text-yellow-600',
-    badge: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    ring: 'ring-yellow-200',
-    parent: 'administration'
-  },
-  
-  // Activities & Tasks - Indigo (variant of administration, task-focused)
+
+  // Activities & Tasks - Indigo (variant of Administration & Research)
   'tasks': {
     primary: '#6366f1',      // indigo-500
     background: 'bg-indigo-50',
@@ -141,7 +129,7 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
     icon: 'text-indigo-500',
     badge: 'bg-indigo-100 text-indigo-700 border-indigo-200',
     ring: 'ring-indigo-200',
-    parent: 'administration'
+    parent: 'administrationAndResearch'
   }
 };
 
@@ -152,9 +140,9 @@ export const COLOR_MAPPING: Record<string, ColorScheme> = {
 export const SKILL_COLORS = {
   field: COLOR_MAPPING['field'].primary,
   winery: COLOR_MAPPING['winery'].primary,
-  administration: COLOR_MAPPING['administration'].primary,
+  financeAndStaff: COLOR_MAPPING['financeAndStaff'].primary,
   sales: COLOR_MAPPING['sales'].primary,
-  maintenance: COLOR_MAPPING['maintenance'].primary
+  administrationAndResearch: COLOR_MAPPING['administrationAndResearch'].primary
 } as const;
 
 /**

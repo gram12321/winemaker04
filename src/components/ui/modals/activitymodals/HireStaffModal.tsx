@@ -28,7 +28,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
   const [skillLevel, setSkillLevel] = useState(0.3);
   const [previewSkills, setPreviewSkills] = useState<StaffSkills | null>(null);
   const [previewWage, setPreviewWage] = useState(0);
-  
+
   // Generate preview when skill level changes
   useEffect(() => {
     const skills = generateRandomSkills(skillLevel, []);
@@ -36,25 +36,25 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
     setPreviewSkills(skills);
     setPreviewWage(wage);
   }, [skillLevel]);
-  
+
   if (!isOpen) return null;
-  
+
   const handleRandomize = () => {
     const randomNationality = getRandomNationality();
     const randomFirstName = getRandomFirstName(randomNationality);
     const randomLastName = getRandomLastName(randomNationality);
-    
+
     setNationality(randomNationality);
     setFirstName(randomFirstName);
     setLastName(randomLastName);
   };
-  
+
   const handleHire = async () => {
     if (!firstName.trim() || !lastName.trim()) {
       alert('Please enter both first and last name');
       return;
     }
-    
+
     const staff = createStaff(
       firstName.trim(),
       lastName.trim(),
@@ -62,7 +62,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       [],
       nationality
     );
-    
+
     const result = await addStaff(staff);
     if (result) {
       onClose();
@@ -73,27 +73,27 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       setSkillLevel(0.3);
     }
   };
-  
+
   const skillInfo = getSkillLevelInfo(skillLevel);
-  
+
   // Render skill preview bars
   const renderSkillPreview = () => {
     if (!previewSkills) return null;
-    
+
     const skills = [
       { key: 'field' as const, label: 'Field Work', color: '#10b981' },
       { key: 'winery' as const, label: 'Winery Work', color: '#8b5cf6' },
-      { key: 'administration' as const, label: 'Administration', color: '#3b82f6' },
+      { key: 'financeAndStaff' as const, label: 'Finance & Staff', color: '#3b82f6' },
       { key: 'sales' as const, label: 'Sales', color: '#f59e0b' },
-      { key: 'maintenance' as const, label: 'Maintenance', color: '#ef4444' }
+      { key: 'administrationAndResearch' as const, label: 'Admin & Research', color: '#ef4444' }
     ];
-    
+
     return (
       <div className="space-y-2">
         {skills.map((skill) => {
           const skillValue = previewSkills[skill.key];
           const percentage = formatNumber(skillValue * 100, { smartDecimals: true });
-          
+
           return (
             <div key={skill.key} className="flex items-center gap-2">
               <span className="text-xs text-gray-400 w-24">{skill.label}</span>
@@ -113,7 +113,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
       </div>
     );
   };
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
@@ -130,7 +130,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
             ×
           </button>
         </div>
-        
+
         {/* Form */}
         <div className="flex-1 overflow-y-auto p-6 scrollbar-styled">
           <div className="space-y-6">
@@ -147,7 +147,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                   🎲 Random Name
                 </Button>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName" className="text-gray-300 mb-2 block">
@@ -161,7 +161,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                     className="bg-gray-700 border-gray-600 text-white"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="lastName" className="text-gray-300 mb-2 block">
                     Last Name
@@ -175,7 +175,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                   />
                 </div>
               </div>
-              
+
               <div className="mt-4">
                 <Label htmlFor="nationality" className="text-gray-300 mb-2 block">
                   Nationality
@@ -192,11 +192,11 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                 </Select>
               </div>
             </div>
-            
+
             {/* Skill Level Section */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Skill Level</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-2">
@@ -217,7 +217,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Skills Preview */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-4">Skill Preview</h3>
@@ -226,7 +226,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
               </p>
               {renderSkillPreview()}
             </div>
-            
+
             {/* Wage Preview */}
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h3 className="font-semibold text-white mb-2">Weekly Wage</h3>
@@ -237,7 +237,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
             </div>
           </div>
         </div>
-        
+
         {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
           <Button

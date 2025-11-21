@@ -33,8 +33,8 @@ export const ChevronLeftIcon = ({ className = "w-5 h-5" }: { className?: string 
 );
 
 export const getChevronIcon = (isExpanded: boolean, className?: string) => {
-  return isExpanded ? 
-    <ChevronDownIcon className={className} /> : 
+  return isExpanded ?
+    <ChevronDownIcon className={className} /> :
     <ChevronRightIcon className={className} />;
 };
 
@@ -46,7 +46,7 @@ export const getChevronIconComponent = (isExpanded: boolean) => {
 
 export const ICON_SIZES = {
   xs: 'w-3 h-3',
-  sm: 'w-4 h-4', 
+  sm: 'w-4 h-4',
   md: 'w-5 h-5',
   lg: 'w-6 h-6',
   xl: 'w-8 h-8'
@@ -59,9 +59,9 @@ export type IconSize = keyof typeof ICON_SIZES;
 export const SPECIALIZATION_ICONS = {
   field: '🌱',
   winery: '🍷',
-  administration: '📊',
+  financeAndStaff: '📊',
   sales: '💼',
-  maintenance: '🔧'
+  administrationAndResearch: '🔧'
 } as const;
 
 export const getSpecializationIcon = (specialization: string): string => {
@@ -69,7 +69,7 @@ export const getSpecializationIcon = (specialization: string): string => {
 };
 
 export const EMOJI_OPTIONS: readonly string[] = [
-  '📊', '🔧', '🍇', '🍷', '💼', '👥', '🌟', '⚡', '🎯', '🚀', 
+  '📊', '🔧', '🍇', '🍷', '💼', '👥', '🌟', '⚡', '🎯', '🚀',
   '💡', '🔥', '⭐', '🎪', '🏆', '🎨', '🎵', '🎮', '📱', '💻',
   '🏢', '🏭', '🌍', '🌱', '🌿', '🍃', '🌺', '🌻', '🌸', '🌷'
 ];
@@ -165,7 +165,7 @@ export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
   const roundedClass = rounded ? 'rounded-full' : '';
   // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
   const style = opacity !== 100 ? { opacity: opacity / 100 } : undefined;
-  
+
   const iconElement = (
     <img
       src={getCharacteristicIconSrc(name)}
@@ -177,13 +177,13 @@ export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
       }}
     />
   );
-  
+
   if (tooltip === false) {
     return iconElement;
   }
-  
+
   const tooltipContent = tooltip === true ? getCharacteristicDisplayName(name) : tooltip;
-  
+
   return (
     <UnifiedTooltip
       content={tooltipContent}
@@ -225,7 +225,7 @@ export const ActivityIcon: React.FC<ActivityIconProps> = ({
   const roundedClass = rounded ? 'rounded-full' : '';
   // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
   const style = opacity !== 100 ? { opacity: opacity / 100 } : undefined;
-  
+
   const iconElement = (
     <img
       src={`/assets/icons/activities/${iconFile}`}
@@ -237,13 +237,13 @@ export const ActivityIcon: React.FC<ActivityIconProps> = ({
       }}
     />
   );
-  
+
   if (tooltip === false) {
     return iconElement;
   }
-  
+
   const tooltipContent = tooltip === true ? WORK_CATEGORY_INFO[category].displayName : tooltip;
-  
+
   return (
     <UnifiedTooltip
       content={tooltipContent}
@@ -281,7 +281,7 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
   const roundedClass = rounded ? 'rounded-full' : '';
   // Use inline style for opacity (Tailwind doesn't support dynamic opacity classes)
   const style = opacity !== 100 ? { opacity: opacity / 100 } : undefined;
-  
+
   const iconElement = (
     <img
       src={iconSrc}
@@ -293,13 +293,13 @@ export const GrapeIcon: React.FC<GrapeIconProps> = ({
       }}
     />
   );
-  
+
   if (tooltip === false) {
     return iconElement;
   }
-  
+
   const tooltipContent = tooltip === true ? variety : tooltip;
-  
+
   return (
     <UnifiedTooltip
       content={tooltipContent}

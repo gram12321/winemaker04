@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Staff, StaffSkills, Nationality } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { saveStaffToDb, loadStaffFromDb, deleteStaffFromDb } from '@/lib/database/core/staffDB';
-import { 
+import {
   getMaleNamesForNationality,
   getFemaleNamesForNationality,
   getLastNamesForNationality,
@@ -40,9 +40,9 @@ export function generateRandomSkills(skillModifier: number = 0.5, specialization
   return {
     field: getSkillValue(specializations.includes('field')),
     winery: getSkillValue(specializations.includes('winery')),
-    administration: getSkillValue(specializations.includes('administration')),
+    financeAndStaff: getSkillValue(specializations.includes('financeAndStaff')),
     sales: getSkillValue(specializations.includes('sales')),
-    maintenance: getSkillValue(specializations.includes('maintenance'))
+    administrationAndResearch: getSkillValue(specializations.includes('administrationAndResearch'))
   };
 }
 
@@ -52,10 +52,10 @@ export function generateRandomSkills(skillModifier: number = 0.5, specialization
  */
 export function getRandomFirstName(nationality: Nationality): string {
   const isMale = Math.random() > 0.5;
-  const nameList = isMale 
+  const nameList = isMale
     ? getMaleNamesForNationality(nationality)
     : getFemaleNamesForNationality(nationality);
-  
+
   return nameList[Math.floor(Math.random() * nameList.length)];
 }
 
@@ -87,7 +87,7 @@ export function createStaff(
 ): Staff {
   const gameState = getGameState();
   const calculatedSkills = skills || generateRandomSkills(skillLevel, specializations);
-  
+
   return {
     id: uuidv4(),
     name: `${firstName} ${lastName}`,
@@ -112,17 +112,17 @@ export function createStaff(
 export async function addStaff(staff: Staff): Promise<Staff | null> {
   const gameState = getGameState();
   const currentStaff = gameState.staff || [];
-  
+
   // Save to database
   const success = await saveStaffToDb(staff);
   if (!success) {
     console.error('Failed to hire staff member');
     return null;
   }
-  
+
   // Update game state
   updateGameState({ staff: [...currentStaff, staff] });
-  
+
   await notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', NotificationCategory.STAFF_MANAGEMENT);
   return staff;
 }
@@ -134,20 +134,20 @@ export async function removeStaff(staffId: string): Promise<boolean> {
   const gameState = getGameState();
   const currentStaff = gameState.staff || [];
   const staff = currentStaff.find(s => s.id === staffId);
-  
+
   if (!staff) {
     console.error('Staff member not found');
     return false;
   }
-  
+
   const success = await deleteStaffFromDb(staffId);
   if (!success) {
     console.error('Failed to remove staff member');
     return false;
   }
-  
+
   updateGameState({ staff: currentStaff.filter(s => s.id !== staffId) });
-  
+
   console.log(`${staff.name} has left the company`);
   return true;
 }

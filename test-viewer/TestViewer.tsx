@@ -101,6 +101,255 @@ const testSuites: Record<string, TestSuite> = {
       }
     ]
   },
+  'companyCreation.test.ts': {
+    file: 'tests/user/companyCreation.test.ts',
+    title: 'Company and User Creation - Database Persistence',
+    description: 'Tests that company and user creation workflows successfully write data to the database. This automates the manual testing process where developers create companies/users through the UI and verify they appear in the database.',
+    groups: [
+      {
+        name: 'Creating a Company with a User',
+        tests: [
+          {
+            name: 'creates a user and company successfully and writes to database',
+            scenario: 'Creating a company with a user through companyService.createCompany()',
+            expected: 'Both user and company are created and can be retrieved from database',
+            whyItMatters: 'This is the most common error - data not being successfully written to database'
+          },
+          {
+            name: 'creates a company with user and sets correct default values',
+            scenario: 'Verifying default values (money=0, prestige=STARTING_PRESTIGE, week=1, season=Spring)',
+            expected: 'All default values match expected initialization constants',
+            whyItMatters: 'Ensures new companies start with correct game state'
+          },
+          {
+            name: 'prevents duplicate company names',
+            scenario: 'Attempting to create two companies with the same name',
+            expected: 'Second creation fails with "already exists" error',
+            whyItMatters: 'Prevents database conflicts and ensures company names are unique'
+          }
+        ]
+      },
+      {
+        name: 'Creating a Company without a User',
+        tests: [
+          {
+            name: 'creates a company without user successfully and writes to database',
+            scenario: 'Creating a company without user association',
+            expected: 'Company is created with userId=null and can be retrieved from database',
+            whyItMatters: 'Supports anonymous company creation workflow'
+          },
+          {
+            name: 'creates a company without user and sets correct default values',
+            scenario: 'Verifying default values for company without user',
+            expected: 'All default values match expected initialization constants',
+            whyItMatters: 'Ensures consistent initialization regardless of user association'
+          }
+        ]
+      },
+      {
+        name: 'Database Persistence Verification',
+        tests: [
+          {
+            name: 'can retrieve company immediately after creation',
+            scenario: 'Creating company and immediately querying database',
+            expected: 'Company is found in database right after creation',
+            whyItMatters: 'Validates that database writes complete successfully before function returns'
+          },
+          {
+            name: 'persists company data correctly in database',
+            scenario: 'Verifying all company fields are saved correctly',
+            expected: 'All fields (id, name, userId, money, prestige, dates) are persisted correctly',
+            whyItMatters: 'Ensures complete data integrity - missing fields would break game functionality'
+          },
+          {
+            name: 'persists user data correctly when created with company',
+            scenario: 'Creating company with user and verifying user data in database',
+            expected: 'User data (id, name, dates) is correctly saved and retrievable',
+            whyItMatters: 'User data must be persisted correctly for company-user relationships to work'
+          }
+        ]
+      },
+      {
+        name: 'Multiple Companies with Same User',
+        tests: [
+          {
+            name: 'creates multiple companies for the same user successfully',
+            scenario: 'Creating two companies linked to the same user',
+            expected: 'Both companies are created and appear in user\'s company list',
+            whyItMatters: 'Users should be able to have multiple companies (saves)'
+          }
+        ]
+      }
+    ]
+  },
+  'startingConditions.test.ts': {
+    file: 'tests/user/startingConditions.test.ts',
+    title: 'Starting Conditions - Country-Specific Setup',
+    description: 'Tests that each starting condition (France, Italy, Germany, Spain, United States) correctly applies country-specific starting conditions including staff, money, loans, vineyards, and prestige.',
+    groups: [
+      {
+        name: 'France Starting Conditions',
+        tests: [
+          {
+            name: 'creates company with France starting conditions and applies all setup correctly',
+            scenario: 'Creating company with France starting conditions and verifying staff, money, loan, vineyard, and prestige',
+            expected: 'Company has 2 staff (Pierre, Camille), starting money 40000, loan 80000, vineyard in Bourgogne, prestige 5',
+            whyItMatters: 'Ensures France starting conditions match the Latosha family story and game balance'
+          },
+          {
+            name: 'verifies France starting condition configuration values',
+            scenario: 'Checking France configuration structure',
+            expected: 'All configuration values are valid and within expected ranges'
+          }
+        ]
+      },
+      {
+        name: 'Italy Starting Conditions',
+        tests: [
+          {
+            name: 'creates company with Italy starting conditions and applies all setup correctly',
+            scenario: 'Creating company with Italy starting conditions and verifying staff, money, loan, vineyard, and prestige',
+            expected: 'Company has 2 staff (Roberto, Bianca), starting money 55000, loan 48000, vineyard in Tuscany, prestige 2',
+            whyItMatters: 'Ensures Italy starting conditions match the De Luca family story and game balance'
+          },
+          {
+            name: 'verifies Italy starting condition configuration values',
+            scenario: 'Checking Italy configuration structure',
+            expected: 'All configuration values are valid and within expected ranges'
+          }
+        ]
+      },
+      {
+        name: 'Germany Starting Conditions',
+        tests: [
+          {
+            name: 'creates company with Germany starting conditions and applies all setup correctly',
+            scenario: 'Creating company with Germany starting conditions and verifying staff, money, vineyard, and prestige',
+            expected: 'Company has 4 staff (Johann, Lukas, Elsa, Klara), starting money 74000, vineyard in Mosel, prestige 1',
+            whyItMatters: 'Ensures Germany starting conditions match the Weissburg family story (largest staff) and game balance'
+          },
+          {
+            name: 'verifies Germany starting condition configuration values',
+            scenario: 'Checking Germany configuration structure',
+            expected: 'All configuration values are valid and within expected ranges'
+          }
+        ]
+      },
+      {
+        name: 'Spain Starting Conditions',
+        tests: [
+          {
+            name: 'creates company with Spain starting conditions and applies all setup correctly',
+            scenario: 'Creating company with Spain starting conditions and verifying staff, money, loan, and vineyard',
+            expected: 'Company has 1 staff (Miguel), starting money 100000, loan 5000, vineyard in Ribera del Duero',
+            whyItMatters: 'Ensures Spain starting conditions match the Torres family story (highest starting money) and game balance'
+          },
+          {
+            name: 'verifies Spain starting condition configuration values',
+            scenario: 'Checking Spain configuration structure',
+            expected: 'All configuration values are valid and within expected ranges'
+          }
+        ]
+      },
+      {
+        name: 'United States Starting Conditions',
+        tests: [
+          {
+            name: 'creates company with United States starting conditions and applies all setup correctly',
+            scenario: 'Creating company with US starting conditions and verifying staff, money, and vineyard',
+            expected: 'Company has 2 staff (Sarah, Robert), starting money 65000, vineyard in Napa Valley',
+            whyItMatters: 'Ensures US starting conditions match the Mondavi family story and game balance'
+          },
+          {
+            name: 'verifies United States starting condition configuration values',
+            scenario: 'Checking US configuration structure',
+            expected: 'All configuration values are valid and within expected ranges'
+          }
+        ]
+      },
+      {
+        name: 'Starting Conditions Comparison',
+        tests: [
+          {
+            name: 'verifies that each country has unique starting conditions',
+            scenario: 'Comparing starting money and staff counts across all countries',
+            expected: 'Countries have variation in starting money and staff counts',
+            whyItMatters: 'Ensures each country offers unique gameplay experience'
+          },
+          {
+            name: 'verifies that countries with loans have reasonable loan amounts',
+            scenario: 'Checking loan configurations for France, Italy, and Spain',
+            expected: 'All loans have valid principal, duration, interest rate values',
+            whyItMatters: 'Ensures loans are balanced and don\'t break game economy'
+          },
+          {
+            name: 'verifies that countries with prestige have reasonable prestige amounts',
+            scenario: 'Checking prestige configurations for France, Italy, and Germany',
+            expected: 'All prestige amounts are reasonable (0-100) with valid decay rates',
+            whyItMatters: 'Ensures prestige bonuses are balanced and meaningful'
+          }
+        ]
+      }
+    ]
+  },
+  'hireStaffWorkflow.test.ts': {
+    file: 'tests/user/hireStaffWorkflow.test.ts',
+    title: 'Hire Staff Workflow - Complete Staff Search and Hiring Process',
+    description: 'Tests the complete staff hiring workflow from search to hire. Validates that staff search activities generate candidates, hiring activities add staff to the database, and transactions are recorded correctly.',
+    groups: [
+      {
+        name: 'Complete Staff Search Workflow',
+        tests: [
+          {
+            name: 'creates company, starts staff search, completes search, and generates candidates',
+            scenario: 'Creating company with starting conditions, starting staff search with options, completing search activity',
+            expected: 'Search activity created, money deducted, candidates generated and stored in game state, activity removed after completion',
+            whyItMatters: 'Validates that staff search creates activities correctly, generates candidates matching search criteria, and completes successfully'
+          },
+          {
+            name: 'generates candidates with correct skill levels and specializations',
+            scenario: 'Searching with specific skill level and specializations',
+            expected: 'Candidates match search criteria (skill level range, specializations)',
+            whyItMatters: 'Ensures search options are correctly applied to generated candidates'
+          }
+        ]
+      },
+      {
+        name: 'Complete Hiring Workflow',
+        tests: [
+          {
+            name: 'hires a candidate from search results and adds them to database',
+            scenario: 'Completing staff search, selecting candidate, starting and completing hiring process',
+            expected: 'Hiring activity created, staff added to database, first month wage deducted, transaction recorded, activity removed',
+            whyItMatters: 'Most common error - data not being successfully written to database. Validates complete hiring workflow.'
+          },
+          {
+            name: 'can hire multiple candidates from the same search',
+            scenario: 'Completing search with 3 candidates, hiring 2 of them sequentially',
+            expected: 'Both candidates added to database correctly with their unique data',
+            whyItMatters: 'Ensures multiple hires from same search work correctly and don\'t conflict'
+          },
+          {
+            name: 'prevents hiring when company has insufficient funds',
+            scenario: 'Completing search, trying to hire candidate when company has less money than candidate wage',
+            expected: 'Hiring process fails or returns null when insufficient funds',
+            whyItMatters: 'Validates financial checks prevent hiring without sufficient funds'
+          }
+        ]
+      },
+      {
+        name: 'Hire Staff via Manual Hire Modal',
+        tests: [
+          {
+            name: 'manually hires staff using createStaff and addStaff directly',
+            scenario: 'Using HireStaffModal to manually create and add staff (without search)',
+            expected: 'Staff created and added to database with correct name, skills, and specializations',
+            whyItMatters: 'Validates alternative hiring path through manual hire modal works correctly'
+          }
+        ]
+      }
+    ]
+  },
   'yieldCalculator.test.ts': {
     file: 'tests/vineyard/yieldCalculator.test.ts',
     title: 'Vineyard Yield Calculator Tests',
@@ -802,7 +1051,7 @@ const TestViewer: React.FC = () => {
           {testResult.status !== 'idle' && (
             <div className="space-y-6">
               {Object.entries(testSuites)
-                .filter(([key]) => key === 'vineyardCreation.test.ts') // Only show human automation tests
+                .filter(([key]) => key === 'vineyardCreation.test.ts' || key === 'companyCreation.test.ts' || key === 'startingConditions.test.ts' || key === 'hireStaffWorkflow.test.ts') // Only show human automation tests
                 .map(([key, suite]) => {
                 const matchingTestFile = testResult.testFiles?.find(tf => 
                   tf.file.includes(key.replace('.test.ts', '')) || tf.file.includes(key)
@@ -824,7 +1073,10 @@ const TestViewer: React.FC = () => {
                       <div className="mt-3 p-2 bg-gray-50 rounded border border-gray-200">
                         <p className="text-xs font-semibold text-gray-700 mb-1">What this replaces:</p>
                         <p className="text-xs text-gray-600">
-                          Manual testing: Creating 100+ vineyards in-game and checking that size distribution looks realistic.
+                          {key === 'vineyardCreation.test.ts' && 'Manual testing: Creating 100+ vineyards in-game and checking that size distribution looks realistic.'}
+                          {key === 'companyCreation.test.ts' && 'Manual testing: Creating companies with and without users through the login screen, then checking the database to verify they were saved correctly.'}
+                          {key === 'startingConditions.test.ts' && 'Manual testing: Creating a company with each starting condition (France, Italy, Germany, Spain, US) through the UI, then manually checking that staff, money, loans, vineyards, and prestige match the configuration.'}
+                          {key === 'hireStaffWorkflow.test.ts' && 'Manual testing: Opening Staff page, clicking "Search Staff", configuring search options, waiting for search to complete, viewing results modal, hiring candidates, waiting for hiring activity to complete, verifying new staff appears in list, checking transactions for costs.'}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-xs mt-2 w-fit">
@@ -1010,10 +1262,18 @@ const TestViewer: React.FC = () => {
             </CardHeader>
             <CardContent>
               <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
-                <li>Vineyard planting workflow validation</li>
-                <li>Harvest timing and yield validation</li>
-                <li>Wine production pipeline validation</li>
-                <li>Sales and customer interaction validation</li>
+                <li>✅ Company and user creation (COMPLETED)</li>
+                <li>✅ Starting conditions for all countries (COMPLETED)</li>
+                <li>✅ Hire staff workflow validation (COMPLETED)</li>
+                <li>Take loan workflow validation</li>
+                <li>Find/buy land workflow validation</li>
+                <li>Plant vineyard workflow validation</li>
+                <li>Harvest grapes workflow validation</li>
+                <li>Crush grapes workflow validation</li>
+                <li>Ferment wine workflow validation</li>
+                <li>Bottle wine workflow validation</li>
+                <li>Get, accept and receive orders workflow validation</li>
+                <li>Get, fulfill and reject contracts workflow validation</li>
               </ul>
             </CardContent>
           </Card>

@@ -5,6 +5,7 @@ import { completeLandSearch } from './landSearchManager';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, WorkCategory } from '@/lib/services/activity';
+import { completeResearch } from './researchManager';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { completeLenderSearch } from './lenderSearchManager';
 import { completeTakeLoan } from './takeLoanManager';
@@ -17,13 +18,13 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     if (activity.targetId && activity.params.density) {
       // Complete the planting and finalize the status
       await completePlanting(activity.targetId, activity.params.density);
-      
+
       const targetDensity = activity.params.density;
       const grape = activity.params.grape;
       notificationService.addMessage(
-        `Successfully planted ${targetDensity} vines/ha of ${grape} in ${activity.params.targetName || 'vineyard'}!`, 
-        'vineyard.planting', 
-        'Vineyard Planting', 
+        `Successfully planted ${targetDensity} vines/ha of ${grape} in ${activity.params.targetName || 'vineyard'}!`,
+        'vineyard.planting',
+        'Vineyard Planting',
         NotificationCategory.VINEYARD_OPERATIONS
       );
     }
@@ -44,7 +45,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
         // Check current season to determine final status
         const gameState = getGameState();
         const currentSeason = gameState.season;
-        
+
         if (remainingYield > 1) { // Only create batch if at least 1kg remaining
           // Create harvest dates: start is activity start, end is current date
           const harvestStartDate = {
@@ -52,13 +53,13 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
             season: activity.gameSeason as any,
             year: activity.gameYear
           };
-          
+
           const harvestEndDate = {
             week: gameState.week || 1,
             season: gameState.season || 'Spring',
             year: gameState.currentYear || 2024
           };
-          
+
           await createWineBatchFromHarvest(
             vineyard.id,
             vineyard.name,
@@ -116,8 +117,10 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     // TODO: Implement upgrading completion
   },
 
-  [WorkCategory.MAINTENANCE]: async (_activity: Activity) => {
-    // TODO: Implement maintenance completion
+  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: async (activity: Activity) => {
+    // For now, all activities in this category are treated as research or generic maintenance
+    // If we distinguish them, we check activity.type or params
+    await completeResearch(activity);
   },
 
   [WorkCategory.STAFF_SEARCH]: async (activity: Activity) => {
@@ -140,7 +143,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
     await completeTakeLoan(activity);
   },
 
-  [WorkCategory.ADMINISTRATION]: async (activity: Activity) => {
+  [WorkCategory.FINANCE_AND_STAFF]: async (activity: Activity) => {
     await completeBookkeeping(activity);
   }
 };
@@ -151,7 +154,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
 export async function createActivity(options: ActivityCreationOptions): Promise<string | null> {
   try {
     const gameState = getGameState();
-    
+
     // Check for conflicting activities
     if (options.targetId) {
       const hasConflict = await hasActiveActivity(options.targetId, options.category);
@@ -160,7 +163,7 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
         return null;
       }
     }
-    
+
     const activity: Activity = {
       id: uuidv4(),
       category: options.category,
@@ -176,7 +179,7 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
       isCancellable: options.isCancellable !== false, // default to true
       createdAt: new Date()
     };
-    
+
     // Auto-assign staff from matching team if no staff already assigned
     if (!activity.params.assignedStaffIds || activity.params.assignedStaffIds.length === 0) {
       const matchingTeam = getTeamForCategory(options.category);
@@ -184,22 +187,22 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
         activity.params.assignedStaffIds = matchingTeam.memberIds;
       }
     }
-    
+
     const success = await saveActivityToDb(activity);
     if (success) {
       // Update local game state
       const currentActivities = await loadActivitiesFromDb();
       updateGameState({ activities: currentActivities });
-      
+
       // Trigger immediate UI update for critical activity creation
       triggerGameUpdateImmediate();
-      
+
       // Only send default notification if not skipped
       if (!options.skipNotification) {
         const assignedCount = activity.params.assignedStaffIds?.length || 0;
         const formattedTotalWork = formatNumber(activity.totalWork, { smartDecimals: true, smartMaxDecimals: true });
         const formattedAssignedCount = formatNumber(assignedCount, { smartDecimals: true, smartMaxDecimals: true });
-        const baseAssignmentMessage = assignedCount > 0 
+        const baseAssignmentMessage = assignedCount > 0
           ? `Started ${activity.title} - ${formattedTotalWork} work units required (${formattedAssignedCount} staff auto-assigned)`
           : `Started ${activity.title} - ${formattedTotalWork} work units required`;
 
@@ -207,12 +210,12 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
         const assignmentMessage = options.activityDetails
           ? `${baseAssignmentMessage} - ${options.activityDetails}`
           : baseAssignmentMessage;
-        
+
         notificationService.addMessage(assignmentMessage, 'activity.creation', 'Activity Creation', NotificationCategory.ACTIVITIES_TASKS);
       }
       return activity.id;
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error creating activity:', error);
@@ -246,22 +249,22 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
       console.warn(`Activity ${activityId} not found`);
       return false;
     }
-    
+
     if (!activity.isCancellable) {
       console.warn(`Activity ${activityId} is not cancellable`);
       return false;
     }
-    
+
     const success = await updateActivityInDb(activityId, { status: 'cancelled' });
     if (success) {
       // Update local game state
       const currentActivities = await loadActivitiesFromDb();
       updateGameState({ activities: currentActivities.filter(a => a.status === 'active') });
-      
+
       // Trigger immediate UI update for critical activity cancellation
       triggerGameUpdateImmediate();
     }
-    
+
     return success;
   } catch (error) {
     console.error('Error cancelling activity:', error);
@@ -279,7 +282,7 @@ export async function progressActivities(): Promise<void> {
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
-    
+
     // Build staff task count map to handle multi-tasking
     const staffTaskCounts = new Map<string, number>();
     for (const activity of activities) {
@@ -288,42 +291,42 @@ export async function progressActivities(): Promise<void> {
         staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
       }
     }
-    
+
     // Process each activity
     for (const activity of activities) {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
-      
+
       // Calculate work contribution from staff (0 if no staff assigned)
       const workThisTick = assignedStaff.length > 0
         ? calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts)
         : 0;
-      
+
       const oldCompletedWork = activity.completedWork;
       const newCompletedWork = Math.min(
         activity.totalWork,
         activity.completedWork + workThisTick
       );
-      
+
       // Handle partial planting for PLANTING activities
       if (activity.category === WorkCategory.PLANTING && activity.targetId) {
         await handlePartialPlanting(activity, oldCompletedWork, newCompletedWork);
       }
-      
+
       // Handle partial harvesting for HARVESTING activities
       if (activity.category === WorkCategory.HARVESTING && activity.targetId) {
         await handlePartialHarvesting(activity, oldCompletedWork, newCompletedWork);
       }
-      
+
       // Update the activity
       await updateActivityInDb(activity.id, { completedWork: newCompletedWork });
-      
+
       // Check if activity is complete
       if (newCompletedWork >= activity.totalWork) {
         completedActivities.push({ ...activity, completedWork: newCompletedWork });
       }
     }
-    
+
     // Handle completed activities
     for (const completedActivity of completedActivities) {
       try {
@@ -332,25 +335,25 @@ export async function progressActivities(): Promise<void> {
         if (handler) {
           await handler(completedActivity);
         }
-        
+
         // Remove the completed activity
         await removeActivityFromDb(completedActivity.id);
-        
+
         // Completion notification handled by individual completion handlers
       } catch (error) {
         console.error(`Error completing activity ${completedActivity.id}:`, error);
       }
     }
-    
+
     // Update local game state
     const currentActivities = await getAllActivities();
     updateGameState({ activities: currentActivities });
-    
+
     // Trigger immediate UI update if any activities were completed
     if (completedActivities.length > 0) {
       triggerGameUpdateImmediate();
     }
-    
+
   } catch (error) {
     console.error('Error progressing activities:', error);
   }
@@ -363,19 +366,19 @@ export async function progressActivities(): Promise<void> {
 export async function getActivityProgress(activityId: string): Promise<ActivityProgress | null> {
   const activity = await getActivityById(activityId);
   if (!activity) return null;
-  
+
   const progress = (activity.completedWork / activity.totalWork) * 100;
   const isComplete = progress >= 100;
-  
+
   // Calculate accurate time remaining based on actual staff assignments
   const remainingWork = activity.totalWork - activity.completedWork;
   let timeRemaining = 'N/A';
-  
+
   if (!isComplete && remainingWork > 0) {
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const allActivities = await getAllActivities();
-    
+
     // Build staff task count map to handle multi-tasking
     const staffTaskCounts = new Map<string, number>();
     for (const act of allActivities) {
@@ -384,15 +387,15 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
         staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
       }
     }
-    
+
     // Get staff assigned to this activity
     const assignedStaffIds = activity.params.assignedStaffIds || [];
     const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
-    
+
     if (assignedStaff.length > 0) {
       // Calculate actual work contribution per week
       const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts);
-      
+
       if (workPerWeek > 0) {
         const weeksRemaining = Math.ceil(remainingWork / workPerWeek);
         timeRemaining = weeksRemaining === 1 ? '1 week' : `${weeksRemaining} weeks`;
@@ -403,7 +406,7 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
       timeRemaining = 'No staff assigned';
     }
   }
-  
+
   return {
     activityId,
     progress: Math.min(100, progress),
@@ -420,8 +423,8 @@ export async function initializeActivitySystem(): Promise<void> {
     const activities = await loadActivitiesFromDb();
     const activeActivities = activities.filter(a => a.status === 'active');
     updateGameState({ activities: activeActivities });
-    
-            // Activities loaded successfully
+
+    // Activities loaded successfully
   } catch (error) {
     console.error('Error initializing activity system:', error);
     updateGameState({ activities: [] });

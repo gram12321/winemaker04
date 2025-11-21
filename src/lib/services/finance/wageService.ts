@@ -23,18 +23,18 @@ export function calculateWage(skills: StaffSkills, specializations: string[] = [
   const avgSkill = (
     skills.field +
     skills.winery +
-    skills.administration +
+    skills.financeAndStaff +
     skills.sales +
-    skills.maintenance
+    skills.administrationAndResearch
   ) / 5;
-  
+
   // Add bonus for specialized roles (30% per specialization, multiplicative)
-  const specializationBonus = specializations.length > 0 ? 
+  const specializationBonus = specializations.length > 0 ?
     Math.pow(1.3, specializations.length) : 1;
-  
+
   // Calculate weekly wage
   const weeklyWage = (BASE_WEEKLY_WAGE + (avgSkill * SKILL_WAGE_MULTIPLIER)) * specializationBonus;
-  
+
   return Math.round(weeklyWage);
 }
 
@@ -49,7 +49,7 @@ export function getMaxWage(): number {
   const maxSkill = 1.0;
   const maxSpecializations = 5;
   const specializationBonus = Math.pow(1.3, maxSpecializations); // 30% per specialization
-  
+
   return (BASE_WEEKLY_WAGE + maxSkill * SKILL_WAGE_MULTIPLIER) * specializationBonus;
 }
 
@@ -63,7 +63,7 @@ export function getMaxWage(): number {
 export function normalizeWage(wage: number, maxWage?: number): number {
   const max = maxWage || getMaxWage();
   const normalized = wage / max;
-  
+
   // Apply exponential scaling for better color distribution
   // Maps 0-maxWage to 0-1 with exponential curve
   return Math.pow(normalized, 0.7); // 0.7 gives good distribution
@@ -80,7 +80,7 @@ export function normalizeWage(wage: number, maxWage?: number): number {
 export function getWageColorClass(wage: number, period: 'weekly' | 'seasonal' | 'annual' = 'weekly'): string {
   const weeklyMaxWage = getMaxWage();
   let maxWage = weeklyMaxWage;
-  
+
   // Adjust maximum wage based on period to ensure consistent coloring
   switch (period) {
     case 'seasonal':
@@ -94,7 +94,7 @@ export function getWageColorClass(wage: number, period: 'weekly' | 'seasonal' | 
       maxWage = weeklyMaxWage;
       break;
   }
-  
+
   const normalized = normalizeWage(wage, maxWage);
   return getColorClass(normalized);
 }
@@ -182,7 +182,7 @@ export function getWageStatistics(staff: { wage: number }[]): {
 
   const wages = staff.map(member => member.wage);
   const totalWeekly = calculateTotalWeeklyWages(staff);
-  
+
   return {
     totalWeekly,
     totalSeasonal: calculateTotalSeasonalWages(staff),
@@ -208,33 +208,33 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
     if (staff.length === 0) {
       return null; // No staff to pay
     }
-    
+
     // Calculate total seasonal wages (12 weeks per season)
     const totalWages = staff.reduce((sum, member) => sum + (member.wage * 12), 0);
-    
+
     if (totalWages === 0) {
       return null; // No wages to pay
     }
-    
+
     // Check if we have enough money
     const gameState = getGameState();
     const currentMoney = gameState.money || 0;
     const season = gameState.season || 'Spring';
-    
+
     if (currentMoney < totalWages) {
       const insufficientFundsMessage = `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`;
-      
+
       if (!skipNotification) {
         await notificationService.addMessage(
           insufficientFundsMessage,
           'wageService.processSeasonalWages',
           'Insufficient Funds',
-          NotificationCategory.FINANCE
+          NotificationCategory.ADMINISTRATION
         );
       }
       // Still process the transaction to show negative balance
     }
-    
+
     // Create transaction for wage payment (negative amount = expense)
     await addTransaction(
       -totalWages,
@@ -242,10 +242,10 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
       TRANSACTION_CATEGORIES.STAFF_WAGES,
       true // recurring transaction
     );
-    
+
     // Prepare notification about wage payment
     const message = `Paid €${formatNumber(totalWages)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`;
-    
+
     if (skipNotification) {
       return message;
     } else {
@@ -257,7 +257,7 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
       );
       return null;
     }
-    
+
   } catch (error) {
     console.error('Error processing seasonal wages:', error);
     return null;

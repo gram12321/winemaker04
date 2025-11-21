@@ -1,4 +1,4 @@
-import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO} from '@/lib/constants/activityConstants';
+import { BASE_WORK_UNITS, DEFAULT_VINE_DENSITY, WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { Staff, WorkCategory } from '@/lib/types/types';
 
 // Work factor interface for UI display
@@ -25,31 +25,31 @@ export function calculateTotalWork(
     workModifiers?: number[]; // Percentage modifiers (0.2 = +20%, -0.1 = -10%)
   }
 ): number {
-  const { 
-    rate, 
-    initialWork = 0, 
-    density, 
+  const {
+    rate,
+    initialWork = 0,
+    density,
     useDensityAdjustment = false,
-    workModifiers = [] 
+    workModifiers = []
   } = factors;
-  
+
   // Adjust rate for density if needed
   // Only apply density adjustment if density is provided and > 0
-  const adjustedRate = (useDensityAdjustment && density && density > 0) 
-    ? rate / (density / DEFAULT_VINE_DENSITY) 
+  const adjustedRate = (useDensityAdjustment && density && density > 0)
+    ? rate / (density / DEFAULT_VINE_DENSITY)
     : rate;
-  
+
   // Calculate work units
   const workWeeks = amount / adjustedRate;
   const workUnits = workWeeks * BASE_WORK_UNITS;
-  
+
   // Base work = initial setup + calculated work units
   const baseWork = initialWork + workUnits;
-  
+
   // Apply modifiers (e.g., skill bonuses, environmental factors)
-  const totalWork = workModifiers.reduce((work, modifier) => 
+  const totalWork = workModifiers.reduce((work, modifier) =>
     work * (1 + modifier), baseWork);
-  
+
   return Math.ceil(totalWork);
 }
 
@@ -83,35 +83,35 @@ export function calculateStaffWorkContribution(
   staffTaskCounts: Map<string, number>
 ): number {
   if (assignedStaff.length === 0) return 0;
-  
+
   const relevantSkill = WORK_CATEGORY_INFO[category].skill;
   let totalIndividualWork = 0;
-  
+
   for (const staff of assignedStaff) {
     // Get relevant skill for this activity type
     const skillValue = staff.skills[relevantSkill];
-    
+
     // Add specialization bonus if applicable (20% boost)
     const hasSpecialization = staff.specializations.includes(relevantSkill);
     const effectiveSkill = hasSpecialization ? skillValue * 1.2 : skillValue;
-    
+
     // Calculate staff contribution: workforce × effective skill level
     const staffContribution = staff.workforce * effectiveSkill;
-    
+
     // Divide by number of tasks this staff is assigned to (multi-tasking penalty)
     const taskCount = staffTaskCounts.get(staff.id) || 1;
     const dividedContribution = staffContribution / taskCount;
-    
+
     totalIndividualWork += dividedContribution;
   }
-  
+
   // Apply team size efficiency factor with diminishing returns
   // Formula: staffCount^0.92
   // This prevents linear scaling while still providing strong benefits
   const teamSizeFactor = Math.pow(assignedStaff.length, 0.92);
   const averageWorkPerStaff = totalIndividualWork / assignedStaff.length;
   const scaledWork = averageWorkPerStaff * teamSizeFactor;
-  
+
   return scaledWork;
 }
 
@@ -131,9 +131,9 @@ export function calculateEstimatedWeeks(
   remainingWork: number
 ): number {
   const workPerWeek = calculateStaffWorkContribution(assignedStaff, category, staffTaskCounts);
-  
+
   if (workPerWeek <= 0) return 0;
-  
+
   return Math.ceil(remainingWork / workPerWeek);
 }
 
@@ -146,7 +146,7 @@ export function calculateEstimatedWeeks(
  */
 export function getRelevantSkillName(category: WorkCategory): string {
   const skillKey = WORK_CATEGORY_INFO[category].skill;
-  
+
   const skillNames: Record<string, string> = {
     field: 'Field',
     winery: 'Winery',
@@ -154,6 +154,6 @@ export function getRelevantSkillName(category: WorkCategory): string {
     sales: 'Sales',
     maintenance: 'Maintenance'
   };
-  
+
   return skillNames[skillKey] || 'General';
 }

@@ -20,13 +20,13 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.CLEARING]: 0.4,     // hectares/week (1.0 acres = ~0.4 hectares)
   [WorkCategory.BUILDING]: 100000,  // €/week
   [WorkCategory.UPGRADING]: 100000, // €/week
-  [WorkCategory.MAINTENANCE]: 500000, // €/week
+  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: 500000, // €/week
   [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
   [WorkCategory.STAFF_HIRING]: 2.0,  // hires/week
   [WorkCategory.LAND_SEARCH]: 15,   // properties/week
   [WorkCategory.LENDER_SEARCH]: 2.0, // lender offers/week
   [WorkCategory.TAKE_LOAN]: 0.5,    // loans/week
-  [WorkCategory.ADMINISTRATION]: 250 // transactions/week; with BASE_WORK_UNITS 25 => 10 work unit per transaction
+  [WorkCategory.FINANCE_AND_STAFF]: 250 // transactions/week; with BASE_WORK_UNITS 25 => 10 work unit per transaction
 };
 
 // Harvest yield rate - how much grapes can be harvested per week
@@ -44,7 +44,7 @@ export const CLEARING_TASKS = {
     initialWork: 5
   },
   REMOVE_DEBRIS: {
-    id: 'remove-debris', 
+    id: 'remove-debris',
     name: 'Remove debris',
     healthImprovement: 0.05, // +5% health
     rate: 0.4, // hectares/week
@@ -52,14 +52,14 @@ export const CLEARING_TASKS = {
   },
   UPROOT_VINES: {
     id: 'uproot-vines',
-    name: 'Uproot vines', 
+    name: 'Uproot vines',
     setHealth: 0.5, // Set health to absolute 50% (no gradual improvement)
     rate: 0.35, // hectares/week (just removing vines)
     initialWork: 8
   },
   REPLANT_VINES: {
     id: 'replant-vines',
-    name: 'Replant vines', 
+    name: 'Replant vines',
     setHealth: 0.5, // Set health to 50% initially, then gradual improvement via plantingHealthBonus
     rate: 0.155, // hectares/week (calculated: 1/(1/0.35 + 1/0.28) = 0.155)
     initialWork: 12 // Starting threshold for replanting task (not additive)
@@ -75,13 +75,13 @@ export const INITIAL_WORK: Record<WorkCategory, number> = {
   [WorkCategory.CLEARING]: 5, // Base initial work for clearing category
   [WorkCategory.BUILDING]: 200,
   [WorkCategory.UPGRADING]: 150,
-  [WorkCategory.MAINTENANCE]: 10,
+  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: 10,
   [WorkCategory.STAFF_SEARCH]: 25,
   [WorkCategory.STAFF_HIRING]: 25,
   [WorkCategory.LAND_SEARCH]: 75,
   [WorkCategory.LENDER_SEARCH]: 50,
   [WorkCategory.TAKE_LOAN]: 50,
-  [WorkCategory.ADMINISTRATION]: 5
+  [WorkCategory.FINANCE_AND_STAFF]: 5
 };
 
 // ===== WORK CATEGORY INFO =====
@@ -115,29 +115,29 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
     isDensityBased: false,
     skill: 'field'
   },
-  [WorkCategory.ADMINISTRATION]: {
+  [WorkCategory.FINANCE_AND_STAFF]: {
     displayName: 'Administration',
     icon: 'icon_administration.webp',
     isDensityBased: false,
-    skill: 'administration'
+    skill: 'financeAndStaff'
   },
   [WorkCategory.BUILDING]: {
     displayName: 'Building',
     icon: 'icon_building.webp',
     isDensityBased: false,
-    skill: 'maintenance'
+    skill: 'administrationAndResearch'
   },
   [WorkCategory.UPGRADING]: {
     displayName: 'Upgrading',
     icon: 'icon_upgrade.webp',
     isDensityBased: false,
-    skill: 'maintenance'
+    skill: 'administrationAndResearch'
   },
-  [WorkCategory.MAINTENANCE]: {
+  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: {
     displayName: 'Maintenance',
     icon: 'icon_maintenance.webp',
     isDensityBased: false,
-    skill: 'maintenance'
+    skill: 'administrationAndResearch'
   },
   [WorkCategory.CRUSHING]: {
     displayName: 'Crushing',
@@ -155,31 +155,31 @@ export const WORK_CATEGORY_INFO: Record<WorkCategory, {
     displayName: 'Staff Search',
     icon: 'icon_hiring.webp',
     isDensityBased: false,
-    skill: 'administration'
+    skill: 'financeAndStaff'
   },
   [WorkCategory.STAFF_HIRING]: {
     displayName: 'Staff Hiring',
     icon: 'icon_hiring.webp',
     isDensityBased: false,
-    skill: 'administration'
+    skill: 'financeAndStaff'
   },
   [WorkCategory.LAND_SEARCH]: {
     displayName: 'Land Search',
     icon: 'icon_research.webp',
     isDensityBased: false,
-    skill: 'administration'
+    skill: 'financeAndStaff'
   },
   [WorkCategory.LENDER_SEARCH]: {
     displayName: 'Lender Search',
     icon: 'icon_bookkeeping.webp',
     isDensityBased: false,
-    skill: 'administration'
+    skill: 'financeAndStaff'
   },
   [WorkCategory.TAKE_LOAN]: {
     displayName: 'Take Loan',
     icon: 'icon_bookkeeping.webp',
     isDensityBased: false,
-    skill: 'administration'
+    skill: 'financeAndStaff'
   }
 };
 
@@ -207,11 +207,11 @@ export function getTaskTypeDisplayName(taskType: string): string {
   const matchingCategory = Object.values(WorkCategory).find(
     category => category.toLowerCase() === taskType.toLowerCase()
   );
-  
+
   if (matchingCategory) {
     return WORK_CATEGORY_INFO[matchingCategory].displayName;
   }
-  
+
   // Fallback: capitalize first letter
   return taskType.charAt(0).toUpperCase() + taskType.slice(1);
 }

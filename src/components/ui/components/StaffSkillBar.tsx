@@ -5,7 +5,7 @@ import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../sh
 
 interface StaffSkillBarProps {
   label: string;
-  skillKey: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance';
+  skillKey: 'field' | 'winery' | 'financeAndStaff' | 'sales' | 'administrationAndResearch';
   staff: Staff;
   isRelevant?: boolean; // highlight when relevant for current activity
   taskCount?: number; // multitasking count for this staff
@@ -31,28 +31,28 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
     return (
       <div className={tooltipStyles.text}>
         <TooltipSection title={`${label} Skill Details`}>
-          <TooltipRow 
-            label={`${label}:`} 
+          <TooltipRow
+            label={`${label}:`}
             value={`${formatNumber(value * 100, { decimals: 0 })}%`}
             valueRating={value}
           />
-          <TooltipRow 
-            label="Workforce:" 
+          <TooltipRow
+            label="Workforce:"
             value={String(staff.workforce)}
           />
-          <TooltipRow 
-            label="Tasks:" 
+          <TooltipRow
+            label="Tasks:"
             value={String(Math.max(1, taskCount))}
           />
-          <TooltipRow 
-            label="Contribution:" 
+          <TooltipRow
+            label="Contribution:"
             value={`${formatNumber(effectiveContribution, { decimals: 0 })} / wk`}
             monospaced
           />
           {staff.specializations.includes(skillKey) && (
             <div className="mt-2 pt-2 border-t border-gray-600">
-              <TooltipRow 
-                label="Specialization:" 
+              <TooltipRow
+                label="Specialization:"
                 value="+20%"
               />
             </div>
@@ -101,7 +101,7 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
 
 interface StaffSkillBarsListProps {
   staff: Staff;
-  relevantSkill?: 'field' | 'winery' | 'administration' | 'sales' | 'maintenance';
+  relevantSkill?: 'field' | 'winery' | 'financeAndStaff' | 'sales' | 'administrationAndResearch';
   taskCountMap?: Map<string, number>;
   className?: string;
 }
@@ -115,9 +115,9 @@ export const StaffSkillBarsList: React.FC<StaffSkillBarsListProps> = ({
   const skills: Array<{ key: StaffSkillBarProps['skillKey']; label: string }> = [
     { key: 'field', label: 'Field' },
     { key: 'winery', label: 'Winery' },
-    { key: 'administration', label: 'Admin' },
+    { key: 'financeAndStaff', label: 'Finance' },
     { key: 'sales', label: 'Sales' },
-    { key: 'maintenance', label: 'Maint.' }
+    { key: 'administrationAndResearch', label: 'Admin & Research' }
   ];
 
   return (

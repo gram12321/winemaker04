@@ -40,8 +40,8 @@ export interface ApplyStartingConditionsResult {
 }
 
 const SPECIALIZATION_TEAM_TASKS: Record<string, string[]> = {
-  administration: ['administration'],
-  maintenance: ['maintenance'],
+  financeAndStaff: ['financeAndStaff'],
+  administrationAndResearch: ['administrationAndResearch'],
   field: ['planting', 'harvesting', 'clearing'],
   winery: ['fermentation', 'crushing'],
   sales: ['sales']
@@ -61,10 +61,10 @@ export function generateVineyardPreview(condition: StartingCondition): VineyardP
     maxAltitude,
     preferredAspects
   } = condition.startingVineyard;
-  
+
   // Generate random hectares within range
   const hectares = Number((minHectares + Math.random() * (maxHectares - minHectares)).toFixed(2));
-  
+
   // Generate random vineyard properties
   const aspect = preferredAspects && preferredAspects.length > 0
     ? getRandomFromArray(preferredAspects)
@@ -76,7 +76,7 @@ export function generateVineyardPreview(condition: StartingCondition): VineyardP
       : getRandomAltitude(country, region);
   const soil = getRandomSoils(country, region);
   const density = DEFAULT_VINE_DENSITY; // Use shared default density
-  
+
   return {
     name,
     country,
@@ -103,7 +103,7 @@ export async function applyStartingConditions(
     if (!condition) {
       return { success: false, error: 'Invalid starting country' };
     }
-    
+
     const startingMoney = condition.startingMoney;
     let startingLoanId: string | undefined;
     const availableTeams = getAllTeams();
@@ -154,27 +154,27 @@ export async function applyStartingConditions(
         staffConfig.specializations,
         staffConfig.nationality as any // Nationality type
       );
-      
+
       const addedStaff = await addStaff(staff);
       if (addedStaff) {
         createdStaff.push(addedStaff);
-        
+
         if (availableTeams.length > 0 && staffConfig.specializations?.length) {
           const teamIdsToAssign = new Set<string>();
-          
+
           for (const specialization of staffConfig.specializations) {
             const taskTypes = SPECIALIZATION_TEAM_TASKS[specialization];
             if (!taskTypes) continue;
-            
+
             const matchingTeam = availableTeams.find((team) =>
               taskTypes.some((task) => team.defaultTaskTypes.includes(task))
             );
-            
+
             if (matchingTeam) {
               teamIdsToAssign.add(matchingTeam.id);
             }
           }
-          
+
           for (const teamId of teamIdsToAssign) {
             const success = await assignStaffToTeam(addedStaff.id, teamId);
             if (!success) {
@@ -184,7 +184,7 @@ export async function applyStartingConditions(
         }
       }
     }
-    
+
     // 5. Create starting vineyard from preview
     const previewAspect = (vineyardPreview.aspect as Aspect) || 'South';
     const landValuePerHectare = calculateLandValue(
@@ -218,12 +218,12 @@ export async function applyStartingConditions(
         vineyard_total_value: baseTotalValue,
         created_at: new Date().toISOString()
       });
-      
+
     if (vineyardError) {
       console.error('Error creating starting vineyard:', vineyardError);
       return { success: false, error: 'Failed to create starting vineyard' };
     }
-    
+
     // Refresh company money after all financial adjustments (capital + loan)
     let resolvedStartingMoney = startingMoney;
     try {
