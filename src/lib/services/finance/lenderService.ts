@@ -15,11 +15,11 @@ function generateLenderName(lenderType: LenderType): string {
     case 'Bank':
       const bankNames = LENDER_NAMES.banks;
       return bankNames[Math.floor(Math.random() * bankNames.length)];
-    
+
     case 'Investment Fund':
       const fundNames = LENDER_NAMES.investmentFunds;
       return fundNames[Math.floor(Math.random() * fundNames.length)];
-    
+
     case 'Private Lender':
       const prefixes = LENDER_NAMES.privateLenderPrefixes;
       const suffixes = LENDER_NAMES.privateLenderSuffixes;
@@ -30,7 +30,7 @@ function generateLenderName(lenderType: LenderType): string {
     case 'QuickLoan':
       const quickProviders = LENDER_NAMES.quickLoanProviders;
       return quickProviders[Math.floor(Math.random() * quickProviders.length)];
-    
+
     default:
       return 'Unknown Lender';
   }
@@ -38,21 +38,78 @@ function generateLenderName(lenderType: LenderType): string {
 
 
 /**
+ * Create a single lender with random characteristics based on type
+ */
+function createLender(lenderType: LenderType): Lender {
+  const params = LENDER_PARAMS[lenderType];
+
+  // Generate characteristics
+  const riskTolerance = randomInRange(params.riskToleranceRange[0], params.riskToleranceRange[1]);
+  const flexibility = randomInRange(params.flexibilityRange[0], params.flexibilityRange[1]);
+  const marketPresence = calculateSkewedMultiplier(Math.random()); // Like customer market share
+  const baseInterestRate = randomInRange(params.baseInterestRange[0], params.baseInterestRange[1]);
+
+  // Generate loan parameters
+  const minLoanAmount = params.loanAmountRange[0];
+  const maxLoanAmount = params.loanAmountRange[1];
+  const minDurationSeasons = params.durationRange[0];
+  const maxDurationSeasons = params.durationRange[1];
+
+  // Generate origination fee parameters
+  const originationFeeConfig = params.originationFeeRange;
+  const originationFee = {
+    basePercent: randomInRange(originationFeeConfig.basePercentRange[0], originationFeeConfig.basePercentRange[1]),
+    minFee: randomInRange(originationFeeConfig.minFeeRange[0], originationFeeConfig.minFeeRange[1]),
+    maxFee: randomInRange(originationFeeConfig.maxFeeRange[0], originationFeeConfig.maxFeeRange[1]),
+    creditRatingModifier: randomInRange(originationFeeConfig.creditRatingModifierRange[0], originationFeeConfig.creditRatingModifierRange[1]),
+    durationModifier: randomInRange(originationFeeConfig.durationModifierRange[0], originationFeeConfig.durationModifierRange[1])
+  };
+
+  return {
+    id: uuidv4(),
+    name: generateLenderName(lenderType),
+    type: lenderType,
+    riskTolerance,
+    flexibility,
+    marketPresence,
+    baseInterestRate,
+    minLoanAmount,
+    maxLoanAmount,
+    minDurationSeasons,
+    maxDurationSeasons,
+    originationFee,
+    blacklisted: false
+  };
+}
+
+/**
  * Generate lenders for a company
  * Creates 15-25 lenders with type-based distribution and characteristics
+ * Ensures at least 3 lenders of each type
  */
 export async function generateLenders(): Promise<Lender[]> {
-  const lenderCount = LENDER_GENERATION.MIN_LENDERS + 
+  const lenderCount = LENDER_GENERATION.MIN_LENDERS +
     Math.floor(Math.random() * (LENDER_GENERATION.MAX_LENDERS - LENDER_GENERATION.MIN_LENDERS + 1));
-  
+
   const lenders: Lender[] = [];
-  
-  // Generate lenders based on type distribution
-  for (let i = 0; i < lenderCount; i++) {
+  const lenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[];
+  const MIN_PER_TYPE = 3;
+
+  // 1. Ensure minimum count for each type
+  for (const type of lenderTypes) {
+    for (let i = 0; i < MIN_PER_TYPE; i++) {
+      lenders.push(createLender(type));
+    }
+  }
+
+  // 2. Fill the rest based on distribution
+  const remainingCount = Math.max(0, lenderCount - lenders.length);
+
+  for (let i = 0; i < remainingCount; i++) {
     // Determine lender type based on distribution
     const rand = Math.random();
     let lenderType: LenderType;
-    
+
     const distributionEntries = Object.entries(LENDER_TYPE_DISTRIBUTION) as Array<[LenderType, number]>;
     let cumulative = 0;
     lenderType = distributionEntries[distributionEntries.length - 1]?.[0] ?? 'Private Lender';
@@ -64,50 +121,10 @@ export async function generateLenders(): Promise<Lender[]> {
         break;
       }
     }
-    
-    const params = LENDER_PARAMS[lenderType];
-    
-    // Generate characteristics
-    const riskTolerance = randomInRange(params.riskToleranceRange[0], params.riskToleranceRange[1]);
-    const flexibility = randomInRange(params.flexibilityRange[0], params.flexibilityRange[1]);
-    const marketPresence = calculateSkewedMultiplier(Math.random()); // Like customer market share
-    const baseInterestRate = randomInRange(params.baseInterestRange[0], params.baseInterestRange[1]);
-    
-    // Generate loan parameters
-    const minLoanAmount = params.loanAmountRange[0];
-    const maxLoanAmount = params.loanAmountRange[1];
-    const minDurationSeasons = params.durationRange[0];
-    const maxDurationSeasons = params.durationRange[1];
-    
-    // Generate origination fee parameters
-    const originationFeeConfig = params.originationFeeRange;
-    const originationFee = {
-      basePercent: randomInRange(originationFeeConfig.basePercentRange[0], originationFeeConfig.basePercentRange[1]),
-      minFee: randomInRange(originationFeeConfig.minFeeRange[0], originationFeeConfig.minFeeRange[1]),
-      maxFee: randomInRange(originationFeeConfig.maxFeeRange[0], originationFeeConfig.maxFeeRange[1]),
-      creditRatingModifier: randomInRange(originationFeeConfig.creditRatingModifierRange[0], originationFeeConfig.creditRatingModifierRange[1]),
-      durationModifier: randomInRange(originationFeeConfig.durationModifierRange[0], originationFeeConfig.durationModifierRange[1])
-    };
-    
-    const lender: Lender = {
-      id: uuidv4(),
-      name: generateLenderName(lenderType),
-      type: lenderType,
-      riskTolerance,
-      flexibility,
-      marketPresence,
-      baseInterestRate,
-      minLoanAmount,
-      maxLoanAmount,
-      minDurationSeasons,
-      maxDurationSeasons,
-      originationFee,
-      blacklisted: false
-    };
-    
-    lenders.push(lender);
+
+    lenders.push(createLender(lenderType));
   }
-  
+
   return lenders;
 }
 
@@ -117,7 +134,7 @@ export async function generateLenders(): Promise<Lender[]> {
 export async function initializeLenders(companyId?: string): Promise<void> {
   try {
     const lendersExist = await checkLendersExist(companyId);
-    
+
     if (!lendersExist) {
       const lenders = await generateLenders();
       await saveLenders(lenders, companyId);
@@ -144,8 +161,8 @@ export async function getAllLenders(): Promise<Lender[]> {
  * Calculate lender availability with prestige influence
  */
 export function calculateLenderAvailability(
-  lender: Lender, 
-  creditRating: number, 
+  lender: Lender,
+  creditRating: number,
   companyPrestige?: number
 ): {
   isAvailable: boolean;
@@ -156,17 +173,17 @@ export function calculateLenderAvailability(
 } {
   // Normalize prestige to 0-1 scale (prestige influence is secondary to credit rating)
   const normalizedPrestige = companyPrestige ? NormalizeScrewed1000To01WithTail(companyPrestige) : 0;
-  
+
   // Primary requirement: Credit rating must meet risk tolerance
   const baseRequirement = lender.riskTolerance * 100;
-  
+
   // Secondary influence: Prestige can help with slightly higher risk tolerance
   // Prestige provides up to 20% reduction in risk tolerance requirement
   const prestigeBonus = normalizedPrestige * 20; // Max 20% bonus from prestige
   const adjustedRequirement = baseRequirement - prestigeBonus;
-  
+
   const isAvailable = creditRating >= adjustedRequirement && !lender.blacklisted;
-  
+
   return {
     isAvailable,
     baseRequirement,
@@ -183,7 +200,7 @@ export function calculateLenderAvailability(
 export async function getAvailableLenders(creditRating: number, companyPrestige?: number): Promise<Lender[]> {
   try {
     const allLenders = await loadLenders();
-    
+
     return allLenders.filter(lender => {
       const availability = calculateLenderAvailability(lender, creditRating, companyPrestige);
       return availability.isAvailable;

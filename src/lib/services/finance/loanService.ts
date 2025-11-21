@@ -29,10 +29,10 @@ export function calculateEffectiveInterestRate(
 ): number {
   const economyMultiplier = ECONOMY_INTEREST_MULTIPLIERS[economyPhase];
   const lenderMultiplier = LENDER_TYPE_MULTIPLIERS[lenderType];
-  
+
   // Credit rating modifier: 0.8 + (0.7 * (1 - creditRating)) - now uses 0-1 scale
   const creditMultiplier = 0.8 + (0.7 * (1 - creditRating));
-  
+
   // Duration modifier (longer loans get slightly lower rates)
   let durationMultiplier = 1.0;
   if (durationSeasons) {
@@ -46,7 +46,7 @@ export function calculateEffectiveInterestRate(
       durationMultiplier = DURATION_INTEREST_MODIFIERS.VERY_LONG_TERM.modifier;
     }
   }
-  
+
   return baseRate * economyMultiplier * lenderMultiplier * creditMultiplier * durationMultiplier;
 }
 
@@ -187,7 +187,7 @@ export async function applyForLoan(
 
       principalAmount = Math.min(requestedAmount, limitInfo.maxAllowed);
     }
-    
+
     // Calculate effective interest rate
     const baseInterestRate = options.overrideBaseRate ?? lender.baseInterestRate;
 
@@ -198,13 +198,13 @@ export async function applyForLoan(
       creditRating,
       durationSeasons
     );
-    
+
     // Calculate seasonal payment using loan amortization
     const seasonalPayment = calculateSeasonalPayment(principalAmount, effectiveRate, durationSeasons);
-    
+
     // Calculate origination fee
     const originationFee = calculateOriginationFee(principalAmount, lender, creditRating, durationSeasons);
-    
+
     // Create loan object
     const derivedCategory: LoanCategory = options.loanCategory
       ? options.loanCategory
@@ -233,10 +233,10 @@ export async function applyForLoan(
       isForced: options.isForced ?? false,
       loanCategory: derivedCategory
     };
-    
+
     // Add loan to database
     await insertLoan(loan);
-    
+
     if (!options.skipTransactions) {
       // Add principal amount to company money
       await addTransaction(
@@ -245,7 +245,7 @@ export async function applyForLoan(
         TRANSACTION_CATEGORIES.LOAN_RECEIVED,
         false
       );
-      
+
       // Deduct origination fee from company money
       await addTransaction(
         -originationFee,
@@ -254,14 +254,14 @@ export async function applyForLoan(
         false
       );
     }
-    
+
     // Trigger UI update
     triggerGameUpdate();
-    
+
     if (!options.skipAdministrationPenalty) {
       await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_TAKEN);
     }
-    
+
     return loan.id;
   } catch (error) {
     throw error;
@@ -275,7 +275,7 @@ export function calculateSeasonalPayment(principal: number, rate: number, season
   if (rate === 0) {
     return principal / seasons;
   }
-  
+
   const payment = principal * (rate * Math.pow(1 + rate, seasons)) / (Math.pow(1 + rate, seasons) - 1);
   return payment;
 }
@@ -339,10 +339,10 @@ export function calculateOriginationFee(
   durationSeasons: number
 ): number {
   const feeConfig = lender.originationFee;
-  
+
   // Calculate base fee as percentage of loan amount
   let baseFee = principalAmount * feeConfig.basePercent;
-  
+
   // Apply credit rating modifier based on lender's specific modifier
   let creditModifier = 1.0;
   if (creditRating >= 0.8) { // 80-100% credit rating
@@ -356,7 +356,7 @@ export function calculateOriginationFee(
   } else { // 0-20% credit rating
     creditModifier = 1.0 + (1.5 - feeConfig.creditRatingModifier) * 0.6; // Very poor credit penalty
   }
-  
+
   // Apply duration modifier based on lender's specific modifier
   let durationModifier = 1.0;
   if (durationSeasons <= 16) { // 0-4 years
@@ -368,13 +368,13 @@ export function calculateOriginationFee(
   } else { // 20-30 years
     durationModifier = feeConfig.durationModifier; // Full premium for very long-term
   }
-  
+
   // Apply modifiers
   let finalFee = baseFee * creditModifier * durationModifier;
-  
+
   // Apply min/max constraints
   finalFee = Math.max(feeConfig.minFee, Math.min(feeConfig.maxFee, finalFee));
-  
+
   return Math.round(finalFee);
 }
 
@@ -694,8 +694,14 @@ function simulateVineyardSeizureStep(
     return { valueRecovered: 0, saleProceeds: 0 };
   }
 
+  // Calculate current total portfolio value to enforce 50% rule
+  const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.value, 0);
+  const singleVineyardCap = totalPortfolioValue * 0.5;
+
   const sorted = [...vineyards].sort((a, b) => a.value - b.value);
-  const target = sorted.find(v => v.value > 0 && v.value <= maxValue);
+
+  // Find a vineyard that fits within the remaining allowance AND is not more than 50% of total portfolio
+  const target = sorted.find(v => v.value > 0 && v.value <= maxValue && v.value <= singleVineyardCap);
 
   if (!target) {
     return { valueRecovered: 0, saleProceeds: 0 };
@@ -837,10 +843,16 @@ async function seizeVineyardForRestructure(
     return { valueRecovered: 0, saleProceeds: 0 };
   }
 
-  const sorted = [...vineyards].sort((a, b) => a.vineyardTotalValue - b.vineyardTotalValue);
-  const target = sorted[0];
+  // Calculate current total portfolio value to enforce 50% rule
+  const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
+  const singleVineyardCap = totalPortfolioValue * 0.5;
 
-  if (!target || target.vineyardTotalValue <= 0 || target.vineyardTotalValue > maxValue) {
+  const sorted = [...vineyards].sort((a, b) => a.vineyardTotalValue - b.vineyardTotalValue);
+
+  // Find a vineyard that fits within the remaining allowance AND is not more than 50% of total portfolio
+  const target = sorted.find(v => v.vineyardTotalValue > 0 && v.vineyardTotalValue <= maxValue && v.vineyardTotalValue <= singleVineyardCap);
+
+  if (!target) {
     return { valueRecovered: 0, saleProceeds: 0 };
   }
 
@@ -876,29 +888,29 @@ function buildRestructureOfferDetails(offer: ForcedLoanRestructureOffer): { mess
 
   const stepLines = offer.steps.length
     ? [
-        'Proposed sequence:',
-        ...offer.steps.map(step =>
-          `  ${step.order}. ${step.description} → recovers ${formatNumber(step.valueRecovered, { currency: true })} (${formatNumber(step.saleProceeds, { currency: true })} after penalties)`
-        )
-      ]
+      'Proposed sequence:',
+      ...offer.steps.map(step =>
+        `  ${step.order}. ${step.description} → recovers ${formatNumber(step.valueRecovered, { currency: true })} (${formatNumber(step.saleProceeds, { currency: true })} after penalties)`
+      )
+    ]
     : ['Proposed sequence:', '  1. No qualifying assets found for liquidation.'];
 
   const cellarLines = offer.estimatedCellarLots.length
     ? [
-        'Targeted cellar lots:',
-        ...offer.estimatedCellarLots.map(lot =>
-          `  • ${lot.label} → proceeds ${formatNumber(lot.proceeds, { currency: true })}`
-        )
-      ]
+      'Targeted cellar lots:',
+      ...offer.estimatedCellarLots.map(lot =>
+        `  • ${lot.label} → proceeds ${formatNumber(lot.proceeds, { currency: true })}`
+      )
+    ]
     : ['Targeted cellar lots: none available.'];
 
   const vineyardLines = offer.estimatedVineyards.length
     ? [
-        'Vineyards at risk:',
-        ...offer.estimatedVineyards.map(vineyard =>
-          `  • ${vineyard.name} → value ${formatNumber(vineyard.valueRecovered, { currency: true })} (${formatNumber(vineyard.saleProceeds, { currency: true })} after penalties)`
-        )
-      ]
+      'Vineyards at risk:',
+      ...offer.estimatedVineyards.map(vineyard =>
+        `  • ${vineyard.name} → value ${formatNumber(vineyard.valueRecovered, { currency: true })} (${formatNumber(vineyard.saleProceeds, { currency: true })} after penalties)`
+      )
+    ]
     : ['Vineyards at risk: none within seizure threshold.'];
 
   const decisionLines = [
@@ -1454,10 +1466,10 @@ function buildRestructureCompletionMessage(
 
     lines.push(
       `• Consolidated loan: ${formatNumber(result.consolidatedPrincipal, { currency: true })}` +
-        (result.lenderName ? ` with ${result.lenderName}` : '') +
-        (rateLabel ? ` at ${rateLabel}` : '') +
-        (years ? ` over ≈${years} years` : '') +
-        (result.lenderType ? ` (${result.lenderType})` : '')
+      (result.lenderName ? ` with ${result.lenderName}` : '') +
+      (rateLabel ? ` at ${rateLabel}` : '') +
+      (years ? ` over ≈${years} years` : '') +
+      (result.lenderType ? ` (${result.lenderType})` : '')
     );
 
     if (result.lenderOriginationFee) {
@@ -1663,9 +1675,9 @@ export async function processSeasonalLoanPayments(): Promise<void> {
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2024
     };
-    
 
-    
+
+
     for (const loan of activeLoans) {
       // Check if payment is due
       if (isPaymentDue(loan.nextPaymentDue, currentDate)) {
@@ -1682,8 +1694,8 @@ export async function processSeasonalLoanPayments(): Promise<void> {
  * Check if a loan payment is due
  */
 function isPaymentDue(paymentDate: GameDate, currentDate: GameDate): boolean {
-  return paymentDate.year === currentDate.year && 
-         paymentDate.season === currentDate.season;
+  return paymentDate.year === currentDate.year &&
+    paymentDate.season === currentDate.season;
 }
 
 /**
@@ -1693,7 +1705,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
   try {
     const gameState = getGameState();
     const availableMoney = gameState.money || 0;
-    
+
     if (availableMoney >= loan.seasonalPayment) {
       // Sufficient funds - make full payment
       await addTransaction(
@@ -1702,14 +1714,14 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
         TRANSACTION_CATEGORIES.LOAN_PAYMENT,
         false
       );
-      
+
       // Update loan
       const newBalance = loan.remainingBalance - loan.seasonalPayment;
       const newSeasonsRemaining = loan.seasonsRemaining - 1;
-      
+
       // Reduce missed payments (recovery from warnings)
       const newMissedPayments = Math.max(0, (loan.missedPayments || 0) - 1);
-      
+
       if (newBalance <= 0 || newSeasonsRemaining <= 0) {
         // Loan paid off
         await updateLoan(loan.id, {
@@ -1718,7 +1730,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
           status: 'paid_off',
           missedPayments: 0
         });
-        
+
         await notificationService.addMessage(
           `Loan from ${loan.lenderName} has been paid off! Credit rating improved.`,
           'loan.paidOff',
@@ -1734,7 +1746,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
           nextPaymentDue: nextPaymentDate,
           missedPayments: newMissedPayments
         });
-        
+
         // Notify if recovered from warnings
         if (loan.missedPayments > 0 && newMissedPayments === 0) {
           await notificationService.addMessage(
@@ -1753,14 +1765,14 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
         TRANSACTION_CATEGORIES.LOAN_PAYMENT,
         false
       );
-      
+
       // Update loan with partial payment
       const newBalance = loan.remainingBalance - availableMoney;
       const newSeasonsRemaining = loan.seasonsRemaining - 1;
-      
+
       // Still count as missed payment since not full amount
       const newMissedPayments = (loan.missedPayments || 0) + 1;
-      
+
       const nextPaymentDate = calculateNextPaymentDate(currentDate);
       await updateLoan(loan.id, {
         remainingBalance: newBalance,
@@ -1768,7 +1780,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
         nextPaymentDue: nextPaymentDate,
         missedPayments: newMissedPayments
       });
-      
+
       // Apply penalties based on warning level
       if (newMissedPayments === 1) {
         await applyWarning1Penalties(loan);
@@ -1780,7 +1792,7 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
         // missedPayments >= 4: Full default
         await applyFullDefault(loan);
       }
-      
+
       await notificationService.addMessage(
         `Partial loan payment made to ${loan.lenderName}. ${formatNumber(loan.seasonalPayment - availableMoney, { currency: true })} still owed. Warning level: ${newMissedPayments}`,
         'loan.partialPayment',
@@ -1790,13 +1802,13 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
     } else {
       // No funds available - apply graduated penalties based on missed payments
       const newMissedPayments = (loan.missedPayments || 0) + 1;
-      
+
       // Update loan with incremented missed payments
       await updateLoan(loan.id, {
         missedPayments: newMissedPayments,
         nextPaymentDue: calculateNextPaymentDate(currentDate)
       });
-      
+
       // Apply penalties based on warning level
       if (newMissedPayments === 1) {
         await applyWarning1Penalties(loan);
@@ -1894,17 +1906,17 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
   try {
     const activeLoans = await loadActiveLoans();
     const loan = activeLoans.find(l => l.id === loanId);
-    
+
     if (!loan) {
       throw new Error('Loan not found');
     }
-    
+
     const gameState = getGameState();
     const availableMoney = gameState.money || 0;
     const remainingInterest = Math.max(0, calculateRemainingInterest(loan));
     const prepaymentPenalty = calculatePrepaymentPenalty(remainingInterest);
     const totalPayoffCost = loan.remainingBalance + prepaymentPenalty;
-    
+
     if (availableMoney < totalPayoffCost) {
       const shortfall = totalPayoffCost - availableMoney;
       await notificationService.addMessage(
@@ -1919,7 +1931,7 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
       );
       return;
     }
-    
+
     // Deduct remaining balance from company money
     await addTransaction(
       -loan.remainingBalance,
@@ -1936,17 +1948,17 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
         false
       );
     }
-    
+
     // Update loan status to paid off
     await updateLoan(loanId, {
       remainingBalance: 0,
       seasonsRemaining: 0,
       status: 'paid_off'
     });
-    
+
     // Credit rating will be recalculated automatically with comprehensive system
     // Early payoff typically improves credit rating
-    
+
     await notificationService.addMessage(
       [
         `Loan from ${loan.lenderName} paid off early!`,
@@ -1959,9 +1971,9 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
       'Loan Update',
       NotificationCategory.FINANCE
     );
-    
+
     await addLoanAdministrationBurden(ADMINISTRATION_LOAN_PENALTIES.LOAN_FULL_REPAYMENT);
-    
+
     triggerGameUpdate();
   } catch (error) {
     throw error;
@@ -1989,21 +2001,21 @@ async function queueLoanWarningModal(warning: PendingLoanWarning): Promise<void>
  */
 async function applyWarning1Penalties(loan: Loan): Promise<void> {
   const penalties = LOAN_MISSED_PAYMENT_PENALTIES.WARNING_1;
-  
+
   // Calculate late fee
   const lateFee = Math.round(loan.seasonalPayment * penalties.LATE_FEE_PERCENT);
-  
+
   // Add late fee to loan balance
   await updateLoan(loan.id, {
     remainingBalance: loan.remainingBalance + lateFee
   });
-  
+
   // Apply credit rating loss (will be handled by comprehensive credit rating system)
   // The penalty is automatically reflected through missedPayments tracking
-  
+
   // Queue bookkeeping penalty work
   await queueLoanPenaltyWork(penalties.BOOKKEEPING_WORK, loan.lenderName, 1);
-  
+
   // Queue warning modal
   const warning: PendingLoanWarning = {
     loanId: loan.id,
@@ -2019,9 +2031,9 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
       bookkeepingWork: penalties.BOOKKEEPING_WORK
     }
   };
-  
+
   await queueLoanWarningModal(warning);
-  
+
   // Also send regular notification
   await notificationService.addMessage(
     `Missed payment to ${loan.lenderName}! Late fee of ${formatNumber(lateFee, { currency: true })} applied. WARNING #1 - check loan details.`,
@@ -2029,7 +2041,7 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
     'Loan Warning',
     NotificationCategory.FINANCE
   );
-  
+
   // Trigger UI update to reflect balance changes
   triggerGameUpdate();
 }
@@ -2045,19 +2057,19 @@ async function applyWarning1Penalties(loan: Loan): Promise<void> {
 async function applyWarning2Penalties(loan: Loan): Promise<void> {
   const penalties = LOAN_MISSED_PAYMENT_PENALTIES.WARNING_2;
   const gameState = getGameState();
-  
+
   // Increase interest rate
   const newInterestRate = loan.effectiveInterestRate + penalties.INTEREST_RATE_INCREASE;
-  
+
   // Calculate balance penalty
   const balancePenalty = Math.round(loan.remainingBalance * penalties.BALANCE_PENALTY_PERCENT);
-  
+
   // Update loan
   await updateLoan(loan.id, {
     effectiveInterestRate: newInterestRate,
     remainingBalance: loan.remainingBalance + balancePenalty
   });
-  
+
   // Apply prestige penalty
   await insertPrestigeEvent({
     id: uuidv4(),
@@ -2074,10 +2086,10 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
       missedPaymentAmount: loan.seasonalPayment
     }
   });
-  
+
   // Queue bookkeeping penalty work
   await queueLoanPenaltyWork(penalties.BOOKKEEPING_WORK, loan.lenderName, 2);
-  
+
   // Queue warning modal
   const warning: PendingLoanWarning = {
     loanId: loan.id,
@@ -2095,16 +2107,16 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
       bookkeepingWork: penalties.BOOKKEEPING_WORK
     }
   };
-  
+
   await queueLoanWarningModal(warning);
-  
+
   await notificationService.addMessage(
     `Second missed payment to ${loan.lenderName}! Interest rate increased, ${formatNumber(balancePenalty, { currency: true })} penalty applied. WARNING #2 - CRITICAL!`,
     'loan.missedPayment2',
     'Loan Warning',
     NotificationCategory.FINANCE
   );
-  
+
   // Trigger UI update to reflect interest rate change
   triggerGameUpdate();
 }
@@ -2213,7 +2225,7 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
 async function applyFullDefault(loan: Loan): Promise<void> {
   // Apply Warning #3 penalties first
   await applyWarning3Penalties(loan);
-  
+
   // Then apply full default
   await defaultOnLoan(loan.id);
 }
@@ -2232,39 +2244,39 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
 }> {
   try {
     const vineyards = await loadVineyards();
-    
+
     if (vineyards.length === 0) {
       return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [], saleProceeds: 0 };
     }
-    
+
     // Calculate total portfolio value and maximum seizure amount (50% of VALUE)
     const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
     const maxSeizureValue = totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
-    
+
     // Sort vineyards by value (lowest first - take least valuable ones)
     const sortedVineyards = [...vineyards].sort((a, b) => a.vineyardTotalValue - b.vineyardTotalValue);
-    
+
     let valueRecovered = 0;
     const vineyardsToRemove: string[] = [];
     const vineyardNames: string[] = [];
-    
+
     // Seize vineyards until 50% of portfolio VALUE is reached
     for (const vineyard of sortedVineyards) {
       if (valueRecovered >= maxSeizureValue) break;
-      
+
       vineyardsToRemove.push(vineyard.id);
       vineyardNames.push(vineyard.name);
       valueRecovered += vineyard.vineyardTotalValue;
     }
-    
+
     // Remove seized vineyards from database
     if (vineyardsToRemove.length > 0) {
       await deleteVineyards(vineyardsToRemove);
     }
-    
+
     // Calculate sale proceeds with -25% penalty
     const saleProceeds = valueRecovered * 0.75; // -25% penalty
-    
+
     // Add sale proceeds to user money
     if (saleProceeds > 0) {
       await addTransaction(
@@ -2274,7 +2286,7 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
         false
       );
     }
-    
+
     return {
       vineyardsSeized: vineyardsToRemove.length,
       valueRecovered,
@@ -2294,11 +2306,11 @@ async function queueLoanPenaltyWork(workUnits: number, lenderName: string, warni
   const gameState = getGameState();
   const currentPenaltyWork = gameState.loanPenaltyWork || 0;
   const newPenaltyWork = currentPenaltyWork + workUnits;
-  
+
   // Update game state with accumulated penalty work
   updateGameState({ ...gameState, loanPenaltyWork: newPenaltyWork });
-  
-  
+
+
   await notificationService.addMessage(
     `Additional ${workUnits} work units will be added to next bookkeeping task due to missed payment (${lenderName}, Warning #${warningLevel}).`,
     'loan.bookkeepingPenalty',
@@ -2313,21 +2325,21 @@ async function queueLoanPenaltyWork(workUnits: number, lenderName: string, warni
 async function defaultOnLoan(loanId: string): Promise<void> {
   try {
     const gameState = getGameState();
-    
+
     // Get loan details before updating
     const loan = await loadActiveLoans().then(loans => loans.find(l => l.id === loanId));
     if (!loan) {
       return;
     }
-    
+
     // Update loan status
     await updateLoan(loanId, {
       status: 'defaulted',
       missedPayments: 1
     });
-    
+
     // Create prestige penalty event (negative prestige with slow decay)
-    
+
     await insertPrestigeEvent({
       id: uuidv4(),
       type: 'company_finance',
@@ -2343,20 +2355,20 @@ async function defaultOnLoan(loanId: string): Promise<void> {
         missedPaymentAmount: loan.seasonalPayment
       }
     });
-    
+
     // Credit rating will be recalculated automatically with comprehensive system
     // The new system includes more severe penalties for defaults and missed payments
-    
+
     // Blacklist company with this lender
     await updateLenderBlacklist(loan.lenderId, true);
-    
+
     await notificationService.addMessage(
       `Loan payment missed! You have been blacklisted by ${loan.lenderName}. Prestige and credit rating severely impacted.`,
       'loan.default',
       'Loan Default',
       NotificationCategory.FINANCE
     );
-    
+
     triggerGameUpdate();
   } catch (error) {
     // Silent error handling
