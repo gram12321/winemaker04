@@ -3,7 +3,7 @@ import {
   calculateGrapeSuitabilityMetrics,
   calculateGrapeSuitabilityContribution
 } from '@/lib/services/vineyard/vineyardValueCalc';
-import type { GrapeVariety, Aspect } from '@/lib/types/types';
+import type { GrapeVariety } from '@/lib/types/types';
 
 describe('calculateGrapeSuitabilityMetrics', () => {
   it('calculates suitability for a well-matched grape and region', () => {

@@ -106,8 +106,7 @@ describe('calculateVineyardYield - Core Yield Formula', () => {
       // 1 hectare → ~12,000 kg grapes
       // 2 hectares → ~24,000 kg grapes
       const vineyard1: Vineyard = {
-        ...baseVineyard,
-        hectares: 1
+        ...baseVineyard
       };
 
       const vineyard2: Vineyard = {
@@ -137,9 +136,9 @@ describe('calculateVineyardYield - Core Yield Formula', () => {
         density: 2500 // Lower density
       };
 
+      // Standard density (5000) - already in baseVineyard
       const vineyard2: Vineyard = {
-        ...baseVineyard,
-        density: 5000 // Standard density
+        ...baseVineyard
       };
 
       const yield1 = calculateVineyardYield(vineyard1);
@@ -160,9 +159,9 @@ describe('calculateVineyardYield - Core Yield Formula', () => {
       // EXAMPLE:
       // Healthy (100%): ~12,000 kg
       // Damaged (50%): ~6,000 kg
+      // Perfect health (1.0) - already in baseVineyard
       const healthyVineyard: Vineyard = {
-        ...baseVineyard,
-        vineyardHealth: 1.0 // Perfect health
+        ...baseVineyard
       };
 
       const damagedVineyard: Vineyard = {
@@ -217,9 +216,9 @@ describe('calculateVineyardYield - Core Yield Formula', () => {
         vineYield: 0.5 // Young vines (just planted)
       };
 
+      // Mature vines (1.0) - already in baseVineyard
       const matureVineyard: Vineyard = {
-        ...baseVineyard,
-        vineYield: 1.0 // Mature vines (5+ years old)
+        ...baseVineyard
       };
 
       const youngYield = calculateVineyardYield(youngVineyard);
@@ -241,14 +240,13 @@ describe('calculateVineyardYield - Core Yield Formula', () => {
       // 5 hectares × 5,000 vines/ha = 25,000 vines
       // In reality: ~15-25 kg per vine = 375,000-625,000 kg
       // Game baseline: 1.5 kg/vine × multipliers = ~30,000-50,000 kg (scaled down for gameplay)
+      // density: 5000, vineYield: 1.0, grape: 'Sangiovese' - already in baseVineyard
       const optimalVineyard: Vineyard = {
         ...baseVineyard,
         hectares: 5,
-        density: 5000,
         ripeness: 0.9, // Very ripe
         vineyardHealth: 0.95, // Excellent health
-        vineYield: 1.0, // Mature vines
-        grape: 'Sangiovese'
+        vineyardTotalValue: 250000 // Updated for 5 hectares
       };
 
       const yield_ = calculateVineyardYield(optimalVineyard);

@@ -223,7 +223,7 @@ return (
 - **Transaction Management**: Complete financial system with Supabase integration
 - **Financial Reporting**: Income statements, balance sheets, cash flow statements
 - **Asset Valuation**: Automatic calculation of vineyard, wine inventory, grape values
-- **Loan System**: Economy phases, lenders, credit rating, loan applications with activity integration
+- **Loan System**: Economy phases, diversified lender pool (guaranteed type distribution), credit rating, loan applications with activity integration
 - **Integration**: All money flows through transaction system
 
 ### 6. Player Interface ✅ **IMPLEMENTED**
