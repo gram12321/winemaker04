@@ -1451,4 +1451,16 @@ Complete refactoring from standalone oxidation to extensible config-driven featu
 
 ---
 
+## 🧪 **Automated Testing Framework (Phase 0 & 1)**
+- **Vitest Setup**: Added Vitest test runner with jsdom environment, TypeScript support, path aliases
+- **Test Structure**: Created `tests/` folder with domain-based organization (`activity/`, `vineyard/`, `wine/`)
+- **Phase 0 Complete**: Work calculator tests (`tests/activity/workCalculator.test.ts`) - 5 tests covering density adjustments, staff contributions, time estimates
+- **Phase 1 Started**: 
+  - **Vineyard Tests** (`tests/vineyard/yieldCalculator.test.ts`) - 11 tests for yield calculations, health/ripeness multipliers, edge cases
+  - **Wine Tests** (`tests/wine/fermentationCharacteristics.test.ts`) - 14 tests for fermentation methods, temperature effects, characteristic clamping
+- **Documentation**: Consolidated testing strategy into `tests/README.md` with roadmap and conventions
+- **Total Coverage**: 30 passing tests covering core game mechanics (work, yield, fermentation)
+
+---
+
 *For versions 0.011 and earlier, see git commit history or archived documentation*

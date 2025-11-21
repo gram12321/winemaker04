@@ -6,14 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
   },
   "devDependencies": {
+    "@vitest/ui": "^4.0.12",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^27.2.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.3",
-    "vite": "^7.1.5"
+    "vite": "^7.1.5",
+    "vitest": "^4.0.12"
   },
   "description": "This briefing is for AI-assisted code generation for the **Winery Management Game**, a turn-based single-player simulation game.",
   "main": "index.js",

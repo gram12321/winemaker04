@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
+import { testApiPlugin } from './server/test-api'
 
 /**
  * Dev File Override Plugin
@@ -74,7 +75,8 @@ function devFileOverridePlugin() {
 export default defineConfig({
   plugins: [
     react(),
-    devFileOverridePlugin()
+    devFileOverridePlugin(),
+    testApiPlugin()
   ],
   resolve: {
     alias: {
@@ -84,5 +86,10 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts']
   }
 })

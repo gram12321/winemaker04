@@ -3,6 +3,7 @@ import { useLoadingState } from '@/hooks';
 import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui';
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
+import TestViewer from '../../../test-viewer/TestViewer';
 import {
   adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate
 } from '@/lib/services';
@@ -155,10 +156,11 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
 
         <Tabs defaultValue="database" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="database">Database</TabsTrigger>
             <TabsTrigger value="cheats">Cheats</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
+            <TabsTrigger value="tests">Tests</TabsTrigger>
           </TabsList>
 
           {/* Database Management */}
@@ -441,6 +443,11 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
             </div>
 
+          </TabsContent>
+
+          {/* Test Viewer */}
+          <TabsContent value="tests">
+            <TestViewer />
           </TabsContent>
         </Tabs>
     </div>
