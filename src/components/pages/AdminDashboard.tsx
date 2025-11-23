@@ -5,7 +5,7 @@ import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import TestViewer from '../../../test-viewer/TestViewer';
 import {
-  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate
+  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch
 } from '@/lib/services';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
@@ -55,6 +55,16 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
     setGameWeek(String(safeWeek));
     setGameYear(String(safeYear));
+  });
+
+  const handleGrantAllResearch = () => withLoading(async () => {
+    const result = await adminGrantAllResearch();
+    console.log(`Research granted: ${result.unlocked} unlocked, ${result.alreadyUnlocked} already unlocked`);
+  });
+
+  const handleRemoveAllResearch = () => withLoading(async () => {
+    const result = await adminRemoveAllResearch();
+    console.log(`Research removed: ${result.removed} unlocks removed`);
   });
 
   const handleClearAllHighscores = () => withLoading(async () => {
@@ -401,6 +411,34 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                     Set Game Date
                   </Button>
                 </div>
+              </SimpleCard>
+
+              <SimpleCard
+                title="Research Management"
+                description="Grant or remove all research projects"
+              >
+                <Button
+                  onClick={handleGrantAllResearch}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  🔬 Grant All Research
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Unlocks all research projects for the active company
+                </p>
+                
+                <Button
+                  variant="destructive"
+                  onClick={handleRemoveAllResearch}
+                  disabled={isLoading}
+                  className="w-full mt-4"
+                >
+                  🗑️ Remove All Research
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Removes all research unlocks from the active company
+                </p>
               </SimpleCard>
             </div>
           </TabsContent>

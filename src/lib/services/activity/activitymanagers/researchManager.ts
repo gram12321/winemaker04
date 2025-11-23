@@ -110,64 +110,65 @@ export async function completeResearch(activity: Activity): Promise<void> {
 
             const rewardText = rewards.length > 0 ? ` Received: ${rewards.join(', ')}.` : '';
 
-            // Process unlocks if this research has any
+            // Always record completed research in database (for tracking and preventing duplicates)
+            const gameState = getGameState();
+            const companyId = getCurrentCompanyId();
+            
+            if (companyId) {
+                  const gameDate: GameDate = {
+                        week: gameState.week || 1,
+                        season: (gameState.season || 'Spring') as any,
+                        year: gameState.currentYear || 2024
+                  };
+                  
+                  const absoluteWeeks = calculateAbsoluteWeeks(
+                        gameDate.week,
+                        gameDate.season,
+                        gameDate.year
+                  );
+                  
+                  // Record the research completion in database (always, even if no unlocks)
+                  await unlockResearch({
+                        researchId: projectId,
+                        companyId,
+                        unlockedAt: gameDate,
+                        unlockedAtTimestamp: absoluteWeeks,
+                        metadata: {
+                              unlocks: project.unlocks || []
+                        }
+                  });
+            }
+
+            // Process unlock messages if this research has any
             const unlockMessages: string[] = [];
             if (project.unlocks && project.unlocks.length > 0) {
-                  const gameState = getGameState();
-                  const companyId = getCurrentCompanyId();
-                  
-                  if (companyId) {
-                        const gameDate: GameDate = {
-                              week: gameState.week || 1,
-                              season: (gameState.season || 'Spring') as any,
-                              year: gameState.currentYear || 2024
-                        };
-                        
-                        const absoluteWeeks = calculateAbsoluteWeeks(
-                              gameDate.week,
-                              gameDate.season,
-                              gameDate.year
-                        );
-                        
-                        // Record the research unlock in database
-                        await unlockResearch({
-                              researchId: projectId,
-                              companyId,
-                              unlockedAt: gameDate,
-                              unlockedAtTimestamp: absoluteWeeks,
-                              metadata: {
-                                    unlocks: project.unlocks
-                              }
-                        });
-                        
-                        // Build unlock messages for notification
-                        for (const unlock of project.unlocks) {
-                              const displayName = unlock.displayName || String(unlock.value);
-                              switch (unlock.type) {
-                                    case 'grape':
-                                          unlockMessages.push(`${displayName} grape variety`);
-                                          break;
-                                    case 'vineyard_size':
-                                          unlockMessages.push(`Vineyard size limit: ${unlock.value} hectares`);
-                                          break;
-                                    case 'fermentation_technology':
-                                          unlockMessages.push(`${displayName} fermentation technology`);
-                                          break;
-                                    case 'staff_limit':
-                                          unlockMessages.push(`Staff limit: ${unlock.value} staff members`);
-                                          break;
-                                    case 'building_type':
-                                          unlockMessages.push(`${displayName} building type`);
-                                          break;
-                                    case 'wine_feature':
-                                          unlockMessages.push(`${displayName} wine feature`);
-                                          break;
-                                    case 'contract_type':
-                                          unlockMessages.push(`${displayName} contract type`);
-                                          break;
-                                    default:
-                                          unlockMessages.push(`${displayName}`);
-                              }
+                  // Build unlock messages for notification
+                  for (const unlock of project.unlocks) {
+                        const displayName = unlock.displayName || String(unlock.value);
+                        switch (unlock.type) {
+                              case 'grape':
+                                    unlockMessages.push(`${displayName} grape variety`);
+                                    break;
+                              case 'vineyard_size':
+                                    unlockMessages.push(`Vineyard size limit: ${unlock.value} hectares`);
+                                    break;
+                              case 'fermentation_technology':
+                                    unlockMessages.push(`${displayName} fermentation technology`);
+                                    break;
+                              case 'staff_limit':
+                                    unlockMessages.push(`Staff limit: ${unlock.value} staff members`);
+                                    break;
+                              case 'building_type':
+                                    unlockMessages.push(`${displayName} building type`);
+                                    break;
+                              case 'wine_feature':
+                                    unlockMessages.push(`${displayName} wine feature`);
+                                    break;
+                              case 'contract_type':
+                                    unlockMessages.push(`${displayName} contract type`);
+                                    break;
+                              default:
+                                    unlockMessages.push(`${displayName}`);
                         }
                   }
             }

@@ -5,7 +5,7 @@
 
 import { GrapeVariety, GRAPE_VARIETIES } from '../types/types';
 import { calculateGrapeDifficulty } from '../services/wine/features/grapeDifficulty';
-import { getGrapeIconSrc } from '../utils/utils';
+import { getGrapeIconSrc } from '../utils/icons';
 
 /**
  * Types of unlocks that research can provide

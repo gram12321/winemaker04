@@ -7,7 +7,8 @@ import { getFermentationMethodInfo, getFermentationTemperatureInfo, Fermentation
 import { startFermentationActivity } from '@/lib/services/wine/winery/fermentationManager';
 import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { formatNumber, getCharacteristicDisplayName, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass, getCharacteristicIconSrc } from '@/lib/utils/utils';
+import { formatNumber, getCharacteristicDisplayName, getColorClass, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';

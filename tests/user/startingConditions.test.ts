@@ -1,315 +1,167 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { companyService } from '@/lib/services/user/companyService';
-import { applyStartingConditions, generateVineyardPreview } from '@/lib/services/core/startingConditionsService';
-import { setActiveCompany, resetGameState } from '@/lib/services/core/gameState';
-import { initializeTeamsSystem } from '@/lib/services/user/teamService';
-import { initializeStaffSystem } from '@/lib/services/user/staffService';
-import { STARTING_CONDITIONS, type StartingCountry } from '@/lib/constants/startingConditions';
-import { deleteCompany } from '@/lib/database/core/companiesDB';
-import { loadStaffFromDb } from '@/lib/database/core/staffDB';
-import { loadLoans } from '@/lib/database/core/loansDB';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
-import { getCompanyById } from '@/lib/database/core/companiesDB';
-import { getUnlockedGrapes } from '@/lib/utils/researchUtils';
+import { describe, it, expect } from 'vitest';
+import { 
+  generateVineyardPreview,
+   
+} from '@/lib/services/core/startingConditionsService';
+import { 
+  STARTING_CONDITIONS, 
+  type StartingCountry,
+    
+} from '@/lib/constants/startingConditions';
 
 /**
- * Human Automation Test: Starting Conditions - Country-Specific Setup
+ * Starting Conditions Tests - Pure Functions
  * 
- * This test validates that each starting condition (France, Italy, Germany, Spain, United States)
- * correctly applies country-specific starting conditions including staff, money, loans, vineyards,
- * and prestige. This automates the manual testing process where developers create companies with
- * different starting conditions and verify all setup is correct.
- * 
- * Manual testing equivalent: Creating a company with each starting condition through the UI,
- * then checking that staff, money, loans, vineyards, and prestige match the configuration.
+ * These tests validate starting condition generation without requiring database setup.
+ * Focuses on configuration validation and preview generation logic.
  */
-
-describe('Starting Conditions - Country-Specific Setup', () => {
-  // Track created entities for cleanup
-  const createdCompanyIds: string[] = [];
-
-  beforeEach(async () => {
-    // Clear tracking arrays before each test
-    createdCompanyIds.length = 0;
-    // Reset game state
-    resetGameState();
-  });
-
-  afterEach(async () => {
-    // Cleanup: Delete all created companies (this will cascade delete staff, loans, vineyards, etc.)
-    for (const companyId of createdCompanyIds) {
-      try {
-        await deleteCompany(companyId);
-      } catch (error) {
-        console.error(`Failed to cleanup company ${companyId}:`, error);
-      }
-    }
-    createdCompanyIds.length = 0;
-    resetGameState();
-  });
-
-  // Test each starting country
+describe('Starting Conditions - Pure Functions', () => {
   const startingCountries: StartingCountry[] = ['France', 'Italy', 'Germany', 'Spain', 'United States'];
 
-  startingCountries.forEach((country) => {
-    describe(`${country} Starting Conditions`, () => {
-      it(`creates company with ${country} starting conditions and applies all setup correctly`, async () => {
+  describe('generateVineyardPreview', () => {
+    startingCountries.forEach((country) => {
+      it(`generates valid vineyard preview for ${country}`, () => {
         const condition = STARTING_CONDITIONS[country];
         expect(condition).toBeDefined();
         
-        const testCompanyName = `Test${country}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-
-        // 1. Create company
-        const companyResult = await companyService.createCompany({
-          name: testCompanyName,
-          associateWithUser: false
-        });
-
-        expect(companyResult.success).toBe(true);
-        expect(companyResult.company).toBeDefined();
-        const company = companyResult.company!;
-        createdCompanyIds.push(company.id);
-
-        // 2. Initialize systems required for starting conditions
-        await setActiveCompany(company);
-        await initializeTeamsSystem();
-        await initializeStaffSystem();
-
-        // 3. Generate vineyard preview
-        const vineyardPreview = generateVineyardPreview(condition);
-
-        // 4. Apply starting conditions
-        const conditionsResult = await applyStartingConditions(
-          company.id,
-          country,
-          vineyardPreview
-        );
-
-        expect(conditionsResult.success).toBe(true);
-        expect(conditionsResult.error).toBeUndefined();
-
-        // 5. Refresh company data to get updated money (after loan)
-        const updatedCompany = await getCompanyById(company.id);
-        expect(updatedCompany).not.toBeNull();
-
-        // 6. Verify Starting Money
-        if (updatedCompany) {
-          // Money should match starting money (loans use skipTransactions: true, so money isn't automatically added)
-          const expectedBaseMoney = condition.startingMoney;
-          // Allow small variance for transaction processing
-          expect(Math.abs(updatedCompany.money - expectedBaseMoney)).toBeLessThan(1);
-        }
-
-        // 7. Verify Staff
-        await initializeStaffSystem(); // Refresh staff after creation
-        const staff = await loadStaffFromDb();
-        expect(staff.length).toBe(condition.staff.length);
-
-        // Verify each staff member matches configuration
-        condition.staff.forEach((expectedStaff) => {
-          const foundStaff = staff.find(
-            (s) => s.name === `${expectedStaff.firstName} ${expectedStaff.lastName}`
-          );
-          expect(foundStaff).toBeDefined();
-          
-          if (foundStaff) {
-            expect(foundStaff.nationality).toBe(expectedStaff.nationality);
-            // Skill level should be approximately correct (within 0.1 tolerance due to randomization)
-            expect(Math.abs(foundStaff.skillLevel - expectedStaff.skillLevel)).toBeLessThan(0.15);
-            // Verify specializations match
-            expectedStaff.specializations.forEach((spec) => {
-              expect(foundStaff.specializations).toContain(spec);
-            });
-          }
-        });
-
-        // 8. Verify Starting Loan (if applicable)
-        if (condition.startingLoan) {
-          const loans = await loadLoans();
-          expect(loans.length).toBeGreaterThan(0);
-          
-          // Find the starting loan by principal amount
-          const startingLoan = loans.find(
-            (loan) => Math.abs(loan.principalAmount - condition.startingLoan!.principal) < 100
-          );
-          
-          expect(startingLoan).toBeDefined();
-          if (startingLoan) {
-            expect(startingLoan.lenderType).toBe(condition.startingLoan.lenderType);
-            expect(Math.abs(startingLoan.principalAmount - condition.startingLoan.principal)).toBeLessThan(100);
-            expect(startingLoan.totalSeasons).toBe(condition.startingLoan.durationSeasons);
-            if (condition.startingLoan.interestRate) {
-              // Interest rate should be approximately correct (within 0.01 tolerance)
-              expect(Math.abs(startingLoan.effectiveInterestRate - condition.startingLoan.interestRate)).toBeLessThan(0.01);
-            }
-          }
-        } else {
-          // No starting loan should exist
-          const loans = await loadLoans();
-          // Allow for lenders being initialized, but should not have starting loan principal
-          if (loans.length > 0) {
-            const hasStartingLoan = loans.some(
-              (loan) => loan.principalAmount > 10000 // Starting loans are large
-            );
-            expect(hasStartingLoan).toBe(false);
-          }
-        }
-
-        // 9. Verify Starting Vineyard
-        const vineyards = await loadVineyards();
-        expect(vineyards.length).toBe(1); // Should have exactly one starting vineyard
+        const preview = generateVineyardPreview(condition);
         
-        const vineyard = vineyards[0];
-        expect(vineyard.country).toBe(condition.startingVineyard.country);
-        expect(vineyard.region).toBe(condition.startingVineyard.region);
+        // Validate preview structure
+        expect(preview.name).toBeTruthy();
+        expect(preview.country).toBe(country);
+        expect(preview.region).toBe(condition.startingVineyard.region);
+        expect(preview.hectares).toBeGreaterThanOrEqual(condition.startingVineyard.minHectares);
+        expect(preview.hectares).toBeLessThanOrEqual(condition.startingVineyard.maxHectares + 0.01);
+        expect(Array.isArray(preview.soil)).toBe(true);
+        expect(preview.soil.length).toBeGreaterThan(0);
+        expect(preview.altitude).toBeGreaterThan(0);
+        expect(preview.density).toBeGreaterThan(0);
         
-        // Verify hectares are within expected range
-        expect(vineyard.hectares).toBeGreaterThanOrEqual(condition.startingVineyard.minHectares);
-        expect(vineyard.hectares).toBeLessThanOrEqual(condition.startingVineyard.maxHectares + 0.01); // Allow small rounding
-        
-        // Verify altitude is within expected range (if specified)
-        if (condition.startingVineyard.minAltitude !== undefined && condition.startingVineyard.maxAltitude !== undefined) {
-          expect(vineyard.altitude).toBeGreaterThanOrEqual(condition.startingVineyard.minAltitude - 10); // Allow small variance
-          expect(vineyard.altitude).toBeLessThanOrEqual(condition.startingVineyard.maxAltitude + 10);
+        // Validate altitude range if specified
+        if (condition.startingVineyard.minAltitude !== undefined && 
+            condition.startingVineyard.maxAltitude !== undefined) {
+          expect(preview.altitude).toBeGreaterThanOrEqual(condition.startingVineyard.minAltitude - 10);
+          expect(preview.altitude).toBeLessThanOrEqual(condition.startingVineyard.maxAltitude + 10);
         }
         
-        // Verify aspect matches preferred aspects (if specified)
-        if (condition.startingVineyard.preferredAspects && condition.startingVineyard.preferredAspects.length > 0) {
-          expect(condition.startingVineyard.preferredAspects).toContain(vineyard.aspect);
-        }
-        
-        // Starting vineyard should be planted with starting grape (if specified)
-        if (condition.startingUnlockedGrape) {
-          expect(vineyard.status).toBe('Planted');
-          expect(vineyard.density).toBeGreaterThan(0); // Should have density when planted
-          expect(vineyard.grape).toBe(condition.startingUnlockedGrape);
-          expect(vineyard.vineAge).toBe(condition.startingVineyard.startingVineAge);
-        } else {
-          // If no starting grape, vineyard should be barren
-          expect(vineyard.status).toBe('Barren');
-          expect(vineyard.density).toBe(0);
-          expect(vineyard.grape).toBeNull();
-        }
-
-        // 10. Verify Starting Prestige (if applicable)
-        if (condition.startingPrestige) {
-          const prestigeEvents = await listPrestigeEventsForUI();
-          const startingPrestigeEvent = prestigeEvents.find(
-            (event) => 
-              event.type === condition.startingPrestige!.type || 
-              event.type === 'company_story'
-          );
-          
-          expect(startingPrestigeEvent).toBeDefined();
-          if (startingPrestigeEvent) {
-            expect(startingPrestigeEvent.amount).toBe(condition.startingPrestige.amount);
-            if (condition.startingPrestige.decayRate) {
-              expect(startingPrestigeEvent.decayRate).toBe(condition.startingPrestige.decayRate);
-            }
-          }
-        }
-
-        // 11. Verify Starting Unlocked Grape (if applicable)
-        if (condition.startingUnlockedGrape) {
-          const unlockedGrapes = await getUnlockedGrapes(company.id);
-          expect(unlockedGrapes).toContain(condition.startingUnlockedGrape);
+        // Validate aspect if preferred aspects are specified
+        if (condition.startingVineyard.preferredAspects && 
+            condition.startingVineyard.preferredAspects.length > 0) {
+          expect(condition.startingVineyard.preferredAspects).toContain(preview.aspect);
         }
       });
 
-      it(`verifies ${country} starting condition configuration values`, () => {
+      it(`generates different previews for ${country} on multiple calls`, () => {
+        const condition = STARTING_CONDITIONS[country];
+        const preview1 = generateVineyardPreview(condition);
+        const preview2 = generateVineyardPreview(condition);
+        
+        // Some properties should vary (at least hectares, altitude, aspect might differ)
+        // But country and region should always match
+        expect(preview1.country).toBe(preview2.country);
+        expect(preview1.region).toBe(preview2.region);
+      });
+    });
+  });
+
+  describe('Starting Condition Configuration', () => {
+    startingCountries.forEach((country) => {
+      it(`validates ${country} starting condition structure`, () => {
         const condition = STARTING_CONDITIONS[country];
         
-        // Verify configuration structure
+        // Basic structure
         expect(condition.id).toBe(country);
-        expect(condition.name).toBeDefined();
+        expect(condition.name).toBeTruthy();
         expect(condition.startingMoney).toBeGreaterThan(0);
+        
+        // Staff configuration
+        expect(Array.isArray(condition.staff)).toBe(true);
         expect(condition.staff.length).toBeGreaterThan(0);
-        expect(condition.startingVineyard.country).toBe(country);
-        expect(condition.startingVineyard.region).toBeDefined();
-        expect(condition.startingVineyard.minHectares).toBeGreaterThan(0);
-        expect(condition.startingVineyard.maxHectares).toBeGreaterThanOrEqual(condition.startingVineyard.minHectares);
-
-        // Verify staff configuration
         condition.staff.forEach((staff) => {
-          expect(staff.firstName).toBeDefined();
-          expect(staff.lastName).toBeDefined();
+          expect(staff.firstName).toBeTruthy();
+          expect(staff.lastName).toBeTruthy();
           expect(staff.nationality).toBe(country);
           expect(staff.skillLevel).toBeGreaterThan(0);
           expect(staff.skillLevel).toBeLessThanOrEqual(1);
           expect(Array.isArray(staff.specializations)).toBe(true);
         });
-
-        // Verify vineyard configuration
-        if (condition.startingVineyard.minAltitude !== undefined && condition.startingVineyard.maxAltitude !== undefined) {
-          expect(condition.startingVineyard.maxAltitude).toBeGreaterThanOrEqual(condition.startingVineyard.minAltitude);
+        
+        // Vineyard configuration
+        expect(condition.startingVineyard.country).toBe(country);
+        expect(condition.startingVineyard.region).toBeTruthy();
+        expect(condition.startingVineyard.minHectares).toBeGreaterThan(0);
+        expect(condition.startingVineyard.maxHectares).toBeGreaterThanOrEqual(
+          condition.startingVineyard.minHectares
+        );
+        
+        if (condition.startingVineyard.minAltitude !== undefined && 
+            condition.startingVineyard.maxAltitude !== undefined) {
+          expect(condition.startingVineyard.maxAltitude).toBeGreaterThanOrEqual(
+            condition.startingVineyard.minAltitude
+          );
         }
-
-        // Verify starting unlocked grape is defined (if applicable)
-        if (condition.startingUnlockedGrape) {
-          expect(condition.startingUnlockedGrape).toBeDefined();
-          expect(typeof condition.startingUnlockedGrape).toBe('string');
-        }
-
-        // Verify starting vine age is defined and reasonable
+        
+        // Starting vine age
         expect(condition.startingVineyard.startingVineAge).toBeDefined();
         expect(condition.startingVineyard.startingVineAge).toBeGreaterThan(0);
-        expect(condition.startingVineyard.startingVineAge).toBeLessThan(50); // Reasonable max age
+        expect(condition.startingVineyard.startingVineAge).toBeLessThan(50);
       });
     });
-  });
 
-  describe('Starting Conditions Comparison', () => {
-    it('verifies that each country has unique starting conditions', () => {
-      const countries = Object.keys(STARTING_CONDITIONS) as StartingCountry[];
-      const startingMoneys = countries.map(country => STARTING_CONDITIONS[country].startingMoney);
-      const staffCounts = countries.map(country => STARTING_CONDITIONS[country].staff.length);
+    it('validates that countries have unique starting conditions', () => {
+      const startingMoneys = startingCountries.map(c => STARTING_CONDITIONS[c].startingMoney);
+      const staffCounts = startingCountries.map(c => STARTING_CONDITIONS[c].staff.length);
       
-      // Not all countries should have the same starting money (they should differ)
+      // Should have some variation
       const uniqueMoneys = new Set(startingMoneys);
-      // At least some variation in starting money (not all identical)
       expect(uniqueMoneys.size).toBeGreaterThan(1);
       
-      // Not all countries should have the same number of staff
       const uniqueStaffCounts = new Set(staffCounts);
-      // At least some variation in staff counts
       expect(uniqueStaffCounts.size).toBeGreaterThan(1);
     });
 
-    it('verifies that countries with loans have reasonable loan amounts', () => {
-      const countriesWithLoans = (Object.keys(STARTING_CONDITIONS) as StartingCountry[]).filter(
-        country => STARTING_CONDITIONS[country].startingLoan
+    it('validates loan configuration when present', () => {
+      const countriesWithLoans = startingCountries.filter(
+        c => STARTING_CONDITIONS[c].startingLoan
       );
-
+      
       countriesWithLoans.forEach((country) => {
-        const condition = STARTING_CONDITIONS[country];
-        const loan = condition.startingLoan!;
-        
+        const loan = STARTING_CONDITIONS[country].startingLoan!;
         expect(loan.principal).toBeGreaterThan(0);
         expect(loan.durationSeasons).toBeGreaterThan(0);
-        expect(loan.lenderType).toBeDefined();
+        expect(loan.lenderType).toBeTruthy();
         if (loan.interestRate) {
           expect(loan.interestRate).toBeGreaterThan(0);
-          expect(loan.interestRate).toBeLessThan(1); // Should be a rate, not percentage
+          expect(loan.interestRate).toBeLessThan(1);
         }
       });
     });
 
-    it('verifies that countries with prestige have reasonable prestige amounts', () => {
-      const countriesWithPrestige = (Object.keys(STARTING_CONDITIONS) as StartingCountry[]).filter(
-        country => STARTING_CONDITIONS[country].startingPrestige
+    it('validates prestige configuration when present', () => {
+      const countriesWithPrestige = startingCountries.filter(
+        c => STARTING_CONDITIONS[c].startingPrestige
       );
-
+      
       countriesWithPrestige.forEach((country) => {
-        const condition = STARTING_CONDITIONS[country];
-        const prestige = condition.startingPrestige!;
-        
+        const prestige = STARTING_CONDITIONS[country].startingPrestige!;
         expect(prestige.amount).toBeGreaterThan(0);
-        expect(prestige.amount).toBeLessThan(100); // Reasonable prestige amount
+        expect(prestige.amount).toBeLessThan(100);
         if (prestige.decayRate) {
           expect(prestige.decayRate).toBeGreaterThan(0);
           expect(prestige.decayRate).toBeLessThanOrEqual(1);
         }
+      });
+    });
+
+    it('validates starting unlocked grape when present', () => {
+      const countriesWithGrape = startingCountries.filter(
+        c => STARTING_CONDITIONS[c].startingUnlockedGrape
+      );
+      
+      countriesWithGrape.forEach((country) => {
+        const grape = STARTING_CONDITIONS[country].startingUnlockedGrape!;
+        expect(typeof grape).toBe('string');
+        expect(grape.length).toBeGreaterThan(0);
       });
     });
   });

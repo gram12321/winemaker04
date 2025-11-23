@@ -63,21 +63,45 @@ export function testApiPlugin(): Plugin {
           // Strip ANSI escape codes for parsing
           const cleanOutput = stdout.replace(/\x1b\[[0-9;]*m/g, '');
 
-          // Parse test results from output
-          const passedMatch = cleanOutput.match(/Tests:\s+(\d+)\s+passed|(\d+)\s+passed/i);
-          const failedMatch = cleanOutput.match(/Tests:\s+(\d+)\s+failed|(\d+)\s+failed/i);
-          const totalMatch = cleanOutput.match(/Tests:\s+(\d+)/i);
+          // Parse test results from output - match format like:
+          // "Tests  1 failed | 107 passed (108)"
+          // or "Tests  107 passed (108)"
+          let passed = 0;
+          let failed = 0;
+          let total = 0;
 
-          const passed = passedMatch ? parseInt(passedMatch[1] || passedMatch[2] || '0', 10) : 0;
-          const failed = failedMatch ? parseInt(failedMatch[1] || failedMatch[2] || '0', 10) : 0;
-          const total = totalMatch ? parseInt(totalMatch[1] || '0', 10) : (passed + failed || 0);
+          // Try to match the summary line format - look for "Tests" line (not "Test Files")
+          // Format: "     Tests  X failed | Y passed (Z)"
+          const testsSummaryMatch = cleanOutput.match(/Tests\s+(\d+)\s+failed\s+\|\s+(\d+)\s+passed\s+\((\d+)\)/i);
+          if (testsSummaryMatch) {
+            failed = parseInt(testsSummaryMatch[1], 10);
+            passed = parseInt(testsSummaryMatch[2], 10);
+            total = parseInt(testsSummaryMatch[3], 10);
+          } else {
+            // Try format without failed: "Tests  Y passed (Z)"
+            const testsPassedOnlyMatch = cleanOutput.match(/Tests\s+(\d+)\s+passed\s+\((\d+)\)/i);
+            if (testsPassedOnlyMatch) {
+              passed = parseInt(testsPassedOnlyMatch[1], 10);
+              total = parseInt(testsPassedOnlyMatch[2], 10);
+              failed = total - passed;
+            } else {
+              // Fallback: try to match individual patterns
+              const passedMatch = cleanOutput.match(/(\d+)\s+passed/i);
+              const failedMatch = cleanOutput.match(/(\d+)\s+failed/i);
+              const totalMatch = cleanOutput.match(/\((\d+)\)/);
+
+              passed = passedMatch ? parseInt(passedMatch[1], 10) : 0;
+              failed = failedMatch ? parseInt(failedMatch[1], 10) : 0;
+              total = totalMatch ? parseInt(totalMatch[1], 10) : (passed + failed || 0);
+            }
+          }
 
           // Parse individual test file results
           // Pattern 1: ✓ tests/path/file.test.ts (X tests) Xms (passed)
           // Pattern 2: ❯ tests/path/file.test.ts (X tests | Y failed) Xms (failed)
           // Match lines like: 
           //   ✓ tests/wine/fermentationCharacteristics.test.ts (14 tests) 15ms
-          //   ❯ tests/user/hireStaffWorkflow.test.ts (6 tests | 5 failed) 14174ms
+          //   ❯ tests/user/hireStaffWorkflow.test.ts (6 tests | 1 failed) 23485ms
           const testFilePattern = /(✓|✗|❯)\s+([^\s]+\.test\.ts)\s+\((\d+)\s+tests?(?:\s*\|\s*(\d+)\s+failed)?\)\s+(\d+)ms/g;
           const testFiles: Array<{ file: string; tests: number; duration: number; passed: boolean }> = [];
           let match;
@@ -85,13 +109,14 @@ export function testApiPlugin(): Plugin {
           while ((match = testFilePattern.exec(cleanOutput)) !== null) {
             const totalTests = parseInt(match[3], 10);
             const failedTests = match[4] ? parseInt(match[4], 10) : 0;
-            const passed = match[1] === '✓' || (match[1] === '❯' && failedTests === 0);
+            // File passes if it has ✓ or if it's ❯ with no failed tests
+            const filePassed = match[1] === '✓' || (match[1] === '❯' && failedTests === 0);
             
             testFiles.push({
-              file: match[2], // Second capture group is the file path
+              file: match[2], // Second capture group is the file path (e.g., "tests/user/researchWorkflow.test.ts")
               tests: totalTests,
               duration: parseInt(match[5], 10),
-              passed: passed
+              passed: filePassed
             });
           }
 

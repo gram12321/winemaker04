@@ -4,7 +4,8 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
-import { formatNumber, ChevronDownIcon, ChevronRightIcon, getCharacteristicIconSrc } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
+import { ChevronDownIcon, ChevronRightIcon, getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 
 

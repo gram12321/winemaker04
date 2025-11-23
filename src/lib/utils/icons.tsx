@@ -3,8 +3,9 @@ import { WineCharacteristics } from '@/lib/types/types';
 import { GrapeVariety } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
-import { cn, getCharacteristicDisplayName, getCharacteristicIconSrc, getGrapeIconSrc, getStoryImageSrc } from './utils';
+import { cn, getCharacteristicDisplayName, getStoryImageSrc } from './utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
+
 
 // ===== SVG ICONS =====
 
@@ -152,6 +153,23 @@ interface CharacteristicIconProps {
   tooltip?: boolean | string | React.ReactNode;
 }
 
+// Direct mapping of characteristic names to icon file paths
+const CHARACTERISTIC_ICON_MAP: Record<keyof WineCharacteristics, string> = {
+  acidity: '/assets/icons/characteristics/icon_acidity.png',
+  aroma: '/assets/icons/characteristics/icon_aroma.png',
+  body: '/assets/icons/characteristics/icon_body.png',
+  spice: '/assets/icons/characteristics/icon_spice.png',
+  sweetness: '/assets/icons/characteristics/icon_sweetness.png',
+  tannins: '/assets/icons/characteristics/icon_tannins.png'
+};
+
+/**
+ * Get icon path for a wine characteristic (uses direct mapping, no transformations)
+ */
+export function getCharacteristicIconSrc(characteristic: keyof WineCharacteristics | string): string {
+  return CHARACTERISTIC_ICON_MAP[characteristic as keyof WineCharacteristics] || `/assets/icons/characteristics/icon_${characteristic}.png`;
+}
+
 export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
   name,
   size = 'xs',
@@ -265,6 +283,24 @@ interface GrapeIconProps {
   rounded?: boolean;
   alt?: string;
   tooltip?: boolean | string | React.ReactNode;
+}
+
+// Direct mapping of grape variety names to icon file paths (file names are already correct)
+const GRAPE_ICON_MAP: Record<GrapeVariety, string> = {
+  'Barbera': '/assets/icons/grape/icon_barbera.png',
+  'Chardonnay': '/assets/icons/grape/icon_chardonnay.png',
+  'Pinot Noir': '/assets/icons/grape/icon_pinot_noir.png',
+  'Primitivo': '/assets/icons/grape/icon_primitivo.png',
+  'Sauvignon Blanc': '/assets/icons/grape/icon_sauvignon_blanc.png',
+  'Tempranillo': '/assets/icons/grape/icon_tempranillo.png',
+  'Sangiovese': '/assets/icons/grape/icon_sangiovese.png'
+};
+
+/**
+ * Get icon path for a grape variety (uses direct mapping, no transformations)
+ */
+export function getGrapeIconSrc(variety: GrapeVariety): string {
+  return GRAPE_ICON_MAP[variety];
 }
 
 export const GrapeIcon: React.FC<GrapeIconProps> = ({

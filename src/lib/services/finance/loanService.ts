@@ -729,7 +729,8 @@ function simulateVineyardSeizureStep(
 async function liquidateBottledInventory(
   targetValue: number,
   penaltyRate: number,
-  transactionLabel: string
+  transactionLabel: string,
+  maxAllowedSeizureValue?: number
 ): Promise<{ valueRecovered: number; saleProceeds: number; batchSummaries: string[] }> {
   const batches = await loadWineBatches();
   const eligibleBatches = batches.filter(batch => batch.state === 'bottled' && batch.quantity > 0);
@@ -742,8 +743,12 @@ async function liquidateBottledInventory(
     const unitPrice = batch.estimatedPrice ?? batch.askingPrice ?? 10;
     return sum + unitPrice * batch.quantity;
   }, 0);
-  const inventoryAllowance =
-    totalInventoryValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+  
+  // Use maxAllowedSeizureValue if provided (for cumulative tracking), otherwise calculate from current inventory
+  const inventoryAllowance = maxAllowedSeizureValue !== undefined
+    ? maxAllowedSeizureValue
+    : totalInventoryValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+  
   const cappedTarget = Math.min(targetValue, inventoryAllowance);
 
   if (cappedTarget <= 0) {
@@ -1676,12 +1681,43 @@ export async function processSeasonalLoanPayments(): Promise<void> {
       year: gameState.currentYear || 2024
     };
 
+    // Calculate original portfolio and inventory values BEFORE any seizures
+    // This ensures we never exceed 50% of original value across all defaults
+    const vineyards = await loadVineyards();
+    const originalPortfolioValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
+    const maxPortfolioSeizureValue = originalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
 
+    const batches = await loadWineBatches();
+    const eligibleBatches = batches.filter(batch => batch.state === 'bottled' && batch.quantity > 0);
+    const originalInventoryValue = eligibleBatches.reduce((sum, batch) => {
+      const unitPrice = batch.estimatedPrice ?? batch.askingPrice ?? 10;
+      return sum + unitPrice * batch.quantity;
+    }, 0);
+    const maxInventorySeizureValue = originalInventoryValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+
+    // Track cumulative seizures across all loan defaults in this payment cycle
+    let cumulativeVineyardSeizureValue = 0;
+    let cumulativeInventorySeizureValue = 0;
 
     for (const loan of activeLoans) {
       // Check if payment is due
       if (isPaymentDue(loan.nextPaymentDue, currentDate)) {
-        await processLoanPayment(loan, currentDate);
+        const seizureLimits = {
+          maxPortfolioSeizureValue,
+          maxInventorySeizureValue,
+          remainingPortfolioSeizureValue: maxPortfolioSeizureValue - cumulativeVineyardSeizureValue,
+          remainingInventorySeizureValue: maxInventorySeizureValue - cumulativeInventorySeizureValue,
+          cumulativeVineyardSeizureValue,
+          cumulativeInventorySeizureValue
+        };
+
+        const seizureResult = await processLoanPayment(loan, currentDate, seizureLimits);
+
+        // Update cumulative seizures after processing this loan
+        if (seizureResult) {
+          cumulativeVineyardSeizureValue += seizureResult.vineyardSeizureValue;
+          cumulativeInventorySeizureValue += seizureResult.inventorySeizureValue;
+        }
       }
     }
     // Ensure UI sees final state after all loan updates
@@ -1701,7 +1737,18 @@ function isPaymentDue(paymentDate: GameDate, currentDate: GameDate): boolean {
 /**
  * Process payment for a specific loan (3-strike warning system)
  */
-async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<void> {
+async function processLoanPayment(
+  loan: Loan, 
+  currentDate: GameDate,
+  seizureLimits?: {
+    maxPortfolioSeizureValue: number;
+    maxInventorySeizureValue: number;
+    remainingPortfolioSeizureValue: number;
+    remainingInventorySeizureValue: number;
+    cumulativeVineyardSeizureValue: number;
+    cumulativeInventorySeizureValue: number;
+  }
+): Promise<{ vineyardSeizureValue: number; inventorySeizureValue: number } | null> {
   try {
     const gameState = getGameState();
     const availableMoney = gameState.money || 0;
@@ -1757,6 +1804,9 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
           );
         }
       }
+
+      // No seizures for successful payment
+      return null;
     } else if (availableMoney > 0) {
       // Partial payment - use all available funds
       await addTransaction(
@@ -1782,15 +1832,16 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
       });
 
       // Apply penalties based on warning level
+      let seizureResult = null;
       if (newMissedPayments === 1) {
         await applyWarning1Penalties(loan);
       } else if (newMissedPayments === 2) {
         await applyWarning2Penalties(loan);
       } else if (newMissedPayments === 3) {
-        await applyWarning3Penalties(loan);
+        seizureResult = await applyWarning3Penalties(loan, seizureLimits);
       } else {
         // missedPayments >= 4: Full default
-        await applyFullDefault(loan);
+        seizureResult = await applyFullDefault(loan, seizureLimits);
       }
 
       await notificationService.addMessage(
@@ -1799,6 +1850,8 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
         'Partial Loan Payment',
         NotificationCategory.FINANCE_AND_STAFF
       );
+
+      return seizureResult;
     } else {
       // No funds available - apply graduated penalties based on missed payments
       const newMissedPayments = (loan.missedPayments || 0) + 1;
@@ -1810,19 +1863,23 @@ async function processLoanPayment(loan: Loan, currentDate: GameDate): Promise<vo
       });
 
       // Apply penalties based on warning level
+      let seizureResult = null;
       if (newMissedPayments === 1) {
         await applyWarning1Penalties(loan);
       } else if (newMissedPayments === 2) {
         await applyWarning2Penalties(loan);
       } else if (newMissedPayments === 3) {
-        await applyWarning3Penalties(loan);
+        seizureResult = await applyWarning3Penalties(loan, seizureLimits);
       } else {
         // missedPayments >= 4: Full default
-        await applyFullDefault(loan);
+        seizureResult = await applyFullDefault(loan, seizureLimits);
       }
+
+      return seizureResult;
     }
   } catch (error) {
     // Silent error handling
+    return null;
   }
 }
 
@@ -2127,17 +2184,33 @@ async function applyWarning2Penalties(loan: Loan): Promise<void> {
  * - Credit rating loss: -10% (cumulative: -20% total)
  * - Bookkeeping work: +100 units
  */
-async function applyWarning3Penalties(loan: Loan): Promise<void> {
+async function applyWarning3Penalties(
+  loan: Loan,
+  seizureLimits?: {
+    maxPortfolioSeizureValue: number;
+    maxInventorySeizureValue: number;
+    remainingPortfolioSeizureValue: number;
+    remainingInventorySeizureValue: number;
+    cumulativeVineyardSeizureValue: number;
+    cumulativeInventorySeizureValue: number;
+  }
+): Promise<{ vineyardSeizureValue: number; inventorySeizureValue: number } | null> {
   const penalties = LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3;
 
+  // Calculate target values based on loan balance, but cap by remaining seizure limits
+  const targetInventoryValue = loan.remainingBalance * penalties.MAX_VINEYARD_SEIZURE_PERCENT;
+  const maxAllowedInventorySeizure = seizureLimits?.remainingInventorySeizureValue ?? targetInventoryValue;
+  const cappedInventoryTarget = Math.min(targetInventoryValue, maxAllowedInventorySeizure);
+
   const inventoryResult = await liquidateBottledInventory(
-    loan.remainingBalance * penalties.MAX_VINEYARD_SEIZURE_PERCENT,
+    cappedInventoryTarget,
     EMERGENCY_RESTRUCTURE.SALE_PENALTY_RATE,
-    'Forced cellar liquidation'
+    'Forced cellar liquidation',
+    maxAllowedInventorySeizure
   );
 
-  // Seize vineyards to cover debt (up to 50% of portfolio VALUE)
-  const seizureResult = await seizeVineyardsForDebt(loan);
+  // Seize vineyards to cover debt (up to 50% of portfolio VALUE, respecting cumulative limits)
+  const seizureResult = await seizeVineyardsForDebt(loan, seizureLimits);
 
   // Now use ALL available money (including liquidation proceeds) to repay loan
   const gameState = getGameState();
@@ -2181,6 +2254,12 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
       ? `• ${seizureResult.vineyardsSeized} vineyard(s) forcibly sold`
       : '• Attempted to seize vineyards but none available';
 
+  // Return seizure values for cumulative tracking
+  return {
+    vineyardSeizureValue: seizureResult.valueRecovered,
+    inventorySeizureValue: inventoryResult.valueRecovered
+  };
+
   // Queue warning modal
   const warning: PendingLoanWarning = {
     loanId: loan.id,
@@ -2222,12 +2301,25 @@ async function applyWarning3Penalties(loan: Loan): Promise<void> {
  * - Lender blacklist
  * - Full default prestige penalty
  */
-async function applyFullDefault(loan: Loan): Promise<void> {
-  // Apply Warning #3 penalties first
-  await applyWarning3Penalties(loan);
+async function applyFullDefault(
+  loan: Loan,
+  seizureLimits?: {
+    maxPortfolioSeizureValue: number;
+    maxInventorySeizureValue: number;
+    remainingPortfolioSeizureValue: number;
+    remainingInventorySeizureValue: number;
+    cumulativeVineyardSeizureValue: number;
+    cumulativeInventorySeizureValue: number;
+  }
+): Promise<{ vineyardSeizureValue: number; inventorySeizureValue: number } | null> {
+  // Apply Warning #3 penalties first (returns seizure values)
+  const seizureResult = await applyWarning3Penalties(loan, seizureLimits);
 
   // Then apply full default
   await defaultOnLoan(loan.id);
+
+  // Return seizure values for cumulative tracking
+  return seizureResult;
 }
 
 /**
@@ -2235,8 +2327,21 @@ async function applyFullDefault(loan: Loan): Promise<void> {
  * Sells vineyards (lowest value first) until 50% of portfolio VALUE is reached
  * Applies -25% penalty to sale proceeds and adds to user money
  * Returns details of seizure for modal display
+ * 
+ * IMPORTANT: Respects cumulative seizure limits to prevent multiple defaults from exceeding 50% cap
+ * Always ensures at least one vineyard remains
  */
-async function seizeVineyardsForDebt(loan: Loan): Promise<{
+async function seizeVineyardsForDebt(
+  loan: Loan,
+  seizureLimits?: {
+    maxPortfolioSeizureValue: number;
+    maxInventorySeizureValue: number;
+    remainingPortfolioSeizureValue: number;
+    remainingInventorySeizureValue: number;
+    cumulativeVineyardSeizureValue: number;
+    cumulativeInventorySeizureValue: number;
+  }
+): Promise<{
   vineyardsSeized: number;
   valueRecovered: number;
   vineyardNames: string[];
@@ -2249,9 +2354,19 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
       return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [], saleProceeds: 0 };
     }
 
-    // Calculate total portfolio value and maximum seizure amount (50% of VALUE)
+    // CRITICAL: Always protect at least one vineyard - never seize the last one
+    if (vineyards.length === 1) {
+      return { vineyardsSeized: 0, valueRecovered: 0, vineyardNames: [], saleProceeds: 0 };
+    }
+
+    // Calculate total portfolio value
     const totalPortfolioValue = vineyards.reduce((sum, v) => sum + v.vineyardTotalValue, 0);
-    const maxSeizureValue = totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
+    
+    // Use remaining seizure allowance if provided, otherwise calculate from current portfolio
+    // This ensures we never exceed 50% of ORIGINAL portfolio value across all defaults
+    const maxSeizureValue = seizureLimits 
+      ? Math.max(0, seizureLimits.remainingPortfolioSeizureValue)
+      : totalPortfolioValue * LOAN_MISSED_PAYMENT_PENALTIES.WARNING_3.MAX_VINEYARD_SEIZURE_PERCENT;
 
     // Sort vineyards by value (lowest first - take least valuable ones)
     const sortedVineyards = [...vineyards].sort((a, b) => a.vineyardTotalValue - b.vineyardTotalValue);
@@ -2260,9 +2375,15 @@ async function seizeVineyardsForDebt(loan: Loan): Promise<{
     const vineyardsToRemove: string[] = [];
     const vineyardNames: string[] = [];
 
-    // Seize vineyards until 50% of portfolio VALUE is reached
-    for (const vineyard of sortedVineyards) {
-      if (valueRecovered >= maxSeizureValue) break;
+    // Seize vineyards until limit is reached, BUT always leave at least one vineyard
+    // Loop through all vineyards EXCEPT the last one (to ensure at least one remains)
+    for (let i = 0; i < sortedVineyards.length - 1; i++) {
+      const vineyard = sortedVineyards[i];
+      
+      // Check if adding this vineyard would exceed the limit
+      if (valueRecovered + vineyard.vineyardTotalValue > maxSeizureValue) {
+        break;
+      }
 
       vineyardsToRemove.push(vineyard.id);
       vineyardNames.push(vineyard.name);

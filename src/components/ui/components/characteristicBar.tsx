@@ -1,6 +1,7 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange, getCharacteristicIconSrc } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
+import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { useWineBalance } from '@/hooks';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';

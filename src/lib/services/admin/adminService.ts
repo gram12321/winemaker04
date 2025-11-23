@@ -5,6 +5,10 @@ import { insertPrestigeEvent } from '../../database';
 import { calculateAbsoluteWeeks, formatNumber } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
+import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
+import { unlockResearch, getAllResearchUnlocks } from '@/lib/database';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import type { GameDate } from '@/lib/types/types';
 
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
@@ -318,6 +322,118 @@ export async function adminSetGameDate({ week, season, year }: AdminGameDatePayl
     season: normalizedSeason,
     currentYear: normalizedYear
   });
+}
+
+/**
+ * Grant all research projects to the active company
+ */
+export async function adminGrantAllResearch(): Promise<{ success: boolean; unlocked: number; alreadyUnlocked: number }> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) {
+      throw new Error('No active company found');
+    }
+
+    const gameState = getGameState();
+    const gameDate: GameDate = {
+      week: gameState.week || GAME_INITIALIZATION.STARTING_WEEK,
+      season: (gameState.season || GAME_INITIALIZATION.STARTING_SEASON) as any,
+      year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
+    };
+
+    const absoluteWeeks = calculateAbsoluteWeeks(
+      gameDate.week,
+      gameDate.season,
+      gameDate.year
+    );
+
+    // Get currently unlocked research IDs
+    const existingUnlocks = await getAllResearchUnlocks(companyId);
+    const unlockedIds = new Set(existingUnlocks.map(u => u.researchId));
+
+    let unlocked = 0;
+    let alreadyUnlocked = 0;
+
+    // Unlock all research projects
+    for (const project of RESEARCH_PROJECTS) {
+      if (unlockedIds.has(project.id)) {
+        alreadyUnlocked++;
+        continue;
+      }
+
+      try {
+        await unlockResearch({
+          researchId: project.id,
+          companyId,
+          unlockedAt: gameDate,
+          unlockedAtTimestamp: absoluteWeeks,
+          metadata: {
+            unlocks: project.unlocks || [],
+            adminGranted: true
+          }
+        });
+        unlocked++;
+      } catch (error) {
+        // If it's a duplicate error, count as already unlocked
+        if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+          alreadyUnlocked++;
+        } else {
+          console.error(`Error unlocking research ${project.id}:`, error);
+        }
+      }
+    }
+
+    console.log(`✅ Admin granted all research: ${unlocked} unlocked, ${alreadyUnlocked} already unlocked`);
+
+    return {
+      success: true,
+      unlocked,
+      alreadyUnlocked
+    };
+  } catch (error) {
+    console.error('Error granting all research:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove all research unlocks from the active company
+ */
+export async function adminRemoveAllResearch(): Promise<{ success: boolean; removed: number }> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) {
+      throw new Error('No active company found');
+    }
+
+    // Get all research unlocks for the company
+    const unlocks = await getAllResearchUnlocks(companyId);
+    const unlockIds = unlocks.map(u => u.id);
+
+    if (unlockIds.length === 0) {
+      return { success: true, removed: 0 };
+    }
+
+    // Delete all research unlocks
+    const { error } = await supabase
+      .from('research_unlocks')
+      .delete()
+      .in('id', unlockIds);
+
+    if (error) {
+      throw error;
+    }
+
+    console.log(`✅ Admin removed all research: ${unlockIds.length} unlocks removed`);
+
+    return {
+      success: true,
+      removed: unlockIds.length
+    };
+  } catch (error) {
+    console.error('Error removing all research:', error);
+    throw error;
+  }
 }
 
 /**

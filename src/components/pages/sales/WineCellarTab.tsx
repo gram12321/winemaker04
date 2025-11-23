@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { WineBatch } from '@/lib/types/types';
-import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange, getCharacteristicIconSrc } from '@/lib/utils/utils';
+import { formatNumber, formatPercent, getGrapeQualityCategory, getColorClass, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
+import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';

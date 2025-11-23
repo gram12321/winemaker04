@@ -3,7 +3,8 @@ import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../sh
 import { getRatingForRange } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { WineCharacteristics } from '@/lib/types/types';
-import { formatNumber, getCharacteristicIconSrc } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
+import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 
 interface CharacteristicSliderProps {
   value: number;

@@ -350,6 +350,48 @@ const testSuites: Record<string, TestSuite> = {
       }
     ]
   },
+  'researchWorkflow.test.ts': {
+    file: 'tests/user/researchWorkflow.test.ts',
+    title: 'Research Workflow - Complete Research Process',
+    description: 'Tests the complete research workflow from start to completion. Validates that research activities can be started and completed, costs are deducted via transactions, unlocks are written to database, prestige bonuses are granted, and research completion can be retrieved from database.',
+    groups: [
+      {
+        name: 'Complete Research Workflow',
+        tests: [
+          {
+            name: 'creates company, starts research, completes research, and verifies all steps',
+            scenario: 'Creating company with starting conditions, starting research activity, completing research activity',
+            expected: 'Research activity created with reasonable work amount, cost deducted via transaction, research unlock written to database, prestige event created, activity removed after completion',
+            whyItMatters: 'Most common error - data not being successfully written to database. Validates complete research workflow including transactions, unlocks, and prestige.'
+          },
+          {
+            name: 'verifies research with unlocks writes unlock data to database',
+            scenario: 'Completing research project that has unlocks (e.g., grape variety research)',
+            expected: 'Research unlock record created with metadata containing unlock information',
+            whyItMatters: 'Ensures unlock data is properly stored so game can check what has been unlocked'
+          },
+          {
+            name: 'verifies research with grant reward adds money transaction on completion',
+            scenario: 'Completing research project with rewardAmount (grant projects)',
+            expected: 'Grant reward transaction added on completion, money increased by grant amount',
+            whyItMatters: 'Validates that grant research projects correctly award money on completion'
+          },
+          {
+            name: 'prevents starting research when company has insufficient funds',
+            scenario: 'Attempting to start research when company has less money than research cost',
+            expected: 'Research start fails (returns null), no activity created, money not deducted',
+            whyItMatters: 'Validates financial checks prevent starting research without sufficient funds'
+          },
+          {
+            name: 'verifies multiple research projects can be completed and retrieved from database',
+            scenario: 'Completing multiple research projects sequentially',
+            expected: 'All completed research can be retrieved from database, unlocked research IDs list contains all completed projects',
+            whyItMatters: 'Ensures database persistence works correctly for multiple research completions'
+          }
+        ]
+      }
+    ]
+  },
   'yieldCalculator.test.ts': {
     file: 'tests/vineyard/yieldCalculator.test.ts',
     title: 'Vineyard Yield Calculator Tests',
@@ -1051,7 +1093,7 @@ const TestViewer: React.FC = () => {
           {testResult.status !== 'idle' && (
             <div className="space-y-6">
               {Object.entries(testSuites)
-                .filter(([key]) => key === 'vineyardCreation.test.ts' || key === 'companyCreation.test.ts' || key === 'startingConditions.test.ts' || key === 'hireStaffWorkflow.test.ts') // Only show human automation tests
+                .filter(([key]) => key === 'vineyardCreation.test.ts' || key === 'companyCreation.test.ts' || key === 'startingConditions.test.ts' || key === 'hireStaffWorkflow.test.ts' || key === 'researchWorkflow.test.ts') // Only show human automation tests
                 .map(([key, suite]) => {
                 const matchingTestFile = testResult.testFiles?.find(tf => {
                   const fileName = tf.file.split('/').pop() || tf.file; // Get just the filename
@@ -1084,6 +1126,7 @@ const TestViewer: React.FC = () => {
                           {key === 'companyCreation.test.ts' && 'Manual testing: Creating companies with and without users through the login screen, then checking the database to verify they were saved correctly.'}
                           {key === 'startingConditions.test.ts' && 'Manual testing: Creating a company with each starting condition (France, Italy, Germany, Spain, US) through the UI, then manually checking that staff, money, loans, vineyards, and prestige match the configuration.'}
                           {key === 'hireStaffWorkflow.test.ts' && 'Manual testing: Opening Staff page, clicking "Search Staff", configuring search options, waiting for search to complete, viewing results modal, hiring candidates, waiting for hiring activity to complete, verifying new staff appears in list, checking transactions for costs.'}
+                          {key === 'researchWorkflow.test.ts' && 'Manual testing: Opening Finance page → Research tab, selecting a research project, clicking "Start Research", verifying money is deducted, waiting for research activity to complete, verifying research appears in completed research list, checking prestige modal for research prestige bonus, verifying unlocks are applied (e.g., grape variety unlocked).'}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-xs mt-2 w-fit">
@@ -1271,6 +1314,7 @@ const TestViewer: React.FC = () => {
                 <li>✅ Company and user creation (COMPLETED)</li>
                 <li>✅ Starting conditions for all countries (COMPLETED)</li>
                 <li>✅ Hire staff workflow validation (COMPLETED)</li>
+                <li>✅ Research workflow validation (COMPLETED)</li>
                 <li>Take loan workflow validation</li>
                 <li>Find/buy land workflow validation</li>
                 <li>Plant vineyard workflow validation</li>

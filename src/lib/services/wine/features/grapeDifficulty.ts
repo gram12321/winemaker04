@@ -13,7 +13,7 @@ import {
   ALL_SOIL_TYPES
 } from '@/lib/constants';
 import { GrapeVariety, WineCharacteristics, Aspect } from '@/lib/types/types';
-import { clamp01 } from '@/lib/utils';
+import { clamp01 } from '@/lib/utils/utils';
 
 type DifficultyComponentKey =
   | 'handling'

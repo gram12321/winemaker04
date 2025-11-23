@@ -4,7 +4,8 @@ import { WineCharacteristicsDisplay, CharacteristicSliderGrid } from '@/componen
 import { WineCharacteristics } from '@/lib/types/types';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { RANGE_ADJUSTMENTS } from '@/lib/balance';
-import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES, getCharacteristicIconSrc } from '@/lib/utils';
+import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
+import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 
 export function DynamicRangeTab() {
   const baseRanges = BASE_BALANCED_RANGES;
