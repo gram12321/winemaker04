@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Season } from '../../types/types';
+import { Season, GameDate } from '../../types/types';
 
 const COMPANIES_TABLE = 'companies';
 
@@ -16,6 +16,15 @@ export interface Company {
   lastPlayed: Date;
   createdAt: Date;
   updatedAt: Date;
+  // Public company fields
+  totalShares?: number;
+  outstandingShares?: number;
+  playerShares?: number;
+  initialOwnershipPct?: number;
+  dividendRate?: number; // Fixed per share in euros
+  lastDividendPaid?: GameDate;
+  marketCap?: number;
+  sharePrice?: number;
 }
 
 /**
@@ -34,7 +43,20 @@ function mapCompanyFromDB(dbCompany: any): Company {
     prestige: dbCompany.prestige,
     lastPlayed: dbCompany.last_played ? new Date(dbCompany.last_played) : new Date(),
     createdAt: new Date(dbCompany.created_at),
-    updatedAt: new Date(dbCompany.updated_at)
+    updatedAt: new Date(dbCompany.updated_at),
+    // Public company fields
+    totalShares: dbCompany.total_shares ? Number(dbCompany.total_shares) : undefined,
+    outstandingShares: dbCompany.outstanding_shares ? Number(dbCompany.outstanding_shares) : undefined,
+    playerShares: dbCompany.player_shares ? Number(dbCompany.player_shares) : undefined,
+    initialOwnershipPct: dbCompany.initial_ownership_pct ? Number(dbCompany.initial_ownership_pct) : undefined,
+    dividendRate: dbCompany.dividend_rate ? Number(dbCompany.dividend_rate) : undefined,
+    lastDividendPaid: (dbCompany.last_dividend_paid_week && dbCompany.last_dividend_paid_season && dbCompany.last_dividend_paid_year) ? {
+      week: dbCompany.last_dividend_paid_week,
+      season: dbCompany.last_dividend_paid_season as Season,
+      year: dbCompany.last_dividend_paid_year
+    } : undefined,
+    marketCap: dbCompany.market_cap ? Number(dbCompany.market_cap) : undefined,
+    sharePrice: dbCompany.share_price ? Number(dbCompany.share_price) : undefined
   };
 }
 
@@ -54,6 +76,17 @@ export interface CompanyData {
   money: number;
   prestige: number;
   last_played?: string;
+  // Public company fields
+  total_shares?: number;
+  outstanding_shares?: number;
+  player_shares?: number;
+  initial_ownership_pct?: number;
+  dividend_rate?: number; // Fixed per share in euros
+  last_dividend_paid_week?: number;
+  last_dividend_paid_season?: Season;
+  last_dividend_paid_year?: number;
+  market_cap?: number;
+  share_price?: number;
 }
 
 export const insertCompany = async (companyData: CompanyData): Promise<{ success: boolean; data?: any; error?: string }> => {

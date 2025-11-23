@@ -8,6 +8,7 @@ export interface CompanyCreateData {
   name: string;
   associateWithUser?: boolean;
   userName?: string;
+  outsideInvestmentAmount?: number; // Outside investment in euros (0 to 1,000,000)
 }
 
 export interface CompanyUpdateData {
@@ -17,6 +18,12 @@ export interface CompanyUpdateData {
   money?: number;
   prestige?: number;
   startingCountry?: string;
+  totalShares?: number;
+  outstandingShares?: number;
+  playerShares?: number;
+  initialOwnershipPct?: number;
+  marketCap?: number;
+  sharePrice?: number;
 }
 
 export interface CompanyStats {
@@ -55,6 +62,16 @@ class CompanyService {
         return { success: false, error: 'Company name already exists' };
       }
 
+      // Calculate share structure based on outside investment
+      const FIXED_PLAYER_INVESTMENT = 100000; // Fixed at 100,000€
+      const outsideInvestment = data.outsideInvestmentAmount ?? 0;
+      const totalCapital = FIXED_PLAYER_INVESTMENT + outsideInvestment;
+      const playerOwnershipPct = totalCapital > 0 ? (FIXED_PLAYER_INVESTMENT / totalCapital) * 100 : 100;
+      
+      const TOTAL_SHARES = 1000000; // Fixed total shares
+      const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
+      const outstandingShares = TOTAL_SHARES - playerShares;
+
       const companyData: CompanyData = {
         name: data.name,
         user_id: userId,
@@ -63,7 +80,15 @@ class CompanyService {
         current_season: 'Spring',
         current_year: 2024,
         money: 0,
-        prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
+        prestige: GAME_INITIALIZATION.STARTING_PRESTIGE,
+        // Public company fields
+        total_shares: TOTAL_SHARES,
+        outstanding_shares: outstandingShares,
+        player_shares: playerShares,
+        initial_ownership_pct: playerOwnershipPct,
+        dividend_rate: 0, // Fixed per share in euros
+        market_cap: 0,
+        share_price: 0
       };
 
       const result = await insertCompany(companyData);
@@ -85,7 +110,20 @@ class CompanyService {
         prestige: result.data.prestige,
         lastPlayed: new Date(),
         createdAt: new Date(result.data.created_at),
-        updatedAt: new Date(result.data.updated_at)
+        updatedAt: new Date(result.data.updated_at),
+        // Public company fields
+        totalShares: result.data.total_shares ? Number(result.data.total_shares) : undefined,
+        outstandingShares: result.data.outstanding_shares ? Number(result.data.outstanding_shares) : undefined,
+        playerShares: result.data.player_shares ? Number(result.data.player_shares) : undefined,
+        initialOwnershipPct: result.data.initial_ownership_pct ? Number(result.data.initial_ownership_pct) : undefined,
+        dividendRate: result.data.dividend_rate ? Number(result.data.dividend_rate) : undefined,
+        lastDividendPaid: (result.data.last_dividend_paid_week && result.data.last_dividend_paid_season && result.data.last_dividend_paid_year) ? {
+          week: result.data.last_dividend_paid_week,
+          season: result.data.last_dividend_paid_season as Season,
+          year: result.data.last_dividend_paid_year
+        } : undefined,
+        marketCap: result.data.market_cap ? Number(result.data.market_cap) : undefined,
+        sharePrice: result.data.share_price ? Number(result.data.share_price) : undefined
       } as Company : undefined;
 
       // Initialize lenders for the new company
@@ -128,6 +166,12 @@ class CompanyService {
     if (updates.money !== undefined) updateData.money = updates.money;
     if (updates.prestige !== undefined) updateData.prestige = updates.prestige;
     if (updates.startingCountry !== undefined) updateData.starting_country = updates.startingCountry;
+    if (updates.totalShares !== undefined) updateData.total_shares = updates.totalShares;
+    if (updates.outstandingShares !== undefined) updateData.outstanding_shares = updates.outstandingShares;
+    if (updates.playerShares !== undefined) updateData.player_shares = updates.playerShares;
+    if (updates.initialOwnershipPct !== undefined) updateData.initial_ownership_pct = updates.initialOwnershipPct;
+    if (updates.marketCap !== undefined) updateData.market_cap = updates.marketCap;
+    if (updates.sharePrice !== undefined) updateData.share_price = updates.sharePrice;
 
     return await updateCompanyInDB(companyId, updateData);
   }

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Button } from '../../shadCN/button';
 import { ScrollArea } from '../../shadCN/scroll-area';
+import { Slider } from '../../shadCN/slider';
 import { StartingCountry, STARTING_CONDITIONS, getStartingCountries } from '@/lib/constants/startingConditions';
 import {
   generateVineyardPreview,
@@ -13,6 +14,8 @@ import {
   type ApplyStartingConditionsResult
 } from '@/lib/services/core/startingConditionsService';
 import { formatNumber, getFlagIcon, StoryPortrait } from '@/lib/utils';
+import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
+import type { Aspect } from '@/lib/types/types';
 
 type MentorWelcomeData = {
   mentorName: string | null;
@@ -38,18 +41,79 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   onMentorReady
 }) => {
   const [selectedCountry, setSelectedCountry] = useState<StartingCountry>('France');
-  const [vineyardPreview, setVineyardPreview] = useState<VineyardPreview | null>(null);
+  const [vineyardPreviews, setVineyardPreviews] = useState<Record<StartingCountry, VineyardPreview | null>>({} as Record<StartingCountry, VineyardPreview | null>);
   const [isApplying, setIsApplying] = useState(false);
+  const [outsideInvestment, setOutsideInvestment] = useState<number>(0); // 0 to 1,000,000€
   
-  // Generate preview when country changes
+  const selectedCondition = STARTING_CONDITIONS[selectedCountry];
+  const BASE_PLAYER_INVESTMENT = selectedCondition.startingMoney; // Use country-specific base investment
+  
+  // Generate preview once per country when modal opens
   useEffect(() => {
-    if (!selectedCountry) return;
-    const condition = STARTING_CONDITIONS[selectedCountry];
-    if (condition) {
-      const preview = generateVineyardPreview(condition);
-      setVineyardPreview(preview);
+    if (!isOpen) {
+      // Reset previews when modal closes
+      setVineyardPreviews({} as Record<StartingCountry, VineyardPreview | null>);
+      return;
     }
-  }, [selectedCountry]);
+    
+    // Generate previews for all countries when modal opens (only once)
+    const countries = getStartingCountries();
+    const newPreviews: Record<StartingCountry, VineyardPreview | null> = {} as Record<StartingCountry, VineyardPreview | null>;
+    
+    countries.forEach((country) => {
+      const condition = STARTING_CONDITIONS[country];
+      if (condition) {
+        newPreviews[country] = generateVineyardPreview(condition);
+      }
+    });
+    
+    setVineyardPreviews(newPreviews);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]); // Only regenerate when modal opens/closes
+  
+  // Get the preview for the currently selected country
+  const vineyardPreview = vineyardPreviews[selectedCountry] || null;
+  
+  // Calculate vineyard value as part of player contribution
+  // This calculation must match exactly what applyStartingConditions uses
+  const estimatedVineyardValue = vineyardPreview ? (() => {
+    const previewAspect = (vineyardPreview.aspect as Aspect) || 'South';
+    const landValuePerHectare = calculateLandValue(
+      vineyardPreview.country,
+      vineyardPreview.region,
+      vineyardPreview.altitude,
+      previewAspect
+    );
+    
+    // If vineyard is planted, use adjusted land value (must match service calculation)
+    if (selectedCondition.startingUnlockedGrape) {
+      const adjustedValuePerHectare = calculateAdjustedLandValue(
+        vineyardPreview.country,
+        vineyardPreview.region,
+        vineyardPreview.altitude,
+        previewAspect,
+        {
+          grape: selectedCondition.startingUnlockedGrape,
+          vineAge: selectedCondition.startingVineyard.startingVineAge,
+          vineyardPrestige: 0,
+          soil: vineyardPreview.soil
+        }
+      );
+      return Math.round(adjustedValuePerHectare * vineyardPreview.hectares);
+    }
+    
+    return Math.round(landValuePerHectare * vineyardPreview.hectares);
+  })() : 0;
+  
+  // Calculate derived values (after selectedCondition is defined)
+  const playerCashContribution = BASE_PLAYER_INVESTMENT;
+  const playerTotalContribution = playerCashContribution + estimatedVineyardValue; // Cash + Vineyard value
+  const MAX_OUTSIDE_INVESTMENT = playerTotalContribution * 10; // Maximum 10x total player contribution (cash + vineyard)
+  const totalCompanyValue = playerTotalContribution + outsideInvestment;
+  const loanPrincipal = selectedCondition.startingLoan?.principal ?? 0;
+  const netStartingCapital = totalCompanyValue - loanPrincipal; // Net assets after loan
+  const playerOwnershipPct = totalCompanyValue > 0 ? (playerTotalContribution / totalCompanyValue) * 100 : 100;
+  const outsideOwnershipPct = 100 - playerOwnershipPct;
   
   const modalTitle = companyName
     ? `Select Starting Conditions for ${companyName}`
@@ -71,7 +135,8 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
       const result: ApplyStartingConditionsResult = await applyStartingConditions(
         companyId,
         selectedCountry,
-        vineyardPreview
+        vineyardPreview,
+        outsideInvestment
       );
       
       if (result.success) {
@@ -96,7 +161,6 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     }
   };
   
-  const selectedCondition = STARTING_CONDITIONS[selectedCountry];
   const countries = getStartingCountries();
   
   return (
@@ -165,7 +229,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Starting Capital:</span>
                     <span className="font-semibold text-green-600">
-                      {formatNumber(selectedCondition.startingMoney, { currency: true })}
+                      {formatNumber(netStartingCapital, { currency: true })}
                     </span>
                   </div>
 
@@ -224,6 +288,84 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                         </span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Ownership & Investment Section */}
+              <div className="bg-blue-50 rounded-lg p-4 space-y-4 border border-blue-200">
+                <h3 className="font-semibold text-blue-900">Company Ownership</h3>
+                
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Player Cash Contribution:</span>
+                        <span className="font-semibold text-green-600">
+                          {formatNumber(playerCashContribution, { currency: true })}
+                        </span>
+                      </div>
+                      {vineyardPreview && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-700">Player Vineyard Contribution:</span>
+                          <span className="font-semibold text-green-600">
+                            {formatNumber(estimatedVineyardValue, { currency: true })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-sm pt-1 border-t border-blue-200">
+                        <span className="text-gray-700 font-semibold">Total Player Contribution:</span>
+                        <span className="font-semibold text-green-600">
+                          {formatNumber(playerTotalContribution, { currency: true })}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Outside Investment:</span>
+                        <span className="font-semibold text-blue-600">
+                          {formatNumber(outsideInvestment, { currency: true })}
+                        </span>
+                      </div>
+                      
+                      <Slider
+                        value={[outsideInvestment]}
+                        onValueChange={(value) => setOutsideInvestment(value[0])}
+                        min={0}
+                        max={MAX_OUTSIDE_INVESTMENT}
+                        step={10000}
+                        className="w-full"
+                      />
+                      
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>€0</span>
+                        <span>{formatNumber(MAX_OUTSIDE_INVESTMENT, { currency: true })}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-blue-200 space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Total Company Value:</span>
+                        <span className="font-semibold text-gray-900">
+                          {formatNumber(totalCompanyValue, { currency: true })}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Player Ownership:</span>
+                        <span className="font-semibold text-green-600">
+                          {playerOwnershipPct.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Outside Investor Ownership:</span>
+                        <span className="font-semibold text-blue-600">
+                          {outsideOwnershipPct.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

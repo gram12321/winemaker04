@@ -14,7 +14,7 @@ import { applyForLoan } from '../finance/loanService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
-import { calculateLandValue } from '../vineyard/vineyardValueCalc';
+import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
 import { getGrapeUnlockResearchId } from '@/lib/utils/researchUtils';
 
@@ -98,7 +98,8 @@ export function generateVineyardPreview(condition: StartingCondition): VineyardP
 export async function applyStartingConditions(
   companyId: string,
   country: StartingCountry,
-  vineyardPreview: VineyardPreview
+  vineyardPreview: VineyardPreview,
+  outsideInvestmentAmount?: number // Outside investment in euros (0 to 1,000,000)
 ): Promise<ApplyStartingConditionsResult> {
   try {
     const condition = STARTING_CONDITIONS[country];
@@ -106,13 +107,56 @@ export async function applyStartingConditions(
       return { success: false, error: 'Invalid starting country' };
     }
 
-    const startingMoney = condition.startingMoney;
+    const basePlayerInvestment = condition.startingMoney; // Use country-specific base investment (cash)
+    
+    // Calculate vineyard value as part of player contribution (calculate once, use everywhere)
+    const previewAspect = (vineyardPreview.aspect as Aspect) || 'South';
+    const landValuePerHectare = calculateLandValue(
+      vineyardPreview.country,
+      vineyardPreview.region,
+      vineyardPreview.altitude,
+      previewAspect
+    );
+    
+    // If vineyard is planted, use adjusted land value
+    let vineyardValue = Math.round(landValuePerHectare * vineyardPreview.hectares);
+    let adjustedLandValuePerHectare = landValuePerHectare;
+    if (condition.startingUnlockedGrape) {
+      adjustedLandValuePerHectare = calculateAdjustedLandValue(
+        vineyardPreview.country,
+        vineyardPreview.region,
+        vineyardPreview.altitude,
+        previewAspect,
+        {
+          grape: condition.startingUnlockedGrape,
+          vineAge: condition.startingVineyard.startingVineAge,
+          vineyardPrestige: 0,
+          soil: vineyardPreview.soil
+        }
+      );
+      vineyardValue = Math.round(adjustedLandValuePerHectare * vineyardPreview.hectares);
+    }
+    
+    const playerTotalContribution = basePlayerInvestment + vineyardValue; // Cash + Vineyard value
+    const outsideInvestment = outsideInvestmentAmount ?? 0;
+    const totalCompanyValue = playerTotalContribution + outsideInvestment;
+    
+    // Calculate share structure based on total company value
+    const playerOwnershipPct = totalCompanyValue > 0 ? (playerTotalContribution / totalCompanyValue) * 100 : 100;
+    const TOTAL_SHARES = 1000000;
+    const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
+    const outstandingShares = TOTAL_SHARES - playerShares;
+
     let startingLoanId: string | undefined;
     const availableTeams = getAllTeams();
 
-    // 1. Update company metadata via service (starting country)
+    // 1. Update company metadata via service (starting country and share structure)
     const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
-      startingCountry: country
+      startingCountry: country,
+      totalShares: TOTAL_SHARES,
+      outstandingShares: outstandingShares,
+      playerShares: playerShares,
+      initialOwnershipPct: playerOwnershipPct
     });
 
     if (!companyUpdateSuccess) {
@@ -120,13 +164,18 @@ export async function applyStartingConditions(
       return { success: false, error: 'Failed to update company' };
     }
 
-    // 2. Adjust starting capital using finance service utilities
-    const moneyDifference = startingMoney - GAME_INITIALIZATION.STARTING_MONEY;
-    if (moneyDifference !== 0) {
+    // 2. Add starting capital (player cash investment + outside investment)
+    // Note: Vineyard value is part of player contribution but doesn't add to cash
+    const baseStartingMoney = condition.startingMoney;
+    const capitalAdjustment = (basePlayerInvestment + outsideInvestment) - baseStartingMoney;
+    
+    if (capitalAdjustment !== 0) {
       try {
         await addTransaction(
-          moneyDifference,
-          'Starting Capital Adjustment',
+          capitalAdjustment,
+          outsideInvestment > 0 
+            ? `Initial Capital: €${basePlayerInvestment.toLocaleString()} player cash + €${outsideInvestment.toLocaleString()} outside investment`
+            : 'Initial Capital: Player cash investment',
           TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
           false,
           companyId
@@ -134,6 +183,19 @@ export async function applyStartingConditions(
       } catch (transactionError) {
         console.error('Error adjusting starting capital:', transactionError);
         return { success: false, error: 'Failed to adjust starting capital' };
+      }
+    } else {
+      // Still add transaction for base starting money if no adjustment needed
+      try {
+        await addTransaction(
+          basePlayerInvestment + outsideInvestment,
+          'Initial Capital: Player cash investment',
+          TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
+          false,
+          companyId
+        );
+      } catch (transactionError) {
+        console.error('Error adding starting capital transaction:', transactionError);
       }
     }
 
@@ -188,14 +250,12 @@ export async function applyStartingConditions(
     }
 
     // 5. Create starting vineyard from preview
-    const previewAspect = (vineyardPreview.aspect as Aspect) || 'South';
-    const landValuePerHectare = calculateLandValue(
-      vineyardPreview.country,
-      vineyardPreview.region,
-      vineyardPreview.altitude,
-      previewAspect
-    );
-    const baseTotalValue = Math.round(landValuePerHectare * vineyardPreview.hectares);
+    // Use the same values calculated above to ensure consistency
+    // vineyardValue was calculated using previewAspect and vineyardPreview data above
+    // Verification: vineyardValue should equal adjustedLandValuePerHectare * vineyardPreview.hectares (rounded)
+    // This ensures the stored vineyard_total_value matches what was used for ownership calculation
+    const baseTotalValue = vineyardValue; // This matches the value used for ownership calculation
+    
 
     // Determine if vineyard should be planted with starting grape
     const startingGrape = condition.startingUnlockedGrape ?? null;
@@ -221,7 +281,7 @@ export async function applyStartingConditions(
         vine_yield: 0.02,
         vineyard_health: 0.6, // Default starting health
         vineyard_prestige: 0,
-        land_value: landValuePerHectare,
+        land_value: adjustedLandValuePerHectare, // Use adjusted value if planted, base value if not
         vineyard_total_value: baseTotalValue,
         created_at: new Date().toISOString()
       });
@@ -232,7 +292,7 @@ export async function applyStartingConditions(
     }
 
     // Refresh company money after all financial adjustments (capital + loan)
-    let resolvedStartingMoney = startingMoney;
+    let resolvedStartingMoney = basePlayerInvestment + outsideInvestment;
     try {
       const updatedCompany = await companyService.getCompany(companyId);
       if (updatedCompany) {
@@ -241,6 +301,8 @@ export async function applyStartingConditions(
     } catch (moneyError) {
       console.warn('Unable to resolve updated company money after starting conditions:', moneyError);
     }
+    
+    // Return the actual cash amount (vineyard value is a separate asset, not cash)
 
     if (condition.startingPrestige) {
       try {
@@ -314,7 +376,7 @@ export async function applyStartingConditions(
       mentorMessage: mentorMessage ?? undefined,
       mentorName: condition.mentorName,
       mentorImage: mentorImageSrc,
-      startingMoney: resolvedStartingMoney,
+      startingMoney: resolvedStartingMoney, // Return actual cash amount after all transactions (vineyard value is separate asset)
       startingLoanId,
       startingPrestige: condition.startingPrestige?.amount
     };

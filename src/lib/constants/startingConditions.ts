@@ -62,7 +62,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
     id: 'France',
     name: 'France',
     description: 'Start your winery in the beautiful French countryside. You will begin with a small vineyard in Burgundy, guided by the Latosha family tradition.',
-    startingMoney: 40000,
+    startingMoney: 20000, // Reduced from 40k because vineyard value is 80-100k (not 60k), keeping net assets ~100k
     flagCode: 'fr',
     familyPicture: 'pierrecamille.webp',
     mentorName: 'Pierre Latosha',
@@ -116,7 +116,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
     id: 'Italy',
     name: 'Italy',
     description: 'Begin your journey in the rolling hills of Tuscany. The De Luca family will guide you through the Italian winemaking tradition.',
-    startingMoney: 55000,
+    startingMoney: 35000, // Reduced from 55k because vineyard value is 80-100k (not 60-80k), keeping net assets ~100k
     flagCode: 'it',
     familyPicture: 'robertobianca.webp',
     mentorName: 'Roberto De Luca',
