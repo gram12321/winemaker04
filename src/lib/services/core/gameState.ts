@@ -91,6 +91,23 @@ export const updateGameState = async (updates: Partial<GameState>): Promise<void
     }
   }
 
+  // Persist economyPhase to game_state table if it changed
+  if (updates.economyPhase !== undefined) {
+    try {
+      await saveGameState({
+        week: gameState.week,
+        season: gameState.season,
+        currentYear: gameState.currentYear,
+        money: gameState.money,
+        prestige: gameState.prestige,
+        economyPhase: updates.economyPhase
+      });
+    } catch (error) {
+      console.error('Failed to save economy phase to game_state:', error);
+      // Continue even if persistence fails
+    }
+  }
+
   // Notify subscribers that game state changed (debounced globally)
   try {
     triggerGameUpdate();
