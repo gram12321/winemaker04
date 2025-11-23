@@ -21,6 +21,8 @@ export * from './finance/financeService';
 export * from './finance/lenderService';
 export * from './finance/loanService';
 export * from './finance/wageService';
+export * from './finance/shareValueService';
+export * from './finance/shareManagementService';
 
 // Admin services
 export * from './admin/adminService';

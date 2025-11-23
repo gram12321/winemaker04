@@ -1,0 +1,514 @@
+import { GameDate } from '../../types/types';
+import { companyService } from '../user/companyService';
+import { getCurrentCompanyId } from '../../utils/companyUtils';
+import { addTransaction } from './financeService';
+import { TRANSACTION_CATEGORIES } from '../../constants';
+import { updateMarketValue } from './shareValueService';
+import { getGameState } from '../core/gameState';
+import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { notificationService } from '../core/notificationService';
+import { NotificationCategory } from '../../types/types';
+
+/**
+ * Issue new shares (dilutes player ownership)
+ * 
+ * @param shares - Number of shares to issue
+ * @param price - Price per share (optional, uses current market price if not provided)
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns Success status and updated share structure
+ */
+export async function issueStock(
+  shares: number,
+  price?: number,
+  companyId?: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  totalShares?: number;
+  outstandingShares?: number;
+  playerShares?: number;
+  playerOwnershipPct?: number;
+  capitalRaised?: number;
+}> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return { success: false, error: 'No company ID available' };
+    }
+
+    if (shares <= 0) {
+      return { success: false, error: 'Number of shares must be greater than 0' };
+    }
+
+    // Get current company data
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return { success: false, error: 'Company not found' };
+    }
+
+    // Get current share price if not provided
+    let sharePrice = price;
+    if (sharePrice === undefined) {
+      const marketValue = await updateMarketValue(companyId);
+      if (!marketValue.success || !marketValue.sharePrice) {
+        return { success: false, error: 'Failed to determine share price' };
+      }
+      sharePrice = marketValue.sharePrice;
+    }
+
+    if (sharePrice <= 0) {
+      return { success: false, error: 'Share price must be greater than 0' };
+    }
+
+    // Calculate capital raised
+    const capitalRaised = shares * sharePrice;
+
+    // Update share structure
+    const currentTotalShares = company.totalShares || 1000000;
+    const currentPlayerShares = company.playerShares || currentTotalShares;
+    const newTotalShares = currentTotalShares + shares;
+    const newOutstandingShares = (company.outstandingShares || 0) + shares;
+    const newPlayerShares = currentPlayerShares; // Player shares stay the same (dilution)
+    const newPlayerOwnershipPct = (newPlayerShares / newTotalShares) * 100;
+
+    // Update company in database
+    const updateResult = await companyService.updateCompany(companyId, {
+      totalShares: newTotalShares,
+      outstandingShares: newOutstandingShares,
+      playerShares: newPlayerShares
+    });
+
+    if (!updateResult.success) {
+      return { success: false, error: updateResult.error || 'Failed to update share structure' };
+    }
+
+    // Add capital raised to company money
+    await addTransaction(
+      capitalRaised,
+      `Stock Issuance: ${shares.toLocaleString()} shares @ ${sharePrice.toFixed(2)}€ per share`,
+      TRANSACTION_CATEGORIES.INITIAL_INVESTMENT, // Using initial investment category for now
+      false,
+      companyId
+    );
+
+    // Recalculate market value after share issuance
+    await updateMarketValue(companyId);
+
+    // Trigger game update
+    triggerGameUpdate();
+
+    return {
+      success: true,
+      totalShares: newTotalShares,
+      outstandingShares: newOutstandingShares,
+      playerShares: newPlayerShares,
+      playerOwnershipPct: newPlayerOwnershipPct,
+      capitalRaised
+    };
+  } catch (error) {
+    console.error('Error issuing stock:', error);
+    return { success: false, error: 'Failed to issue stock' };
+  }
+}
+
+/**
+ * Buy back shares (increases player ownership)
+ * 
+ * @param shares - Number of shares to buy back
+ * @param price - Price per share (optional, uses current market price if not provided)
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns Success status and updated share structure
+ */
+export async function buyBackStock(
+  shares: number,
+  price?: number,
+  companyId?: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  totalShares?: number;
+  outstandingShares?: number;
+  playerShares?: number;
+  playerOwnershipPct?: number;
+  cost?: number;
+}> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return { success: false, error: 'No company ID available' };
+    }
+
+    if (shares <= 0) {
+      return { success: false, error: 'Number of shares must be greater than 0' };
+    }
+
+    // Get current company data
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return { success: false, error: 'Company not found' };
+    }
+
+    const currentOutstandingShares = company.outstandingShares || 0;
+    if (shares > currentOutstandingShares) {
+      return { success: false, error: 'Cannot buy back more shares than are outstanding' };
+    }
+
+    // Get current share price if not provided
+    let sharePrice = price;
+    if (sharePrice === undefined) {
+      const marketValue = await updateMarketValue(companyId);
+      if (!marketValue.success || !marketValue.sharePrice) {
+        return { success: false, error: 'Failed to determine share price' };
+      }
+      sharePrice = marketValue.sharePrice;
+    }
+
+    if (sharePrice <= 0) {
+      return { success: false, error: 'Share price must be greater than 0' };
+    }
+
+    // Calculate total cost
+    const cost = shares * sharePrice;
+
+    // Check if company has enough cash
+    const currentMoney = company.money || 0;
+    if (cost > currentMoney) {
+      return { success: false, error: 'Insufficient funds to buy back shares' };
+    }
+
+    // Update share structure
+    const currentTotalShares = company.totalShares || 1000000;
+    const currentPlayerShares = company.playerShares || currentTotalShares;
+    const newTotalShares = currentTotalShares - shares;
+    const newOutstandingShares = currentOutstandingShares - shares;
+    const newPlayerShares = currentPlayerShares; // Player shares stay the same (concentration)
+    const newPlayerOwnershipPct = newTotalShares > 0 ? (newPlayerShares / newTotalShares) * 100 : 100;
+
+    // Update company in database
+    const updateResult = await companyService.updateCompany(companyId, {
+      totalShares: newTotalShares,
+      outstandingShares: newOutstandingShares,
+      playerShares: newPlayerShares
+    });
+
+    if (!updateResult.success) {
+      return { success: false, error: updateResult.error || 'Failed to update share structure' };
+    }
+
+    // Deduct cost from company money
+    await addTransaction(
+      -cost,
+      `Stock Buyback: ${shares.toLocaleString()} shares @ ${sharePrice.toFixed(2)}€ per share`,
+      TRANSACTION_CATEGORIES.OTHER,
+      false,
+      companyId
+    );
+
+    // Recalculate market value after buyback
+    await updateMarketValue(companyId);
+
+    // Trigger game update
+    triggerGameUpdate();
+
+    return {
+      success: true,
+      totalShares: newTotalShares,
+      outstandingShares: newOutstandingShares,
+      playerShares: newPlayerShares,
+      playerOwnershipPct: newPlayerOwnershipPct,
+      cost
+    };
+  } catch (error) {
+    console.error('Error buying back stock:', error);
+    return { success: false, error: 'Failed to buy back stock' };
+  }
+}
+
+/**
+ * Update dividend rate (fixed per share in euros)
+ * 
+ * @param rate - New dividend rate per share in euros
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns Success status
+ */
+export async function updateDividendRate(
+  rate: number,
+  companyId?: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return { success: false, error: 'No company ID available' };
+    }
+
+    if (rate < 0) {
+      return { success: false, error: 'Dividend rate cannot be negative' };
+    }
+
+    // Update company in database
+    const updateResult = await companyService.updateCompany(companyId, {
+      dividendRate: rate
+    });
+
+    if (!updateResult.success) {
+      return { success: false, error: updateResult.error || 'Failed to update dividend rate' };
+    }
+
+    // Trigger game update
+    triggerGameUpdate();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating dividend rate:', error);
+    return { success: false, error: 'Failed to update dividend rate' };
+  }
+}
+
+/**
+ * Calculate total dividend payment for all shares (player + outstanding)
+ * 
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns Total dividend payment amount
+ */
+export async function calculateDividendPayment(companyId?: string): Promise<number> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return 0;
+    }
+
+    // Get company data
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return 0;
+    }
+
+    const dividendRate = company.dividendRate || 0;
+    const totalShares = company.totalShares || 0;
+
+    // Calculate total dividend payment (fixed per share) for all shares
+    const totalPayment = dividendRate * totalShares;
+
+    return totalPayment;
+  } catch (error) {
+    console.error('Error calculating dividend payment:', error);
+    return 0;
+  }
+}
+
+/**
+ * Check if dividends are due (1st week of each season)
+ * 
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns True if dividends are due, false otherwise
+ */
+export async function areDividendsDue(companyId?: string): Promise<boolean> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return false;
+    }
+
+    // Get company data
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return false;
+    }
+
+    const dividendRate = company.dividendRate || 0;
+    if (dividendRate <= 0) {
+      return false; // No dividends set
+    }
+
+    // Get current game state
+    const gameState = getGameState();
+    const currentWeek = gameState.week || 1;
+    const currentSeason = gameState.season || 'Spring';
+    const currentYear = gameState.currentYear || 2024;
+
+    // Dividends are due on week 1 of each season
+    if (currentWeek !== 1) {
+      return false;
+    }
+
+    // Check if dividends have already been paid for this season
+    const lastPaidWeek = company.lastDividendPaid?.week;
+    const lastPaidSeason = company.lastDividendPaid?.season;
+    const lastPaidYear = company.lastDividendPaid?.year;
+
+    // If dividends were already paid this season, they're not due
+    if (lastPaidWeek === 1 && lastPaidSeason === currentSeason && lastPaidYear === currentYear) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking if dividends are due:', error);
+    return false;
+  }
+}
+
+/**
+ * Check and trigger dividend payment notification if dividends are due
+ * Called during game tick on week 1 of each season
+ * 
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns True if dividends were due and notification was sent, false otherwise
+ */
+export async function checkAndNotifyDividendsDue(companyId?: string): Promise<boolean> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return false;
+    }
+
+    const isDue = await areDividendsDue(companyId);
+    if (!isDue) {
+      return false;
+    }
+
+    // Get company data for notification
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return false;
+    }
+
+    const dividendPayment = await calculateDividendPayment(companyId);
+
+    // Send notification
+    await notificationService.addMessage(
+      `Dividends are due! Pay ${dividendPayment.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} to shareholders (${company.dividendRate?.toFixed(2) || 0}€ per share).`,
+      'dividend.due',
+      'Dividend Payment Due',
+      NotificationCategory.FINANCE_AND_STAFF
+    );
+
+    return true;
+  } catch (error) {
+    console.error('Error checking and notifying dividends due:', error);
+    return false;
+  }
+}
+
+/**
+ * Pay dividends to shareholders
+ * 
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns Success status and payment details
+ */
+export async function payDividends(companyId?: string): Promise<{
+  success: boolean;
+  error?: string;
+  totalPayment?: number;
+  playerPayment?: number;
+  outstandingPayment?: number;
+}> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return { success: false, error: 'No company ID available' };
+    }
+
+    // Get company data
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return { success: false, error: 'Company not found' };
+    }
+
+    const dividendRate = company.dividendRate || 0;
+    if (dividendRate <= 0) {
+      return { success: false, error: 'Dividend rate is not set or is zero' };
+    }
+
+    // Calculate payments
+    const playerShares = company.playerShares || 0;
+    const outstandingShares = company.outstandingShares || 0;
+    const totalShares = company.totalShares || 1000000;
+
+    const playerPayment = dividendRate * playerShares;
+    const outstandingPayment = dividendRate * outstandingShares;
+    const totalPayment = playerPayment + outstandingPayment;
+
+    // Check if company has enough cash
+    const currentMoney = company.money || 0;
+    if (totalPayment > currentMoney) {
+      return { success: false, error: 'Insufficient funds to pay dividends' };
+    }
+
+    // Get current game date
+    const gameState = getGameState();
+    const gameDate: GameDate = {
+      week: gameState.week || 1,
+      season: (gameState.season || 'Spring') as any,
+      year: gameState.currentYear || 2024
+    };
+
+    // Deduct total payment from company money
+    await addTransaction(
+      -totalPayment,
+      `Dividend Payment: ${dividendRate.toFixed(2)}€ per share (${totalShares.toLocaleString()} shares)`,
+      TRANSACTION_CATEGORIES.OTHER,
+      false,
+      companyId
+    );
+
+    // Add player's dividend payment back to company (player is the company owner)
+    // Note: In a real system, this would go to the player's personal account
+    // For now, we'll just record the transaction
+    await addTransaction(
+      playerPayment,
+      `Dividend Received (Player): ${playerShares.toLocaleString()} shares @ ${dividendRate.toFixed(2)}€ per share`,
+      TRANSACTION_CATEGORIES.OTHER,
+      false,
+      companyId
+    );
+
+    // Update last dividend paid date
+    await companyService.updateCompany(companyId, {
+      lastDividendPaidWeek: gameDate.week,
+      lastDividendPaidSeason: gameDate.season,
+      lastDividendPaidYear: gameDate.year
+    });
+
+    // Recalculate market value after dividend payment
+    await updateMarketValue(companyId);
+
+    // Trigger game update
+    triggerGameUpdate();
+
+    return {
+      success: true,
+      totalPayment,
+      playerPayment,
+      outstandingPayment
+    };
+  } catch (error) {
+    console.error('Error paying dividends:', error);
+    return { success: false, error: 'Failed to pay dividends' };
+  }
+}
+

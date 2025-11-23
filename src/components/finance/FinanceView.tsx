@@ -17,6 +17,7 @@ import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { ResearchPanel } from './ResearchPanel';
 import { StaffWageSummary } from './StaffWageSummary';
+import { ShareManagementPanel } from './ShareManagementPanel';
 import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
@@ -224,7 +225,7 @@ export default function FinanceView() {
               <p className="text-white/90 text-sm mt-1">Track your financial performance and growth</p>
             </div>
             <div className="text-white/80 text-sm">
-              {activeTab === 'income' ? 'Income & Balance' : activeTab === 'cashflow' ? 'Cash Flow' : 'Research & Upgrades'}
+              {activeTab === 'income' ? 'Income & Balance' : activeTab === 'cashflow' ? 'Cash Flow' : activeTab === 'loans' ? 'Loans' : activeTab === 'shares' ? 'Share Management' : 'Research & Upgrades'}
             </div>
           </div>
         </div>
@@ -246,6 +247,11 @@ export default function FinanceView() {
             value="loans"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'loans' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Loans
+          </TabsTrigger>
+          <TabsTrigger
+            value="shares"
+            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'shares' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
+            Shares
           </TabsTrigger>
           <TabsTrigger
             value="upgrades"
@@ -295,6 +301,9 @@ export default function FinanceView() {
         </TabsContent>
         <TabsContent value="loans">
           <LoansView />
+        </TabsContent>
+        <TabsContent value="shares">
+          <ShareManagementPanel />
         </TabsContent>
         <TabsContent value="upgrades">
           <ResearchPanel />

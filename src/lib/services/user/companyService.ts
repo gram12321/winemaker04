@@ -22,6 +22,10 @@ export interface CompanyUpdateData {
   outstandingShares?: number;
   playerShares?: number;
   initialOwnershipPct?: number;
+  dividendRate?: number;
+  lastDividendPaidWeek?: number;
+  lastDividendPaidSeason?: Season;
+  lastDividendPaidYear?: number;
   marketCap?: number;
   sharePrice?: number;
 }
@@ -170,6 +174,10 @@ class CompanyService {
     if (updates.outstandingShares !== undefined) updateData.outstanding_shares = updates.outstandingShares;
     if (updates.playerShares !== undefined) updateData.player_shares = updates.playerShares;
     if (updates.initialOwnershipPct !== undefined) updateData.initial_ownership_pct = updates.initialOwnershipPct;
+    if (updates.dividendRate !== undefined) updateData.dividend_rate = updates.dividendRate;
+    if (updates.lastDividendPaidWeek !== undefined) updateData.last_dividend_paid_week = updates.lastDividendPaidWeek;
+    if (updates.lastDividendPaidSeason !== undefined) updateData.last_dividend_paid_season = updates.lastDividendPaidSeason;
+    if (updates.lastDividendPaidYear !== undefined) updateData.last_dividend_paid_year = updates.lastDividendPaidYear;
     if (updates.marketCap !== undefined) updateData.market_cap = updates.marketCap;
     if (updates.sharePrice !== undefined) updateData.share_price = updates.sharePrice;
 

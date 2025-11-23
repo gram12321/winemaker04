@@ -1,5 +1,5 @@
 import { ECONOMY_PHASES, ECONOMY_SALES_MULTIPLIERS } from '@/lib/constants/economyConstants';
-import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/loanConstants';
+import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/economyConstants';
 
 export function EconomyTab() {
   return (

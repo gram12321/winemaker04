@@ -1,5 +1,4 @@
-import { LenderType, EconomyPhase } from '../types/types';
-
+import { LenderType } from '../types/types';
 // Lender search base cost
 export const LENDER_SEARCH_BASE_COST = 2000;
 
@@ -106,15 +105,6 @@ export const LENDER_GENERATION = {
   MIN_LENDERS: 25,
   MAX_LENDERS: 65
 } as const;
-
-// Economy phase interest rate multipliers
-export const ECONOMY_INTEREST_MULTIPLIERS: Record<EconomyPhase, number> = {
-  'Crash': 1.7,
-  'Recession': 1.5,
-  'Stable': 1.0,
-  'Expansion': 0.5,
-  'Boom': 0.3
-};
 
 // Lender type interest rate multipliers
 export const LENDER_TYPE_MULTIPLIERS: Record<LenderType, number> = {

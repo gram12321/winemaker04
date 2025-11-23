@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, PendingLoanWarning, ForcedLoanRestructureOffer, ForcedLoanRestructureStep } from '../../types/types';
-import { ECONOMY_INTEREST_MULTIPLIERS, LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES, LOAN_PREPAYMENT } from '../../constants/loanConstants';
+import { LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES, LOAN_PREPAYMENT } from '../../constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getGameState, updateGameState } from '../core/gameState';
 import { addTransaction, calculateTotalAssets } from './financeService';
@@ -16,6 +16,7 @@ import { calculateAbsoluteWeeks, formatNumber, formatPercent } from '../../utils
 import { loadVineyards, deleteVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
 import { setLoanWarning } from '../../database/core/loansDB';
+import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/economyConstants';
 
 /**
  * Calculate effective interest rate with all modifiers
@@ -61,11 +62,17 @@ export function calculateCreditRatingModifier(creditRating: number): number {
 
 /**
  * Get current comprehensive credit rating
+ * Also updates gameState.creditRating with the calculated value
  */
 export async function getCurrentCreditRating(): Promise<number> {
   try {
     const creditBreakdown = await calculateCreditRating();
-    return creditBreakdown.finalRating;
+    const finalRating = creditBreakdown.finalRating;
+    
+    // Update gameState with the calculated credit rating
+    await updateGameState({ creditRating: finalRating });
+    
+    return finalRating;
   } catch (error) {
     // Fallback to game state credit rating
     const gameState = getGameState();
@@ -162,7 +169,7 @@ export async function applyForLoan(
 ): Promise<string> {
   try {
     const gameState = getGameState();
-    const creditRating = gameState.creditRating ?? CREDIT_RATING.DEFAULT_RATING;
+    const creditRating = await getCurrentCreditRating();
     const currentDate: GameDate = {
       week: gameState.week || 1,
       season: gameState.season || 'Spring',
@@ -961,7 +968,7 @@ async function createForcedLoanRestructureOffer(forcedLoans: Loan[]): Promise<Fo
   } = EMERGENCY_RESTRUCTURE;
 
   const gameState = getGameState();
-  const creditRating = gameState.creditRating ?? CREDIT_RATING.DEFAULT_RATING;
+  const creditRating = await getCurrentCreditRating();
   const economyPhase = (gameState.economyPhase as EconomyPhase) ?? 'Stable';
 
   const wineBatches = await loadWineBatches();
@@ -1321,7 +1328,7 @@ async function executeForcedLoanRestructure(offer: ForcedLoanRestructureOffer): 
     }
 
     if (restructureLender) {
-      const creditRating = getGameState().creditRating ?? CREDIT_RATING.DEFAULT_RATING;
+      const creditRating = await getCurrentCreditRating();
       const economyPhase = (getGameState().economyPhase as EconomyPhase) ?? 'Stable';
 
       const interestMultiplier =
@@ -1655,6 +1662,9 @@ export async function makeExtraLoanPayment(loanId: string): Promise<void> {
   await updateLoan(loan.id, updateData);
   await clearLoanWarning(loan.id).catch(() => undefined);
 
+  // Recalculate credit rating after extra payment
+  await getCurrentCreditRating();
+
   await notificationService.addMessage(
     `Extra payment of ${formatNumber(totalPayment, { currency: true })} applied to ${loan.lenderName}. Loan warnings cleared.`,
     'loan.extraPayment',
@@ -1720,6 +1730,10 @@ export async function processSeasonalLoanPayments(): Promise<void> {
         }
       }
     }
+    
+    // Recalculate credit rating after all loan payments are processed
+    await getCurrentCreditRating();
+    
     // Ensure UI sees final state after all loan updates
     triggerGameUpdate();
   } catch (error) {
@@ -1778,6 +1792,9 @@ async function processLoanPayment(
           missedPayments: 0
         });
 
+        // Recalculate credit rating after loan payoff
+        await getCurrentCreditRating();
+        
         await notificationService.addMessage(
           `Loan from ${loan.lenderName} has been paid off! Credit rating improved.`,
           'loan.paidOff',
@@ -2013,8 +2030,8 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
       status: 'paid_off'
     });
 
-    // Credit rating will be recalculated automatically with comprehensive system
-    // Early payoff typically improves credit rating
+    // Recalculate credit rating after early payoff
+    await getCurrentCreditRating();
 
     await notificationService.addMessage(
       [

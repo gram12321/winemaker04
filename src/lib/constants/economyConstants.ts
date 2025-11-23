@@ -64,3 +64,25 @@ export const ECONOMY_SALES_MULTIPLIERS: Record<EconomyPhase, {
   }
 };
 
+// Interest rate multipliers per economy phase
+// These multipliers affect loan interest rates based on economic conditions
+// Higher multipliers in downturns (higher risk), lower in booms (lower risk)
+export const ECONOMY_INTEREST_MULTIPLIERS: Record<EconomyPhase, number> = {
+  Crash: 1.7,
+  Recession: 1.5,
+  Stable: 1.0,
+  Expansion: 0.5,
+  Boom: 0.3
+};
+
+// Market capitalization multipliers per economy phase
+// These multipliers affect how the market values companies based on economic conditions
+// Lower multipliers in downturns (market pessimism), higher in booms (market optimism)
+export const ECONOMY_MARKET_CAP_MULTIPLIERS: Record<EconomyPhase, number> = {
+  Crash: 0.6,
+  Recession: 0.75,
+  Stable: 1.0,
+  Expansion: 1.25,
+  Boom: 1.5
+};
+

@@ -1,5 +1,6 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, enforceEmergencyQuickLoanIfNeeded, restructureForcedLoansIfNeeded } from '@/lib/services';
+import { checkAndNotifyDividendsDue } from '@/lib/services/finance/shareManagementService';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
@@ -94,6 +95,11 @@ let newSeason: string | undefined;
   // Check for bookkeeping activity creation (week 1 of any season)
   // Pass season change info and all collected messages if we just changed seasons
   await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
+  
+  // Check for dividend payments due (week 1 of each season)
+  if (week === 1) {
+    await checkAndNotifyDividendsDue();
+  }
   
   // Update vineyard ripeness and status based on current season and week
   await updateVineyardRipeness(season, week);
