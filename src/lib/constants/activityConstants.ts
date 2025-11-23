@@ -20,7 +20,7 @@ export const TASK_RATES: Record<WorkCategory, number> = {
   [WorkCategory.CLEARING]: 0.4,     // hectares/week (1.0 acres = ~0.4 hectares)
   [WorkCategory.BUILDING]: 100000,  // €/week
   [WorkCategory.UPGRADING]: 100000, // €/week
-  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: 500000, // €/week
+  [WorkCategory.ADMINISTRATION_AND_RESEARCH]: 25, // BASE_WORK_UNITS/week (standard work units per week)
   [WorkCategory.STAFF_SEARCH]: 5.0,  // candidates/week
   [WorkCategory.STAFF_HIRING]: 2.0,  // hires/week
   [WorkCategory.LAND_SEARCH]: 15,   // properties/week

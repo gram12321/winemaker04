@@ -10,6 +10,9 @@ export * from './calculator';
 // Company and database utilities
 export * from './companyUtils';
 
+// Research utilities
+export * from './researchUtils';
+
 // Color mapping utilities
 export * from './colorMapping';
 

@@ -1,4 +1,4 @@
-import type { Aspect, Nationality, LenderType } from '@/lib/types/types';
+import type { Aspect, Nationality, LenderType, GrapeVariety } from '@/lib/types/types';
 
 export type StartingCountry = Nationality;
 
@@ -18,6 +18,7 @@ export interface StartingVineyardConfig {
   minAltitude?: number;
   maxAltitude?: number;
   preferredAspects?: Aspect[];
+  startingVineAge: number; // Age of vines in the starting vineyard (in years)
 }
 
 export interface StartingLoanConfig {
@@ -52,6 +53,7 @@ export interface StartingCondition {
   mentorImage?: string | null;
   startingLoan?: StartingLoanConfig;
   startingPrestige?: StartingPrestigeConfig;
+  startingUnlockedGrape?: GrapeVariety; // Grape variety unlocked at start (regionally appropriate)
 }
 
 // Starting conditions configuration
@@ -88,7 +90,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       maxHectares: 0.05,
       minAltitude: 200,
       maxAltitude: 220,
-      preferredAspects: ['North', 'Northwest'] as Aspect[]
+      preferredAspects: ['North', 'Northwest'] as Aspect[],
+      startingVineAge: 5 // Established Pinot Noir vines in Burgundy
     },
     startingLoan: {
       lenderType: 'Bank',
@@ -105,7 +108,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       decayRate: 0.999,
       description: 'Vineyard Legacy Prestige',
       payload: { origin: 'starting_conditions', family: 'Latosha' }
-    }
+    },
+    startingUnlockedGrape: 'Pinot Noir' // Classic Burgundy grape
   },
 
   'Italy': {
@@ -140,7 +144,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       maxHectares: 0.16,
       minAltitude: 260,
       maxAltitude: 340,
-      preferredAspects: ['Southeast', 'South'] as Aspect[]
+      preferredAspects: ['Southeast', 'South'] as Aspect[],
+      startingVineAge: 7 // Mature Sangiovese vines in Tuscany
     },
     startingLoan: {
       lenderType: 'Bank',
@@ -157,7 +162,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       decayRate: 0.999,
       description: 'Heritage Estate Recognition',
       payload: { origin: 'starting_conditions', family: 'De Luca' }
-    }
+    },
+    startingUnlockedGrape: 'Sangiovese' // Classic Tuscan grape
   },
 
   'Germany': {
@@ -206,7 +212,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       maxHectares: 0.22,
       minAltitude: 260,
       maxAltitude: 320,
-      preferredAspects: ['Southeast', 'South'] as Aspect[]
+      preferredAspects: ['Southeast', 'South'] as Aspect[],
+      startingVineAge: 4 // Young but established Sauvignon Blanc vines
     }
     , startingPrestige: {
       amount: 1,
@@ -214,7 +221,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       decayRate: 0.999,
       description: 'German Wine Heritage Recognition',
       payload: { origin: 'starting_conditions', family: 'Weissburg' }
-    }
+    },
+    startingUnlockedGrape: 'Sauvignon Blanc' // White wine grape suitable for Mosel region
   },
 
   'Spain': {
@@ -242,7 +250,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       maxHectares: 0.24,
       minAltitude: 720,
       maxAltitude: 860,
-      preferredAspects: ['South', 'Southeast'] as Aspect[]
+      preferredAspects: ['South', 'Southeast'] as Aspect[],
+      startingVineAge: 6 // Established Tempranillo vines
     },
     startingLoan: {
       lenderType: 'Bank',
@@ -252,7 +261,8 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       description: 'Short-term cooperative credit to bridge early operational costs.',
       skipAdministrationPenalty: true,
       interestRate: 0.017
-    }
+    },
+    startingUnlockedGrape: 'Tempranillo' // Classic Ribera del Duero grape
   },
 
   'United States': {
@@ -287,8 +297,10 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
       maxHectares: 0.06,
       minAltitude: 160,
       maxAltitude: 220,
-      preferredAspects: ['South', 'Southeast'] as Aspect[]
-    }
+      preferredAspects: ['South', 'Southeast'] as Aspect[],
+      startingVineAge: 3 // Young Chardonnay vines in Napa
+    },
+    startingUnlockedGrape: 'Chardonnay' // Common in Napa Valley
   }
 };
 

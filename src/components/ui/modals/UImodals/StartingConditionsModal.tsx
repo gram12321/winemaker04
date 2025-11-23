@@ -187,6 +187,15 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       </span>
                     </div>
                   )}
+
+                  {selectedCondition.startingUnlockedGrape && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Starting Grape:</span>
+                      <span className="font-semibold text-right text-green-600">
+                        {selectedCondition.startingUnlockedGrape}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Location:</span>
@@ -248,10 +257,29 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       <span className="text-gray-600">Aspect:</span>
                       <span className="font-semibold">{vineyardPreview.aspect}</span>
                     </div>
+                    
+                    {selectedCondition.startingUnlockedGrape && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Grape Variety:</span>
+                          <span className="font-semibold text-green-600">
+                            {selectedCondition.startingUnlockedGrape}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Vine Age:</span>
+                          <span className="font-semibold">
+                            {selectedCondition.startingVineyard.startingVineAge} years
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                   
                   <p className="text-xs text-gray-600 italic">
-                    This vineyard will be granted to you when you start. You can purchase additional land later.
+                    {selectedCondition.startingUnlockedGrape 
+                      ? `This vineyard comes with ${selectedCondition.startingUnlockedGrape} vines that are ${selectedCondition.startingVineyard.startingVineAge} years old. You can purchase additional land later.`
+                      : 'This vineyard will be granted to you when you start. You can purchase additional land later.'}
                   </p>
                 </div>
               )}

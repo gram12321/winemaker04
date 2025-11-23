@@ -1,15 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { GrapeVariety, Vineyard, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services';
 import { WorkCategory, WorkFactor } from '@/lib/services/activity';
 import { calculatePlantingWork } from '@/lib/services/activity';
-import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate } from '@/components/ui';
+import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, WarningModal } from '@/components/ui';
 import { notificationService } from '@/lib/services';
-import { GRAPE_VARIETIES } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { calculateGrapeSuitabilityMetrics } from '@/lib/services';
-import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
+import { getBadgeColorClasses, formatNumber, getUnlockedGrapes } from '@/lib/utils';
 
 
 /**
@@ -27,21 +26,43 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   onClose
 }) => {
   // State initialization
+  const [unlockedGrapes, setUnlockedGrapes] = useState<GrapeVariety[]>([]);
   const [options, setOptions] = useState({
     grape: 'Chardonnay' as GrapeVariety,
     density: DEFAULT_VINE_DENSITY
   });
 
-  // Field definitions
+  // Load unlocked grapes on mount
+  useEffect(() => {
+    const loadUnlockedGrapes = async () => {
+      const unlocked = await getUnlockedGrapes();
+      setUnlockedGrapes(unlocked);
+      
+      // If current selection is not unlocked, switch to first unlocked grape
+      if (unlocked.length > 0 && !unlocked.includes(options.grape)) {
+        setOptions(prev => ({ ...prev, grape: unlocked[0] }));
+      }
+    };
+    
+    if (isOpen) {
+      loadUnlockedGrapes();
+    }
+  }, [isOpen]);
+
+  // Field definitions - only show unlocked grapes
   const fields: ActivityOptionField[] = [
     {
       id: 'grape',
       label: 'Grape Variety',
       type: 'select',
       defaultValue: options.grape,
-      options: GRAPE_VARIETIES.map((grape: GrapeVariety) => ({ value: grape, label: grape })),
+      options: unlockedGrapes.length > 0 
+        ? unlockedGrapes.map((grape: GrapeVariety) => ({ value: grape, label: grape }))
+        : [],
       required: true,
-      tooltip: 'Select the type of grape to plant in this vineyard.'
+      tooltip: unlockedGrapes.length === 0 
+        ? 'No grape varieties unlocked. Complete research projects to unlock new grapes.'
+        : 'Select the type of grape to plant in this vineyard.'
     },
     {
       id: 'density',
@@ -126,6 +147,20 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   // Early returns
   if (!vineyard) return null;
   if (!isOpen) return null;
+  
+  // Show message if no grapes are unlocked
+  if (unlockedGrapes.length === 0) {
+    return (
+      <WarningModal
+        isOpen={isOpen}
+        onClose={onClose}
+        severity="warning"
+        title="No Grape Varieties Unlocked"
+        message="You need to complete research projects to unlock grape varieties before you can plant them."
+        details="Visit the Research panel in the Finance section to start unlocking grapes. Each grape variety requires completing its corresponding research project."
+      />
+    );
+  }
 
   // Render
   return (

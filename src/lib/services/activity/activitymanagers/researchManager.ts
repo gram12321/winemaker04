@@ -1,4 +1,4 @@
-import { Activity, WorkCategory, NotificationCategory } from '@/lib/types/types';
+import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
 import { getGameState } from '../../core/gameState';
 import { createActivity } from './activityManager';
 import { notificationService, addTransaction } from '@/lib/services';
@@ -6,6 +6,9 @@ import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateResearchWork, calculateResearchCost } from '../workcalculators/researchWorkCalculator';
 import { getResearchProject } from '@/lib/constants/researchConstants';
 import { addResearchPrestigeEvent } from '../../prestige/prestigeService';
+import { unlockResearch } from '@/lib/database';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { calculateAbsoluteWeeks } from '@/lib/utils';
 
 /**
  * Start a research activity
@@ -107,8 +110,74 @@ export async function completeResearch(activity: Activity): Promise<void> {
 
             const rewardText = rewards.length > 0 ? ` Received: ${rewards.join(', ')}.` : '';
 
+            // Process unlocks if this research has any
+            const unlockMessages: string[] = [];
+            if (project.unlocks && project.unlocks.length > 0) {
+                  const gameState = getGameState();
+                  const companyId = getCurrentCompanyId();
+                  
+                  if (companyId) {
+                        const gameDate: GameDate = {
+                              week: gameState.week || 1,
+                              season: (gameState.season || 'Spring') as any,
+                              year: gameState.currentYear || 2024
+                        };
+                        
+                        const absoluteWeeks = calculateAbsoluteWeeks(
+                              gameDate.week,
+                              gameDate.season,
+                              gameDate.year
+                        );
+                        
+                        // Record the research unlock in database
+                        await unlockResearch({
+                              researchId: projectId,
+                              companyId,
+                              unlockedAt: gameDate,
+                              unlockedAtTimestamp: absoluteWeeks,
+                              metadata: {
+                                    unlocks: project.unlocks
+                              }
+                        });
+                        
+                        // Build unlock messages for notification
+                        for (const unlock of project.unlocks) {
+                              const displayName = unlock.displayName || String(unlock.value);
+                              switch (unlock.type) {
+                                    case 'grape':
+                                          unlockMessages.push(`${displayName} grape variety`);
+                                          break;
+                                    case 'vineyard_size':
+                                          unlockMessages.push(`Vineyard size limit: ${unlock.value} hectares`);
+                                          break;
+                                    case 'fermentation_technology':
+                                          unlockMessages.push(`${displayName} fermentation technology`);
+                                          break;
+                                    case 'staff_limit':
+                                          unlockMessages.push(`Staff limit: ${unlock.value} staff members`);
+                                          break;
+                                    case 'building_type':
+                                          unlockMessages.push(`${displayName} building type`);
+                                          break;
+                                    case 'wine_feature':
+                                          unlockMessages.push(`${displayName} wine feature`);
+                                          break;
+                                    case 'contract_type':
+                                          unlockMessages.push(`${displayName} contract type`);
+                                          break;
+                                    default:
+                                          unlockMessages.push(`${displayName}`);
+                              }
+                        }
+                  }
+            }
+
+            const unlockText = unlockMessages.length > 0 
+                  ? ` Unlocked: ${unlockMessages.join(', ')}!` 
+                  : '';
+
             await notificationService.addMessage(
-                  `Research completed: ${project.title}.${rewardText}`,
+                  `Research completed: ${project.title}.${rewardText}${unlockText}`,
                   'researchManager.completeResearch',
                   'Research Complete',
                   NotificationCategory.ADMINISTRATION_AND_RESEARCH

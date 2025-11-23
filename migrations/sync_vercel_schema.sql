@@ -396,6 +396,26 @@ COMMENT ON COLUMN achievements.achievement_key IS 'Identifier matching achieveme
 COMMENT ON COLUMN achievements.progress IS 'Optional progress data for tracking partial completion';
 COMMENT ON COLUMN achievements.metadata IS 'Additional data about the achievement unlock (e.g., prestige amount spawned)';
 
+-- Research unlocks table
+CREATE TABLE research_unlocks (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
+    research_id text NOT NULL,
+    unlocked_game_week integer,
+    unlocked_game_season varchar,
+    unlocked_game_year integer,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    created_at timestamptz DEFAULT now(),
+    UNIQUE (company_id, research_id)
+);
+
+CREATE INDEX idx_research_unlocks_company ON research_unlocks(company_id);
+CREATE INDEX idx_research_unlocks_research ON research_unlocks(research_id);
+
+COMMENT ON TABLE research_unlocks IS 'Tracks completed research projects that unlock game features (e.g., grape varieties)';
+COMMENT ON COLUMN research_unlocks.research_id IS 'Identifier matching research project ID in code';
+COMMENT ON COLUMN research_unlocks.metadata IS 'Additional data about the research unlock (e.g., unlocked grape variety)';
+
 -- Wine log table
 CREATE TABLE wine_log (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -834,6 +854,14 @@ ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "company_members_manage_achievements" ON achievements;
 CREATE POLICY "company_members_manage_achievements"
 ON achievements
+FOR ALL
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
+
+ALTER TABLE research_unlocks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_research_unlocks" ON research_unlocks;
+CREATE POLICY "company_members_manage_research_unlocks"
+ON research_unlocks
 FOR ALL
 USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
 WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));

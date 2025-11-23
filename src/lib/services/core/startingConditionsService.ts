@@ -3,7 +3,7 @@ import { StartingCountry, StartingCondition, STARTING_CONDITIONS, StartingLoanCo
 import { createStaff, addStaff } from '../user/staffService';
 import { assignStaffToTeam, getAllTeams } from '../user/teamService';
 import { supabase } from '@/lib/database';
-import type { Aspect, Staff } from '@/lib/types/types';
+import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
@@ -15,6 +15,8 @@ import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue } from '../vineyard/vineyardValueCalc';
+import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
+import { getGrapeUnlockResearchId } from '@/lib/utils/researchUtils';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -195,6 +197,11 @@ export async function applyStartingConditions(
     );
     const baseTotalValue = Math.round(landValuePerHectare * vineyardPreview.hectares);
 
+    // Determine if vineyard should be planted with starting grape
+    const startingGrape = condition.startingUnlockedGrape ?? null;
+    const startingVineAge = condition.startingVineyard.startingVineAge;
+    const isPlanted = startingGrape !== null;
+
     const { error: vineyardError } = await supabase
       .from('vineyards')
       .insert({
@@ -206,10 +213,10 @@ export async function applyStartingConditions(
         soil: vineyardPreview.soil,
         altitude: vineyardPreview.altitude,
         aspect: previewAspect,
-        density: 0, // Not yet planted
-        status: 'Barren',
-        grape_variety: null,
-        vine_age: null,
+        density: isPlanted ? DEFAULT_VINE_DENSITY : 0, // Planted vineyards have full density
+        status: isPlanted ? 'Planted' : 'Barren',
+        grape_variety: startingGrape,
+        vine_age: isPlanted ? startingVineAge : null,
         ripeness: 0,
         vine_yield: 0.02,
         vineyard_health: 0.6, // Default starting health
@@ -261,6 +268,42 @@ export async function applyStartingConditions(
         });
       } catch (prestigeError) {
         console.error('Error creating starting prestige event:', prestigeError);
+      }
+    }
+
+    // 6. Unlock starting grape variety (if specified)
+    if (condition.startingUnlockedGrape) {
+      try {
+        const gameState = getGameState();
+        const gameDate: GameDate = {
+          week: gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+          season: (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as any,
+          year: gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR
+        };
+        
+        const absoluteWeeks = calculateAbsoluteWeeks(
+          gameDate.week,
+          gameDate.season,
+          gameDate.year
+        );
+
+        const researchId = getGrapeUnlockResearchId(condition.startingUnlockedGrape);
+        if (researchId) {
+          await unlockResearch({
+            researchId,
+            companyId,
+            unlockedAt: gameDate,
+            unlockedAtTimestamp: absoluteWeeks,
+            metadata: {
+              source: 'starting_conditions',
+              country: condition.id,
+              grape: condition.startingUnlockedGrape
+            }
+          });
+        }
+      } catch (grapeUnlockError) {
+        console.error('Error unlocking starting grape:', grapeUnlockError);
+        // Don't fail the entire process if grape unlock fails
       }
     }
 

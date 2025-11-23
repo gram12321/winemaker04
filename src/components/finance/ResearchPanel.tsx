@@ -7,6 +7,7 @@ import {
       CardContent,
       CardFooter
 } from '@/components/ui/shadCN/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { WorkCategory } from '@/lib/types/types';
 import { RESEARCH_PROJECTS, ResearchProject } from '@/lib/constants/researchConstants';
@@ -88,7 +89,18 @@ export function ResearchPanel() {
                               <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">
                                           {project.icon && (
-                                                <div className="text-3xl">{project.icon}</div>
+                                                project.icon.startsWith('/') || project.icon.startsWith('http') ? (
+                                                      <img 
+                                                            src={project.icon} 
+                                                            alt={project.title}
+                                                            className="w-12 h-12 object-contain"
+                                                            onError={(e) => {
+                                                                  e.currentTarget.style.display = 'none';
+                                                            }}
+                                                      />
+                                                ) : (
+                                                      <div className="text-3xl">{project.icon}</div>
+                                                )
                                           )}
                                           <div>
                                                 <CardTitle className="text-lg flex items-center gap-2">
@@ -166,44 +178,116 @@ export function ResearchPanel() {
       };
 
       // Group projects by category
-      const grantProjects = RESEARCH_PROJECTS.filter(p => p.category === 'grant');
-      const technologyProjects = RESEARCH_PROJECTS.filter(p => p.category === 'technology');
-      const upgradeProjects = RESEARCH_PROJECTS.filter(p => p.category === 'upgrade');
+      const categoryGroups: Record<ResearchProject['category'], ResearchProject[]> = {
+            administration: RESEARCH_PROJECTS.filter(p => p.category === 'administration'),
+            projects: RESEARCH_PROJECTS.filter(p => p.category === 'projects'),
+            technology: RESEARCH_PROJECTS.filter(p => p.category === 'technology'),
+            agriculture: RESEARCH_PROJECTS.filter(p => p.category === 'agriculture'),
+            efficiency: RESEARCH_PROJECTS.filter(p => p.category === 'efficiency'),
+            marketing: RESEARCH_PROJECTS.filter(p => p.category === 'marketing'),
+            staff: RESEARCH_PROJECTS.filter(p => p.category === 'staff')
+      };
+
+      // Category display info
+      const categoryInfo: Record<ResearchProject['category'], { title: string; description: string; icon: string }> = {
+            administration: {
+                  title: 'Administration',
+                  description: 'Improve administrative processes and documentation systems.',
+                  icon: '📋'
+            },
+            projects: {
+                  title: 'Projects',
+                  description: 'Apply for research grants and funding opportunities.',
+                  icon: '💰'
+            },
+            technology: {
+                  title: 'Technology',
+                  description: 'Research advanced technologies for winemaking and vineyard management.',
+                  icon: '🔬'
+            },
+            agriculture: {
+                  title: 'Agriculture',
+                  description: 'Research grape varieties and agricultural techniques.',
+                  icon: '🌾'
+            },
+            efficiency: {
+                  title: 'Efficiency',
+                  description: 'Improve operational efficiency and productivity.',
+                  icon: '⚡'
+            },
+            marketing: {
+                  title: 'Marketing',
+                  description: 'Study market trends and customer preferences.',
+                  icon: '📊'
+            },
+            staff: {
+                  title: 'Staff',
+                  description: 'Develop staff training and management programs.',
+                  icon: '👥'
+            }
+      };
+
+      const renderCategoryContent = (category: ResearchProject['category']) => {
+            const projects = categoryGroups[category];
+            const info = categoryInfo[category];
+
+            if (projects.length === 0) {
+                  return (
+                        <div className="text-center py-12 text-gray-500">
+                              <p>No research projects available in this category yet.</p>
+                        </div>
+                  );
+            }
+
+            return (
+                  <div className="space-y-6">
+                        <div>
+                              <h3 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                                    <span className="text-2xl">{info.icon}</span>
+                                    {info.title}
+                              </h3>
+                              <p className="text-gray-600 mb-6">{info.description}</p>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {projects.map(renderResearchCard)}
+                        </div>
+                  </div>
+            );
+      };
 
       return (
-            <div className="space-y-8">
-                  {/* Grants Section */}
-                  <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Research Grants</h2>
-                        <p className="text-gray-600 mb-4">
-                              Apply for research grants to receive funding for your vineyard operations.
-                        </p>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                              {grantProjects.map(renderResearchCard)}
-                        </div>
-                  </div>
+            <Tabs defaultValue="administration" className="w-full">
+                  <TabsList className="grid w-full grid-cols-7 mb-6">
+                        <TabsTrigger value="administration" className="text-xs">Admin</TabsTrigger>
+                        <TabsTrigger value="projects" className="text-xs">Projects</TabsTrigger>
+                        <TabsTrigger value="technology" className="text-xs">Technology</TabsTrigger>
+                        <TabsTrigger value="agriculture" className="text-xs">Agriculture</TabsTrigger>
+                        <TabsTrigger value="efficiency" className="text-xs">Efficiency</TabsTrigger>
+                        <TabsTrigger value="marketing" className="text-xs">Marketing</TabsTrigger>
+                        <TabsTrigger value="staff" className="text-xs">Staff</TabsTrigger>
+                  </TabsList>
 
-                  {/* Technology Section */}
-                  <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Technology Research</h2>
-                        <p className="text-gray-600 mb-4">
-                              Invest in technology research to unlock new capabilities and improvements.
-                        </p>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                              {technologyProjects.map(renderResearchCard)}
-                        </div>
-                  </div>
-
-                  {/* Upgrades Section */}
-                  <div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Operational Upgrades</h2>
-                        <p className="text-gray-600 mb-4">
-                              Research operational improvements to enhance efficiency and profitability.
-                        </p>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                              {upgradeProjects.map(renderResearchCard)}
-                        </div>
-                  </div>
-            </div>
+                  <TabsContent value="administration">
+                        {renderCategoryContent('administration')}
+                  </TabsContent>
+                  <TabsContent value="projects">
+                        {renderCategoryContent('projects')}
+                  </TabsContent>
+                  <TabsContent value="technology">
+                        {renderCategoryContent('technology')}
+                  </TabsContent>
+                  <TabsContent value="agriculture">
+                        {renderCategoryContent('agriculture')}
+                  </TabsContent>
+                  <TabsContent value="efficiency">
+                        {renderCategoryContent('efficiency')}
+                  </TabsContent>
+                  <TabsContent value="marketing">
+                        {renderCategoryContent('marketing')}
+                  </TabsContent>
+                  <TabsContent value="staff">
+                        {renderCategoryContent('staff')}
+                  </TabsContent>
+            </Tabs>
       );
 }

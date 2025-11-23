@@ -11,6 +11,7 @@ import { loadLoans } from '@/lib/database/core/loansDB';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
 import { getCompanyById } from '@/lib/database/core/companiesDB';
+import { getUnlockedGrapes } from '@/lib/utils/researchUtils';
 
 /**
  * Human Automation Test: Starting Conditions - Country-Specific Setup
@@ -178,10 +179,18 @@ describe('Starting Conditions - Country-Specific Setup', () => {
           expect(condition.startingVineyard.preferredAspects).toContain(vineyard.aspect);
         }
         
-        // Starting vineyard should be barren (not planted)
-        expect(vineyard.status).toBe('Barren');
-        expect(vineyard.density).toBe(0);
-        expect(vineyard.grape).toBeNull();
+        // Starting vineyard should be planted with starting grape (if specified)
+        if (condition.startingUnlockedGrape) {
+          expect(vineyard.status).toBe('Planted');
+          expect(vineyard.density).toBeGreaterThan(0); // Should have density when planted
+          expect(vineyard.grape).toBe(condition.startingUnlockedGrape);
+          expect(vineyard.vineAge).toBe(condition.startingVineyard.startingVineAge);
+        } else {
+          // If no starting grape, vineyard should be barren
+          expect(vineyard.status).toBe('Barren');
+          expect(vineyard.density).toBe(0);
+          expect(vineyard.grape).toBeNull();
+        }
 
         // 10. Verify Starting Prestige (if applicable)
         if (condition.startingPrestige) {
@@ -199,6 +208,12 @@ describe('Starting Conditions - Country-Specific Setup', () => {
               expect(startingPrestigeEvent.decayRate).toBe(condition.startingPrestige.decayRate);
             }
           }
+        }
+
+        // 11. Verify Starting Unlocked Grape (if applicable)
+        if (condition.startingUnlockedGrape) {
+          const unlockedGrapes = await getUnlockedGrapes(company.id);
+          expect(unlockedGrapes).toContain(condition.startingUnlockedGrape);
         }
       });
 
@@ -229,6 +244,17 @@ describe('Starting Conditions - Country-Specific Setup', () => {
         if (condition.startingVineyard.minAltitude !== undefined && condition.startingVineyard.maxAltitude !== undefined) {
           expect(condition.startingVineyard.maxAltitude).toBeGreaterThanOrEqual(condition.startingVineyard.minAltitude);
         }
+
+        // Verify starting unlocked grape is defined (if applicable)
+        if (condition.startingUnlockedGrape) {
+          expect(condition.startingUnlockedGrape).toBeDefined();
+          expect(typeof condition.startingUnlockedGrape).toBe('string');
+        }
+
+        // Verify starting vine age is defined and reasonable
+        expect(condition.startingVineyard.startingVineAge).toBeDefined();
+        expect(condition.startingVineyard.startingVineAge).toBeGreaterThan(0);
+        expect(condition.startingVineyard.startingVineAge).toBeLessThan(50); // Reasonable max age
       });
     });
   });

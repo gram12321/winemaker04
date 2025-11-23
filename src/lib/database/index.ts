@@ -14,4 +14,5 @@ export * from './core/loansDB';
 export * from './customers/customerDB';
 export * from './customers/relationshipBoostsDB';
 export * from './customers/prestigeEventsDB';
+export * from './core/researchUnlocksDB';
 export { supabase } from './core/supabase';
