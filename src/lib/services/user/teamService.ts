@@ -19,15 +19,15 @@ export function getDefaultTeams(): StaffTeam[] {
       description: 'Handle company administration, research, and paperwork',
       memberIds: [],
       icon: '📊',
-      defaultTaskTypes: ['administration_and_research', 'staff_search', 'staff_hiring', 'land_search', 'lender_search', 'take_loan']
+      defaultTaskTypes: ['administration_and_research']
     },
     {
       id: uuidv4(),
-      name: 'Building & Maintenance Team',
-      description: 'Maintain and upgrade facilities',
+      name: 'Finance & HR Team',
+      description: 'Manage company finances and human resources',
       memberIds: [],
-      icon: '🔧',
-      defaultTaskTypes: ['maintenance', 'building', 'upgrading']
+      icon: '💰',
+      defaultTaskTypes: ['finance_and_staff', 'staff_search', 'staff_hiring', 'land_search', 'lender_search', 'take_loan']
     },
     {
       id: uuidv4(),

@@ -40,10 +40,10 @@ export interface ApplyStartingConditionsResult {
 }
 
 const SPECIALIZATION_TEAM_TASKS: Record<string, string[]> = {
-  financeAndStaff: ['financeAndStaff'],
-  administrationAndResearch: ['administrationAndResearch'],
+  financeAndStaff: ['finance_and_staff', 'land_search'],
+  administrationAndResearch: ['administration_and_research'],
   field: ['planting', 'harvesting', 'clearing'],
-  winery: ['fermentation', 'crushing'],
+  winery: ['crushing', 'fermentation'],
   sales: ['sales']
 };
 

@@ -73,18 +73,25 @@ export function testApiPlugin(): Plugin {
           const total = totalMatch ? parseInt(totalMatch[1] || '0', 10) : (passed + failed || 0);
 
           // Parse individual test file results
-          // Pattern: ✓ tests/path/file.test.ts (X tests) Xms
-          // Match lines like: ✓ tests/wine/fermentationCharacteristics.test.ts (14 tests) 15ms
-          const testFilePattern = /(✓|✗)\s+([^\s]+\.test\.ts)\s+\((\d+)\s+tests?\)\s+(\d+)ms/g;
+          // Pattern 1: ✓ tests/path/file.test.ts (X tests) Xms (passed)
+          // Pattern 2: ❯ tests/path/file.test.ts (X tests | Y failed) Xms (failed)
+          // Match lines like: 
+          //   ✓ tests/wine/fermentationCharacteristics.test.ts (14 tests) 15ms
+          //   ❯ tests/user/hireStaffWorkflow.test.ts (6 tests | 5 failed) 14174ms
+          const testFilePattern = /(✓|✗|❯)\s+([^\s]+\.test\.ts)\s+\((\d+)\s+tests?(?:\s*\|\s*(\d+)\s+failed)?\)\s+(\d+)ms/g;
           const testFiles: Array<{ file: string; tests: number; duration: number; passed: boolean }> = [];
           let match;
           
           while ((match = testFilePattern.exec(cleanOutput)) !== null) {
+            const totalTests = parseInt(match[3], 10);
+            const failedTests = match[4] ? parseInt(match[4], 10) : 0;
+            const passed = match[1] === '✓' || (match[1] === '❯' && failedTests === 0);
+            
             testFiles.push({
               file: match[2], // Second capture group is the file path
-              tests: parseInt(match[3], 10),
-              duration: parseInt(match[4], 10),
-              passed: match[1] === '✓'
+              tests: totalTests,
+              duration: parseInt(match[5], 10),
+              passed: passed
             });
           }
 

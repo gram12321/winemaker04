@@ -1053,9 +1053,16 @@ const TestViewer: React.FC = () => {
               {Object.entries(testSuites)
                 .filter(([key]) => key === 'vineyardCreation.test.ts' || key === 'companyCreation.test.ts' || key === 'startingConditions.test.ts' || key === 'hireStaffWorkflow.test.ts') // Only show human automation tests
                 .map(([key, suite]) => {
-                const matchingTestFile = testResult.testFiles?.find(tf => 
-                  tf.file.includes(key.replace('.test.ts', '')) || tf.file.includes(key)
-                );
+                const matchingTestFile = testResult.testFiles?.find(tf => {
+                  const fileName = tf.file.split('/').pop() || tf.file; // Get just the filename
+                  const keyName = key.replace('.test.ts', ''); // Remove .test.ts extension
+                  const keyFull = key; // Full key with extension
+                  // Match by filename or full path
+                  return fileName === key || 
+                         fileName === keyFull || 
+                         tf.file.includes(keyName) || 
+                         tf.file.includes(keyFull);
+                });
 
                 return (
                   <Card key={key}>
@@ -1115,15 +1122,14 @@ const TestViewer: React.FC = () => {
                             </div>
                             {matchingTestFile.passed && (
                               <div className="pt-2 border-t border-green-300">
-                                <p className="font-semibold text-green-900 mb-2">Test Summary:</p>
-                                <ul className="space-y-1 text-green-800">
-                                  <li>✓ All {matchingTestFile.tests} test cases passed</li>
-                                  <li>✓ Size range validation: All samples within 0.05-2000 ha</li>
-                                  <li>✓ Precision validation: All values have ≤2 decimal places</li>
-                                  <li>✓ Distribution validation: Bucket probabilities within expected ranges (±5% tolerance)</li>
-                                  <li>✓ Boundary validation: All values fall within defined bucket ranges</li>
-                                  <li>✓ Statistical validation: Small vineyards (0.05-2.5 ha) are 10x+ more common than large ones (10+ ha)</li>
-                                </ul>
+                                <p className="text-sm text-green-800">
+                                  ✓ All {matchingTestFile.tests} test cases passed in {matchingTestFile.duration}ms
+                                </p>
+                                {testResult.output && (
+                                  <p className="text-xs text-green-700 mt-2">
+                                    See detailed test output below for specific test results.
+                                  </p>
+                                )}
                               </div>
                             )}
                             {testResult.output && (

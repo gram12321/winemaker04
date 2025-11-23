@@ -24,25 +24,159 @@
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.081 - Research System Enhancements
+**Date:** 2025-11-21 | **Commit:** 567a7a8 | **Stats:** 1,639 additions, 1,048 deletions
 
-## Unreleased - High Altitude Grape Coverage
+### 🔬 **Research System Improvements**
+- `src/lib/constants/researchConstants.ts` - Enhanced research constants (145 lines)
+- `src/components/finance/ResearchPanel.tsx` - Major research panel enhancements (195 additions, 28 deletions)
+- `src/lib/services/activity/activitymanagers/researchManager.ts` - Enhanced research manager (120 additions, 18 deletions)
+- `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` - Enhanced research work calculations (139 additions, 19 deletions)
+- `src/lib/services/prestige/prestigeService.ts` - Research prestige integration (123 additions, 93 deletions)
 
-### Changes
-- Expanded altitude tolerance bands for Barbera, Chardonnay, Pinot Noir, Primitivo, and Sauvignon Blanc to overlap with mountainous vineyard ranges.
-- Introduced Tempranillo across grape constants (altitude, sun, base characteristics) and added it to the shared grape variety registry.
-- Extended regional suitability tables to score Tempranillo for every country/region combination.
-- Mapped Tempranillo to the existing Primitivo grape icon as a placeholder until bespoke artwork is available.
-- Added Sangiovese to core grape registries (soil, altitude, sun, and base characteristic constants) and exposed it via `GRAPE_VARIETIES`.
-- Updated every regional suitability table to include Sangiovese scores and added `public/assets/icons/grape/icon_sangiovese.png` (placeholder clone of the Primitivo icon).
-- Fixed grape-quality compounding: `wine_batches` now stores immutable `born_grape_quality` / `born_balance` snapshots and the inventory loader consumes them so feature effects no longer restack to 1.0 after reloads.
+### 🎨 **UI Updates**
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Prestige modal updates (473 additions, 481 deletions)
+- `src/components/finance/LoansView.tsx` - Loan view improvements (85 additions, 87 deletions)
 
-### Security & Database Hardening
-- Applied Supabase migration `2025-11-14_enable_company_rls` to enable RLS on every company-scoped table, add guarded helper functions (`is_service_role`, `is_company_member`, `is_company_member_text`), and lock down maintenance helpers with an explicit search_path.
-- Replaced permissive public policies on `staff`, `loan_warnings`, and `wine_contracts` with company-scoped access controls (authenticated members + service role override).
-- Updated `migrations/vercel_migration_preserve_data.sql` and `migrations/sync_vercel_schema.sql` to mirror the new helper functions, search_path settings, and RLS policies so the Vercel database stays aligned with dev.
-- Addressed Supabase advisor performance warnings by wrapping `auth.uid()` calls in `(select auth.uid())` inside `owners_*`, `users_manage_self`, and `user_settings_self_access` policies, and removed the legacy `Users can access their own company loan warnings` policy to avoid redundant permissive rules.
-- Replaced `migrations/vercel_migration_preserve_data.sql` with a lightweight delta template so future Vercel updates only include incremental, idempotent changes (use `sync_vercel_schema.sql` for full resets).
-- Added `born_grape_quality` / `born_balance` columns (with automatic backfill) to `wine_batches` so production data retains its harvest baseline even when feature-driven updates are persisted.
+### 🛠️ **System Updates**
+- `src/lib/services/user/teamService.ts` - Team service updates (55 additions, 55 deletions)
+- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service updates (32 additions, 32 deletions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates (43 additions, 1 deletion)
+
+## Version 0.08 - Research System Implementation
+**Date:** 2025-11-21 | **Commit:** d44000c | **Stats:** 2,051 additions, 363 deletions
+
+### 🔬 **Research System Framework**
+- **NEW FILE:** `src/lib/services/activity/activitymanagers/researchManager.ts` (26 lines) - Research activity manager
+- **NEW FILE:** `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` (32 lines) - Research work calculator
+- **NEW FILE:** `src/components/finance/ResearchPanel.tsx` (42 lines) - Research panel component
+- **REMOVED:** `src/components/finance/UpgradesPlaceholder.tsx` (27 lines) - Replaced by ResearchPanel
+- `src/lib/constants/activityConstants.ts` - Added research activity constants (20 additions, 20 deletions)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Research activity integration (50 additions, 47 deletions)
+- `src/lib/services/activity/workcalculators/workCalculator.ts` - Research work calculation support (26 additions, 26 deletions)
+
+### 🧪 **Test System Integration**
+- `test-viewer/TestViewer.tsx` - Enhanced test viewer (266 additions, 6 deletions)
+- **NEW FILE:** `tests/user/companyCreation.test.ts` (395 lines) - Company creation tests
+- **NEW FILE:** `tests/user/hireStaffWorkflow.test.ts` (674 lines) - Staff hiring workflow tests
+- **NEW FILE:** `tests/user/startingConditions.test.ts` (293 lines) - Starting conditions tests
+
+### 🛠️ **System Updates**
+- `src/lib/types/types.ts` - Research type definitions (58 additions, 56 deletions)
+- `src/lib/services/finance/wageService.ts` - Wage service updates (21 additions, 21 deletions)
+- `src/lib/services/user/staffService.ts` - Staff service updates (13 additions, 13 deletions)
+- `src/lib/utils/colorMapping.ts` - Color mapping updates (23 additions, 35 deletions)
+- `src/lib/utils/icons.tsx` - Icon utility updates (18 additions, 18 deletions)
+
+## Version 0.076a - Test Suite Enhancements
+**Date:** 2025-11-21 | **Commit:** edc8b60 | **Stats:** 1,270 additions, 501 deletions
+
+### 🧪 **Test System Improvements**
+- `test-viewer/TestViewer.tsx` - Major test viewer enhancements (1,105 additions, 488 deletions)
+- **NEW FILE:** `tests/vineyard/vineyardCreation.test.ts` (154 lines) - Vineyard creation tests
+- `tests/vineyard/grapeSuitability.test.ts` - Grape suitability test updates (1 addition, 1 deletion)
+- `tests/vineyard/yieldCalculator.test.ts` - Yield calculator test updates (9 additions, 11 deletions)
+
+## Version 0.076 - Lender Creation Bug Fix
+**Date:** 2025-11-21 | **Commit:** 99981d9 | **Stats:** 196 additions, 167 deletions
+
+### 💰 **Loan System Fixes**
+- `src/lib/services/finance/lenderService.ts` - Fixed lender creation to ensure 3 of each type (77 additions, 60 deletions)
+- `src/lib/services/finance/loanService.ts` - Fixed vineyard value seizure to max 50% (119 additions, 107 deletions)
+
+## Version 0.075 - Automated Testing Framework & pnpm Migration
+**Date:** 2025-11-21 | **Commit:** c7d5c9a | **Stats:** 9,517 additions, 6,308 deletions
+
+### 🧪 **Testing Framework Implementation**
+- **NEW FILE:** `tests/README.md` (96 lines) - Test documentation
+- **NEW FILE:** `tests/activity/workCalculator.test.ts` (166 lines) - Work calculator tests
+- **NEW FILE:** `tests/finance/loanService.test.ts` (165 lines) - Loan service tests
+- **NEW FILE:** `tests/finance/wageService.test.ts` (150 lines) - Wage service tests
+- **NEW FILE:** `tests/vineyard/grapeSuitability.test.ts` (277 lines) - Grape suitability tests
+- **NEW FILE:** `tests/vineyard/yieldCalculator.test.ts` (281 lines) - Yield calculator tests
+- **NEW FILE:** `tests/wine/fermentationCharacteristics.test.ts` (214 lines) - Fermentation characteristics tests
+
+### 🛠️ **Test Infrastructure**
+- **NEW FILE:** `test-viewer/TestViewer.tsx` (822 lines) - Test viewer component
+- **NEW FILE:** `test-viewer/TestViewerPage.tsx` (13 lines) - Test viewer page
+- **NEW FILE:** `test-viewer/index.html` (432 lines) - Test viewer HTML
+- **NEW FILE:** `test-viewer/viewer.js` (161 lines) - Test viewer JavaScript
+- **NEW FILE:** `test-viewer/README.md` (56 lines) - Test viewer documentation
+- **NEW FILE:** `server/test-api.ts` (132 lines) - Test API server
+- **NEW FILE:** `docs/Agents_feedback/testscripts` (1,615 lines) - Test script documentation
+
+### 📦 **Package Manager Migration**
+- **REMOVED:** `package-lock.json` (6,302 lines) - Removed npm lock file
+- **NEW FILE:** `pnpm-lock.yaml` (4,897 lines) - pnpm lock file
+- **NEW FILE:** `pnpm-workspace.yaml` (2 lines) - pnpm workspace configuration
+- `package.json` - Updated for pnpm and test dependencies (7 additions, 2 deletions)
+- Added test scripts: `test` and `test:watch` using Vitest
+
+### ⚙️ **Configuration Updates**
+- `vite.config.ts` - Vitest configuration (8 additions, 1 deletion)
+- `tsconfig.json` - TypeScript configuration for tests (3 additions, 2 deletions)
+- `src/components/pages/AdminDashboard.tsx` - Admin dashboard updates (8 additions, 1 deletion)
+
+## Version 0.074a - Supabase Fix & Vineyard Value Calculations
+**Date:** 2025-11-21 | **Commit:** cbe577c | **Stats:** 70 additions, 54 deletions
+
+### 🗄️ **Database & Service Updates**
+- `migrations/sync_vercel_schema.sql` - Supabase schema fixes (44 additions, 44 deletions)
+- `src/lib/services/core/startingConditionsService.ts` - Vineyard value calculations in starting conditions (14 additions, 3 deletions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard value calculation improvements (10 additions, 5 deletions)
+- `src/lib/services/sales/salesService.ts` - Sales service updates (2 additions, 2 deletions)
+
+## Version 0.074 - Database Schema Updates
+**Date:** 2025-11-14 | **Commit:** b813805 | **Stats:** 74 additions, 10 deletions
+
+### 🗄️ **Database Updates**
+- `migrations/sync_vercel_schema.sql` - Database schema updates (71 additions, 8 deletions)
+- `src/components/layout/ActivityPanel.tsx` - Activity panel updates (2 additions, 2 deletions)
+
+## Version 0.073-0.073DB - Bug Fixes & System Improvements (Combined)
+**Date:** 2025-11-13 to 2025-11-14 | **Commits:** d2067c8 (0.073), c0bb9b5 (0.073a), e0f4656 (0.073b), 9dca737 (0.073C), 7ddc08d (0.073D), 8a896e5 (0.073DA), c1ae140 (0.073DB) | **Stats:** Combined 1,801 additions, 654 deletions
+
+### 🐛 **Bug Fixes & Improvements**
+- `src/lib/services/prestige/prestigeService.ts` - Vineyard prestige bug fixes (17 additions, 4 deletions)
+- `src/lib/services/user/achievementService.ts` - Achievement service improvements (54 additions, 27 deletions)
+- `src/lib/services/finance/loanService.ts` - Loan service bug fixes (147 additions, 119 deletions across commits)
+- `src/lib/services/sales/contractGenerationService.ts` - Contract generation improvements (337 additions, 161 deletions)
+- `src/lib/services/sales/contractService.ts` - Contract service updates (134 additions, 28 deletions)
+- **NEW FILE:** `src/lib/constants/contractConstants.ts` (209 lines) - Contract constants
+- **NEW FILE:** `src/lib/services/sales/expirationService.ts` (104 lines) - Contract expiration service
+- **NEW FILE:** `src/hooks/useWinePriceCalculator.ts` (63 lines) - Wine price calculator hook
+- **REMOVED:** `src/hooks/useEstimatedPrice.ts` (46 lines) - Replaced by useWinePriceCalculator
+
+### 🎨 **UI Component Updates**
+- `src/components/pages/sales/ContractsTab.tsx` - Contract tab improvements (179 additions, 60 deletions)
+- `src/components/pages/sales/AssignWineModal.tsx` - Wine assignment modal updates (50 additions, 7 deletions)
+- `src/components/ui/components/grapeQualityBreakdown.tsx` - Quality breakdown updates (48 additions, 72 deletions)
+- `src/components/finance/LoansView.tsx` - Loan view updates (28 additions, 9 deletions)
+
+### 🗄️ **Database Updates**
+- `migrations/sync_vercel_schema.sql` - Database schema updates (303 additions, 59 deletions)
+- `src/lib/database/activities/inventoryDB.ts` - Inventory database updates (6 additions, 2 deletions)
+
+## Version 0.072 - Bug Fixes: Features, Sales, Orders, Contracts & Loans
+**Date:** 2025-11-13 | **Commit:** e46d1c6 | **Stats:** 688 additions, 153 deletions
+
+### 🐛 **System Bug Fixes**
+- `src/lib/services/wine/features/featureService.ts` - Feature service bug fixes (108 additions, 52 deletions)
+- `src/lib/services/finance/loanService.ts` - Loan service bug fixes (106 additions, 8 deletions)
+- `src/lib/services/sales/salesOrderService.ts` - Sales order service fixes (62 additions, 1 deletion)
+- `src/lib/services/sales/generateOrder.ts` - Order generation fixes (25 additions, 5 deletions)
+- **NEW FILE:** `src/lib/services/sales/expirationService.ts` (104 lines) - Contract expiration service
+- `src/lib/services/vineyard/vineyardManager.ts` - Vineyard manager fixes (42 additions, 5 deletions)
+- `src/lib/services/core/gameTick.ts` - Game tick fixes (15 additions, 2 deletions)
+
+### 🎨 **UI Component Updates**
+- `src/components/ui/modals/activitymodals/LenderSearchOptionsModal.tsx` - Lender search modal improvements (128 additions, 32 deletions)
+- `src/components/pages/sales/OrdersTab.tsx` - Orders tab updates (26 additions, 4 deletions)
+
+### 🗄️ **Database Updates**
+- `migrations/sync_vercel_schema.sql` - Database schema updates (4 additions)
+- `src/lib/database/core/supabase.ts` - Supabase client updates (12 additions, 1 deletion)
+- `src/lib/database/customers/salesDB.ts` - Sales database updates (9 additions, 1 deletion)
 
 ---
 ## Version 0.071a - Build Fix

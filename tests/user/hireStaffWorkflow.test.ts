@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { companyService } from '@/lib/services/user/companyService';
 import { applyStartingConditions, generateVineyardPreview } from '@/lib/services/core/startingConditionsService';
-import { setActiveCompany, resetGameState, getGameState } from '@/lib/services/core/gameState';
+import { setActiveCompany, resetGameState, getGameState, updateGameState, getCurrentCompany } from '@/lib/services/core/gameState';
 import { initializeTeamsSystem } from '@/lib/services/user/teamService';
 import { initializeStaffSystem } from '@/lib/services/user/staffService';
 import { STARTING_CONDITIONS, type StartingCountry } from '@/lib/constants/startingConditions';
@@ -9,7 +9,7 @@ import { deleteCompany } from '@/lib/database/core/companiesDB';
 import { loadStaffFromDb } from '@/lib/database/core/staffDB';
 import { getActivityById } from '@/lib/services/activity/activitymanagers/activityManager';
 import { startStaffSearch, completeStaffSearch, startHiringProcess, completeHiringProcess, type StaffSearchOptions } from '@/lib/services/activity/activitymanagers/staffSearchManager';
-import { updateActivityInDb } from '@/lib/database/activities/activityDB';
+import { updateActivityInDb, removeActivityFromDb } from '@/lib/database/activities/activityDB';
 import { loadTransactions } from '@/lib/database/core/transactionsDB';
 import type { Staff } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
@@ -66,10 +66,33 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
   });
 
   /**
-   * Helper function to manually complete an activity for testing
-   * Sets completedWork = totalWork, then calls completion handler
+   * Helper function to ensure company is set as active (needed for operations that use getCurrentCompanyId)
    */
-  async function completeActivityManually(activityId: string): Promise<void> {
+  async function ensureCompanyActive(companyId: string): Promise<void> {
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+    // Force set active company even if already active (to refresh game state)
+    const currentCompany = getCurrentCompany();
+    if (!currentCompany || currentCompany.id !== companyId) {
+      await setActiveCompany(company);
+    } else {
+      // Company is already active, but ensure game state is synced
+      await updateGameState({ money: company.money });
+    }
+  }
+
+  /**
+   * Helper function to manually complete an activity for testing
+   * Sets completedWork = totalWork, then calls completion handler and removes activity
+   */
+  async function completeActivityManually(activityId: string, companyId?: string): Promise<void> {
+    // Ensure company is active before operations that require it
+    if (companyId) {
+      await ensureCompanyActive(companyId);
+    }
+
     const activity = await getActivityById(activityId);
     if (!activity) {
       throw new Error(`Activity ${activityId} not found`);
@@ -86,6 +109,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       throw new Error(`Failed to update activity ${activityId}`);
     }
 
+    // Ensure company is active before calling completion handlers (they use getCurrentCompanyId)
+    if (companyId) {
+      await ensureCompanyActive(companyId);
+    }
+
     // Call appropriate completion handler based on category
     if (updatedActivity.category === WorkCategory.STAFF_SEARCH) {
       await completeStaffSearch(updatedActivity);
@@ -94,6 +122,13 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
     } else {
       throw new Error(`No completion handler for category ${updatedActivity.category}`);
     }
+
+    // Remove the completed activity (same as progressActivities does)
+    // Ensure company is active before removing (removeActivityFromDb uses getCurrentCompanyId)
+    if (companyId) {
+      await ensureCompanyActive(companyId);
+    }
+    await removeActivityFromDb(activityId);
   }
 
   describe('Complete Staff Search Workflow', () => {
@@ -136,28 +171,33 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
         specializations: []
       };
 
-      // Get initial money and add enough for search cost
-      const initialCompany = await companyService.getCompany(company.id);
-      expect(initialCompany).not.toBeNull();
-      const initialMoney = initialCompany?.money || 0;
-
       // Calculate search cost
       const { calculateStaffSearchCost } = await import('@/lib/services/activity/workcalculators/staffSearchWorkCalculator');
       const searchCost = calculateStaffSearchCost(searchOptions);
       
+      // Get current money after starting conditions
+      const companyBeforeSearch = await companyService.getCompany(company.id);
+      expect(companyBeforeSearch).not.toBeNull();
+      const moneyBeforeSearch = companyBeforeSearch?.money || 0;
+      
       // Add money if needed (should have enough from France starting conditions, but ensure we have it)
-      if (initialMoney < searchCost + 10000) {
+      const targetMoney = searchCost + 20000; // Add extra for hiring costs
+      if (moneyBeforeSearch < targetMoney) {
         await companyService.updateCompany(company.id, {
-          money: searchCost + 20000 // Add extra for hiring costs
+          money: targetMoney
         });
+        
+        // Update game state directly to ensure it's synced (setActiveCompany won't update if company is already active)
+        await updateGameState({ money: targetMoney });
+      } else {
+        // Even if we have enough, ensure game state is synced with current money
+        await updateGameState({ money: moneyBeforeSearch });
       }
 
-      // Refresh company state
-      const refreshedCompany = await companyService.getCompany(company.id);
-      if (!refreshedCompany) {
-        throw new Error('Failed to refresh company');
-      }
-      await setActiveCompany(refreshedCompany);
+      // Get the actual money we have now (after potential update)
+      const companyWithMoney = await companyService.getCompany(company.id);
+      const moneyAfterUpdate = companyWithMoney?.money || 0;
+      await updateGameState({ money: moneyAfterUpdate });
 
       // 2. Start staff search
       const searchActivityId = await startStaffSearch(searchOptions);
@@ -181,8 +221,8 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
         expect(companyAfterSearch).not.toBeNull();
         if (companyAfterSearch) {
           // Money should be reduced by search cost (allow small variance for transaction processing)
-          expect(companyAfterSearch.money).toBeLessThanOrEqual(initialMoney);
-          expect(Math.abs((initialMoney - companyAfterSearch.money) - searchCost)).toBeLessThan(1);
+          expect(companyAfterSearch.money).toBeLessThanOrEqual(moneyAfterUpdate);
+          expect(Math.abs((moneyAfterUpdate - companyAfterSearch.money) - searchCost)).toBeLessThan(1);
         }
 
         // Verify transaction was recorded
@@ -195,7 +235,7 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
         expect(searchTransaction?.category).toBe(TRANSACTION_CATEGORIES.STAFF_SEARCH);
 
         // 3. Manually complete the search activity (simulating time passing and work completion)
-        await completeActivityManually(searchActivityId);
+        await completeActivityManually(searchActivityId, company.id);
 
         // 4. Verify candidates were generated and stored in game state
         const gameState = getGameState();
@@ -258,14 +298,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       // Add money
       const { calculateStaffSearchCost } = await import('@/lib/services/activity/workcalculators/staffSearchWorkCalculator');
       const searchCost = calculateStaffSearchCost(searchOptions);
+      const targetMoney2 = searchCost + 20000;
       await companyService.updateCompany(company.id, {
-        money: searchCost + 20000
+        money: targetMoney2
       });
-      const refreshedCompany2 = await companyService.getCompany(company.id);
-      if (!refreshedCompany2) {
-        throw new Error('Failed to refresh company');
-      }
-      await setActiveCompany(refreshedCompany2);
+      await updateGameState({ money: targetMoney2 });
 
       // Start and complete search
       const searchActivityId = await startStaffSearch(searchOptions);
@@ -273,7 +310,7 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       
       if (searchActivityId) {
         createdActivityIds.push(searchActivityId);
-        await completeActivityManually(searchActivityId);
+        await completeActivityManually(searchActivityId, company.id);
 
         // Verify candidates
         const gameState = getGameState();
@@ -328,14 +365,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
 
       const { calculateStaffSearchCost } = await import('@/lib/services/activity/workcalculators/staffSearchWorkCalculator');
       const searchCost = calculateStaffSearchCost(searchOptions);
+      const targetMoney3 = searchCost + 50000; // Enough for search + hiring multiple candidates
       await companyService.updateCompany(company.id, {
-        money: searchCost + 50000 // Enough for search + hiring multiple candidates
+        money: targetMoney3
       });
-      const refreshedCompany3 = await companyService.getCompany(company.id);
-      if (!refreshedCompany3) {
-        throw new Error('Failed to refresh company');
-      }
-      await setActiveCompany(refreshedCompany3);
+      await updateGameState({ money: targetMoney3 });
 
       const searchActivityId = await startStaffSearch(searchOptions);
       expect(searchActivityId).not.toBeNull();
@@ -345,7 +379,7 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       }
 
       createdActivityIds.push(searchActivityId);
-      await completeActivityManually(searchActivityId);
+      await completeActivityManually(searchActivityId, company.id);
 
       // 3. Get candidates from game state
       const gameState = getGameState();
@@ -389,9 +423,10 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       expect(candidateData.id).toBe(candidateToHire.id);
 
       // 5. Manually complete the hiring activity
-      await completeActivityManually(hiringActivityId);
+      await completeActivityManually(hiringActivityId, company.id);
 
       // 6. Verify staff was added to database
+      await ensureCompanyActive(company.id); // Ensure company is active before loading staff
       await initializeStaffSystem(); // Refresh staff
       const staffAfterHire = await loadStaffFromDb();
       expect(staffAfterHire.length).toBe(initialStaffCount + 1);
@@ -474,14 +509,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       const { calculateStaffSearchCost } = await import('@/lib/services/activity/workcalculators/staffSearchWorkCalculator');
       const searchCost = calculateStaffSearchCost(searchOptions);
       const totalWages = 30000; // Estimate for 3 candidates
+      const targetMoney4 = searchCost + totalWages;
       await companyService.updateCompany(company.id, {
-        money: searchCost + totalWages
+        money: targetMoney4
       });
-      const refreshedCompany4 = await companyService.getCompany(company.id);
-      if (!refreshedCompany4) {
-        throw new Error('Failed to refresh company');
-      }
-      await setActiveCompany(refreshedCompany4);
+      await updateGameState({ money: targetMoney4 });
 
       const searchActivityId = await startStaffSearch(searchOptions);
       expect(searchActivityId).not.toBeNull();
@@ -491,7 +523,7 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       }
 
       createdActivityIds.push(searchActivityId);
-      await completeActivityManually(searchActivityId);
+      await completeActivityManually(searchActivityId, company.id);
 
       // Get candidates
       const gameState = getGameState();
@@ -505,10 +537,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       
       if (hiringActivityId1) {
         createdActivityIds.push(hiringActivityId1);
-        await completeActivityManually(hiringActivityId1);
+        await completeActivityManually(hiringActivityId1, company.id);
       }
 
-      // Refresh staff
+      // Refresh staff - ensure company is active
+      await ensureCompanyActive(company.id);
       await initializeStaffSystem();
       let staffAfterFirstHire = await loadStaffFromDb();
       expect(staffAfterFirstHire.length).toBe(initialStaffCount + 1);
@@ -520,10 +553,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       
       if (hiringActivityId2) {
         createdActivityIds.push(hiringActivityId2);
-        await completeActivityManually(hiringActivityId2);
+        await completeActivityManually(hiringActivityId2, company.id);
       }
 
-      // Refresh staff
+      // Refresh staff - ensure company is active
+      await ensureCompanyActive(company.id);
       await initializeStaffSystem();
       const staffAfterSecondHire = await loadStaffFromDb();
       expect(staffAfterSecondHire.length).toBe(initialStaffCount + 2);
@@ -571,14 +605,11 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       const { calculateStaffSearchCost } = await import('@/lib/services/activity/workcalculators/staffSearchWorkCalculator');
       const searchCost = calculateStaffSearchCost(searchOptions);
       // Give just enough for search, but not enough for hiring
+      const targetMoney5 = searchCost + 1; // Just 1 more than search cost
       await companyService.updateCompany(company.id, {
-        money: searchCost + 1 // Just 1 more than search cost
+        money: targetMoney5
       });
-      const refreshedCompany5 = await companyService.getCompany(company.id);
-      if (!refreshedCompany5) {
-        throw new Error('Failed to refresh company');
-      }
-      await setActiveCompany(refreshedCompany5);
+      await updateGameState({ money: targetMoney5 });
 
       const searchActivityId = await startStaffSearch(searchOptions);
       expect(searchActivityId).not.toBeNull();
@@ -588,7 +619,7 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       }
 
       createdActivityIds.push(searchActivityId);
-      await completeActivityManually(searchActivityId);
+      await completeActivityManually(searchActivityId, company.id);
 
       // Get candidates
       const gameState = getGameState();
@@ -596,6 +627,8 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       expect(candidates.length).toBe(3);
 
       // Try to hire a candidate (should fail due to insufficient funds)
+      // Ensure company is active before hiring
+      await ensureCompanyActive(company.id);
       const candidate = candidates[0];
       const hiringActivityId = await startHiringProcess(candidate);
       
@@ -657,6 +690,7 @@ describe('Hire Staff Workflow - Complete Staff Search and Hiring Process', () =>
       expect(addedStaff?.name).toBe('John Doe');
 
       // Verify staff was added to database
+      await ensureCompanyActive(company.id);
       await initializeStaffSystem();
       const staffAfterManualHire = await loadStaffFromDb();
       expect(staffAfterManualHire.length).toBe(initialStaffCount + 1);

@@ -78,8 +78,8 @@ export const SPECIALIZED_ROLES: Record<string, {
     bonusAmount: 0.2
   },
   administrationAndResearch: {
-    title: 'Estate Administrator',
-    description: 'Expert in business operations and research',
+    title: 'Administration & Research Manager',
+    description: 'Expert in Administration and Research',
     skillBonus: 'administrationAndResearch',
     bonusAmount: 0.2
   },

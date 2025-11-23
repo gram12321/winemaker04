@@ -182,7 +182,7 @@ export const STARTING_CONDITIONS: Record<StartingCountry, StartingCondition> = {
         lastName: 'Weissburg',
         nationality: 'Germany',
         skillLevel: 0.5,
-        specializations: ['buildingAndMaintenance']
+        specializations: ['financeAndStaff']
       },
       {
         firstName: 'Elsa',
