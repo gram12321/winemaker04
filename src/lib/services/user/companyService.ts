@@ -8,6 +8,7 @@ export interface CompanyCreateData {
   name: string;
   associateWithUser?: boolean;
   userName?: string;
+  userId?: string; // Optional: directly specify userId to associate with (takes precedence over associateWithUser)
   outsideInvestmentAmount?: number; // Outside investment in euros (0 to 1,000,000)
 }
 
@@ -42,8 +43,12 @@ class CompanyService {
     try {
       let userId: string | null = null;
 
+      // If userId is directly provided, use it (takes precedence)
+      if (data.userId) {
+        userId = data.userId;
+      }
       // If user creation is requested, create a user first
-      if (data.associateWithUser && data.userName) {
+      else if (data.associateWithUser && data.userName) {
         const userResult = await insertUser({
           name: data.userName,
           created_at: new Date().toISOString()

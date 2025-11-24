@@ -223,7 +223,13 @@ export function Login({ onCompanySelected }: LoginProps) {
     e.preventDefault();
     setError('');
 
-    const company = await createNewCompany(companyName, createUserProfile, createUserProfile ? userName : undefined);
+    // If there's a current user, always associate the company with that user
+    // Otherwise, use the createUserProfile toggle
+    const shouldAssociateWithUser = currentUser ? true : createUserProfile;
+    const userNameToUse = currentUser ? undefined : (createUserProfile ? userName : undefined);
+    const userIdToUse = currentUser ? currentUser.id : undefined;
+
+    const company = await createNewCompany(companyName, shouldAssociateWithUser, userNameToUse, userIdToUse);
 
     if (company) {
       setCompanyName('');

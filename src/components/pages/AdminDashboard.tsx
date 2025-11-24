@@ -5,7 +5,7 @@ import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import TestViewer from '../../../test-viewer/TestViewer';
 import {
-  adminSetGoldToCompany, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch
+  adminSetGoldToCompany, adminSetPlayerBalance, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch
 } from '@/lib/services';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
@@ -17,6 +17,7 @@ interface AdminDashboardProps extends PageProps, NavigationProps {
 export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProps) {
   const { isLoading, withLoading } = useLoadingState();
   const [goldAmount, setGoldAmount] = useState('10000');
+  const [playerBalanceAmount, setPlayerBalanceAmount] = useState('10000');
   const [prestigeAmount, setPrestigeAmount] = useState('100');
   const [gameWeek, setGameWeek] = useState(String(GAME_INITIALIZATION.STARTING_WEEK));
   const [gameSeason, setGameSeason] = useState<Season>(GAME_INITIALIZATION.STARTING_SEASON);
@@ -28,6 +29,17 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
   const handleSetGold = () => withLoading(async () => {
     const amount = parseFloat(goldAmount) || 10000;
     await adminSetGoldToCompany(amount);
+  });
+
+  const handleSetPlayerBalance = () => withLoading(async () => {
+    const amount = parseFloat(playerBalanceAmount) || 10000;
+    const result = await adminSetPlayerBalance(amount);
+    if (result.success) {
+      console.log(result.message);
+    } else {
+      console.error(result.error || 'Failed to set player balance');
+      alert(result.error || 'Failed to set player balance');
+    }
   });
 
   const handleAddPrestige = () => withLoading(async () => {
@@ -313,7 +325,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                 description="Set money and resources for the active company"
               >
                   <div className="space-y-2">
-                    <Label htmlFor="goldAmount">Gold Amount to Set</Label>
+                    <Label htmlFor="goldAmount">Company Gold Amount to Set</Label>
                     <Input
                       id="goldAmount"
                       type="number"
@@ -328,6 +340,27 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                     >
                       Set Gold for Active Company
                     </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="playerBalanceAmount">Player Balance Amount to Set</Label>
+                    <Input
+                      id="playerBalanceAmount"
+                      type="number"
+                      value={playerBalanceAmount}
+                      onChange={(e) => setPlayerBalanceAmount(e.target.value)}
+                      placeholder="10000"
+                    />
+                    <Button
+                      onClick={handleSetPlayerBalance}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      Set Player Balance
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                      Sets the cash balance for the user associated with the active company
+                    </p>
                   </div>
 
                   <div className="space-y-2">

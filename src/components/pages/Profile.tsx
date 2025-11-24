@@ -8,6 +8,7 @@ import type { CompanyStats } from '@/lib/services';
 import { formatNumber, calculateCompanyWeeks, formatDate } from '@/lib/utils/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
+import { getPlayerBalance } from '@/lib/services/user/userBalanceService';
 
 // Color options
 const COLOR_OPTIONS = [
@@ -32,6 +33,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userCompanies, setUserCompanies] = useState<Company[]>([]);
   const [companyStats, setCompanyStats] = useState<CompanyStats>({ totalCompanies: 0, totalGold: 0, totalValue: 0, avgWeeks: 0 });
+  const [playerBalance, setPlayerBalance] = useState<number>(0);
   const [error, setError] = useState('');
 
   // Edit profile state
@@ -78,13 +80,15 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
   }, [currentCompany]);
 
   const loadUserData = (userId: string) => withLoading(async () => {
-    const [companies, stats] = await Promise.all([
+    const [companies, stats, balance] = await Promise.all([
       companyService.getUserCompanies(userId),
-      companyService.getCompanyStats(userId)
+      companyService.getCompanyStats(userId),
+      getPlayerBalance(userId)
     ]);
     
     setUserCompanies(companies);
     setCompanyStats(stats);
+    setPlayerBalance(balance);
   });
 
   const loadCompanyUserData = async (userId: string) => {
@@ -117,6 +121,10 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
         setEditName(user.name);
         setSelectedAvatar(user.avatar || 'default');
         setSelectedColor(user.avatar_color || 'blue');
+        
+        // Load player balance
+        const balance = await getPlayerBalance(userId);
+        setPlayerBalance(balance);
         
         // Load all companies for this user
         await loadUserData(userId);
@@ -458,6 +466,29 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                 </div>
               </CardContent>
             </Card>
+
+            {/* Player Balance */}
+            {currentUser && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Player Balance
+                  </CardTitle>
+                  <CardDescription>Your personal cash balance for company investments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-green-600">
+                      {formatNumber(playerBalance, { currency: true, decimals: 0 })}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Available for new company investments
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Companies List */}

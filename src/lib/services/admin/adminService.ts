@@ -9,6 +9,9 @@ import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { unlockResearch, getAllResearchUnlocks } from '@/lib/database';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { GameDate } from '@/lib/types/types';
+import { setPlayerBalance } from '../user/userBalanceService';
+import { getCurrentCompany } from '../core/gameState';
+import { companyService } from '../user/companyService';
 
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
@@ -29,6 +32,52 @@ export async function adminSetGoldToCompany(amount: number): Promise<void> {
   // Only add transaction if there's a difference
   if (difference !== 0) {
     await addTransaction(difference, `Admin: Set to ${formatNumber(targetAmount, { currency: true })} (was ${formatNumber(currentMoney, { currency: true })})`, 'admin_cheat');
+  }
+}
+
+/**
+ * Set player cash balance for the user associated with the active company
+ */
+export async function adminSetPlayerBalance(amount: number): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const targetAmount = amount || 10000;
+    
+    // Get current company to find associated user
+    const currentCompany = getCurrentCompany();
+    if (!currentCompany) {
+      return { success: false, error: 'No active company found' };
+    }
+    
+    // Get full company data to access userId
+    const company = await companyService.getCompany(currentCompany.id);
+    if (!company) {
+      return { success: false, error: 'Company not found' };
+    }
+    
+    if (!company.userId) {
+      return { success: false, error: 'Company is not associated with a user' };
+    }
+    
+    // Set the player balance
+    const result = await setPlayerBalance(targetAmount, company.userId);
+    
+    if (result.success) {
+      return {
+        success: true,
+        message: `Player balance set to ${formatNumber(targetAmount, { currency: true })} for user ${company.userId}`
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to set player balance'
+      };
+    }
+  } catch (error) {
+    console.error('Error setting player balance:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to set player balance'
+    };
   }
 }
 

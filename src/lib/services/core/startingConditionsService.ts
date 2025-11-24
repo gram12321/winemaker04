@@ -17,6 +17,7 @@ import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
 import { getGrapeUnlockResearchId } from '@/lib/utils/researchUtils';
+import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -99,7 +100,8 @@ export async function applyStartingConditions(
   companyId: string,
   country: StartingCountry,
   vineyardPreview: VineyardPreview,
-  outsideInvestmentAmount?: number // Outside investment in euros (0 to 1,000,000)
+  outsideInvestmentAmount?: number, // Outside investment in euros (0 to 1,000,000)
+  playerCashContribution?: number // Optional player cash contribution (for subsequent companies)
 ): Promise<ApplyStartingConditionsResult> {
   try {
     const condition = STARTING_CONDITIONS[country];
@@ -107,7 +109,32 @@ export async function applyStartingConditions(
       return { success: false, error: 'Invalid starting country' };
     }
 
-    const basePlayerInvestment = condition.startingMoney; // Use country-specific base investment (cash)
+    // Get company to check if it has a user
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return { success: false, error: 'Company not found' };
+    }
+
+    // Check if this is the first company for the user
+    let isFirstCompany = true;
+    let userId: string | undefined;
+    if (company.userId) {
+      userId = company.userId;
+      const userCompanies = await companyService.getUserCompanies(userId);
+      // Exclude the current company being created
+      const otherCompanies = userCompanies.filter(c => c.id !== companyId);
+      isFirstCompany = otherCompanies.length === 0;
+    }
+
+    // Determine player cash contribution
+    // For first company: use country-specific base investment
+    // For subsequent companies: use provided playerCashContribution or default to base
+    let basePlayerInvestment: number;
+    if (isFirstCompany || playerCashContribution === undefined) {
+      basePlayerInvestment = condition.startingMoney; // Use country-specific base investment (cash)
+    } else {
+      basePlayerInvestment = playerCashContribution;
+    }
     
     // Calculate vineyard value as part of player contribution (calculate once, use everywhere)
     const previewAspect = (vineyardPreview.aspect as Aspect) || 'South';
@@ -164,7 +191,28 @@ export async function applyStartingConditions(
       return { success: false, error: 'Failed to update company' };
     }
 
-    // 2. Add starting capital (player cash investment + outside investment)
+    // 2. Handle player balance deduction (for subsequent companies only)
+    if (!isFirstCompany && userId) {
+      // Calculate total player contribution (cash + vineyard value)
+      const totalPlayerContribution = basePlayerInvestment + vineyardValue;
+      
+      // Check player balance
+      const playerBalance = await getPlayerBalance(userId);
+      if (playerBalance < totalPlayerContribution) {
+        return { 
+          success: false, 
+          error: `Insufficient balance. You have ${playerBalance.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} but need ${totalPlayerContribution.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} (${basePlayerInvestment.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} cash + ${vineyardValue.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} vineyard)` 
+        };
+      }
+
+      // Deduct total contribution from player balance
+      const balanceResult = await updatePlayerBalance(-totalPlayerContribution, userId);
+      if (!balanceResult.success) {
+        return { success: false, error: balanceResult.error || 'Failed to deduct from player balance' };
+      }
+    }
+
+    // 3. Add starting capital (player cash investment + outside investment)
     // Note: Vineyard value is part of player contribution but doesn't add to cash
     const baseStartingMoney = condition.startingMoney;
     const capitalAdjustment = (basePlayerInvestment + outsideInvestment) - baseStartingMoney;
@@ -199,7 +247,7 @@ export async function applyStartingConditions(
       }
     }
 
-    // 3. Apply optional starting loan before staffing to ensure capital reflects loan
+    // 4. Apply optional starting loan before staffing to ensure capital reflects loan
     if (condition.startingLoan) {
       const loanResult = await applyStartingLoan(condition.startingLoan);
       if (!loanResult.success) {
@@ -208,7 +256,7 @@ export async function applyStartingConditions(
       startingLoanId = loanResult.loanId;
     }
 
-    // 4. Create starting staff
+    // 5. Create starting staff
     const createdStaff: Staff[] = [];
     for (const staffConfig of condition.staff) {
       const staff = createStaff(
@@ -249,7 +297,7 @@ export async function applyStartingConditions(
       }
     }
 
-    // 5. Create starting vineyard from preview
+    // 6. Create starting vineyard from preview
     // Use the same values calculated above to ensure consistency
     // vineyardValue was calculated using previewAspect and vineyardPreview data above
     // Verification: vineyardValue should equal adjustedLandValuePerHectare * vineyardPreview.hectares (rounded)
@@ -302,6 +350,11 @@ export async function applyStartingConditions(
       console.warn('Unable to resolve updated company money after starting conditions:', moneyError);
     }
     
+    // 7. Set player balance to 10,000€ after first company creation
+    if (isFirstCompany && userId) {
+      await setPlayerBalance(10000, userId);
+    }
+    
     // Return the actual cash amount (vineyard value is a separate asset, not cash)
 
     if (condition.startingPrestige) {
@@ -333,7 +386,7 @@ export async function applyStartingConditions(
       }
     }
 
-    // 6. Unlock starting grape variety (if specified)
+    // 8. Unlock starting grape variety (if specified)
     if (condition.startingUnlockedGrape) {
       try {
         const gameState = getGameState();

@@ -26,6 +26,7 @@ export function ShareManagementPanel() {
   const [issuingShares, setIssuingShares] = useState(0);
   const [buybackShares, setBuybackShares] = useState(0);
   const [dividendRate, setDividendRate] = useState(0);
+  const [dividendRateInput, setDividendRateInput] = useState<string>('0');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -45,7 +46,9 @@ export function ShareManagementPanel() {
         const companyData = await companyService.getCompany(companyId);
         if (companyData) {
           setCompany(companyData);
-          setDividendRate(companyData.dividendRate || 0);
+          const rate = companyData.dividendRate || 0;
+          setDividendRate(rate);
+          setDividendRateInput(rate.toString());
         }
 
         // Update market value
@@ -149,7 +152,7 @@ export function ShareManagementPanel() {
     try {
       const result = await updateDividendRate(dividendRate);
       if (result.success) {
-        setSuccess(`Dividend rate updated to ${formatNumber(dividendRate, { currency: true })} per share`);
+        setSuccess(`Dividend rate updated to ${formatNumber(dividendRate, { currency: true, decimals: 4 })} per share`);
       } else {
         setError(result.error || 'Failed to update dividend rate');
       }
@@ -265,7 +268,7 @@ export function ShareManagementPanel() {
             <div className="space-y-1">
               <div className="text-xs text-gray-600">Dividend Rate</div>
               <div className="font-semibold text-base text-purple-600">
-                {dividendRate > 0 ? formatNumber(dividendRate, { currency: true }) + '/share' : 'Not set'}
+                {dividendRate > 0 ? formatNumber(dividendRate, { currency: true, decimals: 4 }) + '/share' : 'Not set'}
               </div>
             </div>
           </div>
@@ -367,16 +370,31 @@ export function ShareManagementPanel() {
                 <div className="mt-1 flex items-center gap-2">
                   <Input
                     id="dividend-rate"
-                    type="number"
-                    min="0"
-                    step="0.0001"
-                    value={dividendRate || ''}
+                    type="text"
+                    value={dividendRateInput}
                     onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      if (!isNaN(value) && value >= 0) {
-                        setDividendRate(value);
-                      } else if (e.target.value === '' || e.target.value === '.') {
+                      const inputValue = e.target.value;
+                      // Allow empty string, numbers, and decimal point
+                      if (inputValue === '' || inputValue === '.' || /^\d*\.?\d*$/.test(inputValue)) {
+                        setDividendRateInput(inputValue);
+                        // Parse and update the actual rate if it's a valid number
+                        const parsed = parseFloat(inputValue);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                          setDividendRate(parsed);
+                        } else if (inputValue === '' || inputValue === '.') {
+                          setDividendRate(0);
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // On blur, ensure we have a valid number
+                      const parsed = parseFloat(e.target.value);
+                      if (isNaN(parsed) || parsed < 0) {
+                        setDividendRateInput('0');
                         setDividendRate(0);
+                      } else {
+                        setDividendRateInput(parsed.toString());
+                        setDividendRate(parsed);
                       }
                     }}
                     className="flex-1"
@@ -402,7 +420,7 @@ export function ShareManagementPanel() {
                 </div>
                 {company && company.totalShares && dividendRate > 0 && (
                   <div className="text-gray-500 mt-1">
-                    ({formatNumber(company.totalShares, { decimals: 0 })} shares × {formatNumber(dividendRate, { currency: true })})
+                    ({formatNumber(company.totalShares, { decimals: 0 })} shares × {formatNumber(dividendRate, { currency: true, decimals: 4 })})
                   </div>
                 )}
               </div>

@@ -8,6 +8,8 @@ import { getGameState } from '../core/gameState';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
+import { updatePlayerBalance } from '../user/userBalanceService';
+import { formatNumber } from '../../utils/utils';
 
 /**
  * Issue new shares (dilutes player ownership)
@@ -398,7 +400,7 @@ export async function checkAndNotifyDividendsDue(companyId?: string): Promise<bo
 
     // Send notification
     await notificationService.addMessage(
-      `Dividends are due! Pay ${dividendPayment.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} to shareholders (${company.dividendRate?.toFixed(2) || 0}€ per share).`,
+      `Dividends are due! Pay ${formatNumber(dividendPayment, { currency: true })} to shareholders (${formatNumber(company.dividendRate || 0, { currency: true, decimals: 4 })} per share).`,
       'dividend.due',
       'Dividend Payment Due',
       NotificationCategory.FINANCE_AND_STAFF
@@ -470,22 +472,21 @@ export async function payDividends(companyId?: string): Promise<{
     // Deduct total payment from company money
     await addTransaction(
       -totalPayment,
-      `Dividend Payment: ${dividendRate.toFixed(2)}€ per share (${totalShares.toLocaleString()} shares)`,
+      `Dividend Payment: ${formatNumber(dividendRate, { currency: true, decimals: 4 })} per share (${formatNumber(totalShares, { decimals: 0 })} shares)`,
       TRANSACTION_CATEGORIES.OTHER,
       false,
       companyId
     );
 
-    // Add player's dividend payment back to company (player is the company owner)
-    // Note: In a real system, this would go to the player's personal account
-    // For now, we'll just record the transaction
-    await addTransaction(
-      playerPayment,
-      `Dividend Received (Player): ${playerShares.toLocaleString()} shares @ ${dividendRate.toFixed(2)}€ per share`,
-      TRANSACTION_CATEGORIES.OTHER,
-      false,
-      companyId
-    );
+    // Add player's dividend payment to user balance (if company has a user)
+    // For anonymous companies, player dividends are not added anywhere
+    if (company.userId && playerPayment > 0) {
+      const balanceResult = await updatePlayerBalance(playerPayment, company.userId);
+      if (!balanceResult.success) {
+        console.warn('Failed to add player dividend to user balance:', balanceResult.error);
+        // Continue with the payment even if user balance update fails
+      }
+    }
 
     // Update last dividend paid date
     await companyService.updateCompany(companyId, {

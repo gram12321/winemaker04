@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '../../shadCN/button';
 import { ScrollArea } from '../../shadCN/scroll-area';
 import { Slider } from '../../shadCN/slider';
+import { Label } from '../../shadCN/label';
 import { StartingCountry, STARTING_CONDITIONS, getStartingCountries } from '@/lib/constants/startingConditions';
 import {
   generateVineyardPreview,
@@ -16,6 +17,8 @@ import {
 import { formatNumber, getFlagIcon, StoryPortrait } from '@/lib/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
 import type { Aspect } from '@/lib/types/types';
+import { companyService } from '@/lib/services/user/companyService';
+import { getPlayerBalance } from '@/lib/services/user/userBalanceService';
 
 type MentorWelcomeData = {
   mentorName: string | null;
@@ -44,9 +47,58 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   const [vineyardPreviews, setVineyardPreviews] = useState<Record<StartingCountry, VineyardPreview | null>>({} as Record<StartingCountry, VineyardPreview | null>);
   const [isApplying, setIsApplying] = useState(false);
   const [outsideInvestment, setOutsideInvestment] = useState<number>(0); // 0 to 1,000,000€
+  const [playerBalance, setPlayerBalance] = useState<number>(0);
+  const [isFirstCompany, setIsFirstCompany] = useState<boolean>(true);
+  const [playerCashContribution, setPlayerCashContribution] = useState<number>(0);
   
   const selectedCondition = STARTING_CONDITIONS[selectedCountry];
   const BASE_PLAYER_INVESTMENT = selectedCondition.startingMoney; // Use country-specific base investment
+  
+  // Load player balance and check if first company
+  useEffect(() => {
+    const loadPlayerData = async () => {
+      try {
+        const company = await companyService.getCompany(companyId);
+        if (company?.userId) {
+          const balance = await getPlayerBalance(company.userId);
+          setPlayerBalance(balance);
+          
+          // Check if this is the first company
+          // Get all companies for this user, excluding the current one
+          const userCompanies = await companyService.getUserCompanies(company.userId);
+          const otherCompanies = userCompanies.filter(c => c.id !== companyId);
+          const isFirst = otherCompanies.length === 0;
+          setIsFirstCompany(isFirst);
+          
+          // Set initial player cash contribution (for subsequent companies)
+          // Default to 0 so user can adjust up to their available balance
+          if (!isFirst) {
+            setPlayerCashContribution(0);
+          }
+        } else {
+          // No userId means anonymous company - always first company behavior
+          setIsFirstCompany(true);
+          setPlayerBalance(0);
+        }
+      } catch (error) {
+        console.error('Error loading player data:', error);
+        // Default to first company on error
+        setIsFirstCompany(true);
+      }
+    };
+    
+    if (isOpen) {
+      loadPlayerData();
+    }
+  }, [isOpen, companyId, selectedCondition.startingMoney]);
+  
+  // Reset player cash contribution to 0 when country changes (for subsequent companies)
+  // This ensures the slider starts at 0 and user can adjust up to their available balance
+  useEffect(() => {
+    if (!isFirstCompany) {
+      setPlayerCashContribution(0);
+    }
+  }, [selectedCountry, isFirstCompany]);
   
   // Generate preview once per country when modal opens
   useEffect(() => {
@@ -106,8 +158,16 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   })() : 0;
   
   // Calculate derived values (after selectedCondition is defined)
-  const playerCashContribution = BASE_PLAYER_INVESTMENT;
-  const playerTotalContribution = playerCashContribution + estimatedVineyardValue; // Cash + Vineyard value
+  // For first company: use base investment, for subsequent: use player's choice
+  const actualPlayerCashContribution = isFirstCompany ? BASE_PLAYER_INVESTMENT : playerCashContribution;
+  const playerTotalContribution = actualPlayerCashContribution + estimatedVineyardValue; // Cash + Vineyard value
+  
+  // For subsequent companies: validate that player has enough balance
+  const maxPlayerCashContribution = isFirstCompany 
+    ? BASE_PLAYER_INVESTMENT 
+    : Math.max(0, playerBalance - estimatedVineyardValue);
+  const canAffordContribution = isFirstCompany || (playerBalance >= playerTotalContribution);
+  const canAffordVineyard = isFirstCompany || (playerBalance >= estimatedVineyardValue);
   const MAX_OUTSIDE_INVESTMENT = playerTotalContribution * 10; // Maximum 10x total player contribution (cash + vineyard)
   const totalCompanyValue = playerTotalContribution + outsideInvestment;
   const loanPrincipal = selectedCondition.startingLoan?.principal ?? 0;
@@ -130,13 +190,26 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   const handleConfirm = async () => {
     if (!vineyardPreview) return;
     
+    // Validate player contribution for subsequent companies
+    if (!isFirstCompany) {
+      if (!canAffordContribution) {
+        alert(`Insufficient balance. You have ${formatNumber(playerBalance, { currency: true })} but need ${formatNumber(playerTotalContribution, { currency: true })} (${formatNumber(actualPlayerCashContribution, { currency: true })} cash + ${formatNumber(estimatedVineyardValue, { currency: true })} vineyard)`);
+        return;
+      }
+      if (playerCashContribution < 0) {
+        alert('Player cash contribution cannot be negative');
+        return;
+      }
+    }
+    
     setIsApplying(true);
     try {
       const result: ApplyStartingConditionsResult = await applyStartingConditions(
         companyId,
         selectedCountry,
         vineyardPreview,
-        outsideInvestment
+        outsideInvestment,
+        isFirstCompany ? undefined : playerCashContribution
       );
       
       if (result.success) {
@@ -296,15 +369,83 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
               <div className="bg-blue-50 rounded-lg p-4 space-y-4 border border-blue-200">
                 <h3 className="font-semibold text-blue-900">Company Ownership</h3>
                 
+                {/* Player Balance Display (for subsequent companies) */}
+                {!isFirstCompany && (
+                  <div className="bg-white rounded-md p-3 border border-blue-300 mb-3">
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-gray-700 font-semibold">Your Balance:</span>
+                      <span className={`font-semibold ${playerBalance >= playerTotalContribution ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatNumber(playerBalance, { currency: true })}
+                      </span>
+                    </div>
+                    {!canAffordContribution && (
+                      <div className="text-xs text-red-600 mt-1">
+                        ⚠️ Insufficient balance for this contribution
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <div className="space-y-1">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-700">Player Cash Contribution:</span>
-                        <span className="font-semibold text-green-600">
-                          {formatNumber(playerCashContribution, { currency: true })}
-                        </span>
-                      </div>
+                      {/* Player Cash Contribution - editable for subsequent companies */}
+                      {!isFirstCompany ? (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <Label htmlFor="player-cash-contribution" className="text-gray-700">
+                              Player Cash Contribution:
+                            </Label>
+                            <span className="font-semibold text-green-600">
+                              {formatNumber(actualPlayerCashContribution, { currency: true })}
+                            </span>
+                          </div>
+                          {!canAffordVineyard ? (
+                            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-xs text-red-700">
+                              <div className="font-semibold mb-1">⚠️ Insufficient Balance</div>
+                              <div>You need at least {formatNumber(estimatedVineyardValue, { currency: true })} to cover the vineyard value.</div>
+                              <div className="mt-1">Your balance: {formatNumber(playerBalance, { currency: true })}</div>
+                            </div>
+                          ) : maxPlayerCashContribution > 0 ? (
+                            <>
+                              <Slider
+                                id="player-cash-contribution"
+                                value={[playerCashContribution]}
+                                onValueChange={(value) => {
+                                  const newValue = Math.max(0, Math.min(maxPlayerCashContribution, value[0]));
+                                  setPlayerCashContribution(newValue);
+                                }}
+                                min={0}
+                                max={maxPlayerCashContribution}
+                                step={Math.max(100, Math.floor(maxPlayerCashContribution / 100))}
+                                className="w-full"
+                              />
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>€0</span>
+                                <span>{formatNumber(maxPlayerCashContribution, { currency: true })}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-2 text-xs text-yellow-700">
+                              Maximum contribution is €0 (balance exactly covers vineyard value)
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-600">
+                            Available balance: <span className="font-semibold">{formatNumber(playerBalance, { currency: true })}</span>
+                            {' '}• Vineyard value: <span className="font-semibold">{formatNumber(estimatedVineyardValue, { currency: true })}</span>
+                            {maxPlayerCashContribution >= 0 && (
+                              <> • Max cash: <span className="font-semibold">{formatNumber(maxPlayerCashContribution, { currency: true })}</span></>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-700">Player Cash Contribution:</span>
+                          <span className="font-semibold text-green-600">
+                            {formatNumber(actualPlayerCashContribution, { currency: true })}
+                          </span>
+                        </div>
+                      )}
                       {vineyardPreview && (
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-700">Player Vineyard Contribution:</span>
@@ -315,10 +456,15 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       )}
                       <div className="flex justify-between items-center text-sm pt-1 border-t border-blue-200">
                         <span className="text-gray-700 font-semibold">Total Player Contribution:</span>
-                        <span className="font-semibold text-green-600">
+                        <span className={`font-semibold ${canAffordContribution ? 'text-green-600' : 'text-red-600'}`}>
                           {formatNumber(playerTotalContribution, { currency: true })}
                         </span>
                       </div>
+                      {!isFirstCompany && !canAffordContribution && (
+                        <div className="text-xs text-red-600 mt-1">
+                          Required: {formatNumber(playerTotalContribution, { currency: true })}, Available: {formatNumber(playerBalance, { currency: true })}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="space-y-2">

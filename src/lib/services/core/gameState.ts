@@ -207,12 +207,13 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
 
 };
 
-export const createNewCompany = async (companyName: string, associateWithUser: boolean = false, userName?: string): Promise<Company | null> => {
+export const createNewCompany = async (companyName: string, associateWithUser: boolean = false, userName?: string, userId?: string): Promise<Company | null> => {
   try {
     const result = await companyService.createCompany({
       name: companyName,
       associateWithUser,
-      userName
+      userName,
+      userId
     });
     
     if (result.success && result.company) {

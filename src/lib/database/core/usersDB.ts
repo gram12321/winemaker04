@@ -14,6 +14,7 @@ export interface UserData {
   name: string;
   avatar?: string;
   avatar_color?: string;
+  cash_balance?: number;
   created_at?: string;
 }
 
@@ -23,6 +24,7 @@ export interface AuthUser {
   name: string;
   avatar?: string;
   avatarColor?: string;
+  cashBalance?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +39,7 @@ function mapUserFromDB(dbUser: any): AuthUser {
     name: dbUser.name,
     avatar: dbUser.avatar,
     avatarColor: dbUser.avatar_color,
+    cashBalance: dbUser.cash_balance ? Number(dbUser.cash_balance) : 0,
     createdAt: new Date(dbUser.created_at),
     updatedAt: new Date(dbUser.updated_at)
   };
