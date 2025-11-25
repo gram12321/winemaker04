@@ -29,6 +29,7 @@ export interface CompanyUpdateData {
   lastDividendPaidYear?: number;
   marketCap?: number;
   sharePrice?: number;
+  initialVineyardValue?: number; // Initial family contribution (vineyard value at company creation)
 }
 
 export interface CompanyStats {
@@ -95,7 +96,7 @@ class CompanyService {
         outstanding_shares: outstandingShares,
         player_shares: playerShares,
         initial_ownership_pct: playerOwnershipPct,
-        dividend_rate: 0, // Fixed per share in euros
+        dividend_rate: 0.001, // Fixed per share in euros
         market_cap: 0,
         share_price: 0
       };
@@ -185,6 +186,7 @@ class CompanyService {
     if (updates.lastDividendPaidYear !== undefined) updateData.last_dividend_paid_year = updates.lastDividendPaidYear;
     if (updates.marketCap !== undefined) updateData.market_cap = updates.marketCap;
     if (updates.sharePrice !== undefined) updateData.share_price = updates.sharePrice;
+    if (updates.initialVineyardValue !== undefined) updateData.initial_vineyard_value = updates.initialVineyardValue;
 
     return await updateCompanyInDB(companyId, updateData);
   }

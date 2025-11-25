@@ -50,6 +50,9 @@ const SPECIALIZATION_TEAM_TASKS: Record<string, string[]> = {
   sales: ['sales']
 };
 
+export const FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION = 100000;
+const FIRST_COMPANY_PLAYER_BALANCE_SEED = 110000;
+
 /**
  * Generate a preview vineyard for a starting condition
  * This is called before the user confirms the selection
@@ -129,11 +132,13 @@ export async function applyStartingConditions(
     // Determine player cash contribution
     // For first company: use country-specific base investment
     // For subsequent companies: use provided playerCashContribution or default to base
-    let basePlayerInvestment: number;
-    if (isFirstCompany || playerCashContribution === undefined) {
-      basePlayerInvestment = condition.startingMoney; // Use country-specific base investment (cash)
+    let playerCashContributionAmount: number;
+    if (isFirstCompany) {
+      playerCashContributionAmount = FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION;
+    } else if (playerCashContribution !== undefined) {
+      playerCashContributionAmount = playerCashContribution;
     } else {
-      basePlayerInvestment = playerCashContribution;
+      playerCashContributionAmount = condition.startingMoney;
     }
     
     // Calculate vineyard value as part of player contribution (calculate once, use everywhere)
@@ -164,12 +169,13 @@ export async function applyStartingConditions(
       vineyardValue = Math.round(adjustedLandValuePerHectare * vineyardPreview.hectares);
     }
     
-    const playerTotalContribution = basePlayerInvestment + vineyardValue; // Cash + Vineyard value
     const outsideInvestment = outsideInvestmentAmount ?? 0;
-    const totalCompanyValue = playerTotalContribution + outsideInvestment;
+    const familyContribution = vineyardValue;
+    const playerShareContribution = playerCashContributionAmount;
+    const totalCompanyValue = playerShareContribution + familyContribution + outsideInvestment;
     
     // Calculate share structure based on total company value
-    const playerOwnershipPct = totalCompanyValue > 0 ? (playerTotalContribution / totalCompanyValue) * 100 : 100;
+    const playerOwnershipPct = totalCompanyValue > 0 ? (playerShareContribution / totalCompanyValue) * 100 : 100;
     const TOTAL_SHARES = 1000000;
     const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
     const outstandingShares = TOTAL_SHARES - playerShares;
@@ -178,12 +184,14 @@ export async function applyStartingConditions(
     const availableTeams = getAllTeams();
 
     // 1. Update company metadata via service (starting country and share structure)
+    // Store initial vineyard value for family contribution tracking
     const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
       startingCountry: country,
       totalShares: TOTAL_SHARES,
       outstandingShares: outstandingShares,
       playerShares: playerShares,
-      initialOwnershipPct: playerOwnershipPct
+      initialOwnershipPct: playerOwnershipPct,
+      initialVineyardValue: vineyardValue // Store initial family contribution
     });
 
     if (!companyUpdateSuccess) {
@@ -191,59 +199,62 @@ export async function applyStartingConditions(
       return { success: false, error: 'Failed to update company' };
     }
 
-    // 2. Handle player balance deduction (for subsequent companies only)
-    if (!isFirstCompany && userId) {
-      // Calculate total player contribution (cash + vineyard value)
-      const totalPlayerContribution = basePlayerInvestment + vineyardValue;
+    // 2. Handle player balance deduction
+    if (userId) {
+      if (isFirstCompany) {
+        await setPlayerBalance(FIRST_COMPANY_PLAYER_BALANCE_SEED, userId);
+      }
+      
+      const playerCashRequirement = playerCashContributionAmount;
       
       // Check player balance
       const playerBalance = await getPlayerBalance(userId);
-      if (playerBalance < totalPlayerContribution) {
+      if (playerBalance < playerCashRequirement) {
         return { 
           success: false, 
-          error: `Insufficient balance. You have ${playerBalance.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} but need ${totalPlayerContribution.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} (${basePlayerInvestment.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} cash + ${vineyardValue.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} vineyard)` 
+          error: `Insufficient balance. You have ${playerBalance.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} but need ${playerCashRequirement.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} in cash for this company.` 
         };
       }
 
       // Deduct total contribution from player balance
-      const balanceResult = await updatePlayerBalance(-totalPlayerContribution, userId);
+      const balanceResult = await updatePlayerBalance(-playerCashRequirement, userId);
       if (!balanceResult.success) {
         return { success: false, error: balanceResult.error || 'Failed to deduct from player balance' };
       }
     }
 
     // 3. Add starting capital (player cash investment + outside investment)
-    // Note: Vineyard value is part of player contribution but doesn't add to cash
-    const baseStartingMoney = condition.startingMoney;
-    const capitalAdjustment = (basePlayerInvestment + outsideInvestment) - baseStartingMoney;
+    let workingMoney = company.money ?? 0;
     
-    if (capitalAdjustment !== 0) {
+    if (playerCashContributionAmount !== 0) {
       try {
         await addTransaction(
-          capitalAdjustment,
-          outsideInvestment > 0 
-            ? `Initial Capital: €${basePlayerInvestment.toLocaleString()} player cash + €${outsideInvestment.toLocaleString()} outside investment`
-            : 'Initial Capital: Player cash investment',
+          playerCashContributionAmount,
+          'Initial Capital: Player cash contribution',
           TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
           false,
           companyId
         );
+        workingMoney += playerCashContributionAmount;
       } catch (transactionError) {
-        console.error('Error adjusting starting capital:', transactionError);
-        return { success: false, error: 'Failed to adjust starting capital' };
+        console.error('Error adding player capital contribution:', transactionError);
+        return { success: false, error: 'Failed to record player capital contribution' };
       }
-    } else {
-      // Still add transaction for base starting money if no adjustment needed
+    }
+    
+    if (outsideInvestment > 0) {
       try {
         await addTransaction(
-          basePlayerInvestment + outsideInvestment,
-          'Initial Capital: Player cash investment',
+          outsideInvestment,
+          'Outside investment committed',
           TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
           false,
           companyId
         );
+        workingMoney += outsideInvestment;
       } catch (transactionError) {
-        console.error('Error adding starting capital transaction:', transactionError);
+        console.error('Error adding outside investment:', transactionError);
+        return { success: false, error: 'Failed to record outside investment' };
       }
     }
 
@@ -254,6 +265,25 @@ export async function applyStartingConditions(
         return { success: false, error: loanResult.error ?? 'Failed to apply starting loan' };
       }
       startingLoanId = loanResult.loanId;
+
+      if (condition.startingLoan.principal > 0) {
+        const loanDescription = condition.startingLoan.label
+          ? `Starting loan proceeds: ${condition.startingLoan.label}`
+          : `Starting loan proceeds from ${condition.startingLoan.lenderType}`;
+        try {
+          await addTransaction(
+            condition.startingLoan.principal,
+            loanDescription,
+            TRANSACTION_CATEGORIES.LOAN_RECEIVED,
+            false,
+            companyId
+          );
+          workingMoney += condition.startingLoan.principal;
+        } catch (loanTransactionError) {
+          console.error('Error adding starting loan proceeds:', loanTransactionError);
+          return { success: false, error: 'Failed to record starting loan proceeds' };
+        }
+      }
     }
 
     // 5. Create starting staff
@@ -340,7 +370,7 @@ export async function applyStartingConditions(
     }
 
     // Refresh company money after all financial adjustments (capital + loan)
-    let resolvedStartingMoney = basePlayerInvestment + outsideInvestment;
+    let resolvedStartingMoney = workingMoney;
     try {
       const updatedCompany = await companyService.getCompany(companyId);
       if (updatedCompany) {
@@ -350,13 +380,6 @@ export async function applyStartingConditions(
       console.warn('Unable to resolve updated company money after starting conditions:', moneyError);
     }
     
-    // 7. Set player balance to 10,000€ after first company creation
-    if (isFirstCompany && userId) {
-      await setPlayerBalance(10000, userId);
-    }
-    
-    // Return the actual cash amount (vineyard value is a separate asset, not cash)
-
     if (condition.startingPrestige) {
       try {
         const gameState = getGameState();

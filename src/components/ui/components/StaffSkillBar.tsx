@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Staff } from '@/lib/types/types';
 import { getSkillColor, formatNumber, getColorClass } from '@/lib/utils';
+import { calculateEffectiveSkill } from '@/lib/services/user/staffService';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 interface StaffSkillBarProps {
@@ -22,9 +23,13 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
   showValue = true,
   className = ''
 }) => {
-  const value = Math.max(0, Math.min(1, staff.skills[skillKey]));
+  const baseSkill = Math.max(0, Math.min(1, staff.skills[skillKey]));
+  const rawXP = staff.experience?.[`skill:${skillKey}`] || 0;
+  const effectiveSkill = calculateEffectiveSkill(baseSkill, rawXP);
+  const xpBonus = effectiveSkill - baseSkill;
+
   const color = getSkillColor(skillKey);
-  const effectiveContribution = staff.workforce * value / Math.max(1, taskCount);
+  const effectiveContribution = staff.workforce * effectiveSkill / Math.max(1, taskCount);
 
   // Build tooltip content JSX
   const buildTooltipContent = () => {
@@ -32,9 +37,21 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
       <div className={tooltipStyles.text}>
         <TooltipSection title={`${label} Skill Details`}>
           <TooltipRow
-            label={`${label}:`}
-            value={`${formatNumber(value * 100, { decimals: 0 })}%`}
-            valueRating={value}
+            label={`Base ${label}:`}
+            value={`${formatNumber(baseSkill * 100, { decimals: 0 })}%`}
+            valueRating={baseSkill}
+          />
+          {xpBonus > 0.001 && (
+            <TooltipRow
+              label="XP Bonus:"
+              value={`+${formatNumber(xpBonus * 100, { decimals: 1 })}%`}
+              valueRating={xpBonus}
+            />
+          )}
+          <TooltipRow
+            label="Effective Skill:"
+            value={`${formatNumber(effectiveSkill * 100, { decimals: 1 })}%`}
+            valueRating={effectiveSkill}
           />
           <TooltipRow
             label="Workforce:"
@@ -79,21 +96,35 @@ export const StaffSkillBar: React.FC<StaffSkillBarProps> = ({
           triggerClassName={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}
         >
           <div className={`relative w-full h-3 bg-gray-200 rounded-full overflow-hidden cursor-help ${isRelevant ? 'ring-2 ring-yellow-400' : ''}`}>
-            {/* Potential multitask overlay: reduce opacity when taskCount > 1 */}
+            {/* Base skill bar - only round left corners if there's XP bonus */}
             <div
-              className="absolute top-0 bottom-0 rounded-full"
+              className="absolute top-0 bottom-0"
               style={{
                 left: 0,
-                width: `${formatNumber(value * 100, { decimals: 0 })}%`,
+                width: `${formatNumber(baseSkill * 100, { decimals: 0 })}%`,
                 backgroundColor: color,
-                opacity: taskCount > 1 ? 0.85 : 1
+                opacity: taskCount > 1 ? 0.85 : 1,
+                borderRadius: xpBonus > 0.001 ? '9999px 0 0 9999px' : '9999px'
               }}
             />
+            {/* XP bonus extension (lighter color) - only round right corners */}
+            {xpBonus > 0.001 && (
+              <div
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${formatNumber(baseSkill * 100, { decimals: 0 })}%`,
+                  width: `${formatNumber(xpBonus * 100, { decimals: 0 })}%`,
+                  backgroundColor: color,
+                  opacity: (taskCount > 1 ? 0.85 : 1) * 0.5, // 50% opacity for XP bonus
+                  borderRadius: '0 9999px 9999px 0'
+                }}
+              />
+            )}
           </div>
         </UnifiedTooltip>
       </div>
       {showValue && (
-        <div className={`w-10 text-right text-xs ${getColorClass(value)}`}>{formatNumber(value * 100, { smartDecimals: true })}%</div>
+        <div className={`w-10 text-right text-xs ${getColorClass(effectiveSkill)}`}>{formatNumber(effectiveSkill * 100, { smartDecimals: true })}%</div>
       )}
     </div>
   );

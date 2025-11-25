@@ -1,8 +1,8 @@
-import { getGameState, getCurrentCompany, updateGameState } from '../core/gameState';
+import { getGameState, updateGameState } from '../core/gameState';
 import type { Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
-import { GAME_INITIALIZATION, SEASON_ORDER, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { SEASON_ORDER, TRANSACTION_CATEGORIES } from '@/lib/constants';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from '../user/companyService';
@@ -23,42 +23,15 @@ interface FinancialData {
   allVineyardsValue: number;
   wineValue: number;
   grapesValue: number;
+  // Equity components
+  playerContribution: number;
+  familyContribution: number;
+  outsideInvestment: number;
+  retainedEarnings: number;
+  totalEquity: number;
 }
 
 let transactionsCache: Transaction[] = [];
-
-// Initialize starting capital for new games
-export const initializeStartingCapital = async (companyId?: string): Promise<void> => {
-  try {
-    if (!companyId) {
-      const currentCompany = getCurrentCompany();
-      if (!currentCompany) {
-        return;
-      }
-      companyId = currentCompany.id;
-    }
-    
-    const existingTransactions = await loadTransactions();
-    const hasStartingCapital = existingTransactions.some(t => 
-      t.description === 'Starting Capital' && t.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT
-    );
-    
-    if (hasStartingCapital) {
-      return; // Already initialized
-    }
-    
-    await addTransaction(
-      GAME_INITIALIZATION.STARTING_MONEY,
-      'Starting Capital',
-      TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
-      false,
-      companyId
-    );
-    
-  } catch (error) {
-    console.error('Error initializing starting capital:', error);
-  }
-};
 
 // Add a new transaction to the system
 export const addTransaction = async (
@@ -289,6 +262,61 @@ export const calculateFinancialData = async (
   const currentAssets = wineValue + grapesValue;
   const totalAssets = cashMoney + fixedAssets + currentAssets;
   
+  // Calculate equity components from all transactions (not filtered by period)
+  let playerContribution = 0;
+  let outsideInvestment = 0;
+  
+  transactions.forEach(transaction => {
+    // Player cash contribution
+    if (transaction.description === 'Initial Capital: Player cash contribution' || 
+        (transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT && 
+         transaction.description.includes('Player cash contribution'))) {
+      playerContribution += transaction.amount;
+    }
+    // Outside investment
+    if (transaction.description === 'Outside investment committed' ||
+        (transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT &&
+         transaction.description.includes('Outside investment'))) {
+      outsideInvestment += transaction.amount;
+    }
+  });
+  
+  // Family contribution is the initial vineyard value at company creation
+  // Get it from company metadata, or calculate from first vineyards if not stored
+  const company = await companyService.getCompany(getCurrentCompanyId() || '');
+  let familyContribution = 0;
+  
+  if (company && company.initialVineyardValue) {
+    // Use stored initial vineyard value
+    familyContribution = company.initialVineyardValue;
+  } else {
+    // Fallback: use current vineyard value for companies created before this tracking was added
+    // This is a reasonable approximation for existing companies
+    familyContribution = allVineyardsValue;
+  }
+  
+  // Calculate retained earnings: all-time net income (excluding initial investments and loans)
+  let allTimeIncome = 0;
+  let allTimeExpenses = 0;
+  
+  transactions.forEach(transaction => {
+    const isLoanTransaction = transaction.category === TRANSACTION_CATEGORIES.LOAN_RECEIVED || 
+                             transaction.category === TRANSACTION_CATEGORIES.LOAN_PAYMENT ||
+                             transaction.category === TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE;
+    const isInitialInvestment = transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT;
+    
+    if (!isLoanTransaction && !isInitialInvestment) {
+      if (transaction.amount >= 0) {
+        allTimeIncome += transaction.amount;
+      } else {
+        allTimeExpenses += Math.abs(transaction.amount);
+      }
+    }
+  });
+  
+  const retainedEarnings = allTimeIncome - allTimeExpenses;
+  const totalEquity = playerContribution + familyContribution + outsideInvestment + retainedEarnings;
+  
   return {
     income,
     expenses,
@@ -302,7 +330,12 @@ export const calculateFinancialData = async (
     buildingsValue,
     allVineyardsValue,
     wineValue,
-    grapesValue
+    grapesValue,
+    playerContribution,
+    familyContribution,
+    outsideInvestment,
+    retainedEarnings,
+    totalEquity
   };
 };
 

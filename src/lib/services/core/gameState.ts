@@ -5,7 +5,6 @@ import { CREDIT_RATING } from '../../constants/loanConstants';
 import { calculateCurrentPrestige, initializeBasePrestigeEvents, updateCompanyValuePrestige } from '../prestige/prestigeService';
 import { companyService } from '../user/companyService';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
-import { initializeStartingCapital } from '../finance/financeService';
 import { initializeStaffSystem } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
@@ -183,22 +182,6 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     await initializeTeamsSystem();
   } catch (error) {
     console.error('Failed to initialize teams system:', error);
-  }
-  
-  // Initialize starting capital in finance system for this company
-  try {
-    await initializeStartingCapital(company.id);
-    
-    // After starting capital is initialized, ensure game state reflects the updated money
-    // This is critical for UI synchronization
-    const updatedGameState = getGameState();
-    
-    if (updatedGameState.money !== company.money) {
-      // The starting capital was added, update our local company object to match
-      currentCompany = { ...currentCompany, money: updatedGameState.money! };
-    }
-  } catch (error) {
-    console.error('Failed to initialize starting capital:', error);
   }
   
   // Trigger a final game update to ensure all components are synchronized

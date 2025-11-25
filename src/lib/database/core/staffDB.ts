@@ -35,7 +35,8 @@ export async function saveStaffToDb(staff: Staff): Promise<boolean> {
         workforce: staff.workforce,
         hire_date_week: staff.hireDate.week,
         hire_date_season: staff.hireDate.season,
-        hire_date_year: staff.hireDate.year
+        hire_date_year: staff.hireDate.year,
+        experience: staff.experience || {}
       });
 
     if (error) {
@@ -88,6 +89,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
         sales: row.skill_sales,
         administrationAndResearch: row.skill_maintenance
       },
+      experience: row.experience || {},
       workforce: row.workforce || 50,
       hireDate: {
         week: row.hire_date_week,
@@ -168,6 +170,7 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
         sales: data.skill_sales,
         administrationAndResearch: data.skill_maintenance
       },
+      experience: data.experience || {},
       workforce: data.workforce || 50,
       hireDate: {
         week: data.hire_date_week,

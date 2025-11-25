@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui/shadCN/input';
 import { Label } from '@/components/ui/shadCN/label';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, getCreditRatingCategory } from '@/lib/utils';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { companyService } from '@/lib/services/user/companyService';
 import { getMarketValue, updateMarketValue } from '@/lib/services/finance/shareValueService';
@@ -13,7 +13,9 @@ import {
   updateDividendRate,
   payDividends,
   calculateDividendPayment,
-  areDividendsDue
+  areDividendsDue,
+  getShareMetrics,
+  type ShareMetrics
 } from '@/lib/services/finance/shareManagementService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
@@ -31,6 +33,7 @@ export function ShareManagementPanel() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [dividendsDue, setDividendsDue] = useState(false);
+  const [shareMetrics, setShareMetrics] = useState<ShareMetrics | null>(null);
 
   // Load company data and market value
   useEffect(() => {
@@ -59,6 +62,10 @@ export function ShareManagementPanel() {
         // Check if dividends are due
         const isDue = await areDividendsDue(companyId);
         setDividendsDue(isDue);
+
+        // Load share metrics
+        const metrics = await getShareMetrics(companyId);
+        setShareMetrics(metrics);
       } catch (err) {
         console.error('Error loading share management data:', err);
         setError('Failed to load share data');
@@ -87,7 +94,7 @@ export function ShareManagementPanel() {
     try {
       const result = await issueStock(issuingShares);
       if (result.success) {
-        setSuccess(`Successfully issued ${issuingShares.toLocaleString()} shares. Capital raised: ${formatNumber(result.capitalRaised || 0, { currency: true })}`);
+        setSuccess(`Successfully issued ${formatNumber(issuingShares, { decimals: 0 })} shares. Capital raised: ${formatNumber(result.capitalRaised || 0, { currency: true })}`);
         setIssuingShares(0);
         // Reload company data
         const companyId = getCurrentCompanyId();
@@ -97,6 +104,8 @@ export function ShareManagementPanel() {
           await updateMarketValue(companyId);
           const marketData = await getMarketValue(companyId);
           setMarketValue(marketData);
+          const metrics = await getShareMetrics(companyId);
+          setShareMetrics(metrics);
         }
       } else {
         setError(result.error || 'Failed to issue stock');
@@ -122,7 +131,7 @@ export function ShareManagementPanel() {
     try {
       const result = await buyBackStock(buybackShares);
       if (result.success) {
-        setSuccess(`Successfully bought back ${buybackShares.toLocaleString()} shares. Cost: ${formatNumber(result.cost || 0, { currency: true })}`);
+        setSuccess(`Successfully bought back ${formatNumber(buybackShares, { decimals: 0 })} shares. Cost: ${formatNumber(result.cost || 0, { currency: true })}`);
         setBuybackShares(0);
         // Reload company data
         const companyId = getCurrentCompanyId();
@@ -132,6 +141,8 @@ export function ShareManagementPanel() {
           await updateMarketValue(companyId);
           const marketData = await getMarketValue(companyId);
           setMarketValue(marketData);
+          const metrics = await getShareMetrics(companyId);
+          setShareMetrics(metrics);
         }
       } else {
         setError(result.error || 'Failed to buy back stock');
@@ -181,6 +192,8 @@ export function ShareManagementPanel() {
           // Check if dividends are still due after payment
           const isDue = await areDividendsDue(companyId);
           setDividendsDue(isDue);
+          const metrics = await getShareMetrics(companyId);
+          setShareMetrics(metrics);
         }
       } else {
         setError(result.error || 'Failed to pay dividends');
@@ -218,6 +231,8 @@ export function ShareManagementPanel() {
     );
   }
 
+  const creditRatingLabel = shareMetrics ? getCreditRatingCategory(shareMetrics.creditRating) : null;
+
   return (
     <Card>
       <CardHeader>
@@ -238,13 +253,13 @@ export function ShareManagementPanel() {
             <div className="space-y-1">
               <div className="text-xs text-gray-600">Share Price</div>
               <div className="font-semibold text-lg text-blue-600">
-                {formatNumber(marketValue.sharePrice, { currency: true })}
+                {formatNumber(marketValue.sharePrice, { currency: true, decimals: 2, forceDecimals: true })}
               </div>
             </div>
             <div className="space-y-1">
               <div className="text-xs text-gray-600">Player Ownership</div>
               <div className="font-semibold text-lg text-green-600">
-                {playerOwnershipPct.toFixed(2)}%
+                {formatNumber(playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
               </div>
             </div>
             <div className="space-y-1">
@@ -273,6 +288,62 @@ export function ShareManagementPanel() {
             </div>
           </div>
         </div>
+
+        {shareMetrics && (
+          <div className="border border-gray-200 rounded-md p-4 bg-white">
+            <h3 className="font-semibold text-gray-800 mb-3 uppercase text-sm tracking-wider">Per-Share Metrics</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Assets / Share</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.assetPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Cash / Share</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.cashPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Debt / Share</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.debtPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Book Value / Share</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.bookValuePerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Revenue / Share (YTD)</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.revenuePerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Dividends / Share (YTD)</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.dividendPerShareCurrentYear, { currency: true, decimals: 4 })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Dividends / Share (Last Year)</div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.dividendPerSharePreviousYear, { currency: true, decimals: 4 })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Credit Rating</div>
+                <div className="font-semibold text-gray-900">
+                  {creditRatingLabel ?? 'N/A'} ({formatNumber(shareMetrics.creditRating * 100, { decimals: 0 })}%)
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Market Operations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -4,6 +4,8 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getColorClass } from '@/lib/utils';
 import { calculateStaffWorkContribution, getWageColorClass, getAllTeams, getAllActivities } from '@/lib/services';
 import { WORK_CATEGORY_INFO, getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants';
+import { normalizeXP } from '@/lib/utils/calculator';
+import { calculateEffectiveSkill } from '@/lib/services/user/staffService';
 import { StaffSkillBarsList, Button, Badge } from '@/components/ui';
 import { useGameState, useGameStateWithData } from '@/hooks';
 
@@ -56,10 +58,10 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-700">
           <div>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <span className={`${getFlagIcon(staff.nationality)} text-base`}></span>
-                  {staff.name}
-                </h2>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <span className={`${getFlagIcon(staff.nationality)} text - base`}></span>
+              {staff.name}
+            </h2>
             <p className="text-sm text-gray-400 mt-1">
               {staff.nationality} • {skillInfo.name} • Hired Week {staff.hireDate.week}, {staff.hireDate.season} {staff.hireDate.year}
             </p>
@@ -82,13 +84,13 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                 <div>
                   <span className="text-gray-400">Nationality:</span>
                   <div className="text-white font-medium flex items-center gap-2 mt-1">
-                    <span className={`${getFlagIcon(staff.nationality)} text-base`}></span>
+                    <span className={`${getFlagIcon(staff.nationality)} text - base`}></span>
                     {staff.nationality}
                   </div>
                 </div>
                 <div>
                   <span className="text-gray-400">Skill Level:</span>
-                  <div className={`font-medium mt-1 ${getColorClass(staff.skillLevel)}`}>
+                  <div className={`font - medium mt - 1 ${getColorClass(staff.skillLevel)} `}>
                     {skillInfo.name} ({formatNumber(staff.skillLevel * 100, { decimals: 0 })}%)
                   </div>
                 </div>
@@ -128,15 +130,15 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Weekly Wage:</span>
-                  <span className={`font-medium ${getWageColorClass(staff.wage, 'weekly')}`}>{formatNumber(staff.wage, { currency: true })}</span>
+                  <span className={`font - medium ${getWageColorClass(staff.wage, 'weekly')} `}>{formatNumber(staff.wage, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Seasonal Wage (12 weeks):</span>
-                  <span className={`font-medium ${getWageColorClass(staff.wage * 12, 'seasonal')}`}>{formatNumber(staff.wage * 12, { currency: true })}</span>
+                  <span className={`font - medium ${getWageColorClass(staff.wage * 12, 'seasonal')} `}>{formatNumber(staff.wage * 12, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Annual Wage (48 weeks):</span>
-                  <span className={`font-medium ${getWageColorClass(staff.wage * 48, 'annual')}`}>{formatNumber(staff.wage * 48, { currency: true })}</span>
+                  <span className={`font - medium ${getWageColorClass(staff.wage * 48, 'annual')} `}>{formatNumber(staff.wage * 48, { currency: true })}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-400 mt-3">
@@ -148,6 +150,83 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                   </span>
                 )}
               </p>
+            </div>
+
+            {/* Experience Breakdown */}
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="font-semibold text-white mb-4">Experience Breakdown</h3>
+              {staff.experience && Object.keys(staff.experience).length > 0 ? (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {/* Skill Experience */}
+                  <div>
+                    <span className="text-gray-400 block mb-2">Skill Experience</span>
+                    <div className="space-y-3">
+                      {Object.entries(staff.experience)
+                        .filter(([key]) => key.startsWith('skill:'))
+                        .map(([key, value]) => {
+                          const skillName = key.replace('skill:', '');
+                          // Use normalizeXP with raw XP
+                          const progress = normalizeXP(value) * 100;
+
+                          return (
+                            <div key={key} className="text-white">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="capitalize">{skillName.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                <span className="text-xs text-gray-400">{formatNumber(value, { decimals: 0 })} XP</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div
+                                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${progress}% ` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {Object.keys(staff.experience).filter(k => k.startsWith('skill:')).length === 0 && (
+                        <span className="text-gray-500 text-xs italic">No skill experience yet</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Other Experience (e.g. Grapes) */}
+                  <div>
+                    <span className="text-gray-400 block mb-2">Specialized Experience</span>
+                    <div className="space-y-3">
+                      {Object.entries(staff.experience)
+                        .filter(([key]) => !key.startsWith('skill:'))
+                        .map(([key, value]) => {
+                          const [type, name] = key.split(':');
+                          // Use normalizeXP with raw XP
+                          const progress = normalizeXP(value) * 100;
+
+                          return (
+                            <div key={key} className="text-white">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="capitalize">
+                                  <span className="text-gray-500 text-xs mr-1">{type}:</span>
+                                  {name}
+                                </span>
+                                <span className="text-xs text-gray-400">{formatNumber(value, { decimals: 0 })} XP</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div
+                                  className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${progress}% ` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {Object.keys(staff.experience).filter(k => !k.startsWith('skill:')).length === 0 && (
+                        <span className="text-gray-500 text-xs italic">No specialized experience yet</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 italic">No experience gained yet.</p>
+              )}
             </div>
 
             {/* Employment Details */}
@@ -199,21 +278,26 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff, onFire 
                     const relevantSkillKey = (categoryInfo?.skill ?? 'field') as keyof Staff['skills'];
                     const assignedIds = activity.params?.assignedStaffIds || [];
                     const assignedStaff = allStaffMembers.filter(member => assignedIds.includes(member.id));
+                    const grapeVariety = activity.params?.grape;
                     const teamWorkPerWeek = assignedStaff.length > 0
-                      ? calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts)
+                      ? calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety)
                       : 0;
 
                     const totalIndividualWork = assignedStaff.reduce((total, member) => {
                       const memberSkill = member.skills[relevantSkillKey] ?? 0;
+                      const rawXP = member.experience?.[`skill:${relevantSkillKey} `] || 0;
+                      const skillWithXP = calculateEffectiveSkill(memberSkill, rawXP);
                       const hasSpecialization = member.specializations.includes(relevantSkillKey);
-                      const effectiveSkill = hasSpecialization ? memberSkill * 1.2 : memberSkill;
+                      const effectiveSkill = hasSpecialization ? skillWithXP * 1.2 : skillWithXP;
                       const memberTaskCount = staffTaskCounts.get(member.id) || 1;
                       return total + (member.workforce * effectiveSkill) / memberTaskCount;
                     }, 0);
 
                     const personalSkillValue = staff.skills[relevantSkillKey] ?? 0;
+                    const personalRawXP = staff.experience?.[`skill:${relevantSkillKey} `] || 0;
+                    const personalSkillWithXP = calculateEffectiveSkill(personalSkillValue, personalRawXP);
                     const personalSpecialization = staff.specializations.includes(relevantSkillKey);
-                    const personalEffectiveSkill = personalSpecialization ? personalSkillValue * 1.2 : personalSkillValue;
+                    const personalEffectiveSkill = personalSpecialization ? personalSkillWithXP * 1.2 : personalSkillWithXP;
                     const personalTaskCount = staffTaskCounts.get(staff.id) || 1;
                     const personalBaseContribution = (staff.workforce * personalEffectiveSkill) / personalTaskCount;
                     const personalWorkPerWeek = totalIndividualWork > 0

@@ -12,7 +12,8 @@ import {
   generateVineyardPreview,
   applyStartingConditions,
   VineyardPreview,
-  type ApplyStartingConditionsResult
+  type ApplyStartingConditionsResult,
+  FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
 } from '@/lib/services/core/startingConditionsService';
 import { formatNumber, getFlagIcon, StoryPortrait } from '@/lib/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '@/lib/services/vineyard/vineyardValueCalc';
@@ -52,7 +53,6 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   const [playerCashContribution, setPlayerCashContribution] = useState<number>(0);
   
   const selectedCondition = STARTING_CONDITIONS[selectedCountry];
-  const BASE_PLAYER_INVESTMENT = selectedCondition.startingMoney; // Use country-specific base investment
   
   // Load player balance and check if first company
   useEffect(() => {
@@ -158,22 +158,27 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   })() : 0;
   
   // Calculate derived values (after selectedCondition is defined)
-  // For first company: use base investment, for subsequent: use player's choice
-  const actualPlayerCashContribution = isFirstCompany ? BASE_PLAYER_INVESTMENT : playerCashContribution;
-  const playerTotalContribution = actualPlayerCashContribution + estimatedVineyardValue; // Cash + Vineyard value
-  
-  // For subsequent companies: validate that player has enough balance
-  const maxPlayerCashContribution = isFirstCompany 
-    ? BASE_PLAYER_INVESTMENT 
-    : Math.max(0, playerBalance - estimatedVineyardValue);
-  const canAffordContribution = isFirstCompany || (playerBalance >= playerTotalContribution);
-  const canAffordVineyard = isFirstCompany || (playerBalance >= estimatedVineyardValue);
-  const MAX_OUTSIDE_INVESTMENT = playerTotalContribution * 10; // Maximum 10x total player contribution (cash + vineyard)
-  const totalCompanyValue = playerTotalContribution + outsideInvestment;
+  const familyContribution = estimatedVineyardValue;
+  const playerShareContribution = isFirstCompany
+    ? FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
+    : playerCashContribution;
+  const maxPlayerCashContribution = isFirstCompany
+    ? FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
+    : Math.max(0, playerBalance);
+  const canAffordContribution = isFirstCompany || (playerBalance >= playerShareContribution);
+  const baseOutsideInvestmentCap = Math.max(playerShareContribution || 0, FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION);
+  const MAX_OUTSIDE_INVESTMENT = baseOutsideInvestmentCap * 10; // Allow up to 10x player equity
+  const safeOutsideInvestment = Math.min(outsideInvestment, MAX_OUTSIDE_INVESTMENT);
+  const totalCompanyValue = playerShareContribution + familyContribution + safeOutsideInvestment;
   const loanPrincipal = selectedCondition.startingLoan?.principal ?? 0;
-  const netStartingCapital = totalCompanyValue - loanPrincipal; // Net assets after loan
-  const playerOwnershipPct = totalCompanyValue > 0 ? (playerTotalContribution / totalCompanyValue) * 100 : 100;
-  const outsideOwnershipPct = 100 - playerOwnershipPct;
+  const liquidStartingCapital = playerShareContribution + safeOutsideInvestment + loanPrincipal;
+  const playerOwnershipPct = totalCompanyValue > 0 ? (playerShareContribution / totalCompanyValue) * 100 : 100;
+  const familyOwnershipPct = totalCompanyValue > 0 ? (familyContribution / totalCompanyValue) * 100 : 0;
+  const outsideOwnershipPct = totalCompanyValue > 0 ? (safeOutsideInvestment / totalCompanyValue) * 100 : 0;
+  
+  useEffect(() => {
+    setOutsideInvestment((prev) => Math.min(prev, MAX_OUTSIDE_INVESTMENT));
+  }, [MAX_OUTSIDE_INVESTMENT]);
   
   const modalTitle = companyName
     ? `Select Starting Conditions for ${companyName}`
@@ -193,7 +198,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     // Validate player contribution for subsequent companies
     if (!isFirstCompany) {
       if (!canAffordContribution) {
-        alert(`Insufficient balance. You have ${formatNumber(playerBalance, { currency: true })} but need ${formatNumber(playerTotalContribution, { currency: true })} (${formatNumber(actualPlayerCashContribution, { currency: true })} cash + ${formatNumber(estimatedVineyardValue, { currency: true })} vineyard)`);
+        alert(`Insufficient balance. You have ${formatNumber(playerBalance, { currency: true })} but need ${formatNumber(playerShareContribution, { currency: true })} in cash for this company.`);
         return;
       }
       if (playerCashContribution < 0) {
@@ -208,7 +213,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
         companyId,
         selectedCountry,
         vineyardPreview,
-        outsideInvestment,
+        safeOutsideInvestment,
         isFirstCompany ? undefined : playerCashContribution
       );
       
@@ -302,7 +307,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Starting Capital:</span>
                     <span className="font-semibold text-green-600">
-                      {formatNumber(netStartingCapital, { currency: true })}
+                      {formatNumber(liquidStartingCapital, { currency: true })}
                     </span>
                   </div>
 
@@ -374,7 +379,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                   <div className="bg-white rounded-md p-3 border border-blue-300 mb-3">
                     <div className="flex justify-between items-center text-sm mb-2">
                       <span className="text-gray-700 font-semibold">Your Balance:</span>
-                      <span className={`font-semibold ${playerBalance >= playerTotalContribution ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`font-semibold ${playerBalance >= playerShareContribution ? 'text-green-600' : 'text-red-600'}`}>
                         {formatNumber(playerBalance, { currency: true })}
                       </span>
                     </div>
@@ -397,16 +402,10 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                               Player Cash Contribution:
                             </Label>
                             <span className="font-semibold text-green-600">
-                              {formatNumber(actualPlayerCashContribution, { currency: true })}
+                              {formatNumber(playerShareContribution, { currency: true })}
                             </span>
                           </div>
-                          {!canAffordVineyard ? (
-                            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-xs text-red-700">
-                              <div className="font-semibold mb-1">⚠️ Insufficient Balance</div>
-                              <div>You need at least {formatNumber(estimatedVineyardValue, { currency: true })} to cover the vineyard value.</div>
-                              <div className="mt-1">Your balance: {formatNumber(playerBalance, { currency: true })}</div>
-                            </div>
-                          ) : maxPlayerCashContribution > 0 ? (
+                          {maxPlayerCashContribution > 0 ? (
                             <>
                               <Slider
                                 id="player-cash-contribution"
@@ -417,7 +416,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                                 }}
                                 min={0}
                                 max={maxPlayerCashContribution}
-                                step={Math.max(100, Math.floor(maxPlayerCashContribution / 100))}
+                                step={Math.max(1, Math.floor(maxPlayerCashContribution / 100) || 1)}
                                 className="w-full"
                               />
                               <div className="flex justify-between text-xs text-gray-500">
@@ -427,12 +426,11 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                             </>
                           ) : (
                             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-2 text-xs text-yellow-700">
-                              Maximum contribution is €0 (balance exactly covers vineyard value)
+                              No liquid funds available for an additional cash contribution.
                             </div>
                           )}
                           <div className="text-xs text-gray-600">
                             Available balance: <span className="font-semibold">{formatNumber(playerBalance, { currency: true })}</span>
-                            {' '}• Vineyard value: <span className="font-semibold">{formatNumber(estimatedVineyardValue, { currency: true })}</span>
                             {maxPlayerCashContribution >= 0 && (
                               <> • Max cash: <span className="font-semibold">{formatNumber(maxPlayerCashContribution, { currency: true })}</span></>
                             )}
@@ -442,27 +440,27 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-700">Player Cash Contribution:</span>
                           <span className="font-semibold text-green-600">
-                            {formatNumber(actualPlayerCashContribution, { currency: true })}
+                            {formatNumber(playerShareContribution, { currency: true })}
                           </span>
                         </div>
                       )}
                       {vineyardPreview && (
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-700">Player Vineyard Contribution:</span>
-                          <span className="font-semibold text-green-600">
-                            {formatNumber(estimatedVineyardValue, { currency: true })}
+                          <span className="text-gray-700">Family Vineyard Contribution:</span>
+                          <span className="font-semibold text-amber-600">
+                            {formatNumber(familyContribution, { currency: true })}
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between items-center text-sm pt-1 border-t border-blue-200">
-                        <span className="text-gray-700 font-semibold">Total Player Contribution:</span>
+                        <span className="text-gray-700 font-semibold">Player Equity Contribution:</span>
                         <span className={`font-semibold ${canAffordContribution ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatNumber(playerTotalContribution, { currency: true })}
+                          {formatNumber(playerShareContribution, { currency: true })}
                         </span>
                       </div>
                       {!isFirstCompany && !canAffordContribution && (
                         <div className="text-xs text-red-600 mt-1">
-                          Required: {formatNumber(playerTotalContribution, { currency: true })}, Available: {formatNumber(playerBalance, { currency: true })}
+                          Required: {formatNumber(playerShareContribution, { currency: true })}, Available: {formatNumber(playerBalance, { currency: true })}
                         </div>
                       )}
                     </div>
@@ -471,13 +469,13 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-700">Outside Investment:</span>
                         <span className="font-semibold text-blue-600">
-                          {formatNumber(outsideInvestment, { currency: true })}
+                          {formatNumber(safeOutsideInvestment, { currency: true })}
                         </span>
                       </div>
                       
                       <Slider
-                        value={[outsideInvestment]}
-                        onValueChange={(value) => setOutsideInvestment(value[0])}
+                        value={[safeOutsideInvestment]}
+                        onValueChange={(value) => setOutsideInvestment(Math.min(value[0], MAX_OUTSIDE_INVESTMENT))}
                         min={0}
                         max={MAX_OUTSIDE_INVESTMENT}
                         step={10000}
@@ -502,6 +500,13 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                         <span className="text-gray-700">Player Ownership:</span>
                         <span className="font-semibold text-green-600">
                           {playerOwnershipPct.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Family Ownership:</span>
+                        <span className="font-semibold text-amber-600">
+                          {familyOwnershipPct.toFixed(1)}%
                         </span>
                       </div>
                       

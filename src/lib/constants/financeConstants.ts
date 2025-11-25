@@ -23,6 +23,8 @@ export const TRANSACTION_CATEGORIES = {
   WINE_SALES: 'Wine Sales',
   GRAPE_SALES: 'Grape Sales',
   INITIAL_INVESTMENT: 'Initial Investment',
+  DIVIDEND_PAYMENT: 'Dividend Payment',
+  DIVIDEND_RECEIVED: 'Dividend Received',
   VINEYARD_SALE: 'Vineyard Sale', // Forced vineyard seizure/sale
 
   // Expense categories
@@ -62,7 +64,12 @@ export const DEFAULT_FINANCIAL_DATA = {
   buildingsValue: 0,
   allVineyardsValue: 0,
   wineValue: 0,
-  grapesValue: 0
+  grapesValue: 0,
+  playerContribution: 0,
+  familyContribution: 0,
+  outsideInvestment: 0,
+  retainedEarnings: 0,
+  totalEquity: 0
 } as const;
 
 // Financial section titles by period

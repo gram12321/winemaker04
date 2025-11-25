@@ -22,7 +22,7 @@ import { loadVineyards } from '../../../database/activities/vineyardDB';
  * Start Fermentation Activity: Create activity to begin fermentation process
  */
 export async function startFermentationActivity(
-  batch: WineBatch, 
+  batch: WineBatch,
   options: FermentationOptions
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -43,6 +43,7 @@ export async function startFermentationActivity(
       targetId: batch.id,
       params: {
         batchId: batch.id,
+        grape: batch.grape, // Add grape for XP bonus
         fermentationOptions: options,
         cost,
         targetName: `${batch.grape} from ${batch.vineyardName}`
@@ -63,17 +64,17 @@ export async function startFermentationActivity(
 export async function bottleWine(batchId: string): Promise<boolean> {
   const batches = await loadWineBatches();
   const batch = batches.find(b => b.id === batchId);
-  
+
   // Updated to accept must_fermenting state (no wine_aging state)
   if (!batch || batch.state !== 'must_fermenting') {
     return false;
   }
 
   const gameState = getGameState();
-  
+
   // Calculate wine score at bottling for snapshot
   const bottledWineScore = (batch.grapeQuality + batch.balance) / 2;
-  
+
   // Preserve all wine batch values and update necessary fields + create bottling snapshots
   const success = await updateInventoryBatch(batchId, {
     state: 'bottled',
@@ -95,17 +96,17 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       // Get the updated batch to record in the log
       const updatedBatches = await loadWineBatches();
       const bottledBatch = updatedBatches.find(b => b.id === batchId);
-      
+
       if (bottledBatch && bottledBatch.state === 'bottled') {
         await recordBottledWine(bottledBatch);
-        
+
         // Trigger bottling event for wine features (e.g., bottle aging)
         const batchWithEventFeatures = await processEventTrigger(bottledBatch, 'bottling', {});
-        
+
         // Update batch if features modified characteristics or breakdown
         if (batchWithEventFeatures.characteristics !== bottledBatch.characteristics ||
-            batchWithEventFeatures.breakdown !== bottledBatch.breakdown ||
-            batchWithEventFeatures.grapeQuality !== bottledBatch.grapeQuality) {
+          batchWithEventFeatures.breakdown !== bottledBatch.breakdown ||
+          batchWithEventFeatures.grapeQuality !== bottledBatch.grapeQuality) {
           await updateWineBatch(batchId, {
             characteristics: batchWithEventFeatures.characteristics,
             breakdown: batchWithEventFeatures.breakdown,
@@ -133,18 +134,18 @@ export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment
       if (batch.state !== 'must_ready') {
         return false;
       }
-      
+
       // Check if there's already an active fermentation activity for this batch
       const gameState = getGameState();
       const activeActivities = gameState.activities || [];
-      const hasActiveFermentation = activeActivities.some(activity => 
+      const hasActiveFermentation = activeActivities.some(activity =>
         activity.category === WorkCategory.FERMENTATION &&
         activity.targetId === batch.id &&
         activity.status === 'active'
       );
-      
+
       return !hasActiveFermentation;
-      
+
     case 'bottle':
       return batch.state === 'must_fermenting'; // Updated: no wine_aging state
     default:
@@ -160,7 +161,7 @@ export function isFermentationActionAvailable(batch: WineBatch, action: 'ferment
 export async function processWeeklyFermentation(): Promise<void> {
   try {
     const batches = await loadWineBatches();
-    const fermentingBatches = batches.filter(batch => 
+    const fermentingBatches = batches.filter(batch =>
       batch.state === 'must_fermenting' && batch.fermentationOptions
     );
 
@@ -185,7 +186,7 @@ export async function processWeeklyFermentation(): Promise<void> {
 
       // Recalculate balance based on new characteristics
       const balanceResult = calculateWineBalance(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
-      
+
       // Calculate quality from vineyard factors (using pre-loaded vineyards)
       const vineyard = vineyardMap.get(batch.vineyardId);
       const newQuality = vineyard ? calculateGrapeQuality(vineyard) : batch.grapeQuality;

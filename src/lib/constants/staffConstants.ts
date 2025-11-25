@@ -112,3 +112,68 @@ export function getStaffRoleDisplayName(specializations: string[]): string {
   return SPECIALIZED_ROLES[firstSpecialization]?.title || firstSpecialization;
 }
 
+// ===== EXPERIENCE & LEVELING CONSTANTS =====
+
+// Base XP required for the first level
+export const BASE_XP_PER_LEVEL = 1000;
+
+// Growth factor for subsequent levels (1.5 means each level needs 50% more XP than the last)
+export const XP_GROWTH_FACTOR = 1.5;
+
+/**
+ * Calculate the level based on total XP
+ * Formula: Level = floor(log(XP / BASE_XP * (GROWTH - 1) + 1) / log(GROWTH)) + 1
+ * Simplified for linear/exponential hybrid or just simple thresholds
+ * 
+ * For now, using a simple geometric sequence:
+ * Level 1: 0 - 1000
+ * Level 2: 1000 - 2500 (1000 + 1500)
+ * Level 3: 2500 - 4750 (2500 + 2250)
+ */
+export function calculateLevelFromXP(xp: number): number {
+  if (xp < BASE_XP_PER_LEVEL) return 1;
+
+  let level = 1;
+  let currentXpThreshold = BASE_XP_PER_LEVEL;
+  let nextLevelCost = BASE_XP_PER_LEVEL * XP_GROWTH_FACTOR;
+
+  while (xp >= currentXpThreshold) {
+    level++;
+    currentXpThreshold += nextLevelCost;
+    nextLevelCost *= XP_GROWTH_FACTOR;
+  }
+
+  return level;
+}
+
+/**
+ * Get the XP required to reach the next level
+ */
+export function getNextLevelThreshold(currentLevel: number): number {
+  let threshold = BASE_XP_PER_LEVEL;
+  let cost = BASE_XP_PER_LEVEL;
+
+  for (let i = 1; i < currentLevel; i++) {
+    cost *= XP_GROWTH_FACTOR;
+    threshold += cost;
+  }
+
+  return threshold;
+}
+
+/**
+ * Get the XP required to reach the current level (floor)
+ */
+export function getCurrentLevelBaseXP(currentLevel: number): number {
+  if (currentLevel === 1) return 0;
+
+  let threshold = BASE_XP_PER_LEVEL;
+  let cost = BASE_XP_PER_LEVEL;
+
+  for (let i = 2; i < currentLevel; i++) {
+    cost *= XP_GROWTH_FACTOR;
+    threshold += cost;
+  }
+
+  return threshold;
+}

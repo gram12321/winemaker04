@@ -13,22 +13,103 @@ import { setPlayerBalance } from '../user/userBalanceService';
 import { getCurrentCompany } from '../core/gameState';
 import { companyService } from '../user/companyService';
 
+import { awardExperience, getAllStaff } from '../user/staffService';
+
 
 // ===== ADMIN BUSINESS LOGIC FUNCTIONS =====
+
+/**
+ * Admin function to set staff XP for a specific skill category
+ * @param staffId - ID of the staff member
+ * @param category - XP category (e.g., 'skill:field', 'grape:Chardonnay')
+ * @param amount - Amount of XP to set (replaces current value)
+ */
+export async function adminSetStaffXP(
+  staffId: string,
+  category: string,
+  amount: number
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const allStaff = await getAllStaff();
+    const staff = allStaff.find(s => s.id === staffId);
+
+    if (!staff) {
+      return {
+        success: false,
+        error: 'Staff member not found'
+      };
+    }
+
+    const currentXP = staff.experience?.[category] || 0;
+    const difference = amount - currentXP;
+
+    // Use awardExperience to set the XP (by awarding the difference)
+    await awardExperience(staffId, difference, [category]);
+
+    return {
+      success: true,
+      message: `Set ${category} XP to ${amount} for ${staff.name}`
+    };
+  } catch (error) {
+    console.error('Error setting staff XP:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Admin function to add XP to a staff member (doesn't replace, adds to current)
+ * @param staffId - ID of the staff member
+ * @param category - XP category (e.g., 'skill:field', 'grape:Chardonnay')
+ * @param amount - Amount of XP to add
+ */
+export async function adminAddStaffXP(
+  staffId: string,
+  category: string,
+  amount: number
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const allStaff = await getAllStaff();
+    const staff = allStaff.find(s => s.id === staffId);
+
+    if (!staff) {
+      return {
+        success: false,
+        error: 'Staff member not found'
+      };
+    }
+
+    await awardExperience(staffId, amount, [category]);
+
+    return {
+      success: true,
+      message: `Added ${amount} XP to ${category} for ${staff.name}`
+    };
+  } catch (error) {
+    console.error('Error adding staff XP:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
 
 /**
  * Set gold/money for the active company
  */
 export async function adminSetGoldToCompany(amount: number): Promise<void> {
   const targetAmount = amount || 10000;
-  
+
   // Get current money from game state
   const gameState = getGameState();
   const currentMoney = gameState.money || 0;
-  
+
   // Calculate the difference needed to reach target amount
   const difference = targetAmount - currentMoney;
-  
+
   // Only add transaction if there's a difference
   if (difference !== 0) {
     await addTransaction(difference, `Admin: Set to ${formatNumber(targetAmount, { currency: true })} (was ${formatNumber(currentMoney, { currency: true })})`, 'admin_cheat');
@@ -41,26 +122,26 @@ export async function adminSetGoldToCompany(amount: number): Promise<void> {
 export async function adminSetPlayerBalance(amount: number): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const targetAmount = amount || 10000;
-    
+
     // Get current company to find associated user
     const currentCompany = getCurrentCompany();
     if (!currentCompany) {
       return { success: false, error: 'No active company found' };
     }
-    
+
     // Get full company data to access userId
     const company = await companyService.getCompany(currentCompany.id);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
-    
+
     if (!company.userId) {
       return { success: false, error: 'Company is not associated with a user' };
     }
-    
+
     // Set the player balance
     const result = await setPlayerBalance(targetAmount, company.userId);
-    
+
     if (result.success) {
       return {
         success: true,
@@ -86,7 +167,7 @@ export async function adminSetPlayerBalance(amount: number): Promise<{ success: 
  */
 export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
   const parsedAmount = amount || 100;
-  
+
   try {
     const gameState = getGameState();
     const currentWeek = calculateAbsoluteWeeks(
@@ -94,7 +175,7 @@ export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
       gameState.season!,
       gameState.currentYear!
     );
-    
+
     // Add prestige event using the proper service layer
     await insertPrestigeEvent({
       id: uuidv4(),
@@ -108,11 +189,11 @@ export async function adminAddPrestigeToCompany(amount: number): Promise<void> {
         addedAmount: parsedAmount
       }
     });
-    
+
     // Clear prestige cache to force recalculation
     clearPrestigeCache();
     await getCurrentPrestige();
-    
+
   } catch (error) {
     console.error('Failed to add prestige event:', error);
     throw error;
@@ -164,7 +245,7 @@ export async function adminClearAllCompaniesAndUsers(): Promise<void> {
     // Clear companies first (due to foreign key constraints)
     const { error: companiesError } = await supabase.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (companiesError) throw companiesError;
-    
+
     // Then clear users
     const { error: usersError } = await supabase.from('users').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (usersError) throw usersError;
@@ -182,7 +263,7 @@ export async function adminRecreateCustomers(): Promise<void> {
     // First clear all existing customers
     const { error: deleteError } = await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (deleteError) throw deleteError;
-    
+
     // Then recreate them
     await initializeCustomers(1); // Initialize with base prestige
   } catch (error) {
@@ -203,7 +284,7 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
   const { loadVineyards } = await import('../../database/activities/vineyardDB');
   const { getCurrentPrestige } = await import('../core/gameState');
   const { SALES_CONSTANTS } = await import('../../constants/constants');
-  
+
   // Get or create customers
   let allCustomers = await getAllCustomers();
   if (allCustomers.length === 0) {
@@ -211,38 +292,38 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
     await initializeCustomers();
     allCustomers = await getAllCustomers();
   }
-  
+
   if (allCustomers.length === 0) {
     console.log('❌ Failed to create customers');
     return { totalOrdersCreated: 0, customersGenerated: 0 };
   }
-  
+
   // Select random customer
   const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
   const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
-  
+
   // Load all available wines and vineyards (like real order generation)
   const [allBatches, allVineyards] = await Promise.all([
     getAllWineBatches(),
     loadVineyards()
   ]);
   const availableWines = allBatches.filter((batch: any) => batch.state === 'bottled' && batch.quantity > 0);
-  
+
   if (availableWines.length === 0) {
     console.log('❌ No bottled wines available for orders');
     return { totalOrdersCreated: 0, customersGenerated: 0 };
   }
-  
+
   // Get current prestige for realistic order evaluation
   const currentPrestige = await getCurrentPrestige();
-  
+
   // Try to generate orders using the sophisticated flow (with diminishing returns)
   const orders = [];
-  
+
   for (let i = 0; i < availableWines.length && orders.length < 3; i++) {
     const wineBatch = availableWines[i];
     const ordersPlaced = orders.length;
-    
+
     // Calculate diminishing returns (same as real flow)
     const gameState = getGameState();
     const economyPhase = (gameState.economyPhase || 'Stable');
@@ -256,19 +337,19 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
     const multiplePenaltyBoost = ECONOMY_SALES_MULTIPLIERS[economyPhase]?.multipleOrderPenaltyMultiplier || 1.0;
     const effectivePenalty = customerTypeConfig.multipleOrderPenalty * multiplePenaltyBoost;
     const multipleOrderModifier = Math.pow(effectivePenalty, ordersPlaced);
-    
+
     // Find vineyard
     const vineyard = allVineyards.find((v: any) => v.id === wineBatch.vineyardId);
     if (!vineyard) continue;
-    
+
     // Generate order using real logic (includes rejection probability, pricing, etc.)
     const order = await generateOrder(customer, wineBatch, multipleOrderModifier, vineyard, currentPrestige);
-    
+
     if (order) {
       orders.push(order);
     }
   }
-  
+
   if (orders.length > 0) {
     console.log('✅ Admin orders generated:', {
       customer: customer.name,
@@ -280,10 +361,10 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
   } else {
     console.log('❌ No orders generated (all wines rejected by customer)');
   }
-  
-  return { 
-    totalOrdersCreated: orders.length, 
-    customersGenerated: 0 
+
+  return {
+    totalOrdersCreated: orders.length,
+    customersGenerated: 0
   };
 }
 
@@ -299,7 +380,7 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
   const { getAllCustomers } = await import('../sales/createCustomer');
   const { generateContractForCustomer } = await import('../sales/contractGenerationService');
   const { saveWineContract } = await import('../../database/sales/contractDB');
-  
+
   // Get or create customers
   let allCustomers = await getAllCustomers();
   if (allCustomers.length === 0) {
@@ -307,21 +388,21 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
     await initializeCustomers();
     allCustomers = await getAllCustomers();
   }
-  
+
   if (allCustomers.length === 0) {
     return { success: false, message: 'No customers available' };
   }
-  
+
   // Select a random customer
   const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
-  
+
   // Use the real contract generation logic (same quantity/pricing as normal contracts)
   // This shares the exact same calculateContractPricing function as normal gameplay
   const contract = await generateContractForCustomer(customer);
-  
+
   // Save to database
   await saveWineContract(contract);
-  
+
   console.log('✅ Admin contract generated:', {
     customer: customer.name,
     type: customer.customerType,
@@ -330,10 +411,10 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
     value: contract.totalValue.toFixed(2),
     multiYear: contract.terms ? `${contract.terms.durationYears} years` : 'single'
   });
-  
-  return { 
-    success: true, 
-    message: `Contract generated for ${customer.name}: ${contract.requestedQuantity} bottles @ $${contract.offeredPrice.toFixed(2)}/bottle` 
+
+  return {
+    success: true,
+    message: `Contract generated for ${customer.name}: ${contract.requestedQuantity} bottles @ $${contract.offeredPrice.toFixed(2)}/bottle`
   };
 }
 
@@ -494,7 +575,7 @@ export async function adminFullDatabaseReset(): Promise<void> {
     // Delete child tables first, then parent tables
     const tables = [
       'relationship_boosts',
-      'wine_orders', 
+      'wine_orders',
       'wine_batches',
       'vineyards',
       'activities',
@@ -512,12 +593,12 @@ export async function adminFullDatabaseReset(): Promise<void> {
     ];
 
     const errors: string[] = [];
-    
+
     // Clear all tables - use DELETE with proper ordering for foreign keys
     for (const table of tables) {
       try {
         let deleteQuery;
-        
+
         // Handle different table structures
         if (table === 'company_customers') {
           // company_customers has composite primary key, no single id column
@@ -526,7 +607,7 @@ export async function adminFullDatabaseReset(): Promise<void> {
           // All other tables have id columns - delete all records
           deleteQuery = supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
         }
-        
+
         const { error } = await deleteQuery;
         if (error) {
           const errorMsg = `Error clearing table ${table}: ${error.message}`;

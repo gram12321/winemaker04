@@ -4,13 +4,17 @@ import { getGameState, updateGameState, notificationService, completePlanting, c
 import { completeLandSearch } from './landSearchManager';
 import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
 import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
-import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, WorkCategory } from '@/lib/services/activity';
+import { awardExperience } from '@/lib/services/user/staffService';
+import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
+import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
 import { completeResearch } from './researchManager';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { completeLenderSearch } from './lenderSearchManager';
 import { completeTakeLoan } from './takeLoanManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber } from '@/lib/utils';
+
+
 
 // Completion handlers for each activity type
 const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<void>> = {
@@ -296,11 +300,28 @@ export async function progressActivities(): Promise<void> {
     for (const activity of activities) {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
+      const grapeVariety = activity.params.grape; // Get grape variety for XP bonus
 
       // Calculate work contribution from staff (0 if no staff assigned)
-      const workThisTick = assignedStaff.length > 0
-        ? calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts)
-        : 0;
+      let workThisTick = 0;
+      if (assignedStaff.length > 0) {
+        workThisTick = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety);
+
+        // Award XP to assigned staff
+        const relevantSkill = WORK_CATEGORY_INFO[activity.category].skill;
+        const xpCategories = [`skill:${relevantSkill}`];
+
+        // Add grape variety XP if applicable
+        if (grapeVariety) {
+          xpCategories.push(`grape:${grapeVariety}`);
+        }
+
+        for (const staff of assignedStaff) {
+          const contribution = calculateIndividualStaffContribution(staff, activity.category, staffTaskCounts, grapeVariety);
+          // Award XP equal to contribution
+          await awardExperience(staff.id, contribution, xpCategories);
+        }
+      }
 
       const oldCompletedWork = activity.completedWork;
       const newCompletedWork = Math.min(
@@ -391,10 +412,11 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     // Get staff assigned to this activity
     const assignedStaffIds = activity.params.assignedStaffIds || [];
     const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
+    const grapeVariety = activity.params.grape;
 
     if (assignedStaff.length > 0) {
       // Calculate actual work contribution per week
-      const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts);
+      const workPerWeek = calculateStaffWorkContribution(assignedStaff, activity.category, staffTaskCounts, grapeVariety);
 
       if (workPerWeek > 0) {
         const weeksRemaining = Math.ceil(remainingWork / workPerWeek);

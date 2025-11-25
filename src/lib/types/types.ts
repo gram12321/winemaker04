@@ -700,6 +700,7 @@ export interface Staff {
   wage: number;        // Monthly wage in euros
   teamIds: string[];   // Multiple team assignments (replaces single teamId)
   skills: StaffSkills;
+  experience: Record<string, number>; // Experience points by category (e.g., 'skill:field', 'grape:Barbera')
   workforce: number;   // Base work capacity (default 50)
   hireDate: GameDate;
 }

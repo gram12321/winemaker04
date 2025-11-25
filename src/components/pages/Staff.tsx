@@ -29,7 +29,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
   const [showTeamAssignmentDialog, setShowTeamAssignmentDialog] = useState(false);
   const [staffForTeamAssignment, setStaffForTeamAssignment] = useState<Staff | null>(null);
-  
+
   // Team management states
   const [isCreatingNewTeam, setIsCreatingNewTeam] = useState(false);
   const [editingField, setEditingField] = useState<'name' | 'description' | 'icon' | null>(null);
@@ -42,7 +42,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
     icon: '👥',
     defaultTaskTypes: [] as string[]
   });
-  
+
   const { staff: gameStaff, teams: gameTeams } = useGameState();
   const activities = useGameStateWithData(getAllActivities, []);
   const allStaff = gameStaff || [];
@@ -69,14 +69,14 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       totalActiveTasks: activityList.length
     };
   }, [activities]);
-  
+
   // Filter staff based on selected team
-  const filteredStaff = selectedTeamFilter === 'all' 
-    ? allStaff 
+  const filteredStaff = selectedTeamFilter === 'all'
+    ? allStaff
     : allStaff.filter(staff => (staff.teamIds || []).includes(selectedTeamFilter));
 
   // Note: Staff search results are now handled globally by GlobalSearchResultsDisplay
-  
+
   const handleFireStaff = async (staffId: string) => {
     await removeStaff(staffId);
   };
@@ -129,7 +129,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
         newTeamData.defaultTaskTypes,
         newTeamData.icon
       );
-      
+
       await addTeam(newTeam);
       setIsCreatingNewTeam(false);
       setNewTeamData({
@@ -207,7 +207,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
 
   const handleTaskTypeRemove = (taskType: string) => {
     if (isCreatingNewTeam) {
-      handleNewTeamDataUpdate('defaultTaskTypes', 
+      handleNewTeamDataUpdate('defaultTaskTypes',
         newTeamData.defaultTaskTypes.filter(t => t !== taskType)
       );
     }
@@ -222,16 +222,16 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
       }
     }
   };
-  
+
   // Render skill bars for a staff member
   const renderSkillBars = (staff: Staff) => (
     <StaffSkillBarsList staff={staff} />
   );
-  
+
   return (
     <div className="space-y-3 text-sm">
       {/* Banner */}
-      <div 
+      <div
         className="h-28 bg-cover bg-center rounded-lg relative"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&h=400&fit=crop')"
@@ -346,116 +346,116 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           </div>
         </div>
 
-          {/* New Team Creation */}
-          {isCreatingNewTeam && (
-            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-md font-medium text-gray-900">Create New Team</h4>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveNewTeam} disabled={!newTeamData.name.trim()}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={handleCancelNewTeam}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+        {/* New Team Creation */}
+        {isCreatingNewTeam && (
+          <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-md font-medium text-gray-900">Create New Team</h4>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveNewTeam} disabled={!newTeamData.name.trim()}>
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCancelNewTeam}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
-              {/* New Team Header */}
-              <div className="flex items-center gap-2 mb-1">
-                <Dialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+            {/* New Team Header */}
+            <div className="flex items-center gap-2 mb-1">
+              <Dialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-2xl p-1">
+                    {newTeamData.icon}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Select Icon</DialogTitle>
+                    <DialogDescription>Choose an emoji icon for your team</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-6 gap-2">
+                    {EMOJI_OPTIONS.map(emoji => (
+                      <Button
+                        key={emoji}
+                        variant="outline"
+                        size="sm"
+                        className="text-2xl p-2"
+                        onClick={() => handleEmojiSelect(emoji)}
+                      >
+                        {emoji}
+                      </Button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Input
+                value={newTeamData.name}
+                onChange={(e) => handleNewTeamDataUpdate('name', e.target.value)}
+                placeholder="Team Name"
+                className="text-lg font-semibold"
+                autoFocus
+              />
+            </div>
+
+            <Input
+              value={newTeamData.description}
+              onChange={(e) => handleNewTeamDataUpdate('description', e.target.value)}
+              placeholder="Team Description"
+              className="text-sm"
+            />
+
+            {/* New Team Task Types */}
+            <div className="text-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <Label className="font-medium">Default Task Types:</Label>
+                <Dialog open={showTaskTypePicker} onOpenChange={setShowTaskTypePicker}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-2xl p-1">
-                      {newTeamData.icon}
+                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                      <Edit3 className="h-3 w-3" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Select Icon</DialogTitle>
-                      <DialogDescription>Choose an emoji icon for your team</DialogDescription>
+                      <DialogTitle>Select Task Types</DialogTitle>
+                      <DialogDescription>Choose which task types this team will handle</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-6 gap-2">
-                      {EMOJI_OPTIONS.map(emoji => (
-                        <Button
-                          key={emoji}
-                          variant="outline"
-                          size="sm"
-                          className="text-2xl p-2"
-                          onClick={() => handleEmojiSelect(emoji)}
-                        >
-                          {emoji}
-                        </Button>
-                      ))}
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.values(WorkCategory).map(category => {
+                        const taskType = category.toLowerCase();
+                        return (
+                          <Button
+                            key={taskType}
+                            variant={newTeamData.defaultTaskTypes.includes(taskType) ? "default" : "outline"}
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleTaskTypeSelect(taskType)}
+                            disabled={newTeamData.defaultTaskTypes.includes(taskType)}
+                          >
+                            {getTaskTypeDisplayName(taskType)}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </DialogContent>
                 </Dialog>
-                
-                <Input
-                  value={newTeamData.name}
-                  onChange={(e) => handleNewTeamDataUpdate('name', e.target.value)}
-                  placeholder="Team Name"
-                  className="text-lg font-semibold"
-                  autoFocus
-                />
               </div>
-              
-              <Input
-                value={newTeamData.description}
-                onChange={(e) => handleNewTeamDataUpdate('description', e.target.value)}
-                placeholder="Team Description"
-                className="text-sm"
-              />
-
-              {/* New Team Task Types */}
-              <div className="text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Label className="font-medium">Default Task Types:</Label>
-                  <Dialog open={showTaskTypePicker} onOpenChange={setShowTaskTypePicker}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-6 w-6 p-0">
-                        <Edit3 className="h-3 w-3" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Select Task Types</DialogTitle>
-                        <DialogDescription>Choose which task types this team will handle</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.values(WorkCategory).map(category => {
-                          const taskType = category.toLowerCase();
-                          return (
-                            <Button
-                              key={taskType}
-                              variant={newTeamData.defaultTaskTypes.includes(taskType) ? "default" : "outline"}
-                              size="sm"
-                              className="justify-start"
-                              onClick={() => handleTaskTypeSelect(taskType)}
-                              disabled={newTeamData.defaultTaskTypes.includes(taskType)}
-                            >
-                              {getTaskTypeDisplayName(taskType)}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {newTeamData.defaultTaskTypes.map(taskType => (
-                    <Badge 
-                      key={taskType} 
-                      variant="outline" 
-                      className="text-xs cursor-pointer hover:bg-red-100"
-                      onClick={() => handleTaskTypeRemove(taskType)}
-                    >
-                      {getTaskTypeDisplayName(taskType)} ×
-                    </Badge>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-1">
+                {newTeamData.defaultTaskTypes.map(taskType => (
+                  <Badge
+                    key={taskType}
+                    variant="outline"
+                    className="text-xs cursor-pointer hover:bg-red-100"
+                    onClick={() => handleTaskTypeRemove(taskType)}
+                  >
+                    {getTaskTypeDisplayName(taskType)} ×
+                  </Badge>
+                ))}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
         {/* Selected Team Details */}
         {selectedTeamFilter !== 'all' && (
@@ -463,7 +463,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
             {(() => {
               const team = allTeams.find(t => t.id === selectedTeamFilter);
               if (!team) return null;
-              
+
               return (
                 <>
                   {/* Team Header */}
@@ -498,14 +498,14 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <span 
+                          <span
                             className="text-2xl cursor-pointer hover:bg-gray-100 rounded p-1"
                             onClick={() => handleStartEdit('icon', team.icon || '👥')}
                           >
                             {team.icon}
                           </span>
                         )}
-                        
+
                         {editingField === 'name' ? (
                           <div className="flex items-center gap-2">
                             <Input
@@ -526,7 +526,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                             </Button>
                           </div>
                         ) : (
-                          <h4 
+                          <h4
                             className="text-lg font-semibold cursor-pointer hover:bg-gray-100 rounded p-1"
                             onClick={() => handleStartEdit('name', team.name)}
                           >
@@ -534,7 +534,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                           </h4>
                         )}
                       </div>
-                      
+
                       {editingField === 'description' ? (
                         <div className="flex items-center gap-2">
                           <Input
@@ -555,7 +555,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                           </Button>
                         </div>
                       ) : (
-                        <p 
+                        <p
                           className="text-sm text-gray-600 cursor-pointer hover:bg-gray-100 rounded p-1"
                           onClick={() => handleStartEdit('description', team.description)}
                         >
@@ -563,7 +563,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                         </p>
                       )}
                     </div>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -619,9 +619,9 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {team.defaultTaskTypes.map(taskType => (
-                        <Badge 
-                          key={taskType} 
-                          variant="outline" 
+                        <Badge
+                          key={taskType}
+                          variant="outline"
                           className="text-xs cursor-pointer hover:bg-red-100"
                           onClick={async () => {
                             const updatedTeam = {
@@ -648,24 +648,24 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
         )}
 
       </div>
-      
+
       {/* Staff Content */}
-      
+
       {/* Staff List */}
       {filteredStaff.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           {selectedTeamFilter === 'all' ? (
             <>
-          <h3 className="text-base font-semibold text-gray-900 mb-1">No Staff Members</h3>
-          <p className="text-xs text-gray-600 mb-4">Start a staff search to find candidates to hire.</p>
-          <Button
-            onClick={() => setShowSearchModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Search className="mr-2 h-4 w-4" />
-            Search for Your First Employee
-          </Button>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">No Staff Members</h3>
+              <p className="text-xs text-gray-600 mb-4">Start a staff search to find candidates to hire.</p>
+              <Button
+                onClick={() => setShowSearchModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Search for Your First Employee
+              </Button>
             </>
           ) : (
             <>
@@ -701,7 +701,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
               const skillInfo = getSkillLevelInfo(staff.skillLevel);
               const assignedTaskCount = staffTaskCounts.get(staff.id) ?? 0;
               const taskLabel = totalActiveTasks === 1 ? 'task' : 'tasks';
-              
+
               return (
                 <div
                   key={staff.id}
@@ -763,12 +763,12 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                       Fire
                     </Button>
                   </div>
-                  
+
                   {/* Skills */}
                   <div className="mb-2">
                     {renderSkillBars(staff)}
                   </div>
-                  
+
                   {/* Footer */}
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <div className="flex items-center gap-4 text-xs text-gray-600">
@@ -776,7 +776,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                         <span className="font-medium">Wage:</span> <span className={getWageColorClass(staff.wage, 'weekly')}>{formatNumber(staff.wage, { currency: true })}/wk</span>
                       </div>
                     </div>
-                    
+
                     {staff.specializations.length > 0 && (
                       <div className="flex gap-1">
                         {staff.specializations.map(spec => (
@@ -788,7 +788,12 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                       </div>
                     )}
                   </div>
-                  
+
+                  {/* Experience */}
+                  <div className="text-2xs text-gray-500 mt-1">
+                    Total XP: {formatNumber(Object.values(staff.experience || {}).reduce((sum, val) => sum + val, 0), { decimals: 0 })}
+                  </div>
+
                   {/* Hire Date */}
                   <div className="text-2xs text-gray-500 mt-1">
                     Hired: Week {staff.hireDate.week}, {staff.hireDate.season} {staff.hireDate.year}
@@ -839,7 +844,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
                 <p className="text-gray-500 text-sm">Not assigned to any teams</p>
               )}
             </div>
-            
+
             {/* Available Teams */}
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">Available Teams:</h4>
@@ -865,7 +870,7 @@ export const StaffPage: React.FC<StaffPageProps> = ({ title }) => {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Staff Search Options Modal */}
       <StaffSearchOptionsModal
         isOpen={showSearchModal}

@@ -1,7 +1,7 @@
-import { GameDate } from '../../types/types';
+import { GameDate, Transaction } from '../../types/types';
 import { companyService } from '../user/companyService';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { addTransaction } from './financeService';
+import { addTransaction, calculateFinancialData, loadTransactions } from './financeService';
 import { TRANSACTION_CATEGORIES } from '../../constants';
 import { updateMarketValue } from './shareValueService';
 import { getGameState } from '../core/gameState';
@@ -10,6 +10,8 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { updatePlayerBalance } from '../user/userBalanceService';
 import { formatNumber } from '../../utils/utils';
+import { calculateTotalOutstandingLoans } from './loanService';
+import { CREDIT_RATING } from '../../constants/loanConstants';
 
 /**
  * Issue new shares (dilutes player ownership)
@@ -19,6 +21,19 @@ import { formatNumber } from '../../utils/utils';
  * @param companyId - Company ID (optional, uses current company if not provided)
  * @returns Success status and updated share structure
  */
+export interface ShareMetrics {
+  assetPerShare: number;
+  cashPerShare: number;
+  debtPerShare: number;
+  bookValuePerShare: number;
+  revenuePerShare: number;
+  dividendPerShareCurrentYear: number;
+  dividendPerSharePreviousYear: number;
+  creditRating: number;
+}
+
+type FinancialSnapshot = Awaited<ReturnType<typeof calculateFinancialData>>;
+
 export async function issueStock(
   shares: number,
   price?: number,
@@ -413,6 +428,125 @@ export async function checkAndNotifyDividendsDue(companyId?: string): Promise<bo
   }
 }
 
+export async function getShareMetrics(companyId?: string): Promise<ShareMetrics> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+
+    if (!companyId) {
+      return {
+        assetPerShare: 0,
+        cashPerShare: 0,
+        debtPerShare: 0,
+        bookValuePerShare: 0,
+        revenuePerShare: 0,
+        dividendPerShareCurrentYear: 0,
+        dividendPerSharePreviousYear: 0,
+        creditRating: CREDIT_RATING.DEFAULT_RATING
+      };
+    }
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return {
+        assetPerShare: 0,
+        cashPerShare: 0,
+        debtPerShare: 0,
+        bookValuePerShare: 0,
+        revenuePerShare: 0,
+        dividendPerShareCurrentYear: 0,
+        dividendPerSharePreviousYear: 0,
+        creditRating: CREDIT_RATING.DEFAULT_RATING
+      };
+    }
+
+    const totalShares = company.totalShares || 1000000;
+    const gameState = getGameState();
+    const currentYear = gameState.currentYear || 2024;
+    const previousYear = currentYear - 1;
+
+    let transactions: Transaction[] = [];
+    try {
+      transactions = await loadTransactions();
+    } catch (error) {
+      console.error('Error loading transactions for share metrics:', error);
+    }
+
+    let totalDebt = 0;
+    try {
+      totalDebt = await calculateTotalOutstandingLoans();
+    } catch (error) {
+      console.error('Error calculating outstanding loans for share metrics:', error);
+    }
+
+    let financialData: FinancialSnapshot | null = null;
+    try {
+      financialData = await calculateFinancialData('year', { year: currentYear });
+    } catch (error) {
+      console.error('Error calculating financial data for share metrics:', error);
+    }
+
+    const calculatedTotalAssets = financialData?.totalAssets ?? 0;
+    const fallbackAssets = company.marketCap ?? company.money ?? 0;
+    const totalAssets = calculatedTotalAssets > 0 ? calculatedTotalAssets : fallbackAssets;
+
+    const calculatedCash = financialData?.cashMoney ?? null;
+    const cashBalance =
+      calculatedCash !== null && calculatedCash >= 0 ? calculatedCash : (company.money ?? 0);
+
+    const revenueYTD = financialData?.income ?? 0;
+
+    const assetPerShare = totalShares > 0 ? totalAssets / totalShares : 0;
+    const cashPerShare = totalShares > 0 ? cashBalance / totalShares : 0;
+    const debtPerShare = totalShares > 0 ? totalDebt / totalShares : 0;
+    const bookValuePerShare = totalShares > 0 ? (totalAssets - totalDebt) / totalShares : 0;
+    const revenuePerShare = totalShares > 0 ? revenueYTD / totalShares : 0;
+
+    const dividendTransactions = transactions.filter(
+      (transaction) => transaction.category === TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT
+    );
+
+    const sumDividendsForYear = (year: number): number =>
+      dividendTransactions
+        .filter((transaction) => transaction.date.year === year)
+        .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+
+    const dividendsCurrentYear = sumDividendsForYear(currentYear);
+    const dividendsPreviousYear = sumDividendsForYear(previousYear);
+
+    const dividendPerShareCurrentYear =
+      totalShares > 0 ? dividendsCurrentYear / totalShares : 0;
+    const dividendPerSharePreviousYear =
+      totalShares > 0 ? dividendsPreviousYear / totalShares : 0;
+
+    const creditRating = gameState.creditRating ?? CREDIT_RATING.DEFAULT_RATING;
+
+    return {
+      assetPerShare,
+      cashPerShare,
+      debtPerShare,
+      bookValuePerShare,
+      revenuePerShare,
+      dividendPerShareCurrentYear,
+      dividendPerSharePreviousYear,
+      creditRating
+    };
+  } catch (error) {
+    console.error('Error calculating share metrics:', error);
+    return {
+      assetPerShare: 0,
+      cashPerShare: 0,
+      debtPerShare: 0,
+      bookValuePerShare: 0,
+      revenuePerShare: 0,
+      dividendPerShareCurrentYear: 0,
+      dividendPerSharePreviousYear: 0,
+      creditRating: CREDIT_RATING.DEFAULT_RATING
+    };
+  }
+}
+
 /**
  * Pay dividends to shareholders
  * 
@@ -473,7 +607,7 @@ export async function payDividends(companyId?: string): Promise<{
     await addTransaction(
       -totalPayment,
       `Dividend Payment: ${formatNumber(dividendRate, { currency: true, decimals: 4 })} per share (${formatNumber(totalShares, { decimals: 0 })} shares)`,
-      TRANSACTION_CATEGORIES.OTHER,
+      TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT,
       false,
       companyId
     );

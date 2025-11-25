@@ -34,22 +34,22 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   const currentAssignedIds = activity.params.assignedStaffIds || [];
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(currentAssignedIds);
   const [selectAll, setSelectAll] = useState(false);
-  
+
   // Update select all state when selection changes
   useEffect(() => {
     setSelectAll(selectedStaffIds.length === allStaff.length && allStaff.length > 0);
   }, [selectedStaffIds, allStaff.length]);
-  
+
   if (!isOpen) return null;
-  
+
   const handleToggleStaff = (staffId: string) => {
-    setSelectedStaffIds(prev => 
-      prev.includes(staffId) 
+    setSelectedStaffIds(prev =>
+      prev.includes(staffId)
         ? prev.filter(id => id !== staffId)
         : [...prev, staffId]
     );
   };
-  
+
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedStaffIds([]);
@@ -57,7 +57,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       setSelectedStaffIds(allStaff.map(s => s.id));
     }
   };
-  
+
   const handleSave = async () => {
     try {
       // Update activity with new staff assignments
@@ -67,7 +67,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
           assignedStaffIds: selectedStaffIds
         }
       });
-      
+
       if (success) {
         // Trigger immediate UI update
         triggerGameUpdateImmediate();
@@ -81,28 +81,29 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       await notificationService.addMessage('Failed to assign staff', 'staffAssignmentModal.handleSave', 'Staff Assignment Error', NotificationCategory.SYSTEM);
     }
   };
-  
+
   // Calculate work preview
   const selectedStaff = allStaff.filter(s => selectedStaffIds.includes(s.id));
   const staffTaskCounts = new Map<string, number>();
   // For now, assume each selected staff is only on this task (task count = 1)
   selectedStaff.forEach(s => staffTaskCounts.set(s.id, 1));
-  
+  const grapeVariety = activity.params?.grape;
+
   const workPerWeek = selectedStaff.length > 0
-    ? calculateStaffWorkContribution(selectedStaff, activity.category, staffTaskCounts)
+    ? calculateStaffWorkContribution(selectedStaff, activity.category, staffTaskCounts, grapeVariety)
     : 0;
-  
+
   const remainingWork = activity.totalWork - activity.completedWork;
   const weeksToComplete = selectedStaff.length > 0
-    ? calculateEstimatedWeeks(selectedStaff, activity.category, staffTaskCounts, remainingWork)
+    ? calculateEstimatedWeeks(selectedStaff, activity.category, staffTaskCounts, remainingWork, grapeVariety)
     : 0;
-  
+
   const relevantSkill = getRelevantSkillName(activity.category);
-  
+
   // Get the team that auto-assigns to this activity
   const defaultTeam = getTeamForCategory(activity.category);
   const teamMemberCount = defaultTeam?.memberIds.length || 0;
-  
+
   // Render skill bars for a staff member (reusable list component)
   const renderSkillBars = (staff: Staff) => (
     <div className="w-full sm:w-60">
@@ -113,7 +114,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
       />
     </div>
   );
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-xs sm:max-w-2xl lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col scrollbar-styled">
@@ -138,11 +139,11 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
             ×
           </button>
         </div>
-        
+
         {/* Work Preview */}
         <div className="bg-gray-800 p-3 sm:p-4 border-b border-gray-700">
           <h3 className="text-sm font-semibold text-white mb-3">Work Progress Preview</h3>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-3 text-xs sm:text-sm text-gray-300">
             <div>
               <span className="font-medium">Work per Week:</span><br className="sm:hidden" />
@@ -157,7 +158,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
               <span className="sm:ml-1">{weeksToComplete > 0 ? weeksToComplete : 'N/A'}</span>
             </div>
           </div>
-          
+
           {/* Progress bar with completed work + week segments overlay */}
           <div className="h-4 bg-gray-700 rounded-full relative overflow-hidden">
             {/* Completed work - solid fill */}
@@ -165,7 +166,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
               className="h-full bg-green-600 absolute left-0 top-0 transition-all duration-300"
               style={{ width: `${(activity.completedWork / activity.totalWork) * 100}%` }}
             />
-            
+
             {/* Week segments overlay for remaining work */}
             {weeksToComplete > 0 && weeksToComplete <= 20 && (
               <div className="h-full flex absolute left-0 top-0 w-full">
@@ -173,14 +174,14 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                   const weekStart = (index * workPerWeek) / activity.totalWork * 100;
                   const weekEnd = ((index + 1) * workPerWeek) / activity.totalWork * 100;
                   const completedPercent = (activity.completedWork / activity.totalWork) * 100;
-                  
+
                   // Only show segments that extend beyond completed work
                   const segmentStart = Math.max(weekStart, completedPercent);
                   const segmentEnd = weekEnd;
                   const segmentWidth = Math.max(0, segmentEnd - segmentStart);
-                  
+
                   if (segmentWidth <= 0) return null; // Don't render if fully completed
-                  
+
                   return (
                     <div
                       key={index}
@@ -195,7 +196,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                 })}
               </div>
             )}
-            
+
             {/* Fallback for long activities - just show completed work */}
             {weeksToComplete > 20 && (
               <div
@@ -204,24 +205,24 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
               />
             )}
           </div>
-          
+
           {weeksToComplete > 20 && (
             <div className="text-xs text-gray-400 text-center mt-1">
               Progress bar shows one segment for each week of estimated work.
             </div>
           )}
-          
+
           <p className="text-xs text-gray-400 mt-2">
             Primary skill: <span className="font-medium" style={{ color: getSkillColor(relevantSkill.toLowerCase() as any) }}>{relevantSkill}</span>
           </p>
         </div>
-        
+
         {/* Staff List */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 scrollbar-styled">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-white text-sm sm:text-base">Available Staff ({allStaff.length})</h3>
           </div>
-          
+
           {allStaff.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <p>No staff available.</p>
@@ -248,13 +249,12 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                 {allStaff.map(staff => {
                   const skillInfo = getSkillLevelInfo(staff.skillLevel);
                   const isSelected = selectedStaffIds.includes(staff.id);
-                  
+
                   return (
-                    <div 
-                      key={staff.id} 
-                      className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${
-                        isSelected ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'
-                      }`}
+                    <div
+                      key={staff.id}
+                      className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${isSelected ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -275,11 +275,11 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                           />
                         </div>
                       </div>
-                      
+
                       <div className="mb-3">
                         {renderSkillBars(staff)}
                       </div>
-                      
+
                       {staff.specializations.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {staff.specializations.map(spec => (
@@ -294,7 +294,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                   );
                 })}
               </div>
-              
+
               {/* Desktop Table Layout */}
               <div className="hidden sm:block bg-gray-800 rounded-lg overflow-hidden">
                 <table className="min-w-full">
@@ -318,7 +318,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
                   <tbody className="divide-y divide-gray-700">
                     {allStaff.map(staff => {
                       const skillInfo = getSkillLevelInfo(staff.skillLevel);
-                      
+
                       return (
                         <tr key={staff.id} className="hover:bg-gray-750 transition-colors">
                           <td className="px-4 py-3 text-sm text-white">
@@ -364,7 +364,7 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
             </>
           )}
         </div>
-        
+
         {/* Footer */}
         <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-3 sm:p-6 border-t border-gray-700">
           <Button

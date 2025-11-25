@@ -257,15 +257,15 @@ export function calculateSymmetricalMultiplier(
   maxMultiplier: number
 ): number {
   const safeValue = Math.min(0.99999, Math.max(0.00001, value || 0.5));
-  
+
   // Calculate distance from center (0.5)
   const distanceFromCenter = Math.abs(safeValue - 0.5);
-  
+
   // Map distance to 0-1 scale for mathematical progression
   const progressionInput = distanceFromCenter * 2; // 0-1 scale
-  
+
   let progressionValue: number;
-  
+
   if (progressionInput < 0.1) {
     // Sigmoid (0-0.1) - 0.0-0.1 and 0.9-1.0 range - extremes
     progressionValue = 1 - (1 - Math.exp(-progressionInput * 10)) * 0.1;
@@ -297,11 +297,11 @@ export function calculateSymmetricalMultiplier(
     // Sigmoid (0.9-1.0) - 0.0-0.1 and 0.9-1.0 range (symmetrical) - extremes
     progressionValue = 0.1 + (1 - Math.exp(-(progressionInput - 0.9) * 10)) * 0.1;
   }
-  
+
   // Map progression value to multiplier range
   const range = maxMultiplier - minMultiplier;
   const multiplier = minMultiplier + (progressionValue * range);
-  
+
   // Ensure we never quite reach the extremes
   const buffer = range * 0.001; // 0.1% buffer from extremes
   return Math.max(minMultiplier + buffer, Math.min(maxMultiplier - buffer, multiplier));
@@ -313,11 +313,11 @@ export function calculateSymmetricalMultiplier(
 // Central source of truth for vineyard size distribution used by both generation and cost/work calculations
 export const HECTARE_BUCKETS: Array<{ w: number; min: number; max: number }> = [
   { w: 0.25, min: 0.05, max: 0.5 },    // Very Small 25%
-  { w: 0.35, min: 0.5,  max: 2.5 },    // Small 35%
-  { w: 0.28, min: 2.5,  max: 5 },      // Medium 28%
-  { w: 0.07, min: 5,    max: 10 },     // Large 7%
-  { w: 0.03, min: 10,   max: 20 },     // Very Large 3%
-  { w: 0.014, min: 20,  max: 100 },    // Extra Large 1.4%
+  { w: 0.35, min: 0.5, max: 2.5 },    // Small 35%
+  { w: 0.28, min: 2.5, max: 5 },      // Medium 28%
+  { w: 0.07, min: 5, max: 10 },     // Large 7%
+  { w: 0.03, min: 10, max: 20 },     // Very Large 3%
+  { w: 0.014, min: 20, max: 100 },    // Extra Large 1.4%
   { w: 0.005, min: 100, max: 500 },    // Ultra Large 0.5%
   { w: 0.001, min: 500, max: 2000 }    // Massive 0.1%
 ];
@@ -401,34 +401,34 @@ export function vineyardAgePrestigeModifier(vineAge: number): number {
  * @returns Order amount multiplier
  */
 export function calculateOrderAmount(
-  selectedWine: SelectedWine, 
-  calculatedBasePrice: number, 
+  selectedWine: SelectedWine,
+  calculatedBasePrice: number,
   orderType: keyof typeof SALES_CONSTANTS.CUSTOMER_TYPES
 ): number {
   const selectedOrderType = SALES_CONSTANTS.CUSTOMER_TYPES[orderType];
-  
+
   if (!selectedOrderType) {
     console.warn(`Unknown order type: ${orderType}`);
     return 1.0; // Default multiplier
   }
-  
+
   // Calculate price difference from base price (ratio of asking price to calculated base price)
   const priceDifference = selectedWine.askingPrice / calculatedBasePrice;
-  
+
   // Enhanced price adjustment with more aggressive formula for discounts
   let amountAdjustment = 1.0;
-  
+
   if (priceDifference < 1) {
     // Lower price than base (discount)
     // Calculate percentage below base price (0 to 1 scale where 1 = 100% discount)
     const discountLevel = 1 - priceDifference;
-    
+
     // Define discount threshold constants locally
     const SMALL_DISCOUNT_THRESHOLD = 0.1;   // 10% discount threshold
     const MEDIUM_DISCOUNT_THRESHOLD = 0.5;  // 50% discount threshold
     const LARGE_DISCOUNT_THRESHOLD = 0.9;   // 90% discount threshold
     const MAX_DISCOUNT_MODIFIER = 10;       // Maximum discount modifier (10x)
-    
+
     // New formula that more closely matches our desired curve:
     // 10% discount -> 10% boost
     // 25% discount -> ~35% boost
@@ -452,19 +452,19 @@ export function calculateOrderAmount(
       // Extreme growth approaching infinity as discount approaches 100%
       // 0.9 -> 4.0, 0.99 -> 10.0, 0.999 -> 100.0
       amountAdjustment = 1 + (1 / (1 - discountLevel) * discountLevel * 10);
-      
+
       // Cap at MAX_DISCOUNT_MODIFIER to avoid excessive orders
       amountAdjustment = Math.min(amountAdjustment, MAX_DISCOUNT_MODIFIER);
     }
   } else {
     // Higher price than base (premium) - Harsh punishment for overpricing
     const premiumLevel = priceDifference - 1; // 0 = no premium, 1 = 100% premium, 9 = 900% premium
-    
+
     // Define premium punishment thresholds
     const SMALL_PREMIUM_THRESHOLD = 0.2;   // 20% premium threshold
     const MEDIUM_PREMIUM_THRESHOLD = 1.0;  // 100% premium threshold (2x price)
     const LARGE_PREMIUM_THRESHOLD = 5.0;   // 500% premium threshold (6x price)
-    
+
     // Moderate premium punishment formula (half as harsh):
     // 20% premium -> 0.9x quantity (10% reduction)
     // 50% premium -> 0.75x quantity (25% reduction)
@@ -488,11 +488,11 @@ export function calculateOrderAmount(
       // 5.0 -> 0.05, 10.0 -> 0.005, 20.0 -> 0.0005
       amountAdjustment = Math.pow(0.1, premiumLevel / 10);
     }
-    
+
     // Ensure minimum quantity (at least 1% of base quantity)
     amountAdjustment = Math.max(amountAdjustment, 0.01);
   }
-  
+
   return amountAdjustment;
 }
 
@@ -511,9 +511,9 @@ export function calculateOrderAmount(
  */
 export function NormalizeScrewed1000To01WithTail(prestige: number): number {
   const safePrestige = Math.max(0, prestige || 0);
-  
+
   let normalized: number;
-  
+
   if (safePrestige <= 10) {
     // Most companies: 0.1-10 prestige → 0.1-0.7 (linear with slight curve)
     const ratio = safePrestige / 10;
@@ -532,13 +532,13 @@ export function NormalizeScrewed1000To01WithTail(prestige: number): number {
     const excessRatio = Math.min(excess / 1000, 1); // Cap at 2000 for calculation
     normalized = 0.98 + (0.02 * excessRatio);
   }
-  
+
   // Use squashNormalizeTail only for very high prestige (>1000) to prevent hard 1.0
   if (safePrestige > 1000) {
     const result = squashNormalizeTail(normalized, 0.98, 0.999, 5);
     return result;
   }
-  
+
   return Math.min(0.999, Math.max(0.001, normalized));
 }
 
@@ -597,4 +597,52 @@ export function Normalize1000To01WithTail(prestige: number): number {
 
 // ===== EXPORT TYPES =====
 
+/**
+ * Normalize raw XP to a 0-1 scale.
+ * 
+ * Mapping:
+ * 0 XP -> 0.00
+ * 25 XP -> ~0.019 (1.9%) - Visible progress for first tick
+ * 1000 XP -> 0.25 - Solid milestone
+ * 10k XP -> 0.60 - Major milestone
+ * 100k XP -> 0.85 - Expert
+ * 1M XP -> 0.95 - Master
+ * >1M XP -> Approaches 1.0 slowly
+ */
+export function normalizeXP(xp: number): number {
+  const x = Math.max(0, xp || 0);
+
+  if (x <= 1000) {
+    // 0 - 1000 XP: Power curve to give early visibility starting from 0
+    // x=0 -> 0
+    // x=25 -> 0.25 * (25/1000)^0.7 ≈ 0.018 (1.8%)
+    // x=1000 -> 0.25
+    return 0.25 * Math.pow(x / 1000, 0.7);
+  } else if (x <= 10000) {
+    // 1k - 10k XP: Logarithmic growth
+    // x=1000 -> 0.25
+    // x=10000 -> 0.60
+    // Range is 0.35. Log10(10000/1000) = 1.
+    return 0.25 + 0.35 * Math.log10(x / 1000);
+  } else if (x <= 100000) {
+    // 10k - 100k XP: Logarithmic growth
+    // x=10000 -> 0.60
+    // x=100000 -> 0.85
+    // Range is 0.25. Log10(100000/10000) = 1.
+    return 0.60 + 0.25 * Math.log10(x / 10000);
+  } else if (x <= 1000000) {
+    // 100k - 1M XP: Slow logarithmic growth
+    // x=100000 -> 0.85
+    // x=1000000 -> 0.95
+    // Range is 0.10.
+    return 0.85 + 0.10 * Math.log10(x / 100000);
+  } else {
+    // > 1M XP: Tail squashing
+    // Use a slow linear projection and squash it
+    const projected = 0.95 + (x - 1000000) * 0.0000001;
+    return squashNormalizeTail(projected, 0.95, 0.999, 5);
+  }
+}
+
 export type { SelectedWine };
+

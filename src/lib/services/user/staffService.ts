@@ -11,6 +11,26 @@ import {
 import { calculateWage } from '../finance/wageService';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
+import { normalizeXP } from '@/lib/utils/calculator';
+
+/**
+ * Calculate effective skill level combining base skill and experience.
+ * Formula: Effective = Base + (XP_Normalized * (1 - Base))
+ * This ensures that as XP approaches max (1.0), the effective skill approaches 1.0,
+ * filling the gap in the base skill.
+ * 
+ * @param baseSkill The base skill level (0-1)
+ * @param rawXP The raw experience points
+ * @returns Effective skill level (0-1)
+ */
+export function calculateEffectiveSkill(baseSkill: number, rawXP: number): number {
+  const xpNormalized = normalizeXP(rawXP);
+  // Ensure baseSkill is within 0-1 for the calculation (though it should be already)
+  const safeBase = Math.max(0, Math.min(1, baseSkill));
+
+  // XP fills the remaining gap to 1.0
+  return safeBase + (xpNormalized * (1 - safeBase));
+}
 
 /**
  * Generate random skills based on skill level and specializations
@@ -102,17 +122,15 @@ export function createStaff(
       season: gameState.season || 'Spring',
       year: gameState.currentYear || 2025
     },
-    teamIds: []
+    teamIds: [],
+    experience: {}
   };
 }
 
 /**
- * Add a staff member to the game state and database
+ * Add a staff member (Business Logic: orchestrates DB save + game state + notification)
  */
 export async function addStaff(staff: Staff): Promise<Staff | null> {
-  const gameState = getGameState();
-  const currentStaff = gameState.staff || [];
-
   // Save to database
   const success = await saveStaffToDb(staff);
   if (!success) {
@@ -121,14 +139,23 @@ export async function addStaff(staff: Staff): Promise<Staff | null> {
   }
 
   // Update game state
+  const gameState = getGameState();
+  const currentStaff = gameState.staff || [];
   updateGameState({ staff: [...currentStaff, staff] });
 
-  await notificationService.addMessage(`${staff.name} has been hired!`, 'staffService.hireStaff', 'Staff Hiring', NotificationCategory.STAFF_MANAGEMENT);
+  // Send notification
+  await notificationService.addMessage(
+    `${staff.name} has been hired!`,
+    'staffService.hireStaff',
+    'Staff Hiring',
+    NotificationCategory.STAFF_MANAGEMENT
+  );
+
   return staff;
 }
 
 /**
- * Remove a staff member from the game state and database
+ * Remove a staff member (Business Logic: orchestrates DB delete + game state)
  */
 export async function removeStaff(staffId: string): Promise<boolean> {
   const gameState = getGameState();
@@ -140,12 +167,14 @@ export async function removeStaff(staffId: string): Promise<boolean> {
     return false;
   }
 
+  // Delete from database
   const success = await deleteStaffFromDb(staffId);
   if (!success) {
     console.error('Failed to remove staff member');
     return false;
   }
 
+  // Update game state
   updateGameState({ staff: currentStaff.filter(s => s.id !== staffId) });
 
   console.log(`${staff.name} has left the company`);
@@ -153,22 +182,24 @@ export async function removeStaff(staffId: string): Promise<boolean> {
 }
 
 /**
- * Get all staff members
+ * Get all staff members (from database)
+ * Follows vineyard pattern: reads from DB, not game state
  */
-export function getAllStaff(): Staff[] {
-  return getGameState().staff || [];
+export async function getAllStaff(): Promise<Staff[]> {
+  return await loadStaffFromDb();
 }
 
 /**
- * Get a staff member by ID
+ * Get a staff member by ID (from database)
+ * Follows vineyard pattern: reads from DB, not game state
  */
-export function getStaffById(staffId: string): Staff | undefined {
-  const staff = getAllStaff();
+export async function getStaffById(staffId: string): Promise<Staff | undefined> {
+  const staff = await loadStaffFromDb();
   return staff.find(s => s.id === staffId);
 }
 
 /**
- * Initialize staff system (load from database)
+ * Initialize staff system (Business Logic: load from DB + update game state)
  */
 export async function initializeStaffSystem(): Promise<void> {
   try {
@@ -180,4 +211,27 @@ export async function initializeStaffSystem(): Promise<void> {
   }
 }
 
+/**
+ * Award experience to a staff member (Business Logic: calculate XP + update + save)
+ */
+export async function awardExperience(staffId: string, amount: number, categories: string[]): Promise<void> {
+  const staff = await getStaffById(staffId);
+  if (!staff) return;
 
+  // Calculate new experience
+  const newExperience = { ...staff.experience };
+  for (const category of categories) {
+    newExperience[category] = (newExperience[category] || 0) + amount;
+  }
+
+  const updatedStaff = { ...staff, experience: newExperience };
+
+  // Update game state
+  const gameState = getGameState();
+  const currentStaff = gameState.staff || [];
+  const updatedStaffList = currentStaff.map(s => s.id === staffId ? updatedStaff : s);
+  updateGameState({ staff: updatedStaffList });
+
+  // Save to database
+  await saveStaffToDb(updatedStaff);
+}

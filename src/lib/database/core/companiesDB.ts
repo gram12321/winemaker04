@@ -16,6 +16,7 @@ export interface Company {
   lastPlayed: Date;
   createdAt: Date;
   updatedAt: Date;
+  startingCountry?: string; // Starting country for companies using new starting conditions system
   // Public company fields
   totalShares?: number;
   outstandingShares?: number;
@@ -25,6 +26,7 @@ export interface Company {
   lastDividendPaid?: GameDate;
   marketCap?: number;
   sharePrice?: number;
+  initialVineyardValue?: number; // Initial family contribution (vineyard value at company creation)
 }
 
 /**
@@ -44,6 +46,7 @@ function mapCompanyFromDB(dbCompany: any): Company {
     lastPlayed: dbCompany.last_played ? new Date(dbCompany.last_played) : new Date(),
     createdAt: new Date(dbCompany.created_at),
     updatedAt: new Date(dbCompany.updated_at),
+    startingCountry: dbCompany.starting_country || undefined,
     // Public company fields
     totalShares: dbCompany.total_shares ? Number(dbCompany.total_shares) : undefined,
     outstandingShares: dbCompany.outstanding_shares ? Number(dbCompany.outstanding_shares) : undefined,
@@ -56,7 +59,8 @@ function mapCompanyFromDB(dbCompany: any): Company {
       year: dbCompany.last_dividend_paid_year
     } : undefined,
     marketCap: dbCompany.market_cap ? Number(dbCompany.market_cap) : undefined,
-    sharePrice: dbCompany.share_price ? Number(dbCompany.share_price) : undefined
+    sharePrice: dbCompany.share_price ? Number(dbCompany.share_price) : undefined,
+    initialVineyardValue: dbCompany.initial_vineyard_value ? Number(dbCompany.initial_vineyard_value) : undefined
   };
 }
 
@@ -76,6 +80,7 @@ export interface CompanyData {
   money: number;
   prestige: number;
   last_played?: string;
+  starting_country?: string;
   // Public company fields
   total_shares?: number;
   outstanding_shares?: number;
@@ -87,6 +92,7 @@ export interface CompanyData {
   last_dividend_paid_year?: number;
   market_cap?: number;
   share_price?: number;
+  initial_vineyard_value?: number;
 }
 
 export const insertCompany = async (companyData: CompanyData): Promise<{ success: boolean; data?: any; error?: string }> => {

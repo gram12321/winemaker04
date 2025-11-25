@@ -89,9 +89,12 @@ CREATE TABLE users (
     name text NOT NULL,
     avatar text DEFAULT 'default',
     avatar_color text DEFAULT 'blue',
+    cash_balance numeric DEFAULT 0,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
+
+COMMENT ON COLUMN users.cash_balance IS 'Player personal cash balance in euros, used for company investments';
 
 -- Companies table
 CREATE TABLE companies (
@@ -107,12 +110,35 @@ CREATE TABLE companies (
     credit_rating integer DEFAULT 50 CHECK (credit_rating >= 0 AND credit_rating <= 100),
     economy_phase text DEFAULT 'Stable' CHECK (economy_phase IN ('Crash', 'Recession', 'Stable', 'Expansion', 'Boom')),
     starting_country text,
+    -- Public company system fields
+    total_shares bigint DEFAULT 1000000,
+    outstanding_shares bigint DEFAULT 0,
+    player_shares bigint DEFAULT 1000000,
+    initial_ownership_pct numeric DEFAULT 100.0,
+    dividend_rate numeric DEFAULT 0,
+    last_dividend_paid_week integer,
+    last_dividend_paid_season text,
+    last_dividend_paid_year integer,
+    market_cap numeric DEFAULT 0,
+    share_price numeric DEFAULT 0,
+    initial_vineyard_value numeric DEFAULT 0,
     last_played timestamptz DEFAULT now(),
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
 
 COMMENT ON COLUMN companies.starting_country IS 'Starting country selected during company creation (France, Italy, Germany, Spain, United States)';
+COMMENT ON COLUMN companies.total_shares IS 'Total authorized shares for the company';
+COMMENT ON COLUMN companies.outstanding_shares IS 'Shares held by outside investors';
+COMMENT ON COLUMN companies.player_shares IS 'Shares held by the player';
+COMMENT ON COLUMN companies.initial_ownership_pct IS 'Player initial ownership percentage (0-100)';
+COMMENT ON COLUMN companies.dividend_rate IS 'Current dividend rate (fixed per share in euros)';
+COMMENT ON COLUMN companies.last_dividend_paid_week IS 'Week when last dividend was paid';
+COMMENT ON COLUMN companies.last_dividend_paid_season IS 'Season when last dividend was paid';
+COMMENT ON COLUMN companies.last_dividend_paid_year IS 'Year when last dividend was paid';
+COMMENT ON COLUMN companies.market_cap IS 'Current market capitalization';
+COMMENT ON COLUMN companies.share_price IS 'Current share price';
+COMMENT ON COLUMN companies.initial_vineyard_value IS 'Initial vineyard value at company creation (family contribution for equity calculation)';
 
 -- User settings table
 CREATE TABLE user_settings (
