@@ -3,6 +3,7 @@ import { Season } from '../../types/types';
 import { GAME_INITIALIZATION } from '../../constants/constants';
 import { insertCompany, insertUser, getCompanyById, getCompanyByName, getUserCompanies, getAllCompanies as loadAllCompanies, updateCompany as updateCompanyInDB, deleteCompany as deleteCompanyFromDB, getCompanyStats as loadCompanyStats, checkCompanyNameExists, type Company, type CompanyData } from '@/lib/database';
 import { initializeLenders } from '../finance/lenderService';
+import { calculateInitialShareCount } from '../../constants/financeConstants';
 
 export interface CompanyCreateData {
   name: string;
@@ -78,7 +79,8 @@ class CompanyService {
       const totalCapital = FIXED_PLAYER_INVESTMENT + outsideInvestment;
       const playerOwnershipPct = totalCapital > 0 ? (FIXED_PLAYER_INVESTMENT / totalCapital) * 100 : 100;
       
-      const TOTAL_SHARES = 1000000; // Fixed total shares
+      // Calculate share count based on total capital and target share price (€50)
+      const TOTAL_SHARES = calculateInitialShareCount(totalCapital);
       const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
       const outstandingShares = TOTAL_SHARES - playerShares;
 

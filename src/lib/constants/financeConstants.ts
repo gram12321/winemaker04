@@ -50,6 +50,24 @@ export const TRANSACTION_CATEGORIES = {
   LOAN_PREPAYMENT_FEE: 'Loan Prepayment Fee'
 } as const;
 
+// Categories that should be capitalized (affect assets/cash but not P&L)
+export const CAPITALIZED_TRANSACTION_CATEGORIES = new Set<string>([
+  TRANSACTION_CATEGORIES.VINEYARD_PURCHASE,
+  TRANSACTION_CATEGORIES.EQUIPMENT_PURCHASE,
+  TRANSACTION_CATEGORIES.BUILDING_CONSTRUCTION,
+  TRANSACTION_CATEGORIES.VINEYARD_PLANTING
+]);
+
+// Transaction categories that should appear as capital/financing flows in cash flow statements
+export const CAPITAL_FLOW_TRANSACTION_CATEGORIES = new Set<string>([
+  TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
+  TRANSACTION_CATEGORIES.LOAN_RECEIVED,
+  TRANSACTION_CATEGORIES.LOAN_PAYMENT,
+  TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE,
+  TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT,
+  ...CAPITALIZED_TRANSACTION_CATEGORIES
+]);
+
 // Default financial data structure for components
 export const DEFAULT_FINANCIAL_DATA = {
   income: 0,
@@ -91,3 +109,21 @@ export const FINANCE_PERIOD_LABELS = {
     expenses: 'ALL-TIME EXPENSES'
   }
 } as const;
+
+// Share calculation constants
+export const SHARE_CALCULATION = {
+  TARGET_SHARE_PRICE: 50, // Target share price in euros (€50)
+  MIN_SHARES: 10000, // Minimum shares for liquidity
+} as const;
+
+/**
+ * Calculate initial share count based on total company capital
+ * Uses target share price of €50 to determine appropriate share count
+ * 
+ * @param totalCapital Total company capital (player + family + outside investment)
+ * @returns Calculated share count (minimum 10,000 for liquidity)
+ */
+export function calculateInitialShareCount(totalCapital: number): number {
+  const calculatedShares = Math.round(totalCapital / SHARE_CALCULATION.TARGET_SHARE_PRICE);
+  return Math.max(calculatedShares, SHARE_CALCULATION.MIN_SHARES);
+}

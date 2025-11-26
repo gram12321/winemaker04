@@ -6,6 +6,7 @@ import { supabase } from '@/lib/database';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
+import { calculateInitialShareCount } from '@/lib/constants/financeConstants';
 import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
 import { companyService } from '../user/companyService';
@@ -176,7 +177,8 @@ export async function applyStartingConditions(
     
     // Calculate share structure based on total company value
     const playerOwnershipPct = totalCompanyValue > 0 ? (playerShareContribution / totalCompanyValue) * 100 : 100;
-    const TOTAL_SHARES = 1000000;
+    // Calculate share count based on total capital and target share price (€50)
+    const TOTAL_SHARES = calculateInitialShareCount(totalCompanyValue);
     const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
     const outstandingShares = TOTAL_SHARES - playerShares;
 

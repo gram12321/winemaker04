@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
-import { Button } from '@/components/ui';
+import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Input } from '@/components/ui/shadCN/input';
 import { Label } from '@/components/ui/shadCN/label';
-import { formatNumber, getCreditRatingCategory } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { companyService } from '@/lib/services/user/companyService';
 import { getMarketValue, updateMarketValue } from '@/lib/services/finance/shareValueService';
@@ -15,10 +15,15 @@ import {
   calculateDividendPayment,
   areDividendsDue,
   getShareMetrics,
-  type ShareMetrics
+  getShareholderBreakdown,
+  getHistoricalShareMetrics,
+  type ShareMetrics,
+  type ShareholderBreakdown,
+  type HistoricalShareMetric
 } from '@/lib/services/finance/shareManagementService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 export function ShareManagementPanel() {
   const gameState = useGameState();
@@ -34,6 +39,8 @@ export function ShareManagementPanel() {
   const [success, setSuccess] = useState<string | null>(null);
   const [dividendsDue, setDividendsDue] = useState(false);
   const [shareMetrics, setShareMetrics] = useState<ShareMetrics | null>(null);
+  const [shareholderBreakdown, setShareholderBreakdown] = useState<ShareholderBreakdown | null>(null);
+  const [historicalMetrics, setHistoricalMetrics] = useState<HistoricalShareMetric[]>([]);
 
   // Load company data and market value
   useEffect(() => {
@@ -66,6 +73,14 @@ export function ShareManagementPanel() {
         // Load share metrics
         const metrics = await getShareMetrics(companyId);
         setShareMetrics(metrics);
+
+        // Load shareholder breakdown
+        const breakdown = await getShareholderBreakdown(companyId);
+        setShareholderBreakdown(breakdown);
+
+        // Load historical metrics
+        const historical = await getHistoricalShareMetrics(companyId, 2);
+        setHistoricalMetrics(historical);
       } catch (err) {
         console.error('Error loading share management data:', err);
         setError('Failed to load share data');
@@ -106,6 +121,8 @@ export function ShareManagementPanel() {
           setMarketValue(marketData);
           const metrics = await getShareMetrics(companyId);
           setShareMetrics(metrics);
+          const latestBreakdown = await getShareholderBreakdown(companyId);
+          setShareholderBreakdown(latestBreakdown);
         }
       } else {
         setError(result.error || 'Failed to issue stock');
@@ -143,6 +160,8 @@ export function ShareManagementPanel() {
           setMarketValue(marketData);
           const metrics = await getShareMetrics(companyId);
           setShareMetrics(metrics);
+          const latestBreakdown = await getShareholderBreakdown(companyId);
+          setShareholderBreakdown(latestBreakdown);
         }
       } else {
         setError(result.error || 'Failed to buy back stock');
@@ -231,7 +250,32 @@ export function ShareManagementPanel() {
     );
   }
 
-  const creditRatingLabel = shareMetrics ? getCreditRatingCategory(shareMetrics.creditRating) : null;
+  // Color mappings for metrics (matching the reference image style)
+  const metricColors = {
+    sharePrice: '#3b82f6',      // Blue
+    bookValue: '#10b981',       // Green
+    revenue: '#ef4444',         // Red
+    earnings: '#f97316',        // Orange
+    dividend: '#a855f7',        // Purple
+    assets: '#6366f1',          // Indigo
+    cash: '#06b6d4',            // Cyan
+    debt: '#f59e0b',            // Amber
+  };
+
+  // Prepare pie chart data for shareholder breakdown
+  const pieChartData = shareholderBreakdown ? [
+    { name: 'Player', value: shareholderBreakdown.playerShares, pct: shareholderBreakdown.playerPct, color: '#3b82f6' },
+    { name: 'Family', value: shareholderBreakdown.familyShares, pct: shareholderBreakdown.familyPct, color: '#10b981' },
+    { name: 'Outside', value: shareholderBreakdown.outsideShares, pct: shareholderBreakdown.outsidePct, color: '#f97316' }
+  ].filter(item => item.value > 0) : [];
+
+  // Prepare historical graph data (simplified - show key metrics)
+  const graphData = historicalMetrics.map(point => ({
+    period: `${point.season.substring(0, 3)} ${point.year}`,
+    sharePrice: point.sharePrice,
+    bookValue: point.bookValuePerShare,
+    earnings: point.earningsPerShare,
+  }));
 
   return (
     <Card>
@@ -240,110 +284,259 @@ export function ShareManagementPanel() {
         <CardDescription>Manage company shares, dividends, and market value</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Public Company Overview */}
-        <div className="border border-gray-300 rounded-md p-4 bg-gradient-to-br from-blue-50 to-green-50">
-          <h3 className="font-semibold text-gray-800 mb-3 uppercase text-sm tracking-wider">Public Company Overview</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Market Capitalization</div>
-              <div className="font-semibold text-lg text-green-600">
-                {formatNumber(marketValue.marketCap, { currency: true })}
+        {/* Public Company Overview and Per-Share Metrics in 2-column grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Public Company Overview */}
+          <div className="border border-gray-300 rounded-md p-4 bg-gradient-to-br from-blue-50 to-green-50">
+            <h3 className="font-semibold text-gray-800 mb-3 uppercase text-sm tracking-wider">Public Company Overview</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Market Capitalization</div>
+                <div className="font-semibold text-lg text-green-600">
+                  {formatNumber(marketValue.marketCap, { currency: true })}
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Share Price</div>
-              <div className="font-semibold text-lg text-blue-600">
-                {formatNumber(marketValue.sharePrice, { currency: true, decimals: 2, forceDecimals: true })}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Share Price</div>
+                <div className="font-semibold text-lg text-blue-600">
+                  {formatNumber(marketValue.sharePrice, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Player Ownership</div>
-              <div className="font-semibold text-lg text-green-600">
-                {formatNumber(playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Player Ownership</div>
+                <div className="font-semibold text-lg text-green-600">
+                  {formatNumber(playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Total Shares</div>
-              <div className="font-semibold text-base">
-                {formatNumber(company.totalShares || 0, { decimals: 0 })}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Total Shares</div>
+                <div className="font-semibold text-base">
+                  {formatNumber(company.totalShares || 0, { decimals: 0 })}
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Outstanding Shares</div>
-              <div className="font-semibold text-base">
-                {formatNumber(company.outstandingShares || 0, { decimals: 0 })}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Outstanding Shares</div>
+                <div className="font-semibold text-base">
+                  {formatNumber(company.outstandingShares || 0, { decimals: 0 })}
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Player Shares</div>
-              <div className="font-semibold text-base">
-                {formatNumber(company.playerShares || 0, { decimals: 0 })}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Player Shares</div>
+                <div className="font-semibold text-base">
+                  {formatNumber(company.playerShares || 0, { decimals: 0 })}
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600">Dividend Rate</div>
-              <div className="font-semibold text-base text-purple-600">
-                {dividendRate > 0 ? formatNumber(dividendRate, { currency: true, decimals: 4 }) + '/share' : 'Not set'}
+              <div className="space-y-1 col-span-2">
+                <div className="text-xs text-gray-600">Dividend Rate</div>
+                <div className="font-semibold text-base text-purple-600">
+                  {dividendRate > 0 ? formatNumber(dividendRate, { currency: true, decimals: 4 }) + '/share' : 'Not set'}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {shareMetrics && (
-          <div className="border border-gray-200 rounded-md p-4 bg-white">
-            <h3 className="font-semibold text-gray-800 mb-3 uppercase text-sm tracking-wider">Per-Share Metrics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          {/* Per-Share Metrics */}
+          {shareMetrics && (
+            <div className="border border-gray-200 rounded-md p-4 bg-white">
+              <h3 className="font-semibold text-gray-800 mb-3 uppercase text-sm tracking-wider">Per-Share Metrics</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-1">
-                <div className="text-xs text-gray-600">Assets / Share</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.sharePrice }}></div>
+                  <div className="text-xs text-gray-600">Share Price</div>
+                </div>
                 <div className="font-semibold text-gray-900">
-                  {formatNumber(shareMetrics.assetPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                  {formatNumber(marketValue.sharePrice, { currency: true, decimals: 2, forceDecimals: true })}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-gray-600">Cash / Share</div>
-                <div className="font-semibold text-gray-900">
-                  {formatNumber(shareMetrics.cashPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.bookValue }}></div>
+                  <div className="text-xs text-gray-600">Book Value / Share</div>
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-gray-600">Debt / Share</div>
-                <div className="font-semibold text-gray-900">
-                  {formatNumber(shareMetrics.debtPerShare, { currency: true, decimals: 2, forceDecimals: true })}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-gray-600">Book Value / Share</div>
                 <div className="font-semibold text-gray-900">
                   {formatNumber(shareMetrics.bookValuePerShare, { currency: true, decimals: 2, forceDecimals: true })}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-gray-600">Revenue / Share (YTD)</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.revenue }}></div>
+                  <div className="text-xs text-gray-600">Revenue / Share (YTD)</div>
+                </div>
                 <div className="font-semibold text-gray-900">
                   {formatNumber(shareMetrics.revenuePerShare, { currency: true, decimals: 2, forceDecimals: true })}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-gray-600">Dividends / Share (YTD)</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.earnings }}></div>
+                  <div className="text-xs text-gray-600">Earnings / Share</div>
+                </div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.earningsPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.dividend }}></div>
+                  <div className="text-xs text-gray-600">Dividend / Share (YTD)</div>
+                </div>
                 <div className="font-semibold text-gray-900">
                   {formatNumber(shareMetrics.dividendPerShareCurrentYear, { currency: true, decimals: 4 })}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-gray-600">Dividends / Share (Last Year)</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.assets }}></div>
+                  <div className="text-xs text-gray-600">Assets / Share</div>
+                </div>
                 <div className="font-semibold text-gray-900">
-                  {formatNumber(shareMetrics.dividendPerSharePreviousYear, { currency: true, decimals: 4 })}
+                  {formatNumber(shareMetrics.assetPerShare, { currency: true, decimals: 2, forceDecimals: true })}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-gray-600">Credit Rating</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.cash }}></div>
+                  <div className="text-xs text-gray-600">Cash / Share</div>
+                </div>
                 <div className="font-semibold text-gray-900">
-                  {creditRatingLabel ?? 'N/A'} ({formatNumber(shareMetrics.creditRating * 100, { decimals: 0 })}%)
+                  {formatNumber(shareMetrics.cashPerShare, { currency: true, decimals: 2, forceDecimals: true })}
                 </div>
               </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: metricColors.debt }}></div>
+                  <div className="text-xs text-gray-600">Debt / Share</div>
+                </div>
+                <div className="font-semibold text-gray-900">
+                  {formatNumber(shareMetrics.debtPerShare, { currency: true, decimals: 2, forceDecimals: true })}
+                </div>
+              </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Charts in Tabs */}
+        <Tabs defaultValue="breakdown" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="breakdown">Shareholder Breakdown</TabsTrigger>
+            <TabsTrigger value="trends">Historical Trends</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="breakdown" className="mt-4">
+            {shareholderBreakdown && pieChartData.length > 0 ? (
+              <div className="border border-gray-200 rounded-md p-4 bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                    <ResponsiveContainer width="100%" height={256}>
+                      <PieChart>
+                        <Pie
+                          data={pieChartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={(entry: any) => `${entry.name}: ${formatNumber(entry.pct, { decimals: 1 })}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {pieChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          formatter={(value: number, _name: string, props: any) => [
+                            `${formatNumber(value, { decimals: 0 })} shares (${formatNumber(props.payload.pct, { decimals: 1 })}%)`,
+                            props.payload.name
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-col justify-center space-y-3">
+                    {pieChartData.map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }}></div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm">{item.name}</div>
+                          <div className="text-xs text-gray-600">
+                            {formatNumber(item.value, { decimals: 0 })} shares ({formatNumber(item.pct, { decimals: 1 })}%)
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-gray-200 rounded-md p-4 bg-white text-center text-gray-500">
+                No shareholder data available
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="trends" className="mt-4">
+            {historicalMetrics.length > 0 ? (
+              <div className="border border-gray-200 rounded-md p-4 bg-white">
+                <div className="w-full" style={{ height: '256px', minHeight: '256px' }}>
+                  <ResponsiveContainer width="100%" height={256}>
+                    <LineChart data={graphData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="period" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => formatNumber(value, { currency: true, decimals: 0 })}
+                      />
+                      <RechartsTooltip
+                        formatter={(value: number, name: string) => [
+                          formatNumber(value, { currency: true, decimals: 2 }),
+                          name
+                        ]}
+                        labelFormatter={(label) => `Period: ${label}`}
+                      />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="sharePrice" 
+                        stroke={metricColors.sharePrice} 
+                        strokeWidth={2} 
+                        dot={false}
+                        name="Share Price"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="bookValue" 
+                        stroke={metricColors.bookValue} 
+                        strokeWidth={2} 
+                        dot={false}
+                        name="Book Value"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="earnings" 
+                        stroke={metricColors.earnings} 
+                        strokeWidth={2} 
+                        dot={false}
+                        name="Earnings"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-gray-200 rounded-md p-4 bg-white text-center text-gray-500">
+                No historical data available
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Market Operations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

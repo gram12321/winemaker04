@@ -3,6 +3,7 @@ import type { Transaction } from '@/lib/types/types';
 import { loadVineyards } from '../../database/activities/vineyardDB';
 import { loadWineBatches } from '../../database/activities/inventoryDB';
 import { SEASON_ORDER, TRANSACTION_CATEGORIES } from '@/lib/constants';
+import { CAPITAL_FLOW_TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { companyService } from '../user/companyService';
@@ -198,19 +199,18 @@ export const calculateFinancialData = async (
   const categorizedTransactions: Record<string, { total: number; transactions: Transaction[] }> = {};
   
   filteredTransactions.forEach(transaction => {
-    if (!categorizedTransactions[transaction.category]) {
-      categorizedTransactions[transaction.category] = { total: 0, transactions: [] };
+    const isCapitalFlow = CAPITAL_FLOW_TRANSACTION_CATEGORIES.has(transaction.category);
+
+    if (!isCapitalFlow) {
+      if (!categorizedTransactions[transaction.category]) {
+        categorizedTransactions[transaction.category] = { total: 0, transactions: [] };
+      }
+      
+      categorizedTransactions[transaction.category].total += transaction.amount;
+      categorizedTransactions[transaction.category].transactions.push(transaction);
     }
     
-    categorizedTransactions[transaction.category].total += transaction.amount;
-    categorizedTransactions[transaction.category].transactions.push(transaction);
-    
-    // Exclude loan-related transactions from revenue calculation
-    const isLoanTransaction = transaction.category === 'Loan Received' || 
-                             transaction.category === 'Loan Payment' ||
-                             transaction.category === 'Loan Origination Fee';
-    
-    if (!isLoanTransaction) {
+    if (!isCapitalFlow) {
       if (transaction.amount >= 0) {
         income += transaction.amount;
       } else {
@@ -267,16 +267,25 @@ export const calculateFinancialData = async (
   let outsideInvestment = 0;
   
   transactions.forEach(transaction => {
-    // Player cash contribution
-    if (transaction.description === 'Initial Capital: Player cash contribution' || 
-        (transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT && 
-         transaction.description.includes('Player cash contribution'))) {
+    const description = transaction.description || '';
+    const isInitialInvestmentCategory = transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT;
+    const isPositiveCapital = transaction.amount > 0;
+
+    const isPlayerContribution =
+      description === 'Initial Capital: Player cash contribution' ||
+      (isInitialInvestmentCategory && description.includes('Player cash contribution'));
+
+    if (isPlayerContribution) {
       playerContribution += transaction.amount;
+      return;
     }
-    // Outside investment
-    if (transaction.description === 'Outside investment committed' ||
-        (transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT &&
-         transaction.description.includes('Outside investment'))) {
+
+    const isOutsideInvestment =
+      description === 'Outside investment committed' ||
+      (isInitialInvestmentCategory && description.includes('Outside investment')) ||
+      (isInitialInvestmentCategory && description.startsWith('Stock Issuance'));
+
+    if (isOutsideInvestment && isPositiveCapital) {
       outsideInvestment += transaction.amount;
     }
   });
@@ -300,12 +309,9 @@ export const calculateFinancialData = async (
   let allTimeExpenses = 0;
   
   transactions.forEach(transaction => {
-    const isLoanTransaction = transaction.category === TRANSACTION_CATEGORIES.LOAN_RECEIVED || 
-                             transaction.category === TRANSACTION_CATEGORIES.LOAN_PAYMENT ||
-                             transaction.category === TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE;
-    const isInitialInvestment = transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT;
+    const isCapitalFlow = CAPITAL_FLOW_TRANSACTION_CATEGORIES.has(transaction.category);
     
-    if (!isLoanTransaction && !isInitialInvestment) {
+    if (!isCapitalFlow) {
       if (transaction.amount >= 0) {
         allTimeIncome += transaction.amount;
       } else {

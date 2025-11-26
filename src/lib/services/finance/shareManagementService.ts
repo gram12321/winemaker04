@@ -3,7 +3,7 @@ import { companyService } from '../user/companyService';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { addTransaction, calculateFinancialData, loadTransactions } from './financeService';
 import { TRANSACTION_CATEGORIES } from '../../constants';
-import { updateMarketValue } from './shareValueService';
+import { updateMarketValue, getMarketValue } from './shareValueService';
 import { getGameState } from '../core/gameState';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
@@ -27,9 +27,19 @@ export interface ShareMetrics {
   debtPerShare: number;
   bookValuePerShare: number;
   revenuePerShare: number;
+  earningsPerShare: number;
   dividendPerShareCurrentYear: number;
   dividendPerSharePreviousYear: number;
   creditRating: number;
+}
+
+export interface ShareholderBreakdown {
+  playerShares: number;
+  familyShares: number;
+  outsideShares: number;
+  playerPct: number;
+  familyPct: number;
+  outsidePct: number;
 }
 
 type FinancialSnapshot = Awaited<ReturnType<typeof calculateFinancialData>>;
@@ -441,6 +451,7 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
         debtPerShare: 0,
         bookValuePerShare: 0,
         revenuePerShare: 0,
+        earningsPerShare: 0,
         dividendPerShareCurrentYear: 0,
         dividendPerSharePreviousYear: 0,
         creditRating: CREDIT_RATING.DEFAULT_RATING
@@ -455,6 +466,7 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
         debtPerShare: 0,
         bookValuePerShare: 0,
         revenuePerShare: 0,
+        earningsPerShare: 0,
         dividendPerShareCurrentYear: 0,
         dividendPerSharePreviousYear: 0,
         creditRating: CREDIT_RATING.DEFAULT_RATING
@@ -496,12 +508,14 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
       calculatedCash !== null && calculatedCash >= 0 ? calculatedCash : (company.money ?? 0);
 
     const revenueYTD = financialData?.income ?? 0;
+    const netIncome = financialData?.netIncome ?? 0;
 
     const assetPerShare = totalShares > 0 ? totalAssets / totalShares : 0;
     const cashPerShare = totalShares > 0 ? cashBalance / totalShares : 0;
     const debtPerShare = totalShares > 0 ? totalDebt / totalShares : 0;
     const bookValuePerShare = totalShares > 0 ? (totalAssets - totalDebt) / totalShares : 0;
     const revenuePerShare = totalShares > 0 ? revenueYTD / totalShares : 0;
+    const earningsPerShare = totalShares > 0 ? netIncome / totalShares : 0;
 
     const dividendTransactions = transactions.filter(
       (transaction) => transaction.category === TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT
@@ -528,6 +542,7 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
       debtPerShare,
       bookValuePerShare,
       revenuePerShare,
+      earningsPerShare,
       dividendPerShareCurrentYear,
       dividendPerSharePreviousYear,
       creditRating
@@ -540,9 +555,92 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
       debtPerShare: 0,
       bookValuePerShare: 0,
       revenuePerShare: 0,
+      earningsPerShare: 0,
       dividendPerShareCurrentYear: 0,
       dividendPerSharePreviousYear: 0,
       creditRating: CREDIT_RATING.DEFAULT_RATING
+    };
+  }
+}
+
+/**
+ * Get shareholder breakdown (Player/Family/Outside)
+ * Calculates share distribution based on initial equity contributions
+ * 
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @returns Shareholder breakdown with shares and percentages
+ */
+export async function getShareholderBreakdown(companyId?: string): Promise<ShareholderBreakdown> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return {
+        playerShares: 0,
+        familyShares: 0,
+        outsideShares: 0,
+        playerPct: 0,
+        familyPct: 0,
+        outsidePct: 0
+      };
+    }
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return {
+        playerShares: 0,
+        familyShares: 0,
+        outsideShares: 0,
+        playerPct: 0,
+        familyPct: 0,
+        outsidePct: 0
+      };
+    }
+
+    const totalShares = company.totalShares || 0;
+    const playerShares = company.playerShares || 0;
+    const nonPlayerShares = Math.max(totalShares - playerShares, 0);
+
+    // Get initial equity contributions to calculate family vs outside split
+    const financialData = await calculateFinancialData('all');
+    const familyContribution = financialData.familyContribution;
+    const outsideInvestment = financialData.outsideInvestment;
+    // Calculate family and outside shares based on their initial equity proportions
+    // If no initial equity data, assume all outstanding shares are "other investors"
+    let familyShares = 0;
+    let outsideShares = nonPlayerShares;
+
+    const totalNonPlayerEquity = Math.max(familyContribution, 0) + Math.max(outsideInvestment, 0);
+
+    if (totalNonPlayerEquity > 0 && nonPlayerShares > 0) {
+      const familyShareRatio = Math.max(familyContribution, 0) / totalNonPlayerEquity;
+      familyShares = Math.round(nonPlayerShares * familyShareRatio);
+      outsideShares = Math.max(nonPlayerShares - familyShares, 0);
+    }
+
+    const playerPct = totalShares > 0 ? (playerShares / totalShares) * 100 : 0;
+    const familyPct = totalShares > 0 ? (familyShares / totalShares) * 100 : 0;
+    const outsidePct = totalShares > 0 ? (outsideShares / totalShares) * 100 : 0;
+
+    return {
+      playerShares,
+      familyShares,
+      outsideShares,
+      playerPct,
+      familyPct,
+      outsidePct: outsidePct // Explicitly return to avoid unused warning
+    };
+  } catch (error) {
+    console.error('Error calculating shareholder breakdown:', error);
+    return {
+      playerShares: 0,
+      familyShares: 0,
+      outsideShares: 0,
+      playerPct: 0,
+      familyPct: 0,
+      outsidePct: 0
     };
   }
 }
@@ -644,6 +742,108 @@ export async function payDividends(companyId?: string): Promise<{
   } catch (error) {
     console.error('Error paying dividends:', error);
     return { success: false, error: 'Failed to pay dividends' };
+  }
+}
+
+/**
+ * Historical share metric data point
+ */
+export interface HistoricalShareMetric {
+  year: number;
+  season: string;
+  week: number;
+  sharePrice: number;
+  bookValuePerShare: number;
+  earningsPerShare: number;
+  dividendPerShare: number;
+}
+
+/**
+ * Get historical share metrics for trend graph
+ * Calculates metrics for each season/year from transactions
+ * 
+ * @param companyId - Company ID (optional, uses current company if not provided)
+ * @param yearsBack - Number of years to look back (default: 2)
+ * @returns Array of historical metric data points
+ */
+export async function getHistoricalShareMetrics(
+  companyId?: string,
+  yearsBack: number = 2
+): Promise<HistoricalShareMetric[]> {
+  try {
+    if (!companyId) {
+      companyId = getCurrentCompanyId();
+    }
+    
+    if (!companyId) {
+      return [];
+    }
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return [];
+    }
+
+    const gameState = getGameState();
+    const currentYear = gameState.currentYear || 2024;
+    const startYear = Math.max(2024, currentYear - yearsBack);
+    const totalShares = company.totalShares || 0;
+
+    if (totalShares === 0) {
+      return [];
+    }
+
+    const historicalData: HistoricalShareMetric[] = [];
+    const transactions = await loadTransactions();
+
+    // Group transactions by year and season
+    for (let year = startYear; year <= currentYear; year++) {
+      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+      
+      for (const season of seasons) {
+        // Get financial data for this period
+        const financialData = await calculateFinancialData('season', { season, year });
+        
+        // Calculate metrics for this period
+        const netIncome = financialData.netIncome;
+        const totalAssets = financialData.totalAssets;
+        const totalDebt = await calculateTotalOutstandingLoans();
+        
+        const bookValuePerShare = totalShares > 0 ? (totalAssets - totalDebt) / totalShares : 0;
+        const earningsPerShare = totalShares > 0 ? netIncome / totalShares : 0;
+        
+        // Get dividends paid this season
+        const dividendTransactions = transactions.filter(
+          t => t.date.year === year && 
+               t.date.season === season && 
+               t.category === TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT
+        );
+        const dividendsPaid = dividendTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        const dividendPerShare = totalShares > 0 ? dividendsPaid / totalShares : 0;
+        
+        // Get share price (use current market value for now, or calculate from market cap)
+        const marketValue = await getMarketValue(companyId);
+        const sharePrice = marketValue.sharePrice || 0;
+
+        // Only add data point if we have meaningful data (not all zeros)
+        if (year === currentYear || bookValuePerShare > 0 || earningsPerShare !== 0 || dividendPerShare > 0) {
+          historicalData.push({
+            year,
+            season,
+            week: 1, // Use week 1 of each season for consistency
+            sharePrice,
+            bookValuePerShare,
+            earningsPerShare,
+            dividendPerShare
+          });
+        }
+      }
+    }
+
+    return historicalData;
+  } catch (error) {
+    console.error('Error calculating historical share metrics:', error);
+    return [];
   }
 }
 
