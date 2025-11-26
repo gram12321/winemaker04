@@ -22,7 +22,7 @@ const createStaff = (overrides: Partial<Staff> = {}): Staff => {
     financeAndStaff: 0.5
   };
 
-  const { skills, ...rest } = overrides;
+  const { skills, experience, ...rest } = overrides;
 
   return {
     id: 'staff-default',
@@ -34,6 +34,7 @@ const createStaff = (overrides: Partial<Staff> = {}): Staff => {
     teamIds: [],
     skills: { ...defaultSkills, ...(skills ?? {}) },
     workforce: 50,
+    experience: experience ?? {},
     hireDate: { ...baseHireDate },
     ...rest
   };

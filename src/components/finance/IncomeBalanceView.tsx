@@ -222,6 +222,12 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
                   <span className="font-semibold text-base">Company Value</span>
                   <span className="font-bold text-lg">{formatNumber(financialData.totalAssets, { currency: true })}</span>
                 </div>
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <span className="font-medium text-gray-600">Net Worth</span>
+                  <span className={`font-semibold ${getColorClass(netWorth >= 0 ? 0.8 : 0.2)}`}>
+                    {formatNumber(netWorth, { currency: true })}
+                  </span>
+                </div>
               </div>
             </div>
           </FinancialSection>
