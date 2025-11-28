@@ -5,14 +5,14 @@ import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeServic
 import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
 import { getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
-import { calculateNetWorth } from '../lib/services/finance/financeService';
+import { calculateCompanyValue } from '../lib/services/finance/financeService';
 import { recalculateVineyardValues } from '@/lib/services/vineyard/vineyardManager';
 
 /**
  * Unified hook that monitors all prestige-affecting changes and updates prestige events accordingly
  *
  * Company Prestige Updates:
- * - Company value changes (watches net worth = total assets - total liabilities)
+ * - Company value changes (watches company value = total assets - total liabilities)
  * - Weekly decay (monitors time changes and applies decay to all decaying events)
  *
  * Vineyard base prestige is updated directly by domain logic
@@ -20,7 +20,7 @@ import { recalculateVineyardValues } from '@/lib/services/vineyard/vineyardManag
  * vineyard monitoring is needed here.
  */
 export function usePrestigeUpdates() {
-  const lastCompanyNetWorthRef = useRef<number | null>(null);
+  const lastCompanyValueRef = useRef<number | null>(null);
   const lastWeekRef = useRef<number | null>(null);
   const lastSeasonRef = useRef<string | null>(null);
   const lastYearRef = useRef<number | null>(null);
@@ -48,34 +48,34 @@ export function usePrestigeUpdates() {
         const currentSeason = gameState.season || 'Spring';
         const currentYear = gameState.currentYear || 2023;
 
-        // Check if company net worth changed (affects company value prestige)
-        const currentNetWorth = await calculateNetWorth();
+        // Check if company value changed (affects company value prestige)
+        const currentCompanyValue = await calculateCompanyValue();
 
-        if (lastCompanyNetWorthRef.current === null) {
+        if (lastCompanyValueRef.current === null) {
           // Initialize on first run
-          lastCompanyNetWorthRef.current = currentNetWorth;
-        } else if (currentNetWorth !== lastCompanyNetWorthRef.current) {
+          lastCompanyValueRef.current = currentCompanyValue;
+        } else if (currentCompanyValue !== lastCompanyValueRef.current) {
 
           // Update company value prestige with logarithmic scaling
-          const companyValuePrestige = Math.log(currentNetWorth / getMaxLandValue() + 1) * 2;
+          const companyValuePrestige = Math.log(currentCompanyValue / getMaxLandValue() + 1) * 2;
           await updateBasePrestigeEvent(
             'company_finance',
             'company_net_worth',
             companyValuePrestige,
             {
-              companyNetWorth: currentNetWorth,
+              companyNetWorth: currentCompanyValue,
               maxLandValue: getMaxLandValue(),
               prestigeBase01: companyValuePrestige,
             }
           );
 
-          lastCompanyNetWorthRef.current = currentNetWorth;
+          lastCompanyValueRef.current = currentCompanyValue;
 
-          // Recalculate vineyard values on material net worth changes (event-driven refresh)
+          // Recalculate vineyard values on material company value changes (event-driven refresh)
           try {
             await recalculateVineyardValues();
           } catch (err) {
-            console.warn('Vineyard value refresh failed after net worth change:', err);
+            console.warn('Vineyard value refresh failed after company value change:', err);
           }
         }
 

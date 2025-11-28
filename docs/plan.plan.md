@@ -257,14 +257,14 @@ For each metric:
 ## Phase 6: Historical Snapshot System ✅
 
 1. **Created `company_metrics_history` table**
-   - ✅ Stores weekly snapshots of credit rating, prestige, fixed asset ratio
+   - ✅ Stores weekly snapshots of all metrics (credit rating, prestige, fixed asset ratio, share price, book value, EPS, revenue/share, dividend/share, profit margin, revenue growth)
    - ✅ Used for 48-week rolling comparisons
    - ✅ Enables efficient historical trend queries
 
 2. **Unified 48-week comparison system**
-   - ✅ All metrics now use 48-week rolling windows for consistent comparisons
-   - ✅ Trend-based metrics (credit rating, fixed asset ratio, prestige) compare current vs. 48 weeks ago
-   - ✅ Expected-based metrics compare last 48 weeks vs. expected annual values
+   - ✅ All metrics now use unified trend-based comparison (current 48w vs previous 48w)
+   - ✅ Consistent comparison windows across all metrics
+   - ✅ Actual improvement compared to expected improvement rates
 
 3. **Benefits of snapshot system**
    - No need to recalculate historical values
@@ -272,8 +272,43 @@ For each metric:
    - Consistent comparison windows across all metrics
    - Efficient queries (simple SELECT from snapshot table)
 
+## Phase 7: Unified Trend-Based System & Company Value Modifier ✅
+
+1. **Unified trend-based comparison**
+   - ✅ All metrics compare current 48-week rolling to previous 48-week rolling values
+   - ✅ Delta = (Actual Improvement - Expected Improvement)
+   - ✅ Expected improvement rates target 15-30x growth over 200 years (accounting for ups/downs)
+
+2. **Updated baseline improvement rates**
+   - ✅ Earnings/Share: 1.2% per 48 weeks
+   - ✅ Revenue/Share: 1.2% per 48 weeks
+   - ✅ Dividend/Share: 0.3% per 48 weeks (small, player-controlled)
+   - ✅ Revenue Growth: 1.2% per 48 weeks
+   - ✅ Profit Margin: 0.8% per 48 weeks
+   - ✅ Credit Rating: 0.4% per 48 weeks
+   - ✅ Fixed Asset Ratio: 0.2% per 48 weeks
+   - ✅ Prestige: 0.5% per 48 weeks
+
+3. **Market cap modifier**
+   - ✅ Additional expected improvement requirement based on market cap
+   - ✅ Logarithmic scaling: `baseRate × log10(marketCap / baseMarketCap)`
+   - ✅ Makes it progressively harder for larger companies
+   - ✅ Independent of 48-week trend comparison
+   - ✅ Formula: `Expected = (Baseline × Multipliers) + Market Cap Requirement`
+   - ✅ **Note**: Market Cap = Share Price × Total Shares (separate from Company Value = Total Assets - Total Liabilities)
+
+4. **Immediate share structure adjustments**
+   - ✅ Share issuance: Immediate price drop (dilution + 3% market penalty)
+   - ✅ Share buyback: Immediate price boost (concentration + 3% market bonus)
+
+5. **Dividend change prestige events**
+   - ✅ Dividend cuts: Larger negative prestige impact (0.5× multiplier)
+   - ✅ Dividend increases: Smaller positive prestige impact (0.3× multiplier)
+   - ✅ Asymmetric impact reflects market psychology
+   - ✅ Prestige events decay over time
+
 ## Future Enhancements (Optional)
 
-- **Expand snapshots**: Consider storing additional metrics (share price, book value, EPS) in snapshots for faster historical diagram queries
 - Fine-tuning of base adjustments and caps based on gameplay feedback
 - Additional metrics if needed
+- Consider company age or other factors for company value modifier

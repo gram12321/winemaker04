@@ -1,9 +1,10 @@
 import { describe, it, expect} from 'vitest';
 import {
-  EXPECTED_VALUE_BASELINES,
+  EXPECTED_IMPROVEMENT_RATES,
   GROWTH_TREND_CONFIG,
   INCREMENTAL_ANCHOR_CONFIG,
-  INCREMENTAL_METRIC_CONFIG
+  INCREMENTAL_METRIC_CONFIG,
+  MARKET_CAP_MODIFIER_CONFIG
 } from '@/lib/constants/shareValuationConstants';
 import { ECONOMY_EXPECTATION_MULTIPLIERS, ECONOMY_PHASES } from '@/lib/constants/economyConstants';
 
@@ -16,14 +17,13 @@ import { ECONOMY_EXPECTATION_MULTIPLIERS, ECONOMY_PHASES } from '@/lib/constants
 
 describe('Share Valuation System', () => {
   describe('Constants Validation', () => {
-    it('has expected value baselines in reasonable ranges', () => {
-      // Revenue growth baseline (0-1 scale for percentage)
-      expect(EXPECTED_VALUE_BASELINES.revenueGrowth).toBeGreaterThanOrEqual(0);
-      expect(EXPECTED_VALUE_BASELINES.revenueGrowth).toBeLessThanOrEqual(1);
+    it('has expected improvement rates in reasonable ranges', () => {
+      // All improvement rates should be small (targeting 15-30x over 200 years)
+      expect(EXPECTED_IMPROVEMENT_RATES.earningsPerShare).toBeGreaterThan(0);
+      expect(EXPECTED_IMPROVEMENT_RATES.earningsPerShare).toBeLessThan(0.02);
       
-      // Profit margin baseline (0-1 scale for percentage)
-      expect(EXPECTED_VALUE_BASELINES.profitMargin).toBeGreaterThanOrEqual(0);
-      expect(EXPECTED_VALUE_BASELINES.profitMargin).toBeLessThanOrEqual(1);
+      expect(EXPECTED_IMPROVEMENT_RATES.revenuePerShare).toBeGreaterThan(0);
+      expect(EXPECTED_IMPROVEMENT_RATES.revenuePerShare).toBeLessThan(0.02);
     });
 
     it('has economy expectation multipliers for all economy phases', () => {
@@ -92,20 +92,20 @@ describe('Share Valuation System', () => {
       expect(actual.earningsPerShare / expected.earningsPerShare).toBeCloseTo(0.75, 2);
     });
 
-    it('calculates expected values with economy phase adjustment', () => {
-      const baseRevenueGrowth = EXPECTED_VALUE_BASELINES.revenueGrowth; // 0.10
+    it('calculates expected improvement rates with economy phase adjustment', () => {
+      const baseImprovementRate = EXPECTED_IMPROVEMENT_RATES.revenueGrowth; // 0.012 (1.2%)
       
-      // In Boom phase (1.5x multiplier), expected growth should be higher
+      // In Boom phase (1.5x multiplier), expected improvement should be higher
       const boomMultiplier = ECONOMY_EXPECTATION_MULTIPLIERS.Boom;
-      const boomExpectedGrowth = baseRevenueGrowth * boomMultiplier;
+      const boomExpectedImprovement = baseImprovementRate * boomMultiplier;
       
-      // In Crash phase (0.6x multiplier), expected growth should be lower
+      // In Crash phase (0.6x multiplier), expected improvement should be lower
       const crashMultiplier = ECONOMY_EXPECTATION_MULTIPLIERS.Crash;
-      const crashExpectedGrowth = baseRevenueGrowth * crashMultiplier;
+      const crashExpectedImprovement = baseImprovementRate * crashMultiplier;
       
-      expect(boomExpectedGrowth).toBeGreaterThan(baseRevenueGrowth);
-      expect(crashExpectedGrowth).toBeLessThan(baseRevenueGrowth);
-      expect(boomExpectedGrowth).toBeGreaterThan(crashExpectedGrowth);
+      expect(boomExpectedImprovement).toBeGreaterThan(baseImprovementRate);
+      expect(crashExpectedImprovement).toBeLessThan(baseImprovementRate);
+      expect(boomExpectedImprovement).toBeGreaterThan(crashExpectedImprovement);
     });
 
     it('ensures initial share price equals book value', () => {
@@ -322,6 +322,82 @@ describe('Share Valuation System', () => {
         
         expect(newMultiplier).toBeLessThan(currentMultiplier);
         expect(newMultiplier).toBeGreaterThanOrEqual(minMultiplier);
+      });
+    });
+
+    describe('Market Cap Requirement', () => {
+      it('has valid market cap modifier configuration', () => {
+        expect(MARKET_CAP_MODIFIER_CONFIG.baseMarketCap).toBeGreaterThan(0);
+        expect(MARKET_CAP_MODIFIER_CONFIG.baseRate).toBeGreaterThan(0);
+        expect(MARKET_CAP_MODIFIER_CONFIG.maxRate).toBeGreaterThan(MARKET_CAP_MODIFIER_CONFIG.baseRate);
+        expect(MARKET_CAP_MODIFIER_CONFIG.maxRate).toBeLessThanOrEqual(0.02); // Max 2% per 48 weeks
+      });
+
+      it('calculates market cap requirement correctly for base market cap', () => {
+        const marketCap = MARKET_CAP_MODIFIER_CONFIG.baseMarketCap;
+        const logRatio = Math.log10(marketCap / MARKET_CAP_MODIFIER_CONFIG.baseMarketCap);
+        const requirement = MARKET_CAP_MODIFIER_CONFIG.baseRate * logRatio;
+        
+        expect(requirement).toBe(0); // log10(1) = 0
+      });
+
+      it('calculates market cap requirement correctly for 10x market cap', () => {
+        const marketCap = MARKET_CAP_MODIFIER_CONFIG.baseMarketCap * 10;
+        const logRatio = Math.log10(marketCap / MARKET_CAP_MODIFIER_CONFIG.baseMarketCap);
+        const requirement = MARKET_CAP_MODIFIER_CONFIG.baseRate * logRatio;
+        
+        expect(logRatio).toBeCloseTo(1, 2); // log10(10) = 1
+        expect(requirement).toBeCloseTo(MARKET_CAP_MODIFIER_CONFIG.baseRate, 3);
+      });
+
+      it('respects maximum market cap requirement cap', () => {
+        const marketCap = MARKET_CAP_MODIFIER_CONFIG.baseMarketCap * 1000000; // Very large
+        const logRatio = Math.log10(marketCap / MARKET_CAP_MODIFIER_CONFIG.baseMarketCap);
+        const requirement = Math.min(
+          MARKET_CAP_MODIFIER_CONFIG.baseRate * logRatio,
+          MARKET_CAP_MODIFIER_CONFIG.maxRate
+        );
+        
+        expect(requirement).toBeLessThanOrEqual(MARKET_CAP_MODIFIER_CONFIG.maxRate);
+      });
+    });
+
+    describe('Expected Improvement Rates', () => {
+      it('has expected improvement rates in reasonable ranges', () => {
+        // All rates should be small (targeting 15-30x over 200 years with ups/downs)
+        expect(EXPECTED_IMPROVEMENT_RATES.earningsPerShare).toBeGreaterThan(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.earningsPerShare).toBeLessThan(0.02); // Max 2% per 48 weeks
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.revenuePerShare).toBeGreaterThan(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.revenuePerShare).toBeLessThan(0.02);
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.dividendPerShare).toBeGreaterThanOrEqual(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.dividendPerShare).toBeLessThan(0.01);
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.revenueGrowth).toBeGreaterThan(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.revenueGrowth).toBeLessThan(0.02);
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.profitMargin).toBeGreaterThan(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.profitMargin).toBeLessThan(0.02);
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.creditRating).toBeGreaterThan(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.creditRating).toBeLessThan(0.01);
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio).toBeGreaterThanOrEqual(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio).toBeLessThan(0.01);
+        
+        expect(EXPECTED_IMPROVEMENT_RATES.prestige).toBeGreaterThan(0);
+        expect(EXPECTED_IMPROVEMENT_RATES.prestige).toBeLessThan(0.01);
+      });
+
+      it('calculates expected improvement with multipliers and market cap requirement', () => {
+        const baseline = EXPECTED_IMPROVEMENT_RATES.earningsPerShare; // 0.012 (1.2%)
+        const improvementMultiplier = 1.5; // Example: Boom economy, high prestige
+        const marketCapRequirement = 0.003; // Example: €10M market cap
+        
+        const expectedImprovement = (baseline * improvementMultiplier + marketCapRequirement) * 100;
+        
+        expect(expectedImprovement).toBeCloseTo(2.1, 1); // (0.012 × 1.5 + 0.003) × 100 = 2.1%
       });
     });
   });

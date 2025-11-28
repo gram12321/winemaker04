@@ -1,20 +1,6 @@
 export { ECONOMY_EXPECTATION_MULTIPLIERS } from './economyConstants';
 
 /**
- * Share Valuation Constants
- * Defines expected value baselines and scaling factors for share price valuation
- */
-
-/**
- * Expected value baselines for performance metrics
- * @deprecated Replaced by EXPECTED_IMPROVEMENT_RATES for unified trend-based system
- */
-export const EXPECTED_VALUE_BASELINES = {
-  revenueGrowth: 0.10,
-  profitMargin: 0.15,
-} as const;
-
-/**
  * Expected improvement rates (per 48-week period) for trend-based metrics
  * These represent the baseline expected improvement when comparing current 48-week rolling
  * to previous 48-week rolling values. Multiplied by economy × prestige × growth factors.
@@ -106,15 +92,15 @@ export const DIVIDEND_CHANGE_PRESTIGE_CONFIG = {
 } as const;
 
 /**
- * Company value modifier configuration.
- * As company value (market cap) increases, additional expected improvement is required.
+ * Market cap modifier configuration.
+ * As market cap increases, additional expected improvement is required.
  * This is independent of the 48-week trend comparison and makes it progressively harder
  * for larger companies to meet expectations.
  * 
- * Formula: companyValueRequirement = baseRate × log10(marketCap / baseMarketCap)
+ * Formula: marketCapRequirement = baseRate × log10(marketCap / baseMarketCap)
  * This creates a logarithmic scaling where larger companies face higher absolute expectations.
  */
-export const COMPANY_VALUE_MODIFIER_CONFIG = {
+export const MARKET_CAP_MODIFIER_CONFIG = {
   baseMarketCap: 1000000,     // Base market cap (€1M) - no additional requirement below this
   baseRate: 0.002,            // Base additional expected improvement rate per 48 weeks (0.2%)
   maxRate: 0.01,              // Maximum additional expected improvement rate (1.0%)

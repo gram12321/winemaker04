@@ -4,7 +4,6 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { getGameState } from '../core/gameState';
 import { getShareMetrics } from './shareManagementService';
 import {
-  EXPECTED_VALUE_BASELINES,
   ECONOMY_EXPECTATION_MULTIPLIERS,
   PRESTIGE_SCALING
 } from '../../constants/shareValuationConstants';
@@ -49,9 +48,9 @@ export async function calculateExpectedValues(
   const company = await companyService.getCompany(companyId);
   const growthTrendMultiplier = company?.growthTrendMultiplier ?? 1.0;
   
-  // Base expectations - use company-stored values if available, otherwise use constants
-  const baseRevenueGrowth = company?.baseRevenueGrowth ?? EXPECTED_VALUE_BASELINES.revenueGrowth;
-  const baseProfitMargin = company?.baseProfitMargin ?? EXPECTED_VALUE_BASELINES.profitMargin;
+  // Base expectations - use company-stored values if available, otherwise use fallback defaults
+  const baseRevenueGrowth = company?.baseRevenueGrowth ?? 0.10; // 10% default
+  const baseProfitMargin = company?.baseProfitMargin ?? 0.15; // 15% default
   const expectedReturnOnBookValue = company?.baseExpectedReturnOnBookValue ?? 0.10;
   
   // Economy phase adjustment

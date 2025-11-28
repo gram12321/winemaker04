@@ -58,10 +58,23 @@ return (
 - **Business logic in services**: Never put calculations in components
 - **Reactive updates**: Services trigger global updates, components auto-refresh
 
-### 🪜 Starting Conditions Calibration
-- Target net starting assets of roughly €100,000 calculated as `starting cash + starting vineyard value − starting loan principal`
-- Adjust target by ±€10,000 for each starting staff member relative to a two-person baseline
-- Example: a setup with three starting staff should land near €110,000, while a solo founder should be closer to €90,000
+### 🪜 Starting Conditions & Financial Options
+- **Target Net Starting Assets**: Roughly €100,000 calculated as `starting cash + starting vineyard value − starting loan principal`
+- **Staff Adjustment**: ±€10,000 for each starting staff member relative to a two-person baseline
+- **Financial Options**:
+  - **Player Cash Contribution**: Required investment from player's personal balance (separate from company money)
+  - **Family Contribution**: Initial vineyard value (contributed as equity, not cash)
+  - **Outside Investment**: Optional investment from external investors (0 to €1,000,000)
+  - **Starting Loans**: Country-specific loan options with varying terms
+- **Share Structure**: Initial share allocation based on total contributions (player cash + family + outside investment)
+- **Example**: A setup with three starting staff should land near €110,000, while a solo founder should be closer to €90,000
+
+### 💰 Company/Player Separation
+- **Player Balance**: Players maintain a separate cash balance (`users.cash_balance`) independent of company finances
+- **Multi-Company Support**: Players can create multiple companies, each with separate finances
+- **Investment Flow**: Player balance is deducted when creating/investing in companies
+- **Dividend Payments**: Player receives dividends to their personal balance when companies pay dividends
+- **Use Cases**: Allows players to manage a portfolio of companies, transfer funds between investments, and maintain personal capital separate from business operations
 
 **Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
 - Import from `@/lib/constants` (barrel). It re-exports:
@@ -226,6 +239,21 @@ return (
 - **Loan System**: Economy phases, diversified lender pool (guaranteed type distribution), credit rating, loan applications with activity integration
 - **Integration**: All money flows through transaction system
 
+#### 5.1. Public Company & Share System ✅ **IMPLEMENTED**
+- **Share Management**: Issue shares, buy back stock, manage ownership percentages
+- **Share Price System**: Incremental adjustment system that updates weekly based on performance metrics
+  - Initial price: Book Value per Share (Total Assets - Total Liabilities) / Total Shares
+  - Weekly adjustments based on 8 metrics (EPS, revenue/share, dividend/share, revenue growth, profit margin, credit rating, fixed asset ratio, prestige)
+  - Anchor constraint: Book value acts as anchor, constraining price movements naturally
+  - Market cap modifier: Larger companies (higher market cap) face additional expected improvement requirements
+- **Dividend System**: Fixed per-share dividend payments with prestige impact for changes
+- **Share Structure Adjustments**: Immediate price impact for share issuance (dilution) and buyback (concentration)
+- **Historical Tracking**: Weekly snapshots of all metrics for 48-week rolling comparisons
+- **Terminology**:
+  - **Company Value** = Total Assets - Total Liabilities (used for prestige, highscores, achievements)
+  - **Market Cap** = Share Price × Total Shares (used in share price contexts only)
+  - **Book Value Per Share** = (Total Assets - Total Liabilities) / Total Shares (anchor for share price)
+
 ### 6. Player Interface ✅ **IMPLEMENTED**
 - **Login System**: Company selection, creation, user profile management
 - **Company Management**: Multi-company support with switching and portfolio stats
@@ -248,12 +276,15 @@ return (
 - Sophisticated wine production with characteristics and balance system
 - Advanced sales system with regional customers and multi-factor pricing
 - Finance system with transaction tracking, loan system, and economy phases
+- **Public company & share system** with incremental share price adjustments, share issuance/buyback, dividend management, and market cap-based expectations
 - Wine features framework with unified service architecture
 - Complete player interface with Winepedia, achievements, and admin tools
 - Staff management system with skill-based work calculation
 - **Activity-based workflows** for land buying, staff search, and loan applications
 - **Dual database architecture** with development and staging environments
 - **MCP integration** for agentic database management
+- **Company/Player separation** with independent player balance system for multi-company portfolio management
+- **Starting conditions system** with financial options (player cash, family contribution, outside investment, loans)
 
 ❌ **NOT IMPLEMENTED:**
 

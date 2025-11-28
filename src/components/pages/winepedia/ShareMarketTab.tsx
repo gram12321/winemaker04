@@ -1,5 +1,5 @@
 import { SimpleCard } from '@/components/ui';
-import { EXPECTED_VALUE_BASELINES, GROWTH_TREND_CONFIG, INCREMENTAL_METRIC_CONFIG } from '@/lib/constants/shareValuationConstants';
+import { EXPECTED_IMPROVEMENT_RATES, GROWTH_TREND_CONFIG, INCREMENTAL_METRIC_CONFIG, MARKET_CAP_MODIFIER_CONFIG } from '@/lib/constants/shareValuationConstants';
 import { ECONOMY_EXPECTATION_MULTIPLIERS, ECONOMY_PHASES } from '@/lib/constants/economyConstants';
 import { formatNumber } from '@/lib/utils/utils';
 
@@ -12,6 +12,14 @@ export function ShareMarketTab() {
           Share prices use an incremental adjustment system that updates weekly based on your company's performance. 
           The initial share price equals book value per share, then adjusts incrementally each week based on multiple metrics.
         </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-xs">
+          <div className="font-semibold text-blue-800 mb-2">Terminology Clarification:</div>
+          <div className="text-blue-700 space-y-1">
+            <div><strong>Market Cap</strong> = Share Price × Total Shares (used in share price contexts)</div>
+            <div><strong>Company Value</strong> = Total Assets - Total Liabilities (used for prestige, highscores, achievements)</div>
+            <div><strong>Book Value Per Share</strong> = (Total Assets - Total Liabilities) / Total Shares (anchor for share price)</div>
+          </div>
+        </div>
       </div>
 
       <SimpleCard title="Initial Share Price">
@@ -21,7 +29,8 @@ export function ShareMarketTab() {
             <strong>Initial Price = Book Value per Share</strong>
           </div>
           <div className="text-gray-600">
-            When shares are first issued, the initial price is simply the company's book value (total equity) divided by the number of shares.
+            When shares are first issued, the initial price is simply the company's book value per share 
+            ((Total Assets - Total Liabilities) / Total Shares). This serves as the anchor for future price movements.
           </div>
         </div>
       </SimpleCard>
@@ -88,18 +97,37 @@ export function ShareMarketTab() {
       </div>
 
       <div>
-        <h3 className="font-semibold mb-2">Expected Values</h3>
+        <h3 className="font-semibold mb-2">Expected Improvement Rates</h3>
         <p className="text-gray-600 mb-3 text-xs">
-          Expected performance benchmarks adjust dynamically based on:
+          The system compares your current 48-week rolling metrics to previous 48-week rolling metrics. 
+          Expected improvement rates represent the baseline expected improvement per 48-week period, adjusted by:
         </p>
         <div className="space-y-2">
-          <SimpleCard title="Expected Value Baselines">
+          <SimpleCard title="Baseline Improvement Rates (per 48 weeks)">
             <div className="text-xs space-y-2">
               <div>
-                <strong>Revenue Growth Baseline:</strong> {formatNumber(EXPECTED_VALUE_BASELINES.revenueGrowth, { percent: true, decimals: 0, percentIsDecimal: true })} per year
+                <strong>Earnings/Share:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.earningsPerShare * 100, { decimals: 1, forceDecimals: true })}% expected improvement
               </div>
               <div>
-                <strong>Profit Margin Baseline:</strong> {formatNumber(EXPECTED_VALUE_BASELINES.profitMargin, { percent: true, decimals: 0, percentIsDecimal: true })}
+                <strong>Revenue/Share:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.revenuePerShare * 100, { decimals: 1, forceDecimals: true })}% expected improvement
+              </div>
+              <div>
+                <strong>Revenue Growth:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.revenueGrowth * 100, { decimals: 1, forceDecimals: true })}% expected improvement
+              </div>
+              <div>
+                <strong>Profit Margin:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.profitMargin * 100, { decimals: 1, forceDecimals: true })}% expected improvement
+              </div>
+              <div>
+                <strong>Dividend/Share:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.dividendPerShare * 100, { decimals: 1, forceDecimals: true })}% expected improvement
+              </div>
+              <div>
+                <strong>Credit Rating:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.creditRating * 100, { decimals: 1, forceDecimals: true })}% expected improvement
+              </div>
+              <div>
+                <strong>Fixed Asset Ratio:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * 100, { decimals: 1, forceDecimals: true })}% expected improvement
+              </div>
+              <div>
+                <strong>Prestige:</strong> {formatNumber(EXPECTED_IMPROVEMENT_RATES.prestige * 100, { decimals: 1, forceDecimals: true })}% expected improvement
               </div>
             </div>
           </SimpleCard>
@@ -111,6 +139,12 @@ export function ShareMarketTab() {
               <div>
                 <strong>Growth Trends:</strong> Companies that consistently meet or exceed expectations face gradually increasing benchmarks 
                 (adjustment: {formatNumber(GROWTH_TREND_CONFIG.adjustmentIncrement, { percent: true, decimals: 0, percentIsDecimal: true })} per period)
+              </div>
+              <div>
+                <strong>Market Cap Requirement:</strong> Larger companies (higher market cap) face additional expected improvement requirements. 
+                This is calculated independently using logarithmic scaling: baseRate × log10(marketCap / baseMarketCap). 
+                Base market cap: {formatNumber(MARKET_CAP_MODIFIER_CONFIG.baseMarketCap, { currency: true, decimals: 0 })}. 
+                Additional requirement scales from {formatNumber(MARKET_CAP_MODIFIER_CONFIG.baseRate * 100, { decimals: 2, forceDecimals: true })}% up to a maximum of {formatNumber(MARKET_CAP_MODIFIER_CONFIG.maxRate * 100, { decimals: 1, forceDecimals: true })}% per 48 weeks.
               </div>
             </div>
           </SimpleCard>

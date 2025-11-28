@@ -23,7 +23,7 @@ import {
 } from '@/lib/services/finance/shareManagementService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
-import { calculateIncrementalAdjustmentDebug } from '@/lib/services/finance/sharePriceIncrementService';
+import { getSharePriceBreakdown } from '@/lib/services/finance/sharePriceIncrementService';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { loadTransactions } from '@/lib/services/finance/financeService';
 import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
@@ -45,7 +45,7 @@ export function ShareManagementPanel() {
   const [shareMetrics, setShareMetrics] = useState<ShareMetrics | null>(null);
   const [shareholderBreakdown, setShareholderBreakdown] = useState<ShareholderBreakdown | null>(null);
   const [historicalMetrics, setHistoricalMetrics] = useState<HistoricalShareMetric[]>([]);
-  const [incrementalDebugData, setIncrementalDebugData] = useState<Awaited<ReturnType<typeof calculateIncrementalAdjustmentDebug>>['data'] | null>(null);
+  const [sharePriceBreakdown, setSharePriceBreakdown] = useState<Awaited<ReturnType<typeof getSharePriceBreakdown>>['data'] | null>(null);
   const [showMetricDetails, setShowMetricDetails] = useState(false);
   const [showExpectedValuesCalc, setShowExpectedValuesCalc] = useState(false);
   const [recentShareChanges, setRecentShareChanges] = useState<Array<{
@@ -101,10 +101,10 @@ export function ShareManagementPanel() {
         const historical = await getHistoricalShareMetrics(companyId, 2);
         setHistoricalMetrics(historical);
         
-        // Load incremental debug data
-        const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
-        if (debugResult.success && debugResult.data) {
-          setIncrementalDebugData(debugResult.data);
+        // Load share price breakdown data
+        const breakdownResult = await getSharePriceBreakdown(companyId);
+        if (breakdownResult.success && breakdownResult.data) {
+          setSharePriceBreakdown(breakdownResult.data);
         }
 
         // Load recent share structure changes and dividend changes
@@ -229,10 +229,10 @@ export function ShareManagementPanel() {
           setShareMetrics(metrics);
           const latestBreakdown = await getShareholderBreakdown(companyId);
           setShareholderBreakdown(latestBreakdown);
-          // Refresh debug data
-          const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
-          if (debugResult.success && debugResult.data) {
-            setIncrementalDebugData(debugResult.data);
+          // Refresh share price breakdown data
+          const breakdownResult = await getSharePriceBreakdown(companyId);
+          if (breakdownResult.success && breakdownResult.data) {
+            setSharePriceBreakdown(breakdownResult.data);
           }
         }
       } else {
@@ -273,10 +273,10 @@ export function ShareManagementPanel() {
           setShareMetrics(metrics);
           const latestBreakdown = await getShareholderBreakdown(companyId);
           setShareholderBreakdown(latestBreakdown);
-          // Refresh debug data
-          const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
-          if (debugResult.success && debugResult.data) {
-            setIncrementalDebugData(debugResult.data);
+          // Refresh share price breakdown data
+          const breakdownResult = await getSharePriceBreakdown(companyId);
+          if (breakdownResult.success && breakdownResult.data) {
+            setSharePriceBreakdown(breakdownResult.data);
           }
         }
       } else {
@@ -717,7 +717,7 @@ export function ShareManagementPanel() {
             </div>
 
             {/* Share Price Breakdown Panel */}
-            {incrementalDebugData && (
+            {sharePriceBreakdown && (
           <Card className="border-2 border-gray-300">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -749,28 +749,28 @@ export function ShareManagementPanel() {
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Current Price</div>
                   <div className="font-semibold text-blue-600">
-                    {formatNumber(incrementalDebugData.currentPrice, { currency: true, decimals: 2 })}
+                    {formatNumber(sharePriceBreakdown.currentPrice, { currency: true, decimals: 2 })}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Anchor (Book Value)</div>
                   <div className="font-semibold text-green-600">
-                    {formatNumber(incrementalDebugData.basePrice, { currency: true, decimals: 2 })}
+                    {formatNumber(sharePriceBreakdown.basePrice, { currency: true, decimals: 2 })}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Weekly Adjustment</div>
-                  <div className={`font-semibold ${incrementalDebugData.adjustment.adjustment >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatNumber(incrementalDebugData.adjustment.adjustment, { currency: true, decimals: 4, forceDecimals: true })}
+                  <div className={`font-semibold ${sharePriceBreakdown.adjustment.adjustment >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatNumber(sharePriceBreakdown.adjustment.adjustment, { currency: true, decimals: 4, forceDecimals: true })}
                   </div>
                   <div className="text-xs text-gray-500">
-                    ({formatNumber((incrementalDebugData.adjustment.adjustment / incrementalDebugData.currentPrice) * 100, { decimals: 2, forceDecimals: true })}%)
+                    ({formatNumber((sharePriceBreakdown.adjustment.adjustment / sharePriceBreakdown.currentPrice) * 100, { decimals: 2, forceDecimals: true })}%)
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Next Price</div>
                   <div className="font-semibold text-blue-600">
-                    {formatNumber(incrementalDebugData.adjustment.newPrice, { currency: true, decimals: 2 })}
+                    {formatNumber(sharePriceBreakdown.adjustment.newPrice, { currency: true, decimals: 2 })}
                   </div>
                 </div>
               </div>
@@ -858,7 +858,7 @@ export function ShareManagementPanel() {
               )}
 
               {/* Expected Improvement Rates Calculation */}
-              {showExpectedValuesCalc && incrementalDebugData?.expectedValuesCalc && (
+              {showExpectedValuesCalc && sharePriceBreakdown?.expectedValuesCalc && (
                 <div className="border border-gray-200 rounded-md p-4 bg-green-50/50">
                   <h3 className="font-semibold text-sm mb-3 text-gray-800">Expected Improvement Rates Calculation</h3>
                   <div className="text-xs space-y-3">
@@ -891,19 +891,19 @@ export function ShareManagementPanel() {
                       <div className="font-semibold mb-1">Multipliers (adjust baseline by context):</div>
                       <div className="grid grid-cols-2 gap-2 pl-4">
                         <div>Economy Phase → Multiplier:</div>
-                        <div className="font-mono">{incrementalDebugData.expectedValuesCalc.economyPhase} → {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })}</div>
-                        <div>Prestige ({formatNumber(incrementalDebugData.expectedValuesCalc.prestige, { decimals: 0 })}, norm: {formatNumber(incrementalDebugData.expectedValuesCalc.normalizedPrestige, { decimals: 3 })}):</div>
-                        <div className="font-mono">{formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })}</div>
+                        <div className="font-mono">{sharePriceBreakdown.expectedValuesCalc.economyPhase} → {formatNumber(sharePriceBreakdown.expectedValuesCalc.economyMultiplier, { decimals: 3 })}</div>
+                        <div>Prestige ({formatNumber(sharePriceBreakdown.expectedValuesCalc.prestige, { decimals: 0 })}, norm: {formatNumber(sharePriceBreakdown.expectedValuesCalc.normalizedPrestige, { decimals: 3 })}):</div>
+                        <div className="font-mono">{formatNumber(sharePriceBreakdown.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })}</div>
                         <div>Growth Trend Multiplier:</div>
-                        <div className="font-mono">{formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}</div>
-                        {(incrementalDebugData.expectedValuesCalc as any).companyValueRequirement !== undefined && (incrementalDebugData.expectedValuesCalc as any).companyValueRequirement > 0 && (
+                        <div className="font-mono">{formatNumber(sharePriceBreakdown.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}</div>
+                        {(sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement !== undefined && (sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement > 0 && (
                           <>
-                            <div>Company Value Requirement:</div>
+                            <div>Market Cap Requirement:</div>
                             <div className="font-mono text-orange-600 font-semibold">
-                              +{formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%
+                              +{formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement, { decimals: 2, forceDecimals: true })}%
                             </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              Market Cap: {formatNumber((incrementalDebugData.expectedValuesCalc as any).marketCap ?? 0, { currency: true, decimals: 0 })}
+                              Market Cap: {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCap ?? 0, { currency: true, decimals: 0 })}
                               {' '}(Additional expectation for larger companies)
                             </div>
                           </>
@@ -913,73 +913,73 @@ export function ShareManagementPanel() {
                     <div className="border-t border-gray-300 pt-2">
                       <div className="font-semibold mb-1">Expected Improvement Rates (per 48 weeks):</div>
                       <div className="text-gray-600 text-xs mb-2 pl-4">
-                        Formula: (Baseline × Economy × Prestige × Growth) + Company Value Requirement = Expected Improvement %
+                        Formula: (Baseline × Economy × Prestige × Growth) + Market Cap Requirement = Expected Improvement %
                       </div>
                       <div className="grid grid-cols-2 gap-2 pl-4">
                         <div>Improvement Multiplier:</div>
                         <div className="font-mono text-blue-600 font-semibold">
-                          {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                          {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
                         </div>
                         <div className="text-gray-600 text-xs col-span-2 pl-4">
-                          = {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}
+                          = {formatNumber(sharePriceBreakdown.expectedValuesCalc.economyMultiplier, { decimals: 3 })} × {formatNumber(sharePriceBreakdown.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })} × {formatNumber(sharePriceBreakdown.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}
                         </div>
-                        {incrementalDebugData.expectedImprovementRates && (
+                        {sharePriceBreakdown.expectedImprovementRates && (
                           <>
                             <div>Expected EPS Improvement:</div>
                         <div className="font-mono text-green-600 font-semibold">
-                              {formatNumber(incrementalDebugData.expectedImprovementRates.earningsPerShare, { decimals: 2, forceDecimals: true })}%
+                              {formatNumber(sharePriceBreakdown.expectedImprovementRates.earningsPerShare, { decimals: 2, forceDecimals: true })}%
                         </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 1.2% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
-                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              = 1.2% × {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement, { decimals: 2, forceDecimals: true })}%</>
                               )}
                             </div>
                             <div>Expected Revenue/Share Improvement:</div>
                         <div className="font-mono text-green-600 font-semibold">
-                              {formatNumber(incrementalDebugData.expectedImprovementRates.revenuePerShare, { decimals: 2, forceDecimals: true })}%
+                              {formatNumber(sharePriceBreakdown.expectedImprovementRates.revenuePerShare, { decimals: 2, forceDecimals: true })}%
                         </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 1.2% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
-                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              = 1.2% × {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement, { decimals: 2, forceDecimals: true })}%</>
                               )}
                             </div>
                             <div>Expected Revenue Growth Improvement:</div>
                         <div className="font-mono text-green-600 font-semibold">
-                              {formatNumber(incrementalDebugData.expectedImprovementRates.revenueGrowth, { decimals: 2, forceDecimals: true })}%
+                              {formatNumber(sharePriceBreakdown.expectedImprovementRates.revenueGrowth, { decimals: 2, forceDecimals: true })}%
                         </div>
                         <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 1.2% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              = 1.2% × {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
                         </div>
                             <div>Expected Profit Margin Improvement:</div>
                         <div className="font-mono text-green-600 font-semibold">
-                              {formatNumber(incrementalDebugData.expectedImprovementRates.profitMargin, { decimals: 2, forceDecimals: true })}%
+                              {formatNumber(sharePriceBreakdown.expectedImprovementRates.profitMargin, { decimals: 2, forceDecimals: true })}%
                         </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 0.8% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
-                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              = 0.8% × {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement, { decimals: 2, forceDecimals: true })}%</>
                               )}
                             </div>
                             <div>Expected Credit Rating Improvement:</div>
                             <div className="font-mono text-green-600 font-semibold">
-                              {formatNumber(incrementalDebugData.expectedImprovementRates.creditRating, { decimals: 2, forceDecimals: true })}%
+                              {formatNumber(sharePriceBreakdown.expectedImprovementRates.creditRating, { decimals: 2, forceDecimals: true })}%
                       </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 0.4% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
-                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              = 0.4% × {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement, { decimals: 2, forceDecimals: true })}%</>
                               )}
                     </div>
                             <div>Expected Prestige Improvement:</div>
                             <div className="font-mono text-green-600 font-semibold">
-                              {formatNumber(incrementalDebugData.expectedImprovementRates.prestige, { decimals: 2, forceDecimals: true })}%
+                              {formatNumber(sharePriceBreakdown.expectedImprovementRates.prestige, { decimals: 2, forceDecimals: true })}%
                   </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 0.5% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
-                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              = 0.5% × {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((sharePriceBreakdown.expectedValuesCalc as any).marketCapRequirement, { decimals: 2, forceDecimals: true })}%</>
                               )}
                             </div>
                           </>
@@ -991,7 +991,7 @@ export function ShareManagementPanel() {
               )}
 
               {/* Metric Breakdown Table - Shows 48-week rolling metrics */}
-              {showMetricDetails && incrementalDebugData && (
+              {showMetricDetails && sharePriceBreakdown && (
                 <div className="mt-4 border border-gray-200 rounded-md overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -1011,23 +1011,23 @@ export function ShareManagementPanel() {
                             Earnings/Share <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.currentValues48Weeks?.earningsPerShare ?? 0, { currency: true, decimals: 4 })}
+                            {formatNumber(sharePriceBreakdown.currentValues48Weeks?.earningsPerShare ?? 0, { currency: true, decimals: 4 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.earningsPerShare !== null && incrementalDebugData.previousValues48WeeksAgo?.earningsPerShare !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.earningsPerShare, { currency: true, decimals: 4 })
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.earningsPerShare !== null && sharePriceBreakdown.previousValues48WeeksAgo?.earningsPerShare !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.earningsPerShare, { currency: true, decimals: 4 })
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.earningsPerShare, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.earningsPerShare, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.earningsPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.earningsPerShare, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.earningsPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.earningsPerShare, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.earningsPerShare.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.earningsPerShare.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.earningsPerShare.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.earningsPerShare.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1037,23 +1037,23 @@ export function ShareManagementPanel() {
                             Revenue/Share <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.currentValues48Weeks?.revenuePerShare ?? 0, { currency: true, decimals: 4 })}
+                            {formatNumber(sharePriceBreakdown.currentValues48Weeks?.revenuePerShare ?? 0, { currency: true, decimals: 4 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.revenuePerShare !== null && incrementalDebugData.previousValues48WeeksAgo?.revenuePerShare !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.revenuePerShare, { currency: true, decimals: 4 })
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.revenuePerShare !== null && sharePriceBreakdown.previousValues48WeeksAgo?.revenuePerShare !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.revenuePerShare, { currency: true, decimals: 4 })
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.revenuePerShare, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.revenuePerShare, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.revenuePerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.revenuePerShare, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.revenuePerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.revenuePerShare, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.revenuePerShare.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.revenuePerShare.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.revenuePerShare.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.revenuePerShare.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1063,23 +1063,23 @@ export function ShareManagementPanel() {
                             Dividend/Share <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.currentValues48Weeks?.dividendPerShare ?? 0, { currency: true, decimals: 4 })}
+                            {formatNumber(sharePriceBreakdown.currentValues48Weeks?.dividendPerShare ?? 0, { currency: true, decimals: 4 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.dividendPerShare !== null && incrementalDebugData.previousValues48WeeksAgo?.dividendPerShare !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.dividendPerShare, { currency: true, decimals: 4 })
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.dividendPerShare !== null && sharePriceBreakdown.previousValues48WeeksAgo?.dividendPerShare !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.dividendPerShare, { currency: true, decimals: 4 })
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                             <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.dividendPerShare, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.dividendPerShare, { decimals: 1, forceDecimals: true })}%)
                             </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.dividendPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.dividendPerShare, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.dividendPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.dividendPerShare, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.dividendPerShare.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.dividendPerShare.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.dividendPerShare.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.dividendPerShare.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1089,23 +1089,23 @@ export function ShareManagementPanel() {
                             Revenue Growth <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber((incrementalDebugData.currentValues48Weeks?.revenueGrowth ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
+                            {formatNumber((sharePriceBreakdown.currentValues48Weeks?.revenueGrowth ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.revenueGrowth !== null && incrementalDebugData.previousValues48WeeksAgo?.revenueGrowth !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.revenueGrowth * 100, { decimals: 2, forceDecimals: true }) + '%'
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.revenueGrowth !== null && sharePriceBreakdown.previousValues48WeeksAgo?.revenueGrowth !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.revenueGrowth * 100, { decimals: 2, forceDecimals: true }) + '%'
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.revenueGrowth, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.revenueGrowth, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.revenueGrowth, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.revenueGrowth, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.revenueGrowth.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.revenueGrowth.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.revenueGrowth.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.revenueGrowth.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1115,23 +1115,23 @@ export function ShareManagementPanel() {
                             Profit Margin <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber((incrementalDebugData.currentValues48Weeks?.profitMargin ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
+                            {formatNumber((sharePriceBreakdown.currentValues48Weeks?.profitMargin ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.profitMargin !== null && incrementalDebugData.previousValues48WeeksAgo?.profitMargin !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.profitMargin * 100, { decimals: 2, forceDecimals: true }) + '%'
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.profitMargin !== null && sharePriceBreakdown.previousValues48WeeksAgo?.profitMargin !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.profitMargin * 100, { decimals: 2, forceDecimals: true }) + '%'
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.profitMargin, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.profitMargin, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.profitMargin, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.profitMargin, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.profitMargin.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.profitMargin.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.profitMargin.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.profitMargin.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1141,23 +1141,23 @@ export function ShareManagementPanel() {
                             Credit Rating <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.currentValues?.creditRating ?? 0, { decimals: 3 })}
+                            {formatNumber(sharePriceBreakdown.currentValues?.creditRating ?? 0, { decimals: 3 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.creditRating !== null && incrementalDebugData.previousValues48WeeksAgo?.creditRating !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.creditRating, { decimals: 3 })
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.creditRating !== null && sharePriceBreakdown.previousValues48WeeksAgo?.creditRating !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.creditRating, { decimals: 3 })
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.creditRating, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.creditRating, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.creditRating >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.creditRating, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.creditRating >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.creditRating, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.creditRating.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.creditRating.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.creditRating.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.creditRating.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1167,23 +1167,23 @@ export function ShareManagementPanel() {
                             Fixed Asset Ratio <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber((incrementalDebugData.currentValues?.fixedAssetRatio ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
+                            {formatNumber((sharePriceBreakdown.currentValues?.fixedAssetRatio ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.fixedAssetRatio !== null && incrementalDebugData.previousValues48WeeksAgo?.fixedAssetRatio !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.fixedAssetRatio * 100, { decimals: 2, forceDecimals: true }) + '%'
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.fixedAssetRatio !== null && sharePriceBreakdown.previousValues48WeeksAgo?.fixedAssetRatio !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.fixedAssetRatio * 100, { decimals: 2, forceDecimals: true }) + '%'
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.fixedAssetRatio, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.fixedAssetRatio, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.fixedAssetRatio >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.fixedAssetRatio, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.fixedAssetRatio >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.fixedAssetRatio, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.fixedAssetRatio.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.fixedAssetRatio.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.fixedAssetRatio.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.fixedAssetRatio.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1193,23 +1193,23 @@ export function ShareManagementPanel() {
                             Prestige <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.currentValues?.prestige ?? 0, { decimals: 2 })}
+                            {formatNumber(sharePriceBreakdown.currentValues?.prestige ?? 0, { decimals: 2 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.previousValues48WeeksAgo?.prestige !== null && incrementalDebugData.previousValues48WeeksAgo?.prestige !== undefined
-                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.prestige, { decimals: 2 })
+                            {sharePriceBreakdown.previousValues48WeeksAgo?.prestige !== null && sharePriceBreakdown.previousValues48WeeksAgo?.prestige !== undefined
+                              ? formatNumber(sharePriceBreakdown.previousValues48WeeksAgo.prestige, { decimals: 2 })
                               : <span className="text-gray-400 italic">N/A</span>}
-                            {incrementalDebugData.expectedImprovementRates && (
+                            {sharePriceBreakdown.expectedImprovementRates && (
                               <span className="text-xs text-gray-500 ml-1">
-                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.prestige, { decimals: 1, forceDecimals: true })}%)
+                                (exp: {formatNumber(sharePriceBreakdown.expectedImprovementRates.prestige, { decimals: 1, forceDecimals: true })}%)
                               </span>
                             )}
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.prestige >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.deltas.prestige, { decimals: 2, forceDecimals: true })}%
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.deltas.prestige >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.deltas.prestige, { decimals: 2, forceDecimals: true })}%
                           </td>
-                          <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.contributions.prestige.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.contributions.prestige.contribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right font-semibold ${sharePriceBreakdown.adjustment.contributions.prestige.contribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.contributions.prestige.contribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                         
@@ -1218,8 +1218,8 @@ export function ShareManagementPanel() {
                           <td className="px-4 py-2">Total</td>
                           <td className="px-4 py-2 text-right" colSpan={2}></td>
                           <td className="px-4 py-2 text-right text-gray-700">—</td>
-                          <td className={`px-4 py-2 text-right ${incrementalDebugData.adjustment.totalContribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(incrementalDebugData.adjustment.totalContribution, { currency: true, decimals: 4, forceDecimals: true })}
+                          <td className={`px-4 py-2 text-right ${sharePriceBreakdown.adjustment.totalContribution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatNumber(sharePriceBreakdown.adjustment.totalContribution, { currency: true, decimals: 4, forceDecimals: true })}
                           </td>
                         </tr>
                       </tbody>

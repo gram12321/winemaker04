@@ -141,17 +141,20 @@ export const getTransactions = (): Transaction[] => {
   return transactionsCache;
 };
 
-// Calculate company net worth (total assets - total liabilities)
-export const calculateNetWorth = async (): Promise<number> => {
+// Calculate company value (total assets - total liabilities)
+export const calculateCompanyValue = async (): Promise<number> => {
   try {
     const financialData = await calculateFinancialData('year');
     const totalOutstandingLoans = await calculateTotalOutstandingLoans();
     return financialData.totalAssets - totalOutstandingLoans;
   } catch (error) {
-    console.error('Error calculating net worth:', error);
+    console.error('Error calculating company value:', error);
     return 0;
   }
 };
+
+// Legacy export for backwards compatibility (deprecated - use calculateCompanyValue)
+export const calculateNetWorth = calculateCompanyValue;
 
 export const calculateTotalAssets = async (): Promise<number> => {
   try {

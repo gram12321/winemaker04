@@ -1441,7 +1441,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                     <div className="flex items-start gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                       <div>
-                        <strong>Company Value:</strong> Based on net worth vs. max land value. Uses logarithmic scaling for natural diminishing returns.
+                        <strong>Company Value:</strong> Based on company value (total assets - total liabilities) vs. max land value. Uses logarithmic scaling for natural diminishing returns.
                       </div>
                     </div>
                     <div className="flex items-start gap-2">

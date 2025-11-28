@@ -4,6 +4,15 @@
 
 The public company system allows players to issue shares, raise capital, pay dividends, and have their share price adjust based on company performance. The share price uses an incremental adjustment system that updates weekly based on multiple financial and operational metrics.
 
+## Terminology Clarification
+
+To avoid confusion, the following terms are used consistently throughout the system:
+
+- **Company Value**: Total Assets - Total Liabilities. Used for prestige calculations, highscores, and achievements. Calculated via `calculateCompanyValue()`.
+- **Market Cap**: Share Price × Total Shares. Used in share price contexts only. Represents the total market valuation of the company's shares.
+- **Book Value Per Share**: (Total Assets - Total Liabilities) / Total Shares. Used as the anchor for share price calculations.
+- **Total Contributions**: Initial capital contributions when creating a company (player cash + family contribution + outside investment). Used in starting conditions.
+
 ## Share Price System
 
 ### Initial Share Price
@@ -56,41 +65,30 @@ All metrics contribute equally to the adjustment, with individual caps:
 | Fixed Asset Ratio | €0.02 | ±200% | Trend-based |
 | Prestige | €0.02 | ±200% | Trend-based |
 
-#### Expected-Based Metrics (48-Week Rolling Comparison)
+#### Unified Trend-Based System (48-Week Rolling Comparison)
 
-Compare actual value over last 48 weeks to expected annual value:
-- **Expected Value Calculation**: Uses baseline expectations adjusted by:
-  - Economy phase multiplier
-  - Prestige multiplier (logarithmic scaling)
-  - Growth trend multiplier (based on historical performance)
-- **Expected Baselines**:
-  - Revenue Growth: 10% per year
-  - Profit Margin: 15%
-  - Earnings per Share: 10% return on book value
-  - Revenue per Share: Calculated from expected EPS and expected profit margin
+**All metrics now use a unified trend-based comparison system:**
+- Compare current 48-week rolling values to previous 48-week rolling values (from 48 weeks ago)
+- Calculate actual improvement: `(Current 48w - Previous 48w) / Previous 48w × 100`
+- Compare actual improvement to expected improvement rate
+- Delta = Actual Improvement - Expected Improvement
 
-**48-Week Rolling Window**: All expected-based metrics use a rolling 48-week comparison:
-- **Earnings/Share**: Last 48 weeks vs. expected annual (48 weeks) EPS
-- **Revenue/Share**: Last 48 weeks vs. expected annual (48 weeks) revenue per share
-- **Dividend/Share**: Last 48 weeks vs. expected dividend payments (based on company age within 48-week window)
-- **Revenue Growth**: Compares last 48 weeks' revenue to previous 48 weeks' revenue
-- **Profit Margin**: Last 48 weeks' net income / last 48 weeks' revenue
+**Metrics Using Trend-Based Comparison:**
+- **Earnings/Share**: Current 48-week EPS vs. previous 48-week EPS
+- **Revenue/Share**: Current 48-week revenue per share vs. previous 48-week revenue per share
+- **Dividend/Share**: Current 48-week dividends per share vs. previous 48-week dividends per share
+- **Revenue Growth**: Current 48-week growth rate vs. previous 48-week growth rate
+- **Profit Margin**: Current 48-week profit margin vs. previous 48-week profit margin
+- **Credit Rating**: Current credit rating vs. credit rating from 48 weeks ago
+- **Fixed Asset Ratio**: Current fixed asset ratio vs. fixed asset ratio from 48 weeks ago
+- **Prestige**: Current prestige vs. prestige from 48 weeks ago
 
-**Grace Period**: If a company is less than 48 weeks old, profitability metrics (EPS, Revenue/Share, Revenue Growth, Profit Margin) skip delta calculation (set to 0) since players cannot generate revenue before the first harvest.
-
-#### Trend-Based Metrics (48-Week Rolling Comparison)
-
-Compare current value to value from 48 weeks ago (stored in historical snapshots):
-- **Credit Rating**: Percentage change compared to 48 weeks ago
-- **Fixed Asset Ratio**: Percentage change compared to 48 weeks ago
-- **Prestige**: Percentage change compared to 48 weeks ago
-
-**Historical Snapshots**: All three trend-based metrics are stored weekly in the `company_metrics_history` table. When calculating deltas, the system queries the snapshot from exactly 48 weeks ago. This provides:
-- Consistent 48-week comparison window (same as expected-based metrics)
+**Historical Snapshots**: All metrics are stored weekly in the `company_metrics_history` table. When calculating deltas, the system queries the snapshot from exactly 48 weeks ago. This provides:
+- Consistent 48-week comparison window across all metrics
 - Historical data for trend diagrams
 - No need for complex recalculation of past values
 
-**Grace Period**: If a company is less than 48 weeks old, these metrics skip delta calculation (set to 0) to avoid penalizing new companies.
+**Grace Period**: If a company is less than 48 weeks old, profitability metrics (EPS, Revenue/Share, Revenue Growth, Profit Margin) skip delta calculation (set to 0) since players cannot generate revenue before the first harvest. Trend-based metrics (Credit Rating, Fixed Asset Ratio, Prestige) also skip if company is less than 48 weeks old.
 
 ### Anchor Constraint
 
@@ -103,31 +101,73 @@ The book value per share acts as an "anchor" that constrains share price movemen
   - Exponent: 1.25
   - Deviation: `|currentPrice - bookValue| / bookValue`
 
-### Expected Values System
+### Expected Improvement Rates System
 
-Expected values adjust dynamically based on:
+Expected improvement rates represent the baseline expected improvement when comparing current 48-week rolling values to previous 48-week rolling values. These rates are adjusted by multiple factors and then added to a company value requirement.
 
-#### Economy Phase
+**Baseline Improvement Rates (per 48 weeks):**
+- Earnings/Share: 1.2%
+- Revenue/Share: 1.2%
+- Dividend/Share: 0.3% (small, player-controlled)
+- Revenue Growth: 1.2%
+- Profit Margin: 0.8% (margins improve slowly)
+- Credit Rating: 0.4% (slow improvement)
+- Fixed Asset Ratio: 0.2% (very slow, strategic)
+- Prestige: 0.5% (gradual prestige growth)
 
-Multipliers from `ECONOMY_EXPECTATION_MULTIPLIERS`:
+**Note**: These rates target 15-30x growth over 200 years, accounting for ups and downs. Since comparisons are to previous 48 weeks (not linear), actual growth will fluctuate.
+
+#### Multipliers (Adjust Baseline by Context)
+
+**Economy Phase Multipliers** (`ECONOMY_EXPECTATION_MULTIPLIERS`):
 - Crash: 0.6
 - Recession: 0.75
 - Stable: 1.0
 - Expansion: 1.25
 - Boom: 1.5
 
-#### Prestige
-
-Higher prestige companies face higher expectations:
+**Prestige Multiplier:**
+- Higher prestige companies face higher expectations
 - Uses logarithmic scaling: `NormalizeScrewed1000To01WithTail(prestige)`
-- Mapped to 1.0-2.0 multiplier range
+- Mapped to 1.0-3.0 multiplier range
 
-#### Growth Trend
-
-Companies that consistently meet/exceed expectations face gradually increasing benchmarks:
+**Growth Trend Multiplier:**
+- Companies that consistently meet/exceed expectations face gradually increasing benchmarks
 - Stored in database as `growthTrendMultiplier`
 - Updated annually based on performance
-- Adjusts expected values for revenue growth, profit margin, and EPS
+- Adjusts expected improvement rates for all metrics
+
+**Combined Multiplier Formula:**
+```
+Improvement Multiplier = Economy × Prestige × Growth Trend
+```
+
+#### Market Cap Requirement
+
+As market cap increases, additional expected improvement is required. This is independent of the 48-week trend comparison and makes it progressively harder for larger companies to meet expectations.
+
+**Formula:**
+```
+Market Cap Requirement = baseRate × log10(marketCap / baseMarketCap)
+```
+
+**Configuration:**
+- Base Market Cap: €1M (no requirement below this)
+- Base Rate: 0.2% per 48 weeks
+- Max Rate: 1.0% (capped maximum requirement)
+
+**Final Expected Improvement Rate:**
+```
+Expected Improvement = (Baseline × Improvement Multiplier) + Market Cap Requirement
+```
+
+**Example:**
+- Baseline: 1.2% (Earnings/Share)
+- Improvement Multiplier: 1.5 (Boom economy, high prestige, good growth trend)
+- Market Cap Requirement: 0.3% (€10M market cap)
+- Final Expected: (1.2% × 1.5) + 0.3% = 2.1% per 48 weeks
+
+**Note:** Market Cap = Share Price × Total Shares. This is separate from Company Value (Total Assets - Total Liabilities), which is used for prestige and highscores.
 
 ## Share Management Features
 
@@ -137,6 +177,10 @@ Companies that consistently meet/exceed expectations face gradually increasing b
 - **Effect**: Dilutes player ownership (player shares stay the same, total shares increase)
 - **Capital Raised**: `Shares Issued × Current Share Price`
 - **Transaction**: Records capital inflow as "Outside Investment"
+- **Immediate Price Impact**: Share price drops immediately due to dilution effect
+  - Mathematical adjustment: `newPrice = oldPrice × (oldShares / newShares)`
+  - Market reaction: Additional 3% penalty multiplier (dilution penalty)
+  - Formula: `finalPrice = mathematicalPrice × 0.97`
 
 ### Share Buyback
 
@@ -145,13 +189,23 @@ Companies that consistently meet/exceed expectations face gradually increasing b
 - **Cost**: `Shares Bought × Current Share Price`
 - **Transaction**: Records capital outflow
 - **Limit**: Cannot buy back more shares than are outstanding
+- **Immediate Price Impact**: Share price rises immediately due to concentration effect
+  - Mathematical adjustment: `newPrice = oldPrice × (oldShares / newShares)`
+  - Market reaction: Additional 3% bonus multiplier (concentration bonus)
+  - Formula: `finalPrice = mathematicalPrice × 1.03`
 
 ### Dividends
 
 - **Rate**: Fixed per-share amount in euros (set by player)
 - **Payment**: Annual payment calculated as `Dividend Rate × Total Shares`
 - **Tracking**: System tracks dividends paid per share for current and previous year
-- **Impact**: Dividend changes affect share price through the dividend per share metric
+- **Impact on Share Price**:
+  - **Direct**: Dividend changes affect share price through the dividend per share metric (trend-based comparison)
+  - **Indirect**: Dividend changes create prestige events with asymmetric impact:
+    - **Dividend Cuts**: Larger negative prestige impact (0.5× multiplier)
+    - **Dividend Increases**: Smaller positive prestige impact (0.3× multiplier)
+    - Prestige impact decays over time (decay rate: 0.98)
+    - Prestige affects share price through the prestige metric and expected improvement rates
 
 ### Shareholder Breakdown
 
@@ -203,11 +257,10 @@ The `ShareMetrics` interface provides per-share calculations:
 
 **Historical Snapshots:**
 - `company_metrics_history`: Weekly snapshots of company metrics for 48-week rolling comparisons
-  - Stores: `credit_rating`, `prestige`, `fixed_asset_ratio` at each snapshot
+  - Stores: `credit_rating`, `prestige`, `fixed_asset_ratio`, `share_price`, `book_value_per_share`, `earnings_per_share_48w`, `revenue_per_share_48w`, `dividend_per_share_48w`, `profit_margin_48w`, `revenue_growth_48w` at each snapshot
   - Used for: Trend calculations (comparing current vs. 48 weeks ago) and historical trend diagrams
   - Snapshots are automatically created each week when share price is adjusted
-
-**Note**: The previous tick values (`previousCreditRating`, `previousFixedAssetRatio`, `previousPrestige`) are deprecated in favor of the snapshot system, which provides more consistent 48-week comparisons.
+  - Provides consistent 48-week comparison windows across all metrics
 
 ## Key Files
 
@@ -222,17 +275,19 @@ The `ShareMetrics` interface provides per-share calculations:
 
 - **`src/lib/services/finance/sharePriceIncrementService.ts`**
   - `adjustSharePriceIncrementally()`: Weekly share price adjustment
-  - `calculateIncrementalAdjustment()`: Core delta calculation logic
+  - `calculateIncrementalAdjustment()`: Core delta calculation logic (unified trend-based system)
   - `initializeSharePriceWithTimestamp()`: Initialize price on first use
+  - `applyImmediateShareStructureAdjustment()`: Immediate price adjustment for share issuance/buyback
+  - `calculateIncrementalAdjustmentDebug()`: Debug function for detailed calculation breakdown
 
 - **`src/lib/services/finance/shareManagementService.ts`**
-  - `issueStock()`: Issue new shares
-  - `buyBackStock()`: Repurchase shares
-  - `updateDividendRate()`: Set dividend rate
+  - `issueStock()`: Issue new shares (triggers immediate price adjustment)
+  - `buyBackStock()`: Repurchase shares (triggers immediate price adjustment)
+  - `updateDividendRate()`: Set dividend rate (creates prestige events for changes)
   - `autoPayDividends()`: Automatically pay dividends on season change
   - `getShareMetrics()`: Calculate all per-share metrics (including 48-week rolling metrics)
   - `getShareholderBreakdown()`: Calculate ownership percentages
-  - `getHistoricalShareMetrics()`: Historical per-share data (recalculated from transactions)
+  - `getHistoricalShareMetrics()`: Historical per-share data (from snapshots)
 
 - **`src/lib/database/core/companyMetricsHistoryDB.ts`**
   - `insertCompanyMetricsSnapshot()`: Store weekly snapshot of metrics
@@ -245,11 +300,14 @@ The `ShareMetrics` interface provides per-share calculations:
 ### Constants
 
 - **`src/lib/constants/shareValuationConstants.ts`**
-  - `EXPECTED_VALUE_BASELINES`: Base expectations for revenue growth and profit margin
+  - `EXPECTED_IMPROVEMENT_RATES`: Baseline improvement rates per 48 weeks (targeting 15-30x over 200 years)
   - `INCREMENTAL_METRIC_CONFIG`: Base adjustments and max ratios for each metric
   - `INCREMENTAL_ANCHOR_CONFIG`: Anchor constraint parameters
   - `PRESTIGE_SCALING`: Prestige multiplier configuration
   - `GROWTH_TREND_CONFIG`: Growth trend adjustment parameters
+  - `MARKET_CAP_MODIFIER_CONFIG`: Market cap requirement configuration (additional expected improvement for larger companies)
+  - `SHARE_STRUCTURE_ADJUSTMENT_CONFIG`: Immediate price adjustments for issuance/buyback
+  - `DIVIDEND_CHANGE_PRESTIGE_CONFIG`: Prestige impact configuration for dividend changes
 
 - **`src/lib/constants/economyConstants.ts`**
   - `ECONOMY_EXPECTATION_MULTIPLIERS`: Economy phase multipliers for expected values

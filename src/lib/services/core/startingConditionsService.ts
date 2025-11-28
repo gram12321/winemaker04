@@ -173,12 +173,12 @@ export async function applyStartingConditions(
     const outsideInvestment = outsideInvestmentAmount ?? 0;
     const familyContribution = vineyardValue;
     const playerShareContribution = playerCashContributionAmount;
-    const totalCompanyValue = playerShareContribution + familyContribution + outsideInvestment;
+    const totalContributions = playerShareContribution + familyContribution + outsideInvestment;
     
-    // Calculate share structure based on total company value
-    const playerOwnershipPct = totalCompanyValue > 0 ? (playerShareContribution / totalCompanyValue) * 100 : 100;
+    // Calculate share structure based on total contributions (initial capital)
+    const playerOwnershipPct = totalContributions > 0 ? (playerShareContribution / totalContributions) * 100 : 100;
     // Calculate share count based on total capital and target share price (€50)
-    const TOTAL_SHARES = calculateInitialShareCount(totalCompanyValue);
+    const TOTAL_SHARES = calculateInitialShareCount(totalContributions);
     const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
     const outstandingShares = TOTAL_SHARES - playerShares;
 

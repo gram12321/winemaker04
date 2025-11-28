@@ -2,7 +2,7 @@ import { AchievementConfig, AchievementWithStatus, AchievementUnlock, Achievemen
 import { ALL_ACHIEVEMENTS, achievementLevels } from '../../constants/achievementConstants';
 import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked, getAchievementUnlock } from '../../database/core/achievementsDB';
 import { insertPrestigeEvent, listPrestigeEvents } from '../../database/customers/prestigeEventsDB';
-import { getGameState, calculateFinancialData, calculateNetWorth, loadTransactions } from '../index';
+import { getGameState, calculateFinancialData, calculateCompanyValue, loadTransactions } from '../index';
 import { calculateAbsoluteWeeks } from '../../utils';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { loadVineyards } from '../../database/activities/vineyardDB';
@@ -205,7 +205,7 @@ export function createTieredAchievements(
 interface AchievementCheckContext {
   companyId: string;
   currentMoney: number;
-  netWorth: number;
+  companyValue: number;
   currentPrestige: number;
   companyAgeInYears: number;
   totalSalesCount: number;
@@ -251,9 +251,9 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   const companyAgeInYears = gameState.currentYear! - gameState.foundedYear!;
   
   // Load financial data
-  const [financialData, netWorth, transactions] = await Promise.all([
+  const [financialData, companyValue, transactions] = await Promise.all([
     calculateFinancialData('year'),
-    calculateNetWorth(),
+    calculateCompanyValue(),
     loadTransactions()
   ]);
   
@@ -345,7 +345,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   return {
     companyId,
     currentMoney: gameState.money || 0,
-    netWorth,
+    companyValue,
     currentPrestige: gameState.prestige || 0,
     companyAgeInYears,
     totalSalesCount,
@@ -408,7 +408,7 @@ function checkAchievementCondition(
   switch (condition.type) {
     case 'money_threshold':
       // Cash reserves minus outstanding loan debt (net cash position)
-      const outstandingLoans = context.totalAssets - context.netWorth;
+      const outstandingLoans = context.totalAssets - context.companyValue;
       const netCashPosition = context.currentMoney - outstandingLoans;
       return {
         isMet: netCashPosition >= (condition.threshold || 0),
@@ -553,10 +553,10 @@ function checkAchievementCondition(
       };
       
     case 'total_assets':
-      // Check if net worth meets threshold (assets minus liabilities)
+      // Check if company value meets threshold (assets minus liabilities)
       return {
-        isMet: context.netWorth >= (condition.threshold || 0),
-        progress: context.netWorth,
+        isMet: context.companyValue >= (condition.threshold || 0),
+        progress: context.companyValue,
         target: condition.threshold,
         unit: 'euros'
       };
@@ -672,9 +672,9 @@ function checkAchievementCondition(
       };
       
     case 'assets_by_year':
-      // Check if accumulated threshold net worth before year 10
+      // Check if accumulated threshold company value before year 10
       return checkYearBasedAchievement(
-        context.companyAgeInYears, 10, context.netWorth, condition.threshold || 0, 'euros'
+        context.companyAgeInYears, 10, context.companyValue, condition.threshold || 0, 'euros'
       );
       
     case 'hectares_by_year':

@@ -169,12 +169,12 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   const baseOutsideInvestmentCap = Math.max(playerShareContribution || 0, FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION);
   const MAX_OUTSIDE_INVESTMENT = baseOutsideInvestmentCap * 10; // Allow up to 10x player equity
   const safeOutsideInvestment = Math.min(outsideInvestment, MAX_OUTSIDE_INVESTMENT);
-  const totalCompanyValue = playerShareContribution + familyContribution + safeOutsideInvestment;
+  const totalContributions = playerShareContribution + familyContribution + safeOutsideInvestment;
   const loanPrincipal = selectedCondition.startingLoan?.principal ?? 0;
   const liquidStartingCapital = playerShareContribution + safeOutsideInvestment + loanPrincipal;
-  const playerOwnershipPct = totalCompanyValue > 0 ? (playerShareContribution / totalCompanyValue) * 100 : 100;
-  const familyOwnershipPct = totalCompanyValue > 0 ? (familyContribution / totalCompanyValue) * 100 : 0;
-  const outsideOwnershipPct = totalCompanyValue > 0 ? (safeOutsideInvestment / totalCompanyValue) * 100 : 0;
+  const playerOwnershipPct = totalContributions > 0 ? (playerShareContribution / totalContributions) * 100 : 100;
+  const familyOwnershipPct = totalContributions > 0 ? (familyContribution / totalContributions) * 100 : 0;
+  const outsideOwnershipPct = totalContributions > 0 ? (safeOutsideInvestment / totalContributions) * 100 : 0;
   
   useEffect(() => {
     setOutsideInvestment((prev) => Math.min(prev, MAX_OUTSIDE_INVESTMENT));
@@ -490,9 +490,9 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                     
                     <div className="pt-2 border-t border-blue-200 space-y-2">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-700">Total Company Value:</span>
+                        <span className="text-gray-700">Total Contributions:</span>
                         <span className="font-semibold text-gray-900">
-                          {formatNumber(totalCompanyValue, { currency: true })}
+                          {formatNumber(totalContributions, { currency: true })}
                         </span>
                       </div>
                       

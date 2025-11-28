@@ -1,5 +1,5 @@
 import { formatNumber, getColorClass } from '@/lib/utils';
-import { calculateFinancialData, calculateNetWorth } from '@/lib/services';
+import { calculateFinancialData, calculateCompanyValue } from '@/lib/services';
 import { SimpleCard } from '../ui';
 import { useGameStateWithData } from '@/hooks';
 import { DEFAULT_FINANCIAL_DATA, FINANCE_PERIOD_LABELS, WEEKS_PER_SEASON } from '@/lib/constants';
@@ -46,9 +46,9 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
   const periodLabel = period === 'all' ? 'All Time' : `${period.charAt(0).toUpperCase() + period.slice(1)}`;
   const showLoanPaymentBreakdown = period !== 'all';
 
-  // Calculate net worth using centralized function
-  const netWorth = useGameStateWithData(
-    () => calculateNetWorth(),
+  // Calculate company value using centralized function
+  const companyValue = useGameStateWithData(
+    () => calculateCompanyValue(),
     0
   );
 
@@ -223,9 +223,9 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
                   <span className="font-bold text-lg">{formatNumber(financialData.totalAssets, { currency: true })}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm mt-1">
-                  <span className="font-medium text-gray-600">Net Worth</span>
-                  <span className={`font-semibold ${getColorClass(netWorth >= 0 ? 0.8 : 0.2)}`}>
-                    {formatNumber(netWorth, { currency: true })}
+                  <span className="font-medium text-gray-600">Company Value</span>
+                  <span className={`font-semibold ${getColorClass(companyValue >= 0 ? 0.8 : 0.2)}`}>
+                    {formatNumber(companyValue, { currency: true })}
                   </span>
                 </div>
               </div>

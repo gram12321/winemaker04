@@ -7,11 +7,10 @@ import { calculateCreditRating } from './creditRatingService';
 import {
   INCREMENTAL_ANCHOR_CONFIG,
   INCREMENTAL_METRIC_CONFIG,
-  EXPECTED_VALUE_BASELINES,
   EXPECTED_IMPROVEMENT_RATES,
   PRESTIGE_SCALING,
   SHARE_STRUCTURE_ADJUSTMENT_CONFIG,
-  COMPANY_VALUE_MODIFIER_CONFIG
+  MARKET_CAP_MODIFIER_CONFIG
 } from '../../constants/shareValuationConstants';
 import { ECONOMY_EXPECTATION_MULTIPLIERS } from '../../constants/economyConstants';
 import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -114,16 +113,16 @@ async function calculateIncrementalAdjustment(
   // Combined multiplier for expected improvement rates
   const improvementMultiplier = economyMultiplier * prestigeMultiplier * growthTrendMultiplier;
   
-  // Calculate company value modifier (additional expected improvement based on market cap)
-  let companyValueRequirement = 0;
-  if (COMPANY_VALUE_MODIFIER_CONFIG.enabled) {
+  // Calculate market cap modifier (additional expected improvement based on market cap)
+  let marketCapRequirement = 0;
+  if (MARKET_CAP_MODIFIER_CONFIG.enabled) {
     const marketCap = company.marketCap ?? (company.sharePrice ?? 0) * (company.totalShares ?? 1000000);
-    if (marketCap > COMPANY_VALUE_MODIFIER_CONFIG.baseMarketCap) {
+    if (marketCap > MARKET_CAP_MODIFIER_CONFIG.baseMarketCap) {
       // Logarithmic scaling: larger companies face higher absolute expectations
-      const logRatio = Math.log10(marketCap / COMPANY_VALUE_MODIFIER_CONFIG.baseMarketCap);
-      companyValueRequirement = Math.min(
-        COMPANY_VALUE_MODIFIER_CONFIG.baseRate * logRatio,
-        COMPANY_VALUE_MODIFIER_CONFIG.maxRate
+      const logRatio = Math.log10(marketCap / MARKET_CAP_MODIFIER_CONFIG.baseMarketCap);
+      marketCapRequirement = Math.min(
+        MARKET_CAP_MODIFIER_CONFIG.baseRate * logRatio,
+        MARKET_CAP_MODIFIER_CONFIG.maxRate
       );
     }
   }
@@ -165,16 +164,16 @@ async function calculateIncrementalAdjustment(
     ? ((currentProfitMargin48W - previousProfitMargin48W) / previousProfitMargin48W) * 100
     : (currentProfitMargin48W > 0 ? 100 : 0);
   
-  // Calculate expected improvement rates (baseline × multipliers + company value requirement)
-  // Company value requirement is added on top of trend-based expectations
-  const expectedEPSImprovement = (EXPECTED_IMPROVEMENT_RATES.earningsPerShare * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedRevenuePerShareImprovement = (EXPECTED_IMPROVEMENT_RATES.revenuePerShare * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedDividendPerShareImprovement = (EXPECTED_IMPROVEMENT_RATES.dividendPerShare * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedRevenueGrowthImprovement = (EXPECTED_IMPROVEMENT_RATES.revenueGrowth * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedProfitMarginImprovement = (EXPECTED_IMPROVEMENT_RATES.profitMargin * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedCreditRatingImprovement = (EXPECTED_IMPROVEMENT_RATES.creditRating * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedFixedAssetRatioImprovement = (EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * improvementMultiplier + companyValueRequirement) * 100;
-  const expectedPrestigeImprovement = (EXPECTED_IMPROVEMENT_RATES.prestige * improvementMultiplier + companyValueRequirement) * 100;
+  // Calculate expected improvement rates (baseline × multipliers + market cap requirement)
+  // Market cap requirement is added on top of trend-based expectations
+  const expectedEPSImprovement = (EXPECTED_IMPROVEMENT_RATES.earningsPerShare * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedRevenuePerShareImprovement = (EXPECTED_IMPROVEMENT_RATES.revenuePerShare * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedDividendPerShareImprovement = (EXPECTED_IMPROVEMENT_RATES.dividendPerShare * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedRevenueGrowthImprovement = (EXPECTED_IMPROVEMENT_RATES.revenueGrowth * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedProfitMarginImprovement = (EXPECTED_IMPROVEMENT_RATES.profitMargin * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedCreditRatingImprovement = (EXPECTED_IMPROVEMENT_RATES.creditRating * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedFixedAssetRatioImprovement = (EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * improvementMultiplier + marketCapRequirement) * 100;
+  const expectedPrestigeImprovement = (EXPECTED_IMPROVEMENT_RATES.prestige * improvementMultiplier + marketCapRequirement) * 100;
   
   // Calculate deltas: (Actual Improvement - Expected Improvement)
   // For profitability metrics, skip in first year (grace period)
@@ -454,10 +453,10 @@ export async function applyImmediateShareStructureAdjustment(
 }
 
 /**
- * Debug function: Calculate and return incremental adjustment data without applying it
- * Used for debugging and admin dashboard display
+ * Get share price breakdown: Calculate and return incremental adjustment data without applying it
+ * Used for Share Price Breakdown UI display
  */
-export async function calculateIncrementalAdjustmentDebug(companyId?: string): Promise<{
+export async function getSharePriceBreakdown(companyId?: string): Promise<{
   success: boolean;
   data?: {
     currentPrice: number;
@@ -517,7 +516,7 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
       growthTrendMultiplier: number;
       expectedDividendPayments: number;
       improvementMultiplier: number; // Combined multiplier (economy × prestige × growth)
-      companyValueRequirement: number; // Additional expected improvement from company value (% per 48 weeks)
+      marketCapRequirement: number; // Additional expected improvement from market cap (% per 48 weeks)
       marketCap: number; // Market cap for display
     };
   };
@@ -565,30 +564,30 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
     const prestigeMultiplier = PRESTIGE_SCALING.base + (normalizedPrestige * (PRESTIGE_SCALING.maxMultiplier - PRESTIGE_SCALING.base));
     const improvementMultiplier = economyMultiplier * prestigeMultiplier * growthTrendMultiplier;
     
-    // Calculate company value modifier (additional expected improvement based on market cap)
-    let companyValueRequirement = 0;
+    // Calculate market cap modifier (additional expected improvement based on market cap)
+    let marketCapRequirement = 0;
     let marketCap = 0;
-    if (COMPANY_VALUE_MODIFIER_CONFIG.enabled) {
+    if (MARKET_CAP_MODIFIER_CONFIG.enabled) {
       marketCap = company.marketCap ?? (company.sharePrice ?? 0) * (company.totalShares ?? 1000000);
-      if (marketCap > COMPANY_VALUE_MODIFIER_CONFIG.baseMarketCap) {
-        const logRatio = Math.log10(marketCap / COMPANY_VALUE_MODIFIER_CONFIG.baseMarketCap);
-        companyValueRequirement = Math.min(
-          COMPANY_VALUE_MODIFIER_CONFIG.baseRate * logRatio,
-          COMPANY_VALUE_MODIFIER_CONFIG.maxRate
+      if (marketCap > MARKET_CAP_MODIFIER_CONFIG.baseMarketCap) {
+        const logRatio = Math.log10(marketCap / MARKET_CAP_MODIFIER_CONFIG.baseMarketCap);
+        marketCapRequirement = Math.min(
+          MARKET_CAP_MODIFIER_CONFIG.baseRate * logRatio,
+          MARKET_CAP_MODIFIER_CONFIG.maxRate
         );
       }
     }
     
-    // Calculate expected improvement rates (baseline × multipliers + company value requirement)
+    // Calculate expected improvement rates (baseline × multipliers + market cap requirement)
     const expectedImprovementRates = {
-      earningsPerShare: (EXPECTED_IMPROVEMENT_RATES.earningsPerShare * improvementMultiplier + companyValueRequirement) * 100,
-      revenuePerShare: (EXPECTED_IMPROVEMENT_RATES.revenuePerShare * improvementMultiplier + companyValueRequirement) * 100,
-      dividendPerShare: (EXPECTED_IMPROVEMENT_RATES.dividendPerShare * improvementMultiplier + companyValueRequirement) * 100,
-      revenueGrowth: (EXPECTED_IMPROVEMENT_RATES.revenueGrowth * improvementMultiplier + companyValueRequirement) * 100,
-      profitMargin: (EXPECTED_IMPROVEMENT_RATES.profitMargin * improvementMultiplier + companyValueRequirement) * 100,
-      creditRating: (EXPECTED_IMPROVEMENT_RATES.creditRating * improvementMultiplier + companyValueRequirement) * 100,
-      fixedAssetRatio: (EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * improvementMultiplier + companyValueRequirement) * 100,
-      prestige: (EXPECTED_IMPROVEMENT_RATES.prestige * improvementMultiplier + companyValueRequirement) * 100
+      earningsPerShare: (EXPECTED_IMPROVEMENT_RATES.earningsPerShare * improvementMultiplier + marketCapRequirement) * 100,
+      revenuePerShare: (EXPECTED_IMPROVEMENT_RATES.revenuePerShare * improvementMultiplier + marketCapRequirement) * 100,
+      dividendPerShare: (EXPECTED_IMPROVEMENT_RATES.dividendPerShare * improvementMultiplier + marketCapRequirement) * 100,
+      revenueGrowth: (EXPECTED_IMPROVEMENT_RATES.revenueGrowth * improvementMultiplier + marketCapRequirement) * 100,
+      profitMargin: (EXPECTED_IMPROVEMENT_RATES.profitMargin * improvementMultiplier + marketCapRequirement) * 100,
+      creditRating: (EXPECTED_IMPROVEMENT_RATES.creditRating * improvementMultiplier + marketCapRequirement) * 100,
+      fixedAssetRatio: (EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * improvementMultiplier + marketCapRequirement) * 100,
+      prestige: (EXPECTED_IMPROVEMENT_RATES.prestige * improvementMultiplier + marketCapRequirement) * 100
     };
     
     // Get current 48-week rolling values
@@ -632,8 +631,8 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
     };
     
     // Get expected values calculation details (for backward compatibility with UI)
-    const baseRevenueGrowth = company?.baseRevenueGrowth ?? EXPECTED_VALUE_BASELINES.revenueGrowth;
-    const baseProfitMargin = company?.baseProfitMargin ?? EXPECTED_VALUE_BASELINES.profitMargin;
+    const baseRevenueGrowth = company?.baseRevenueGrowth ?? 0.10; // 10% default
+    const baseProfitMargin = company?.baseProfitMargin ?? 0.15; // 15% default
     const expectedReturnOnBookValue = company?.baseExpectedReturnOnBookValue ?? 0.10;
     
     const companyWeeks = calculateCompanyWeeks(
@@ -659,7 +658,7 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
       growthTrendMultiplier,
       expectedDividendPayments,
       improvementMultiplier, // Combined multiplier (economy × prestige × growth)
-      companyValueRequirement: companyValueRequirement * 100, // Company value requirement (% per 48 weeks)
+      marketCapRequirement: marketCapRequirement * 100, // Market cap requirement (% per 48 weeks)
       marketCap // Market cap for display
     };
     
@@ -684,8 +683,8 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
       }
     };
   } catch (error) {
-    console.error('Error calculating incremental adjustment debug:', error);
-    return { success: false, error: 'Failed to calculate incremental adjustment' };
+    console.error('Error getting share price breakdown:', error);
+    return { success: false, error: 'Failed to get share price breakdown' };
   }
 }
 

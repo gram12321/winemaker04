@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
 import { getMaxLandValue } from '../wine/winescore/grapeQualityCalculation';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
-import { calculateNetWorth } from '../finance/financeService';
+import { calculateCompanyValue } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
 import { calculateSalePrestigeWithAssets, calculateVineyardSalePrestige, calculateFeatureSalePrestigeWithReputation, calculateVineyardManifestationPrestige, calculateCompanyManifestationPrestige } from './prestigeCalculator';
 
@@ -31,17 +31,17 @@ type VineyardPrestigeFactors = {
 export async function initializeBasePrestigeEvents(): Promise<void> {
   const maxLandValue = getMaxLandValue();
 
-  // Calculate net worth using centralized function
-  const netWorth = await calculateNetWorth();
+  // Calculate company value using centralized function
+  const companyValue = await calculateCompanyValue();
 
-  const companyValuePrestige = Math.log((netWorth || 0) / maxLandValue + 1);
+  const companyValuePrestige = Math.log((companyValue || 0) / maxLandValue + 1);
 
   await updateBasePrestigeEvent(
     'company_finance',
     'company_net_worth',
     companyValuePrestige,
     {
-      companyNetWorth: netWorth,
+      companyNetWorth: companyValue,
       maxLandValue: maxLandValue,
       prestigeBase01: companyValuePrestige,
     }
@@ -330,16 +330,16 @@ export async function updateCompanyValuePrestige(_money: number): Promise<void> 
   try {
     const maxLandValue = getMaxLandValue();
 
-    // Calculate net worth using centralized function
-    const netWorth = await calculateNetWorth();
+    // Calculate company value using centralized function
+    const companyValue = await calculateCompanyValue();
 
-    const companyValuePrestige = Math.log((netWorth || 0) / maxLandValue + 1);
+    const companyValuePrestige = Math.log((companyValue || 0) / maxLandValue + 1);
     await updateBasePrestigeEvent(
       'company_finance',
       'company_net_worth',
       companyValuePrestige,
       {
-        companyNetWorth: netWorth,
+        companyNetWorth: companyValue,
         maxLandValue: maxLandValue,
         prestigeBase01: companyValuePrestige,
       }
