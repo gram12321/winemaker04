@@ -21,16 +21,22 @@ export const EXPECTED_VALUE_BASELINES = {
  * 
  * All metrics now use trend-based comparisons (current 48w vs previous 48w).
  * The baseline represents "normal" expected improvement in stable economy with average prestige.
+ * 
+ * Note: These rates target 15-30x growth over 200 years, accounting for ups and downs.
+ * Since comparisons are to previous 48 weeks (not linear), actual growth will fluctuate.
+ * 
+ * Math: (1.01)^200 = 7.3x, (1.015)^200 = 19.7x, (1.02)^200 = 52.4x
+ * Using 1.0-1.5% gives 7-20x theoretical, but with ups/downs averages to 15-30x range.
  */
 export const EXPECTED_IMPROVEMENT_RATES = {
-  earningsPerShare: 0.10,      // 10% improvement expected per 48 weeks (baseline)
-  revenuePerShare: 0.10,       // 10% improvement expected per 48 weeks (baseline)
-  dividendPerShare: 0.0,        // No expected improvement (dividends are player-controlled)
-  revenueGrowth: 0.10,          // 10% improvement in growth rate expected per 48 weeks (baseline)
-  profitMargin: 0.05,           // 5% improvement in margin expected per 48 weeks (baseline)
-  creditRating: 0.02,            // 2% improvement expected per 48 weeks (slow improvement)
-  fixedAssetRatio: 0.0,         // No expected improvement (maintains current level - strategic choice)
-  prestige: 0.03                  // 3% improvement expected per 48 weeks (gradual prestige growth)
+  earningsPerShare: 0.012,      // 1.2% improvement expected per 48 weeks (baseline)
+  revenuePerShare: 0.012,       // 1.2% improvement expected per 48 weeks (baseline)
+  dividendPerShare: 0.003,      // 0.3% improvement expected per 48 weeks (small, player-controlled)
+  revenueGrowth: 0.012,          // 1.2% improvement in growth rate expected per 48 weeks (baseline)
+  profitMargin: 0.008,           // 0.8% improvement in margin expected per 48 weeks (margins improve slowly)
+  creditRating: 0.004,           // 0.4% improvement expected per 48 weeks (slow improvement)
+  fixedAssetRatio: 0.002,       // 0.2% improvement expected per 48 weeks (very slow, strategic)
+  prestige: 0.005                // 0.5% improvement expected per 48 weeks (gradual prestige growth)
 } as const;
 
 /**
@@ -38,7 +44,7 @@ export const EXPECTED_IMPROVEMENT_RATES = {
  */
 export const PRESTIGE_SCALING = {
   base: 1.0,
-  maxMultiplier: 2.0,
+  maxMultiplier: 3.0,
 } as const;
 
 /**
@@ -97,5 +103,21 @@ export const DIVIDEND_CHANGE_PRESTIGE_CONFIG = {
   cutMultiplier: 0.5,         // Prestige impact multiplier for dividend cuts
   increaseMultiplier: 0.3,     // Prestige impact multiplier for dividend increases (smaller)
   decayRate: 0.98              // Prestige event decay rate (market forgets over time)
+} as const;
+
+/**
+ * Company value modifier configuration.
+ * As company value (market cap) increases, additional expected improvement is required.
+ * This is independent of the 48-week trend comparison and makes it progressively harder
+ * for larger companies to meet expectations.
+ * 
+ * Formula: companyValueRequirement = baseRate × log10(marketCap / baseMarketCap)
+ * This creates a logarithmic scaling where larger companies face higher absolute expectations.
+ */
+export const COMPANY_VALUE_MODIFIER_CONFIG = {
+  baseMarketCap: 1000000,     // Base market cap (€1M) - no additional requirement below this
+  baseRate: 0.002,            // Base additional expected improvement rate per 48 weeks (0.2%)
+  maxRate: 0.01,              // Maximum additional expected improvement rate (1.0%)
+  enabled: true                // Toggle to enable/disable company value modifier
 } as const;
 

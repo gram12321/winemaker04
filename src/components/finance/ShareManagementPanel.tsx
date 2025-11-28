@@ -870,21 +870,21 @@ export function ShareManagementPanel() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 pl-4">
                         <div>Earnings/Share Baseline:</div>
-                        <div className="font-mono">10.0%</div>
+                        <div className="font-mono">1.2%</div>
                         <div>Revenue/Share Baseline:</div>
-                        <div className="font-mono">10.0%</div>
+                        <div className="font-mono">1.2%</div>
                         <div>Dividend/Share Baseline:</div>
-                        <div className="font-mono">0.0% (player-controlled)</div>
+                        <div className="font-mono">0.3%</div>
                         <div>Revenue Growth Baseline:</div>
-                        <div className="font-mono">10.0%</div>
+                        <div className="font-mono">1.2%</div>
                         <div>Profit Margin Baseline:</div>
-                        <div className="font-mono">5.0%</div>
+                        <div className="font-mono">0.8%</div>
                         <div>Credit Rating Baseline:</div>
-                        <div className="font-mono">2.0%</div>
+                        <div className="font-mono">0.4%</div>
                         <div>Fixed Asset Ratio Baseline:</div>
-                        <div className="font-mono">0.0% (maintains level)</div>
+                        <div className="font-mono">0.2%</div>
                         <div>Prestige Baseline:</div>
-                        <div className="font-mono">3.0%</div>
+                        <div className="font-mono">0.5%</div>
                       </div>
                     </div>
                     <div>
@@ -896,12 +896,24 @@ export function ShareManagementPanel() {
                         <div className="font-mono">{formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })}</div>
                         <div>Growth Trend Multiplier:</div>
                         <div className="font-mono">{formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}</div>
+                        {(incrementalDebugData.expectedValuesCalc as any).companyValueRequirement !== undefined && (incrementalDebugData.expectedValuesCalc as any).companyValueRequirement > 0 && (
+                          <>
+                            <div>Company Value Requirement:</div>
+                            <div className="font-mono text-orange-600 font-semibold">
+                              +{formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              Market Cap: {formatNumber((incrementalDebugData.expectedValuesCalc as any).marketCap ?? 0, { currency: true, decimals: 0 })}
+                              {' '}(Additional expectation for larger companies)
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="border-t border-gray-300 pt-2">
                       <div className="font-semibold mb-1">Expected Improvement Rates (per 48 weeks):</div>
                       <div className="text-gray-600 text-xs mb-2 pl-4">
-                        Formula: Baseline × Economy × Prestige × Growth = Expected Improvement %
+                        Formula: (Baseline × Economy × Prestige × Growth) + Company Value Requirement = Expected Improvement %
                       </div>
                       <div className="grid grid-cols-2 gap-2 pl-4">
                         <div>Improvement Multiplier:</div>
@@ -914,46 +926,61 @@ export function ShareManagementPanel() {
                         {incrementalDebugData.expectedImprovementRates && (
                           <>
                             <div>Expected EPS Improvement:</div>
-                            <div className="font-mono text-green-600 font-semibold">
+                        <div className="font-mono text-green-600 font-semibold">
                               {formatNumber(incrementalDebugData.expectedImprovementRates.earningsPerShare, { decimals: 2, forceDecimals: true })}%
-                            </div>
+                        </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 10.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              = 1.2% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              )}
                             </div>
                             <div>Expected Revenue/Share Improvement:</div>
-                            <div className="font-mono text-green-600 font-semibold">
+                        <div className="font-mono text-green-600 font-semibold">
                               {formatNumber(incrementalDebugData.expectedImprovementRates.revenuePerShare, { decimals: 2, forceDecimals: true })}%
-                            </div>
+                        </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 10.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              = 1.2% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              )}
                             </div>
                             <div>Expected Revenue Growth Improvement:</div>
-                            <div className="font-mono text-green-600 font-semibold">
+                        <div className="font-mono text-green-600 font-semibold">
                               {formatNumber(incrementalDebugData.expectedImprovementRates.revenueGrowth, { decimals: 2, forceDecimals: true })}%
-                            </div>
-                            <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 10.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                            </div>
+                        </div>
+                        <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 1.2% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                        </div>
                             <div>Expected Profit Margin Improvement:</div>
-                            <div className="font-mono text-green-600 font-semibold">
+                        <div className="font-mono text-green-600 font-semibold">
                               {formatNumber(incrementalDebugData.expectedImprovementRates.profitMargin, { decimals: 2, forceDecimals: true })}%
-                            </div>
+                        </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 5.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              = 0.8% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              )}
                             </div>
                             <div>Expected Credit Rating Improvement:</div>
                             <div className="font-mono text-green-600 font-semibold">
                               {formatNumber(incrementalDebugData.expectedImprovementRates.creditRating, { decimals: 2, forceDecimals: true })}%
-                            </div>
+                      </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 2.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
-                            </div>
+                              = 0.4% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              )}
+                    </div>
                             <div>Expected Prestige Improvement:</div>
                             <div className="font-mono text-green-600 font-semibold">
                               {formatNumber(incrementalDebugData.expectedImprovementRates.prestige, { decimals: 2, forceDecimals: true })}%
-                            </div>
+                  </div>
                             <div className="text-gray-600 text-xs col-span-2 pl-4">
-                              = 3.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              = 0.5% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                              {((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement ?? 0) > 0 && (
+                                <> + {formatNumber((incrementalDebugData.expectedValuesCalc as any).companyValueRequirement, { decimals: 2, forceDecimals: true })}%</>
+                              )}
                             </div>
                           </>
                         )}
@@ -1043,9 +1070,9 @@ export function ShareManagementPanel() {
                               ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.dividendPerShare, { currency: true, decimals: 4 })
                               : <span className="text-gray-400 italic">N/A</span>}
                             {incrementalDebugData.expectedImprovementRates && (
-                              <span className="text-xs text-gray-500 ml-1">
+                            <span className="text-xs text-gray-500 ml-1">
                                 (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.dividendPerShare, { decimals: 1, forceDecimals: true })}%)
-                              </span>
+                            </span>
                             )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.dividendPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
