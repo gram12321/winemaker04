@@ -27,6 +27,15 @@ export interface Company {
   marketCap?: number;
   sharePrice?: number;
   initialVineyardValue?: number; // Initial family contribution (vineyard value at company creation)
+  // Growth trend tracking for share valuation
+  growthTrendMultiplier?: number; // Multiplier adjusting expected values based on historical performance (default: 1.0)
+  lastGrowthTrendUpdate?: GameDate; // When growth trend was last updated
+  // Incremental share price tracking
+  lastSharePriceUpdate?: GameDate; // When share price was last adjusted incrementally
+  // Base values for expected value calculations (future: NPC/Board room controlled)
+  baseRevenueGrowth?: number; // Default: 0.10 (10%)
+  baseProfitMargin?: number; // Default: 0.15 (15%)
+  baseExpectedReturnOnBookValue?: number; // Default: 0.10 (10%)
 }
 
 /**
@@ -60,7 +69,21 @@ function mapCompanyFromDB(dbCompany: any): Company {
     } : undefined,
     marketCap: dbCompany.market_cap ? Number(dbCompany.market_cap) : undefined,
     sharePrice: dbCompany.share_price ? Number(dbCompany.share_price) : undefined,
-    initialVineyardValue: dbCompany.initial_vineyard_value ? Number(dbCompany.initial_vineyard_value) : undefined
+    initialVineyardValue: dbCompany.initial_vineyard_value ? Number(dbCompany.initial_vineyard_value) : undefined,
+    growthTrendMultiplier: dbCompany.growth_trend_multiplier ? Number(dbCompany.growth_trend_multiplier) : undefined,
+    lastGrowthTrendUpdate: (dbCompany.last_growth_trend_update_week && dbCompany.last_growth_trend_update_season && dbCompany.last_growth_trend_update_year) ? {
+      week: dbCompany.last_growth_trend_update_week,
+      season: dbCompany.last_growth_trend_update_season as Season,
+      year: dbCompany.last_growth_trend_update_year
+    } : undefined,
+    lastSharePriceUpdate: (dbCompany.last_share_price_update_week && dbCompany.last_share_price_update_season && dbCompany.last_share_price_update_year) ? {
+      week: dbCompany.last_share_price_update_week,
+      season: dbCompany.last_share_price_update_season as Season,
+      year: dbCompany.last_share_price_update_year
+    } : undefined,
+    baseRevenueGrowth: dbCompany.base_revenue_growth !== null && dbCompany.base_revenue_growth !== undefined ? Number(dbCompany.base_revenue_growth) : undefined,
+    baseProfitMargin: dbCompany.base_profit_margin !== null && dbCompany.base_profit_margin !== undefined ? Number(dbCompany.base_profit_margin) : undefined,
+    baseExpectedReturnOnBookValue: dbCompany.base_expected_return_on_book_value !== null && dbCompany.base_expected_return_on_book_value !== undefined ? Number(dbCompany.base_expected_return_on_book_value) : undefined
   };
 }
 
@@ -93,6 +116,19 @@ export interface CompanyData {
   market_cap?: number;
   share_price?: number;
   initial_vineyard_value?: number;
+  // Growth trend tracking
+  growth_trend_multiplier?: number;
+  last_growth_trend_update_week?: number;
+  last_growth_trend_update_season?: Season;
+  last_growth_trend_update_year?: number;
+  // Incremental share price tracking
+  last_share_price_update_week?: number;
+  last_share_price_update_season?: Season;
+  last_share_price_update_year?: number;
+  // Base values for expected value calculations
+  base_revenue_growth?: number;
+  base_profit_margin?: number;
+  base_expected_return_on_book_value?: number;
 }
 
 export const insertCompany = async (companyData: CompanyData): Promise<{ success: boolean; data?: any; error?: string }> => {

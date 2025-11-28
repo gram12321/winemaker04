@@ -1,6 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateNetWorth, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, enforceEmergencyQuickLoanIfNeeded, restructureForcedLoansIfNeeded } from '@/lib/services';
-import { checkAndNotifyDividendsDue } from '@/lib/services/finance/shareManagementService';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
@@ -96,9 +95,23 @@ const executeGameTick = async (): Promise<void> => {
   // Pass season change info and all collected messages if we just changed seasons
   await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
 
-  // Check for dividend payments due (week 1 of each season)
+  // Automatically pay dividends on season change (week 1 of each season)
   if (week === 1) {
-    await checkAndNotifyDividendsDue();
+    try {
+      const { payDividends } = await import('../finance/shareManagementService');
+      const result = await payDividends();
+      if (result.success && result.totalPayment && result.totalPayment > 0) {
+        // Dividends paid successfully - notification handled by payDividends
+      } else if (result.error && result.error === 'Insufficient funds to pay dividends') {
+        // Silently skip if insufficient funds (automatic payment)
+      } else if (result.error && result.error === 'Dividend rate is not set or is zero') {
+        // Silently skip if no dividend rate set
+      }
+      // Other errors are silently ignored for automatic payments
+    } catch (error) {
+      console.warn('Error automatically paying dividends:', error);
+      // Don't fail game tick if dividend payment fails
+    }
   }
 
   // Update vineyard ripeness and status based on current season and week
@@ -150,6 +163,15 @@ const onNewYear = async (_previousYear: number, _newYear: number): Promise<void>
 
   // Update vineyard vine yields
   await updateVineyardVineYields();
+
+  // Update growth trend multipliers based on performance vs expectations
+  try {
+    const { updateGrowthTrend } = await import('../finance/growthTrendService');
+    await updateGrowthTrend();
+  } catch (error) {
+    console.error('Error updating growth trend on new year:', error);
+    // Don't fail the entire year transition if growth trend update fails
+  }
 
   // TODO: Add other yearly effects when ready
   // - Annual financial summaries
@@ -254,6 +276,16 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
         await updateCellarCollectionPrestige();
       } catch (error) {
         console.warn('Error during cellar collection prestige update:', error);
+      }
+    })(),
+
+    // Adjust share price incrementally (weekly incremental update)
+    (async () => {
+      try {
+        const { adjustSharePriceIncrementally } = await import('../finance/sharePriceIncrementService');
+        await adjustSharePriceIncrementally();
+      } catch (error) {
+        console.warn('Error during incremental share price adjustment:', error);
       }
     })()
   ];

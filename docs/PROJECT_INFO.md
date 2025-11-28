@@ -5,13 +5,14 @@
 winemaker04/
 ├── 📄 Configuration Files
 │   ├── components.json              # ShadCN UI configuration
-│   ├── package.json                 # Dependencies and scripts
-│   ├── package-lock.json           # Dependency lock file
+│   ├── package.json                 # Dependencies, pnpm scripts, Vitest config
+│   ├── pnpm-lock.yaml              # pnpm dependency lock file
+│   ├── pnpm-workspace.yaml         # pnpm workspace definition
 │   ├── tailwind.config.js          # Tailwind CSS configuration
 │   ├── tsconfig.json               # TypeScript configuration
 │   ├── tsconfig.node.json          # Node.js TypeScript config
 │   ├── postcss.config.js           # PostCSS configuration
-│   ├── vite.config.ts              # Vite build configuration
+│   ├── vite.config.ts              # Vite + Vitest build configuration
 │   ├── vercel.json                 # Vercel deployment config
 │   └── .gitignore                  # Git ignore rules
 │
@@ -23,7 +24,9 @@ winemaker04/
 │       ├── AIpromt_codecleaning.md        # Code cleaning prompts
 │       ├── AIpromt_docs.md               # Documentation prompts
 │       ├── AIpromt_newpromt.md           # New prompt guidelines
-│       ├── versionlog.md                 # Version history (939 lines)
+│       ├── versionlog.md                 # Active version history (477 lines)
+│       ├── versionlog_legacy.md          # Archived entries ≤ v0.06 (1,196 lines)
+│       ├── Agents_feedback/testscripts   # Vitest prompts & runbooks
 │       └── old_iterations/               # Legacy versions
 │           ├── hackandslash/             # Hack and slash iteration
 │           ├── simulus/                  # Simulus version
@@ -32,7 +35,8 @@ winemaker04/
 │
 ├── 📄 Database & Migrations
 │   └── migrations/
-│       └── sync_vercel_schema.sql   # Database schema synchronization
+│       ├── sync_vercel_schema.sql                   # Full schema synchronization
+│       └── vercel_migration_preserve_data_delta.sql # Incremental Vercel updates
 │
 ├── 📄 Static Assets
 │   ├── public/                     # Public static files
@@ -56,20 +60,21 @@ winemaker04/
 │   │
 │   └── index.html                  # Root HTML template
 │
-├── 📄 Source Code (src/) - 46,457 total lines
+├── 📄 Source Code (src/) - ~72,000 total lines
 │   ├── main.tsx (14 lines)                    # Application entry point
 │   ├── App.tsx (196 lines)                    # Main application component
 │   ├── index.css (106 lines)                  # Global styles
 │   ├── vite-env.d.ts (5 lines)                # Vite environment types
 │   │
-│   ├── components/ (22,555 lines total)       # React components
-│   │   ├── finance/ (1,000+ lines total)     # Financial components
-│   │   │   ├── CashFlowView.tsx (99 lines)    # Cash flow visualization
-│   │   │   ├── FinanceView.tsx (88 lines)     # Main finance view
-│   │   │   ├── IncomeBalanceView.tsx (203 lines) # Income/balance statements
-│   │   │   ├── LoansView.tsx (625 lines)      # Loan management interface
-│   │   │   ├── StaffWageSummary.tsx (87 lines) # Staff wage breakdown
-│   │   │   ├── UpgradesPlaceholder.tsx (26 lines) # Upgrades placeholder
+│   ├── components/ (≈33,000 lines total)      # React components
+│   │   ├── finance/ (1,600+ lines total)     # Financial components
+│   │   │   ├── CashFlowView.tsx (140 lines)   # Cash flow visualization
+│   │   │   ├── FinanceView.tsx (120 lines)    # Main finance view
+│   │   │   ├── IncomeBalanceView.tsx (260 lines) # Income/balance statements
+│   │   │   ├── LoansView.tsx (650 lines)      # Loan management & quick loans
+│   │   │   ├── ResearchPanel.tsx (240 lines)  # Research project status & unlocks
+│   │   │   ├── ShareManagementPanel.tsx (700+ lines) # IPO tooling, equity breakdowns
+│   │   │   ├── StaffWageSummary.tsx (130 lines) # Staff wage + experience breakdown
 │   │   │   └── index.ts (5 lines)             # Barrel exports
 │   │   │
 │   │   ├── layout/ (1,498 lines total)        # Layout components
@@ -187,7 +192,7 @@ winemaker04/
 │   │       │   └── WineryFeatureStatusGrid.tsx (570 lines) # Feature status grid
 │   │       └── index.ts (42 lines)            # Barrel exports
 │   │
-│   ├── hooks/ (745 lines total)               # Custom React hooks
+│   ├── hooks/ (900+ lines total)              # Custom React hooks
 │   │   ├── index.ts (10 lines)                # Hook exports
 │   │   ├── use-mobile.tsx (15 lines)          # Mobile detection hook
 │   │   ├── useCustomerData.ts (66 lines)      # Customer data hook
@@ -201,7 +206,7 @@ winemaker04/
 │   │   ├── useWineCombinedScore.ts (64 lines) # Combined wine scoring
 │   │   └── useWineFeatureDetails.ts (79 lines) # Wine feature details
 │   │
-│   └── lib/ (20,111 lines total)              # Core library code
+│   └── lib/ (28,000+ lines total)             # Core library code
 │       ├── balance/ (690 lines total)         # Wine balance system
 │       │   ├── calculations/ (318 lines total) # Balance calculations
 │       │   │   ├── balanceCalculator.ts (122 lines) # Balance calculator
@@ -253,6 +258,7 @@ winemaker04/
 │       │   │   ├── loansDB.ts (171 lines)     # Loans database
 │       │   │   ├── notificationsDB.ts (151 lines) # Notifications database
 │       │   │   ├── staffDB.ts (165 lines)     # Staff database
+│       │   │   ├── researchUnlocksDB.ts (154 lines) # Research unlock persistence
 │       │   │   ├── supabase.ts (7 lines)      # Supabase configuration
 │       │   │   ├── teamDB.ts (159 lines)      # Teams database
 │       │   │   ├── transactionsDB.ts (71 lines) # Transactions database
@@ -295,13 +301,15 @@ winemaker04/
 │       │   │   ├── gameTick.ts (269 lines)    # Game tick system
 │       │   │   ├── notificationService.ts (242 lines) # Centralized notification service
 │       │   │   └── index.ts (116 lines)       # Core services exports
-│       │   ├── finance/ (1,000+ lines total) # Finance services
+│       │   ├── finance/ (1,400+ lines total) # Finance services
 │       │   │   ├── creditRatingService.ts (438 lines) # Credit rating calculation
-│       │   │   ├── economyService.ts (67 lines) # Economy phase transitions
-│       │   │   ├── financeService.ts (304 lines) # Finance operations
-│       │   │   ├── lenderService.ts (188 lines) # Lender generation
-│       │   │   ├── loanService.ts (844 lines) # Loan management
-│       │   │   └── wageService.ts (232 lines) # Wage calculations
+│       │   │   ├── economyService.ts (90 lines) # Economy phase transitions
+│       │   │   ├── financeService.ts (350 lines) # Finance operations
+│       │   │   ├── lenderService.ts (220 lines) # Lender generation
+│       │   │   ├── loanService.ts (900+ lines) # Loan management
+│       │   │   ├── shareManagementService.ts (500+ lines) # Public company workflow
+│       │   │   ├── shareValueService.ts (190 lines) # Share pricing + dividends
+│       │   │   └── wageService.ts (260 lines) # Wage calculations & staff XP
 │       │   ├── prestige/ (1,180 lines total)  # Prestige system services
 │       │   │   ├── prestigeCalculator.ts (188 lines) # Prestige calculator
 │       │   │   ├── prestigeDecayService.ts (57 lines) # Prestige decay
@@ -370,19 +378,22 @@ winemaker04/
 │           ├── toast.ts (171 lines)           # Toast notification utilities
 │           └── utils.ts (519 lines)           # General utilities
 │
+├── tests/                          # Vitest suites (activity/finance/user/vineyard/wine)
+├── test-viewer/                    # Standalone test dashboard (HTML/TS + script)
+├── server/                         # Dev-only test API helper
 └── node_modules/                   # Dependencies (not tracked in git)
 ```
 ## 📊 Code Statistics
 
 ### Line Count Summary (src/ directory only)
-- **Total Files**: 231 files
-- **Total Lines of Code**: 46,457 lines
+- **Total Files**: 266 files (TS/TSX/CSS)
+- **Total Lines of Code**: ~72,000 lines
 
 ### Breakdown by File Type
-- **TypeScript Files** (.ts, .tsx): 230 files | 46,351 lines
-- **CSS Files** (.css): 1 file | 106 lines  
+- **TypeScript Files** (.ts, .tsx): 265 files | ~71,866 lines
+- **CSS Files** (.css): 1 file | 134 lines  
 
 ---
 
-**Last Updated**: 2025-10-27  
+**Last Updated**: 2025-11-26  
 

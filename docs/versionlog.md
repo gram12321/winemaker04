@@ -24,6 +24,76 @@
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.092 - Finance & Share Management Tuning
+**Date:** 2025-11-26 | **Commit:** f8bda77 | **Stats:** 612 additions, 134 deletions
+
+### 💹 Share & Treasury Updates
+- `src/components/finance/ShareManagementPanel.tsx` — Added detailed shareholder breakdowns, IPO readiness cues, and board controls (258 additions, 65 deletions).
+- `src/lib/services/finance/shareManagementService.ts` — Expanded equity math for dilution, investor classes, and dividend scheduling (201 additions, 1 deletion).
+- `src/components/finance/CashFlowView.tsx` — Reworked inflow/outflow grouping plus rolling net balance graph (81 additions, 42 deletions).
+- `src/lib/services/finance/financeService.ts` — Updated to expose new equity metrics to the UI (30 additions, 24 deletions).
+
+### 🛠️ Supporting Fixes
+- `src/lib/constants/financeConstants.ts` — Added share-category descriptors (36 additions).
+- `src/lib/services/core/startingConditionsService.ts` / `user/companyService.ts` — Seed companies with the new share fields (6 additions, 2 deletions combined).
+
+## Version 0.09-0.091B - Public Companies & Equity Framework (Combined)
+**Date:** 2025-11-23 to 2025-11-25 | **Commits:** d108f94 (0.09), 10709b7 (0.091), e1435d4 (0.091a), ef4e4b8 (0.091B) | **Stats:** Combined 4,452 additions, 1,472 deletions
+
+### 🏛️ Public Company Infrastructure
+- **NEW FILE:** `src/components/finance/ShareManagementPanel.tsx` (445 lines) — Investor ledger with issuance controls and market cap summary.
+- **NEW FILES:** `src/lib/services/finance/shareManagementService.ts` (514 lines) & `shareValueService.ts` (189 lines) — Core business logic for IPO states, share pricing, dilution, and dividend forecasting.
+- `src/components/pages/AdminDashboard.tsx` / `Profile.tsx` / `Login.tsx` — Added IPO toggles, ownership visibility, and balance sheets (481 additions, 5 deletions across files).
+- `src/lib/database/core/companiesDB.ts` & `usersDB.ts` — Persist float, listing status, and user cash balance (43 additions, 3 deletions).
+
+### 👥 Staff & Activity Enhancements
+- `src/components/pages/Staff.tsx`, `StaffModal.tsx`, `StaffWageSummary.tsx`, `StaffSkillBar.tsx`, and `activity/workCalculator.ts` — Introduced experience tracking, contribution scoring, and revised wage multipliers (409 additions, 113 deletions).
+- `src/lib/services/activity/activitymanagers/activityManager.ts` & `workcalculators/workCalculator.ts` — Support staff-derived research/finance work (112 additions, 24 deletions).
+
+### 🧮 Finance & Models
+- `src/components/finance/IncomeBalanceView.tsx` / `economyConstants.ts` / `loanService.ts` — Connected dividends, credit rating, and lender behaviour to equity state (200+ additions).
+- `src/components/pages/winepedia/MathematicalModelsTab.tsx` — Documented new share valuation and contribution curves (517 additions, 456 deletions).
+- `src/lib/utils/calculator.ts` — Added helper functions for contribution caps and equity weighting (76 additions, 28 deletions).
+
+### 🔧 IPO Phase Fixes
+- **NEW FILE:** `src/lib/services/user/userBalanceService.ts` (123 lines) — Centralises user cash/dividend payouts.
+- `src/lib/services/core/startingConditionsService.ts`, `StartingConditionsModal.tsx`, `AdminDashboard.tsx` — Ensure IPO-ready companies spawn with voters, treasury stock, and user cash balances (330+ additions, 59 deletions).
+
+## Documentation Update - Versionlog Split
+**Date:** 2025-11-23 | **Commit:** 1e5bfc4 | **Stats:** 1,197 additions, 1,195 deletions
+
+### 📝 Docs
+- **NEW FILE:** `docs/versionlog_legacy.md` (1,196 lines) — Archived historical entries (≤0.06).
+- `docs/versionlog.md` — Trimmed to active releases while keeping contributor guidelines (1 deletion of legacy content, 1 addition referencing the archive).
+
+## Version 0.082 - Research Grapes & Unlocks
+**Date:** 2025-11-23 | **Commit:** e0c1b16 | **Stats:** 856 additions, 129 deletions
+
+### 🔬 Research Unlock System
+- **NEW FILE:** `src/lib/database/core/researchUnlocksDB.ts` (154 lines) and **NEW FILE:** `src/lib/utils/researchUtils.ts` (39 lines) — Track unlocked grape families and expose helper utilities.
+- `src/lib/constants/researchConstants.ts` — Added grape-focused research tracks (150 additions, 18 deletions).
+- `src/components/finance/ResearchPanel.tsx` — Display unlock progress and next-tier requirements (117 additions, 33 deletions).
+- `src/lib/services/activity/activitymanagers/researchManager.ts` & `researchWorkCalculator.ts` — Reward unlocked varietals and adjust workload (131 additions, 17 deletions).
+
+### 🍇 Gameplay Integration
+- `src/components/pages/winepedia/GrapeVarietiesTab.tsx`, `PlantingOptionsModal.tsx`, and `StartingConditionsModal.tsx` — Gate planting lists and starting perks behind research progress (131 additions, 8 deletions).
+- `src/lib/constants/startingConditions.ts` / `startingConditionsService.ts` — Seed research with founders’ expertise (71 additions, 16 deletions).
+- `tests/user/startingConditions.test.ts` — Coverage for grape unlock flows (30 additions).
+
+## Version 0.076b-0.076C - Test & Economy Fixes (Combined)
+**Date:** 2025-11-23 | **Commits:** dd4b2f3 (0.076b), 2ada3b9 (0.76C bug), 545fea1 (0.076C) | **Stats:** Combined 1,289 additions, 1,193 deletions
+
+### 🧪 Test Improvements
+- `tests/user/hireStaffWorkflow.test.ts`, `researchWorkflow.test.ts` (NEW FILE, 213 lines), and `startingConditions.test.ts` — Expanded hiring, research, and founder scenario coverage (405 additions, 963 deletions net due to refactors).
+- `server/test-api.ts` & `test-viewer/TestViewer.tsx` — Added mock endpoints plus viewer UX refinements for running targeted suites (113 additions, 24 deletions).
+
+### ⚙️ Gameplay Fixes
+- `src/lib/services/core/gameState.ts` — Patched economy-phase persistence regression (17 additions).
+- `src/lib/services/finance/loanService.ts` — Addressed lender seizure math after IPO changes (144 additions, 23 deletions).
+- `src/lib/services/activity/activitymanagers/researchManager.ts` and `researchConstants.ts` — Synced research targets with new data set (58 additions, 57 deletions).
+- Renamed grape icon assets to snake_case for test harness consistency.
+
+---
 ## Version 0.081 - Research System Enhancements
 **Date:** 2025-11-21 | **Commit:** 567a7a8 | **Stats:** 1,639 additions, 1,048 deletions
 

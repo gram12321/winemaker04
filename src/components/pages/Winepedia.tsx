@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageProps } from '@/lib/types/UItypes';
-import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, LendersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab } from '@/components/pages/winepedia/index';
+import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, LendersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab, ShareMarketTab } from '@/components/pages/winepedia/index';
 
 interface WinepediaProps extends PageProps {
   view?: string;
@@ -35,7 +35,8 @@ export default function Winepedia({ view }: WinepediaProps) {
     { id: 'yieldProjection', label: 'Yield Projection', component: YieldProjectionTab },
     { id: 'customers', label: 'Customers', component: CustomersTab },
     { id: 'lenders', label: 'Lenders', component: LendersTab },
-    { id: 'economy', label: 'Economy', component: EconomyTab }
+    { id: 'economy', label: 'Economy', component: EconomyTab },
+    { id: 'shareMarket', label: 'Share Market', component: ShareMarketTab }
   ];
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || GrapeVarietiesTab;

@@ -3,7 +3,7 @@ import { ECONOMY_TRANSITION, ECONOMY_PHASES } from '../../constants/economyConst
 import { updateGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
-import { updateMarketValue } from './shareValueService';
+import { updateMarketValue } from './shareValuationService';
 
 /**
  * Calculate the next economy phase based on semi-random transitions
@@ -57,14 +57,8 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
     if (newPhase !== currentPhase) {
       await updateGameState({ economyPhase: newPhase });
 
-      // Recalculate market values for all companies when economy phase changes
-      // This updates share prices based on new economy multipliers
-      try {
-        await updateMarketValue();
-      } catch (marketValueError) {
-        console.error('Error updating market value after economy phase change:', marketValueError);
-        // Don't fail the entire transition if market value update fails
-      }
+      // Economy phase changes affect expected values, which naturally adjust deltas
+      // Share price adjusts incrementally on next tick - no jump needed
 
       // Prepare notification for phase change
       const phaseDescriptions = {

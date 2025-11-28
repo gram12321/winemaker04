@@ -103,6 +103,18 @@ function App() {
   const handleTimeAdvance = () => {
   };
 
+  // Listen for custom navigation events (e.g., from ShareManagementPanel)
+  useEffect(() => {
+    const handleNavigateToWinepedia = () => {
+      setCurrentPage('winepedia');
+    };
+
+    window.addEventListener('navigateToWinepedia', handleNavigateToWinepedia);
+    return () => {
+      window.removeEventListener('navigateToWinepedia', handleNavigateToWinepedia);
+    };
+  }, []);
+
   const renderCurrentPage = () => {
     if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {
       return <Login onCompanySelected={handleCompanySelected} />;

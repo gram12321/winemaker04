@@ -83,6 +83,21 @@ const CREDIT_RATING_CONSTANTS = {
 
 /**
  * Calculate comprehensive credit rating with all factors
+ * 
+ * IMPORTANT: Credit Rating vs Share Price Separation
+ * This service calculates CREDIT RATING which is focused on RISK and CREDITWORTHINESS.
+ * Share price valuation (in shareValuationService.ts) uses credit rating as ONE input among many,
+ * but uses different metrics for PERFORMANCE and VALUE.
+ * 
+ * Components kept in Credit Rating Only (risk-focused):
+ * - Asset health (debt-to-asset, liquidity) - risk indicators
+ * - Payment history - creditworthiness signal
+ * - Negative balance penalties - risk signal
+ * 
+ * Components used differently in Share Price:
+ * - Profit consistency (credit) → Profit margin + growth trends (share price)
+ * - Expense efficiency (credit) → Profit margin (share price)
+ * - Company age (credit) → Used in both (stability signal)
  */
 export async function calculateCreditRating(): Promise<CreditRatingBreakdown> {
   const company = getCurrentCompany();

@@ -61,6 +61,7 @@ DROP TABLE IF EXISTS wine_contracts CASCADE;
 DROP TABLE IF EXISTS wine_batches CASCADE;
 DROP TABLE IF EXISTS vineyards CASCADE;
 DROP TABLE IF EXISTS game_state CASCADE;
+DROP TABLE IF EXISTS company_metrics_history CASCADE;
 DROP TABLE IF EXISTS loan_warnings CASCADE;
 DROP TABLE IF EXISTS loans CASCADE;
 DROP TABLE IF EXISTS lenders CASCADE;
@@ -122,6 +123,19 @@ CREATE TABLE companies (
     market_cap numeric DEFAULT 0,
     share_price numeric DEFAULT 0,
     initial_vineyard_value numeric DEFAULT 0,
+    -- Growth trend tracking for share valuation
+    growth_trend_multiplier numeric DEFAULT 1.0,
+    last_growth_trend_update_week integer,
+    last_growth_trend_update_season text,
+    last_growth_trend_update_year integer,
+    -- Incremental share price tracking
+    last_share_price_update_week integer,
+    last_share_price_update_season text,
+    last_share_price_update_year integer,
+    -- Base values for expected value calculations (future: NPC/Board room controlled)
+    base_revenue_growth numeric,
+    base_profit_margin numeric,
+    base_expected_return_on_book_value numeric,
     last_played timestamptz DEFAULT now(),
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
@@ -139,6 +153,13 @@ COMMENT ON COLUMN companies.last_dividend_paid_year IS 'Year when last dividend 
 COMMENT ON COLUMN companies.market_cap IS 'Current market capitalization';
 COMMENT ON COLUMN companies.share_price IS 'Current share price';
 COMMENT ON COLUMN companies.initial_vineyard_value IS 'Initial vineyard value at company creation (family contribution for equity calculation)';
+COMMENT ON COLUMN companies.growth_trend_multiplier IS 'Multiplier adjusting expected values based on historical performance (default: 1.0)';
+COMMENT ON COLUMN companies.last_growth_trend_update_week IS 'Week when growth trend was last updated';
+COMMENT ON COLUMN companies.last_growth_trend_update_season IS 'Season when growth trend was last updated';
+COMMENT ON COLUMN companies.last_growth_trend_update_year IS 'Year when growth trend was last updated';
+COMMENT ON COLUMN companies.last_share_price_update_week IS 'Week when share price was last adjusted incrementally';
+COMMENT ON COLUMN companies.last_share_price_update_season IS 'Season when share price was last adjusted incrementally';
+COMMENT ON COLUMN companies.last_share_price_update_year IS 'Year when share price was last adjusted incrementally';
 
 -- User settings table
 CREATE TABLE user_settings (
@@ -637,6 +658,34 @@ CREATE TABLE loan_warnings (
     created_game_year integer
 );
 
+-- Company metrics history table (for 48-week rolling comparisons and historical diagrams)
+CREATE TABLE company_metrics_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    snapshot_week integer NOT NULL CHECK (snapshot_week >= 1 AND snapshot_week <= 12),
+    snapshot_season text NOT NULL CHECK (snapshot_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    snapshot_year integer NOT NULL,
+    credit_rating numeric NOT NULL,
+    prestige numeric NOT NULL,
+    fixed_asset_ratio numeric NOT NULL,
+    share_price numeric NOT NULL,
+    book_value_per_share numeric NOT NULL,
+    earnings_per_share_48w numeric NOT NULL,
+    revenue_per_share_48w numeric NOT NULL,
+    dividend_per_share_48w numeric NOT NULL,
+    created_at timestamptz DEFAULT now()
+);
+
+COMMENT ON TABLE company_metrics_history IS 'Weekly snapshots of company metrics for 48-week rolling comparisons and historical trend diagrams';
+COMMENT ON COLUMN company_metrics_history.credit_rating IS 'Credit rating value at snapshot time';
+COMMENT ON COLUMN company_metrics_history.prestige IS 'Prestige value at snapshot time';
+COMMENT ON COLUMN company_metrics_history.fixed_asset_ratio IS 'Fixed asset ratio (fixed assets / total assets) at snapshot time';
+COMMENT ON COLUMN company_metrics_history.share_price IS 'Share price at snapshot time';
+COMMENT ON COLUMN company_metrics_history.book_value_per_share IS 'Book value per share at snapshot time';
+COMMENT ON COLUMN company_metrics_history.earnings_per_share_48w IS 'Earnings per share (48-week rolling) at snapshot time';
+COMMENT ON COLUMN company_metrics_history.revenue_per_share_48w IS 'Revenue per share (48-week rolling) at snapshot time';
+COMMENT ON COLUMN company_metrics_history.dividend_per_share_48w IS 'Dividend per share (48-week rolling) at snapshot time';
+
 -- ============================================================
 -- SECURITY HELPERS & ROW LEVEL SECURITY
 -- ============================================================
@@ -1121,6 +1170,10 @@ CREATE INDEX IF NOT EXISTS idx_loans_lender ON loans(lender_id);
 CREATE INDEX IF NOT EXISTS idx_loan_warnings_company ON loan_warnings(company_id);
 CREATE INDEX IF NOT EXISTS idx_loan_warnings_loan ON loan_warnings(loan_id);
 CREATE INDEX IF NOT EXISTS idx_loan_warnings_severity ON loan_warnings(severity);
+
+-- Company metrics history indexes
+CREATE INDEX IF NOT EXISTS idx_company_metrics_history_company ON company_metrics_history(company_id);
+CREATE INDEX IF NOT EXISTS idx_company_metrics_history_date ON company_metrics_history(company_id, snapshot_year DESC, snapshot_season DESC, snapshot_week DESC);
 
 -- ============================================================
 -- SCHEMA SYNC COMPLETE

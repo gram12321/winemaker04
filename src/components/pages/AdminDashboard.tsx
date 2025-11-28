@@ -7,6 +7,10 @@ import TestViewer from '../../../test-viewer/TestViewer';
 import {
   adminSetGoldToCompany, adminSetPlayerBalance, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch, adminSetStaffXP
 } from '@/lib/services';
+import { getCurrentSharePrice, calculateSharePrice } from '@/lib/services/finance/shareValuationService';
+import { calculateIncrementalAdjustmentDebug } from '@/lib/services/finance/sharePriceIncrementService';
+import { companyService } from '@/lib/services/user/companyService';
+import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getAllStaff } from '@/lib/services/user/staffService';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
@@ -610,6 +614,83 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
               </Button>
               <p className="text-xs text-gray-500 mt-2">
                 Bypasses relationship/prestige checks to force contract generation
+              </p>
+            </SimpleCard>
+
+            <SimpleCard
+              title="Share Price System Debug"
+              description="Log detailed share price calculation breakdown (deterministic + incremental)"
+            >
+              <Button
+                onClick={() => withLoading(async () => {
+                  const companyId = getCurrentCompanyId();
+                  if (!companyId) {
+                    console.error('No company ID available');
+                    alert('No active company found');
+                    return;
+                  }
+
+                  // Get current share price
+                  const currentSharePrice = await getCurrentSharePrice(companyId);
+                  const company = await companyService.getCompany(companyId);
+                  
+                  // Get initial share price (book value)
+                  const initialSharePrice = await calculateSharePrice(companyId);
+                  
+                  // Get incremental adjustment data
+                  const incrementalData = await calculateIncrementalAdjustmentDebug(companyId);
+                  
+                  console.log('=== SHARE PRICE SYSTEM DEBUG ===');
+                  console.log('\n--- CURRENT STATE ---');
+                  console.log('Current Share Price (from DB):', currentSharePrice.toFixed(2));
+                  console.log('Initial Share Price (Book Value):', initialSharePrice.toFixed(2));
+                  console.log('Growth Trend Multiplier:', company?.growthTrendMultiplier ?? 1.0);
+                  console.log('Last Share Price Update:', 
+                    company?.lastSharePriceUpdate 
+                      ? `${company.lastSharePriceUpdate.week}/${company.lastSharePriceUpdate.season}/${company.lastSharePriceUpdate.year}`
+                      : 'Never'
+                  );
+                  
+                  if (incrementalData.success && incrementalData.data) {
+                    const { currentPrice, basePrice, adjustment, shareMetrics, previousValues48WeeksAgo } = incrementalData.data;
+                    console.log('\n=== INCREMENTAL ADJUSTMENT SYSTEM ===');
+                    console.log('Current Price:', currentPrice.toFixed(2));
+                    console.log('Anchor (Book Value):', basePrice.toFixed(2));
+                    console.log('Price Deviation from Anchor:', ((currentPrice / basePrice - 1) * 100).toFixed(2) + '%');
+                    console.log('\n--- Next Tick Adjustment (If Applied Now) ---');
+                    console.log('Anchor Factor:', adjustment.anchorFactor.toFixed(3), '(approaches 0 as price moves from anchor)');
+                    console.log('Total Contribution (before anchor):', adjustment.totalContribution.toFixed(4));
+                    console.log('Price Change (after anchor):', adjustment.adjustment.toFixed(4));
+                    console.log('New Price (after adjustment):', adjustment.newPrice.toFixed(2));
+                    console.log('\n--- Metric Deltas (% change) ---');
+                    (Object.keys(adjustment.deltas) as Array<keyof typeof adjustment.deltas>).forEach((key) => {
+                      const deltaPercent = adjustment.deltas[key];
+                      const contribution = adjustment.contributions[key];
+                      console.log(
+                        `${key} → Δ ${deltaPercent.toFixed(2)}% | ratio ${(contribution.deltaRatio * 100).toFixed(1)}% | contribution ${contribution.contribution.toFixed(4)}€`
+                      );
+                    });
+                    console.log('\n--- 48 Weeks Ago Values (for trend calculations) ---');
+                    console.log('Credit Rating (48w ago):', previousValues48WeeksAgo?.creditRating?.toFixed(3) ?? 'N/A');
+                    console.log('Fixed Asset Ratio (48w ago):', previousValues48WeeksAgo?.fixedAssetRatio ? (previousValues48WeeksAgo.fixedAssetRatio * 100).toFixed(2) + '%' : 'N/A');
+                    console.log('Prestige (48w ago):', previousValues48WeeksAgo?.prestige?.toFixed(2) ?? 'N/A');
+                    console.log('\n--- Current Metrics (48-week rolling) ---');
+                    console.log('Earnings/Share (48w):', (shareMetrics.earningsPerShare48Weeks ?? 0).toFixed(4));
+                    console.log('Revenue Growth (48w):', ((shareMetrics.revenueGrowth48Weeks ?? 0) * 100).toFixed(2) + '%');
+                    console.log('Profit Margin (48w):', ((shareMetrics.profitMargin48Weeks ?? 0) * 100).toFixed(2) + '%');
+                    console.log('Dividend/Share (48w):', (shareMetrics.dividendPerShare48Weeks ?? 0).toFixed(4));
+                  }
+                  
+                  console.log('\n=== END SHARE PRICE SYSTEM DEBUG ===');
+                  alert('Share price system debug logged to console!');
+                })}
+                disabled={isLoading}
+                className="w-full"
+              >
+                📊 Log Share Price System Debug
+              </Button>
+              <p className="text-xs text-gray-500 mt-2">
+                Prints detailed breakdown of deterministic valuation and incremental adjustment system
               </p>
             </SimpleCard>
 

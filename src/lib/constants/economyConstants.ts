@@ -75,10 +75,9 @@ export const ECONOMY_INTEREST_MULTIPLIERS: Record<EconomyPhase, number> = {
   Boom: 0.3
 };
 
-// Market capitalization multipliers per economy phase
-// These multipliers affect how the market values companies based on economic conditions
+// Economy phase multipliers for market expectations and valuations
 // Lower multipliers in downturns (market pessimism), higher in booms (market optimism)
-export const ECONOMY_MARKET_CAP_MULTIPLIERS: Record<EconomyPhase, number> = {
+export const ECONOMY_EXPECTATION_MULTIPLIERS: Record<EconomyPhase, number> = {
   Crash: 0.6,
   Recession: 0.75,
   Stable: 1.0,

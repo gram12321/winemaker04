@@ -47,6 +47,9 @@ export function useCustomerRelationshipUpdates() {
           // Update customer relationships
           await updateCustomerRelationshipsForPrestige(currentPrestige);
           
+          // Prestige changes are tracked via prestige trend delta in incremental system
+          // Share price adjusts naturally on next tick - no jump needed
+          
           // Update reference
           lastPrestigeRef.current = currentPrestige;
           

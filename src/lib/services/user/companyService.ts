@@ -31,6 +31,19 @@ export interface CompanyUpdateData {
   marketCap?: number;
   sharePrice?: number;
   initialVineyardValue?: number; // Initial family contribution (vineyard value at company creation)
+  // Growth trend tracking
+  growthTrendMultiplier?: number;
+  lastGrowthTrendUpdateWeek?: number;
+  lastGrowthTrendUpdateSeason?: Season;
+  lastGrowthTrendUpdateYear?: number;
+  // Incremental share price tracking
+  lastSharePriceUpdateWeek?: number;
+  lastSharePriceUpdateSeason?: Season;
+  lastSharePriceUpdateYear?: number;
+  // Base values for expected value calculations
+  baseRevenueGrowth?: number;
+  baseProfitMargin?: number;
+  baseExpectedReturnOnBookValue?: number;
 }
 
 export interface CompanyStats {
@@ -135,7 +148,18 @@ class CompanyService {
           year: result.data.last_dividend_paid_year
         } : undefined,
         marketCap: result.data.market_cap ? Number(result.data.market_cap) : undefined,
-        sharePrice: result.data.share_price ? Number(result.data.share_price) : undefined
+        sharePrice: result.data.share_price ? Number(result.data.share_price) : undefined,
+        growthTrendMultiplier: result.data.growth_trend_multiplier ? Number(result.data.growth_trend_multiplier) : undefined,
+        lastGrowthTrendUpdate: (result.data.last_growth_trend_update_week && result.data.last_growth_trend_update_season && result.data.last_growth_trend_update_year) ? {
+          week: result.data.last_growth_trend_update_week,
+          season: result.data.last_growth_trend_update_season as Season,
+          year: result.data.last_growth_trend_update_year
+        } : undefined,
+        lastSharePriceUpdate: (result.data.last_share_price_update_week && result.data.last_share_price_update_season && result.data.last_share_price_update_year) ? {
+          week: result.data.last_share_price_update_week,
+          season: result.data.last_share_price_update_season as Season,
+          year: result.data.last_share_price_update_year
+        } : undefined
       } as Company : undefined;
 
       // Initialize lenders for the new company
@@ -189,6 +213,16 @@ class CompanyService {
     if (updates.marketCap !== undefined) updateData.market_cap = updates.marketCap;
     if (updates.sharePrice !== undefined) updateData.share_price = updates.sharePrice;
     if (updates.initialVineyardValue !== undefined) updateData.initial_vineyard_value = updates.initialVineyardValue;
+    if (updates.growthTrendMultiplier !== undefined) updateData.growth_trend_multiplier = updates.growthTrendMultiplier;
+    if (updates.lastGrowthTrendUpdateWeek !== undefined) updateData.last_growth_trend_update_week = updates.lastGrowthTrendUpdateWeek;
+    if (updates.lastGrowthTrendUpdateSeason !== undefined) updateData.last_growth_trend_update_season = updates.lastGrowthTrendUpdateSeason;
+    if (updates.lastGrowthTrendUpdateYear !== undefined) updateData.last_growth_trend_update_year = updates.lastGrowthTrendUpdateYear;
+    if (updates.lastSharePriceUpdateWeek !== undefined) updateData.last_share_price_update_week = updates.lastSharePriceUpdateWeek;
+    if (updates.lastSharePriceUpdateSeason !== undefined) updateData.last_share_price_update_season = updates.lastSharePriceUpdateSeason;
+    if (updates.lastSharePriceUpdateYear !== undefined) updateData.last_share_price_update_year = updates.lastSharePriceUpdateYear;
+    if (updates.baseRevenueGrowth !== undefined) updateData.base_revenue_growth = updates.baseRevenueGrowth;
+    if (updates.baseProfitMargin !== undefined) updateData.base_profit_margin = updates.baseProfitMargin;
+    if (updates.baseExpectedReturnOnBookValue !== undefined) updateData.base_expected_return_on_book_value = updates.baseExpectedReturnOnBookValue;
 
     return await updateCompanyInDB(companyId, updateData);
   }

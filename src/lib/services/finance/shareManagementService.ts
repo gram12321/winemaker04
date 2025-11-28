@@ -1,13 +1,14 @@
 import { GameDate, Transaction } from '../../types/types';
 import { companyService } from '../user/companyService';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { addTransaction, calculateFinancialData, loadTransactions } from './financeService';
+import { addTransaction, calculateFinancialData, loadTransactions, calculateFinancialDataRollingNWeeks } from './financeService';
 import { TRANSACTION_CATEGORIES } from '../../constants';
-import { updateMarketValue, getMarketValue } from './shareValueService';
+import { updateMarketValue } from './shareValuationService';
 import { getGameState } from '../core/gameState';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
+import { calculateAbsoluteWeeks, calculateCompanyWeeks } from '@/lib/utils/utils';
 import { updatePlayerBalance } from '../user/userBalanceService';
 import { formatNumber } from '../../utils/utils';
 import { calculateTotalOutstandingLoans } from './loanService';
@@ -31,6 +32,13 @@ export interface ShareMetrics {
   dividendPerShareCurrentYear: number;
   dividendPerSharePreviousYear: number;
   creditRating: number;
+  profitMargin: number;      // Net income / Revenue ratio
+  revenueGrowth: number;     // Year-over-year revenue growth percentage
+  earningsPerShare48Weeks?: number;
+  revenuePerShare48Weeks?: number;  // Revenue per share over last 48 weeks
+  revenueGrowth48Weeks?: number;  // Revenue growth comparing last 48 weeks to previous 48 weeks
+  profitMargin48Weeks?: number;   // Profit margin over last 48 weeks
+  dividendPerShare48Weeks?: number; // Dividends paid in last 48 weeks
 }
 
 export interface ShareholderBreakdown {
@@ -121,7 +129,7 @@ export async function issueStock(
       companyId
     );
 
-    // Recalculate market value after share issuance
+    // Update market cap (share price adjusts incrementally on next tick)
     await updateMarketValue(companyId);
 
     // Trigger game update
@@ -237,7 +245,7 @@ export async function buyBackStock(
       companyId
     );
 
-    // Recalculate market value after buyback
+    // Update market cap (share price adjusts incrementally on next tick)
     await updateMarketValue(companyId);
 
     // Trigger game update
@@ -284,6 +292,12 @@ export async function updateDividendRate(
       return { success: false, error: 'Dividend rate cannot be negative' };
     }
 
+    // Get current company
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return { success: false, error: 'Company not found' };
+    }
+
     // Update company in database
     const updateResult = await companyService.updateCompany(companyId, {
       dividendRate: rate
@@ -292,6 +306,9 @@ export async function updateDividendRate(
     if (!updateResult.success) {
       return { success: false, error: updateResult.error || 'Failed to update dividend rate' };
     }
+
+    // Share price adjusts incrementally via dividendPerShare delta on next tick
+    // No jump needed - changes are captured naturally in the delta system
 
     // Trigger game update
     triggerGameUpdate();
@@ -454,7 +471,9 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
         earningsPerShare: 0,
         dividendPerShareCurrentYear: 0,
         dividendPerSharePreviousYear: 0,
-        creditRating: CREDIT_RATING.DEFAULT_RATING
+        creditRating: CREDIT_RATING.DEFAULT_RATING,
+        profitMargin: 0,
+        revenueGrowth: 0
       };
     }
 
@@ -469,7 +488,9 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
         earningsPerShare: 0,
         dividendPerShareCurrentYear: 0,
         dividendPerSharePreviousYear: 0,
-        creditRating: CREDIT_RATING.DEFAULT_RATING
+        creditRating: CREDIT_RATING.DEFAULT_RATING,
+        profitMargin: 0,
+        revenueGrowth: 0
       };
     }
 
@@ -517,6 +538,24 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
     const revenuePerShare = totalShares > 0 ? revenueYTD / totalShares : 0;
     const earningsPerShare = totalShares > 0 ? netIncome / totalShares : 0;
 
+    // Calculate profit margin (net income / revenue)
+    const profitMargin = revenueYTD > 0 ? netIncome / revenueYTD : 0;
+
+    // Calculate revenue growth (year-over-year percentage)
+    let revenueGrowth = 0;
+    try {
+      const previousYearData = await calculateFinancialData('year', { year: previousYear });
+      const previousYearRevenue = previousYearData.income;
+      
+      if (previousYearRevenue > 0) {
+        revenueGrowth = (revenueYTD - previousYearRevenue) / previousYearRevenue;
+      } else if (revenueYTD > 0) {
+        revenueGrowth = 1.0; // 100% growth if previous year was zero/negative
+      }
+    } catch (error) {
+      console.error('Error calculating revenue growth for share metrics:', error);
+    }
+
     const dividendTransactions = transactions.filter(
       (transaction) => transaction.category === TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT
     );
@@ -536,6 +575,101 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
 
     const creditRating = gameState.creditRating ?? CREDIT_RATING.DEFAULT_RATING;
 
+    // Calculate rolling 48-week metrics
+    let earningsPerShare48Weeks: number | undefined;
+    let revenuePerShare48Weeks: number | undefined;
+    let revenueGrowth48Weeks: number | undefined;
+    let profitMargin48Weeks: number | undefined;
+    let dividendPerShare48Weeks: number | undefined;
+    
+    try {
+      const currentDate = {
+        week: gameState.week || 1,
+        season: gameState.season || 'Spring',
+        year: gameState.currentYear || 2024
+      };
+      
+      // Get financial data for last 48 weeks
+      const financialData48Weeks = await calculateFinancialDataRollingNWeeks(48, companyId);
+      const revenue48Weeks = financialData48Weeks.income;
+      const netIncome48Weeks = financialData48Weeks.netIncome;
+      
+      // Calculate EPS, revenue per share, and profit margin for last 48 weeks
+      earningsPerShare48Weeks = totalShares > 0 ? netIncome48Weeks / totalShares : 0;
+      revenuePerShare48Weeks = totalShares > 0 ? revenue48Weeks / totalShares : 0;
+      profitMargin48Weeks = revenue48Weeks > 0 ? netIncome48Weeks / revenue48Weeks : 0;
+      
+      // Calculate revenue growth: compare last 48 weeks to previous 48 weeks (96 weeks ago to 48 weeks ago)
+      // Special handling: Only calculate if we have enough history (more than 48 weeks of data)
+      const companyWeeksForGrowth = calculateCompanyWeeks(
+        company.foundedYear || currentDate.year,
+        currentDate.week,
+        currentDate.season,
+        currentDate.year
+      );
+      
+      if (companyWeeksForGrowth > 48) {
+        // We have enough history - compare last 48 weeks to previous 48 weeks
+        const financialData96Weeks = await calculateFinancialDataRollingNWeeks(96, companyId);
+        const revenuePrevious48Weeks = financialData96Weeks.income - revenue48Weeks; // Previous 48 weeks (weeks 49-96 ago)
+        
+        if (revenuePrevious48Weeks > 0) {
+          revenueGrowth48Weeks = (revenue48Weeks - revenuePrevious48Weeks) / revenuePrevious48Weeks;
+        } else if (revenue48Weeks > 0) {
+          revenueGrowth48Weeks = 1.0; // 100% growth if previous period was zero
+        } else {
+          revenueGrowth48Weeks = 0;
+        }
+      } else {
+        // Not enough history yet - set to 0 (grace period, won't affect share price)
+        revenueGrowth48Weeks = 0;
+      }
+      
+      // Calculate dividends paid in last 48 weeks
+      // Special handling: If in first season and no dividends paid yet, initialize with expected dividend
+      const currentAbsoluteWeeks = calculateAbsoluteWeeks(
+        currentDate.week,
+        currentDate.season,
+        currentDate.year,
+        1, 'Spring', 2024
+      );
+      
+      const companyWeeks = calculateCompanyWeeks(
+        company.foundedYear || currentDate.year,
+        currentDate.week,
+        currentDate.season,
+        currentDate.year
+      );
+      const isFirstSeason = companyWeeks <= 12; // First 12 weeks (first season)
+      
+      const dividendTransactions48Weeks = transactions.filter(t => {
+        if (t.category !== TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT) return false;
+        
+        // Check if transaction is in last 48 weeks
+        const transAbsoluteWeeks = calculateAbsoluteWeeks(
+          t.date.week,
+          t.date.season,
+          t.date.year,
+          1, 'Spring', 2024
+        );
+        
+        return transAbsoluteWeeks >= (currentAbsoluteWeeks - 48) && transAbsoluteWeeks <= currentAbsoluteWeeks;
+      });
+      
+      let dividends48Weeks = dividendTransactions48Weeks.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      
+      // Initialize first season: If we're in the first season and have a dividend rate but no payments,
+      // simulate that a dividend was paid (so rolling calculation starts properly from season 2)
+      if (isFirstSeason && (company.dividendRate || 0) > 0 && dividends48Weeks === 0) {
+        dividends48Weeks = (company.dividendRate || 0) * totalShares;
+      }
+      
+      dividendPerShare48Weeks = totalShares > 0 ? dividends48Weeks / totalShares : 0;
+    } catch (error) {
+      console.error('Error calculating rolling 48-week metrics:', error);
+      // Leave as undefined if calculation fails
+    }
+
     return {
       assetPerShare,
       cashPerShare,
@@ -545,7 +679,14 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
       earningsPerShare,
       dividendPerShareCurrentYear,
       dividendPerSharePreviousYear,
-      creditRating
+      creditRating,
+      profitMargin,
+      revenueGrowth,
+      earningsPerShare48Weeks,
+      revenuePerShare48Weeks,
+      revenueGrowth48Weeks,
+      profitMargin48Weeks,
+      dividendPerShare48Weeks
     };
   } catch (error) {
     console.error('Error calculating share metrics:', error);
@@ -558,7 +699,9 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
       earningsPerShare: 0,
       dividendPerShareCurrentYear: 0,
       dividendPerSharePreviousYear: 0,
-      creditRating: CREDIT_RATING.DEFAULT_RATING
+      creditRating: CREDIT_RATING.DEFAULT_RATING,
+      profitMargin: 0,
+      revenueGrowth: 0
     };
   }
 }
@@ -688,8 +831,10 @@ export async function payDividends(companyId?: string): Promise<{
     const totalPayment = playerPayment + outstandingPayment;
 
     // Check if company has enough cash
+    // For automatic payments (called from game tick), skip if insufficient funds instead of erroring
     const currentMoney = company.money || 0;
     if (totalPayment > currentMoney) {
+      // Silently skip payment if insufficient funds (automatic payment from game tick)
       return { success: false, error: 'Insufficient funds to pay dividends' };
     }
 
@@ -760,7 +905,7 @@ export interface HistoricalShareMetric {
 
 /**
  * Get historical share metrics for trend graph
- * Calculates metrics for each season/year from transactions
+ * Queries snapshots from company_metrics_history table (much faster than recalculating)
  * 
  * @param companyId - Company ID (optional, uses current company if not provided)
  * @param yearsBack - Number of years to look back (default: 2)
@@ -779,70 +924,39 @@ export async function getHistoricalShareMetrics(
       return [];
     }
 
-    const company = await companyService.getCompany(companyId);
-    if (!company) {
+    // Get historical snapshots from database (much faster than recalculating)
+    const { getCompanyMetricsHistory } = await import('../../database/core/companyMetricsHistoryDB');
+    const weeksBack = yearsBack * 48; // Convert years to weeks
+    const snapshots = await getCompanyMetricsHistory(companyId, weeksBack);
+
+    if (!snapshots || snapshots.length === 0) {
       return [];
     }
 
-    const gameState = getGameState();
-    const currentYear = gameState.currentYear || 2024;
-    const startYear = Math.max(2024, currentYear - yearsBack);
-    const totalShares = company.totalShares || 0;
+    // Convert snapshots to HistoricalShareMetric format
+    // Use all weekly snapshots for detailed historical tracking
+    const historicalData: HistoricalShareMetric[] = snapshots.map(snapshot => ({
+      year: snapshot.year,
+      season: snapshot.season,
+      week: snapshot.week,
+      sharePrice: snapshot.sharePrice,
+      bookValuePerShare: snapshot.bookValuePerShare,
+      earningsPerShare: snapshot.earningsPerShare48W,
+      dividendPerShare: snapshot.dividendPerShare48W
+    }));
 
-    if (totalShares === 0) {
-      return [];
-    }
-
-    const historicalData: HistoricalShareMetric[] = [];
-    const transactions = await loadTransactions();
-
-    // Group transactions by year and season
-    for (let year = startYear; year <= currentYear; year++) {
-      const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-      
-      for (const season of seasons) {
-        // Get financial data for this period
-        const financialData = await calculateFinancialData('season', { season, year });
-        
-        // Calculate metrics for this period
-        const netIncome = financialData.netIncome;
-        const totalAssets = financialData.totalAssets;
-        const totalDebt = await calculateTotalOutstandingLoans();
-        
-        const bookValuePerShare = totalShares > 0 ? (totalAssets - totalDebt) / totalShares : 0;
-        const earningsPerShare = totalShares > 0 ? netIncome / totalShares : 0;
-        
-        // Get dividends paid this season
-        const dividendTransactions = transactions.filter(
-          t => t.date.year === year && 
-               t.date.season === season && 
-               t.category === TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT
-        );
-        const dividendsPaid = dividendTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-        const dividendPerShare = totalShares > 0 ? dividendsPaid / totalShares : 0;
-        
-        // Get share price (use current market value for now, or calculate from market cap)
-        const marketValue = await getMarketValue(companyId);
-        const sharePrice = marketValue.sharePrice || 0;
-
-        // Only add data point if we have meaningful data (not all zeros)
-        if (year === currentYear || bookValuePerShare > 0 || earningsPerShare !== 0 || dividendPerShare > 0) {
-          historicalData.push({
-            year,
-            season,
-            week: 1, // Use week 1 of each season for consistency
-            sharePrice,
-            bookValuePerShare,
-            earningsPerShare,
-            dividendPerShare
-          });
-        }
-      }
-    }
+    // Sort by year, season, and week (chronologically)
+    historicalData.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      const seasonOrder = ['Spring', 'Summer', 'Fall', 'Winter'];
+      const seasonDiff = seasonOrder.indexOf(a.season) - seasonOrder.indexOf(b.season);
+      if (seasonDiff !== 0) return seasonDiff;
+      return a.week - b.week;
+    });
 
     return historicalData;
   } catch (error) {
-    console.error('Error calculating historical share metrics:', error);
+    console.error('Error getting historical share metrics:', error);
     return [];
   }
 }
