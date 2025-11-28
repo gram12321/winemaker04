@@ -696,21 +696,12 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
       }
       
       // Calculate dividends paid in last 48 weeks
-      // Special handling: If in first season and no dividends paid yet, initialize with expected dividend
       const currentAbsoluteWeeks = calculateAbsoluteWeeks(
         currentDate.week,
         currentDate.season,
         currentDate.year,
         1, 'Spring', 2024
       );
-      
-      const companyWeeks = calculateCompanyWeeks(
-        company.foundedYear || currentDate.year,
-        currentDate.week,
-        currentDate.season,
-        currentDate.year
-      );
-      const isFirstSeason = companyWeeks <= 12; // First 12 weeks (first season)
       
       const dividendTransactions48Weeks = transactions.filter(t => {
         if (t.category !== TRANSACTION_CATEGORIES.DIVIDEND_PAYMENT) return false;
@@ -726,13 +717,7 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
         return transAbsoluteWeeks >= (currentAbsoluteWeeks - 48) && transAbsoluteWeeks <= currentAbsoluteWeeks;
       });
       
-      let dividends48Weeks = dividendTransactions48Weeks.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-      
-      // Initialize first season: If we're in the first season and have a dividend rate but no payments,
-      // simulate that a dividend was paid (so rolling calculation starts properly from season 2)
-      if (isFirstSeason && (company.dividendRate || 0) > 0 && dividends48Weeks === 0) {
-        dividends48Weeks = (company.dividendRate || 0) * totalShares;
-      }
+      const dividends48Weeks = dividendTransactions48Weeks.reduce((sum, t) => sum + Math.abs(t.amount), 0);
       
       dividendPerShare48Weeks = totalShares > 0 ? dividends48Weeks / totalShares : 0;
     } catch (error) {

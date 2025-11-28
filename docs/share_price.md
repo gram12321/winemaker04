@@ -88,7 +88,10 @@ All metrics contribute equally to the adjustment, with individual caps:
 - Historical data for trend diagrams
 - No need for complex recalculation of past values
 
-**Grace Period**: If a company is less than 48 weeks old, profitability metrics (EPS, Revenue/Share, Revenue Growth, Profit Margin) skip delta calculation (set to 0) since players cannot generate revenue before the first harvest. Trend-based metrics (Credit Rating, Fixed Asset Ratio, Prestige) also skip if company is less than 48 weeks old.
+**Grace Period**: 
+- **Profitability Metrics** (EPS, Revenue/Share, Revenue Growth, Profit Margin): Skip delta calculation if company is less than 48 weeks old (first year) since players cannot generate revenue before the first harvest.
+- **Dividend/Share**: Skip delta calculation for the first 3 seasons (36 weeks) to allow dividend payment history to accumulate. Dividends are paid once per season (week 1 of each season), so multiple seasons are needed before performance can be judged.
+- **Trend-based Metrics** (Credit Rating, Fixed Asset Ratio, Prestige): Skip delta calculation if company is less than 48 weeks old.
 
 ### Anchor Constraint
 

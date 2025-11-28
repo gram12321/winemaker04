@@ -95,6 +95,10 @@ async function calculateIncrementalAdjustment(
   );
   const has48WeekHistory = companyWeeks >= 48;
   const isFirstYear = companyWeeks < WEEKS_PER_YEAR; // First 48 weeks (grace period for profitability metrics)
+  // Grace period for dividends: Allow 2-3 seasons (24-36 weeks) for dividend payment history to accumulate
+  // Dividends are paid once per season, so we need multiple seasons before judging performance
+  const DIVIDEND_GRACE_PERIOD_WEEKS = WEEKS_PER_SEASON * 3; // 3 seasons = 36 weeks
+  const isDividendGracePeriod = companyWeeks < DIVIDEND_GRACE_PERIOD_WEEKS;
   
   // Get snapshot from 48 weeks ago for trend-based comparisons
   const { getCompanyMetricsSnapshotNWeeksAgo } = await import('../../database/core/companyMetricsHistoryDB');
@@ -179,7 +183,9 @@ async function calculateIncrementalAdjustment(
   // For profitability metrics, skip in first year (grace period)
   const deltaEarningsPerShare = isFirstYear ? 0 : (actualEPSImprovement - expectedEPSImprovement);
   const deltaRevenuePerShare = isFirstYear ? 0 : (actualRevenuePerShareImprovement - expectedRevenuePerShareImprovement);
-  const deltaDividendPerShare = (actualDividendPerShareImprovement - expectedDividendPerShareImprovement);
+  // Dividend grace period: Skip delta calculation for first 3 seasons (36 weeks) to allow dividend payment history
+  // Dividends are paid once per season, so we need multiple seasons before judging performance
+  const deltaDividendPerShare = isDividendGracePeriod ? 0 : (actualDividendPerShareImprovement - expectedDividendPerShareImprovement);
   const deltaRevenueGrowth = isFirstYear ? 0 : (actualRevenueGrowthImprovement - expectedRevenueGrowthImprovement);
   const deltaProfitMargin = isFirstYear ? 0 : (actualProfitMarginImprovement - expectedProfitMarginImprovement);
   
