@@ -3,7 +3,6 @@ import { ECONOMY_TRANSITION, ECONOMY_PHASES } from '../../constants/economyConst
 import { updateGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
-import { updateMarketValue } from './shareValuationService';
 
 /**
  * Calculate the next economy phase based on semi-random transitions
