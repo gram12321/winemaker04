@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { Season, Transaction } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { SEASON_ORDER } from '@/lib/constants';
+import { buildGameDate } from '../dbMapperUtils';
 
 const TRANSACTIONS_TABLE = 'transactions';
 
@@ -30,10 +31,10 @@ export interface TransactionData {
 function mapTransactionFromDB(row: any): Transaction {
   return {
     id: row.id,
-    date: {
-      week: row.week || 1,
-      season: row.season || 'Spring',
-      year: row.year || 2024
+    date: buildGameDate(row.week, row.season, row.year) || {
+      week: 1,
+      season: 'Spring' as Season,
+      year: 2024
     },
     amount: row.amount,
     description: row.description,

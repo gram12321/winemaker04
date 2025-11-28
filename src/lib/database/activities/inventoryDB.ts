@@ -1,7 +1,8 @@
 import { supabase } from '../core/supabase';
-import { WineBatch, GrapeVariety, Season } from '../../types/types';
+import { WineBatch, GrapeVariety } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
+import { buildGameDate } from '../dbMapperUtils';
 
 const WINE_BATCHES_TABLE = 'wine_batches';
 
@@ -157,22 +158,9 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
         features: row.features || [], 
-        harvestStartDate: {
-          week: row.harvest_start_week,
-          season: row.harvest_start_season as Season,
-          year: row.harvest_start_year
-        },
-        harvestEndDate: {
-          week: row.harvest_end_week,
-          season: row.harvest_end_season as Season,
-          year: row.harvest_end_year
-        },
-
-        bottledDate: row.bottled_week ? {
-          week: row.bottled_week,
-          season: row.bottled_season as Season,
-          year: row.bottled_year
-        } : undefined,
+        harvestStartDate: buildGameDate(row.harvest_start_week, row.harvest_start_season, row.harvest_start_year)!,
+        harvestEndDate: buildGameDate(row.harvest_end_week, row.harvest_end_season, row.harvest_end_year)!,
+        bottledDate: buildGameDate(row.bottled_week, row.bottled_season, row.bottled_year),
         
         agingProgress: row.aging_progress || 0,
         batchNumber: row.batch_number ?? undefined,

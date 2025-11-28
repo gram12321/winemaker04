@@ -2,6 +2,7 @@
 import { supabase } from '../core/supabase';
 import { WineOrder, CustomerType, Season } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
+import { buildGameDate } from '../dbMapperUtils';
 
 const WINE_ORDERS_TABLE = 'wine_orders';
 
@@ -86,10 +87,10 @@ export const loadWineOrders = async (status?: string): Promise<WineOrder[]> => {
       fulfillableValue: row.fulfillable_value,
       askingPriceAtOrderTime: row.asking_price_at_order_time,
       status: row.status,
-      orderedAt: {
-        week: row.ordered_week || 1,
-        season: (row.ordered_season || 'Spring') as Season,
-        year: row.ordered_year || 2024
+      orderedAt: buildGameDate(row.ordered_week, row.ordered_season, row.ordered_year) || {
+        week: 1,
+        season: 'Spring' as Season,
+        year: 2024
       },
       expiresAt: row.expires_at || 100,
       expiresWeek: row.expires_week || 1,

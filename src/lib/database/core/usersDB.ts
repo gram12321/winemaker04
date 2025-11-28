@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { toOptionalNumber } from '../dbMapperUtils';
 
 const USERS_TABLE = 'users';
 
@@ -39,7 +40,7 @@ function mapUserFromDB(dbUser: any): AuthUser {
     name: dbUser.name,
     avatar: dbUser.avatar,
     avatarColor: dbUser.avatar_color,
-    cashBalance: dbUser.cash_balance ? Number(dbUser.cash_balance) : 0,
+    cashBalance: toOptionalNumber(dbUser.cash_balance) ?? 0,
     createdAt: new Date(dbUser.created_at),
     updatedAt: new Date(dbUser.updated_at)
   };

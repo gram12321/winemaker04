@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { WineLogEntry, GrapeVariety, Season } from '../../types/types';
+import { WineLogEntry, GrapeVariety } from '../../types/types';
+import { buildGameDate } from '../dbMapperUtils';
 
 const WINE_LOG_TABLE = 'wine_log';
 
@@ -34,6 +35,12 @@ export interface WineLogData {
  * Map database row to WineLogEntry (uses WineLogEntry from types.ts)
  */
 function mapWineLogFromDB(row: any): WineLogEntry {
+  const harvestDate = buildGameDate(row.harvest_week, row.harvest_season, row.harvest_year);
+  const bottledDate = buildGameDate(row.bottled_week, row.bottled_season, row.bottled_year);
+  
+  if (!harvestDate || !bottledDate) {
+  }
+
   return {
     id: row.id,
     vineyardId: row.vineyard_id,
@@ -46,16 +53,8 @@ function mapWineLogFromDB(row: any): WineLogEntry {
     wineScore: row.wine_score,
     characteristics: row.characteristics,
     estimatedPrice: row.estimated_price,
-    harvestDate: {
-      week: row.harvest_week,
-      season: row.harvest_season as Season,
-      year: row.harvest_year
-    },
-    bottledDate: {
-      week: row.bottled_week,
-      season: row.bottled_season as Season,
-      year: row.bottled_year
-    }
+    harvestDate: harvestDate!, // Non-null assertion: validated above
+    bottledDate: bottledDate!   // Non-null assertion: validated above
   };
 }
 

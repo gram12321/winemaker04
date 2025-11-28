@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { GameDate } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { buildGameDate } from '../dbMapperUtils';
 
 /**
  * Research unlock record (database record)
@@ -33,15 +34,17 @@ interface ResearchUnlockRow {
  * Convert database row to ResearchUnlock
  */
 function rowToResearchUnlock(row: ResearchUnlockRow): ResearchUnlock {
+  const unlockedAt = buildGameDate(
+    row.unlocked_game_week,
+    row.unlocked_game_season,
+    row.unlocked_game_year
+  ) || { week: 1, season: 'Spring' as const, year: 2024 };
+  
   return {
     id: row.id,
     researchId: row.research_id,
     companyId: row.company_id,
-    unlockedAt: {
-      week: row.unlocked_game_week || 1,
-      season: (row.unlocked_game_season || 'Spring') as any,
-      year: row.unlocked_game_year || 2024
-    },
+    unlockedAt,
     unlockedAtTimestamp: row.unlocked_game_week || 1,
     metadata: row.metadata
   };

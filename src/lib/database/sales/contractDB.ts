@@ -2,6 +2,7 @@
 import { supabase } from '../core/supabase';
 import { WineContract } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
+import { toOptionalDate } from '../dbMapperUtils';
 
 // Helper function to map database row to WineContract
 function mapRowToContract(row: any): WineContract {
@@ -32,8 +33,8 @@ function mapRowToContract(row: any): WineContract {
     rejectedYear: row.rejected_year || undefined,
     fulfilledWineBatchIds: row.fulfilled_wine_batch_ids || undefined,
     relationshipAtCreation: row.relationship_at_creation,
-    createdAt: row.created_at ? new Date(row.created_at) : undefined,
-    updatedAt: row.updated_at ? new Date(row.updated_at) : undefined
+    createdAt: toOptionalDate(row.created_at),
+    updatedAt: toOptionalDate(row.updated_at)
   };
 }
 

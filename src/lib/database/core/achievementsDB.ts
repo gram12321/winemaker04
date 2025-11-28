@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { AchievementUnlock, GameDate } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { buildGameDate } from '../dbMapperUtils';
 
 /**
  * Database table schema for achievements (existing table):
@@ -47,15 +48,17 @@ interface AchievementRow {
  * Convert database row to AchievementUnlock
  */
 function rowToAchievementUnlock(row: AchievementRow): AchievementUnlock {
+  const unlockedAt = buildGameDate(
+    row.unlocked_game_week,
+    row.unlocked_game_season,
+    row.unlocked_game_year
+  ) || { week: 1, season: 'Spring' as const, year: 2024 };
+  
   return {
     id: row.id,
     achievementId: row.achievement_key,
     companyId: row.company_id,
-    unlockedAt: {
-      week: row.unlocked_game_week || 1,
-      season: (row.unlocked_game_season || 'Spring') as any,
-      year: row.unlocked_game_year || 2024
-    },
+    unlockedAt,
     unlockedAtTimestamp: row.unlocked_game_week || 1,
     progress: row.progress?.current,
     metadata: row.metadata

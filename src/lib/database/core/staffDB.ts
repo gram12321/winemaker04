@@ -4,6 +4,7 @@
 import { supabase } from './supabase';
 import { Staff } from '@/lib/types/types';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
+import { buildGameDate } from '../dbMapperUtils';
 
 /**
  * Save or update a staff member in the database
@@ -91,11 +92,7 @@ export async function loadStaffFromDb(): Promise<Staff[]> {
       },
       experience: row.experience || {},
       workforce: row.workforce || 50,
-      hireDate: {
-        week: row.hire_date_week,
-        season: row.hire_date_season,
-        year: row.hire_date_year
-      }
+      hireDate: buildGameDate(row.hire_date_week, row.hire_date_season, row.hire_date_year)!
     }));
   } catch (error) {
     console.error('Error in loadStaffFromDb:', error);

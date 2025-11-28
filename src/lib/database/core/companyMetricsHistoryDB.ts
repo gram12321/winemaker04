@@ -1,9 +1,8 @@
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { GameDate } from '../../types/types';
 import { getGameState } from '../../services/core/gameState';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
-import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '../../constants';
+import { toOptionalNumber } from '../dbMapperUtils';
 
 const COMPANY_METRICS_HISTORY_TABLE = 'company_metrics_history';
 
@@ -25,6 +24,7 @@ export interface CompanyMetricsSnapshot {
 }
 
 export interface CompanyMetricsSnapshotData {
+  id?: string;
   company_id: string;
   snapshot_week: number;
   snapshot_season: string;
@@ -129,18 +129,6 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
       2024
     );
     const targetAbsoluteWeeks = Math.max(1, currentAbsoluteWeeks - weeksAgo);
-    const targetYear = 2024 + Math.floor((targetAbsoluteWeeks - 1) / WEEKS_PER_YEAR);
-    const weeksIntoYear = ((targetAbsoluteWeeks - 1) % WEEKS_PER_YEAR);
-    const targetSeasonIndex = Math.floor(weeksIntoYear / WEEKS_PER_SEASON);
-    const targetWeek = (weeksIntoYear % WEEKS_PER_SEASON) + 1;
-    const targetSeason = SEASON_ORDER[targetSeasonIndex] || 'Spring';
-    
-    const targetDate = {
-      week: targetWeek,
-      season: targetSeason,
-      year: targetYear
-    };
-    
     // targetAbsoluteWeeks already calculated above
 
     // Query for snapshot closest to target date (within a small window)
@@ -218,11 +206,11 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
       creditRating: Number(closestSnapshot.credit_rating),
       prestige: Number(closestSnapshot.prestige),
       fixedAssetRatio: Number(closestSnapshot.fixed_asset_ratio),
-      sharePrice: Number(closestSnapshot.share_price ?? 0),
-      bookValuePerShare: Number(closestSnapshot.book_value_per_share ?? 0),
-      earningsPerShare48W: Number(closestSnapshot.earnings_per_share_48w ?? 0),
-      revenuePerShare48W: Number(closestSnapshot.revenue_per_share_48w ?? 0),
-      dividendPerShare48W: Number(closestSnapshot.dividend_per_share_48w ?? 0),
+      sharePrice: toOptionalNumber(closestSnapshot.share_price) ?? 0,
+      bookValuePerShare: toOptionalNumber(closestSnapshot.book_value_per_share) ?? 0,
+      earningsPerShare48W: toOptionalNumber(closestSnapshot.earnings_per_share_48w) ?? 0,
+      revenuePerShare48W: toOptionalNumber(closestSnapshot.revenue_per_share_48w) ?? 0,
+      dividendPerShare48W: toOptionalNumber(closestSnapshot.dividend_per_share_48w) ?? 0,
       createdAt: closestSnapshot.created_at ? new Date(closestSnapshot.created_at) : new Date()
     };
   } catch (error) {
@@ -237,7 +225,7 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
  */
 export async function getCompanyMetricsHistory(
   companyId?: string,
-  weeksBack: number = 52 * 2 // Default: 2 years
+  weeksBack: number = 48 * 2 // Default: 2 years 48 weeks in a gameyear
 ): Promise<CompanyMetricsSnapshot[]> {
   try {
     if (!companyId) {
@@ -305,11 +293,11 @@ export async function getCompanyMetricsHistory(
       creditRating: Number(snapshot.credit_rating),
       prestige: Number(snapshot.prestige),
       fixedAssetRatio: Number(snapshot.fixed_asset_ratio),
-      sharePrice: Number(snapshot.share_price ?? 0),
-      bookValuePerShare: Number(snapshot.book_value_per_share ?? 0),
-      earningsPerShare48W: Number(snapshot.earnings_per_share_48w ?? 0),
-      revenuePerShare48W: Number(snapshot.revenue_per_share_48w ?? 0),
-      dividendPerShare48W: Number(snapshot.dividend_per_share_48w ?? 0),
+      sharePrice: toOptionalNumber(snapshot.share_price) ?? 0,
+      bookValuePerShare: toOptionalNumber(snapshot.book_value_per_share) ?? 0,
+      earningsPerShare48W: toOptionalNumber(snapshot.earnings_per_share_48w) ?? 0,
+      revenuePerShare48W: toOptionalNumber(snapshot.revenue_per_share_48w) ?? 0,
+      dividendPerShare48W: toOptionalNumber(snapshot.dividend_per_share_48w) ?? 0,
       createdAt: snapshot.created_at ? new Date(snapshot.created_at) : new Date()
     }));
   } catch (error) {

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Loan, PendingLoanWarning } from '../../types/types';
 import { getCurrentCompanyId, getCompanyQuery } from '../../utils/companyUtils';
+import { buildGameDate } from '../dbMapperUtils';
 
 export async function insertLoan(loan: Loan): Promise<void> {
   try {
@@ -74,16 +75,8 @@ export async function loadLoans(): Promise<Loan[]> {
       seasonalPayment: row.seasonal_payment,
       seasonsRemaining: row.seasons_remaining,
       totalSeasons: row.total_seasons,
-      startDate: {
-        week: row.start_week,
-        season: row.start_season,
-        year: row.start_year
-      },
-      nextPaymentDue: {
-        week: row.next_payment_week,
-        season: row.next_payment_season,
-        year: row.next_payment_year
-      },
+      startDate: buildGameDate(row.start_week, row.start_season, row.start_year)!,
+      nextPaymentDue: buildGameDate(row.next_payment_week, row.next_payment_season, row.next_payment_year)!,
       missedPayments: row.missed_payments,
       status: row.status,
       isForced: row.is_forced ?? false,
@@ -162,16 +155,8 @@ export async function loadActiveLoans(): Promise<Loan[]> {
       seasonalPayment: row.seasonal_payment,
       seasonsRemaining: row.seasons_remaining,
       totalSeasons: row.total_seasons,
-      startDate: {
-        week: row.start_week,
-        season: row.start_season,
-        year: row.start_year
-      },
-      nextPaymentDue: {
-        week: row.next_payment_week,
-        season: row.next_payment_season,
-        year: row.next_payment_year
-      },
+      startDate: buildGameDate(row.start_week, row.start_season, row.start_year)!,
+      nextPaymentDue: buildGameDate(row.next_payment_week, row.next_payment_season, row.next_payment_year)!,
       missedPayments: row.missed_payments,
       status: row.status,
       isForced: row.is_forced ?? false,
@@ -257,16 +242,8 @@ export async function loadLoansWithUnacknowledgedWarnings(): Promise<Loan[]> {
       seasonalPayment: row.seasonal_payment,
       seasonsRemaining: row.seasons_remaining,
       totalSeasons: row.total_seasons,
-      startDate: {
-        week: row.start_week,
-        season: row.start_season,
-        year: row.start_year
-      },
-      nextPaymentDue: {
-        week: row.next_payment_week,
-        season: row.next_payment_season,
-        year: row.next_payment_year
-      },
+      startDate: buildGameDate(row.start_week, row.start_season, row.start_year)!,
+      nextPaymentDue: buildGameDate(row.next_payment_week, row.next_payment_season, row.next_payment_year)!,
       missedPayments: row.missed_payments,
       status: row.status
     }));

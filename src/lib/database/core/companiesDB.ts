@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Season, GameDate } from '../../types/types';
+import { toOptionalNumber, toOptionalString, buildGameDate } from '../dbMapperUtils';
 
 const COMPANIES_TABLE = 'companies';
 
@@ -42,7 +43,8 @@ export interface Company {
  * Map database row to Company
  */
 function mapCompanyFromDB(dbCompany: any): Company {
-  return {
+  // Core company fields
+  const company: Company = {
     id: dbCompany.id,
     name: dbCompany.name,
     userId: dbCompany.user_id,
@@ -55,36 +57,47 @@ function mapCompanyFromDB(dbCompany: any): Company {
     lastPlayed: dbCompany.last_played ? new Date(dbCompany.last_played) : new Date(),
     createdAt: new Date(dbCompany.created_at),
     updatedAt: new Date(dbCompany.updated_at),
-    startingCountry: dbCompany.starting_country || undefined,
-    // Public company fields
-    totalShares: dbCompany.total_shares ? Number(dbCompany.total_shares) : undefined,
-    outstandingShares: dbCompany.outstanding_shares ? Number(dbCompany.outstanding_shares) : undefined,
-    playerShares: dbCompany.player_shares ? Number(dbCompany.player_shares) : undefined,
-    initialOwnershipPct: dbCompany.initial_ownership_pct ? Number(dbCompany.initial_ownership_pct) : undefined,
-    dividendRate: dbCompany.dividend_rate ? Number(dbCompany.dividend_rate) : undefined,
-    lastDividendPaid: (dbCompany.last_dividend_paid_week && dbCompany.last_dividend_paid_season && dbCompany.last_dividend_paid_year) ? {
-      week: dbCompany.last_dividend_paid_week,
-      season: dbCompany.last_dividend_paid_season as Season,
-      year: dbCompany.last_dividend_paid_year
-    } : undefined,
-    marketCap: dbCompany.market_cap ? Number(dbCompany.market_cap) : undefined,
-    sharePrice: dbCompany.share_price ? Number(dbCompany.share_price) : undefined,
-    initialVineyardValue: dbCompany.initial_vineyard_value ? Number(dbCompany.initial_vineyard_value) : undefined,
-    growthTrendMultiplier: dbCompany.growth_trend_multiplier ? Number(dbCompany.growth_trend_multiplier) : undefined,
-    lastGrowthTrendUpdate: (dbCompany.last_growth_trend_update_week && dbCompany.last_growth_trend_update_season && dbCompany.last_growth_trend_update_year) ? {
-      week: dbCompany.last_growth_trend_update_week,
-      season: dbCompany.last_growth_trend_update_season as Season,
-      year: dbCompany.last_growth_trend_update_year
-    } : undefined,
-    lastSharePriceUpdate: (dbCompany.last_share_price_update_week && dbCompany.last_share_price_update_season && dbCompany.last_share_price_update_year) ? {
-      week: dbCompany.last_share_price_update_week,
-      season: dbCompany.last_share_price_update_season as Season,
-      year: dbCompany.last_share_price_update_year
-    } : undefined,
-    baseRevenueGrowth: dbCompany.base_revenue_growth !== null && dbCompany.base_revenue_growth !== undefined ? Number(dbCompany.base_revenue_growth) : undefined,
-    baseProfitMargin: dbCompany.base_profit_margin !== null && dbCompany.base_profit_margin !== undefined ? Number(dbCompany.base_profit_margin) : undefined,
-    baseExpectedReturnOnBookValue: dbCompany.base_expected_return_on_book_value !== null && dbCompany.base_expected_return_on_book_value !== undefined ? Number(dbCompany.base_expected_return_on_book_value) : undefined
+    startingCountry: toOptionalString(dbCompany.starting_country)
   };
+
+  // Public company fields - shares
+  company.totalShares = toOptionalNumber(dbCompany.total_shares);
+  company.outstandingShares = toOptionalNumber(dbCompany.outstanding_shares);
+  company.playerShares = toOptionalNumber(dbCompany.player_shares);
+  company.initialOwnershipPct = toOptionalNumber(dbCompany.initial_ownership_pct);
+  company.dividendRate = toOptionalNumber(dbCompany.dividend_rate);
+  company.lastDividendPaid = buildGameDate(
+    dbCompany.last_dividend_paid_week,
+    dbCompany.last_dividend_paid_season,
+    dbCompany.last_dividend_paid_year
+  );
+
+  // Public company fields - valuation
+  company.marketCap = toOptionalNumber(dbCompany.market_cap);
+  company.sharePrice = toOptionalNumber(dbCompany.share_price);
+  company.initialVineyardValue = toOptionalNumber(dbCompany.initial_vineyard_value);
+
+  // Growth trend tracking
+  company.growthTrendMultiplier = toOptionalNumber(dbCompany.growth_trend_multiplier);
+  company.lastGrowthTrendUpdate = buildGameDate(
+    dbCompany.last_growth_trend_update_week,
+    dbCompany.last_growth_trend_update_season,
+    dbCompany.last_growth_trend_update_year
+  );
+
+  // Share price tracking
+  company.lastSharePriceUpdate = buildGameDate(
+    dbCompany.last_share_price_update_week,
+    dbCompany.last_share_price_update_season,
+    dbCompany.last_share_price_update_year
+  );
+
+  // Base values for expected value calculations
+  company.baseRevenueGrowth = toOptionalNumber(dbCompany.base_revenue_growth);
+  company.baseProfitMargin = toOptionalNumber(dbCompany.base_profit_margin);
+  company.baseExpectedReturnOnBookValue = toOptionalNumber(dbCompany.base_expected_return_on_book_value);
+
+  return company;
 }
 
 /**
