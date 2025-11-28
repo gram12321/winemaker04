@@ -20,6 +20,8 @@ export interface CompanyMetricsSnapshot {
   earningsPerShare48W: number;
   revenuePerShare48W: number;
   dividendPerShare48W: number;
+  profitMargin48W?: number;  // Profit margin (48-week rolling) at snapshot time
+  revenueGrowth48W?: number; // Revenue growth (48-week rolling) at snapshot time
   createdAt: Date;
 }
 
@@ -37,6 +39,8 @@ export interface CompanyMetricsSnapshotData {
   earnings_per_share_48w: number;
   revenue_per_share_48w: number;
   dividend_per_share_48w: number;
+  profit_margin_48w?: number;  // Profit margin (48-week rolling) at snapshot time
+  revenue_growth_48w?: number;  // Revenue growth (48-week rolling) at snapshot time
   created_at?: string;
 }
 
@@ -57,6 +61,8 @@ export async function insertCompanyMetricsSnapshot(data: {
   earningsPerShare48W: number;
   revenuePerShare48W: number;
   dividendPerShare48W: number;
+  profitMargin48W?: number;  // Profit margin (48-week rolling)
+  revenueGrowth48W?: number;  // Revenue growth (48-week rolling)
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const companyId = data.companyId || getCurrentCompanyId();
@@ -76,7 +82,9 @@ export async function insertCompanyMetricsSnapshot(data: {
       book_value_per_share: data.bookValuePerShare,
       earnings_per_share_48w: data.earningsPerShare48W,
       revenue_per_share_48w: data.revenuePerShare48W,
-      dividend_per_share_48w: data.dividendPerShare48W
+      dividend_per_share_48w: data.dividendPerShare48W,
+      profit_margin_48w: data.profitMargin48W,
+      revenue_growth_48w: data.revenueGrowth48W
     };
 
     const { error } = await supabase
@@ -211,6 +219,8 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
       earningsPerShare48W: toOptionalNumber(closestSnapshot.earnings_per_share_48w) ?? 0,
       revenuePerShare48W: toOptionalNumber(closestSnapshot.revenue_per_share_48w) ?? 0,
       dividendPerShare48W: toOptionalNumber(closestSnapshot.dividend_per_share_48w) ?? 0,
+      profitMargin48W: toOptionalNumber(closestSnapshot.profit_margin_48w),
+      revenueGrowth48W: toOptionalNumber(closestSnapshot.revenue_growth_48w),
       createdAt: closestSnapshot.created_at ? new Date(closestSnapshot.created_at) : new Date()
     };
   } catch (error) {
@@ -298,6 +308,8 @@ export async function getCompanyMetricsHistory(
       earningsPerShare48W: toOptionalNumber(snapshot.earnings_per_share_48w) ?? 0,
       revenuePerShare48W: toOptionalNumber(snapshot.revenue_per_share_48w) ?? 0,
       dividendPerShare48W: toOptionalNumber(snapshot.dividend_per_share_48w) ?? 0,
+      profitMargin48W: toOptionalNumber(snapshot.profit_margin_48w),
+      revenueGrowth48W: toOptionalNumber(snapshot.revenue_growth_48w),
       createdAt: snapshot.created_at ? new Date(snapshot.created_at) : new Date()
     }));
   } catch (error) {

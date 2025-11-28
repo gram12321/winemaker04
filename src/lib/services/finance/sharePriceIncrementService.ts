@@ -1,7 +1,6 @@
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { companyService } from '../user/companyService';
 import { getGameState } from '../core/gameState';
-import { calculateExpectedValues } from './shareValuationService';
 import { getShareMetrics } from './shareManagementService';
 import { calculateFinancialData } from './financeService';
 import { calculateCreditRating } from './creditRatingService';
@@ -9,7 +8,9 @@ import {
   INCREMENTAL_ANCHOR_CONFIG,
   INCREMENTAL_METRIC_CONFIG,
   EXPECTED_VALUE_BASELINES,
-  PRESTIGE_SCALING
+  EXPECTED_IMPROVEMENT_RATES,
+  PRESTIGE_SCALING,
+  SHARE_STRUCTURE_ADJUSTMENT_CONFIG
 } from '../../constants/shareValuationConstants';
 import { ECONOMY_EXPECTATION_MULTIPLIERS } from '../../constants/economyConstants';
 import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -32,14 +33,6 @@ function calculateFixedAssetRatio(fixedAssets: number, totalAssets: number): num
  * Price moves incrementally each week based on performance, with the anchor
  * pulling it back toward bookValuePerShare.
  */
-
-// Helper function to calculate percentage delta
-function calculatePercentageDelta(actual: number, expected: number, fallbackForPositive = 0): number {
-  if (expected > 0) {
-    return ((actual - expected) / expected) * 100;
-  }
-  return fallbackForPositive;
-}
 
 // Helper function to calculate trend delta (percentage change from previous)
 function calculateTrendDelta(current: number, previous: number, fallbackForPositive = 0): number {
@@ -93,120 +86,109 @@ async function calculateIncrementalAdjustment(
   const gameState = getGameState();
   const financialData = await calculateFinancialData('year');
   
-  // Check if company is in first year (grace period for metrics that can't be achieved before first harvest)
+  // Check if company has enough history for trend comparisons
   const companyWeeks = calculateCompanyWeeks(
     company.foundedYear || gameState.currentYear || 2024,
     gameState.week || 1,
     gameState.season || 'Spring',
     gameState.currentYear || 2024
   );
-  const isFirstYear = companyWeeks < WEEKS_PER_YEAR; // First 48 weeks
+  const has48WeekHistory = companyWeeks >= 48;
+  const isFirstYear = companyWeeks < WEEKS_PER_YEAR; // First 48 weeks (grace period for profitability metrics)
   
-  // Calculate expected values
-  const expectedValues = await calculateExpectedValues(basePrice, companyId);
-  
-  // Calculate percentage deltas for each metric
-  // Delta = (Actual - Expected) / Expected * 100 (as percentage)
-  
-  // Use rolling 48-week metrics for comparisons
-  // All metrics now use rolling 48-week windows for smoother, more consistent comparisons
-  
-  // 1. Earnings Per Share delta (rolling 48-week comparison)
-  // Compare actual EPS over last 48 weeks to expected annual EPS
-  // Expected EPS is annual (for a game year = 48 weeks), so we compare directly
-  // GRACE PERIOD: Skip delta in first year as players can't earn money before first harvest
-  const expectedEPS48Weeks = expectedValues.earningsPerShare; // Annual expectation = 48 weeks expectation
-  const actualEPS48Weeks = shareMetrics.earningsPerShare48Weeks ?? 0;
-  const deltaEarningsPerShare = isFirstYear ? 0 : calculatePercentageDelta(
-    actualEPS48Weeks,
-    expectedEPS48Weeks,
-    actualEPS48Weeks > 0 ? 100 : 0
-  );
-  
-  // 2. Revenue Per Share delta (rolling 48-week comparison)
-  // Compare actual revenue per share over last 48 weeks to expected annual revenue per share
-  // Expected revenue per share is annual (for a game year = 48 weeks), so we compare directly
-  // GRACE PERIOD: Skip delta in first year as players can't have revenue before first harvest
-  const expectedRevenuePerShare48Weeks = expectedValues.revenuePerShare; // Annual expectation = 48 weeks expectation
-  const actualRevenuePerShare48Weeks = shareMetrics.revenuePerShare48Weeks ?? 0;
-  const deltaRevenuePerShare = isFirstYear ? 0 : calculatePercentageDelta(
-    actualRevenuePerShare48Weeks,
-    expectedRevenuePerShare48Weeks,
-    actualRevenuePerShare48Weeks > 0 ? 100 : 0
-  );
-  
-  // 3. Dividend Per Share delta (rolling 48-week comparison)
-  // Dividends are paid on week 1 of each season (4 times per year)
-  // Calculate how many dividend payments should have occurred in the last 48 weeks
-  // For a full 48-week period, we expect 4 payments (one per season)
-  // For companies less than 48 weeks old, we expect only the payments for seasons that have occurred
-  let expectedDividendPayments = 4; // Default: full year (48 weeks = 4 seasons)
-  
-  if (companyWeeks < WEEKS_PER_YEAR) {
-    // Company is less than 48 weeks old - calculate based on seasons that have occurred
-    // Count how many season starts (week 1 of each season) have occurred
-    // If we're in season 1 (weeks 1-12), expect 1 payment; season 2 (weeks 13-24), expect 2, etc.
-    expectedDividendPayments = Math.min(4, Math.ceil(companyWeeks / WEEKS_PER_SEASON));
-    
-    // However, if we're looking at a 48-week rolling window, we need to account for
-    // the fact that the window might extend before company founding
-    // Since we're using companyWeeks, we can't look back further than company founding
-    // So the expected payments = number of seasons since founding (up to 4)
-  }
-  
-  const expectedDividendPerShare48Weeks = (company.dividendRate || 0) * expectedDividendPayments;
-  const actualDividendPerShare48Weeks = shareMetrics.dividendPerShare48Weeks ?? 0;
-  const deltaDividendPerShare = calculatePercentageDelta(
-    actualDividendPerShare48Weeks,
-    expectedDividendPerShare48Weeks,
-    actualDividendPerShare48Weeks > 0 ? 100 : 0
-  );
-  
-  // 4. Revenue Growth delta (rolling 48-week comparison)
-  // Compare revenue growth: (last 48 weeks vs previous 48 weeks) vs expected growth rate
-  // GRACE PERIOD: Skip delta in first year - can't have meaningful revenue growth before first harvest
-  const actualRevenueGrowth48Weeks = shareMetrics.revenueGrowth48Weeks ?? 0;
-  const deltaRevenueGrowth = isFirstYear ? 0 : calculatePercentageDelta(
-    actualRevenueGrowth48Weeks,
-    expectedValues.revenueGrowth,
-    actualRevenueGrowth48Weeks > -1 ? 100 : 0 // Allow negative growth rates
-  );
-  
-  // 5. Profit Margin delta (rolling 48-week comparison)
-  // Compare actual profit margin over last 48 weeks to expected annual profit margin
-  // GRACE PERIOD: Skip delta in first year as players can't have profit before first harvest
-  const actualProfitMargin48Weeks = shareMetrics.profitMargin48Weeks ?? 0;
-  const deltaProfitMargin = isFirstYear ? 0 : calculatePercentageDelta(
-    actualProfitMargin48Weeks,
-    expectedValues.profitMargin,
-    actualProfitMargin48Weeks > 0 ? 100 : 0
-  );
-  
-  // 6. Credit Rating delta (48-week rolling comparison)
-  // Compare current credit rating to credit rating from 48 weeks ago
-  const currentCreditRating = await calculateCreditRating();
+  // Get snapshot from 48 weeks ago for trend-based comparisons
   const { getCompanyMetricsSnapshotNWeeksAgo } = await import('../../database/core/companyMetricsHistoryDB');
   const snapshot48WeeksAgo = await getCompanyMetricsSnapshotNWeeksAgo(48, companyId);
-  const previousCreditRating = snapshot48WeeksAgo?.creditRating ?? currentCreditRating.finalRating;
-  const deltaCreditRating = companyWeeks >= 48 
-    ? calculateTrendDelta(currentCreditRating.finalRating, previousCreditRating)
-    : 0; // Grace period: skip if less than 48 weeks of history
   
-  // 7. Fixed Asset Ratio delta (48-week rolling comparison)
-  // Compare current fixed asset ratio to fixed asset ratio from 48 weeks ago
+  // Calculate expected improvement rate multipliers (economy × prestige × growth)
+  const economyPhase: EconomyPhase = (gameState.economyPhase as EconomyPhase) || 'Stable';
+  const prestige = gameState.prestige || 0;
+  const growthTrendMultiplier = company?.growthTrendMultiplier ?? 1.0;
+  const economyMultiplier = ECONOMY_EXPECTATION_MULTIPLIERS[economyPhase];
+  
+  // Calculate prestige multiplier (logarithmic scaling)
+  const normalizedPrestige = NormalizeScrewed1000To01WithTail(prestige);
+  const prestigeMultiplier = PRESTIGE_SCALING.base + (normalizedPrestige * (PRESTIGE_SCALING.maxMultiplier - PRESTIGE_SCALING.base));
+  
+  // Combined multiplier for expected improvement rates
+  const improvementMultiplier = economyMultiplier * prestigeMultiplier * growthTrendMultiplier;
+  
+  // Get current 48-week rolling values
+  const currentEPS48W = shareMetrics.earningsPerShare48Weeks ?? 0;
+  const currentRevenuePerShare48W = shareMetrics.revenuePerShare48Weeks ?? 0;
+  const currentDividendPerShare48W = shareMetrics.dividendPerShare48Weeks ?? 0;
+  const currentRevenueGrowth48W = shareMetrics.revenueGrowth48Weeks ?? 0;
+  const currentProfitMargin48W = shareMetrics.profitMargin48Weeks ?? 0;
+  const currentCreditRating = (await calculateCreditRating()).finalRating;
   const currentFixedAssetRatio = calculateFixedAssetRatio(financialData.fixedAssets, financialData.totalAssets);
-  const previousFixedAssetRatio = snapshot48WeeksAgo?.fixedAssetRatio ?? currentFixedAssetRatio;
-  const deltaFixedAssetRatio = companyWeeks >= 48
-    ? calculateTrendDelta(currentFixedAssetRatio, previousFixedAssetRatio)
-    : 0; // Grace period: skip if less than 48 weeks of history
-  
-  // 8. Prestige delta (48-week rolling comparison)
-  // Compare current prestige to prestige from 48 weeks ago
   const currentPrestige = gameState.prestige || 0;
+  
+  // Get previous 48-week rolling values from snapshot (or use current as fallback)
+  const previousEPS48W = snapshot48WeeksAgo?.earningsPerShare48W ?? currentEPS48W;
+  const previousRevenuePerShare48W = snapshot48WeeksAgo?.revenuePerShare48W ?? currentRevenuePerShare48W;
+  const previousDividendPerShare48W = snapshot48WeeksAgo?.dividendPerShare48W ?? currentDividendPerShare48W;
+  const previousRevenueGrowth48W = snapshot48WeeksAgo?.revenueGrowth48W ?? currentRevenueGrowth48W;
+  const previousProfitMargin48W = snapshot48WeeksAgo?.profitMargin48W ?? currentProfitMargin48W;
+  const previousCreditRating = snapshot48WeeksAgo?.creditRating ?? currentCreditRating;
+  const previousFixedAssetRatio = snapshot48WeeksAgo?.fixedAssetRatio ?? currentFixedAssetRatio;
   const previousPrestige = snapshot48WeeksAgo?.prestige ?? currentPrestige;
-  const deltaPrestige = companyWeeks >= 48
+  
+  // Calculate actual improvement (percentage change from previous to current)
+  const actualEPSImprovement = previousEPS48W > 0 
+    ? ((currentEPS48W - previousEPS48W) / previousEPS48W) * 100 
+    : (currentEPS48W > 0 ? 100 : 0);
+  const actualRevenuePerShareImprovement = previousRevenuePerShare48W > 0
+    ? ((currentRevenuePerShare48W - previousRevenuePerShare48W) / previousRevenuePerShare48W) * 100
+    : (currentRevenuePerShare48W > 0 ? 100 : 0);
+  const actualDividendPerShareImprovement = previousDividendPerShare48W > 0
+    ? ((currentDividendPerShare48W - previousDividendPerShare48W) / previousDividendPerShare48W) * 100
+    : (currentDividendPerShare48W > 0 ? 100 : 0);
+  const actualRevenueGrowthImprovement = previousRevenueGrowth48W > -1
+    ? ((currentRevenueGrowth48W - previousRevenueGrowth48W) / (Math.abs(previousRevenueGrowth48W) + 0.01)) * 100
+    : (currentRevenueGrowth48W > -1 ? 100 : 0);
+  const actualProfitMarginImprovement = previousProfitMargin48W > 0
+    ? ((currentProfitMargin48W - previousProfitMargin48W) / previousProfitMargin48W) * 100
+    : (currentProfitMargin48W > 0 ? 100 : 0);
+  
+  // Calculate expected improvement rates (baseline × multipliers)
+  const expectedEPSImprovement = EXPECTED_IMPROVEMENT_RATES.earningsPerShare * improvementMultiplier * 100;
+  const expectedRevenuePerShareImprovement = EXPECTED_IMPROVEMENT_RATES.revenuePerShare * improvementMultiplier * 100;
+  const expectedDividendPerShareImprovement = EXPECTED_IMPROVEMENT_RATES.dividendPerShare * improvementMultiplier * 100;
+  const expectedRevenueGrowthImprovement = EXPECTED_IMPROVEMENT_RATES.revenueGrowth * improvementMultiplier * 100;
+  const expectedProfitMarginImprovement = EXPECTED_IMPROVEMENT_RATES.profitMargin * improvementMultiplier * 100;
+  const expectedCreditRatingImprovement = EXPECTED_IMPROVEMENT_RATES.creditRating * improvementMultiplier * 100;
+  const expectedFixedAssetRatioImprovement = EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * improvementMultiplier * 100;
+  const expectedPrestigeImprovement = EXPECTED_IMPROVEMENT_RATES.prestige * improvementMultiplier * 100;
+  
+  // Calculate deltas: (Actual Improvement - Expected Improvement)
+  // For profitability metrics, skip in first year (grace period)
+  const deltaEarningsPerShare = isFirstYear ? 0 : (actualEPSImprovement - expectedEPSImprovement);
+  const deltaRevenuePerShare = isFirstYear ? 0 : (actualRevenuePerShareImprovement - expectedRevenuePerShareImprovement);
+  const deltaDividendPerShare = (actualDividendPerShareImprovement - expectedDividendPerShareImprovement);
+  const deltaRevenueGrowth = isFirstYear ? 0 : (actualRevenueGrowthImprovement - expectedRevenueGrowthImprovement);
+  const deltaProfitMargin = isFirstYear ? 0 : (actualProfitMarginImprovement - expectedProfitMarginImprovement);
+  
+  // For trend-based metrics (credit rating, fixed asset ratio, prestige), use trend delta
+  // Compare current to previous, then compare actual improvement to expected improvement
+  const actualCreditRatingImprovement = has48WeekHistory
+    ? calculateTrendDelta(currentCreditRating, previousCreditRating)
+    : 0;
+  const actualFixedAssetRatioImprovement = has48WeekHistory
+    ? calculateTrendDelta(currentFixedAssetRatio, previousFixedAssetRatio)
+    : 0;
+  const actualPrestigeImprovement = has48WeekHistory
     ? calculateTrendDelta(currentPrestige, previousPrestige, currentPrestige > 0 ? 100 : 0)
-    : 0; // Grace period: skip if less than 48 weeks of history
+    : 0;
+  
+  const deltaCreditRating = has48WeekHistory
+    ? (actualCreditRatingImprovement - expectedCreditRatingImprovement)
+    : 0;
+  const deltaFixedAssetRatio = has48WeekHistory
+    ? (actualFixedAssetRatioImprovement - expectedFixedAssetRatioImprovement)
+    : 0;
+  const deltaPrestige = has48WeekHistory
+    ? (actualPrestigeImprovement - expectedPrestigeImprovement)
+    : 0;
   
   const metricDeltas: Record<MetricKey, number> = {
     earningsPerShare: deltaEarningsPerShare,
@@ -344,7 +326,9 @@ export async function adjustSharePriceIncrementally(companyId?: string): Promise
       bookValuePerShare: basePrice,
       earningsPerShare48W: shareMetrics.earningsPerShare48Weeks ?? 0,
       revenuePerShare48W: shareMetrics.revenuePerShare48Weeks ?? 0,
-      dividendPerShare48W: shareMetrics.dividendPerShare48Weeks ?? 0
+      dividendPerShare48W: shareMetrics.dividendPerShare48Weeks ?? 0,
+      profitMargin48W: shareMetrics.profitMargin48Weeks ?? 0,
+      revenueGrowth48W: shareMetrics.revenueGrowth48Weeks ?? 0
     });
     
     // Update company with new price
@@ -391,6 +375,69 @@ export async function initializeSharePriceDeterministically(companyId?: string):
 }
 
 /**
+ * Apply immediate price adjustment for share structure changes (issuance/buyback)
+ * This captures market reaction to dilution/concentration effects beyond pure math
+ * 
+ * @param companyId - Company ID
+ * @param oldTotalShares - Total shares before the change
+ * @param newTotalShares - Total shares after the change
+ * @param adjustmentType - 'issuance' (dilution) or 'buyback' (concentration)
+ * @returns Success status and new price
+ */
+export async function applyImmediateShareStructureAdjustment(
+  companyId: string,
+  oldTotalShares: number,
+  newTotalShares: number,
+  adjustmentType: 'issuance' | 'buyback'
+): Promise<{ success: boolean; newPrice?: number; error?: string }> {
+  try {
+    // Get current price
+    const company = await companyService.getCompany(companyId);
+    if (!company || !company.sharePrice || company.sharePrice <= 0) {
+      return { success: false, error: 'Share price not initialized' };
+    }
+    
+    const currentPrice = company.sharePrice;
+    
+    // Calculate base adjustment (pure math: maintain per-share value)
+    // If we issue shares, price should drop proportionally to maintain market cap
+    // If we buy back shares, price should rise proportionally
+    const shareRatio = oldTotalShares / newTotalShares;
+    
+    // Apply market reaction multiplier
+    const marketReaction = adjustmentType === 'issuance' 
+      ? SHARE_STRUCTURE_ADJUSTMENT_CONFIG.dilutionPenalty 
+      : SHARE_STRUCTURE_ADJUSTMENT_CONFIG.concentrationBonus;
+    
+    const newPrice = currentPrice * shareRatio * marketReaction;
+    
+    // Ensure price doesn't go below soft floor
+    const shareMetrics = await getShareMetrics(companyId);
+    const basePrice = shareMetrics.bookValuePerShare;
+    const minPrice = Math.max(
+      0.01,
+      basePrice * INCREMENTAL_ANCHOR_CONFIG.minPriceRatioToAnchor
+    );
+    const finalPrice = Math.max(minPrice, newPrice);
+    
+    // Update company with new price
+    const gameState = getGameState();
+    await companyService.updateCompany(companyId, {
+      sharePrice: finalPrice,
+      marketCap: finalPrice * newTotalShares,
+      lastSharePriceUpdateWeek: gameState.week,
+      lastSharePriceUpdateSeason: gameState.season,
+      lastSharePriceUpdateYear: gameState.currentYear
+    });
+    
+    return { success: true, newPrice: finalPrice };
+  } catch (error) {
+    console.error('Error applying immediate share structure adjustment:', error);
+    return { success: false, error: 'Failed to apply immediate adjustment' };
+  }
+}
+
+/**
  * Debug function: Calculate and return incremental adjustment data without applying it
  * Used for debugging and admin dashboard display
  */
@@ -402,30 +449,38 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
     adjustment: SharePriceAdjustmentResult;
     shareMetrics: Awaited<ReturnType<typeof getShareMetrics>>;
     company: Awaited<ReturnType<typeof companyService.getCompany>>;
-    expectedValues: {
-      earningsPerShare: number;  // Annual expected (game year = 48 weeks)
-      revenuePerShare: number;  // Annual expected (game year = 48 weeks)
-      dividendPerShare: number;  // Single payment rate
-      dividendPerShare48Weeks: number;  // Expected total for 48 weeks (rate × expected payments)
-      revenueGrowth: number;     // Annual expected growth rate
-      profitMargin: number;      // Annual expected profit margin
+    expectedImprovementRates: {
+      earningsPerShare: number;  // Expected improvement rate (% per 48 weeks)
+      revenuePerShare: number;   // Expected improvement rate (% per 48 weeks)
+      dividendPerShare: number;  // Expected improvement rate (% per 48 weeks)
+      revenueGrowth: number;     // Expected improvement rate (% per 48 weeks)
+      profitMargin: number;      // Expected improvement rate (% per 48 weeks)
+      creditRating: number;      // Expected improvement rate (% per 48 weeks)
+      fixedAssetRatio: number;   // Expected improvement rate (% per 48 weeks)
+      prestige: number;          // Expected improvement rate (% per 48 weeks)
     };
-    actualValues48Weeks: {
+    currentValues48Weeks: {
       earningsPerShare: number;
       revenuePerShare: number;
       dividendPerShare: number;
       revenueGrowth: number;
       profitMargin: number;
     };
-    actualValues: {
+    currentValues: {
       creditRating: number;
       fixedAssetRatio: number;
       prestige: number;
     };
     previousValues48WeeksAgo: {
+      earningsPerShare: number | null;
+      revenuePerShare: number | null;
+      dividendPerShare: number | null;
+      revenueGrowth: number | null;
+      profitMargin: number | null;
       creditRating: number | null;
       fixedAssetRatio: number | null;
       prestige: number | null;
+      hasHistory?: boolean; // True if company has 48+ weeks of history
     };
     anchorFactorDetails: {
       deviation: number;
@@ -445,6 +500,7 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
       prestigeMultiplier: number;
       growthTrendMultiplier: number;
       expectedDividendPayments: number;
+      improvementMultiplier: number; // Combined multiplier (economy × prestige × growth)
     };
   };
   error?: string;
@@ -471,14 +527,59 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
     const shareMetrics = await getShareMetrics(companyId);
     const basePrice = shareMetrics.bookValuePerShare;
     
-    // Calculate expected values for display
-    const expectedValues = await calculateExpectedValues(basePrice, companyId);
-    
-    // Get actual values for trend metrics
+    // Get current values
     const gameState = getGameState();
     const financialData = await calculateFinancialData('year');
     const currentCreditRating = await calculateCreditRating();
     const currentFixedAssetRatio = calculateFixedAssetRatio(financialData.fixedAssets, financialData.totalAssets);
+    const currentPrestige = gameState.prestige || 0;
+    
+    // Get snapshot from 48 weeks ago
+    const { getCompanyMetricsSnapshotNWeeksAgo } = await import('../../database/core/companyMetricsHistoryDB');
+    const snapshot48WeeksAgo = await getCompanyMetricsSnapshotNWeeksAgo(48, companyId);
+    
+    // Calculate expected improvement rate multipliers
+    const economyPhase: EconomyPhase = (gameState.economyPhase as EconomyPhase) || 'Stable';
+    const prestige = gameState.prestige || 0;
+    const growthTrendMultiplier = company?.growthTrendMultiplier ?? 1.0;
+    const economyMultiplier = ECONOMY_EXPECTATION_MULTIPLIERS[economyPhase];
+    const normalizedPrestige = NormalizeScrewed1000To01WithTail(prestige);
+    const prestigeMultiplier = PRESTIGE_SCALING.base + (normalizedPrestige * (PRESTIGE_SCALING.maxMultiplier - PRESTIGE_SCALING.base));
+    const improvementMultiplier = economyMultiplier * prestigeMultiplier * growthTrendMultiplier;
+    
+    // Calculate expected improvement rates
+    const expectedImprovementRates = {
+      earningsPerShare: EXPECTED_IMPROVEMENT_RATES.earningsPerShare * improvementMultiplier * 100,
+      revenuePerShare: EXPECTED_IMPROVEMENT_RATES.revenuePerShare * improvementMultiplier * 100,
+      dividendPerShare: EXPECTED_IMPROVEMENT_RATES.dividendPerShare * improvementMultiplier * 100,
+      revenueGrowth: EXPECTED_IMPROVEMENT_RATES.revenueGrowth * improvementMultiplier * 100,
+      profitMargin: EXPECTED_IMPROVEMENT_RATES.profitMargin * improvementMultiplier * 100,
+      creditRating: EXPECTED_IMPROVEMENT_RATES.creditRating * improvementMultiplier * 100,
+      fixedAssetRatio: EXPECTED_IMPROVEMENT_RATES.fixedAssetRatio * improvementMultiplier * 100,
+      prestige: EXPECTED_IMPROVEMENT_RATES.prestige * improvementMultiplier * 100
+    };
+    
+    // Get current 48-week rolling values
+    const currentValues48Weeks = {
+      earningsPerShare: shareMetrics.earningsPerShare48Weeks ?? 0,
+      revenuePerShare: shareMetrics.revenuePerShare48Weeks ?? 0,
+      dividendPerShare: shareMetrics.dividendPerShare48Weeks ?? 0,
+      revenueGrowth: shareMetrics.revenueGrowth48Weeks ?? 0,
+      profitMargin: shareMetrics.profitMargin48Weeks ?? 0
+    };
+    
+    // Get previous 48-week rolling values (or use current as fallback)
+    const previousValues48WeeksAgo = {
+      earningsPerShare: snapshot48WeeksAgo?.earningsPerShare48W ?? null,
+      revenuePerShare: snapshot48WeeksAgo?.revenuePerShare48W ?? null,
+      dividendPerShare: snapshot48WeeksAgo?.dividendPerShare48W ?? null,
+      revenueGrowth: snapshot48WeeksAgo?.revenueGrowth48W ?? null,
+      profitMargin: snapshot48WeeksAgo?.profitMargin48W ?? null,
+      creditRating: snapshot48WeeksAgo?.creditRating ?? null,
+      fixedAssetRatio: snapshot48WeeksAgo?.fixedAssetRatio ?? null,
+      prestige: snapshot48WeeksAgo?.prestige ?? null,
+      hasHistory: (snapshot48WeeksAgo !== null)
+    };
     
     const adjustment = await calculateIncrementalAdjustment(
       currentPrice,
@@ -498,36 +599,21 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
       anchorFactor: adjustment.anchorFactor
     };
     
-    // Get expected values calculation details
-    const economyPhase: EconomyPhase = (gameState.economyPhase as EconomyPhase) || 'Stable';
-    const prestige = gameState.prestige || 0;
-    const growthTrendMultiplier = company?.growthTrendMultiplier ?? 1.0;
-    const economyMultiplier = ECONOMY_EXPECTATION_MULTIPLIERS[economyPhase];
-    
-    // Calculate prestige multiplier (matching the calculation in calculateExpectedValues)
-    const normalizedPrestige = NormalizeScrewed1000To01WithTail(prestige);
-    const prestigeMultiplier = PRESTIGE_SCALING.base + (normalizedPrestige * (PRESTIGE_SCALING.maxMultiplier - PRESTIGE_SCALING.base));
-    
-    // Base expectations - use company-stored values if available, otherwise use constants
+    // Get expected values calculation details (for backward compatibility with UI)
     const baseRevenueGrowth = company?.baseRevenueGrowth ?? EXPECTED_VALUE_BASELINES.revenueGrowth;
     const baseProfitMargin = company?.baseProfitMargin ?? EXPECTED_VALUE_BASELINES.profitMargin;
     const expectedReturnOnBookValue = company?.baseExpectedReturnOnBookValue ?? 0.10;
     
-    // Calculate expected dividend payments for 48-week window (same logic as in calculateIncrementalAdjustment)
     const companyWeeks = calculateCompanyWeeks(
       company.foundedYear || gameState.currentYear || 2024,
       gameState.week || 1,
       gameState.season || 'Spring',
       gameState.currentYear || 2024
     );
-    let expectedDividendPayments = 4; // Default: full year (48 weeks = 4 seasons)
-    
+    let expectedDividendPayments = 4;
     if (companyWeeks < WEEKS_PER_YEAR) {
-      // Company is less than 48 weeks old - calculate based on seasons that have occurred
       expectedDividendPayments = Math.min(4, Math.ceil(companyWeeks / WEEKS_PER_SEASON));
     }
-    
-    const expectedDividendPerShare48Weeks = (company.dividendRate || 0) * expectedDividendPayments;
     
     const expectedValuesCalc = {
       baseRevenueGrowth,
@@ -539,7 +625,8 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
       normalizedPrestige,
       prestigeMultiplier,
       growthTrendMultiplier,
-      expectedDividendPayments // Add for UI display
+      expectedDividendPayments,
+      improvementMultiplier // Add improvement multiplier for UI display
     };
     
     return {
@@ -550,31 +637,14 @@ export async function calculateIncrementalAdjustmentDebug(companyId?: string): P
         adjustment,
         shareMetrics,
         company,
-        previousValues48WeeksAgo: {
-          creditRating: (await (await import('../../database/core/companyMetricsHistoryDB')).getCompanyMetricsSnapshotNWeeksAgo(48, companyId))?.creditRating ?? null,
-          fixedAssetRatio: (await (await import('../../database/core/companyMetricsHistoryDB')).getCompanyMetricsSnapshotNWeeksAgo(48, companyId))?.fixedAssetRatio ?? null,
-          prestige: (await (await import('../../database/core/companyMetricsHistoryDB')).getCompanyMetricsSnapshotNWeeksAgo(48, companyId))?.prestige ?? null
-        },
-        expectedValues: {
-          earningsPerShare: expectedValues.earningsPerShare,
-          revenuePerShare: expectedValues.revenuePerShare,
-          dividendPerShare: company.dividendRate || 0,
-          dividendPerShare48Weeks: expectedDividendPerShare48Weeks,
-          revenueGrowth: expectedValues.revenueGrowth,
-          profitMargin: expectedValues.profitMargin
-        },
-        actualValues48Weeks: {
-          earningsPerShare: shareMetrics.earningsPerShare48Weeks ?? 0,
-          revenuePerShare: shareMetrics.revenuePerShare48Weeks ?? 0,
-          dividendPerShare: shareMetrics.dividendPerShare48Weeks ?? 0,
-          revenueGrowth: shareMetrics.revenueGrowth48Weeks ?? 0,
-          profitMargin: shareMetrics.profitMargin48Weeks ?? 0
-        },
-        actualValues: {
+        expectedImprovementRates,
+        currentValues48Weeks,
+        currentValues: {
           creditRating: currentCreditRating.finalRating,
           fixedAssetRatio: currentFixedAssetRatio,
-          prestige: gameState.prestige || 0
+          prestige: currentPrestige
         },
+        previousValues48WeeksAgo,
         anchorFactorDetails,
         expectedValuesCalc
       }

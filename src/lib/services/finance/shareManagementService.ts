@@ -129,7 +129,16 @@ export async function issueStock(
       companyId
     );
 
-    // Update market cap (share price adjusts incrementally on next tick)
+    // Apply immediate price adjustment for dilution effect
+    const { applyImmediateShareStructureAdjustment } = await import('./sharePriceIncrementService');
+    await applyImmediateShareStructureAdjustment(
+      companyId,
+      currentTotalShares,
+      newTotalShares,
+      'issuance'
+    );
+
+    // Update market cap (share price already adjusted above)
     await updateMarketValue(companyId);
 
     // Trigger game update
@@ -245,7 +254,16 @@ export async function buyBackStock(
       companyId
     );
 
-    // Update market cap (share price adjusts incrementally on next tick)
+    // Apply immediate price adjustment for concentration effect
+    const { applyImmediateShareStructureAdjustment } = await import('./sharePriceIncrementService');
+    await applyImmediateShareStructureAdjustment(
+      companyId,
+      currentTotalShares,
+      newTotalShares,
+      'buyback'
+    );
+
+    // Update market cap (share price already adjusted above)
     await updateMarketValue(companyId);
 
     // Trigger game update
@@ -298,6 +316,10 @@ export async function updateDividendRate(
       return { success: false, error: 'Company not found' };
     }
 
+    // Get old rate for comparison
+    const oldRate = company.dividendRate || 0;
+    const rateChange = rate - oldRate;
+
     // Update company in database
     const updateResult = await companyService.updateCompany(companyId, {
       dividendRate: rate
@@ -307,8 +329,56 @@ export async function updateDividendRate(
       return { success: false, error: updateResult.error || 'Failed to update dividend rate' };
     }
 
+    // Create prestige event for dividend change (asymmetric impact)
+    if (rateChange !== 0) {
+      try {
+        const { insertPrestigeEvent } = await import('../../database/customers/prestigeEventsDB');
+        const { v4: uuidv4 } = await import('uuid');
+        const { DIVIDEND_CHANGE_PRESTIGE_CONFIG } = await import('../../constants/shareValuationConstants');
+        const gameState = getGameState();
+        
+        // Calculate prestige impact (asymmetric: cuts more negative than increases positive)
+        const rateChangePercent = oldRate > 0 ? (rateChange / oldRate) : (rate > 0 ? 1 : 0);
+        const basePrestigeImpact = Math.abs(rateChangePercent) * 0.5; // Scale impact by change magnitude
+        
+        const prestigeAmount = rateChange < 0 
+          ? -basePrestigeImpact * DIVIDEND_CHANGE_PRESTIGE_CONFIG.cutMultiplier  // Negative for cuts
+          : basePrestigeImpact * DIVIDEND_CHANGE_PRESTIGE_CONFIG.increaseMultiplier; // Smaller positive for increases
+        
+        // Only create event if impact is meaningful (avoid noise from tiny changes)
+        if (Math.abs(prestigeAmount) >= 0.001) {
+          await insertPrestigeEvent({
+            id: uuidv4(),
+            type: 'penalty',
+            amount_base: prestigeAmount,
+            created_game_week: calculateAbsoluteWeeks(
+              gameState.week || 1,
+              gameState.season || 'Spring',
+              gameState.currentYear || 2024
+            ),
+            decay_rate: DIVIDEND_CHANGE_PRESTIGE_CONFIG.decayRate,
+            description: rateChange < 0 
+              ? `Dividend cut: ${formatNumber(Math.abs(rateChangePercent) * 100, { decimals: 1 })}% reduction`
+              : `Dividend increase: ${formatNumber(rateChangePercent * 100, { decimals: 1 })}% increase`,
+            source_id: null,
+            payload: {
+              event: 'dividend_change',
+              oldRate,
+              newRate: rate,
+              rateChange,
+              rateChangePercent,
+              prestigeImpact: prestigeAmount
+            }
+          });
+        }
+      } catch (prestigeError) {
+        console.error('Error creating dividend change prestige event:', prestigeError);
+        // Don't fail the dividend update if prestige event creation fails
+      }
+    }
+
     // Share price adjusts incrementally via dividendPerShare delta on next tick
-    // No jump needed - changes are captured naturally in the delta system
+    // Prestige impact also affects share price through the prestige metric in incremental system
 
     // Trigger game update
     triggerGameUpdate();

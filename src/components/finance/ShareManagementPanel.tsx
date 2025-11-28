@@ -25,6 +25,9 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
 import { calculateIncrementalAdjustmentDebug } from '@/lib/services/finance/sharePriceIncrementService';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { loadTransactions } from '@/lib/services/finance/financeService';
+import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
+import type { PrestigeEvent } from '@/lib/types/types';
 
 export function ShareManagementPanel() {
   const gameState = useGameState();
@@ -45,9 +48,18 @@ export function ShareManagementPanel() {
   const [incrementalDebugData, setIncrementalDebugData] = useState<Awaited<ReturnType<typeof calculateIncrementalAdjustmentDebug>>['data'] | null>(null);
   const [showMetricDetails, setShowMetricDetails] = useState(false);
   const [showExpectedValuesCalc, setShowExpectedValuesCalc] = useState(false);
-  const [baseRevenueGrowth, setBaseRevenueGrowth] = useState<string>('10');
-  const [baseProfitMargin, setBaseProfitMargin] = useState<string>('15');
-  const [baseExpectedReturnOnBookValue, setBaseExpectedReturnOnBookValue] = useState<string>('10');
+  const [recentShareChanges, setRecentShareChanges] = useState<Array<{
+    type: 'issuance' | 'buyback';
+    shares: number;
+    price: number;
+    date: string;
+  }>>([]);
+  const [recentDividendChanges, setRecentDividendChanges] = useState<Array<{
+    oldRate: number;
+    newRate: number;
+    prestigeImpact: number;
+    date: string;
+  }>>([]);
 
   // Load company data and market value
   useEffect(() => {
@@ -66,11 +78,6 @@ export function ShareManagementPanel() {
           const rate = companyData.dividendRate || 0;
           setDividendRate(rate);
           setDividendRateInput(rate.toString());
-          // Initialize base values from company (with defaults from constants)
-          const { EXPECTED_VALUE_BASELINES } = await import('@/lib/constants/shareValuationConstants');
-          setBaseRevenueGrowth(((companyData.baseRevenueGrowth ?? EXPECTED_VALUE_BASELINES.revenueGrowth) * 100).toFixed(2));
-          setBaseProfitMargin(((companyData.baseProfitMargin ?? EXPECTED_VALUE_BASELINES.profitMargin) * 100).toFixed(2));
-          setBaseExpectedReturnOnBookValue(((companyData.baseExpectedReturnOnBookValue ?? 0.10) * 100).toFixed(2));
         }
 
         // Update market value
@@ -98,6 +105,87 @@ export function ShareManagementPanel() {
         const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
         if (debugResult.success && debugResult.data) {
           setIncrementalDebugData(debugResult.data);
+        }
+
+        // Load recent share structure changes and dividend changes
+        try {
+          const transactions = await loadTransactions();
+          const prestigeEvents = await listPrestigeEventsForUI();
+          
+          // Find recent share issuance/buyback transactions (last 12 weeks)
+          const currentWeek = gameState.week || 1;
+          const currentSeason = gameState.season || 'Spring';
+          const currentYear = gameState.currentYear || 2024;
+          const seasonOrder = ['Spring', 'Summer', 'Fall', 'Winter'];
+          
+          const shareTransactions = transactions
+            .filter(t => {
+              const isShareTransaction = t.description.includes('Stock Issuance') || t.description.includes('Stock Buyback');
+              if (!isShareTransaction) return false;
+              
+              // Check if transaction is within last 12 weeks
+              const weeksDiff = (currentYear - t.date.year) * 48 + 
+                (seasonOrder.indexOf(currentSeason) - seasonOrder.indexOf(t.date.season)) * 12 + 
+                (currentWeek - t.date.week);
+              return weeksDiff >= 0 && weeksDiff <= 12;
+            })
+            .slice(0, 5) // Last 5 transactions
+            .map(t => {
+              const isIssuance = t.description.includes('Stock Issuance');
+              const sharesMatch = t.description.match(/([\d,]+)\s+shares/);
+              const priceMatch = t.description.match(/@\s*([\d.]+)€/);
+              const shares = sharesMatch ? parseInt(sharesMatch[1].replace(/,/g, '')) : 0;
+              const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+              
+              return {
+                type: (isIssuance ? 'issuance' : 'buyback') as 'issuance' | 'buyback',
+                shares,
+                price,
+                date: `W${t.date.week} ${t.date.season.substring(0, 3)} ${t.date.year}`
+              };
+            });
+          
+          setRecentShareChanges(shareTransactions);
+          
+          // Find recent dividend change prestige events (last 12 weeks)
+          // Events are already sorted by recency from listPrestigeEventsForUI
+          const dividendEvents = prestigeEvents
+            .filter((event: PrestigeEvent) => {
+              if (event.type !== 'penalty') return false;
+              const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+              if (metadata.event !== 'dividend_change') return false;
+              
+              // For timestamp-based filtering, we'll just take the most recent ones
+              // The listPrestigeEventsForUI already sorts by created_game_week descending
+              return true;
+            })
+            .slice(0, 5) // Last 5 events (already sorted by recency)
+            .map((event: PrestigeEvent) => {
+              const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+              
+              // Try to get week from metadata or use a simple date format
+              // If we have created_at, use that, otherwise use "Recent"
+              let dateStr = 'Recent';
+              if (event.created_at) {
+                try {
+                  const eventDate = new Date(event.created_at);
+                  dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                } catch (e) {
+                  // Fallback
+                }
+              }
+              
+              return {
+                oldRate: metadata.oldRate ?? 0,
+                newRate: metadata.newRate ?? 0,
+                prestigeImpact: event.amount,
+                date: dateStr
+              };
+            });
+          
+          setRecentDividendChanges(dividendEvents);
+        } catch (err) {
+          console.error('Error loading recent share/dividend changes:', err);
         }
       } catch (err) {
         console.error('Error loading share management data:', err);
@@ -687,96 +775,120 @@ export function ShareManagementPanel() {
                 </div>
               </div>
 
-              {/* Expected Values Calculation */}
+              {/* Recent Share Structure & Dividend Changes */}
+              {(recentShareChanges.length > 0 || recentDividendChanges.length > 0) && (
+                <div className="border border-gray-200 rounded-md p-4 bg-blue-50/50">
+                  <h3 className="font-semibold text-sm mb-3 text-gray-800">Recent Share Structure & Dividend Changes</h3>
+                  <div className="text-xs space-y-3">
+                    {/* Share Structure Changes */}
+                    {recentShareChanges.length > 0 && (
+                      <div>
+                        <div className="font-semibold mb-2 text-gray-700">Share Structure Changes (Last 12 weeks):</div>
+                        <div className="space-y-1 pl-4">
+                          {recentShareChanges.map((change, idx) => (
+                            <div key={idx} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium ${change.type === 'issuance' ? 'text-blue-600' : 'text-purple-600'}`}>
+                                  {change.type === 'issuance' ? '📈 Issued' : '📉 Bought Back'}
+                                </span>
+                                <span className="text-gray-600">
+                                  {formatNumber(change.shares, { decimals: 0 })} shares @ {formatNumber(change.price, { currency: true, decimals: 2 })}
+                                </span>
+                              </div>
+                              <div className="text-gray-500 text-xs">
+                                {change.date}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 pl-4 text-gray-600 italic text-xs">
+                          Note: Share issuance causes immediate price drop (dilution), buyback causes immediate price boost (concentration)
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Dividend Changes */}
+                    {recentDividendChanges.length > 0 && (
+                      <div>
+                        <div className="font-semibold mb-2 text-gray-700">Dividend Changes (Last 12 weeks):</div>
+                        <div className="space-y-1 pl-4">
+                          {recentDividendChanges.map((change, idx) => {
+                            const isCut = change.newRate < change.oldRate;
+                            const changePercent = change.oldRate > 0 
+                              ? ((change.newRate - change.oldRate) / change.oldRate) * 100 
+                              : (change.newRate > 0 ? 100 : 0);
+                            return (
+                              <div key={idx} className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-medium ${isCut ? 'text-red-600' : 'text-green-600'}`}>
+                                    {isCut ? '📉 Cut' : '📈 Increased'}
+                                  </span>
+                                  <span className="text-gray-600">
+                                    {formatNumber(change.oldRate, { currency: true, decimals: 4 })} → {formatNumber(change.newRate, { currency: true, decimals: 4 })}/share
+                                  </span>
+                                  <span className={`text-xs ${isCut ? 'text-red-600' : 'text-green-600'}`}>
+                                    ({formatNumber(Math.abs(changePercent), { decimals: 1 })}%)
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-medium ${change.prestigeImpact < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                    Prestige: {formatNumber(change.prestigeImpact, { decimals: 3, forceDecimals: true })}
+                                  </span>
+                                  <span className="text-gray-500 text-xs">
+                                    {change.date}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-2 pl-4 text-gray-600 italic text-xs">
+                          Note: Dividend changes affect share price indirectly through prestige (affects expected values) and dividend per share metric
+                        </div>
+                      </div>
+                    )}
+                    
+                    {recentShareChanges.length === 0 && recentDividendChanges.length === 0 && (
+                      <div className="text-gray-500 italic text-xs">
+                        No recent share structure or dividend changes in the last 12 weeks
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Expected Improvement Rates Calculation */}
               {showExpectedValuesCalc && incrementalDebugData?.expectedValuesCalc && (
                 <div className="border border-gray-200 rounded-md p-4 bg-green-50/50">
-                  <h3 className="font-semibold text-sm mb-3 text-gray-800">Expected Values Calculation</h3>
+                  <h3 className="font-semibold text-sm mb-3 text-gray-800">Expected Improvement Rates Calculation</h3>
                   <div className="text-xs space-y-3">
                     <div>
-                      <div className="font-semibold mb-1">Base Values (Input):</div>
-                      <div className="grid grid-cols-2 gap-2 pl-4 items-center">
-                        <div>Base Revenue Growth (%):</div>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="100"
-                          value={baseRevenueGrowth}
-                          onChange={(e) => setBaseRevenueGrowth(e.target.value)}
-                          onBlur={async () => {
-                            const value = parseFloat(baseRevenueGrowth);
-                            if (!isNaN(value) && value >= 0 && value <= 100) {
-                              const companyId = getCurrentCompanyId();
-                              if (companyId) {
-                                await companyService.updateCompany(companyId, {
-                                  baseRevenueGrowth: value / 100
-                                });
-                                // Reload debug data to reflect changes
-                                const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
-                                if (debugResult.success && debugResult.data) {
-                                  setIncrementalDebugData(debugResult.data);
-                                }
-                              }
-                            }
-                          }}
-                          className="w-24 h-7 text-xs font-mono"
-                        />
-                        <div>Base Profit Margin (%):</div>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="100"
-                          value={baseProfitMargin}
-                          onChange={(e) => setBaseProfitMargin(e.target.value)}
-                          onBlur={async () => {
-                            const value = parseFloat(baseProfitMargin);
-                            if (!isNaN(value) && value >= 0 && value <= 100) {
-                              const companyId = getCurrentCompanyId();
-                              if (companyId) {
-                                await companyService.updateCompany(companyId, {
-                                  baseProfitMargin: value / 100
-                                });
-                                // Reload debug data to reflect changes
-                                const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
-                                if (debugResult.success && debugResult.data) {
-                                  setIncrementalDebugData(debugResult.data);
-                                }
-                              }
-                            }
-                          }}
-                          className="w-24 h-7 text-xs font-mono"
-                        />
-                        <div>Expected Return on Book Value (%):</div>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="100"
-                          value={baseExpectedReturnOnBookValue}
-                          onChange={(e) => setBaseExpectedReturnOnBookValue(e.target.value)}
-                          onBlur={async () => {
-                            const value = parseFloat(baseExpectedReturnOnBookValue);
-                            if (!isNaN(value) && value >= 0 && value <= 100) {
-                              const companyId = getCurrentCompanyId();
-                              if (companyId) {
-                                await companyService.updateCompany(companyId, {
-                                  baseExpectedReturnOnBookValue: value / 100
-                                });
-                                // Reload debug data to reflect changes
-                                const debugResult = await calculateIncrementalAdjustmentDebug(companyId);
-                                if (debugResult.success && debugResult.data) {
-                                  setIncrementalDebugData(debugResult.data);
-                                }
-                              }
-                            }
-                          }}
-                          className="w-24 h-7 text-xs font-mono"
-                        />
+                      <div className="font-semibold mb-1">Baseline Improvement Rates (per 48 weeks):</div>
+                      <div className="text-gray-600 text-xs mb-2 pl-4">
+                        These are the "normal" expected improvement rates in a stable economy with average prestige.
+                        All metrics compare current 48-week rolling to previous 48-week rolling values.
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pl-4">
+                        <div>Earnings/Share Baseline:</div>
+                        <div className="font-mono">10.0%</div>
+                        <div>Revenue/Share Baseline:</div>
+                        <div className="font-mono">10.0%</div>
+                        <div>Dividend/Share Baseline:</div>
+                        <div className="font-mono">0.0% (player-controlled)</div>
+                        <div>Revenue Growth Baseline:</div>
+                        <div className="font-mono">10.0%</div>
+                        <div>Profit Margin Baseline:</div>
+                        <div className="font-mono">5.0%</div>
+                        <div>Credit Rating Baseline:</div>
+                        <div className="font-mono">2.0%</div>
+                        <div>Fixed Asset Ratio Baseline:</div>
+                        <div className="font-mono">0.0% (maintains level)</div>
+                        <div>Prestige Baseline:</div>
+                        <div className="font-mono">3.0%</div>
                       </div>
                     </div>
                     <div>
-                      <div className="font-semibold mb-1">Multipliers:</div>
+                      <div className="font-semibold mb-1">Multipliers (adjust baseline by context):</div>
                       <div className="grid grid-cols-2 gap-2 pl-4">
                         <div>Economy Phase → Multiplier:</div>
                         <div className="font-mono">{incrementalDebugData.expectedValuesCalc.economyPhase} → {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })}</div>
@@ -787,42 +899,64 @@ export function ShareManagementPanel() {
                       </div>
                     </div>
                     <div className="border-t border-gray-300 pt-2">
-                      <div className="font-semibold mb-1">Expected Values (Calculated): Base × Economy × Prestige × Growth</div>
+                      <div className="font-semibold mb-1">Expected Improvement Rates (per 48 weeks):</div>
+                      <div className="text-gray-600 text-xs mb-2 pl-4">
+                        Formula: Baseline × Economy × Prestige × Growth = Expected Improvement %
+                      </div>
                       <div className="grid grid-cols-2 gap-2 pl-4">
-                        <div>Expected Revenue Growth:</div>
-                        <div className="font-mono text-green-600 font-semibold">
-                          {formatNumber(incrementalDebugData.expectedValues.revenueGrowth * 100, { decimals: 4 })}%
+                        <div>Improvement Multiplier:</div>
+                        <div className="font-mono text-blue-600 font-semibold">
+                          {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
                         </div>
                         <div className="text-gray-600 text-xs col-span-2 pl-4">
-                          = {formatNumber(incrementalDebugData.expectedValuesCalc.baseRevenueGrowth * 100, { decimals: 2 })}% × {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}
+                          = {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}
                         </div>
-                        <div>Expected Profit Margin:</div>
-                        <div className="font-mono text-green-600 font-semibold">
-                          {formatNumber(
-                            incrementalDebugData.expectedValuesCalc.baseProfitMargin * 
-                            incrementalDebugData.expectedValuesCalc.economyMultiplier * 
-                            incrementalDebugData.expectedValuesCalc.prestigeMultiplier * 
-                            incrementalDebugData.expectedValuesCalc.growthTrendMultiplier * 100, 
-                            { decimals: 4 }
-                          )}%
-                        </div>
-                        <div className="text-gray-600 text-xs col-span-2 pl-4">
-                          = {formatNumber(incrementalDebugData.expectedValuesCalc.baseProfitMargin * 100, { decimals: 2 })}% × {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}
-                        </div>
-                        <div>Expected Earnings/Share:</div>
-                        <div className="font-mono text-green-600 font-semibold">
-                          {formatNumber(incrementalDebugData.expectedValues.earningsPerShare, { currency: true, decimals: 4 })}
-                        </div>
-                        <div className="text-gray-600 text-xs col-span-2 pl-4">
-                          = {formatNumber(incrementalDebugData.basePrice, { decimals: 2 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.expectedReturnOnBookValue * 100, { decimals: 2 })}% × {formatNumber(incrementalDebugData.expectedValuesCalc.economyMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.prestigeMultiplier, { decimals: 3 })} × {formatNumber(incrementalDebugData.expectedValuesCalc.growthTrendMultiplier, { decimals: 3 })}
-                        </div>
-                        <div>Expected Revenue/Share:</div>
-                        <div className="font-mono text-green-600 font-semibold">
-                          {formatNumber(incrementalDebugData.expectedValues.revenuePerShare, { currency: true, decimals: 4 })}
-                        </div>
-                        <div className="text-gray-600 text-xs col-span-2 pl-4">
-                          = {formatNumber(incrementalDebugData.expectedValues.earningsPerShare, { currency: true, decimals: 4 })} / {formatNumber(incrementalDebugData.expectedValues.profitMargin * 100, { decimals: 2 })}%
-                        </div>
+                        {incrementalDebugData.expectedImprovementRates && (
+                          <>
+                            <div>Expected EPS Improvement:</div>
+                            <div className="font-mono text-green-600 font-semibold">
+                              {formatNumber(incrementalDebugData.expectedImprovementRates.earningsPerShare, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 10.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                            </div>
+                            <div>Expected Revenue/Share Improvement:</div>
+                            <div className="font-mono text-green-600 font-semibold">
+                              {formatNumber(incrementalDebugData.expectedImprovementRates.revenuePerShare, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 10.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                            </div>
+                            <div>Expected Revenue Growth Improvement:</div>
+                            <div className="font-mono text-green-600 font-semibold">
+                              {formatNumber(incrementalDebugData.expectedImprovementRates.revenueGrowth, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 10.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                            </div>
+                            <div>Expected Profit Margin Improvement:</div>
+                            <div className="font-mono text-green-600 font-semibold">
+                              {formatNumber(incrementalDebugData.expectedImprovementRates.profitMargin, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 5.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                            </div>
+                            <div>Expected Credit Rating Improvement:</div>
+                            <div className="font-mono text-green-600 font-semibold">
+                              {formatNumber(incrementalDebugData.expectedImprovementRates.creditRating, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 2.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                            </div>
+                            <div>Expected Prestige Improvement:</div>
+                            <div className="font-mono text-green-600 font-semibold">
+                              {formatNumber(incrementalDebugData.expectedImprovementRates.prestige, { decimals: 2, forceDecimals: true })}%
+                            </div>
+                            <div className="text-gray-600 text-xs col-span-2 pl-4">
+                              = 3.0% × {formatNumber((incrementalDebugData.expectedValuesCalc as any).improvementMultiplier ?? 1.0, { decimals: 3 })}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -837,8 +971,8 @@ export function ShareManagementPanel() {
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="text-left px-4 py-2 font-semibold text-gray-700">Metric</th>
-                          <th className="text-right px-4 py-2 font-semibold text-gray-700">Current Value</th>
-                          <th className="text-right px-4 py-2 font-semibold text-gray-700">Expected Value</th>
+                          <th className="text-right px-4 py-2 font-semibold text-gray-700">Current (48w)</th>
+                          <th className="text-right px-4 py-2 font-semibold text-gray-700">Previous (48w ago)</th>
                           <th className="text-right px-4 py-2 font-semibold text-gray-700">Delta (%)</th>
                           <th className="text-right px-4 py-2 font-semibold text-gray-700">Contribution (€)</th>
                         </tr>
@@ -850,13 +984,17 @@ export function ShareManagementPanel() {
                             Earnings/Share <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.actualValues48Weeks?.earningsPerShare !== undefined
-                              ? formatNumber(incrementalDebugData.actualValues48Weeks.earningsPerShare, { currency: true, decimals: 4 })
-                              : formatNumber(incrementalDebugData.shareMetrics.earningsPerShare48Weeks ?? 0, { currency: true, decimals: 4 })}
+                            {formatNumber(incrementalDebugData.currentValues48Weeks?.earningsPerShare ?? 0, { currency: true, decimals: 4 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.expectedValues.earningsPerShare, { currency: true, decimals: 4 })}
-                            <span className="text-xs text-gray-500 ml-1">(annual = 48 weeks)</span>
+                            {incrementalDebugData.previousValues48WeeksAgo?.earningsPerShare !== null && incrementalDebugData.previousValues48WeeksAgo?.earningsPerShare !== undefined
+                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.earningsPerShare, { currency: true, decimals: 4 })
+                              : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.earningsPerShare, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.earningsPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.earningsPerShare, { decimals: 2, forceDecimals: true })}%
@@ -872,13 +1010,17 @@ export function ShareManagementPanel() {
                             Revenue/Share <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.actualValues48Weeks?.revenuePerShare !== undefined
-                              ? formatNumber(incrementalDebugData.actualValues48Weeks.revenuePerShare, { currency: true, decimals: 4 })
-                              : formatNumber(incrementalDebugData.shareMetrics.revenuePerShare48Weeks ?? 0, { currency: true, decimals: 4 })}
+                            {formatNumber(incrementalDebugData.currentValues48Weeks?.revenuePerShare ?? 0, { currency: true, decimals: 4 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.expectedValues.revenuePerShare, { currency: true, decimals: 4 })}
-                            <span className="text-xs text-gray-500 ml-1">(annual = 48 weeks)</span>
+                            {incrementalDebugData.previousValues48WeeksAgo?.revenuePerShare !== null && incrementalDebugData.previousValues48WeeksAgo?.revenuePerShare !== undefined
+                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.revenuePerShare, { currency: true, decimals: 4 })
+                              : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.revenuePerShare, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.revenuePerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.revenuePerShare, { decimals: 2, forceDecimals: true })}%
@@ -894,20 +1036,17 @@ export function ShareManagementPanel() {
                             Dividend/Share <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.actualValues48Weeks?.dividendPerShare !== undefined
-                              ? formatNumber(incrementalDebugData.actualValues48Weeks.dividendPerShare, { currency: true, decimals: 4 })
-                              : formatNumber(incrementalDebugData.shareMetrics.dividendPerShare48Weeks ?? 0, { currency: true, decimals: 4 })}
+                            {formatNumber(incrementalDebugData.currentValues48Weeks?.dividendPerShare ?? 0, { currency: true, decimals: 4 })}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.expectedValues.dividendPerShare48Weeks, { currency: true, decimals: 4 })}
-                            <span className="text-xs text-gray-500 ml-1">
-                              {(() => {
-                                const rate = incrementalDebugData.expectedValues.dividendPerShare;
-                                const expected = incrementalDebugData.expectedValues.dividendPerShare48Weeks;
-                                const payments = rate > 0 ? Math.round(expected / rate) : 4;
-                                return `(rate × ${payments} payment${payments !== 1 ? 's' : ''})`;
-                              })()}
-                            </span>
+                            {incrementalDebugData.previousValues48WeeksAgo?.dividendPerShare !== null && incrementalDebugData.previousValues48WeeksAgo?.dividendPerShare !== undefined
+                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.dividendPerShare, { currency: true, decimals: 4 })
+                              : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.dividendPerShare, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.dividendPerShare >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.dividendPerShare, { decimals: 2, forceDecimals: true })}%
@@ -923,12 +1062,17 @@ export function ShareManagementPanel() {
                             Revenue Growth <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.actualValues48Weeks?.revenueGrowth !== undefined
-                              ? formatNumber(incrementalDebugData.actualValues48Weeks.revenueGrowth * 100, { decimals: 2, forceDecimals: true }) + '%'
-                              : formatNumber((incrementalDebugData.shareMetrics.revenueGrowth48Weeks ?? 0) * 100, { decimals: 2, forceDecimals: true }) + '%'}
+                            {formatNumber((incrementalDebugData.currentValues48Weeks?.revenueGrowth ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.expectedValues.revenueGrowth * 100, { decimals: 2, forceDecimals: true })}%
+                            {incrementalDebugData.previousValues48WeeksAgo?.revenueGrowth !== null && incrementalDebugData.previousValues48WeeksAgo?.revenueGrowth !== undefined
+                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.revenueGrowth * 100, { decimals: 2, forceDecimals: true }) + '%'
+                              : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.revenueGrowth, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.revenueGrowth, { decimals: 2, forceDecimals: true })}%
@@ -944,12 +1088,17 @@ export function ShareManagementPanel() {
                             Profit Margin <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {incrementalDebugData.actualValues48Weeks?.profitMargin !== undefined
-                              ? formatNumber(incrementalDebugData.actualValues48Weeks.profitMargin * 100, { decimals: 2, forceDecimals: true }) + '%'
-                              : formatNumber((incrementalDebugData.shareMetrics.profitMargin48Weeks ?? 0) * 100, { decimals: 2, forceDecimals: true }) + '%'}
+                            {formatNumber((incrementalDebugData.currentValues48Weeks?.profitMargin ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.expectedValues.profitMargin * 100, { decimals: 2, forceDecimals: true })}%
+                            {incrementalDebugData.previousValues48WeeksAgo?.profitMargin !== null && incrementalDebugData.previousValues48WeeksAgo?.profitMargin !== undefined
+                              ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.profitMargin * 100, { decimals: 2, forceDecimals: true }) + '%'
+                              : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.profitMargin, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.profitMargin, { decimals: 2, forceDecimals: true })}%
@@ -965,12 +1114,17 @@ export function ShareManagementPanel() {
                             Credit Rating <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.actualValues.creditRating, { decimals: 3 })}
+                            {formatNumber(incrementalDebugData.currentValues?.creditRating ?? 0, { decimals: 3 })}
                           </td>
                           <td className="px-4 py-2 text-right">
                             {incrementalDebugData.previousValues48WeeksAgo?.creditRating !== null && incrementalDebugData.previousValues48WeeksAgo?.creditRating !== undefined
                               ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.creditRating, { decimals: 3 })
                               : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.creditRating, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.creditRating >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.creditRating, { decimals: 2, forceDecimals: true })}%
@@ -986,12 +1140,17 @@ export function ShareManagementPanel() {
                             Fixed Asset Ratio <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.actualValues.fixedAssetRatio * 100, { decimals: 2, forceDecimals: true })}%
+                            {formatNumber((incrementalDebugData.currentValues?.fixedAssetRatio ?? 0) * 100, { decimals: 2, forceDecimals: true })}%
                           </td>
                           <td className="px-4 py-2 text-right">
                             {incrementalDebugData.previousValues48WeeksAgo?.fixedAssetRatio !== null && incrementalDebugData.previousValues48WeeksAgo?.fixedAssetRatio !== undefined
                               ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.fixedAssetRatio * 100, { decimals: 2, forceDecimals: true }) + '%'
                               : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.fixedAssetRatio, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.fixedAssetRatio >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.fixedAssetRatio, { decimals: 2, forceDecimals: true })}%
@@ -1007,12 +1166,17 @@ export function ShareManagementPanel() {
                             Prestige <span className="text-xs text-gray-500">(48 weeks)</span>
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {formatNumber(incrementalDebugData.actualValues.prestige, { decimals: 2 })}
+                            {formatNumber(incrementalDebugData.currentValues?.prestige ?? 0, { decimals: 2 })}
                           </td>
                           <td className="px-4 py-2 text-right">
                             {incrementalDebugData.previousValues48WeeksAgo?.prestige !== null && incrementalDebugData.previousValues48WeeksAgo?.prestige !== undefined
                               ? formatNumber(incrementalDebugData.previousValues48WeeksAgo.prestige, { decimals: 2 })
                               : <span className="text-gray-400 italic">N/A</span>}
+                            {incrementalDebugData.expectedImprovementRates && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (exp: {formatNumber(incrementalDebugData.expectedImprovementRates.prestige, { decimals: 1, forceDecimals: true })}%)
+                              </span>
+                            )}
                           </td>
                           <td className={`px-4 py-2 text-right font-semibold ${incrementalDebugData.adjustment.deltas.prestige >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatNumber(incrementalDebugData.adjustment.deltas.prestige, { decimals: 2, forceDecimals: true })}%

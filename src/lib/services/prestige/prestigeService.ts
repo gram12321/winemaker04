@@ -969,8 +969,72 @@ export function getEventDisplayData(event: PrestigeEvent): {
     };
   }
 
+  // Handle penalty events (including dividend changes)
+  if (event.type === 'penalty' && event.metadata) {
+    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    
+    // Dividend change events
+    if (metadata.event === 'dividend_change') {
+      const oldRate = metadata.oldRate ?? 0;
+      const newRate = metadata.newRate ?? 0;
+      const rateChange = metadata.rateChange ?? 0;
+      const rateChangePercent = metadata.rateChangePercent ?? 0;
+      
+      const isCut = rateChange < 0;
+      const changeText = isCut 
+        ? `Cut: ${formatNumber(Math.abs(rateChangePercent) * 100, { decimals: 1 })}% reduction`
+        : `Increase: ${formatNumber(rateChangePercent * 100, { decimals: 1 })}% increase`;
+      
+      return {
+        title: `Dividend ${isCut ? 'Cut' : 'Increase'}: ${changeText}`,
+        titleBase: 'Dividend Change',
+        amountText: `${formatNumber(oldRate, { currency: true, decimals: 4 })} → ${formatNumber(newRate, { currency: true, decimals: 4 })} per share`,
+        displayInfo: `Old rate: ${formatNumber(oldRate, { currency: true, decimals: 4 })}/share → New rate: ${formatNumber(newRate, { currency: true, decimals: 4 })}/share • Prestige impact: ${formatNumber(event.amount, { decimals: 3, forceDecimals: true })}`
+      };
+    }
+    
+    // Generic penalty event
+    return {
+      title: event.description || 'Penalty',
+      titleBase: 'Penalty',
+      amountText: `${event.amount.toFixed(2)} prestige`,
+    };
+  }
+
+  // Handle penalty events (including dividend changes)
+  if (event.type === 'penalty' && event.metadata) {
+    const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
+    
+    // Dividend change events
+    if (metadata.event === 'dividend_change') {
+      const oldRate = metadata.oldRate ?? 0;
+      const newRate = metadata.newRate ?? 0;
+      const rateChange = metadata.rateChange ?? 0;
+      const rateChangePercent = metadata.rateChangePercent ?? 0;
+      
+      const isCut = rateChange < 0;
+      const changeText = isCut 
+        ? `Cut: ${formatNumber(Math.abs(rateChangePercent) * 100, { decimals: 1 })}% reduction`
+        : `Increase: ${formatNumber(rateChangePercent * 100, { decimals: 1 })}% increase`;
+      
+      return {
+        title: `Dividend ${isCut ? 'Cut' : 'Increase'}: ${changeText}`,
+        titleBase: 'Dividend Change',
+        amountText: `${formatNumber(oldRate, { currency: true, decimals: 4 })} → ${formatNumber(newRate, { currency: true, decimals: 4 })} per share`,
+        displayInfo: `Old rate: ${formatNumber(oldRate, { currency: true, decimals: 4 })}/share → New rate: ${formatNumber(newRate, { currency: true, decimals: 4 })}/share • Prestige impact: ${formatNumber(event.amount, { decimals: 3, forceDecimals: true })}`
+      };
+    }
+    
+    // Generic penalty event
+    return {
+      title: event.description || 'Penalty',
+      titleBase: 'Penalty',
+      amountText: `${event.amount.toFixed(2)} prestige`,
+    };
+  }
+
   // Handle other event types with fallback display
-  if (['contract', 'penalty', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement'].includes(event.type)) {
+  if (['contract', 'vineyard_sale', 'vineyard_base', 'vineyard_achievement'].includes(event.type)) {
     return {
       title: event.description || event.type,
       titleBase: event.type,
