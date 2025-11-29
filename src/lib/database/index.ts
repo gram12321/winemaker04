@@ -5,6 +5,7 @@ export * from './core/gamestateDB';
 export * from './core/staffDB';
 export * from './core/highscoresDB';
 export * from './core/companiesDB';
+export * from './core/companySharesDB';
 export * from './core/usersDB';
 export * from './core/transactionsDB';
 export * from './core/wineLogDB';

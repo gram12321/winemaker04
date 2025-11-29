@@ -4,6 +4,7 @@ import { GAME_INITIALIZATION } from '../../constants/constants';
 import { insertCompany, insertUser, getCompanyById, getCompanyByName, getUserCompanies, getAllCompanies as loadAllCompanies, updateCompany as updateCompanyInDB, deleteCompany as deleteCompanyFromDB, getCompanyStats as loadCompanyStats, checkCompanyNameExists, type Company, type CompanyData } from '@/lib/database';
 import { initializeLenders } from '../finance/lenderService';
 import { calculateInitialShareCount } from '../../constants/financeConstants';
+import { createCompanyShares, updateCompanyShares } from '../../database/core/companySharesDB';
 
 export interface CompanyCreateData {
   name: string;
@@ -40,10 +41,6 @@ export interface CompanyUpdateData {
   lastSharePriceUpdateWeek?: number;
   lastSharePriceUpdateSeason?: Season;
   lastSharePriceUpdateYear?: number;
-  // Base values for expected value calculations
-  baseRevenueGrowth?: number;
-  baseProfitMargin?: number;
-  baseExpectedReturnOnBookValue?: number;
 }
 
 export interface CompanyStats {
@@ -105,15 +102,8 @@ class CompanyService {
         current_season: 'Spring',
         current_year: 2024,
         money: 0,
-        prestige: GAME_INITIALIZATION.STARTING_PRESTIGE,
-        // Public company fields
-        total_shares: TOTAL_SHARES,
-        outstanding_shares: outstandingShares,
-        player_shares: playerShares,
-        initial_ownership_pct: playerOwnershipPct,
-        dividend_rate: 0.001, // Fixed per share in euros
-        market_cap: 0,
-        share_price: 0
+        prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
+        // Share fields removed - now in company_shares table
       };
 
       const result = await insertCompany(companyData);
@@ -122,45 +112,25 @@ class CompanyService {
         return { success: false, error: result.error };
       }
 
-      // Map the returned data to Company type
-      const company = result.data ? {
-        id: result.data.id,
-        name: result.data.name,
-        userId: result.data.user_id,
-        foundedYear: result.data.founded_year,
-        currentWeek: result.data.current_week,
-        currentSeason: result.data.current_season as Season,
-        currentYear: result.data.current_year,
-        money: result.data.money,
-        prestige: result.data.prestige,
-        lastPlayed: new Date(),
-        createdAt: new Date(result.data.created_at),
-        updatedAt: new Date(result.data.updated_at),
-        // Public company fields
-        totalShares: result.data.total_shares ? Number(result.data.total_shares) : undefined,
-        outstandingShares: result.data.outstanding_shares ? Number(result.data.outstanding_shares) : undefined,
-        playerShares: result.data.player_shares ? Number(result.data.player_shares) : undefined,
-        initialOwnershipPct: result.data.initial_ownership_pct ? Number(result.data.initial_ownership_pct) : undefined,
-        dividendRate: result.data.dividend_rate ? Number(result.data.dividend_rate) : undefined,
-        lastDividendPaid: (result.data.last_dividend_paid_week && result.data.last_dividend_paid_season && result.data.last_dividend_paid_year) ? {
-          week: result.data.last_dividend_paid_week,
-          season: result.data.last_dividend_paid_season as Season,
-          year: result.data.last_dividend_paid_year
-        } : undefined,
-        marketCap: result.data.market_cap ? Number(result.data.market_cap) : undefined,
-        sharePrice: result.data.share_price ? Number(result.data.share_price) : undefined,
-        growthTrendMultiplier: result.data.growth_trend_multiplier ? Number(result.data.growth_trend_multiplier) : undefined,
-        lastGrowthTrendUpdate: (result.data.last_growth_trend_update_week && result.data.last_growth_trend_update_season && result.data.last_growth_trend_update_year) ? {
-          week: result.data.last_growth_trend_update_week,
-          season: result.data.last_growth_trend_update_season as Season,
-          year: result.data.last_growth_trend_update_year
-        } : undefined,
-        lastSharePriceUpdate: (result.data.last_share_price_update_week && result.data.last_share_price_update_season && result.data.last_share_price_update_year) ? {
-          week: result.data.last_share_price_update_week,
-          season: result.data.last_share_price_update_season as Season,
-          year: result.data.last_share_price_update_year
-        } : undefined
-      } as Company : undefined;
+      // Create company_shares record
+      const companyId = result.data.id;
+      const sharesResult = await createCompanyShares(companyId, {
+        total_shares: TOTAL_SHARES,
+        outstanding_shares: outstandingShares,
+        player_shares: playerShares,
+        initial_ownership_pct: playerOwnershipPct,
+        dividend_rate: 0.001, // Fixed per share in euros
+        market_cap: 0,
+        share_price: 0
+      });
+
+      if (!sharesResult.success) {
+        console.error('Failed to create company shares record:', sharesResult.error);
+        // Don't fail company creation if shares creation fails - migration will handle it
+      }
+
+      // Fetch the complete company with share data from company_shares table
+      const company = await getCompanyById(companyId);
 
       // Initialize lenders for the new company
       if (company) {
@@ -195,36 +165,54 @@ class CompanyService {
   }
 
   public async updateCompany(companyId: string, updates: CompanyUpdateData): Promise<{ success: boolean; error?: string }> {
-    const updateData: any = {};
-    if (updates.currentWeek !== undefined) updateData.current_week = updates.currentWeek;
-    if (updates.currentSeason !== undefined) updateData.current_season = updates.currentSeason;
-    if (updates.currentYear !== undefined) updateData.current_year = updates.currentYear;
-    if (updates.money !== undefined) updateData.money = updates.money;
-    if (updates.prestige !== undefined) updateData.prestige = updates.prestige;
-    if (updates.startingCountry !== undefined) updateData.starting_country = updates.startingCountry;
-    if (updates.totalShares !== undefined) updateData.total_shares = updates.totalShares;
-    if (updates.outstandingShares !== undefined) updateData.outstanding_shares = updates.outstandingShares;
-    if (updates.playerShares !== undefined) updateData.player_shares = updates.playerShares;
-    if (updates.initialOwnershipPct !== undefined) updateData.initial_ownership_pct = updates.initialOwnershipPct;
-    if (updates.dividendRate !== undefined) updateData.dividend_rate = updates.dividendRate;
-    if (updates.lastDividendPaidWeek !== undefined) updateData.last_dividend_paid_week = updates.lastDividendPaidWeek;
-    if (updates.lastDividendPaidSeason !== undefined) updateData.last_dividend_paid_season = updates.lastDividendPaidSeason;
-    if (updates.lastDividendPaidYear !== undefined) updateData.last_dividend_paid_year = updates.lastDividendPaidYear;
-    if (updates.marketCap !== undefined) updateData.market_cap = updates.marketCap;
-    if (updates.sharePrice !== undefined) updateData.share_price = updates.sharePrice;
-    if (updates.initialVineyardValue !== undefined) updateData.initial_vineyard_value = updates.initialVineyardValue;
-    if (updates.growthTrendMultiplier !== undefined) updateData.growth_trend_multiplier = updates.growthTrendMultiplier;
-    if (updates.lastGrowthTrendUpdateWeek !== undefined) updateData.last_growth_trend_update_week = updates.lastGrowthTrendUpdateWeek;
-    if (updates.lastGrowthTrendUpdateSeason !== undefined) updateData.last_growth_trend_update_season = updates.lastGrowthTrendUpdateSeason;
-    if (updates.lastGrowthTrendUpdateYear !== undefined) updateData.last_growth_trend_update_year = updates.lastGrowthTrendUpdateYear;
-    if (updates.lastSharePriceUpdateWeek !== undefined) updateData.last_share_price_update_week = updates.lastSharePriceUpdateWeek;
-    if (updates.lastSharePriceUpdateSeason !== undefined) updateData.last_share_price_update_season = updates.lastSharePriceUpdateSeason;
-    if (updates.lastSharePriceUpdateYear !== undefined) updateData.last_share_price_update_year = updates.lastSharePriceUpdateYear;
-    if (updates.baseRevenueGrowth !== undefined) updateData.base_revenue_growth = updates.baseRevenueGrowth;
-    if (updates.baseProfitMargin !== undefined) updateData.base_profit_margin = updates.baseProfitMargin;
-    if (updates.baseExpectedReturnOnBookValue !== undefined) updateData.base_expected_return_on_book_value = updates.baseExpectedReturnOnBookValue;
+    // Separate company updates from share updates
+    const companyUpdateData: any = {};
+    if (updates.currentWeek !== undefined) companyUpdateData.current_week = updates.currentWeek;
+    if (updates.currentSeason !== undefined) companyUpdateData.current_season = updates.currentSeason;
+    if (updates.currentYear !== undefined) companyUpdateData.current_year = updates.currentYear;
+    if (updates.money !== undefined) companyUpdateData.money = updates.money;
+    if (updates.prestige !== undefined) companyUpdateData.prestige = updates.prestige;
+    if (updates.startingCountry !== undefined) companyUpdateData.starting_country = updates.startingCountry;
 
-    return await updateCompanyInDB(companyId, updateData);
+    // Share-related updates go to company_shares table
+    const sharesUpdateData: any = {};
+    if (updates.totalShares !== undefined) sharesUpdateData.total_shares = updates.totalShares;
+    if (updates.outstandingShares !== undefined) sharesUpdateData.outstanding_shares = updates.outstandingShares;
+    if (updates.playerShares !== undefined) sharesUpdateData.player_shares = updates.playerShares;
+    if (updates.initialOwnershipPct !== undefined) sharesUpdateData.initial_ownership_pct = updates.initialOwnershipPct;
+    if (updates.dividendRate !== undefined) sharesUpdateData.dividend_rate = updates.dividendRate;
+    if (updates.lastDividendPaidWeek !== undefined) sharesUpdateData.last_dividend_paid_week = updates.lastDividendPaidWeek;
+    if (updates.lastDividendPaidSeason !== undefined) sharesUpdateData.last_dividend_paid_season = updates.lastDividendPaidSeason;
+    if (updates.lastDividendPaidYear !== undefined) sharesUpdateData.last_dividend_paid_year = updates.lastDividendPaidYear;
+    if (updates.marketCap !== undefined) sharesUpdateData.market_cap = updates.marketCap;
+    if (updates.sharePrice !== undefined) sharesUpdateData.share_price = updates.sharePrice;
+    if (updates.initialVineyardValue !== undefined) sharesUpdateData.initial_vineyard_value = updates.initialVineyardValue;
+    if (updates.growthTrendMultiplier !== undefined) sharesUpdateData.growth_trend_multiplier = updates.growthTrendMultiplier;
+    if (updates.lastGrowthTrendUpdateWeek !== undefined) sharesUpdateData.last_growth_trend_update_week = updates.lastGrowthTrendUpdateWeek;
+    if (updates.lastGrowthTrendUpdateSeason !== undefined) sharesUpdateData.last_growth_trend_update_season = updates.lastGrowthTrendUpdateSeason;
+    if (updates.lastGrowthTrendUpdateYear !== undefined) sharesUpdateData.last_growth_trend_update_year = updates.lastGrowthTrendUpdateYear;
+    if (updates.lastSharePriceUpdateWeek !== undefined) sharesUpdateData.last_share_price_update_week = updates.lastSharePriceUpdateWeek;
+    if (updates.lastSharePriceUpdateSeason !== undefined) sharesUpdateData.last_share_price_update_season = updates.lastSharePriceUpdateSeason;
+    if (updates.lastSharePriceUpdateYear !== undefined) sharesUpdateData.last_share_price_update_year = updates.lastSharePriceUpdateYear;
+
+    // Update company table (if there are non-share updates)
+    let companyResult = { success: true };
+    if (Object.keys(companyUpdateData).length > 0) {
+      companyResult = await updateCompanyInDB(companyId, companyUpdateData);
+      if (!companyResult.success) {
+        return companyResult;
+      }
+    }
+
+    // Update company_shares table (if there are share updates)
+    if (Object.keys(sharesUpdateData).length > 0) {
+      const sharesResult = await updateCompanyShares(companyId, sharesUpdateData);
+      if (!sharesResult.success) {
+        return sharesResult;
+      }
+    }
+
+    return { success: true };
   }
 
   public async deleteCompany(companyId: string): Promise<{ success: boolean; error?: string }> {

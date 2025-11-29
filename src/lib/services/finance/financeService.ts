@@ -295,16 +295,20 @@ export const calculateFinancialData = async (
   });
   
   // Family contribution is the initial vineyard value at company creation
-  // Get it from company metadata, or calculate from first vineyards if not stored
-  const company = await companyService.getCompany(getCurrentCompanyId() || '');
+  // Get it from company_shares table
+  const companyId = getCurrentCompanyId();
   let familyContribution = 0;
   
-  if (company && company.initialVineyardValue) {
-    // Use stored initial vineyard value
-    familyContribution = company.initialVineyardValue;
+  if (companyId) {
+    const { getCompanyShares } = await import('../../database/core/companySharesDB');
+    const sharesData = await getCompanyShares(companyId);
+    if (sharesData && sharesData.initialVineyardValue) {
+      familyContribution = sharesData.initialVineyardValue;
+    } else {
+      // Fallback: use current vineyard value for companies created before this tracking was added
+      familyContribution = allVineyardsValue;
+    }
   } else {
-    // Fallback: use current vineyard value for companies created before this tracking was added
-    // This is a reasonable approximation for existing companies
     familyContribution = allVineyardsValue;
   }
   
@@ -559,11 +563,18 @@ export async function calculateFinancialDataRollingNWeeks(
     }
   });
   
-  const company = await companyService.getCompany(companyId || getCurrentCompanyId() || '');
+  const effectiveCompanyId = companyId || getCurrentCompanyId() || '';
   let familyContribution = 0;
   
-  if (company && company.initialVineyardValue) {
-    familyContribution = company.initialVineyardValue;
+  if (effectiveCompanyId) {
+    const { getCompanyShares } = await import('../../database/core/companySharesDB');
+    const sharesData = await getCompanyShares(effectiveCompanyId);
+    if (sharesData && sharesData.initialVineyardValue) {
+      familyContribution = sharesData.initialVineyardValue;
+    } else {
+      // Fallback: use current vineyard value for companies created before this tracking was added
+      familyContribution = allVineyardsValue;
+    }
   } else {
     familyContribution = allVineyardsValue;
   }

@@ -269,19 +269,22 @@ The `ShareMetrics` interface provides per-share calculations:
 
 ### Services
 
-- **`src/lib/services/finance/shareValuationService.ts`**
-  - `calculateSharePrice()`: Returns book value per share (initial price)
-  - `calculateExpectedValues()`: Calculates expected performance benchmarks
-  - `calculateMarketCap()`: Market capitalization calculation
-  - `getCurrentSharePrice()`: Get current price from database
-  - `getMarketValue()`: Get current share price and market cap
-
-- **`src/lib/services/finance/sharePriceIncrementService.ts`**
+- **`src/lib/services/finance/shares/sharePriceService.ts`**
   - `adjustSharePriceIncrementally()`: Weekly share price adjustment
   - `calculateIncrementalAdjustment()`: Core delta calculation logic (unified trend-based system)
   - `initializeSharePriceWithTimestamp()`: Initialize price on first use
   - `applyImmediateShareStructureAdjustment()`: Immediate price adjustment for share issuance/buyback
-  - `calculateIncrementalAdjustmentDebug()`: Debug function for detailed calculation breakdown
+  - `getSharePriceBreakdown()`: Detailed calculation breakdown for UI display
+
+- **`src/lib/services/finance/shares/shareCalculations.ts`**
+  - `calculateExpectedImprovementRates()`: **Replaces old `calculateExpectedValues()`** - Calculates expected improvement rates (1.2%, 0.8%, etc.) based on multipliers and market cap requirement
+  - `calculateImprovementMultiplier()`: Calculates combined multiplier (economy × prestige × growth trend)
+  - `calculateMarketCapRequirement()`: Calculates additional expected improvement requirement for larger companies
+  - `calculateMarketCap()`: Market capitalization calculation
+
+- **`src/lib/services/finance/shares/sharePriceBreakdownHelpers.ts`**
+  - `formatMultiplierBreakdownForDisplay()`: Formats multiplier data (economy, prestige, growth trend) for UI display (does NOT calculate expected rates)
+  - `calculateAnchorFactorDetails()`: Formats anchor factor calculation details for UI display
 
 - **`src/lib/services/finance/shareManagementService.ts`**
   - `issueStock()`: Issue new shares (triggers immediate price adjustment)

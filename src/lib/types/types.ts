@@ -978,3 +978,153 @@ export interface GameState {
   loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
   pendingForcedLoanRestructure?: ForcedLoanRestructureOffer | null;
 }
+
+// ===== SHARE TYPES =====
+
+export interface ShareMetrics {
+  assetPerShare: number;
+  cashPerShare: number;
+  debtPerShare: number;
+  bookValuePerShare: number;
+  revenuePerShare: number;
+  earningsPerShare: number;
+  dividendPerShareCurrentYear: number;
+  dividendPerSharePreviousYear: number;
+  creditRating: number;
+  profitMargin: number;
+  revenueGrowth: number;
+  earningsPerShare48Weeks?: number;
+  revenuePerShare48Weeks?: number;
+  revenueGrowth48Weeks?: number;
+  profitMargin48Weeks?: number;
+  dividendPerShare48Weeks?: number;
+}
+
+export interface ShareholderBreakdown {
+  playerShares: number;
+  familyShares: number;
+  outsideShares: number;
+  playerPct: number;
+  familyPct: number;
+  outsidePct: number;
+}
+
+export interface ShareHistoricalMetric {
+  year: number;
+  season: string;
+  week: number;
+  sharePrice: number;
+  bookValuePerShare: number;
+  earningsPerShare: number;
+  dividendPerShare: number;
+}
+
+export interface ShareExpectedImprovementRates {
+  earningsPerShare: number;
+  revenuePerShare: number;
+  dividendPerShare: number;
+  revenueGrowth: number;
+  profitMargin: number;
+  creditRating: number;
+  fixedAssetRatio: number;
+  prestige: number;
+}
+
+export interface ShareMetricDelta {
+  deltaPercent: number;
+  deltaRatio: number;
+  contribution: number;
+}
+
+export interface SharePriceAdjustmentResult {
+  newPrice: number;
+  adjustment: number;
+  totalContribution: number;
+  anchorFactor: number;
+  deltas: Record<string, number>;
+  contributions: Record<string, ShareMetricDelta>;
+}
+
+export interface ShareMetricValues48Weeks {
+  earningsPerShare: number;
+  revenuePerShare: number;
+  dividendPerShare: number;
+  revenueGrowth: number;
+  profitMargin: number;
+}
+
+export interface ShareCurrentMetricValues {
+  creditRating: number;
+  fixedAssetRatio: number;
+  prestige: number;
+}
+
+export interface SharePreviousMetricValues48WeeksAgo {
+  earningsPerShare: number | null;
+  revenuePerShare: number | null;
+  dividendPerShare: number | null;
+  revenueGrowth: number | null;
+  profitMargin: number | null;
+  creditRating: number | null;
+  fixedAssetRatio: number | null;
+  prestige: number | null;
+  hasHistory?: boolean;
+}
+
+export interface ShareAnchorFactorDetails {
+  deviation: number;
+  strength: number;
+  exponent: number;
+  denominator: number;
+  anchorFactor: number;
+}
+
+export interface ShareExpectedValuesCalculation {
+  economyPhase: string;
+  economyMultiplier: number;
+  prestige: number;
+  normalizedPrestige: number;
+  prestigeMultiplier: number;
+  growthTrendMultiplier: number;
+  expectedDividendPayments: number;
+  improvementMultiplier: number;
+  marketCapRequirement: number;
+  marketCap: number;
+}
+
+export interface SharePriceBreakdown {
+  currentPrice: number;
+  basePrice: number;
+  adjustment: SharePriceAdjustmentResult;
+  shareMetrics: ShareMetrics;
+  company: any;
+  expectedImprovementRates: ShareExpectedImprovementRates;
+  currentValues48Weeks: ShareMetricValues48Weeks;
+  currentValues: ShareCurrentMetricValues;
+  previousValues48WeeksAgo: SharePreviousMetricValues48WeeksAgo;
+  anchorFactorDetails: ShareAnchorFactorDetails;
+  expectedValuesCalc: ShareExpectedValuesCalculation;
+}
+
+export interface ShareOperationResult {
+  success: boolean;
+  error?: string;
+  totalShares?: number;
+  outstandingShares?: number;
+  playerShares?: number;
+  playerOwnershipPct?: number;
+  capitalRaised?: number;
+  cost?: number;
+}
+
+export interface ShareMarketValue {
+  marketCap: number;
+  sharePrice: number;
+}
+
+export interface ShareMarketValueUpdateResult {
+  success: boolean;
+  marketCap?: number;
+  sharePrice?: number;
+  error?: string;
+}

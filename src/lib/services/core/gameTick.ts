@@ -98,7 +98,7 @@ const executeGameTick = async (): Promise<void> => {
   // Automatically pay dividends on season change (week 1 of each season)
   if (week === 1) {
     try {
-      const { payDividends } = await import('../finance/shareManagementService');
+      const { payDividends } = await import('../index');
       const result = await payDividends();
       if (result.success && result.totalPayment && result.totalPayment > 0) {
         // Dividends paid successfully - notification handled by payDividends
@@ -166,7 +166,7 @@ const onNewYear = async (_previousYear: number, _newYear: number): Promise<void>
 
   // Update growth trend multipliers based on performance vs expectations
   try {
-    const { updateGrowthTrend } = await import('../finance/growthTrendService');
+    const { updateGrowthTrend } = await import('../finance/shares/growthTrendService');
     await updateGrowthTrend();
   } catch (error) {
     console.error('Error updating growth trend on new year:', error);
@@ -282,7 +282,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     // Adjust share price incrementally (weekly incremental update)
     (async () => {
       try {
-        const { adjustSharePriceIncrementally } = await import('../finance/sharePriceIncrementService');
+        const { adjustSharePriceIncrementally } = await import('../index');
         await adjustSharePriceIncrementally();
       } catch (error) {
         console.warn('Error during incremental share price adjustment:', error);

@@ -13,6 +13,7 @@ export * from './financeConstants';
 export * from './staffConstants';
 export * from './achievementConstants';
 export * from './timeConstants';
+export * from './shareValuationConstants';
 
 // Wine features
 export * from './wineFeatures/oxidation';

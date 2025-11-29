@@ -62,6 +62,7 @@ DROP TABLE IF EXISTS wine_batches CASCADE;
 DROP TABLE IF EXISTS vineyards CASCADE;
 DROP TABLE IF EXISTS game_state CASCADE;
 DROP TABLE IF EXISTS company_metrics_history CASCADE;
+DROP TABLE IF EXISTS company_shares CASCADE;
 DROP TABLE IF EXISTS loan_warnings CASCADE;
 DROP TABLE IF EXISTS loans CASCADE;
 DROP TABLE IF EXISTS lenders CASCADE;
@@ -160,6 +161,68 @@ COMMENT ON COLUMN companies.last_growth_trend_update_year IS 'Year when growth t
 COMMENT ON COLUMN companies.last_share_price_update_week IS 'Week when share price was last adjusted incrementally';
 COMMENT ON COLUMN companies.last_share_price_update_season IS 'Season when share price was last adjusted incrementally';
 COMMENT ON COLUMN companies.last_share_price_update_year IS 'Year when share price was last adjusted incrementally';
+
+-- Company shares table (normalized share-related data)
+CREATE TABLE company_shares (
+  company_id uuid PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+  
+  -- Share structure
+  total_shares bigint DEFAULT 1000000 NOT NULL,
+  outstanding_shares bigint DEFAULT 0 NOT NULL,
+  player_shares bigint DEFAULT 1000000 NOT NULL,
+  initial_ownership_pct numeric DEFAULT 100.0,
+  
+  -- Dividends
+  dividend_rate numeric DEFAULT 0 NOT NULL,
+  last_dividend_paid_week integer,
+  last_dividend_paid_season text CHECK (last_dividend_paid_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+  last_dividend_paid_year integer,
+  
+  -- Pricing
+  market_cap numeric DEFAULT 0 NOT NULL,
+  share_price numeric DEFAULT 0 NOT NULL,
+  
+  -- Growth trend tracking
+  growth_trend_multiplier numeric DEFAULT 1.0 NOT NULL,
+  last_growth_trend_update_week integer,
+  last_growth_trend_update_season text CHECK (last_growth_trend_update_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+  last_growth_trend_update_year integer,
+  
+  -- Incremental share price tracking
+  last_share_price_update_week integer,
+  last_share_price_update_season text CHECK (last_share_price_update_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+  last_share_price_update_year integer,
+  
+  -- Base values for expected value calculations (future: NPC/Board room controlled)
+  base_revenue_growth numeric,
+  base_profit_margin numeric,
+  base_expected_return_on_book_value numeric,
+  
+  created_at timestamptz DEFAULT now() NOT NULL,
+  updated_at timestamptz DEFAULT now() NOT NULL
+);
+
+COMMENT ON TABLE company_shares IS 'Share-related data for public companies, normalized from companies table';
+COMMENT ON COLUMN company_shares.total_shares IS 'Total authorized shares for the company';
+COMMENT ON COLUMN company_shares.outstanding_shares IS 'Shares held by outside investors';
+COMMENT ON COLUMN company_shares.player_shares IS 'Shares held by the player';
+COMMENT ON COLUMN company_shares.initial_ownership_pct IS 'Player initial ownership percentage (0-100)';
+COMMENT ON COLUMN company_shares.dividend_rate IS 'Current dividend rate (fixed per share in euros)';
+COMMENT ON COLUMN company_shares.last_dividend_paid_week IS 'Week when last dividend was paid';
+COMMENT ON COLUMN company_shares.last_dividend_paid_season IS 'Season when last dividend was paid';
+COMMENT ON COLUMN company_shares.last_dividend_paid_year IS 'Year when last dividend was paid';
+COMMENT ON COLUMN company_shares.market_cap IS 'Current market capitalization';
+COMMENT ON COLUMN company_shares.share_price IS 'Current share price';
+COMMENT ON COLUMN company_shares.growth_trend_multiplier IS 'Multiplier adjusting expected values based on historical performance (default: 1.0)';
+COMMENT ON COLUMN company_shares.last_growth_trend_update_week IS 'Week when growth trend was last updated';
+COMMENT ON COLUMN company_shares.last_growth_trend_update_season IS 'Season when growth trend was last updated';
+COMMENT ON COLUMN company_shares.last_growth_trend_update_year IS 'Year when growth trend was last updated';
+COMMENT ON COLUMN company_shares.last_share_price_update_week IS 'Week when share price was last adjusted incrementally';
+COMMENT ON COLUMN company_shares.last_share_price_update_season IS 'Season when share price was last adjusted incrementally';
+COMMENT ON COLUMN company_shares.last_share_price_update_year IS 'Year when share price was last adjusted incrementally';
+COMMENT ON COLUMN company_shares.base_revenue_growth IS 'Base revenue growth expectation (default: 0.10 = 10%). Future: NPC/Board room controlled.';
+COMMENT ON COLUMN company_shares.base_profit_margin IS 'Base profit margin expectation (default: 0.15 = 15%). Future: NPC/Board room controlled.';
+COMMENT ON COLUMN company_shares.base_expected_return_on_book_value IS 'Base expected return on book value (default: 0.10 = 10%). Future: NPC/Board room controlled.';
 
 -- User settings table
 CREATE TABLE user_settings (
@@ -673,6 +736,8 @@ CREATE TABLE company_metrics_history (
     earnings_per_share_48w numeric NOT NULL,
     revenue_per_share_48w numeric NOT NULL,
     dividend_per_share_48w numeric NOT NULL,
+    profit_margin_48w numeric,
+    revenue_growth_48w numeric,
     created_at timestamptz DEFAULT now()
 );
 
@@ -685,6 +750,8 @@ COMMENT ON COLUMN company_metrics_history.book_value_per_share IS 'Book value pe
 COMMENT ON COLUMN company_metrics_history.earnings_per_share_48w IS 'Earnings per share (48-week rolling) at snapshot time';
 COMMENT ON COLUMN company_metrics_history.revenue_per_share_48w IS 'Revenue per share (48-week rolling) at snapshot time';
 COMMENT ON COLUMN company_metrics_history.dividend_per_share_48w IS 'Dividend per share (48-week rolling) at snapshot time';
+COMMENT ON COLUMN company_metrics_history.profit_margin_48w IS 'Profit margin (48-week rolling) at snapshot time';
+COMMENT ON COLUMN company_metrics_history.revenue_growth_48w IS 'Revenue growth (48-week rolling) at snapshot time';
 
 -- ============================================================
 -- SECURITY HELPERS & ROW LEVEL SECURITY

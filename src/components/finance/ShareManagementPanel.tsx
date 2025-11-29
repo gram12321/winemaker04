@@ -7,23 +7,11 @@ import { formatNumber } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { companyService } from '@/lib/services/user/companyService';
-import { getMarketValue, updateMarketValue } from '@/lib/services/finance/shareValuationService';
-import {
-  issueStock,
-  buyBackStock,
-  updateDividendRate,
-  calculateDividendPayment,
-  areDividendsDue,
-  getShareMetrics,
-  getShareholderBreakdown,
-  getHistoricalShareMetrics,
-  type ShareMetrics,
-  type ShareholderBreakdown,
-  type HistoricalShareMetric
-} from '@/lib/services/finance/shareManagementService';
+import { getMarketValue, updateMarketValue, getSharePriceBreakdown, issueStock, buyBackStock, updateDividendRate, calculateDividendPayment, areDividendsDue, getShareMetrics, getShareholderBreakdown, getHistoricalShareMetrics } from '@/lib/services';
+import type { ShareMetrics, ShareholderBreakdown, ShareHistoricalMetric } from '@/lib/types';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
-import { getSharePriceBreakdown } from '@/lib/services/finance/sharePriceIncrementService';
+import { getCompanyShares } from '@/lib/database/core/companySharesDB';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { loadTransactions } from '@/lib/services/finance/financeService';
 import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
@@ -32,6 +20,7 @@ import type { PrestigeEvent } from '@/lib/types/types';
 export function ShareManagementPanel() {
   const gameState = useGameState();
   const [company, setCompany] = useState<Company | null>(null);
+  const [sharesData, setSharesData] = useState<{ totalShares: number; outstandingShares: number; playerShares: number; dividendRate: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [marketValue, setMarketValue] = useState({ marketCap: 0, sharePrice: 0 });
   const [issuingShares, setIssuingShares] = useState(0);
@@ -44,7 +33,7 @@ export function ShareManagementPanel() {
   const [dividendsDue, setDividendsDue] = useState(false);
   const [shareMetrics, setShareMetrics] = useState<ShareMetrics | null>(null);
   const [shareholderBreakdown, setShareholderBreakdown] = useState<ShareholderBreakdown | null>(null);
-  const [historicalMetrics, setHistoricalMetrics] = useState<HistoricalShareMetric[]>([]);
+  const [historicalMetrics, setHistoricalMetrics] = useState<ShareHistoricalMetric[]>([]);
   const [sharePriceBreakdown, setSharePriceBreakdown] = useState<Awaited<ReturnType<typeof getSharePriceBreakdown>>['data'] | null>(null);
   const [showMetricDetails, setShowMetricDetails] = useState(false);
   const [showExpectedValuesCalc, setShowExpectedValuesCalc] = useState(false);
@@ -75,9 +64,19 @@ export function ShareManagementPanel() {
         const companyData = await companyService.getCompany(companyId);
         if (companyData) {
           setCompany(companyData);
-          const rate = companyData.dividendRate || 0;
-          setDividendRate(rate);
-          setDividendRateInput(rate.toString());
+        }
+
+        // Get share data
+        const shares = await getCompanyShares(companyId);
+        if (shares) {
+          setSharesData({
+            totalShares: shares.totalShares,
+            outstandingShares: shares.outstandingShares,
+            playerShares: shares.playerShares,
+            dividendRate: shares.dividendRate
+          });
+          setDividendRate(shares.dividendRate);
+          setDividendRateInput(shares.dividendRate.toString());
         }
 
         // Update market value
@@ -198,8 +197,8 @@ export function ShareManagementPanel() {
     loadData();
   }, [gameState.money, gameState.economyPhase, gameState.week, gameState.season]); // Reload when money, economy phase, week, or season changes
 
-  const playerOwnershipPct = company && company.totalShares && company.playerShares
-    ? (company.playerShares / company.totalShares) * 100
+  const playerOwnershipPct = sharesData && sharesData.totalShares && sharesData.playerShares
+    ? (sharesData.playerShares / sharesData.totalShares) * 100
     : 100;
 
   const handleIssueStock = async () => {
@@ -222,6 +221,18 @@ export function ShareManagementPanel() {
         if (companyId) {
           const companyData = await companyService.getCompany(companyId);
           if (companyData) setCompany(companyData);
+          
+          // Reload share data
+          const shares = await getCompanyShares(companyId);
+          if (shares) {
+            setSharesData({
+              totalShares: shares.totalShares,
+              outstandingShares: shares.outstandingShares,
+              playerShares: shares.playerShares,
+              dividendRate: shares.dividendRate
+            });
+          }
+          
           await updateMarketValue(companyId);
           const marketData = await getMarketValue(companyId);
           setMarketValue(marketData);
@@ -266,6 +277,18 @@ export function ShareManagementPanel() {
         if (companyId) {
           const companyData = await companyService.getCompany(companyId);
           if (companyData) setCompany(companyData);
+          
+          // Reload share data
+          const shares = await getCompanyShares(companyId);
+          if (shares) {
+            setSharesData({
+              totalShares: shares.totalShares,
+              outstandingShares: shares.outstandingShares,
+              playerShares: shares.playerShares,
+              dividendRate: shares.dividendRate
+            });
+          }
+          
           await updateMarketValue(companyId);
           const marketData = await getMarketValue(companyId);
           setMarketValue(marketData);
@@ -423,19 +446,19 @@ export function ShareManagementPanel() {
               <div className="space-y-1">
                 <div className="text-xs text-gray-600">Total Shares</div>
                 <div className="font-semibold text-base">
-                  {formatNumber(company.totalShares || 0, { decimals: 0 })}
+                  {formatNumber(sharesData?.totalShares || 0, { decimals: 0 })}
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-600">Outstanding Shares</div>
                 <div className="font-semibold text-base">
-                  {formatNumber(company.outstandingShares || 0, { decimals: 0 })}
+                  {formatNumber(sharesData?.outstandingShares || 0, { decimals: 0 })}
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-600">Player Shares</div>
                 <div className="font-semibold text-base">
-                  {formatNumber(company.playerShares || 0, { decimals: 0 })}
+                  {formatNumber(sharesData?.playerShares || 0, { decimals: 0 })}
                 </div>
               </div>
               <div className="space-y-1 col-span-2">
@@ -594,16 +617,16 @@ export function ShareManagementPanel() {
                 <Label htmlFor="buyback-shares" className="text-xs">
                   Number of Shares
                   <span className="text-gray-500 ml-1">
-                    (Max: {formatNumber(company.outstandingShares || 0, { decimals: 0 })})
+                    (Max: {formatNumber(sharesData?.outstandingShares || 0, { decimals: 0 })})
                   </span>
                 </Label>
                 <Input
                   id="buyback-shares"
                   type="number"
                   min="1"
-                  max={company.outstandingShares || 0}
+                  max={sharesData?.outstandingShares || 0}
                   value={buybackShares || ''}
-                  onChange={(e) => setBuybackShares(Math.max(0, Math.min(company.outstandingShares || 0, parseInt(e.target.value) || 0)))}
+                  onChange={(e) => setBuybackShares(Math.max(0, Math.min(sharesData?.outstandingShares || 0, parseInt(e.target.value) || 0)))}
                   className="mt-1"
                 />
               </div>
@@ -615,7 +638,7 @@ export function ShareManagementPanel() {
               </div>
               <Button
                 onClick={handleBuyBackStock}
-                disabled={isProcessing || buybackShares <= 0 || buybackShares > (company.outstandingShares || 0)}
+                disabled={isProcessing || buybackShares <= 0 || buybackShares > (sharesData?.outstandingShares || 0)}
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 variant="outline"
               >
@@ -691,9 +714,9 @@ export function ShareManagementPanel() {
                 <div className="font-semibold text-green-600">
                   {formatNumber(dividendPayment, { currency: true })}
                 </div>
-                {company && company.totalShares && dividendRate > 0 && (
+                {sharesData && sharesData.totalShares && dividendRate > 0 && (
                   <div className="text-gray-500 mt-1">
-                    ({formatNumber(company.totalShares, { decimals: 0 })} shares × {formatNumber(dividendRate, { currency: true, decimals: 4 })})
+                    ({formatNumber(sharesData.totalShares, { decimals: 0 })} shares × {formatNumber(dividendRate, { currency: true, decimals: 4 })})
                   </div>
                 )}
               </div>

@@ -21,8 +21,58 @@ export * from './finance/financeService';
 export * from './finance/lenderService';
 export * from './finance/loanService';
 export * from './finance/wageService';
-export * from './finance/shareValuationService';
-export * from './finance/shareManagementService';
+// Share services - explicit exports to avoid naming conflicts
+export {
+  adjustSharePriceIncrementally,
+  initializeSharePriceDeterministically,
+  applyImmediateShareStructureAdjustment,
+  getCurrentSharePrice,
+  calculateSharePrice,
+  getSharePriceBreakdown,
+  calculateMarketCap,
+  updateMarketValue,
+  getMarketValue
+} from './finance/shares/sharePriceService';
+
+export {
+  getShareMetrics,
+  getShareholderBreakdown,
+  getHistoricalShareMetrics
+} from './finance/shares/shareMetricsService';
+
+export {
+  issueStock,
+  buyBackStock,
+  updateDividendRate,
+  payDividends,
+  calculateDividendPayment,
+  areDividendsDue
+} from './finance/shares/shareOperationsService';
+
+export {
+  calculateMarketCap as calcMarketCap,
+  calculateExpectedImprovementRates,
+  getImprovementMultipliers,
+  calculateFixedAssetRatio,
+  calculateTrendDelta,
+  calculateImprovementMultiplier,
+  calculateMarketCapRequirement
+} from './finance/shares/shareCalculations';
+
+export {
+  calculateGracePeriods,
+  calculateProfitabilityImprovements,
+  calculateTrendBasedImprovements,
+  calculateMetricDeltas
+} from './finance/shares/sharePriceAdjustmentHelpers';
+
+export {
+  getCurrentMetricValues,
+  getPreviousMetricValues48WeeksAgo,
+  getCurrent48WeekValues,
+  calculateAnchorFactorDetails,
+  formatMultiplierBreakdownForDisplay
+} from './finance/shares/sharePriceBreakdownHelpers';
 
 // Admin services
 export * from './admin/adminService';
