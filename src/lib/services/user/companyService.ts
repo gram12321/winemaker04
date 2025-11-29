@@ -173,6 +173,7 @@ class CompanyService {
     if (updates.money !== undefined) companyUpdateData.money = updates.money;
     if (updates.prestige !== undefined) companyUpdateData.prestige = updates.prestige;
     if (updates.startingCountry !== undefined) companyUpdateData.starting_country = updates.startingCountry;
+    if (updates.initialVineyardValue !== undefined) companyUpdateData.initial_vineyard_value = updates.initialVineyardValue;
 
     // Share-related updates go to company_shares table
     const sharesUpdateData: any = {};
@@ -186,7 +187,6 @@ class CompanyService {
     if (updates.lastDividendPaidYear !== undefined) sharesUpdateData.last_dividend_paid_year = updates.lastDividendPaidYear;
     if (updates.marketCap !== undefined) sharesUpdateData.market_cap = updates.marketCap;
     if (updates.sharePrice !== undefined) sharesUpdateData.share_price = updates.sharePrice;
-    if (updates.initialVineyardValue !== undefined) sharesUpdateData.initial_vineyard_value = updates.initialVineyardValue;
     if (updates.growthTrendMultiplier !== undefined) sharesUpdateData.growth_trend_multiplier = updates.growthTrendMultiplier;
     if (updates.lastGrowthTrendUpdateWeek !== undefined) sharesUpdateData.last_growth_trend_update_week = updates.lastGrowthTrendUpdateWeek;
     if (updates.lastGrowthTrendUpdateSeason !== undefined) sharesUpdateData.last_growth_trend_update_season = updates.lastGrowthTrendUpdateSeason;

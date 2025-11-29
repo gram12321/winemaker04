@@ -59,8 +59,6 @@ export interface CompanySharesData {
   last_share_price_update_week?: number;
   last_share_price_update_season?: Season;
   last_share_price_update_year?: number;
-  // Initial family contribution (vineyard value at company creation)
-  initial_vineyard_value?: number;
 }
 
 /**
@@ -100,17 +98,33 @@ function mapCompanySharesFromDB(dbShares: any): CompanyShares {
 
 /**
  * Get company shares data by company ID
+ * Also fetches initial_vineyard_value from companies table
  */
 export async function getCompanyShares(companyId: string): Promise<CompanyShares | null> {
   try {
-    const { data, error } = await supabase
+    // Fetch company_shares data
+    const { data: sharesData, error: sharesError } = await supabase
       .from(COMPANY_SHARES_TABLE)
       .select('*')
       .eq('company_id', companyId)
       .single();
 
-    if (error) return null;
-    return data ? mapCompanySharesFromDB(data) : null;
+    if (sharesError || !sharesData) return null;
+
+    // Fetch initial_vineyard_value from companies table
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('initial_vineyard_value')
+      .eq('id', companyId)
+      .single();
+
+    // Map the data, including initial_vineyard_value from companies table
+    const mappedData = mapCompanySharesFromDB({
+      ...sharesData,
+      initial_vineyard_value: companyData?.initial_vineyard_value ?? 0
+    });
+    
+    return mappedData;
   } catch (error) {
     console.error('Error getting company shares:', error);
     return null;
@@ -140,8 +154,7 @@ export async function createCompanyShares(companyId: string, sharesData: Partial
       last_growth_trend_update_year: sharesData.last_growth_trend_update_year,
       last_share_price_update_week: sharesData.last_share_price_update_week,
       last_share_price_update_season: sharesData.last_share_price_update_season,
-      last_share_price_update_year: sharesData.last_share_price_update_year,
-      initial_vineyard_value: sharesData.initial_vineyard_value ?? 0
+      last_share_price_update_year: sharesData.last_share_price_update_year
     };
 
     const { error } = await supabase
