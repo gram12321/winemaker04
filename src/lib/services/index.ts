@@ -111,6 +111,9 @@ export * from './sales/expirationService';
 // Prestige services
 export * from './prestige/prestigeService';
 
+// Research services
+export * from './research/researchEnforcer';
+
 // Activity system
 export * from './activity';
 

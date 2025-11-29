@@ -6,17 +6,18 @@ import { calculateGrapeDifficulty } from '@/lib/services';
 import { GrapeInfoView } from '../../ui/modals/UImodals/winepediaGrapeInfoModal';
 import { GrapeVariety } from '@/lib/types/types';
 import { GrapeIcon } from '@/lib/utils/icons';
-import { formatNumber, getColorClass, getGrapeDifficultyCategory, getGrapeDifficultyDescription, getUnlockedGrapes, getGrapeUnlockResearchId } from '@/lib/utils';
+import { formatNumber, getColorClass, getGrapeDifficultyCategory, getGrapeDifficultyDescription } from '@/lib/utils';
+import { researchEnforcer } from '@/lib/services';
 
 export function GrapeVarietiesTab() {
   const [selectedGrape, setSelectedGrape] = useState<GrapeVariety | null>(null);
-  const [unlockedGrapes, setUnlockedGrapes] = useState<GrapeVariety[]>([]);
+  const [unlockedGrapes, setUnlockedGrapes] = useState<Set<string>>(new Set());
 
   // Load unlocked grapes on mount
   useEffect(() => {
     const loadUnlockedGrapes = async () => {
-      const unlocked = await getUnlockedGrapes();
-      setUnlockedGrapes(unlocked);
+      const unlocked = await researchEnforcer.getUnlockedItems('grape');
+      setUnlockedGrapes(new Set(unlocked));
     };
     loadUnlockedGrapes();
   }, []);
@@ -28,8 +29,8 @@ export function GrapeVarietiesTab() {
     const difficultyCategory = getGrapeDifficultyCategory(difficulty.score);
     const difficultyDescription = getGrapeDifficultyDescription(difficulty.score);
 
-    const isUnlocked = unlockedGrapes.includes(variety);
-    const unlockResearchId = getGrapeUnlockResearchId(variety);
+    const isUnlocked = unlockedGrapes.has(variety);
+    const requiredResearch = researchEnforcer.getRequiredResearch('grape', variety);
     
     return {
       name: variety,
@@ -39,7 +40,7 @@ export function GrapeVarietiesTab() {
       difficultyCategory,
       difficultyDescription,
       isUnlocked,
-      unlockResearchId
+      unlockResearchId: requiredResearch?.id || null
     };
   });
 

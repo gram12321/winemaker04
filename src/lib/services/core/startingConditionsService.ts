@@ -17,7 +17,7 @@ import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
-import { getGrapeUnlockResearchId } from '@/lib/utils/researchUtils';
+import { researchEnforcer } from '../research/researchEnforcer';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
 
 // Preview vineyard type (not yet saved to database)
@@ -427,10 +427,10 @@ export async function applyStartingConditions(
           gameDate.year
         );
 
-        const researchId = getGrapeUnlockResearchId(condition.startingUnlockedGrape);
-        if (researchId) {
+        const requiredResearch = researchEnforcer.getRequiredResearch('grape', condition.startingUnlockedGrape);
+        if (requiredResearch) {
           await unlockResearch({
-            researchId,
+            researchId: requiredResearch.id,
             companyId,
             unlockedAt: gameDate,
             unlockedAtTimestamp: absoluteWeeks,

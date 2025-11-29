@@ -7,8 +7,9 @@ import { ActivityOptionsModal, ActivityOptionField, ActivityWorkEstimate, Warnin
 import { notificationService } from '@/lib/services';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants/activityConstants';
 import { DialogProps } from '@/lib/types/UItypes';
-import { calculateGrapeSuitabilityMetrics } from '@/lib/services';
-import { getBadgeColorClasses, formatNumber, getUnlockedGrapes } from '@/lib/utils';
+import { calculateGrapeSuitabilityMetrics, researchEnforcer } from '@/lib/services';
+import { getBadgeColorClasses, formatNumber } from '@/lib/utils';
+import { GRAPE_VARIETIES } from '@/lib/types/types';
 
 
 /**
@@ -35,12 +36,16 @@ export const PlantingOptionsModal: React.FC<PlantingOptionsModalProps> = ({
   // Load unlocked grapes on mount
   useEffect(() => {
     const loadUnlockedGrapes = async () => {
-      const unlocked = await getUnlockedGrapes();
-      setUnlockedGrapes(unlocked);
+      const unlocked = await researchEnforcer.getUnlockedItems('grape');
+      const unlockedGrapes = unlocked.filter(grape => 
+        GRAPE_VARIETIES.includes(grape as GrapeVariety)
+      ) as GrapeVariety[];
+      
+      setUnlockedGrapes(unlockedGrapes);
       
       // If current selection is not unlocked, switch to first unlocked grape
-      if (unlocked.length > 0 && !unlocked.includes(options.grape)) {
-        setOptions(prev => ({ ...prev, grape: unlocked[0] }));
+      if (unlockedGrapes.length > 0 && !unlockedGrapes.includes(options.grape)) {
+        setOptions(prev => ({ ...prev, grape: unlockedGrapes[0] }));
       }
     };
     
