@@ -212,11 +212,19 @@ Expected Improvement = (Baseline × Improvement Multiplier) + Market Cap Require
 
 ### Shareholder Breakdown
 
-The system tracks:
-- **Player Shares**: Shares owned by the player (founder/family)
-- **Outstanding Shares**: Shares available on the market (total - player shares)
-- **Ownership Percentages**: Calculated for player vs. outside investors
+The system tracks three categories of shareholders:
+- **Player Shares**: Shares owned by the player (founder)
+- **Family Shares**: Shares owned by family members (based on family contribution at company creation)
+- **Outside Shares**: Shares owned by outside investors (based on outside investment contributions and stock issuances)
+- **Total Shares**: Always equals `playerShares + familyShares + outsideShares`
+- **Ownership Percentages**: Calculated for each category as percentage of total shares
 - **Historical Metrics**: Tracks revenue per share, earnings per share, dividends per share over time
+
+**Calculation Logic:**
+- Player shares are tracked directly in the database
+- Family and outside shares are calculated based on their initial equity contributions
+- When shares are issued, they are allocated to outside investors (dilutes player and family ownership)
+- When shares are bought back, they are removed from outside investors (concentrates player and family ownership)
 
 ## Share Metrics
 
@@ -267,41 +275,86 @@ The `ShareMetrics` interface provides per-share calculations:
 
 ## Key Files
 
-### Services
+### Services (Modular Architecture)
 
-- **`src/lib/services/finance/shares/sharePriceService.ts`**
-  - `adjustSharePriceIncrementally()`: Weekly share price adjustment
+The share system has been refactored into a modular architecture with clear separation of concerns:
+
+#### Share Price Services
+
+- **`src/lib/services/finance/shares/sharePriceService.ts`** (657 lines)
+  - `adjustSharePriceIncrementally()`: Weekly share price adjustment using incremental delta system
   - `calculateIncrementalAdjustment()`: Core delta calculation logic (unified trend-based system)
-  - `initializeSharePriceWithTimestamp()`: Initialize price on first use
+  - `initializeSharePriceWithTimestamp()`: Initialize price on first use (sets to book value per share)
   - `applyImmediateShareStructureAdjustment()`: Immediate price adjustment for share issuance/buyback
   - `getSharePriceBreakdown()`: Detailed calculation breakdown for UI display
+  - `getCurrentSharePrice()`: Get current share price (initializes if needed)
+  - `calculateMarketCap()`: Market capitalization calculation
+  - `updateMarketValue()`: Update market cap after share operations
 
-- **`src/lib/services/finance/shares/shareCalculations.ts`**
-  - `calculateExpectedImprovementRates()`: **Replaces old `calculateExpectedValues()`** - Calculates expected improvement rates (1.2%, 0.8%, etc.) based on multipliers and market cap requirement
+#### Share Operations Services
+
+- **`src/lib/services/finance/shares/shareOperationsService.ts`** (544 lines)
+  - `issueStock()`: Issue new shares (triggers immediate price adjustment, creates capital inflow)
+  - `buyBackStock()`: Repurchase shares (triggers immediate price adjustment, creates capital outflow)
+  - `updateDividendRate()`: Set dividend rate (creates prestige events for changes)
+  - `payDividends()`: Pay dividends to all shareholders (player and outside investors)
+  - `calculateDividendPayment()`: Calculate total dividend payment amount
+  - `areDividendsDue()`: Check if dividends are due (week 1 of each season)
+
+#### Share Metrics Services
+
+- **`src/lib/services/finance/shares/shareMetricsService.ts`** (446 lines)
+  - `getShareMetrics()`: Calculate all per-share metrics (including 48-week rolling metrics)
+  - `getShareholderBreakdown()`: Calculate ownership percentages (player, family, outside investors)
+  - `getHistoricalShareMetrics()`: Historical per-share data (from snapshots)
+
+#### Share Calculation Utilities
+
+- **`src/lib/services/finance/shares/shareCalculations.ts`** (125 lines)
+  - `calculateExpectedImprovementRates()`: Calculates expected improvement rates (1.2%, 0.8%, etc.) based on multipliers and market cap requirement
   - `calculateImprovementMultiplier()`: Calculates combined multiplier (economy × prestige × growth trend)
   - `calculateMarketCapRequirement()`: Calculates additional expected improvement requirement for larger companies
   - `calculateMarketCap()`: Market capitalization calculation
+  - `calculateFixedAssetRatio()`: Fixed asset ratio calculation
+  - `calculateTrendDelta()`: Trend delta calculation for trend-based metrics
+  - `getImprovementMultipliers()`: Get all improvement multipliers and market cap requirement
 
-- **`src/lib/services/finance/shares/sharePriceBreakdownHelpers.ts`**
-  - `formatMultiplierBreakdownForDisplay()`: Formats multiplier data (economy, prestige, growth trend) for UI display (does NOT calculate expected rates)
+#### Share Price Adjustment Helpers
+
+- **`src/lib/services/finance/shares/sharePriceAdjustmentHelpers.ts`** (127 lines)
+  - `calculateGracePeriods()`: Calculate grace periods for new companies (first year, dividend grace period, 48-week history)
+  - `calculateProfitabilityImprovements()`: Calculate actual improvements for profitability metrics (EPS, revenue/share, dividends, growth, margin)
+  - `calculateTrendBasedImprovements()`: Calculate actual improvements for trend-based metrics (credit rating, fixed asset ratio, prestige)
+  - `calculateMetricDeltas()`: Calculate deltas (actual improvement - expected improvement) for all metrics
+
+#### Share Price Breakdown Helpers
+
+- **`src/lib/services/finance/shares/sharePriceBreakdownHelpers.ts`** (149 lines)
+  - `formatMultiplierBreakdownForDisplay()`: Formats multiplier data (economy, prestige, growth trend) for UI display
   - `calculateAnchorFactorDetails()`: Formats anchor factor calculation details for UI display
+  - `getCurrentMetricValues()`: Get current metric values (credit rating, fixed asset ratio, prestige)
+  - `getPreviousMetricValues48WeeksAgo()`: Get previous metric values from 48 weeks ago (from snapshots)
+  - `getCurrent48WeekValues()`: Get current 48-week rolling values from share metrics
 
-- **`src/lib/services/finance/shareManagementService.ts`**
-  - `issueStock()`: Issue new shares (triggers immediate price adjustment)
-  - `buyBackStock()`: Repurchase shares (triggers immediate price adjustment)
-  - `updateDividendRate()`: Set dividend rate (creates prestige events for changes)
-  - `autoPayDividends()`: Automatically pay dividends on season change
-  - `getShareMetrics()`: Calculate all per-share metrics (including 48-week rolling metrics)
-  - `getShareholderBreakdown()`: Calculate ownership percentages
-  - `getHistoricalShareMetrics()`: Historical per-share data (from snapshots)
+#### Growth Trend Service
+
+- **`src/lib/services/finance/shares/growthTrendService.ts`** (233 lines)
+  - `updateGrowthTrend()`: Annual update of growth trend multiplier based on performance
+  - Compares actual improvements to expected improvement rates
+  - Adjusts multiplier up if exceeding expectations, down if underperforming
+
+#### Database Layer
+
+- **`src/lib/database/core/companySharesDB.ts`** (208 lines)
+  - `getCompanyShares()`: Get company shares data
+  - `createCompanyShares()`: Create company shares record
+  - `updateCompanyShares()`: Update company shares data
+  - `deleteCompanyShares()`: Delete company shares record
 
 - **`src/lib/database/core/companyMetricsHistoryDB.ts`**
   - `insertCompanyMetricsSnapshot()`: Store weekly snapshot of metrics
   - `getCompanyMetricsSnapshotNWeeksAgo()`: Query snapshot from N weeks ago (for 48-week comparisons)
   - `getCompanyMetricsHistory()`: Get all historical snapshots (for trend diagrams)
-
-- **`src/lib/services/finance/growthTrendService.ts`**
-  - `updateGrowthTrend()`: Annual update of growth trend multiplier based on performance
 
 ### Constants
 

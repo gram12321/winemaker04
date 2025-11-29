@@ -249,9 +249,11 @@ winemaker04/
 │       │   │   ├── activityDB.ts (173 lines)  # Activity database operations
 │       │   │   ├── inventoryDB.ts (201 lines) # Inventory database operations
 │       │   │   └── vineyardDB.ts (74 lines)   # Vineyard database operations
-│       │   ├── core/ (1,400+ lines total)      # Core database operations
+│       │   ├── core/ (1,600+ lines total)      # Core database operations
 │       │   │   ├── achievementsDB.ts (228 lines) # Achievements database
 │       │   │   ├── companiesDB.ts (186 lines) # Companies database
+│       │   │   ├── companySharesDB.ts (208 lines) # Company shares database (normalized)
+│       │   │   ├── companyMetricsHistoryDB.ts (319 lines) # Company metrics history snapshots
 │       │   │   ├── gamestateDB.ts (53 lines)  # Game state database
 │       │   │   ├── highscoresDB.ts (174 lines) # Highscores database
 │       │   │   ├── lendersDB.ts (126 lines)   # Lenders database
@@ -301,15 +303,21 @@ winemaker04/
 │       │   │   ├── gameTick.ts (269 lines)    # Game tick system
 │       │   │   ├── notificationService.ts (242 lines) # Centralized notification service
 │       │   │   └── index.ts (116 lines)       # Core services exports
-│       │   ├── finance/ (1,400+ lines total) # Finance services
+│       │   ├── finance/ (2,400+ lines total) # Finance services
 │       │   │   ├── creditRatingService.ts (438 lines) # Credit rating calculation
 │       │   │   ├── economyService.ts (90 lines) # Economy phase transitions
 │       │   │   ├── financeService.ts (350 lines) # Finance operations
 │       │   │   ├── lenderService.ts (220 lines) # Lender generation
 │       │   │   ├── loanService.ts (900+ lines) # Loan management
-│       │   │   ├── shareManagementService.ts (500+ lines) # Public company workflow
-│       │   │   ├── shareValueService.ts (190 lines) # Share pricing + dividends
-│       │   │   └── wageService.ts (260 lines) # Wage calculations & staff XP
+│       │   │   ├── wageService.ts (260 lines) # Wage calculations & staff XP
+│       │   │   └── shares/ (2,240+ lines total) # Share system (modular architecture)
+│       │   │       ├── sharePriceService.ts (657 lines) # Core share price calculation & adjustment
+│       │   │       ├── shareOperationsService.ts (544 lines) # Share issuance, buyback, dividends
+│       │   │       ├── shareMetricsService.ts (446 lines) # Share metrics & shareholder breakdown
+│       │   │       ├── growthTrendService.ts (233 lines) # Growth trend analysis
+│       │   │       ├── sharePriceBreakdownHelpers.ts (149 lines) # Price breakdown formatters
+│       │   │       ├── shareCalculations.ts (125 lines) # Core calculation utilities
+│       │   │       └── sharePriceAdjustmentHelpers.ts (127 lines) # Price adjustment helpers
 │       │   ├── prestige/ (1,180 lines total)  # Prestige system services
 │       │   │   ├── prestigeCalculator.ts (188 lines) # Prestige calculator
 │       │   │   ├── prestigeDecayService.ts (57 lines) # Prestige decay
@@ -395,5 +403,5 @@ winemaker04/
 
 ---
 
-**Last Updated**: 2025-11-26  
+**Last Updated**: 2025-11-29  
 

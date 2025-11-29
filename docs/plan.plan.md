@@ -9,6 +9,15 @@ Transform share price from simple `book_value × economy_multiplier` to a compre
 
 The system has been fully implemented using an **incremental adjustment model** rather than the originally planned multiplier-based deterministic calculation. This provides more realistic, gradual price movements.
 
+**Architecture Refactor (Version 0.096):**
+The share system has been refactored into a modular architecture with clear separation of concerns:
+- **Share Price Services**: Core price calculation and adjustment logic
+- **Share Operations Services**: Share issuance, buyback, and dividend operations
+- **Share Metrics Services**: Share metrics calculation and shareholder breakdown
+- **Share Calculation Utilities**: Core calculation functions (expected rates, multipliers, market cap)
+- **Helper Services**: Price adjustment helpers and breakdown formatters
+- **Database Layer**: Normalized `company_shares` table with dedicated database operations
+
 ## Key Design Decisions
 
 ### 1. Credit Rating Component Analysis ✅
@@ -167,27 +176,41 @@ deviation = |currentPrice - bookValue| / bookValue
 
 ## Files Created/Modified
 
-### New Files ✅
+### New Files (Modular Architecture) ✅
 
-- ✅ `src/lib/services/finance/shareValuationService.ts` - Expected values and initial price
-- ✅ `src/lib/services/finance/sharePriceIncrementService.ts` - Incremental adjustment logic
-- ✅ `src/lib/services/finance/growthTrendService.ts` - Growth trend tracking
+**Core Services:**
+- ✅ `src/lib/services/finance/shares/sharePriceService.ts` (657 lines) - Core share price calculation and adjustment
+- ✅ `src/lib/services/finance/shares/shareOperationsService.ts` (544 lines) - Share issuance, buyback, dividends
+- ✅ `src/lib/services/finance/shares/shareMetricsService.ts` (446 lines) - Share metrics and shareholder breakdown
+- ✅ `src/lib/services/finance/shares/shareCalculations.ts` (125 lines) - Core calculation utilities
+- ✅ `src/lib/services/finance/shares/growthTrendService.ts` (233 lines) - Growth trend analysis
+- ✅ `src/lib/services/finance/shares/sharePriceAdjustmentHelpers.ts` (127 lines) - Price adjustment helper functions
+- ✅ `src/lib/services/finance/shares/sharePriceBreakdownHelpers.ts` (149 lines) - Price breakdown formatters
+
+**Database Layer:**
+- ✅ `src/lib/database/core/companySharesDB.ts` (208 lines) - Dedicated share ownership database operations
+
+**Constants:**
 - ✅ `src/lib/constants/shareValuationConstants.ts` - Constants for incremental system
+
+### Removed Files (Consolidated) ✅
+
+- ❌ `src/lib/services/finance/shareManagementService.ts` (1,018 lines) - Split into modular services
+- ❌ `src/lib/services/finance/sharePriceIncrementService.ts` (696 lines) - Replaced by sharePriceService
+- ❌ `src/lib/services/finance/shareValuationService.ts` (247 lines) - Replaced by shareCalculations
+- ❌ `src/lib/services/finance/growthTrendService.ts` (136 lines) - Moved to shares subdirectory
 
 ### Modified Files ✅
 
-- ✅ `src/lib/services/finance/shareManagementService.ts` - Added profit margin, revenue growth to metrics
 - ✅ `src/lib/services/core/gameTick.ts` - Weekly share price adjustments
-- ✅ `src/lib/database/core/companiesDB.ts` - Added growth trend and previous value tracking fields
-- ✅ `src/components/finance/ShareManagementPanel.tsx` - UI updates for incremental system
+- ✅ `src/lib/database/core/companiesDB.ts` - Streamlined (share data moved to company_shares table)
+- ✅ `src/components/finance/ShareManagementPanel.tsx` - Updated to use new service architecture
 - ✅ `src/components/pages/AdminDashboard.tsx` - Debug output for incremental system
 - ✅ `src/components/pages/winepedia/ShareMarketTab.tsx` - Documentation of incremental system
+- ✅ `src/lib/services/index.ts` - Updated service exports for modular architecture
 
 ## Constants Implemented
 
-✅ **EXPECTED_VALUE_BASELINES**
-- revenueGrowth: 0.10 (10% per year)
-- profitMargin: 0.15 (15%)
 
 ✅ **INCREMENTAL_METRIC_CONFIG**
 - Base adjustments for 8 metrics (revenue/share, EPS, dividend, revenue growth, profit margin, credit rating, fixed asset ratio, prestige)
@@ -308,7 +331,5 @@ For each metric:
    - ✅ Prestige events decay over time
 
 ## Future Enhancements (Optional)
-
-- Fine-tuning of base adjustments and caps based on gameplay feedback
 - Additional metrics if needed
 - Consider company age or other factors for company value modifier

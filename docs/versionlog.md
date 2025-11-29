@@ -24,6 +24,112 @@
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.096 - Share System Architecture Refactor
+**Date:** 2025-11-29 | **Commit:** d711f55 | **Stats:** 2,939 additions, 2,318 deletions
+
+### 🏗️ **Major Service Architecture Refactor**
+- **REMOVED:** `src/lib/services/finance/shareManagementService.ts` (1,018 lines) - Consolidated into new structure
+- **REMOVED:** `src/lib/services/finance/sharePriceIncrementService.ts` (696 lines) - Replaced by modular services
+- **REMOVED:** `src/lib/services/finance/shareValuationService.ts` (247 lines) - Replaced by modular services
+- **REMOVED:** `src/lib/services/finance/growthTrendService.ts` (136 lines) - Moved to shares subdirectory
+
+### 📦 **New Modular Share Services**
+- **NEW FILE:** `src/lib/services/finance/shares/sharePriceService.ts` (657 lines) - Core share price calculation service
+- **NEW FILE:** `src/lib/services/finance/shares/shareOperationsService.ts` (544 lines) - Share issuance, buyback, and ownership operations
+- **NEW FILE:** `src/lib/services/finance/shares/shareMetricsService.ts` (446 lines) - Financial metrics calculation and tracking
+- **NEW FILE:** `src/lib/services/finance/shares/growthTrendService.ts` (232 lines) - Growth trend analysis
+- **NEW FILE:** `src/lib/services/finance/shares/sharePriceAdjustmentHelpers.ts` (127 lines) - Price adjustment utility functions
+- **NEW FILE:** `src/lib/services/finance/shares/sharePriceBreakdownHelpers.ts` (149 lines) - Price breakdown calculation helpers
+- **NEW FILE:** `src/lib/services/finance/shares/shareCalculations.ts` (124 lines) - Core share calculation utilities
+
+### 🗄️ **Database Layer Improvements**
+- **NEW FILE:** `src/lib/database/core/companySharesDB.ts` (208 lines) - Dedicated share ownership database operations
+- `src/lib/database/core/companiesDB.ts` - Streamlined company database operations (14 additions, 87 deletions)
+- `migrations/sync_vercel_schema.sql` - Database schema updates (67 additions)
+
+### 🎨 **UI & Type System Updates**
+- `src/components/finance/ShareManagementPanel.tsx` - Updated to use new service architecture (53 additions, 30 deletions)
+- `src/lib/types/types.ts` - Enhanced type definitions for new share system (150 additions)
+- `src/lib/types/index.ts` - Added type exports (9 additions)
+- `src/lib/services/index.ts` - Updated service exports (52 additions, 2 deletions)
+- `src/lib/services/user/companyService.ts` - Company service updates (68 additions, 80 deletions)
+- `docs/share_price.md` - Documentation updates (12 additions, 9 deletions)
+
+## Version 0.095-0.095c - Share Price Expectation System & Fixes (Combined)
+**Date:** 2025-11-28 | **Commits:** 2351863 (0.095), 42aedfa (0.095a), fdd7cc7 (0.095b), 09e3789 (0.095c) | **Stats:** Combined 719 additions, 502 deletions
+
+### 📊 **Share Price Expectation System**
+- `src/lib/services/finance/sharePriceIncrementService.ts` - Enhanced expectation system based on past year performance and company size (54 additions, 20 deletions)
+- `src/lib/constants/shareValuationConstants.ts` - Updated expectation constants (31 additions, 9 deletions)
+- `src/components/finance/ShareManagementPanel.tsx` - Enhanced UI for expectation display (57 additions, 30 deletions)
+
+### 🐛 **Bug Fixes & Improvements**
+- `src/lib/services/finance/sharePriceIncrementService.ts` - Share price calculation fixes (52 additions, 47 deletions)
+- `src/lib/services/finance/shareManagementService.ts` - Share management fixes (1 addition, 16 deletions)
+- `docs/share_price.md` - Documentation corrections (4 additions, 1 deletion)
+- `src/lib/services/finance/economyService.ts` - Build fix (1 deletion)
+
+## Version 0.094 - Unified 48-Week Expectation System
+**Date:** 2025-11-28 | **Commit:** 29d08ec | **Stats:** 742 additions, 323 deletions
+
+### 📈 **48-Week Historical Tracking System**
+- `src/lib/services/finance/sharePriceIncrementService.ts` - Unified 48-week expectation system implementation (230 additions, 160 deletions)
+- `src/components/finance/ShareManagementPanel.tsx` - Enhanced UI for 48-week historical display (322 additions, 158 deletions)
+- `src/lib/constants/shareValuationConstants.ts` - Added 48-week expectation constants (39 additions)
+- `src/lib/services/finance/shareManagementService.ts` - Share management updates (73 additions, 3 deletions)
+- `src/lib/services/prestige/prestigeService.ts` - Prestige service integration (65 additions, 1 deletion)
+- `src/lib/database/core/companyMetricsHistoryDB.ts` - Database operations updates (13 additions, 1 deletion)
+
+## Version 0.093a - Database Layer Improvements
+**Date:** 2025-11-28 | **Commit:** a6b6525 | **Stats:** 161 additions, 139 deletions
+
+### 🗄️ **Database Refactoring**
+- **NEW FILE:** `src/lib/database/dbMapperUtils.ts` (50 lines) - Centralized database mapper utilities
+- `src/lib/database/core/companiesDB.ts` - Improved company database operations (43 additions, 30 deletions)
+- `src/lib/database/core/companyMetricsHistoryDB.ts` - Metrics history database improvements (13 additions, 25 deletions)
+- `src/lib/database/core/loansDB.ts` - Loan database cleanup (7 additions, 30 deletions)
+- Database operation improvements across: `achievementsDB.ts`, `inventoryDB.ts`, `researchUnlocksDB.ts`, `staffDB.ts`, `transactionsDB.ts`, `usersDB.ts`, `wineLogDB.ts`, `salesDB.ts`, `contractDB.ts`
+
+## Version 0.093 - Share Price System & Metrics History
+**Date:** 2025-11-28 | **Commit:** 0e51073 | **Stats:** 4,026 additions, 573 deletions
+
+### 💹 **Share Price & Valuation System**
+- **NEW FILE:** `src/lib/services/finance/sharePriceIncrementService.ts` (587 lines) - Incremental share price adjustment system
+- **NEW FILE:** `src/lib/services/finance/shareValuationService.ts` (248 lines) - Share valuation calculations
+- **NEW FILE:** `src/lib/services/finance/growthTrendService.ts` (136 lines) - Growth trend analysis service
+- **NEW FILE:** `src/lib/constants/shareValuationConstants.ts` (62 lines) - Share valuation constants
+- **REMOVED:** `src/lib/services/finance/shareValueService.ts` (189 lines) - Replaced by shareValuationService
+
+### 📊 **Company Metrics History System**
+- **NEW FILE:** `src/lib/database/core/companyMetricsHistoryDB.ts` (319 lines) - Weekly metrics snapshot database operations
+- `src/lib/services/finance/financeService.ts` - Enhanced finance service with metrics tracking (262 additions, 1 deletion)
+- `src/lib/services/core/gameTick.ts` - Weekly metrics snapshot integration (35 additions, 3 deletions)
+
+### 🎨 **UI Components**
+- `src/components/finance/ShareManagementPanel.tsx` - Major share management UI overhaul (722 additions, 270 deletions)
+- **NEW FILE:** `src/components/pages/winepedia/ShareMarketTab.tsx` (215 lines) - Share market information tab
+- `src/components/pages/Winepedia.tsx` - Added Share Market tab (3 additions, 2 deletions)
+- `src/components/pages/AdminDashboard.tsx` - Admin tools updates (81 additions)
+
+### 📚 **Documentation**
+- **NEW FILE:** `docs/share_price.md` (298 lines) - Comprehensive share price system documentation
+- **NEW FILE:** `docs/plan.plan.md` (279 lines) - Planning documentation
+- `docs/PROJECT_INFO.md` - Project info updates (38 additions, 27 deletions)
+
+### 🧪 **Testing**
+- **NEW FILE:** `tests/finance/shareValuation.test.ts` (329 lines) - Share valuation test suite
+
+### 🗄️ **Database Schema**
+- `migrations/sync_vercel_schema.sql` - Database schema updates for metrics history (53 additions)
+- `src/lib/database/core/companiesDB.ts` - Company database updates (37 additions, 1 deletion)
+
+## Version 0.092a - Build Fix
+**Date:** 2025-11-26 | **Commit:** efcb0f8 | **Stats:** 8 additions, 1 deletion
+
+### 🔧 **Build Fixes**
+- `src/components/finance/IncomeBalanceView.tsx` - Build error fixes (6 additions)
+- `tests/activity/workCalculator.test.ts` - Test updates (2 additions, 1 deletion)
+
 ## Version 0.092 - Finance & Share Management Tuning
 **Date:** 2025-11-26 | **Commit:** f8bda77 | **Stats:** 612 additions, 134 deletions
 

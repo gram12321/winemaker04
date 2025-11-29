@@ -88,7 +88,7 @@ class CompanyService {
       const outsideInvestment = data.outsideInvestmentAmount ?? 0;
       const totalCapital = FIXED_PLAYER_INVESTMENT + outsideInvestment;
       const playerOwnershipPct = totalCapital > 0 ? (FIXED_PLAYER_INVESTMENT / totalCapital) * 100 : 100;
-      
+
       // Calculate share count based on total capital and target share price (€50)
       const TOTAL_SHARES = calculateInitialShareCount(totalCapital);
       const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
@@ -141,7 +141,7 @@ class CompanyService {
         }
       }
 
-      return { success: true, company };
+      return { success: true, company: company ?? undefined };
     } catch (error) {
       console.error('Error creating company:', error);
       return { success: false, error: 'An unexpected error occurred' };

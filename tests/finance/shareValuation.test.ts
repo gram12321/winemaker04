@@ -1,18 +1,37 @@
-import { describe, it, expect} from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   EXPECTED_IMPROVEMENT_RATES,
   GROWTH_TREND_CONFIG,
   INCREMENTAL_ANCHOR_CONFIG,
   INCREMENTAL_METRIC_CONFIG,
-  MARKET_CAP_MODIFIER_CONFIG
+  MARKET_CAP_MODIFIER_CONFIG,
+  SHARE_STRUCTURE_ADJUSTMENT_CONFIG,
+  DIVIDEND_CHANGE_PRESTIGE_CONFIG
 } from '@/lib/constants/shareValuationConstants';
 import { ECONOMY_EXPECTATION_MULTIPLIERS, ECONOMY_PHASES } from '@/lib/constants/economyConstants';
+import {
+  calculateMarketCap,
+  calculateImprovementMultiplier,
+  calculateMarketCapRequirement,
+  calculateExpectedImprovementRates,
+  calculateFixedAssetRatio,
+  calculateTrendDelta
+} from '@/lib/services/finance/shares/shareCalculations';
 
 /**
  * Share Valuation System Tests
  * 
  * Tests the incremental share price adjustment system, expected values calculation,
  * and anchor-based constraints. Validates core calculation logic without requiring full database setup.
+ * 
+ * Architecture: The share system uses a modular architecture:
+ * - sharePriceService.ts: Core price calculation and adjustment
+ * - shareOperationsService.ts: Share issuance, buyback, dividends
+ * - shareMetricsService.ts: Share metrics and shareholder breakdown
+ * - shareCalculations.ts: Core calculation utilities (tested here)
+ * - sharePriceAdjustmentHelpers.ts: Price adjustment helper functions
+ * - sharePriceBreakdownHelpers.ts: Price breakdown formatters
+ * - growthTrendService.ts: Growth trend analysis
  */
 
 describe('Share Valuation System', () => {
@@ -399,6 +418,181 @@ describe('Share Valuation System', () => {
         
         expect(expectedImprovement).toBeCloseTo(2.1, 1); // (0.012 × 1.5 + 0.003) × 100 = 2.1%
       });
+    });
+  });
+
+  describe('Share Calculation Utilities', () => {
+    describe('calculateMarketCap', () => {
+      it('calculates market cap correctly', () => {
+        const sharePrice = 10;
+        const totalShares = 1000000;
+        const marketCap = calculateMarketCap(sharePrice, totalShares);
+        
+        expect(marketCap).toBe(10000000); // 10 * 1,000,000
+      });
+
+      it('returns 0 for zero shares', () => {
+        const marketCap = calculateMarketCap(10, 0);
+        expect(marketCap).toBe(0);
+      });
+
+      it('returns 0 for negative share price', () => {
+        const marketCap = calculateMarketCap(-10, 1000000);
+        expect(marketCap).toBe(0);
+      });
+    });
+
+    describe('calculateImprovementMultiplier', () => {
+      it('calculates multiplier correctly for stable economy', () => {
+        const multiplier = calculateImprovementMultiplier('Stable', 0, 1.0);
+        expect(multiplier).toBe(ECONOMY_EXPECTATION_MULTIPLIERS.Stable);
+      });
+
+      it('calculates multiplier correctly with prestige scaling', () => {
+        const stableMultiplier = calculateImprovementMultiplier('Stable', 0, 1.0);
+        const highPrestigeMultiplier = calculateImprovementMultiplier('Stable', 1000, 1.0);
+        
+        expect(highPrestigeMultiplier).toBeGreaterThan(stableMultiplier);
+      });
+
+      it('calculates multiplier correctly with growth trend', () => {
+        const baseMultiplier = calculateImprovementMultiplier('Stable', 0, 1.0);
+        const highGrowthMultiplier = calculateImprovementMultiplier('Stable', 0, 1.5);
+        
+        expect(highGrowthMultiplier).toBeGreaterThan(baseMultiplier);
+        expect(highGrowthMultiplier).toBeCloseTo(baseMultiplier * 1.5, 3);
+      });
+    });
+
+    describe('calculateMarketCapRequirement', () => {
+      it('returns 0 for market cap below base', () => {
+        const requirement = calculateMarketCapRequirement(500000); // Below €1M base
+        expect(requirement).toBe(0);
+      });
+
+      it('returns 0 for market cap equal to base', () => {
+        const requirement = calculateMarketCapRequirement(MARKET_CAP_MODIFIER_CONFIG.baseMarketCap);
+        expect(requirement).toBe(0);
+      });
+
+      it('calculates requirement correctly for 10x market cap', () => {
+        const marketCap = MARKET_CAP_MODIFIER_CONFIG.baseMarketCap * 10;
+        const requirement = calculateMarketCapRequirement(marketCap);
+        
+        // log10(10) = 1, so requirement = baseRate * 1
+        expect(requirement).toBeCloseTo(MARKET_CAP_MODIFIER_CONFIG.baseRate, 3);
+      });
+
+      it('respects maximum rate cap', () => {
+        const veryLargeMarketCap = MARKET_CAP_MODIFIER_CONFIG.baseMarketCap * 1000000;
+        const requirement = calculateMarketCapRequirement(veryLargeMarketCap);
+        
+        expect(requirement).toBeLessThanOrEqual(MARKET_CAP_MODIFIER_CONFIG.maxRate);
+      });
+    });
+
+    describe('calculateExpectedImprovementRates', () => {
+      it('calculates expected rates with multiplier and market cap requirement', () => {
+        const improvementMultiplier = 1.5;
+        const marketCapRequirement = 0.003;
+        const rates = calculateExpectedImprovementRates(improvementMultiplier, marketCapRequirement);
+        
+        // EPS: (0.012 * 1.5 + 0.003) * 100 = 2.1%
+        expect(rates.earningsPerShare).toBeCloseTo(2.1, 1);
+        
+        // Revenue/Share: (0.012 * 1.5 + 0.003) * 100 = 2.1%
+        expect(rates.revenuePerShare).toBeCloseTo(2.1, 1);
+      });
+
+      it('applies multiplier to all metrics', () => {
+        const rates = calculateExpectedImprovementRates(2.0, 0);
+        
+        // All rates should be doubled (multiplier = 2.0)
+        expect(rates.earningsPerShare).toBeCloseTo(EXPECTED_IMPROVEMENT_RATES.earningsPerShare * 2.0 * 100, 1);
+        expect(rates.revenuePerShare).toBeCloseTo(EXPECTED_IMPROVEMENT_RATES.revenuePerShare * 2.0 * 100, 1);
+      });
+    });
+
+    describe('calculateFixedAssetRatio', () => {
+      it('calculates ratio correctly', () => {
+        const fixedAssets = 500000;
+        const totalAssets = 1000000;
+        const ratio = calculateFixedAssetRatio(fixedAssets, totalAssets);
+        
+        expect(ratio).toBe(0.5);
+      });
+
+      it('returns 0 for zero total assets', () => {
+        const ratio = calculateFixedAssetRatio(500000, 0);
+        expect(ratio).toBe(0);
+      });
+    });
+
+    describe('calculateTrendDelta', () => {
+      it('calculates positive delta correctly', () => {
+        const current = 110;
+        const previous = 100;
+        const delta = calculateTrendDelta(current, previous);
+        
+        expect(delta).toBe(10); // 10% increase
+      });
+
+      it('calculates negative delta correctly', () => {
+        const current = 90;
+        const previous = 100;
+        const delta = calculateTrendDelta(current, previous);
+        
+        expect(delta).toBe(-10); // 10% decrease
+      });
+
+      it('handles zero previous value with fallback', () => {
+        const current = 100;
+        const previous = 0;
+        const delta = calculateTrendDelta(current, previous, 50);
+        
+        expect(delta).toBe(50); // Uses fallback
+      });
+
+      it('returns 0 for zero current and previous', () => {
+        const delta = calculateTrendDelta(0, 0);
+        expect(delta).toBe(0);
+      });
+    });
+  });
+
+  describe('Share Structure Adjustment Configuration', () => {
+    it('has valid dilution penalty', () => {
+      expect(SHARE_STRUCTURE_ADJUSTMENT_CONFIG.dilutionPenalty).toBeLessThan(1.0);
+      expect(SHARE_STRUCTURE_ADJUSTMENT_CONFIG.dilutionPenalty).toBeGreaterThan(0);
+    });
+
+    it('has valid concentration bonus', () => {
+      expect(SHARE_STRUCTURE_ADJUSTMENT_CONFIG.concentrationBonus).toBeGreaterThan(1.0);
+    });
+
+    it('ensures dilution penalty and concentration bonus are symmetric', () => {
+      // Dilution penalty should be inverse of concentration bonus (approximately)
+      const penalty = SHARE_STRUCTURE_ADJUSTMENT_CONFIG.dilutionPenalty;
+      const bonus = SHARE_STRUCTURE_ADJUSTMENT_CONFIG.concentrationBonus;
+      
+      // 0.97 * 1.03 ≈ 1.0 (symmetric around 1.0)
+      expect(penalty * bonus).toBeCloseTo(1.0, 2);
+    });
+  });
+
+  describe('Dividend Change Prestige Configuration', () => {
+    it('has asymmetric multipliers (cuts more negative than increases positive)', () => {
+      const cutMultiplier = DIVIDEND_CHANGE_PRESTIGE_CONFIG.cutMultiplier;
+      const increaseMultiplier = DIVIDEND_CHANGE_PRESTIGE_CONFIG.increaseMultiplier;
+      
+      // Cuts should have larger impact (0.5) than increases (0.3)
+      expect(cutMultiplier).toBeGreaterThan(increaseMultiplier);
+    });
+
+    it('has valid decay rate', () => {
+      const decayRate = DIVIDEND_CHANGE_PRESTIGE_CONFIG.decayRate;
+      expect(decayRate).toBeGreaterThan(0);
+      expect(decayRate).toBeLessThanOrEqual(1.0);
     });
   });
 });
