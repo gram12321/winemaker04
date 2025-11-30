@@ -48,10 +48,11 @@ class BoardEnforcerService {
       // For now, if companyId is provided, we still use current company (may need refactoring later)
       const satisfaction = await calculateBoardSatisfaction();
 
-      // 3. Calculate effective satisfaction: satisfaction × outsideShare%
+      // 3. Calculate effective satisfaction: satisfaction × nonPlayerOwnership%
       // This is the key design: constraints apply based on effective satisfaction, not raw satisfaction
-      const outsideSharePct = (100 - breakdown.playerPct) / 100; // Convert to 0-1
-      const effectiveSatisfaction = satisfaction * outsideSharePct;
+      // Non-player ownership includes both family and public investors (all shares not controlled by player)
+      const nonPlayerOwnershipPct = breakdown.nonPlayerOwnershipPct / 100; // Convert to 0-1
+      const effectiveSatisfaction = satisfaction * nonPlayerOwnershipPct;
 
       // 4. Get constraint config
       const constraint = BOARD_CONSTRAINTS[constraintType];
@@ -140,9 +141,10 @@ class BoardEnforcerService {
       // Calculate satisfaction (independent of ownership)
       const satisfaction = await calculateBoardSatisfaction();
       
-      // Calculate effective satisfaction: satisfaction × outsideShare%
-      const outsideSharePct = (100 - breakdown.playerPct) / 100; // Convert to 0-1
-      const effectiveSatisfaction = satisfaction * outsideSharePct;
+      // Calculate effective satisfaction: satisfaction × nonPlayerOwnership%
+      // Non-player ownership includes both family and public investors
+      const nonPlayerOwnershipPct = breakdown.nonPlayerOwnershipPct / 100; // Convert to 0-1
+      const effectiveSatisfaction = satisfaction * nonPlayerOwnershipPct;
 
       // If effective satisfaction is above start threshold, no limit
       if (effectiveSatisfaction > constraint.startThreshold) {

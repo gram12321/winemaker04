@@ -1007,6 +1007,7 @@ export interface ShareholderBreakdown {
   playerPct: number;
   familyPct: number;
   outsidePct: number;
+  nonPlayerOwnershipPct: number; // Family + Public Investor shares (all non-player ownership)
 }
 
 export interface ShareHistoricalMetric {

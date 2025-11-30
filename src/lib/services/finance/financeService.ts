@@ -285,8 +285,8 @@ export const calculateFinancialData = async (
     }
 
     const isOutsideInvestment =
-      description === 'Outside investment committed' ||
-      (isInitialInvestmentCategory && description.includes('Outside investment')) ||
+      description === 'Public investment committed' ||
+      (isInitialInvestmentCategory && description.includes('Public investment')) ||
       (isInitialInvestmentCategory && description.startsWith('Stock Issuance'));
 
     if (isOutsideInvestment && isPositiveCapital) {
@@ -554,8 +554,8 @@ export async function calculateFinancialDataRollingNWeeks(
     }
 
     const isOutsideInvestment =
-      description === 'Outside investment committed' ||
-      (isInitialInvestmentCategory && description.includes('Outside investment')) ||
+      description === 'Public investment committed' ||
+      (isInitialInvestmentCategory && description.includes('Public investment')) ||
       (isInitialInvestmentCategory && description.startsWith('Stock Issuance'));
 
     if (isOutsideInvestment && isPositiveCapital) {

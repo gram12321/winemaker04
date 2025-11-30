@@ -11,7 +11,7 @@ export interface CompanyCreateData {
   associateWithUser?: boolean;
   userName?: string;
   userId?: string; // Optional: directly specify userId to associate with (takes precedence over associateWithUser)
-  outsideInvestmentAmount?: number; // Outside investment in euros (0 to 1,000,000)
+  outsideInvestmentAmount?: number; // Public investment in euros (0 to 1,000,000)
 }
 
 export interface CompanyUpdateData {
@@ -83,7 +83,7 @@ class CompanyService {
         return { success: false, error: 'Company name already exists' };
       }
 
-      // Calculate share structure based on outside investment
+      // Calculate share structure based on public investment
       const FIXED_PLAYER_INVESTMENT = 100000; // Fixed at 100,000€
       const outsideInvestment = data.outsideInvestmentAmount ?? 0;
       const totalCapital = FIXED_PLAYER_INVESTMENT + outsideInvestment;

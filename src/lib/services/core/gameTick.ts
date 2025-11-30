@@ -290,7 +290,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     })(),
 
     // OPTIMIZATION: Defer board satisfaction snapshot to avoid heavy calculation every week
-    // Only calculate if company is public (has outside shareholders)
+    // Only calculate if company is public (has non-player shareholders)
     // This reduces gameTick latency significantly
     (async () => {
       try {
@@ -298,11 +298,11 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
         const company = await getCurrentCompany();
         if (!company) return;
         
-        // Check if company has outside shareholders (public company)
+        // Check if company has non-player shareholders (public company)
         const { getCompanyShares } = await import('../../database/core/companySharesDB');
         const shares = await getCompanyShares(company.id);
         
-        // Only calculate if there are outside shareholders (public company)
+        // Only calculate if there are non-player shareholders (public company)
         // 100% player-owned companies don't need board satisfaction tracking
         if (shares && shares.outstandingShares > 0) {
           const { getBoardSatisfactionBreakdown } = await import('../board/boardSatisfactionService');

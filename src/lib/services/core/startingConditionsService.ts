@@ -104,7 +104,7 @@ export async function applyStartingConditions(
   companyId: string,
   country: StartingCountry,
   vineyardPreview: VineyardPreview,
-  outsideInvestmentAmount?: number, // Outside investment in euros (0 to 1,000,000)
+  outsideInvestmentAmount?: number, // Public investment in euros (0 to 1,000,000)
   playerCashContribution?: number // Optional player cash contribution (for subsequent companies)
 ): Promise<ApplyStartingConditionsResult> {
   try {
@@ -225,7 +225,7 @@ export async function applyStartingConditions(
       }
     }
 
-    // 3. Add starting capital (player cash investment + outside investment)
+    // 3. Add starting capital (player cash investment + public investment)
     let workingMoney = company.money ?? 0;
     
     if (playerCashContributionAmount !== 0) {
@@ -248,15 +248,15 @@ export async function applyStartingConditions(
       try {
         await addTransaction(
           outsideInvestment,
-          'Outside investment committed',
+          'Public investment committed',
           TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
           false,
           companyId
         );
         workingMoney += outsideInvestment;
       } catch (transactionError) {
-        console.error('Error adding outside investment:', transactionError);
-        return { success: false, error: 'Failed to record outside investment' };
+        console.error('Error adding public investment:', transactionError);
+        return { success: false, error: 'Failed to record public investment' };
       }
     }
 

@@ -377,7 +377,7 @@ export function ShareManagementPanel() {
   const pieChartData = shareholderBreakdown ? [
     { name: 'Player', value: shareholderBreakdown.playerShares, pct: shareholderBreakdown.playerPct, color: '#3b82f6' },
     { name: 'Family', value: shareholderBreakdown.familyShares, pct: shareholderBreakdown.familyPct, color: '#10b981' },
-    { name: 'Outside', value: shareholderBreakdown.outsideShares, pct: shareholderBreakdown.outsidePct, color: '#f97316' }
+    { name: 'Public Investors', value: shareholderBreakdown.outsideShares, pct: shareholderBreakdown.outsidePct, color: '#f97316' }
   ].filter(item => item.value > 0) : [];
 
   // Prepare historical graph data (weekly granularity)

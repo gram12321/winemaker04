@@ -36,7 +36,7 @@ export interface BoardConstraint {
 /**
  * Board Satisfaction Component Weights
  * Formula: Satisfaction = (performance × 0.40) + (stability × 0.25) + (consistency × 0.20)
- * Effective Satisfaction (for constraints) = Satisfaction × OutsideShare%
+ * Effective Satisfaction (for constraints) = Satisfaction × NonPlayerOwnership%
  */
 export const BOARD_SATISFACTION_WEIGHTS = {
   performanceScore: 0.40,

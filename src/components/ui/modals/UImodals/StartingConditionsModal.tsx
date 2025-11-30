@@ -47,7 +47,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   const [selectedCountry, setSelectedCountry] = useState<StartingCountry>('France');
   const [vineyardPreviews, setVineyardPreviews] = useState<Record<StartingCountry, VineyardPreview | null>>({} as Record<StartingCountry, VineyardPreview | null>);
   const [isApplying, setIsApplying] = useState(false);
-  const [outsideInvestment, setOutsideInvestment] = useState<number>(0); // 0 to 1,000,000€
+  const [outsideInvestment, setOutsideInvestment] = useState<number>(0); // Public investment: 0 to 1,000,000€
   const [playerBalance, setPlayerBalance] = useState<number>(0);
   const [isFirstCompany, setIsFirstCompany] = useState<boolean>(true);
   const [playerCashContribution, setPlayerCashContribution] = useState<number>(0);
@@ -467,7 +467,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                     
                     <div className="space-y-2">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-700">Outside Investment:</span>
+                        <span className="text-gray-700">Public Investment:</span>
                         <span className="font-semibold text-blue-600">
                           {formatNumber(safeOutsideInvestment, { currency: true })}
                         </span>
@@ -511,7 +511,7 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       </div>
                       
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-700">Outside Investor Ownership:</span>
+                        <span className="text-gray-700">Public Investor Ownership:</span>
                         <span className="font-semibold text-blue-600">
                           {outsideOwnershipPct.toFixed(1)}%
                         </span>

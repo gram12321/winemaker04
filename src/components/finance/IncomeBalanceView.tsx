@@ -312,7 +312,7 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
               <div className="ml-2 space-y-1">
                 <DataRow label="Player Contribution (Cash)" value={financialData.playerContribution} valueClass="text-blue-600" />
                 <DataRow label="Family Contribution (Vineyards)" value={financialData.familyContribution} valueClass="text-blue-600" />
-                <DataRow label="Outside Investment (Cash)" value={financialData.outsideInvestment} valueClass="text-blue-600" />
+                <DataRow label="Public Investment (Cash)" value={financialData.outsideInvestment} valueClass="text-blue-600" />
               </div>
               <div className="ml-2 mt-1 pt-1 border-t border-gray-200">
                 <DataRow 

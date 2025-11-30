@@ -191,28 +191,9 @@ async function calculate48WeekRollingMetrics(
   }
 }
 
-export async function getShareMetrics(companyId?: string): Promise<ShareMetrics> {
+export async function getShareMetrics(): Promise<ShareMetrics> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-
-    if (!companyId) {
-      return {
-        assetPerShare: 0,
-        cashPerShare: 0,
-        debtPerShare: 0,
-        bookValuePerShare: 0,
-        revenuePerShare: 0,
-        earningsPerShare: 0,
-        dividendPerShareCurrentYear: 0,
-        dividendPerSharePreviousYear: 0,
-        creditRating: CREDIT_RATING.DEFAULT_RATING,
-        profitMargin: 0,
-        revenueGrowth: 0
-      };
-    }
-
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return {
@@ -309,58 +290,30 @@ export async function getShareMetrics(companyId?: string): Promise<ShareMetrics>
   }
 }
 
-export async function getShareholderBreakdown(companyId?: string): Promise<ShareholderBreakdown> {
+export async function getShareholderBreakdown(): Promise<ShareholderBreakdown> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return {
-        playerShares: 0,
-        familyShares: 0,
-        outsideShares: 0,
-        playerPct: 0,
-        familyPct: 0,
-        outsidePct: 0
-      };
-    }
-
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
-      return {
-        playerShares: 0,
-        familyShares: 0,
-        outsideShares: 0,
-        playerPct: 0,
-        familyPct: 0,
-        outsidePct: 0
-      };
+      throw new Error('Company not found');
     }
 
     // Get share data
     const sharesDataForBreakdown = await getCompanyShares(companyId);
     if (!sharesDataForBreakdown) {
-      return {
-        playerShares: 0,
-        familyShares: 0,
-        outsideShares: 0,
-        playerPct: 0,
-        familyPct: 0,
-        outsidePct: 0
-      };
+      throw new Error('Share data not found');
     }
 
     const totalShares = sharesDataForBreakdown.totalShares;
     const playerShares = sharesDataForBreakdown.playerShares;
     const nonPlayerShares = Math.max(totalShares - playerShares, 0);
 
-    // Get initial equity contributions to calculate family vs outside split
+    // Get initial equity contributions to calculate family vs public investor split
     const financialData = await calculateFinancialData('all');
     const familyContribution = financialData.familyContribution;
     const outsideInvestment = financialData.outsideInvestment;
     
-    // Calculate family and outside shares based on their initial equity proportions
+    // Calculate family and public investor shares based on their initial equity proportions
     let familyShares = 0;
     let outsideShares = nonPlayerShares;
 
@@ -375,6 +328,7 @@ export async function getShareholderBreakdown(companyId?: string): Promise<Share
     const playerPct = totalShares > 0 ? (playerShares / totalShares) * 100 : 0;
     const familyPct = totalShares > 0 ? (familyShares / totalShares) * 100 : 0;
     const outsidePct = totalShares > 0 ? (outsideShares / totalShares) * 100 : 0;
+    const nonPlayerOwnershipPct = familyPct + outsidePct; // All non-player ownership (family + public investors)
 
     return {
       playerShares,
@@ -382,7 +336,8 @@ export async function getShareholderBreakdown(companyId?: string): Promise<Share
       outsideShares,
       playerPct,
       familyPct,
-      outsidePct
+      outsidePct,
+      nonPlayerOwnershipPct
     };
   } catch (error) {
     console.error('Error calculating shareholder breakdown:', error);

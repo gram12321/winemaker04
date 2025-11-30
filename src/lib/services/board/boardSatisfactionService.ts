@@ -25,7 +25,7 @@ export interface BoardSatisfactionBreakdown {
   performanceScore: number; // 0-1
   stabilityScore: number; // 0-1
   consistencyScore: number; // 0-1
-  ownershipPressure: number; // 0-1 (higher = more outside ownership)
+  ownershipPressure: number; // 0-1 (higher = more non-player ownership)
   playerOwnershipPct: number; // 0-100
   details: {
     performanceMetrics: {
@@ -320,7 +320,7 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
     let consistencyScore = await calculateBoardSatisfactionConsistency(companyId, 0);
 
     // Calculate final satisfaction (INDEPENDENT of ownership)
-    // Ownership is applied as a multiplier (outsideShare%) when checking constraints, not in satisfaction calculation
+    // Ownership is applied as a multiplier (nonPlayerOwnership%) when checking constraints, not in satisfaction calculation
     const satisfaction = 
       (performanceScore * BOARD_SATISFACTION_WEIGHTS.performanceScore) +
       (stabilityScore * BOARD_SATISFACTION_WEIGHTS.stabilityScore) +
