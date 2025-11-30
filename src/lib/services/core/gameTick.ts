@@ -287,6 +287,18 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       } catch (error) {
         console.warn('Error during incremental share price adjustment:', error);
       }
+    })(),
+
+    // Store board satisfaction snapshot (weekly snapshot for consistency tracking)
+    // Note: Snapshots are stored automatically in getBoardSatisfactionBreakdown,
+    // but we trigger it here to ensure weekly snapshots regardless of UI access
+    (async () => {
+      try {
+        const { getBoardSatisfactionBreakdown } = await import('../board/boardSatisfactionService');
+        await getBoardSatisfactionBreakdown(); // This will store snapshot internally
+      } catch (error) {
+        console.warn('Error storing board satisfaction snapshot:', error);
+      }
     })()
   ];
 

@@ -114,6 +114,12 @@ export * from './prestige/prestigeService';
 // Research services
 export * from './research/researchEnforcer';
 
+// Board services
+export { calculateBoardSatisfaction, getBoardSatisfactionBreakdown } from './board/boardSatisfactionService';
+export { boardEnforcer, BoardEnforcerService } from './board/boardEnforcer';
+export type { BoardSatisfactionBreakdown } from './board/boardSatisfactionService';
+export type { BoardEnforcementResult } from './board/boardEnforcer';
+
 // Activity system
 export * from './activity';
 

@@ -19,5 +19,8 @@ export * from './toast';
 // Modal state utilities
 export * from './modalState';
 
+// Consistency and volatility utilities
+export * from './consistencyUtils';
+
 // Types
 export { NotificationCategory } from '@/lib/types/types';

@@ -12,6 +12,7 @@ import {
   calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
   calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
+import { boardEnforcer } from '@/lib/services';
 
 /**
  * Generate random staff candidates based on search parameters
@@ -147,6 +148,19 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
         `Insufficient funds to hire ${candidate.name}. Need €${candidate.wage.toFixed(2)} for first month's wage.`,
         'staffSearchManager.startHiringProcess',
         'Insufficient Funds',
+        NotificationCategory.FINANCE_AND_STAFF
+      );
+      return null;
+    }
+
+    // Check board constraint for staff hiring
+    const companyId = getCurrentCompanyId();
+    const boardCheck = await boardEnforcer.isActionAllowed('staff_hiring', undefined, companyId);
+    if (!boardCheck.allowed) {
+      await notificationService.addMessage(
+        boardCheck.message || `Board approval required to hire ${candidate.name}. Board satisfaction is too low to approve new staff hires.`,
+        'staffSearchManager.startHiringProcess',
+        'Board Restriction',
         NotificationCategory.FINANCE_AND_STAFF
       );
       return null;

@@ -16,4 +16,6 @@ export * from './customers/customerDB';
 export * from './customers/relationshipBoostsDB';
 export * from './customers/prestigeEventsDB';
 export * from './core/researchUnlocksDB';
+export * from './core/companyMetricsHistoryDB';
+export * from './core/boardSatisfactionHistoryDB';
 export { supabase } from './core/supabase';

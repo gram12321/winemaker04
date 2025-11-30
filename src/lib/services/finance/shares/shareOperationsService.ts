@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DIVIDEND_CHANGE_PRESTIGE_CONFIG } from '../../../constants';
 import { calculateAbsoluteWeeks } from '../../../utils/utils';
 import { updateCompanyShares, getCompanyShares } from '../../../database/core/companySharesDB';
+import { boardEnforcer } from '@/lib/services';
 
 export async function issueStock(
   shares: number,
@@ -32,6 +33,12 @@ export async function issueStock(
 
     if (shares <= 0) {
       return { success: false, error: 'Number of shares must be greater than 0' };
+    }
+
+    // Check board constraint
+    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares, companyId);
+    if (!boardCheck.allowed) {
+      return { success: false, error: boardCheck.message || 'Board approval required for share issuance' };
     }
 
     // Get current company data
@@ -153,6 +160,12 @@ export async function buyBackStock(
     const currentOutstandingShares = sharesData.outstandingShares;
     if (shares > currentOutstandingShares) {
       return { success: false, error: 'Cannot buy back more shares than are outstanding' };
+    }
+
+    // Check board constraint
+    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares, companyId);
+    if (!boardCheck.allowed) {
+      return { success: false, error: boardCheck.message || 'Board approval required for share buyback' };
     }
 
     // Get current share price if not provided
@@ -343,6 +356,12 @@ export async function updateDividendRate(
 
     if (rate < 0) {
       return { success: false, error: 'Dividend rate cannot be negative' };
+    }
+
+    // Check board constraint
+    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate, companyId);
+    if (!boardCheck.allowed) {
+      return { success: false, error: boardCheck.message || 'Board approval required for dividend changes' };
     }
 
     // Get current company

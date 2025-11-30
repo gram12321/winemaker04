@@ -753,6 +753,33 @@ COMMENT ON COLUMN company_metrics_history.dividend_per_share_48w IS 'Dividend pe
 COMMENT ON COLUMN company_metrics_history.profit_margin_48w IS 'Profit margin (48-week rolling) at snapshot time';
 COMMENT ON COLUMN company_metrics_history.revenue_growth_48w IS 'Revenue growth (48-week rolling) at snapshot time';
 
+-- Board satisfaction history table
+CREATE TABLE board_satisfaction_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    snapshot_week integer NOT NULL CHECK (snapshot_week >= 1 AND snapshot_week <= 12),
+    snapshot_season text NOT NULL CHECK (snapshot_season IN ('Spring', 'Summer', 'Fall', 'Winter')),
+    snapshot_year integer NOT NULL,
+    satisfaction_score numeric NOT NULL CHECK (satisfaction_score >= 0 AND satisfaction_score <= 1),
+    performance_score numeric NOT NULL CHECK (performance_score >= 0 AND performance_score <= 1),
+    stability_score numeric NOT NULL CHECK (stability_score >= 0 AND stability_score <= 1),
+    consistency_score numeric NOT NULL CHECK (consistency_score >= 0 AND consistency_score <= 1),
+    ownership_pressure numeric NOT NULL CHECK (ownership_pressure >= 0 AND ownership_pressure <= 1),
+    player_ownership_pct numeric NOT NULL CHECK (player_ownership_pct >= 0 AND player_ownership_pct <= 100),
+    created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_board_satisfaction_history_company ON board_satisfaction_history(company_id);
+CREATE INDEX idx_board_satisfaction_history_date ON board_satisfaction_history(company_id, snapshot_year DESC, snapshot_season DESC, snapshot_week DESC);
+
+COMMENT ON TABLE board_satisfaction_history IS 'Weekly snapshots of board satisfaction for historical tracking and consistency calculations';
+COMMENT ON COLUMN board_satisfaction_history.satisfaction_score IS 'Overall board satisfaction score (0-1)';
+COMMENT ON COLUMN board_satisfaction_history.performance_score IS 'Performance component score (0-1)';
+COMMENT ON COLUMN board_satisfaction_history.stability_score IS 'Financial stability component score (0-1)';
+COMMENT ON COLUMN board_satisfaction_history.consistency_score IS 'Consistency/volatility component score (0-1)';
+COMMENT ON COLUMN board_satisfaction_history.ownership_pressure IS 'Ownership pressure from outside shareholders (0-1)';
+COMMENT ON COLUMN board_satisfaction_history.player_ownership_pct IS 'Player ownership percentage (0-100)';
+
 -- ============================================================
 -- SECURITY HELPERS & ROW LEVEL SECURITY
 -- ============================================================

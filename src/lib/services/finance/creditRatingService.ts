@@ -11,6 +11,7 @@ export interface CreditRatingBreakdown {
     debtToAssetRatio: number;
     assetCoverage: number;
     liquidityRatio: number;
+    fixedAssetRatio: number; // Fixed assets / total assets
     score: number; // 0-0.20
   };
   paymentHistory: {
@@ -117,7 +118,7 @@ export async function calculateCreditRating(): Promise<CreditRatingBreakdown> {
   const outstandingLoans = activeLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
 
   // Calculate asset health
-  const assetHealth = calculateAssetHealth(financialData.totalAssets, outstandingLoans, financialData.cashMoney, financialData.currentAssets);
+  const assetHealth = calculateAssetHealth(financialData.totalAssets, outstandingLoans, financialData.cashMoney, financialData.currentAssets, financialData.fixedAssets);
 
   // Calculate payment history
   const paymentHistory = await calculatePaymentHistory(activeLoans, transactions);
@@ -158,7 +159,8 @@ function calculateAssetHealth(
   totalAssets: number, 
   outstandingLoans: number, 
   cash: number, 
-  liquidAssets: number
+  liquidAssets: number,
+  fixedAssets: number
 ): CreditRatingBreakdown['assetHealth'] {
   // Debt-to-Asset Ratio: Outstanding Loans / Total Company Assets
   const debtToAssetRatio = outstandingLoans > 0 ? outstandingLoans / totalAssets : 0;
@@ -168,6 +170,9 @@ function calculateAssetHealth(
   
   // Liquidity Ratio: Cash + Liquid Assets / Outstanding Loans
   const liquidityRatio = outstandingLoans > 0 ? (cash + liquidAssets) / outstandingLoans : 999; // High value when no debt
+  
+  // Fixed Asset Ratio: Fixed Assets / Total Assets
+  const fixedAssetRatio = totalAssets > 0 ? fixedAssets / totalAssets : 0;
   
   // Calculate score based on ratios
   let score = 0;
@@ -186,15 +191,23 @@ function calculateAssetHealth(
   // <2x gets no points
   
   // Liquidity scoring (higher is better)
-  if (liquidityRatio >= 2) score += 0.06; // Excellent (2x+ liquidity)
-  else if (liquidityRatio >= 1) score += 0.04; // Good (1x+ liquidity)
-  else if (liquidityRatio >= 0.5) score += 0.02; // Fair (0.5x+ liquidity)
+  if (liquidityRatio >= 2) score += 0.05; // Excellent (2x+ liquidity) - reduced from 0.06 to make room for fixed asset ratio
+  else if (liquidityRatio >= 1) score += 0.03; // Good (1x+ liquidity)
+  else if (liquidityRatio >= 0.5) score += 0.01; // Fair (0.5x+ liquidity)
   // <0.5x gets no points
+  
+  // Fixed asset ratio scoring (higher is better for stability)
+  // Companies with more fixed assets (vineyards, equipment) are more stable
+  if (fixedAssetRatio >= 0.6) score += 0.03; // Excellent (≥60% fixed assets)
+  else if (fixedAssetRatio >= 0.4) score += 0.02; // Good (≥40% fixed assets)
+  else if (fixedAssetRatio >= 0.2) score += 0.01; // Fair (≥20% fixed assets)
+  // <20% gets no points
   
   return {
     debtToAssetRatio,
     assetCoverage,
     liquidityRatio,
+    fixedAssetRatio,
     score: Math.min(score, CREDIT_RATING_CONSTANTS.ASSET_HEALTH_MAX)
   };
 }
@@ -443,7 +456,7 @@ function calculateNegativeBalancePenalty(
   };
 }
 
-// Future: Outstanding Shares & Dividends
+
 // TODO: Implement share performance tracking and dividend history
 // This will add additional credit rating factors:
 // - Share price stability and growth

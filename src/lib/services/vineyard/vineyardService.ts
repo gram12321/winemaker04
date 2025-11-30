@@ -14,12 +14,14 @@ import { getRandomFromArray } from '../../utils';
 import { formatNumber } from '../../utils/utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY, GRAPE_CONST } from '../../constants';
 import { addTransaction, getGameState } from '../index';
+import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { updateGameState } from '@/lib/services/core/gameState';
+import { boardEnforcer } from '@/lib/services';
 
 
 // Helper functions for random vineyard generation
@@ -416,6 +418,34 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
         success: false,
         error: errorMsg
       };
+    }
+
+    // Check board constraint for vineyard purchase
+    // For scaling constraints, pass total balance so formula can calculate limit
+    const companyId = getCurrentCompanyId();
+    const boardLimit = await boardEnforcer.getActionLimit('vineyard_purchase', currentMoney, companyId);
+    
+    if (boardLimit && boardLimit.limit !== null) {
+      // Scaling constraint: check if purchase exceeds limit
+      if (option.totalPrice > boardLimit.limit) {
+        const errorMsg = `Purchase amount (${formatNumber(option.totalPrice, { currency: true })}) exceeds board-approved limit (${formatNumber(boardLimit.limit, { currency: true })}). Board satisfaction: ${(boardLimit.satisfaction * 100).toFixed(1)}%`;
+        await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Board Restriction', NotificationCategory.FINANCE_AND_STAFF);
+        return {
+          success: false,
+          error: errorMsg
+        };
+      }
+    } else {
+      // Threshold-only constraint: check if action is allowed
+      const boardCheck = await boardEnforcer.isActionAllowed('vineyard_purchase', option.totalPrice, companyId);
+      if (!boardCheck.allowed) {
+        const errorMsg = boardCheck.message || 'Board approval required for vineyard purchases. Your purchase exceeds the approved budget limit.';
+        await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Board Restriction', NotificationCategory.FINANCE_AND_STAFF);
+        return {
+          success: false,
+          error: errorMsg
+        };
+      }
     }
 
     // Convert purchase option to vineyard

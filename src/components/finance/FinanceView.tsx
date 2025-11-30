@@ -18,6 +18,7 @@ import { CashFlowView } from './CashFlowView';
 import { ResearchPanel } from './ResearchPanel';
 import { StaffWageSummary } from './StaffWageSummary';
 import { ShareManagementPanel } from './ShareManagementPanel';
+import { BoardRoomPanel } from './BoardRoomPanel';
 import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
@@ -225,7 +226,7 @@ export default function FinanceView() {
               <p className="text-white/90 text-sm mt-1">Track your financial performance and growth</p>
             </div>
             <div className="text-white/80 text-sm">
-              {activeTab === 'income' ? 'Income & Balance' : activeTab === 'cashflow' ? 'Cash Flow' : activeTab === 'loans' ? 'Loans' : activeTab === 'shares' ? 'Share Management' : 'Research & Upgrades'}
+              {activeTab === 'income' ? 'Income & Balance' : activeTab === 'cashflow' ? 'Cash Flow' : activeTab === 'loans' ? 'Loans' : activeTab === 'shares' ? 'Share Management' : activeTab === 'board' ? 'Board Room' : 'Research & Upgrades'}
             </div>
           </div>
         </div>
@@ -252,6 +253,11 @@ export default function FinanceView() {
             value="shares"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'shares' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Shares
+          </TabsTrigger>
+          <TabsTrigger
+            value="board"
+            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'board' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
+            Board Room
           </TabsTrigger>
           <TabsTrigger
             value="upgrades"
@@ -304,6 +310,9 @@ export default function FinanceView() {
         </TabsContent>
         <TabsContent value="shares">
           <ShareManagementPanel />
+        </TabsContent>
+        <TabsContent value="board">
+          <BoardRoomPanel />
         </TabsContent>
         <TabsContent value="upgrades">
           <ResearchPanel />
