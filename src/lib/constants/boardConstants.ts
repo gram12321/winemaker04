@@ -12,7 +12,7 @@ export type BoardConstraintType =
   | 'dividend_change'
   | 'vineyard_purchase'
   | 'staff_hiring'
-  | 'major_expenditure'; // Future: large purchases
+  // | 'major_expenditure'; // Future: large purchases (commented out until framework supports other major expenditures)
 
 /**
  * Scaling formula function type
@@ -94,17 +94,18 @@ export const BOARD_CONSTRAINTS: Record<BoardConstraintType, BoardConstraint> = {
     startThreshold: 0.7,
     maxThreshold: 0.4,
     message: 'Board approval required for staff hiring. Board satisfaction is too low to approve new staff hires.'
-  },
-  
-  major_expenditure: {
-    type: 'major_expenditure',
-    startThreshold: 0.6,
-    maxThreshold: 0.3,
-    scalingFormula: (satisfaction: number, totalBalance: number): number => {
-      // Major expenditures (large purchases) follow same pattern as vineyard purchases
-      const allowedPercent = 1 - satisfaction;
-      return totalBalance * allowedPercent;
-    },
-    message: 'Board approval required for major expenditures. This purchase exceeds the approved budget limit.'
   }
+  
+  // TODO: Re-enable when framework supports other major expenditures beyond vineyard purchases
+  // major_expenditure: {
+  //   type: 'major_expenditure',
+  //   startThreshold: 0.6,
+  //   maxThreshold: 0.3,
+  //   scalingFormula: (satisfaction: number, totalBalance: number): number => {
+  //     // Major expenditures (large purchases) follow same pattern as vineyard purchases
+  //     const allowedPercent = 1 - satisfaction;
+  //     return totalBalance * allowedPercent;
+  //   },
+  //   message: 'Board approval required for major expenditures. This purchase exceeds the approved budget limit.'
+  // }
 } as const;

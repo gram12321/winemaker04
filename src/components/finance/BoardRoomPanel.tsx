@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent, Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { formatNumber, getRangeColor } from '@/lib/utils';
 import { useGameState } from '@/hooks';
 import { 
@@ -224,6 +225,7 @@ export function BoardRoomPanel() {
   } | null>(null);
   const [effectiveSatisfaction, setEffectiveSatisfaction] = useState<number | null>(null);
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  const [expandedConstraints, setExpandedConstraints] = useState<Set<BoardConstraintType>>(new Set());
 
   useEffect(() => {
     const loadData = async () => {
@@ -432,20 +434,6 @@ export function BoardRoomPanel() {
                       <div>Stability ({formatNumber(BOARD_SATISFACTION_WEIGHTS.stabilityScore * 100, { decimals: 0 })}%): {formatNumber(breakdown.stabilityScore * 100, { decimals: 1 })}%</div>
                       <div>Consistency ({formatNumber(BOARD_SATISFACTION_WEIGHTS.consistencyScore * 100, { decimals: 0 })}%): {formatNumber(breakdown.consistencyScore * 100, { decimals: 1 })}%</div>
                     </div>
-                    {shareholderBreakdown && shareholderBreakdown.nonPlayerOwnershipPct > 0 && (
-                      <div className="text-xs text-gray-500 space-y-0.5 mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-gray-600 font-semibold mb-1">Effective Satisfaction (for Constraints):</div>
-                        <div>
-                          {formatNumber(breakdown.satisfaction * 100, { decimals: 1 })}% × {formatNumber(shareholderBreakdown.nonPlayerOwnershipPct, { decimals: 1 })}% (Non-Player Ownership: Family + Public Investors) ={' '}
-                          <span className="font-semibold text-blue-600">
-                            {formatNumber(breakdown.satisfaction * (shareholderBreakdown.nonPlayerOwnershipPct / 100) * 100, { decimals: 1 })}%
-                          </span>
-                        </div>
-                        <div className="text-gray-400 italic mt-1">
-                          Constraints are applied based on effective satisfaction, not raw satisfaction. Non-player ownership includes both family and public investors.
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </SimpleCard>
@@ -840,12 +828,12 @@ export function BoardRoomPanel() {
 
           <TabsContent value="constraints" className="space-y-4 mt-0">
             {/* Effective Satisfaction Display with Visual Bar */}
-            {effectiveSatisfaction !== null && (
+            {effectiveSatisfaction !== null && breakdown && shareholderBreakdown && shareholderBreakdown.nonPlayerOwnershipPct > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="text-sm font-semibold text-blue-900 mb-2">
                   Effective Satisfaction (Used for Constraints)
                 </div>
-                <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center gap-4 mb-3">
                   <div className="text-2xl font-bold text-blue-700">
                     {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
                   </div>
@@ -868,55 +856,89 @@ export function BoardRoomPanel() {
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-blue-600">
-                  Constraints are evaluated using: Raw Satisfaction × Non-Player Ownership %
+                {/* Detailed Calculation */}
+                <div className="text-xs text-blue-800 space-y-1 pt-2 border-t border-blue-300">
+                  <div className="font-semibold mb-1">Calculation:</div>
+                  <div>
+                    {formatNumber(breakdown.satisfaction * 100, { decimals: 1 })}% (Raw Satisfaction) × {formatNumber(shareholderBreakdown.nonPlayerOwnershipPct, { decimals: 1 })}% (Non-Player Ownership: Family + Public Investors) ={' '}
+                    <span className="font-bold">
+                      {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
+                    </span>
+                  </div>
+                  <div className="text-blue-600 italic mt-1">
+                    Constraints are applied based on effective satisfaction, not raw satisfaction. Non-player ownership includes both family and public investors.
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Constraints List - Compact Accordion */}
-            <Accordion type="multiple" className="w-full space-y-2">
-                {activeConstraints.map(({ type, constraint, status, limit }) => {
-                  // Determine explicit status
-                  const isBlocked = status === 'blocked';
-                  const isLimited = status === 'warning';
+            {/* Constraints List - Grid Layout 2x2 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {activeConstraints.map(({ type, constraint, status, limit }) => {
+                // Determine explicit status
+                const isBlocked = status === 'blocked';
+                const isLimited = status === 'warning';
+                const isExpanded = expandedConstraints.has(type);
 
-                  // Format constraint name
-                  const constraintName = constraint.type
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (l) => l.toUpperCase());
+                // Format constraint name
+                const constraintName = constraint.type
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, (l) => l.toUpperCase());
 
-                  return (
-                    <AccordionItem
-                      key={type}
-                      value={type}
-                      className={`border rounded-md ${
-                        isBlocked
-                          ? 'border-red-300 bg-red-50'
-                          : isLimited
-                          ? 'border-yellow-300 bg-yellow-50'
-                          : 'border-gray-200 bg-gray-50'
-                      }`}
+                const toggleExpand = () => {
+                  setExpandedConstraints(prev => {
+                    const next = new Set(prev);
+                    if (next.has(type)) {
+                      next.delete(type);
+                    } else {
+                      next.add(type);
+                    }
+                    return next;
+                  });
+                };
+
+                return (
+                  <div
+                    key={type}
+                    className={`border rounded-md ${
+                      isBlocked
+                        ? 'border-red-300 bg-red-50'
+                        : isLimited
+                        ? 'border-yellow-300 bg-yellow-50'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    {/* Header */}
+                    <button
+                      onClick={toggleExpand}
+                      className="w-full px-3 py-2 flex items-center justify-between hover:bg-opacity-80 transition-colors"
                     >
-                      <AccordionTrigger className="px-3 py-2 hover:no-underline">
-                        <div className="flex items-center justify-between w-full pr-2">
-                          <div className="font-semibold text-xs text-gray-900">
-                            {constraintName}
-                          </div>
-                          <div
-                            className={`text-xs font-bold px-2 py-0.5 rounded ${
-                              isBlocked
-                                ? 'bg-red-600 text-white'
-                                : isLimited
-                                ? 'bg-yellow-600 text-white'
-                                : 'bg-green-600 text-white'
-                            }`}
-                          >
-                            {isBlocked ? 'BLOCKED' : isLimited ? 'LIMITED' : 'ALLOWED'}
-                          </div>
+                      <div className="font-semibold text-xs text-gray-900">
+                        {constraintName}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`text-xs font-bold px-2 py-0.5 rounded ${
+                            isBlocked
+                              ? 'bg-red-600 text-white'
+                              : isLimited
+                              ? 'bg-yellow-600 text-white'
+                              : 'bg-green-600 text-white'
+                          }`}
+                        >
+                          {isBlocked ? 'BLOCKED' : isLimited ? 'LIMITED' : 'ALLOWED'}
                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-3 pb-3">
+                        <ChevronDown
+                          className={`h-3 w-3 text-gray-500 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Expandable Content */}
+                    {isExpanded && (
+                      <div className="px-3 pb-3 border-t border-gray-300">
                         <div className="space-y-3 pt-2">
                           {/* Status Explanation */}
                           <div className="text-xs text-gray-700">
@@ -990,11 +1012,12 @@ export function BoardRoomPanel() {
                             </div>
                           )}
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
