@@ -192,7 +192,7 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
     }
 
     // Check player ownership - if 100%, return max satisfaction (no board constraints)
-    const shareholderBreakdown = await getShareholderBreakdown(companyId);
+    const shareholderBreakdown = await getShareholderBreakdown();
     const playerOwnershipPct = shareholderBreakdown.playerPct;
     
     if (playerOwnershipPct >= 100) {
@@ -223,7 +223,7 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
     // Get financial data (gameState already fetched above)
     const [financialData, shareMetrics, totalDebt] = await Promise.all([
       calculateFinancialData('year'),
-      getShareMetrics(companyId),
+      getShareMetrics(),
       calculateTotalOutstandingLoans()
     ]);
 
@@ -258,7 +258,7 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
     );
 
     const currentMetricValues = await getCurrentMetricValues();
-    const previousMetricValues = await getPreviousMetricValues48WeeksAgo(companyId);
+    const previousMetricValues = await getPreviousMetricValues48WeeksAgo();
 
     const trendImprovements = calculateTrendBasedImprovements(
       {
@@ -275,7 +275,7 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
     );
 
     // Get expected rates
-    const multipliers = await getImprovementMultipliers(companyId);
+    const multipliers = await getImprovementMultipliers();
     const expectedRates = calculateExpectedImprovementRates(
       multipliers.improvementMultiplier,
       multipliers.marketCapRequirement

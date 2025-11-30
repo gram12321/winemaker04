@@ -3,6 +3,7 @@ import { NormalizeScrewed1000To01WithTail } from '../../../utils/calculator';
 import { EXPECTED_IMPROVEMENT_RATES, PRESTIGE_SCALING, MARKET_CAP_MODIFIER_CONFIG, ECONOMY_EXPECTATION_MULTIPLIERS } from '../../../constants';
 import type { EconomyPhase, ShareExpectedImprovementRates } from '../../../types';
 import { getCompanyShares } from '../../../database/core/companySharesDB';
+import { getCurrentCompanyId } from '../../../utils/companyUtils';
 
 export function calculateMarketCap(sharePrice: number, totalShares: number): number {
   if (totalShares === 0 || sharePrice <= 0) {
@@ -56,9 +57,7 @@ export function calculateExpectedImprovementRates(
   };
 }
 
-export async function getImprovementMultipliers(
-  companyId: string
-): Promise<{
+export async function getImprovementMultipliers(): Promise<{
   improvementMultiplier: number;
   marketCapRequirement: number;
   marketCap: number;
@@ -69,6 +68,7 @@ export async function getImprovementMultipliers(
   growthTrendMultiplier: number;
   economyMultiplier: number;
 }> {
+  const companyId = getCurrentCompanyId();
   const gameState = getGameState();
   
   const economyPhase: EconomyPhase = (gameState.economyPhase as EconomyPhase) || 'Stable';

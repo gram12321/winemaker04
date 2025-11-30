@@ -1,4 +1,3 @@
-import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getShareholderBreakdown } from '@/lib/services';
 import { calculateBoardSatisfaction, getBoardSatisfactionBreakdown } from './boardSatisfactionService';
 import { BOARD_CONSTRAINTS, type BoardConstraintType } from '@/lib/constants';
@@ -23,29 +22,20 @@ class BoardEnforcerService {
    * Check if an action is allowed given current board satisfaction
    * @param constraintType - Type of constraint to check
    * @param value - Optional value for scaling constraints (e.g., purchase amount, number of shares)
-   * @param companyId - Optional company ID (defaults to current company)
    * @returns Enforcement result with allowed status and details
    */
   async isActionAllowed(
     constraintType: BoardConstraintType,
-    value?: any,
-    companyId?: string
+    value?: any
   ): Promise<BoardEnforcementResult> {
     try {
-      const targetCompanyId = companyId || getCurrentCompanyId();
-      if (!targetCompanyId) {
-        return { allowed: false, message: 'No company ID available' };
-      }
-
       // 1. Check player ownership - if 100%, always allow
-      const breakdown = await getShareholderBreakdown(targetCompanyId);
+      const breakdown = await getShareholderBreakdown();
       if (breakdown.playerPct >= 100) {
         return { allowed: true };
       }
 
       // 2. Calculate BoardSatisfaction (INDEPENDENT of ownership - uses current company)
-      // Note: boardEnforcer supports checking different companies, but underlying service uses current company
-      // For now, if companyId is provided, we still use current company (may need refactoring later)
       const satisfaction = await calculateBoardSatisfaction();
 
       // 3. Calculate effective satisfaction: satisfaction × nonPlayerOwnership%
@@ -113,22 +103,15 @@ class BoardEnforcerService {
    * Get the maximum allowed value for a scaling constraint
    * @param constraintType - Type of constraint
    * @param contextValue - Context value (e.g., total balance for purchase limits)
-   * @param companyId - Optional company ID (defaults to current company)
    * @returns Maximum allowed value, or null if no scaling constraint
    */
   async getActionLimit(
     constraintType: BoardConstraintType,
-    contextValue: any,
-    companyId?: string
+    contextValue: any
   ): Promise<{ limit: number | null; satisfaction: number } | null> {
     try {
-      const targetCompanyId = companyId || getCurrentCompanyId();
-      if (!targetCompanyId) {
-        return null;
-      }
-
       // Check if 100% player owned
-      const breakdown = await getShareholderBreakdown(targetCompanyId);
+      const breakdown = await getShareholderBreakdown();
       if (breakdown.playerPct >= 100) {
         return { limit: null, satisfaction: 1.0 }; // No limit for full ownership
       }
@@ -163,12 +146,10 @@ class BoardEnforcerService {
 
   /**
    * Get current board satisfaction score
-   * @param companyId - Optional company ID (defaults to current company)
    * @returns Satisfaction score (0-1)
    */
-  async getBoardSatisfaction(_companyId?: string): Promise<number> {
+  async getBoardSatisfaction(): Promise<number> {
     try {
-      // Note: Currently always uses current company; companyId parameter kept for API compatibility
       return await calculateBoardSatisfaction();
     } catch (error) {
       console.error('Error getting board satisfaction:', error);
@@ -178,11 +159,9 @@ class BoardEnforcerService {
 
   /**
    * Get detailed board satisfaction breakdown
-   * @param _companyId - Optional company ID (currently ignored, uses current company)
    * @returns Detailed breakdown with all components
    */
-  async getSatisfactionBreakdown(_companyId?: string) {
-    // Note: Currently always uses current company; companyId parameter kept for API compatibility
+  async getSatisfactionBreakdown() {
     return await getBoardSatisfactionBreakdown();
   }
 }

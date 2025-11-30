@@ -7,20 +7,13 @@ import { updateCompanyShares, getCompanyShares } from '../../../database/core/co
 import { getCompanyMetricsSnapshotNWeeksAgo } from '../../../database/core/companyMetricsHistoryDB';
 import type { GameDate } from '../../../types';
 
-export async function updateGrowthTrend(companyId?: string): Promise<{
+export async function updateGrowthTrend(): Promise<{
   success: boolean;
   growthTrendMultiplier?: number;
   error?: string;
 }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-    
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
@@ -65,7 +58,7 @@ export async function updateGrowthTrend(companyId?: string): Promise<{
     }
     
     // Get current metrics (same as share price system)
-    const shareMetrics = await getShareMetrics(companyId);
+    const shareMetrics = await getShareMetrics();
     const financialData = await calculateFinancialData('year');
     const currentCreditRating = (await calculateCreditRating()).finalRating;
     const currentFixedAssetRatio = calculateFixedAssetRatio(financialData.fixedAssets, financialData.totalAssets);
@@ -133,7 +126,7 @@ export async function updateGrowthTrend(companyId?: string): Promise<{
     // Get expected improvement rates (same as share price system)
     // Note: We use the CURRENT growth trend multiplier to calculate expected rates
     // This creates a feedback loop: if you exceed expectations, expectations increase
-    const multipliers = await getImprovementMultipliers(companyId);
+    const multipliers = await getImprovementMultipliers();
     const expectedRates = calculateExpectedImprovementRates(
       multipliers.improvementMultiplier,
       multipliers.marketCapRequirement

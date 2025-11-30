@@ -154,8 +154,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     }
 
     // Check board constraint for staff hiring
-    const companyId = getCurrentCompanyId();
-    const boardCheck = await boardEnforcer.isActionAllowed('staff_hiring', undefined, companyId);
+    const boardCheck = await boardEnforcer.isActionAllowed('staff_hiring', undefined);
     if (!boardCheck.allowed) {
       await notificationService.addMessage(
         boardCheck.message || `Board approval required to hire ${candidate.name}. Board satisfaction is too low to approve new staff hires.`,

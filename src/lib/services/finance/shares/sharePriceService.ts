@@ -31,7 +31,7 @@ async function calculateIncrementalAdjustment(
   company: Company
 ): Promise<SharePriceAdjustmentResult> {
   // Get current metrics
-  const shareMetrics = await getShareMetrics(companyId);
+  const shareMetrics = await getShareMetrics();
   const gameState = getGameState();
   const financialData = await calculateFinancialData('year');
   
@@ -42,7 +42,7 @@ async function calculateIncrementalAdjustment(
     const snapshot48WeeksAgo = await getCompanyMetricsSnapshotNWeeksAgo(48, companyId);
   
   // Get improvement multipliers and market cap requirement (using shared calculation)
-  const multipliers = await getImprovementMultipliers(companyId);
+  const multipliers = await getImprovementMultipliers();
   const improvementMultiplier = multipliers.improvementMultiplier;
   const marketCapRequirement = multipliers.marketCapRequirement;
   
@@ -167,13 +167,14 @@ async function calculateIncrementalAdjustment(
   };
 }
 
-async function initializeSharePrice(companyId: string): Promise<number> {
-  const shareMetrics = await getShareMetrics(companyId);
+async function initializeSharePrice(): Promise<number> {
+  const shareMetrics = await getShareMetrics();
   return shareMetrics.bookValuePerShare;
 }
 
-async function initializeSharePriceWithTimestamp(companyId: string): Promise<number> {
-  const initialPrice = await initializeSharePrice(companyId);
+async function initializeSharePriceWithTimestamp(): Promise<number> {
+  const companyId = getCurrentCompanyId();
+  const initialPrice = await initializeSharePrice();
   const gameState = getGameState();
   
   // Get share data for total shares
@@ -191,20 +192,13 @@ async function initializeSharePriceWithTimestamp(companyId: string): Promise<num
   return initialPrice;
 }
 
-export async function adjustSharePriceIncrementally(companyId?: string): Promise<{
+export async function adjustSharePriceIncrementally(): Promise<{
   success: boolean;
   newPrice?: number;
   error?: string;
 }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-    
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
@@ -219,12 +213,12 @@ export async function adjustSharePriceIncrementally(companyId?: string): Promise
     // Initialize if needed
     const currentPrice = sharesData.sharePrice;
     if (!currentPrice || currentPrice <= 0) {
-      const initialPrice = await initializeSharePriceWithTimestamp(companyId);
+      const initialPrice = await initializeSharePriceWithTimestamp();
       return { success: true, newPrice: initialPrice };
     }
     
     // Get base price (anchor) - bookValuePerShare
-    const shareMetrics = await getShareMetrics(companyId);
+    const shareMetrics = await getShareMetrics();
     const basePrice = shareMetrics.bookValuePerShare;
     
     // Get current values for trend calculations
@@ -282,21 +276,13 @@ export async function adjustSharePriceIncrementally(companyId?: string): Promise
   }
 }
 
-export async function initializeSharePriceDeterministically(companyId?: string): Promise<{
+export async function initializeSharePriceDeterministically(): Promise<{
   success: boolean;
   sharePrice?: number;
   error?: string;
 }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-    
-    const initialPrice = await initializeSharePriceWithTimestamp(companyId);
+    const initialPrice = await initializeSharePriceWithTimestamp();
     
     return { success: true, sharePrice: initialPrice };
   } catch (error) {
@@ -336,7 +322,7 @@ export async function applyImmediateShareStructureAdjustment(
     const newPrice = currentPrice * shareRatio * marketReaction;
     
     // Ensure price doesn't go below soft floor
-    const shareMetrics = await getShareMetrics(companyId);
+    const shareMetrics = await getShareMetrics();
     const basePrice = shareMetrics.bookValuePerShare;
     const minPrice = Math.max(
       0.01,
@@ -361,15 +347,8 @@ export async function applyImmediateShareStructureAdjustment(
   }
 }
 
-export async function getCurrentSharePrice(companyId?: string): Promise<number> {
-  if (!companyId) {
-    companyId = getCurrentCompanyId();
-  }
-  
-  if (!companyId) {
-    return 0;
-  }
-  
+export async function getCurrentSharePrice(): Promise<number> {
+  const companyId = getCurrentCompanyId();
   const company = await companyService.getCompany(companyId);
   if (!company) {
     return 0;
@@ -381,37 +360,21 @@ export async function getCurrentSharePrice(companyId?: string): Promise<number> 
   }
   
   // If not set, initialize deterministically
-  const result = await initializeSharePriceDeterministically(companyId);
+  const result = await initializeSharePriceDeterministically();
   return result.sharePrice || 0;
 }
 
 /**
  * Calculate initial share price - simply uses book value per share
  */
-export async function calculateSharePrice(companyId?: string): Promise<number> {
-  if (!companyId) {
-    companyId = getCurrentCompanyId();
-  }
-  
-  if (!companyId) {
-    return 0;
-  }
-  
-  const shareMetrics = await getShareMetrics(companyId);
+export async function calculateSharePrice(): Promise<number> {
+  const shareMetrics = await getShareMetrics();
   return shareMetrics.bookValuePerShare;
 }
 
-export async function calculateMarketCap(companyId?: string): Promise<number> {
+export async function calculateMarketCap(): Promise<number> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      console.error('No company ID available for market cap calculation');
-      return 0;
-    }
-
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       console.error('Company not found for market cap calculation');
@@ -427,7 +390,7 @@ export async function calculateMarketCap(companyId?: string): Promise<number> {
     const totalShares = sharesData.totalShares;
     
     // Use current share price from database (incremental system)
-    const sharePrice = await getCurrentSharePrice(companyId);
+    const sharePrice = await getCurrentSharePrice();
     
     // Use shared calculation function
     return calcMarketCap(sharePrice, totalShares);
@@ -437,18 +400,11 @@ export async function calculateMarketCap(companyId?: string): Promise<number> {
   }
 }
 
-export async function updateMarketValue(companyId?: string): Promise<ShareMarketValueUpdateResult> {
+export async function updateMarketValue(): Promise<ShareMarketValueUpdateResult> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-
-    const marketCap = await calculateMarketCap(companyId);
-    const sharePrice = await getCurrentSharePrice(companyId);
+    const companyId = getCurrentCompanyId();
+    const marketCap = await calculateMarketCap();
+    const sharePrice = await getCurrentSharePrice();
     
     // Only update market cap (share price is managed incrementally)
     const updateResult = await updateCompanyShares(companyId, {
@@ -470,16 +426,9 @@ export async function updateMarketValue(companyId?: string): Promise<ShareMarket
   }
 }
 
-export async function getMarketValue(companyId?: string): Promise<ShareMarketValue> {
+export async function getMarketValue(): Promise<ShareMarketValue> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { marketCap: 0, sharePrice: 0 };
-    }
-
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return { marketCap: 0, sharePrice: 0 };
@@ -496,7 +445,7 @@ export async function getMarketValue(companyId?: string): Promise<ShareMarketVal
     let sharePrice = sharesData.sharePrice;
     if (!sharePrice || sharePrice <= 0) {
       // Initialize share price deterministically
-      const initResult = await initializeSharePriceDeterministically(companyId);
+      const initResult = await initializeSharePriceDeterministically();
       sharePrice = initResult.sharePrice || 0;
     }
 
@@ -511,7 +460,7 @@ export async function getMarketValue(companyId?: string): Promise<ShareMarketVal
   }
 }
 
-export async function getSharePriceBreakdown(companyId?: string): Promise<{
+export async function getSharePriceBreakdown(): Promise<{
   success: boolean;
   data?: {
     currentPrice: number;
@@ -575,14 +524,7 @@ export async function getSharePriceBreakdown(companyId?: string): Promise<{
   error?: string;
 }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-    
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
@@ -598,11 +540,11 @@ export async function getSharePriceBreakdown(companyId?: string): Promise<{
       return { success: false, error: 'Share price not initialized' };
     }
     
-    const shareMetrics = await getShareMetrics(companyId);
+    const shareMetrics = await getShareMetrics();
     const basePrice = shareMetrics.bookValuePerShare;
     
     // Get improvement multipliers and calculate expected rates
-    const multipliers = await getImprovementMultipliers(companyId);
+    const multipliers = await getImprovementMultipliers();
     const expectedImprovementRates = calculateExpectedImprovementRates(
       multipliers.improvementMultiplier,
       multipliers.marketCapRequirement
@@ -616,7 +558,7 @@ export async function getSharePriceBreakdown(companyId?: string): Promise<{
       adjustment
     ] = await Promise.all([
       getCurrentMetricValues(),
-      getPreviousMetricValues48WeeksAgo(companyId),
+      getPreviousMetricValues48WeeksAgo(),
       Promise.resolve(getCurrent48WeekValues(shareMetrics)),
       calculateIncrementalAdjustment(currentPrice, basePrice, companyId, company)
     ]);

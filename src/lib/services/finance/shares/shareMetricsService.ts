@@ -353,18 +353,10 @@ export async function getShareholderBreakdown(): Promise<ShareholderBreakdown> {
 }
 
 export async function getHistoricalShareMetrics(
-  companyId?: string,
   yearsBack: number = 2
 ): Promise<ShareHistoricalMetric[]> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return [];
-    }
-
+    const companyId = getCurrentCompanyId();
     // Get historical snapshots from database
     const weeksBack = yearsBack * 48; // Convert years to weeks
     const snapshots = await getCompanyMetricsHistory(companyId, weeksBack);

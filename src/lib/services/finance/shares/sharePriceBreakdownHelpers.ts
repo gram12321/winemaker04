@@ -6,6 +6,7 @@ import { calculateCompanyWeeks } from '../../../utils/utils';
 import { WEEKS_PER_YEAR, WEEKS_PER_SEASON } from '../../../constants';
 import { INCREMENTAL_ANCHOR_CONFIG } from '../../../constants';
 import { getCompanyMetricsSnapshotNWeeksAgo } from '../../../database/core/companyMetricsHistoryDB';
+import { getCurrentCompanyId } from '../../../utils/companyUtils';
 import type { Company } from '../../../database';
 import type { ShareMetrics } from '../../../types';
 import type { EconomyPhase } from '../../../types';
@@ -28,9 +29,7 @@ export async function getCurrentMetricValues(): Promise<{
   };
 }
 
-export async function getPreviousMetricValues48WeeksAgo(
-  companyId: string
-): Promise<{
+export async function getPreviousMetricValues48WeeksAgo(): Promise<{
   earningsPerShare: number | null;
   revenuePerShare: number | null;
   dividendPerShare: number | null;
@@ -41,6 +40,7 @@ export async function getPreviousMetricValues48WeeksAgo(
   prestige: number | null;
   hasHistory?: boolean;
 }> {
+  const companyId = getCurrentCompanyId();
   const snapshot48WeeksAgo = await getCompanyMetricsSnapshotNWeeksAgo(48, companyId);
 
   return {

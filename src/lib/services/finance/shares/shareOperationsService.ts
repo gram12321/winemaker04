@@ -19,24 +19,17 @@ import { boardEnforcer } from '@/lib/services';
 
 export async function issueStock(
   shares: number,
-  price?: number,
-  companyId?: string
+  price?: number
 ): Promise<ShareOperationResult & { capitalRaised?: number }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
+    const companyId = getCurrentCompanyId();
     
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-
     if (shares <= 0) {
       return { success: false, error: 'Number of shares must be greater than 0' };
     }
 
     // Check board constraint
-    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares, companyId);
+    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares);
     if (!boardCheck.allowed) {
       return { success: false, error: boardCheck.message || 'Board approval required for share issuance' };
     }
@@ -56,7 +49,7 @@ export async function issueStock(
     // Get current share price if not provided
     let sharePrice = price;
     if (sharePrice === undefined) {
-      const marketValue = await updateMarketValue(companyId);
+      const marketValue = await updateMarketValue();
       if (!marketValue.success || !marketValue.sharePrice) {
         return { success: false, error: 'Failed to determine share price' };
       }
@@ -108,7 +101,7 @@ export async function issueStock(
     );
 
     // Update market cap (share price already adjusted above)
-    await updateMarketValue(companyId);
+    await updateMarketValue();
 
     // Trigger game update
     triggerGameUpdate();
@@ -129,18 +122,11 @@ export async function issueStock(
 
 export async function buyBackStock(
   shares: number,
-  price?: number,
-  companyId?: string
+  price?: number
 ): Promise<ShareOperationResult> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
+    const companyId = getCurrentCompanyId();
     
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-
     if (shares <= 0) {
       return { success: false, error: 'Number of shares must be greater than 0' };
     }
@@ -163,7 +149,7 @@ export async function buyBackStock(
     }
 
     // Check board constraint
-    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares, companyId);
+    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares);
     if (!boardCheck.allowed) {
       return { success: false, error: boardCheck.message || 'Board approval required for share buyback' };
     }
@@ -171,7 +157,7 @@ export async function buyBackStock(
     // Get current share price if not provided
     let sharePrice = price;
     if (sharePrice === undefined) {
-      const marketValue = await updateMarketValue(companyId);
+      const marketValue = await updateMarketValue();
       if (!marketValue.success || !marketValue.sharePrice) {
         return { success: false, error: 'Failed to determine share price' };
       }
@@ -229,7 +215,7 @@ export async function buyBackStock(
     );
 
     // Update market cap (share price already adjusted above)
-    await updateMarketValue(companyId);
+    await updateMarketValue();
 
     // Trigger game update
     triggerGameUpdate();
@@ -248,17 +234,9 @@ export async function buyBackStock(
   }
 }
 
-export async function calculateDividendPayment(companyId?: string): Promise<number> {
+export async function calculateDividendPayment(): Promise<number> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return 0;
-    }
-
-    // Get company data
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return 0;
@@ -283,17 +261,9 @@ export async function calculateDividendPayment(companyId?: string): Promise<numb
   }
 }
 
-export async function areDividendsDue(companyId?: string): Promise<boolean> {
+export async function areDividendsDue(): Promise<boolean> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return false;
-    }
-
-    // Get company data
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return false;
@@ -339,27 +309,20 @@ export async function areDividendsDue(companyId?: string): Promise<boolean> {
 }
 
 export async function updateDividendRate(
-  rate: number,
-  companyId?: string
+  rate: number
 ): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
+    const companyId = getCurrentCompanyId();
 
     if (rate < 0) {
       return { success: false, error: 'Dividend rate cannot be negative' };
     }
 
     // Check board constraint
-    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate, companyId);
+    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate);
     if (!boardCheck.allowed) {
       return { success: false, error: boardCheck.message || 'Board approval required for dividend changes' };
     }
@@ -444,7 +407,7 @@ export async function updateDividendRate(
   }
 }
 
-export async function payDividends(companyId?: string): Promise<{
+export async function payDividends(): Promise<{
   success: boolean;
   error?: string;
   totalPayment?: number;
@@ -452,15 +415,7 @@ export async function payDividends(companyId?: string): Promise<{
   outstandingPayment?: number;
 }> {
   try {
-    if (!companyId) {
-      companyId = getCurrentCompanyId();
-    }
-    
-    if (!companyId) {
-      return { success: false, error: 'No company ID available' };
-    }
-
-    // Get company data
+    const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
@@ -544,7 +499,7 @@ export async function payDividends(companyId?: string): Promise<{
     });
 
     // Recalculate market value after dividend payment
-    await updateMarketValue(companyId);
+    await updateMarketValue();
 
     // Trigger game update
     triggerGameUpdate();

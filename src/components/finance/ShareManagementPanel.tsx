@@ -80,28 +80,28 @@ export function ShareManagementPanel() {
         }
 
         // Update market value
-        await updateMarketValue(companyId);
-        const marketData = await getMarketValue(companyId);
+        await updateMarketValue();
+        const marketData = await getMarketValue();
         setMarketValue(marketData);
 
         // Check if dividends are due
-        const isDue = await areDividendsDue(companyId);
+        const isDue = await areDividendsDue();
         setDividendsDue(isDue);
 
         // Load share metrics
-        const metrics = await getShareMetrics(companyId);
+        const metrics = await getShareMetrics();
         setShareMetrics(metrics);
 
         // Load shareholder breakdown
-        const breakdown = await getShareholderBreakdown(companyId);
+        const breakdown = await getShareholderBreakdown();
         setShareholderBreakdown(breakdown);
 
         // Load historical metrics
-        const historical = await getHistoricalShareMetrics(companyId, 2);
+        const historical = await getHistoricalShareMetrics(2);
         setHistoricalMetrics(historical);
         
         // Load share price breakdown data
-        const breakdownResult = await getSharePriceBreakdown(companyId);
+        const breakdownResult = await getSharePriceBreakdown();
         if (breakdownResult.success && breakdownResult.data) {
           setSharePriceBreakdown(breakdownResult.data);
         }
@@ -233,15 +233,15 @@ export function ShareManagementPanel() {
             });
           }
           
-          await updateMarketValue(companyId);
-          const marketData = await getMarketValue(companyId);
+          await updateMarketValue();
+          const marketData = await getMarketValue();
           setMarketValue(marketData);
-          const metrics = await getShareMetrics(companyId);
+          const metrics = await getShareMetrics();
           setShareMetrics(metrics);
-          const latestBreakdown = await getShareholderBreakdown(companyId);
+          const latestBreakdown = await getShareholderBreakdown();
           setShareholderBreakdown(latestBreakdown);
           // Refresh share price breakdown data
-          const breakdownResult = await getSharePriceBreakdown(companyId);
+          const breakdownResult = await getSharePriceBreakdown();
           if (breakdownResult.success && breakdownResult.data) {
             setSharePriceBreakdown(breakdownResult.data);
           }
@@ -289,15 +289,15 @@ export function ShareManagementPanel() {
             });
           }
           
-          await updateMarketValue(companyId);
-          const marketData = await getMarketValue(companyId);
+          await updateMarketValue();
+          const marketData = await getMarketValue();
           setMarketValue(marketData);
-          const metrics = await getShareMetrics(companyId);
+          const metrics = await getShareMetrics();
           setShareMetrics(metrics);
-          const latestBreakdown = await getShareholderBreakdown(companyId);
+          const latestBreakdown = await getShareholderBreakdown();
           setShareholderBreakdown(latestBreakdown);
           // Refresh share price breakdown data
-          const breakdownResult = await getSharePriceBreakdown(companyId);
+          const breakdownResult = await getSharePriceBreakdown();
           if (breakdownResult.success && breakdownResult.data) {
             setSharePriceBreakdown(breakdownResult.data);
           }

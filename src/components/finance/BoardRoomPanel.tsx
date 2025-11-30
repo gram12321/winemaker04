@@ -240,7 +240,7 @@ export function BoardRoomPanel() {
         setBreakdown(satisfactionBreakdown);
 
         // Load shareholder breakdown for pie chart
-        const shareholderData = await getShareholderBreakdown(companyId);
+        const shareholderData = await getShareholderBreakdown();
         setShareholderBreakdown(shareholderData);
 
         // Load historical satisfaction data
@@ -298,7 +298,7 @@ export function BoardRoomPanel() {
 
           // For scaling constraints, always get the limit to display (even when blocked)
           if (constraint.scalingFormula) {
-            const limitResult = await boardEnforcer.getActionLimit(constraintType, balance, companyId);
+            const limitResult = await boardEnforcer.getActionLimit(constraintType, balance);
             if (limitResult) {
               limit = limitResult.limit ?? undefined;
             }
@@ -839,23 +839,43 @@ export function BoardRoomPanel() {
           </TabsContent>
 
           <TabsContent value="constraints" className="space-y-4 mt-0">
-            {/* Effective Satisfaction Display */}
+            {/* Effective Satisfaction Display with Visual Bar */}
             {effectiveSatisfaction !== null && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="text-sm font-semibold text-blue-900 mb-1">
+                <div className="text-sm font-semibold text-blue-900 mb-2">
                   Effective Satisfaction (Used for Constraints)
                 </div>
-                <div className="text-2xl font-bold text-blue-700">
-                  {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="text-2xl font-bold text-blue-700">
+                    {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
+                  </div>
+                  {/* Visual indicator bar */}
+                  <div className="flex-1">
+                    <div className="w-full bg-gray-200 rounded-full h-3 relative">
+                      {/* Current satisfaction indicator */}
+                      <div
+                        className={`h-3 rounded-full transition-all ${
+                          effectiveSatisfaction <= 0.2
+                            ? 'bg-red-500'
+                            : effectiveSatisfaction <= 0.5
+                            ? 'bg-yellow-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(effectiveSatisfaction * 100, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-blue-600 mt-1">
+                <div className="text-xs text-blue-600">
                   Constraints are evaluated using: Raw Satisfaction × Non-Player Ownership %
                 </div>
               </div>
             )}
 
-            {/* Constraints List */}
-            <div className="space-y-3">
+            {/* Constraints List - Accordion */}
+            <Accordion type="multiple" className="w-full space-y-2">
               {activeConstraints.map(({ type, constraint, status, limit }) => {
                 // Determine explicit status
                 const isBlocked = status === 'blocked';
@@ -866,13 +886,11 @@ export function BoardRoomPanel() {
                   .replace(/_/g, ' ')
                   .replace(/\b\w/g, (l) => l.toUpperCase());
 
-                // Get effective satisfaction for this constraint check
-                const effectiveSat = effectiveSatisfaction ?? 0;
-
                 return (
-                  <div
+                  <AccordionItem
                     key={type}
-                    className={`border rounded-lg p-4 ${
+                    value={type}
+                    className={`border rounded-lg ${
                       isBlocked
                         ? 'border-red-300 bg-red-50'
                         : isLimited
@@ -880,156 +898,111 @@ export function BoardRoomPanel() {
                         : 'border-gray-200 bg-gray-50'
                     }`}
                   >
-                    {/* Header: Name and Status */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="font-semibold text-base text-gray-900">
-                        {constraintName}
+                    <AccordionTrigger className="px-4 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className="font-semibold text-sm text-gray-900">
+                            {constraintName}
+                          </div>
+                        </div>
+                        <div
+                          className={`text-xs font-bold px-2 py-1 rounded ${
+                            isBlocked
+                              ? 'bg-red-600 text-white'
+                              : isLimited
+                              ? 'bg-yellow-600 text-white'
+                              : 'bg-green-600 text-white'
+                          }`}
+                        >
+                          {isBlocked ? 'BLOCKED' : isLimited ? 'LIMITED' : 'ALLOWED'}
+                        </div>
                       </div>
-                      <div
-                        className={`text-sm font-bold px-3 py-1 rounded ${
-                          isBlocked
-                            ? 'bg-red-600 text-white'
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <div className="space-y-4 pt-2">
+                        {/* Status Explanation */}
+                        <div className="text-sm text-gray-700">
+                          {isBlocked
+                            ? 'This action is currently blocked by the board.'
                             : isLimited
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-green-600 text-white'
-                        }`}
-                      >
-                        {isBlocked ? 'BLOCKED' : isLimited ? 'LIMITED' : 'ALLOWED'}
-                      </div>
-                    </div>
+                            ? 'This action is limited by the board.'
+                            : 'This action is fully allowed without restrictions.'}
+                        </div>
 
-                    {/* Status Explanation */}
-                    <div className="text-sm text-gray-700 mb-4">
-                      {isBlocked
-                        ? 'This action is currently blocked by the board.'
-                        : isLimited
-                        ? 'This action is limited by the board.'
-                        : 'This action is fully allowed without restrictions.'}
-                    </div>
-
-                    {/* Threshold Values */}
-                    <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-300">
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">Start Threshold</div>
-                        <div className="text-sm font-semibold text-gray-900">
-                          {formatNumber(constraint.startThreshold * 100, {
-                            decimals: 0,
-                            forceDecimals: true,
-                          })}
-                          %
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          Constraints begin below this
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">Block Threshold</div>
-                        <div className="text-sm font-semibold text-gray-900">
-                          {formatNumber(constraint.maxThreshold * 100, {
-                            decimals: 0,
-                            forceDecimals: true,
-                          })}
-                          %
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          Action blocked below this
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Current Status vs Thresholds */}
-                    <div className="mb-4">
-                      <div className="text-xs text-gray-500 mb-2">Current Status</div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <div className="flex justify-between text-xs text-gray-600 mb-1">
-                            <span>Effective Satisfaction</span>
-                            <span className="font-semibold">
-                              {formatNumber(effectiveSat * 100, {
-                                decimals: 1,
+                        {/* Threshold Values */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Start Threshold</div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {formatNumber(constraint.startThreshold * 100, {
+                                decimals: 0,
                                 forceDecimals: true,
                               })}
                               %
-                        </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Constraints begin below this
+                            </div>
                           </div>
-                          {/* Visual indicator */}
-                          <div className="w-full bg-gray-200 rounded-full h-2 relative">
-                            {/* Block threshold marker */}
-                            <div
-                              className="absolute top-0 bottom-0 border-r-2 border-red-400"
-                              style={{
-                                left: `${constraint.maxThreshold * 100}%`,
-                              }}
-                              title={`Block threshold: ${constraint.maxThreshold * 100}%`}
-                            />
-                            {/* Start threshold marker */}
-                            <div
-                              className="absolute top-0 bottom-0 border-r-2 border-yellow-400"
-                              style={{
-                                left: `${constraint.startThreshold * 100}%`,
-                              }}
-                              title={`Start threshold: ${constraint.startThreshold * 100}%`}
-                            />
-                            {/* Current satisfaction indicator */}
-                            <div
-                              className={`h-2 rounded-full ${
-                                isBlocked
-                                  ? 'bg-red-500'
-                                  : isLimited
-                                  ? 'bg-yellow-500'
-                                  : 'bg-green-500'
-                              }`}
-                              style={{
-                                width: `${Math.min(effectiveSat * 100, 100)}%`,
-                              }}
-                            />
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Block Threshold</div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {formatNumber(constraint.maxThreshold * 100, {
+                                decimals: 0,
+                                forceDecimals: true,
+                              })}
+                              %
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Action blocked below this
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Limits/Restrictions (for scaling constraints) */}
-                    {constraint.scalingFormula && (
-                      <div className="mb-4 pb-4 border-b border-gray-300">
-                        <div className="text-xs text-gray-500 mb-2">Scaling Limit</div>
-                        {limit !== undefined && limit !== null ? (
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-700">Current Limit:</span>
-                              <span className="text-sm font-semibold text-gray-900">
-                                {formatNumber(limit, { currency: true })}
-                        </span>
-                        </div>
-                            {currentBalance !== null && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-700">Available Balance:</span>
-                                <span className="text-sm text-gray-600">
-                                  {formatNumber(currentBalance, { currency: true })}
-                                </span>
+                        {/* Limits/Restrictions (for scaling constraints) */}
+                        {constraint.scalingFormula && (
+                          <div className="pt-2 border-t border-gray-300">
+                            <div className="text-xs text-gray-500 mb-2">Scaling Limit</div>
+                            {limit !== undefined && limit !== null ? (
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-700">Current Limit:</span>
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    {formatNumber(limit, { currency: true })}
+                                  </span>
+                                </div>
+                                {currentBalance !== null && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-700">Available Balance:</span>
+                                    <span className="text-sm text-gray-600">
+                                      {formatNumber(currentBalance, { currency: true })}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="text-xs text-gray-500 mt-2">
+                                  Formula: (1 - Effective Satisfaction) × Balance = Limit
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-600">
+                                No limit applies (satisfaction above start threshold)
+                              </div>
+                            )}
                           </div>
                         )}
-                            <div className="text-xs text-gray-500 mt-2">
-                              Formula: (1 - Effective Satisfaction) × Balance = Limit
-                        </div>
-                      </div>
-                        ) : (
-                          <div className="text-sm text-gray-600">
-                            No limit applies (satisfaction above start threshold)
+
+                        {/* Constraint Message */}
+                        {isBlocked && (
+                          <div className="text-xs text-gray-600 italic pt-2 border-t border-gray-300">
+                            {constraint.message}
                           </div>
                         )}
                       </div>
-                    )}
-
-                    {/* Constraint Message */}
-                    {isBlocked && (
-                      <div className="text-xs text-gray-600 italic">
-                        {constraint.message}
-                      </div>
-                    )}
-                  </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 );
               })}
-            </div>
+            </Accordion>
           </TabsContent>
         </Tabs>
       </CardContent>
