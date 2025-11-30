@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
-import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
-import { Input } from '@/components/ui/shadCN/input';
+import { Button, Tabs, TabsList, TabsTrigger, TabsContent, Slider } from '@/components/ui';
 import { Label } from '@/components/ui/shadCN/label';
 import { formatNumber } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { companyService } from '@/lib/services/user/companyService';
-import { getMarketValue, updateMarketValue, getSharePriceBreakdown, issueStock, buyBackStock, updateDividendRate, calculateDividendPayment, areDividendsDue, getShareMetrics, getShareholderBreakdown, getHistoricalShareMetrics } from '@/lib/services';
+import { getMarketValue, updateMarketValue, getSharePriceBreakdown, issueStock, buyBackStock, updateDividendRate, calculateDividendPayment, areDividendsDue, getShareMetrics, getShareholderBreakdown, getHistoricalShareMetrics, getMaxBuybackShares, getMaxIssuanceShares, getDividendRateLimits, loadTransactions } from '@/lib/services';
 import type { ShareMetrics, ShareholderBreakdown, ShareHistoricalMetric } from '@/lib/types';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
 import { getCompanyShares } from '@/lib/database/core/companySharesDB';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
-import { loadTransactions } from '@/lib/services/finance/financeService';
 import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
 import type { PrestigeEvent } from '@/lib/types/types';
 
@@ -26,7 +24,6 @@ export function ShareManagementPanel() {
   const [issuingShares, setIssuingShares] = useState(0);
   const [buybackShares, setBuybackShares] = useState(0);
   const [dividendRate, setDividendRate] = useState(0);
-  const [dividendRateInput, setDividendRateInput] = useState<string>('0');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,6 +46,10 @@ export function ShareManagementPanel() {
     prestigeImpact: number;
     date: string;
   }>>([]);
+  const [maxBuybackShares, setMaxBuybackShares] = useState(0);
+  const [maxIssuanceShares, setMaxIssuanceShares] = useState(0);
+  const [dividendMin, setDividendMin] = useState(0);
+  const [dividendMax, setDividendMax] = useState(0);
 
   // Load company data and market value
   useEffect(() => {
@@ -76,7 +77,6 @@ export function ShareManagementPanel() {
             dividendRate: shares.dividendRate
           });
           setDividendRate(shares.dividendRate);
-          setDividendRateInput(shares.dividendRate.toString());
         }
 
         // Update market value
@@ -186,6 +186,32 @@ export function ShareManagementPanel() {
         } catch (err) {
           console.error('Error loading recent share/dividend changes:', err);
         }
+
+        // Calculate max buyback shares using service function
+        const maxBuyback = await getMaxBuybackShares();
+        setMaxBuybackShares(maxBuyback);
+        if (buybackShares > maxBuyback) {
+          setBuybackShares(maxBuyback);
+        }
+
+        // Calculate max issuance shares using service function
+        const maxIssuance = await getMaxIssuanceShares();
+        setMaxIssuanceShares(maxIssuance);
+        if (issuingShares > maxIssuance) {
+          setIssuingShares(maxIssuance);
+        }
+
+        // Calculate dividend min/max using service function
+        const dividendLimits = await getDividendRateLimits();
+        setDividendMin(dividendLimits.min);
+        setDividendMax(dividendLimits.max);
+        
+        // Clamp current dividend rate to new constraints
+        if (dividendRate > dividendLimits.max) {
+          setDividendRate(dividendLimits.max);
+        } else if (dividendRate < dividendLimits.min) {
+          setDividendRate(dividendLimits.min);
+        }
       } catch (err) {
         console.error('Error loading share management data:', err);
         setError('Failed to load share data');
@@ -195,7 +221,7 @@ export function ShareManagementPanel() {
     };
 
     loadData();
-  }, [gameState.money, gameState.economyPhase, gameState.week, gameState.season]); // Reload when money, economy phase, week, or season changes
+  }, [gameState.money, gameState.economyPhase, gameState.week, gameState.season, gameState.currentYear]); // Reload when money, economy phase, week, season, or year changes
 
   const playerOwnershipPct = sharesData && sharesData.totalShares && sharesData.playerShares
     ? (sharesData.playerShares / sharesData.totalShares) * 100
@@ -580,15 +606,28 @@ export function ShareManagementPanel() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label htmlFor="issue-shares" className="text-xs">Number of Shares</Label>
-                <Input
-                  id="issue-shares"
-                  type="number"
-                  min="1"
-                  value={issuingShares || ''}
-                  onChange={(e) => setIssuingShares(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="mt-1"
-                />
+                <Label htmlFor="issue-shares" className="text-xs">
+                  Number of Shares
+                  {maxIssuanceShares > 0 && (
+                    <span className="text-gray-500 ml-1">
+                      (Max: {formatNumber(maxIssuanceShares, { decimals: 0 })} - 50% of total shares)
+                    </span>
+                  )}
+                </Label>
+                <div className="mt-2 space-y-2">
+                  <Slider
+                    value={[issuingShares]}
+                    onValueChange={(value) => setIssuingShares(Math.max(0, Math.min(maxIssuanceShares, value[0])))}
+                    min={0}
+                    max={maxIssuanceShares}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>0</span>
+                    <span>{formatNumber(maxIssuanceShares, { decimals: 0 })}</span>
+                  </div>
+                </div>
               </div>
               <div className="bg-blue-50 rounded-md p-2 text-xs">
                 <div className="text-gray-600">Capital Raised:</div>
@@ -616,29 +655,41 @@ export function ShareManagementPanel() {
               <div>
                 <Label htmlFor="buyback-shares" className="text-xs">
                   Number of Shares
-                  <span className="text-gray-500 ml-1">
-                    (Max: {formatNumber(sharesData?.outstandingShares || 0, { decimals: 0 })})
-                  </span>
+                  {maxBuybackShares > 0 && (
+                    <span className="text-gray-500 ml-1">
+                      (Max: {formatNumber(maxBuybackShares, { decimals: 0 })} - respects balance, yearly limit, debt ratio)
+                    </span>
+                  )}
                 </Label>
-                <Input
-                  id="buyback-shares"
-                  type="number"
-                  min="1"
-                  max={sharesData?.outstandingShares || 0}
-                  value={buybackShares || ''}
-                  onChange={(e) => setBuybackShares(Math.max(0, Math.min(sharesData?.outstandingShares || 0, parseInt(e.target.value) || 0)))}
-                  className="mt-1"
-                />
+                <div className="mt-2 space-y-2">
+                  <Slider
+                    value={[buybackShares]}
+                    onValueChange={(value) => setBuybackShares(Math.max(0, Math.min(maxBuybackShares, value[0])))}
+                    min={0}
+                    max={maxBuybackShares}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>0</span>
+                    <span>{formatNumber(maxBuybackShares, { decimals: 0 })}</span>
+                  </div>
+                </div>
               </div>
               <div className="bg-purple-50 rounded-md p-2 text-xs">
                 <div className="text-gray-600">Estimated Cost:</div>
                 <div className="font-semibold text-purple-600">
                   {formatNumber(buybackShares * marketValue.sharePrice, { currency: true })}
                 </div>
+                {company && buybackShares * marketValue.sharePrice > (company.money || 0) && (
+                  <div className="text-red-600 mt-1 text-xs">
+                    ⚠️ Exceeds available balance
+                  </div>
+                )}
               </div>
               <Button
                 onClick={handleBuyBackStock}
-                disabled={isProcessing || buybackShares <= 0 || buybackShares > (sharesData?.outstandingShares || 0)}
+                disabled={isProcessing || buybackShares <= 0 || buybackShares > maxBuybackShares}
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 variant="outline"
               >
@@ -662,45 +713,33 @@ export function ShareManagementPanel() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label htmlFor="dividend-rate" className="text-xs">Current Dividend Rate (€ per share)</Label>
-                <div className="mt-1 flex items-center gap-2">
-                  <Input
-                    id="dividend-rate"
-                    type="text"
-                    value={dividendRateInput}
-                    onChange={(e) => {
-                      const inputValue = e.target.value;
-                      // Allow empty string, numbers, and decimal point
-                      if (inputValue === '' || inputValue === '.' || /^\d*\.?\d*$/.test(inputValue)) {
-                        setDividendRateInput(inputValue);
-                        // Parse and update the actual rate if it's a valid number
-                        const parsed = parseFloat(inputValue);
-                        if (!isNaN(parsed) && parsed >= 0) {
-                          setDividendRate(parsed);
-                        } else if (inputValue === '' || inputValue === '.') {
-                          setDividendRate(0);
-                        }
-                      }
-                    }}
-                    onBlur={(e) => {
-                      // On blur, ensure we have a valid number
-                      const parsed = parseFloat(e.target.value);
-                      if (isNaN(parsed) || parsed < 0) {
-                        setDividendRateInput('0');
-                        setDividendRate(0);
-                      } else {
-                        setDividendRateInput(parsed.toString());
-                        setDividendRate(parsed);
-                      }
-                    }}
-                    className="flex-1"
-                    placeholder="0.0000"
-                  />
-                  {dividendRate > 0 && (
-                    <span className="text-xs text-gray-500 whitespace-nowrap">
-                      {formatNumber(dividendRate, { currency: true, decimals: 4 })}/share
+                <Label htmlFor="dividend-rate" className="text-xs">
+                  Current Dividend Rate (€ per share)
+                  {sharesData && (
+                    <span className="text-gray-500 ml-1">
+                      (Max decrease: 10% per season, Max: {formatNumber(dividendMax, { currency: true, decimals: 4 })})
                     </span>
                   )}
+                </Label>
+                <div className="mt-2 space-y-2">
+                  <Slider
+                    value={[dividendRate]}
+                    onValueChange={(value) => {
+                      const newRate = Math.max(dividendMin, Math.min(dividendMax, value[0]));
+                      setDividendRate(newRate);
+                    }}
+                    min={dividendMin}
+                    max={dividendMax}
+                    step={0.0001}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>{formatNumber(dividendMin, { currency: true, decimals: 4 })}</span>
+                    <span>{formatNumber(dividendMax, { currency: true, decimals: 4 })}</span>
+                  </div>
+                  <div className="text-xs text-gray-600 text-center">
+                    Current: {formatNumber(dividendRate, { currency: true, decimals: 4 })}/share
+                  </div>
                 </div>
               </div>
               {dividendsDue && (

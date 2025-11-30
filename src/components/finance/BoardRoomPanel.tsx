@@ -297,12 +297,12 @@ export function BoardRoomPanel() {
           } else if (effectiveSatisfactionValue <= constraint.startThreshold) {
             status = 'warning';
           }
-
+            
           // For scaling constraints, always get the limit to display (even when blocked)
-          if (constraint.scalingFormula) {
+            if (constraint.scalingFormula) {
             const limitResult = await boardEnforcer.getActionLimit(constraintType, balance);
-            if (limitResult) {
-              limit = limitResult.limit ?? undefined;
+              if (limitResult) {
+                limit = limitResult.limit ?? undefined;
             }
           }
 
@@ -485,13 +485,13 @@ export function BoardRoomPanel() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Player Ownership:</span>
-                      <span className="font-semibold text-blue-600">
-                        {formatNumber(breakdown.playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
-                      </span>
-                    </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Player Ownership:</span>
+                    <span className="font-semibold text-blue-600">
+                      {formatNumber(breakdown.playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
+                    </span>
+                  </div>
                     {shareholderBreakdown ? (
                       <>
                         <div className="flex justify-between">
@@ -508,17 +508,17 @@ export function BoardRoomPanel() {
                         </div>
                       </>
                     ) : (
-                      <div className="flex justify-between">
+                  <div className="flex justify-between">
                         <span className="text-gray-600">Non-Player Ownership:</span>
-                        <span className="font-semibold text-orange-600">
-                          {formatNumber(100 - breakdown.playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
-                        </span>
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500 mt-2">
-                      Higher non-player ownership (family + public investors) increases board influence and constraints
-                    </div>
+                    <span className="font-semibold text-orange-600">
+                      {formatNumber(100 - breakdown.playerOwnershipPct, { decimals: 2, forceDecimals: true })}%
+                    </span>
                   </div>
+                    )}
+                  <div className="text-xs text-gray-500 mt-2">
+                      Higher non-player ownership (family + public investors) increases board influence and constraints
+                  </div>
+                </div>
                 )}
               </SimpleCard>
             </div>
@@ -670,53 +670,53 @@ export function BoardRoomPanel() {
 
             {/* Detailed Metrics - Side by Side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SimpleCard title="Performance Metrics Details">
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <div className="text-gray-600 mb-1">Earnings/Share Delta</div>
-                    <div className={`font-semibold ${(breakdown.details.performanceMetrics.earningsPerShare || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(breakdown.details.performanceMetrics.earningsPerShare || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
-                    </div>
+            <SimpleCard title="Performance Metrics Details">
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <div className="text-gray-600 mb-1">Earnings/Share Delta</div>
+                  <div className={`font-semibold ${(breakdown.details.performanceMetrics.earningsPerShare || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatNumber(breakdown.details.performanceMetrics.earningsPerShare || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
+                  </div>
                     <div className="text-xs text-gray-500 mt-0.5">
                       Actual vs. expected improvement
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-600 mb-1">Revenue/Share Delta</div>
-                    <div className={`font-semibold ${(breakdown.details.performanceMetrics.revenuePerShare || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(breakdown.details.performanceMetrics.revenuePerShare || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      Actual vs. expected improvement
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-600 mb-1">Profit Margin Delta</div>
-                    <div className={`font-semibold ${(breakdown.details.performanceMetrics.profitMargin || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(breakdown.details.performanceMetrics.profitMargin || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      Actual vs. expected improvement
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-gray-600 mb-1">Revenue Growth Delta</div>
-                    <div className={`font-semibold ${(breakdown.details.performanceMetrics.revenueGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(breakdown.details.performanceMetrics.revenueGrowth || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      Actual vs. expected improvement
-                    </div>
-                  </div>
                 </div>
-              </SimpleCard>
+                <div>
+                  <div className="text-gray-600 mb-1">Revenue/Share Delta</div>
+                  <div className={`font-semibold ${(breakdown.details.performanceMetrics.revenuePerShare || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatNumber(breakdown.details.performanceMetrics.revenuePerShare || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
+                  </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Actual vs. expected improvement
+                    </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1">Profit Margin Delta</div>
+                  <div className={`font-semibold ${(breakdown.details.performanceMetrics.profitMargin || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatNumber(breakdown.details.performanceMetrics.profitMargin || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
+                  </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Actual vs. expected improvement
+                    </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1">Revenue Growth Delta</div>
+                  <div className={`font-semibold ${(breakdown.details.performanceMetrics.revenueGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatNumber(breakdown.details.performanceMetrics.revenueGrowth || 0, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: false })}
+                  </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Actual vs. expected improvement
+                    </div>
+                </div>
+              </div>
+            </SimpleCard>
 
-              <SimpleCard title="Stability Metrics Details">
+            <SimpleCard title="Stability Metrics Details">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <div className="text-gray-600 mb-1">Cash Ratio</div>
-                      <div className="font-semibold text-gray-900">
+                <div>
+                  <div className="text-gray-600 mb-1">Cash Ratio</div>
+                  <div className="font-semibold text-gray-900">
                         {formatNumber(breakdown.details.stabilityMetrics.cashRatio, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: true })}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
@@ -724,11 +724,11 @@ export function BoardRoomPanel() {
                       </div>
                       <div className="text-xs text-blue-600 mt-1">
                         Target: 10-30% (higher is better)
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600 mb-1">Debt Ratio</div>
-                      <div className="font-semibold text-gray-900">
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1">Debt Ratio</div>
+                  <div className="font-semibold text-gray-900">
                         {formatNumber(breakdown.details.stabilityMetrics.debtRatio, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: true })}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
@@ -736,11 +736,11 @@ export function BoardRoomPanel() {
                       </div>
                       <div className="text-xs text-blue-600 mt-1">
                         Target: &lt;30% (lower is better)
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600 mb-1">Fixed Asset Ratio</div>
-                      <div className="font-semibold text-gray-900">
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1">Fixed Asset Ratio</div>
+                  <div className="font-semibold text-gray-900">
                         {formatNumber(breakdown.details.stabilityMetrics.fixedAssetRatio, { decimals: 2, forceDecimals: true, percent: true, percentIsDecimal: true })}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
@@ -748,8 +748,8 @@ export function BoardRoomPanel() {
                       </div>
                       <div className="text-xs text-blue-600 mt-1">
                         Target: 40-70% (balanced)
-                      </div>
-                    </div>
+                  </div>
+                </div>
                   </div>
                   <div className="border-t border-gray-200 pt-3 mt-2">
                     <div className="flex items-center justify-between mb-2">
@@ -983,27 +983,27 @@ export function BoardRoomPanel() {
                                     <span className="text-xs text-gray-700">Limit:</span>
                                     <span className="text-xs font-semibold text-gray-900">
                                       {formatNumber(limit, { currency: true })}
-                                    </span>
+                        </span>
                                   </div>
                                   {currentBalance !== null && (
                                     <div className="flex justify-between items-center">
                                       <span className="text-xs text-gray-700">Balance:</span>
                                       <span className="text-xs text-gray-600">
                                         {formatNumber(currentBalance, { currency: true })}
-                                      </span>
+                        </span>
                                     </div>
                                   )}
                                   <div className="text-xs text-gray-500 mt-1.5">
                                     (1 - Satisfaction) × Balance
                                   </div>
-                                </div>
+                        </div>
                               ) : (
-                                <div className="text-xs text-gray-600">
+                          <div className="text-xs text-gray-600">
                                   No limit (above threshold)
                                 </div>
                               )}
-                            </div>
-                          )}
+                          </div>
+                        )}
 
                           {/* Constraint Message */}
                           {isBlocked && (

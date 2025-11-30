@@ -27,7 +27,6 @@ class ResearchEnforcerService {
 
     const valueKey = String(value);
 
-    // Check all research projects for this unlock
     for (const project of RESEARCH_PROJECTS) {
       if (!unlockedSet.has(project.id)) continue;
       if (!project.unlocks) continue;
@@ -60,7 +59,6 @@ class ResearchEnforcerService {
 
     const unlockedValues = new Set<string>();
 
-    // Process all research projects to find unlocked items
     for (const project of RESEARCH_PROJECTS) {
       if (!unlockedSet.has(project.id)) continue;
       if (!project.unlocks) continue;
@@ -111,7 +109,6 @@ class ResearchEnforcerService {
       return `${displayName} is locked. Complete research: "${project.title}" to unlock it.`;
     }
 
-    // Fallback message
     const typeLabels: Record<UnlockType, string> = {
       grape: 'grape variety',
       vineyard_size: 'vineyard size',
@@ -126,8 +123,5 @@ class ResearchEnforcerService {
   }
 }
 
-// Export singleton instance
 export const researchEnforcer = new ResearchEnforcerService();
-
-// Export class for testing
 export { ResearchEnforcerService };

@@ -46,7 +46,10 @@ export {
   updateDividendRate,
   payDividends,
   calculateDividendPayment,
-  areDividendsDue
+  areDividendsDue,
+  getMaxBuybackShares,
+  getMaxIssuanceShares,
+  getDividendRateLimits
 } from './finance/shares/shareOperationsService';
 
 export {

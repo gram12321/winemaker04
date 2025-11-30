@@ -15,7 +15,258 @@ import { v4 as uuidv4 } from 'uuid';
 import { DIVIDEND_CHANGE_PRESTIGE_CONFIG } from '../../../constants';
 import { calculateAbsoluteWeeks } from '../../../utils/utils';
 import { updateCompanyShares, getCompanyShares } from '../../../database/core/companySharesDB';
-import { boardEnforcer } from '@/lib/services';
+import { boardEnforcer, calculateFinancialData, calculateTotalOutstandingLoans, loadTransactions } from '@/lib/services';
+
+/**
+ * Check financial constraints for share buyback
+ * Returns error message if constraint violated, null if allowed
+ */
+async function checkBuybackFinancialConstraints(
+  shares: number,
+  cost: number,
+  outstandingShares: number,
+  companyMoney: number
+): Promise<string | null> {
+  if (cost > companyMoney) {
+    return 'Insufficient funds to buy back shares';
+  }
+
+  const gameState = getGameState();
+  const currentYear = gameState.currentYear || 2024;
+  
+  const transactions = await loadTransactions();
+  const buybackTransactions = transactions.filter(t => 
+    t.description.includes('Stock Buyback') && 
+    t.date.year === currentYear
+  );
+  
+  let sharesBoughtBackThisYear = 0;
+  buybackTransactions.forEach(t => {
+    const sharesMatch = t.description.match(/([\d,]+)\s+shares/);
+    if (sharesMatch) {
+      sharesBoughtBackThisYear += parseInt(sharesMatch[1].replace(/,/g, ''), 10);
+    }
+  });
+  
+  const totalSharesThisYear = sharesBoughtBackThisYear + shares;
+  const maxSharesPerYear = Math.floor(outstandingShares * 0.25);
+  
+  if (totalSharesThisYear > maxSharesPerYear) {
+    const remaining = Math.max(0, maxSharesPerYear - sharesBoughtBackThisYear);
+    return `Cannot buy back more than 25% of outstanding shares per year. Already bought back ${sharesBoughtBackThisYear.toLocaleString()} shares this year. Maximum allowed this year: ${maxSharesPerYear.toLocaleString()} shares. Remaining: ${remaining.toLocaleString()} shares`;
+  }
+
+  const financialData = await calculateFinancialData('year');
+  const totalDebt = await calculateTotalOutstandingLoans();
+  const debtRatio = financialData.totalAssets > 0 ? totalDebt / financialData.totalAssets : 0;
+  
+  if (debtRatio > 0.3) {
+    return `Cannot buy back shares when debt ratio exceeds 30%. Current debt ratio: ${(debtRatio * 100).toFixed(1)}%`;
+  }
+
+  return null;
+}
+
+/**
+ * Check financial constraints for dividend rate change
+ * Returns error message if constraint violated, null if allowed
+ */
+async function checkDividendChangeFinancialConstraints(
+  newRate: number,
+  oldRate: number,
+  totalShares: number,
+  companyMoney: number
+): Promise<string | null> {
+  if (newRate < 0) {
+    return 'Dividend rate cannot be negative';
+  }
+
+  const paymentPerSeason = newRate * totalShares;
+  const requiredCash = paymentPerSeason * 4;
+  
+  if (companyMoney < requiredCash && newRate > 0) {
+    return `Insufficient cash reserves. Required: ${formatNumber(requiredCash, { currency: true })} (1 year of dividend payments = 4 seasons), Available: ${formatNumber(companyMoney, { currency: true })}`;
+  }
+
+  // Only restrict decreases (10% limit). Increases are free (only limited by cash reserves).
+  if (oldRate > 0 && newRate < oldRate) {
+    const changeAmount = oldRate - newRate; // Decrease amount
+    const changePercent = (changeAmount / oldRate) * 100;
+    const smallChangeThreshold = 0.005;
+    
+    // Only enforce limit if it's a significant decrease
+    if (changeAmount >= smallChangeThreshold && changePercent > 10) {
+      const maxDecrease = oldRate * 0.1;
+      const minAllowed = oldRate - maxDecrease;
+      return `Cannot decrease dividends by more than 10% per season. Minimum allowed: ${formatNumber(minAllowed, { currency: true, decimals: 4 })} per share. Small decreases (< ${formatNumber(smallChangeThreshold, { currency: true, decimals: 4 })}) are always allowed.`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check financial constraints for share issuance
+ * Returns error message if constraint violated, null if allowed
+ */
+async function checkIssuanceFinancialConstraints(
+  shares: number,
+  sharePrice: number,
+  currentTotalShares: number
+): Promise<string | null> {
+  if (sharePrice < 0.10) {
+    return 'Share price is too low to issue new shares. Minimum required: €0.10 per share';
+  }
+
+  const maxSharesPerIssuance = Math.floor(currentTotalShares * 0.5);
+  if (shares > maxSharesPerIssuance) {
+    return `Cannot issue more than 50% of current total shares in a single operation. Maximum allowed: ${maxSharesPerIssuance.toLocaleString()} shares`;
+  }
+
+  return null;
+}
+
+/**
+ * Get maximum shares that can be issued (for UI display)
+ * Returns max shares based on financial constraints only
+ */
+export async function getMaxIssuanceShares(): Promise<number> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) return 0;
+
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) return 0;
+
+    // Max is 50% of current total shares
+    return Math.floor(sharesData.totalShares * 0.5);
+  } catch (error) {
+    console.error('Error calculating max issuance shares:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get maximum shares that can be bought back (for UI display)
+ * Returns max shares based on all financial constraints
+ */
+export async function getMaxBuybackShares(): Promise<number> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) return 0;
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) return 0;
+
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) return 0;
+
+    const outstandingShares = sharesData.outstandingShares;
+    const currentMoney = company.money || 0;
+
+    // Get share price
+    const { updateMarketValue, getMarketValue } = await import('../../index');
+    await updateMarketValue();
+    const marketData = await getMarketValue();
+    const sharePrice = marketData.sharePrice;
+
+    if (sharePrice <= 0) return 0;
+
+    // Max based on cash available
+    const maxByCash = Math.floor(currentMoney / sharePrice);
+
+    // Max based on yearly limit (25% per year)
+    const gameState = getGameState();
+    const currentYear = gameState.currentYear || 2024;
+    const transactions = await loadTransactions();
+    const buybackTransactions = transactions.filter(t => 
+      t.description.includes('Stock Buyback') && 
+      t.date.year === currentYear
+    );
+
+    let sharesBoughtBackThisYear = 0;
+    buybackTransactions.forEach(t => {
+      const sharesMatch = t.description.match(/([\d,]+)\s+shares/);
+      if (sharesMatch) {
+        sharesBoughtBackThisYear += parseInt(sharesMatch[1].replace(/,/g, ''), 10);
+      }
+    });
+
+    const maxSharesPerYear = Math.floor(outstandingShares * 0.25);
+    const remainingYearlyLimit = Math.max(0, maxSharesPerYear - sharesBoughtBackThisYear);
+
+    // Check debt ratio constraint
+    const financialData = await calculateFinancialData('year');
+    const totalDebt = await calculateTotalOutstandingLoans();
+    const debtRatio = financialData.totalAssets > 0 ? totalDebt / financialData.totalAssets : 0;
+    const maxByDebtRatio = debtRatio > 0.3 ? 0 : outstandingShares;
+
+    // Take minimum of all constraints
+    const maxBuyback = Math.min(
+      outstandingShares, // Can't buy back more than outstanding
+      maxByCash, // Limited by cash
+      remainingYearlyLimit, // Limited by yearly limit
+      maxByDebtRatio // Limited by debt ratio
+    );
+
+    return Math.max(0, maxBuyback);
+  } catch (error) {
+    console.error('Error calculating max buyback shares:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get dividend rate limits (min/max) based on financial constraints (for UI display)
+ * Returns { min: number, max: number } based on cash reserves and change limits
+ * NOTE: Only decreases are restricted (10% limit). Increases are free (only limited by cash). */
+export async function getDividendRateLimits(): Promise<{ min: number; max: number }> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) return { min: 0, max: 0 };
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) return { min: 0, max: 0 };
+
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) return { min: 0, max: 0 };
+
+    const currentMoney = company.money || 0;
+    const oldRate = sharesData.dividendRate;
+    const totalShares = sharesData.totalShares;
+
+    // Max based on cash reserves (must have 4x payment)
+    // rate <= companyMoney / (4 * totalShares)
+    const maxByCash = totalShares > 0 ? currentMoney / (4 * totalShares) : 0;
+
+    // Min based on 10% decrease limit per season (with small change exception)
+    // Only decreases are restricted - increases are free (only limited by cash)
+    const smallChangeThreshold = 0.005;
+    let minByChangeLimit = 0;
+
+    if (oldRate > 0) {
+      // Allow 10% decrease or small changes (whichever is larger)
+      const minChange = oldRate * 0.1;
+      minByChangeLimit = Math.max(0, oldRate - Math.max(minChange, smallChangeThreshold));
+    } else {
+      // If no current dividend, min is 0
+      minByChangeLimit = 0;
+    }
+
+    // Max is only limited by cash (no increase restriction)
+    // Users can freely increase dividends up to cash limit
+    // If oldRate is already above cash limit, allow it to stay but not increase further
+    const maxDividend = oldRate > maxByCash ? oldRate : maxByCash;
+
+    return {
+      min: minByChangeLimit,
+      max: Math.max(0, maxDividend)
+    };
+  } catch (error) {
+    console.error('Error calculating dividend rate limits:', error);
+    return { min: 0, max: 0 };
+  }
+}
 
 export async function issueStock(
   shares: number,
@@ -23,15 +274,9 @@ export async function issueStock(
 ): Promise<ShareOperationResult & { capitalRaised?: number }> {
   try {
     const companyId = getCurrentCompanyId();
-    
+
     if (shares <= 0) {
       return { success: false, error: 'Number of shares must be greater than 0' };
-    }
-
-    // Check board constraint
-    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares);
-    if (!boardCheck.allowed) {
-      return { success: false, error: boardCheck.message || 'Board approval required for share issuance' };
     }
 
     // Get current company data
@@ -46,7 +291,6 @@ export async function issueStock(
       return { success: false, error: 'Share data not found' };
     }
 
-    // Get current share price if not provided
     let sharePrice = price;
     if (sharePrice === undefined) {
       const marketValue = await updateMarketValue();
@@ -60,18 +304,29 @@ export async function issueStock(
       return { success: false, error: 'Share price must be greater than 0' };
     }
 
-    // Calculate capital raised
+    const financialCheck = await checkIssuanceFinancialConstraints(
+      shares,
+      sharePrice,
+      sharesData.totalShares
+    );
+    if (financialCheck) {
+      return { success: false, error: financialCheck };
+    }
+
+    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares);
+    if (!boardCheck.allowed) {
+      return { success: false, error: boardCheck.message || 'Board approval required for share issuance' };
+    }
+
     const capitalRaised = shares * sharePrice;
 
-    // Update share structure
     const currentTotalShares = sharesData.totalShares;
     const currentPlayerShares = sharesData.playerShares;
     const newTotalShares = currentTotalShares + shares;
     const newOutstandingShares = sharesData.outstandingShares + shares;
-    const newPlayerShares = currentPlayerShares; // Player shares stay the same (dilution)
+    const newPlayerShares = currentPlayerShares;
     const newPlayerOwnershipPct = (newPlayerShares / newTotalShares) * 100;
 
-    // Update company shares in database
     const updateResult = await updateCompanyShares(companyId, {
       total_shares: newTotalShares,
       outstanding_shares: newOutstandingShares,
@@ -82,7 +337,6 @@ export async function issueStock(
       return { success: false, error: updateResult.error || 'Failed to update share structure' };
     }
 
-    // Add capital raised to company money
     await addTransaction(
       capitalRaised,
       `Stock Issuance: ${shares.toLocaleString()} shares @ ${sharePrice.toFixed(2)}€ per share`,
@@ -91,7 +345,6 @@ export async function issueStock(
       companyId
     );
 
-    // Apply immediate price adjustment for dilution effect
     const { applyImmediateShareStructureAdjustment } = await import('./sharePriceService');
     await applyImmediateShareStructureAdjustment(
       companyId,
@@ -100,10 +353,7 @@ export async function issueStock(
       'issuance'
     );
 
-    // Update market cap (share price already adjusted above)
     await updateMarketValue();
-
-    // Trigger game update
     triggerGameUpdate();
 
     return {
@@ -126,7 +376,7 @@ export async function buyBackStock(
 ): Promise<ShareOperationResult> {
   try {
     const companyId = getCurrentCompanyId();
-    
+
     if (shares <= 0) {
       return { success: false, error: 'Number of shares must be greater than 0' };
     }
@@ -148,13 +398,6 @@ export async function buyBackStock(
       return { success: false, error: 'Cannot buy back more shares than are outstanding' };
     }
 
-    // Check board constraint
-    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares);
-    if (!boardCheck.allowed) {
-      return { success: false, error: boardCheck.message || 'Board approval required for share buyback' };
-    }
-
-    // Get current share price if not provided
     let sharePrice = price;
     if (sharePrice === undefined) {
       const marketValue = await updateMarketValue();
@@ -168,24 +411,31 @@ export async function buyBackStock(
       return { success: false, error: 'Share price must be greater than 0' };
     }
 
-    // Calculate total cost
     const cost = shares * sharePrice;
-
-    // Check if company has enough cash
     const currentMoney = company.money || 0;
-    if (cost > currentMoney) {
-      return { success: false, error: 'Insufficient funds to buy back shares' };
+
+    const financialCheck = await checkBuybackFinancialConstraints(
+      shares,
+      cost,
+      currentOutstandingShares,
+      currentMoney
+    );
+    if (financialCheck) {
+      return { success: false, error: financialCheck };
     }
 
-    // Update share structure
+    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares);
+    if (!boardCheck.allowed) {
+      return { success: false, error: boardCheck.message || 'Board approval required for share buyback' };
+    }
+
     const currentTotalShares = sharesData.totalShares;
     const currentPlayerShares = sharesData.playerShares;
     const newTotalShares = currentTotalShares - shares;
     const newOutstandingShares = currentOutstandingShares - shares;
-    const newPlayerShares = currentPlayerShares; // Player shares stay the same (concentration)
+    const newPlayerShares = currentPlayerShares;
     const newPlayerOwnershipPct = newTotalShares > 0 ? (newPlayerShares / newTotalShares) * 100 : 100;
 
-    // Update company shares in database
     const updateResult = await updateCompanyShares(companyId, {
       total_shares: newTotalShares,
       outstanding_shares: newOutstandingShares,
@@ -196,7 +446,6 @@ export async function buyBackStock(
       return { success: false, error: updateResult.error || 'Failed to update share structure' };
     }
 
-    // Deduct cost from company money
     await addTransaction(
       -cost,
       `Stock Buyback: ${shares.toLocaleString()} shares @ ${sharePrice.toFixed(2)}€ per share`,
@@ -205,7 +454,6 @@ export async function buyBackStock(
       companyId
     );
 
-    // Apply immediate price adjustment for concentration effect
     const { applyImmediateShareStructureAdjustment } = await import('./sharePriceService');
     await applyImmediateShareStructureAdjustment(
       companyId,
@@ -214,10 +462,7 @@ export async function buyBackStock(
       'buyback'
     );
 
-    // Update market cap (share price already adjusted above)
     await updateMarketValue();
-
-    // Trigger game update
     triggerGameUpdate();
 
     return {
@@ -242,7 +487,6 @@ export async function calculateDividendPayment(): Promise<number> {
       return 0;
     }
 
-    // Get share data
     const sharesData = await getCompanyShares(companyId);
     if (!sharesData) {
       return 0;
@@ -250,8 +494,6 @@ export async function calculateDividendPayment(): Promise<number> {
 
     const dividendRate = sharesData.dividendRate;
     const totalShares = sharesData.totalShares;
-
-    // Calculate total dividend payment (fixed per share) for all shares
     const totalPayment = dividendRate * totalShares;
 
     return totalPayment;
@@ -269,7 +511,6 @@ export async function areDividendsDue(): Promise<boolean> {
       return false;
     }
 
-    // Get share data
     const sharesData = await getCompanyShares(companyId);
     if (!sharesData) {
       return false;
@@ -277,26 +518,22 @@ export async function areDividendsDue(): Promise<boolean> {
 
     const dividendRate = sharesData.dividendRate;
     if (dividendRate <= 0) {
-      return false; // No dividends set
+      return false;
     }
 
-    // Get current game state
     const gameState = getGameState();
     const currentWeek = gameState.week || 1;
     const currentSeason = gameState.season || 'Spring';
     const currentYear = gameState.currentYear || 2024;
 
-    // Dividends are due on week 1 of each season
     if (currentWeek !== 1) {
       return false;
     }
 
-    // Check if dividends have already been paid for this season
     const lastPaidWeek = sharesData.lastDividendPaid?.week;
     const lastPaidSeason = sharesData.lastDividendPaid?.season;
     const lastPaidYear = sharesData.lastDividendPaid?.year;
 
-    // If dividends were already paid this season, they're not due
     if (lastPaidWeek === 1 && lastPaidSeason === currentSeason && lastPaidYear === currentYear) {
       return false;
     }
@@ -317,17 +554,6 @@ export async function updateDividendRate(
   try {
     const companyId = getCurrentCompanyId();
 
-    if (rate < 0) {
-      return { success: false, error: 'Dividend rate cannot be negative' };
-    }
-
-    // Check board constraint
-    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate);
-    if (!boardCheck.allowed) {
-      return { success: false, error: boardCheck.message || 'Board approval required for dividend changes' };
-    }
-
-    // Get current company
     const company = await companyService.getCompany(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
@@ -339,11 +565,25 @@ export async function updateDividendRate(
       return { success: false, error: 'Share data not found' };
     }
 
-    // Get old rate for comparison
     const oldRate = sharesData.dividendRate;
+    const currentMoney = company.money || 0;
+
+    const financialCheck = await checkDividendChangeFinancialConstraints(
+      rate,
+      oldRate,
+      sharesData.totalShares,
+      currentMoney
+    );
+    if (financialCheck) {
+      return { success: false, error: financialCheck };
+    }
+
+    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate);
+    if (!boardCheck.allowed) {
+      return { success: false, error: boardCheck.message || 'Board approval required for dividend changes' };
+    }
     const rateChange = rate - oldRate;
 
-    // Update company shares in database
     const updateResult = await updateCompanyShares(companyId, {
       dividend_rate: rate
     });
@@ -352,12 +592,10 @@ export async function updateDividendRate(
       return { success: false, error: updateResult.error || 'Failed to update dividend rate' };
     }
 
-    // Create prestige event for dividend change (asymmetric impact)
     if (rateChange !== 0) {
       try {
         const gameState = getGameState();
         
-        // Calculate prestige impact (asymmetric: cuts more negative than increases positive)
         const rateChangePercent = oldRate > 0 ? (rateChange / oldRate) : (rate > 0 ? 1 : 0);
         const basePrestigeImpact = Math.abs(rateChangePercent) * 0.5;
         
@@ -365,7 +603,6 @@ export async function updateDividendRate(
           ? -basePrestigeImpact * DIVIDEND_CHANGE_PRESTIGE_CONFIG.cutMultiplier
           : basePrestigeImpact * DIVIDEND_CHANGE_PRESTIGE_CONFIG.increaseMultiplier;
         
-        // Only create event if impact is meaningful
         if (Math.abs(prestigeAmount) >= 0.001) {
           await insertPrestigeEvent({
             id: uuidv4(),
@@ -393,11 +630,9 @@ export async function updateDividendRate(
         }
       } catch (prestigeError) {
         console.error('Error creating dividend change prestige event:', prestigeError);
-        // Don't fail the dividend update if prestige event creation fails
       }
     }
 
-    // Trigger game update
     triggerGameUpdate();
 
     return { success: true };
@@ -432,18 +667,15 @@ export async function payDividends(): Promise<{
       return { success: false, error: 'Dividend rate is not set or is zero' };
     }
 
-    // Check if dividends are due (week 1 of season, not already paid)
     const gameState = getGameState();
     const currentWeek = gameState.week || 1;
     const currentSeason = gameState.season || 'Spring';
     const currentYear = gameState.currentYear || 2024;
 
-    // Dividends are only due on week 1 of each season
     if (currentWeek !== 1) {
       return { success: false, error: 'Dividends are only due on week 1 of each season' };
     }
 
-    // Check if dividends have already been paid for this season
     const lastPaidWeek = sharesData.lastDividendPaid?.week;
     const lastPaidSeason = sharesData.lastDividendPaid?.season;
     const lastPaidYear = sharesData.lastDividendPaid?.year;
@@ -452,7 +684,6 @@ export async function payDividends(): Promise<{
       return { success: false, error: 'Dividends already paid for this season' };
     }
 
-    // Calculate payments
     const playerShares = sharesData.playerShares;
     const outstandingShares = sharesData.outstandingShares;
     const totalShares = sharesData.totalShares;
@@ -461,20 +692,17 @@ export async function payDividends(): Promise<{
     const outstandingPayment = dividendRate * outstandingShares;
     const totalPayment = playerPayment + outstandingPayment;
 
-    // Check if company has enough cash
     const currentMoney = company.money || 0;
     if (totalPayment > currentMoney) {
       return { success: false, error: 'Insufficient funds to pay dividends' };
     }
 
-    // Get current game date
     const gameDate: GameDate = {
       week: currentWeek,
       season: (currentSeason || 'Spring') as any,
       year: currentYear
     };
 
-    // Deduct total payment from company money
     await addTransaction(
       -totalPayment,
       `Dividend Payment: ${formatNumber(dividendRate, { currency: true, decimals: 4 })} per share (${formatNumber(totalShares, { decimals: 0 })} shares)`,
@@ -483,7 +711,6 @@ export async function payDividends(): Promise<{
       companyId
     );
 
-    // Add player's dividend payment to user balance (if company has a user)
     if (company.userId && playerPayment > 0) {
       const balanceResult = await updatePlayerBalance(playerPayment, company.userId);
       if (!balanceResult.success) {
@@ -491,17 +718,13 @@ export async function payDividends(): Promise<{
       }
     }
 
-    // Update last dividend paid date
     await updateCompanyShares(companyId, {
       last_dividend_paid_week: gameDate.week,
       last_dividend_paid_season: gameDate.season,
       last_dividend_paid_year: gameDate.year
     });
 
-    // Recalculate market value after dividend payment
     await updateMarketValue();
-
-    // Trigger game update
     triggerGameUpdate();
 
     return {

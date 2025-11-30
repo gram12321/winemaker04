@@ -24,6 +24,87 @@
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.112a-0.112d - Boardroom System Enhancements & Cleanup (Combined)
+**Date:** 2025-11-30 | **Commits:** 6d14d87 (0.0112), e86f2f8 (0.112a), 60f2ac1 (0.112b), ffad57d (0.112c), 23f3d7d (0.112d) | **Stats:** Combined 2,062 additions, 1,583 deletions
+
+### 🎨 **Boardroom UI Improvements**
+- `src/components/finance/BoardRoomPanel.tsx` - Major UI enhancements and refinements (1,113 additions, 622 deletions across commits)
+- `src/components/finance/LoansView.tsx` - Loan view updates (26 additions, 22 deletions)
+- `src/components/finance/ShareManagementPanel.tsx` - Share management panel updates (18 additions, 18 deletions)
+
+### 💳 **Credit Rating System Overhaul**
+- **NEW FILE:** `src/lib/constants/creditRatingConstants.ts` (60 lines) - Credit rating constants and configuration
+- `src/lib/services/finance/creditRatingService.ts` - Complete credit rating calculation rewrite (280 additions, 160 deletions)
+- `src/lib/database/core/companyMetricsHistoryDB.ts` - Enhanced metrics history tracking (61 additions, 4 deletions)
+
+### 🗄️ **Database & System Updates**
+- `migrations/sync_vercel_schema.sql` - Database schema updates for boardroom system (54 additions across commits)
+- `src/lib/database/core/boardSatisfactionHistoryDB.ts` - Board satisfaction history database improvements (61 additions, 21 deletions)
+- `src/lib/services/board/boardEnforcer.ts` - Board enforcer service updates (36 additions, 20 deletions)
+- `src/lib/services/board/boardSatisfactionService.ts` - Board satisfaction service improvements (67 additions, 36 deletions)
+- `src/lib/services/core/gameTick.ts` - Game tick integration updates (25 additions, 9 deletions)
+
+### 🧹 **Code Cleanup & Refactoring**
+- `src/lib/services/finance/shares/sharePriceService.ts` - Share price service cleanup (34 additions, 92 deletions)
+- `src/lib/services/finance/shares/shareOperationsService.ts` - Share operations service refactoring (20 additions, 65 deletions)
+- `src/lib/services/finance/shares/shareMetricsService.ts` - Share metrics service cleanup (12 additions, 66 deletions)
+- `src/lib/services/finance/shares/growthTrendService.ts` - Growth trend service updates (4 additions, 11 deletions)
+- `src/lib/constants/boardConstants.ts` - Board constants updates (15 additions, 14 deletions)
+
+### 📚 **Documentation**
+- `docs/PublicCompanyImplementation.md` - Documentation updates (39 additions)
+- **REMOVED:** `docs/board-satisfaction-and-constraints-system.plan.md` (363 lines) - Consolidated into main docs
+
+## Version 0.111 - Boardroom System Alpha
+**Date:** 2025-11-30 | **Commit:** be5baea | **Stats:** 2,004 additions, 1,622 deletions
+
+### 🏛️ **Boardroom System Implementation**
+- **NEW FILE:** `src/components/finance/BoardRoomPanel.tsx` (435 lines) - Complete boardroom management interface
+- **NEW FILE:** `src/lib/services/board/boardSatisfactionService.ts` (392 lines) - Board satisfaction calculation and tracking
+- **NEW FILE:** `src/lib/services/board/boardEnforcer.ts` (182 lines) - Board constraint enforcement system
+- **NEW FILE:** `src/lib/constants/boardConstants.ts` (109 lines) - Board system constants and configuration
+- **NEW FILE:** `src/lib/database/core/boardSatisfactionHistoryDB.ts` (304 lines) - Board satisfaction history database operations
+- **NEW FILE:** `src/lib/utils/consistencyUtils.ts` (75 lines) - Consistency utility functions
+
+### 🗄️ **Database Schema Updates**
+- `migrations/sync_vercel_schema.sql` - Database schema updates for boardroom system (27 additions)
+
+### 🔗 **System Integration**
+- `src/components/finance/FinanceView.tsx` - Added boardroom panel integration (10 additions, 1 deletion)
+- `src/lib/services/core/gameTick.ts` - Boardroom system integration (12 additions)
+- `src/lib/services/finance/creditRatingService.ts` - Credit rating service updates (19 additions, 6 deletions)
+- `src/lib/services/finance/shares/shareOperationsService.ts` - Share operations integration (19 additions)
+- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service updates (30 additions)
+- `src/lib/services/activity/activitymanagers/staffSearchManager.ts` - Staff search manager updates (14 additions)
+
+### 📚 **Documentation**
+- **NEW FILE:** `docs/board-satisfaction-and-constraints-system.plan.md` (363 lines) - Boardroom system planning documentation
+- **REMOVED:** `docs/Agents_feedback/testscripts` (1,615 lines) - Consolidated documentation
+
+## Version 0.101 - Research Enforcer System
+**Date:** 2025-11-29 | **Commit:** 1b5486b | **Stats:** 159 additions, 59 deletions
+
+### 🔬 **Research Enforcement System**
+- **NEW FILE:** `src/lib/services/research/researchEnforcer.ts` (133 lines) - Research unlock enforcement service
+- `src/components/pages/winepedia/GrapeVarietiesTab.tsx` - Research enforcement integration (8 additions, 7 deletions)
+- `src/components/ui/modals/activitymodals/PlantingOptionsModal.tsx` - Planting options with research enforcement (11 additions, 6 deletions)
+- `src/lib/services/core/startingConditionsService.ts` - Starting conditions service updates (4 additions, 4 deletions)
+- **REMOVED:** `src/lib/utils/researchUtils.ts` (39 lines) - Consolidated into researchEnforcer service
+
+## Version 0.096a-0.096b - Build Fixes & Database Updates (Combined)
+**Date:** 2025-11-29 | **Commits:** 33bd9d1 (0.096a), 431dd10 (0.096b) | **Stats:** Combined 448 additions, 53 deletions
+
+### 🔧 **Build Fixes & Documentation**
+- `docs/versionlog.md` - Version log updates (106 additions)
+- `docs/share_price.md` - Share price documentation updates (76 additions, 23 deletions)
+- `docs/PROJECT_INFO.md` - Project info updates (14 additions, 6 deletions)
+- `docs/plan.plan.md` - Planning documentation updates (33 additions, 12 deletions)
+- `tests/finance/shareValuation.test.ts` - Test suite enhancements (196 additions, 2 deletions)
+
+### 🗄️ **Database Fixes**
+- `src/lib/database/core/companySharesDB.ts` - Database operation fixes (20 additions, 7 deletions)
+- `src/lib/services/user/companyService.ts` - Company service updates (3 additions, 2 deletions)
+
 ## Version 0.096 - Share System Architecture Refactor
 **Date:** 2025-11-29 | **Commit:** d711f55 | **Stats:** 2,939 additions, 2,318 deletions
 

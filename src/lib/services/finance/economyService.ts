@@ -47,7 +47,6 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
     const currentState = getGameState();
     const currentPhase = currentState.economyPhase;
     if (!currentPhase) {
-      // No economy phase present; nothing to transition yet
       return null;
     }
 
@@ -56,10 +55,6 @@ export async function processEconomyPhaseTransition(skipNotification: boolean = 
     if (newPhase !== currentPhase) {
       await updateGameState({ economyPhase: newPhase });
 
-      // Economy phase changes affect expected values, which naturally adjust deltas
-      // Share price adjusts incrementally on next tick - no jump needed
-
-      // Prepare notification for phase change
       const phaseDescriptions = {
         'Crash': 'Economic crisis with high interest rates',
         'Recession': 'Economic downturn with elevated rates',
