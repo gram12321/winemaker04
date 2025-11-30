@@ -2,7 +2,6 @@ import { supabase } from './supabase';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { getGameState } from '@/lib/services/core/gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
-import { toOptionalNumber } from '../dbMapperUtils';
 
 const BOARD_SATISFACTION_HISTORY_TABLE = 'board_satisfaction_history';
 
@@ -56,27 +55,11 @@ function rowToBoardSatisfactionSnapshot(row: BoardSatisfactionSnapshotData): Boa
   };
 }
 
-/**
- * Map BoardSatisfactionSnapshot to database row
- */
-function boardSatisfactionSnapshotToRow(snapshot: Omit<BoardSatisfactionSnapshot, 'id' | 'createdAt'>): BoardSatisfactionSnapshotData {
-  return {
-    company_id: snapshot.companyId,
-    snapshot_week: snapshot.week,
-    snapshot_season: snapshot.season,
-    snapshot_year: snapshot.year,
-    satisfaction_score: snapshot.satisfactionScore,
-    performance_score: snapshot.performanceScore,
-    stability_score: snapshot.stabilityScore,
-    consistency_score: snapshot.consistencyScore,
-    ownership_pressure: snapshot.ownershipPressure,
-    player_ownership_pct: snapshot.playerOwnershipPct
-  };
-}
 
 /**
  * Insert a snapshot of board satisfaction
  * Called each week during game tick
+ * Checks for existing snapshot before inserting to prevent duplicates
  */
 export async function insertBoardSatisfactionSnapshot(data: {
   companyId?: string;
@@ -96,6 +79,29 @@ export async function insertBoardSatisfactionSnapshot(data: {
       return { success: false, error: 'No company ID available' };
     }
 
+    // Check if snapshot already exists for this week/season/year
+    // This prevents duplicates even if unique constraint isn't applied yet
+    const { data: existing, error: checkError } = await supabase
+      .from(BOARD_SATISFACTION_HISTORY_TABLE)
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('snapshot_week', data.week)
+      .eq('snapshot_season', data.season)
+      .eq('snapshot_year', data.year)
+      .limit(1)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 is "not found" which is fine - means no duplicate
+      console.error('Error checking for existing board satisfaction snapshot:', checkError);
+      // Continue anyway - try to insert
+    }
+
+    // If snapshot already exists, skip insertion
+    if (existing) {
+      return { success: true }; // Already exists, no error
+    }
+
     const snapshotData: BoardSatisfactionSnapshotData = {
       company_id: companyId,
       snapshot_week: data.week,
@@ -109,11 +115,23 @@ export async function insertBoardSatisfactionSnapshot(data: {
       player_ownership_pct: data.playerOwnershipPct
     };
 
+    // Use insert - unique constraint will also prevent duplicates as backup
+    // If duplicate exists, PostgreSQL will return error code 23505
     const { error } = await supabase
       .from(BOARD_SATISFACTION_HISTORY_TABLE)
       .insert(snapshotData);
 
+    // If error is a unique constraint violation, treat as success (duplicate)
     if (error) {
+      // PostgreSQL unique constraint violation code is 23505
+      // Supabase may also return it in different formats
+      if (error.code === '23505' || 
+          error.code === 'PGRST116' || 
+          error.message?.toLowerCase().includes('unique') || 
+          error.message?.toLowerCase().includes('duplicate') ||
+          error.message?.toLowerCase().includes('already exists')) {
+        return { success: true }; // Duplicate, no error - snapshot already exists
+      }
       console.error('Error inserting board satisfaction snapshot:', error);
       return { success: false, error: error.message };
     }
@@ -160,14 +178,25 @@ export async function getBoardSatisfactionSnapshotNWeeksAgo(
     );
     const targetAbsoluteWeeks = Math.max(1, currentAbsoluteWeeks - weeksAgo);
 
-    // Query for snapshots
+    // OPTIMIZATION: Calculate approximate target date and query only nearby snapshots
+    // Instead of fetching 200 rows, we'll fetch a smaller window around the target
+    // Calculate approximate target season/year based on weeks
+    const weeksPerYear = 48; // 4 seasons * 12 weeks
+    const approximateYearsAgo = Math.floor(weeksAgo / weeksPerYear);
+    const targetYear = currentDate.year - approximateYearsAgo;
+    
+    // Query only snapshots from target year and nearby years (max 2 years = ~96 weeks)
+    // This reduces data transfer significantly
     const { data, error } = await supabase
       .from(BOARD_SATISFACTION_HISTORY_TABLE)
       .select('*')
       .eq('company_id', companyId)
+      .gte('snapshot_year', Math.max(2024, targetYear - 1)) // Include previous year for safety
+      .lte('snapshot_year', currentDate.year) // Don't query future
       .order('snapshot_year', { ascending: false })
       .order('snapshot_season', { ascending: false })
-      .order('snapshot_week', { ascending: false });
+      .order('snapshot_week', { ascending: false })
+      .limit(60); // Reduced from 200 - 60 snapshots = ~1.25 years, enough for lookback
 
     if (error) {
       console.error('Error fetching board satisfaction snapshot:', error);
@@ -266,13 +295,24 @@ export async function getBoardSatisfactionHistory(
     );
     const startAbsoluteWeeks = Math.max(1, currentAbsoluteWeeks - weeksBack);
 
+    // OPTIMIZATION: Use database-level filtering instead of fetching all and filtering in JS
+    // Calculate approximate start year based on weeksBack
+    const weeksPerYear = 48; // 4 seasons * 12 weeks
+    const approximateYearsBack = Math.ceil(weeksBack / weeksPerYear);
+    const startYear = Math.max(2024, currentDate.year - approximateYearsBack - 1); // Add buffer
+    
+    // Query only snapshots within the date range - database does the filtering
+    const maxSnapshots = Math.min(weeksBack + 20, 100); // Reduced limit, database filters
     const { data, error } = await supabase
       .from(BOARD_SATISFACTION_HISTORY_TABLE)
       .select('*')
       .eq('company_id', companyId)
+      .gte('snapshot_year', startYear) // Database-level filtering
+      .lte('snapshot_year', currentDate.year)
       .order('snapshot_year', { ascending: true })
       .order('snapshot_season', { ascending: true })
-      .order('snapshot_week', { ascending: true });
+      .order('snapshot_week', { ascending: true })
+      .limit(maxSnapshots);
 
     if (error) {
       console.error('Error fetching board satisfaction history:', error);

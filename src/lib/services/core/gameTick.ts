@@ -289,15 +289,31 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Store board satisfaction snapshot (weekly snapshot for consistency tracking)
-    // Note: Snapshots are stored automatically in getBoardSatisfactionBreakdown,
-    // but we trigger it here to ensure weekly snapshots regardless of UI access
+    // OPTIMIZATION: Defer board satisfaction snapshot to avoid heavy calculation every week
+    // Only calculate if company is public (has outside shareholders)
+    // This reduces gameTick latency significantly
     (async () => {
       try {
-        const { getBoardSatisfactionBreakdown } = await import('../board/boardSatisfactionService');
-        await getBoardSatisfactionBreakdown(); // This will store snapshot internally
+        const { getCurrentCompany } = await import('../index');
+        const company = await getCurrentCompany();
+        if (!company) return;
+        
+        // Check if company has outside shareholders (public company)
+        const { getCompanyShares } = await import('../../database/core/companySharesDB');
+        const shares = await getCompanyShares(company.id);
+        
+        // Only calculate if there are outside shareholders (public company)
+        // 100% player-owned companies don't need board satisfaction tracking
+        if (shares && shares.outstandingShares > 0) {
+          const { getBoardSatisfactionBreakdown } = await import('../board/boardSatisfactionService');
+          // Fire and forget - don't block game tick
+          // Pass storeSnapshot=true to trigger snapshot storage during game tick
+          void getBoardSatisfactionBreakdown(true).catch(err => 
+            console.warn('Error storing board satisfaction snapshot:', err)
+          );
+        }
       } catch (error) {
-        console.warn('Error storing board satisfaction snapshot:', error);
+        console.warn('Error checking company shares for board satisfaction:', error);
       }
     })()
   ];

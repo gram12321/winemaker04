@@ -1188,6 +1188,33 @@ FOR ALL
 USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member_text(company_id))
 WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member_text(company_id));
 
+-- Company shares table (company-scoped)
+ALTER TABLE company_shares ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_company_shares" ON company_shares;
+CREATE POLICY "company_members_manage_company_shares"
+ON company_shares
+FOR ALL
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
+
+-- Company metrics history table (company-scoped)
+ALTER TABLE company_metrics_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_company_metrics_history" ON company_metrics_history;
+CREATE POLICY "company_members_manage_company_metrics_history"
+ON company_metrics_history
+FOR ALL
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
+
+-- Board satisfaction history table (company-scoped)
+ALTER TABLE board_satisfaction_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "company_members_manage_board_satisfaction_history" ON board_satisfaction_history;
+CREATE POLICY "company_members_manage_board_satisfaction_history"
+ON board_satisfaction_history
+FOR ALL
+USING (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id))
+WITH CHECK (public.is_service_role() OR (select auth.uid()) IS NULL OR public.is_company_member(company_id));
+
 -- ============================================================
 -- CREATE INDEXES FOR PERFORMANCE
 -- ============================================================

@@ -47,6 +47,7 @@ export interface CompanyMetricsSnapshotData {
 /**
  * Insert a snapshot of company metrics (all metrics for historical tracking)
  * Called each week when share price is adjusted
+ * Checks for existing snapshot before inserting to prevent duplicates
  */
 export async function insertCompanyMetricsSnapshot(data: {
   companyId?: string;
@@ -70,6 +71,29 @@ export async function insertCompanyMetricsSnapshot(data: {
       return { success: false, error: 'No company ID available' };
     }
 
+    // Check if snapshot already exists for this week/season/year
+    // This prevents duplicates even if unique constraint isn't applied yet
+    const { data: existing, error: checkError } = await supabase
+      .from(COMPANY_METRICS_HISTORY_TABLE)
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('snapshot_week', data.week)
+      .eq('snapshot_season', data.season)
+      .eq('snapshot_year', data.year)
+      .limit(1)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 is "not found" which is fine - means no duplicate
+      console.error('Error checking for existing company metrics snapshot:', checkError);
+      // Continue anyway - try to insert
+    }
+
+    // If snapshot already exists, skip insertion
+    if (existing) {
+      return { success: true }; // Already exists, no error
+    }
+
     const snapshotData: CompanyMetricsSnapshotData = {
       company_id: companyId,
       snapshot_week: data.week,
@@ -87,11 +111,23 @@ export async function insertCompanyMetricsSnapshot(data: {
       revenue_growth_48w: data.revenueGrowth48W
     };
 
+    // Use insert - unique constraint will also prevent duplicates as backup
+    // If duplicate exists, PostgreSQL will return error code 23505
     const { error } = await supabase
       .from(COMPANY_METRICS_HISTORY_TABLE)
       .insert(snapshotData);
 
+    // If error is a unique constraint violation, treat as success (duplicate)
     if (error) {
+      // PostgreSQL unique constraint violation code is 23505
+      // Supabase may also return it in different formats
+      if (error.code === '23505' || 
+          error.code === 'PGRST116' || 
+          error.message?.toLowerCase().includes('unique') || 
+          error.message?.toLowerCase().includes('duplicate') ||
+          error.message?.toLowerCase().includes('already exists')) {
+        return { success: true }; // Duplicate, no error - snapshot already exists
+      }
       console.error('Error inserting company metrics snapshot:', error);
       return { success: false, error: error.message };
     }
@@ -139,15 +175,25 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
     const targetAbsoluteWeeks = Math.max(1, currentAbsoluteWeeks - weeksAgo);
     // targetAbsoluteWeeks already calculated above
 
-    // Query for snapshot closest to target date (within a small window)
-    // Get snapshots from 1 week before to 1 week after the target
+    // OPTIMIZATION: Calculate approximate target date and query only nearby snapshots
+    // Instead of fetching 200 rows, we'll fetch a smaller window around the target
+    // Calculate approximate target season/year based on weeks
+    const weeksPerYear = 48; // 4 seasons * 12 weeks
+    const approximateYearsAgo = Math.floor(weeksAgo / weeksPerYear);
+    const targetYear = currentDate.year - approximateYearsAgo;
+    
+    // Query only snapshots from target year and nearby years (max 3 years = ~144 weeks)
+    // This reduces data transfer significantly
     const { data, error } = await supabase
       .from(COMPANY_METRICS_HISTORY_TABLE)
       .select('*')
       .eq('company_id', companyId)
+      .gte('snapshot_year', Math.max(2024, targetYear - 1)) // Include previous year for safety
+      .lte('snapshot_year', currentDate.year) // Don't query future
       .order('snapshot_year', { ascending: false })
       .order('snapshot_season', { ascending: false })
-      .order('snapshot_week', { ascending: false });
+      .order('snapshot_week', { ascending: false })
+      .limit(60); // Reduced from 200 - 60 snapshots = ~1.25 years, enough for 48-week lookback
 
     if (error) {
       console.error('Error fetching company metrics snapshot:', error);
@@ -264,13 +310,24 @@ export async function getCompanyMetricsHistory(
     const startAbsoluteWeeks = Math.max(1, currentAbsoluteWeeks - weeksBack);
     // startAbsoluteWeeks already calculated above
 
+    // OPTIMIZATION: Use database-level filtering instead of fetching all and filtering in JS
+    // Calculate approximate start year based on weeksBack
+    const weeksPerYear = 48; // 4 seasons * 12 weeks
+    const approximateYearsBack = Math.ceil(weeksBack / weeksPerYear);
+    const startYear = Math.max(2024, currentDate.year - approximateYearsBack - 1); // Add buffer
+    
+    // Query only snapshots within the date range - database does the filtering
+    const maxSnapshots = Math.min(weeksBack + 20, 100); // Reduced limit, database filters
     const { data, error } = await supabase
       .from(COMPANY_METRICS_HISTORY_TABLE)
       .select('*')
       .eq('company_id', companyId)
+      .gte('snapshot_year', startYear) // Database-level filtering
+      .lte('snapshot_year', currentDate.year)
       .order('snapshot_year', { ascending: true })
       .order('snapshot_season', { ascending: true })
-      .order('snapshot_week', { ascending: true });
+      .order('snapshot_week', { ascending: true })
+      .limit(maxSnapshots);
 
     if (error) {
       console.error('Error fetching company metrics history:', error);

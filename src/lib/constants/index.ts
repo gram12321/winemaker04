@@ -15,6 +15,7 @@ export * from './achievementConstants';
 export * from './timeConstants';
 export * from './shareValuationConstants';
 export * from './boardConstants';
+export * from './creditRatingConstants';
 
 // Wine features
 export * from './wineFeatures/oxidation';

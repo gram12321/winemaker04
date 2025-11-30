@@ -413,3 +413,42 @@ The share system has been refactored into a modular architecture with clear sepa
 4. **Performance-Driven**: Price reflects actual company performance compared to dynamically adjusting expectations that scale with success.
 
 5. **Transparency**: All calculations are visible in the debug panel, allowing players to understand how their actions affect share price.
+
+Credit rating / Shareprice interaction
+
+// TODO REVIEW (2024): Share performance tracking for credit rating
+// 
+// STATUS: All metrics are implemented, but by DESIGN CHOICE not all are included in credit rating
+// 
+// Current state - ALL IMPLEMENTED:
+// ✅ Dividends ARE tracked: dividendPerShare48Weeks in shareMetricsService.ts
+// ✅ Dividends ARE used in share price calculations (as performance metric)
+// ✅ Market cap IS calculated: calculateMarketCap() in shareCalculations.ts
+// ✅ Share price stability IS tracked: through incremental adjustments in sharePriceService.ts
+// ✅ Credit rating IS used in share price: credit rating is one of 8 metrics affecting share price
+// 
+// What's NOT in credit rating (by design choice):
+// ❌ Share price stability/growth - NOT in credit rating (only in share price) to avoid circular dependency
+// ❌ Consistent dividend payments - NOT in credit rating (only in share price) to avoid double counting
+// ❌ Market capitalization - NOT in credit rating (only in share price expectations) to avoid circular dependency
+// ❌ Investor confidence metrics - NOT implemented (could be derived from share price trends)
+// 
+// DESIGN DECISION - INTENTIONAL SEPARATION:
+// The architecture intentionally separates CREDIT RATING (risk/creditworthiness) from SHARE PRICE (value/performance).
+// 
+// Credit rating focuses on: asset health, payment history, company stability, negative balance
+//   → Measures: "Can this company repay its debts?" (risk assessment)
+// 
+// Share price focuses on: earnings, revenue, dividends, growth, profit margin, credit rating (as one input)
+//   → Measures: "What is this company worth?" (value assessment)
+// 
+// WHY NOT INCLUDE SHARE METRICS IN CREDIT RATING?
+// 1. Circular dependency: Credit rating → Share price → Credit rating (would create feedback loop)
+// 2. Double counting: Credit rating already affects share price, adding share metrics back would double-count
+// 3. Separation of concerns: Credit rating = debt repayment ability, Share price = market valuation
+// 
+// This matches real-world practice: Credit agencies (S&P, Moody's) DO consider market performance,
+// but they use it as an INDEPENDENT signal, not derived from their own credit rating.
+// 
+// RECOMMENDATION: Keep current separation. If adding share metrics to credit rating in future,
+// track them as INDEPENDENT signals (e.g., share price volatility from market data, not from credit rating).

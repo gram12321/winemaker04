@@ -43,36 +43,41 @@ class BoardEnforcerService {
         return { allowed: true };
       }
 
-      // 2. Calculate BoardSatisfaction (uses current company)
+      // 2. Calculate BoardSatisfaction (INDEPENDENT of ownership - uses current company)
       // Note: boardEnforcer supports checking different companies, but underlying service uses current company
       // For now, if companyId is provided, we still use current company (may need refactoring later)
       const satisfaction = await calculateBoardSatisfaction();
 
-      // 3. Get constraint config
+      // 3. Calculate effective satisfaction: satisfaction × outsideShare%
+      // This is the key design: constraints apply based on effective satisfaction, not raw satisfaction
+      const outsideSharePct = (100 - breakdown.playerPct) / 100; // Convert to 0-1
+      const effectiveSatisfaction = satisfaction * outsideSharePct;
+
+      // 4. Get constraint config
       const constraint = BOARD_CONSTRAINTS[constraintType];
       if (!constraint) {
         console.warn(`No constraint configuration found for type: ${constraintType}`);
         return { allowed: true }; // Default to allowed if constraint not defined
       }
 
-      // 4. Check max threshold (action is forbidden)
-      if (satisfaction <= constraint.maxThreshold) {
+      // 5. Check max threshold using EFFECTIVE satisfaction (action is forbidden)
+      if (effectiveSatisfaction <= constraint.maxThreshold) {
         return {
           allowed: false,
-          satisfaction,
+          satisfaction: effectiveSatisfaction, // Return effective satisfaction for display
           message: constraint.message
         };
       }
 
-      // 5. For scaling constraints, calculate limit and check
+      // 6. For scaling constraints, calculate limit using EFFECTIVE satisfaction
       if (constraint.scalingFormula && value !== undefined) {
-        const limit = constraint.scalingFormula(satisfaction, value);
+        const limit = constraint.scalingFormula(effectiveSatisfaction, value);
         
-        // If satisfaction is above start threshold, no limit (full freedom)
-        if (satisfaction > constraint.startThreshold) {
+        // If effective satisfaction is above start threshold, no limit (full freedom)
+        if (effectiveSatisfaction > constraint.startThreshold) {
           return {
             allowed: true,
-            satisfaction,
+            satisfaction: effectiveSatisfaction,
             limit
           };
         }
@@ -82,18 +87,18 @@ class BoardEnforcerService {
         
         return {
           allowed,
-          satisfaction,
+          satisfaction: effectiveSatisfaction,
           limit,
           message: allowed ? undefined : constraint.message
         };
       }
 
-      // 6. For threshold-only constraints
-      const allowed = satisfaction > constraint.startThreshold;
+      // 7. For threshold-only constraints, use EFFECTIVE satisfaction
+      const allowed = effectiveSatisfaction > constraint.startThreshold;
       
       return {
         allowed,
-        satisfaction,
+        satisfaction: effectiveSatisfaction,
         message: allowed ? undefined : constraint.message
       };
     } catch (error) {
@@ -132,17 +137,22 @@ class BoardEnforcerService {
         return null; // Not a scaling constraint
       }
 
+      // Calculate satisfaction (independent of ownership)
       const satisfaction = await calculateBoardSatisfaction();
+      
+      // Calculate effective satisfaction: satisfaction × outsideShare%
+      const outsideSharePct = (100 - breakdown.playerPct) / 100; // Convert to 0-1
+      const effectiveSatisfaction = satisfaction * outsideSharePct;
 
-      // If satisfaction is above start threshold, no limit
-      if (satisfaction > constraint.startThreshold) {
-        return { limit: null, satisfaction };
+      // If effective satisfaction is above start threshold, no limit
+      if (effectiveSatisfaction > constraint.startThreshold) {
+        return { limit: null, satisfaction: effectiveSatisfaction };
       }
 
-      // Calculate limit
-      const limit = constraint.scalingFormula(satisfaction, contextValue);
+      // Calculate limit using EFFECTIVE satisfaction
+      const limit = constraint.scalingFormula(effectiveSatisfaction, contextValue);
 
-      return { limit, satisfaction };
+      return { limit, satisfaction: effectiveSatisfaction };
     } catch (error) {
       console.error('Error getting action limit:', error);
       return null;

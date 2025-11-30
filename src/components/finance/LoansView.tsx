@@ -557,11 +557,14 @@ export default function LoansView() {
                                     <div>• Debt-to-Asset Ratio = Outstanding Loans ÷ Total Assets</div>
                                     <div>• Asset Coverage = Total Assets ÷ Outstanding Loans</div>
                                     <div>• Liquidity Ratio = (Cash + Liquid Assets) ÷ Outstanding Loans</div>
-                                    <div className="mt-2 font-medium">Scoring:</div>
-                                    <div>• Debt-to-Asset ≤10%: +8% | ≤30%: +6% | ≤50%: +4% | ≤70%: +2%</div>
-                                    <div>• Asset Coverage ≥5x: +6% | ≥3x: +4% | ≥2x: +2%</div>
-                                    <div>• Liquidity ≥2x: +6% | ≥1x: +4% | ≥0.5x: +2%</div>
-                                    <div className="mt-2 font-medium">Max Score: 20% of total credit rating</div>
+                                    <div>• Fixed Asset Ratio = Fixed Assets ÷ Total Assets</div>
+                                    <div className="mt-2 font-medium">Scoring (Normalized 0-1):</div>
+                                    <div>• Each component normalized to 0-1, then weighted average</div>
+                                    <div>• Debt-to-Asset: 40% weight - smooth curve: 1 - (ratio^1.5)</div>
+                                    <div>• Asset Coverage: 30% weight (higher = better)</div>
+                                    <div>• Liquidity: 25% weight (higher = better)</div>
+                                    <div>• Fixed Assets: 5% weight (higher = better)</div>
+                                    <div className="mt-2 font-medium">Final: Asset Health Score (0-1) × 20% = contribution to credit rating</div>
                                   </div>
                                 </div>
                               }
@@ -624,14 +627,15 @@ export default function LoansView() {
                                 <div className="max-w-xs">
                                   <div className="font-medium mb-2">Company Stability Formula:</div>
                                   <div className="text-xs space-y-1">
-                                    <div>• Age Score = min(Company Age × 0.5%, 5%) [max 5% at 10+ years]</div>
-                                    <div>• Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3%</div>
-                                    <div>• Expense Efficiency = (1 - Expense Ratio) × 2%</div>
-                                    <div className="mt-2 font-medium">Scoring:</div>
-                                    <div>• Company Age: 0.5% per year, max 5% at 10+ years</div>
-                                    <div>• Profit Consistency: Based on variance in last 4 seasons</div>
-                                    <div>• Expense Efficiency: Lower expense ratio = higher score</div>
-                                    <div className="mt-2 font-medium">Max Score: 10% of total credit rating</div>
+                                    <div>• Company Age: normalized to 0-1 using vineyard age pattern (0 years = 0.0, heavily weighted toward &lt;40 and &lt;60 years, 200+ years = 1.0)</div>
+                                    <div>• Profit Consistency: normalized to 0-1 (based on variance)</div>
+                                    <div>• Expense Efficiency: normalized to 0-1 (lower expense ratio = higher score)</div>
+                                    <div className="mt-2 font-medium">Scoring (Normalized 0-1):</div>
+                                    <div>• Each component normalized to 0-1, then weighted average</div>
+                                    <div>• Company Age: 50% weight</div>
+                                    <div>• Profit Consistency: 30% weight</div>
+                                    <div>• Expense Efficiency: 20% weight</div>
+                                    <div className="mt-2 font-medium">Final: Company Stability Score (0-1) × 10% = contribution to credit rating</div>
                                   </div>
                                 </div>
                               }
@@ -649,7 +653,7 @@ export default function LoansView() {
                             <div className="space-y-1 text-blue-700">
                               <UnifiedTooltip
                                 content={
-                                  <div className="text-xs">Age Score = min(Company Age × 0.5%, 5%) - Max 5% at 10+ years</div>
+                                  <div className="text-xs">Company Age normalized to 0-1: age / 10 years (0 years = 0.0, 10+ years = 1.0)</div>
                                 }
                                 title="Company Age Score"
                                 side="top"
@@ -662,7 +666,7 @@ export default function LoansView() {
                               </UnifiedTooltip>
                               <UnifiedTooltip
                                 content={
-                                  <div className="text-xs">Profit Consistency = 3% - (Standard Deviation ÷ |Mean|) × 3% - Based on variance in last 4 seasons</div>
+                                  <div className="text-xs">Profit Consistency normalized to 0-1: Based on variance in last 4 seasons (lower variance = higher score)</div>
                                 }
                                 title="Profit Consistency"
                                 side="top"
@@ -675,7 +679,7 @@ export default function LoansView() {
                               </UnifiedTooltip>
                               <UnifiedTooltip
                                 content={
-                                  <div className="text-xs">Expense Efficiency = (1 - Expense Ratio) × 2% - Lower expense ratio = higher score</div>
+                                  <div className="text-xs">Expense Efficiency normalized to 0-1: Lower expense ratio relative to revenue = higher score</div>
                                 }
                                 title="Expense Efficiency"
                                 side="top"
@@ -725,13 +729,13 @@ export default function LoansView() {
                               <div className="max-w-xs">
                                 <div className="font-medium mb-2">Final Credit Rating Formula:</div>
                                 <div className="text-xs space-y-1">
-                                  <div>Final Rating = Base Rating (50%) + Asset Health + Payment History + Company Stability + Negative Balance Penalty</div>
-                                  <div className="mt-2 font-medium">Components:</div>
+                                  <div>Final Rating = Base Rating (50%) + (Asset Health Score × 20%) + (Payment History Score × 15%) + (Company Stability Score × 10%) + Negative Balance Penalty</div>
+                                  <div className="mt-2 font-medium">Components (all normalized to 0-1 first):</div>
                                   <div>• Base Rating: 50% (BBB- equivalent)</div>
-                                  <div>• Asset Health: 0-20% (debt ratios, coverage, liquidity)</div>
-                                  <div>• Payment History: 0-15% (on-time payments, defaults, payoffs)</div>
-                                  <div>• Company Stability: 0-10% (age, profit consistency, efficiency)</div>
-                                  <div>• Negative Balance: 0 to -30% (penalty for negative balance over time)</div>
+                                  <div>• Asset Health: Score (0-1) × 20% weight</div>
+                                  <div>• Payment History: Score (0-1) × 15% weight</div>
+                                  <div>• Company Stability: Score (0-1) × 10% weight</div>
+                                  <div>• Negative Balance: 0 to -30% penalty (normalized weeks × -30%)</div>
                                   <div className="mt-2 font-medium">Total Range: 0-100% (0% = C rating, 100% = AAA rating)</div>
                                   <div className="mt-2 font-medium">Current Breakdown:</div>
                                   <div>• Base: 50%</div>

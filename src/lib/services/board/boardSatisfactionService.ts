@@ -4,9 +4,18 @@ import { companyService, getGameState, calculateFinancialData, calculateCreditRa
 import { getCompanyMetricsSnapshotNWeeksAgo, insertBoardSatisfactionSnapshot, getBoardSatisfactionHistory } from '@/lib/database';
 import { BOARD_SATISFACTION_WEIGHTS, BOARD_SATISFACTION_DEFAULTS } from '@/lib/constants';
 
-// Credit rating constants for normalization
-const CREDIT_RATING_ASSET_HEALTH_MAX = 0.20; // Max score from credit rating asset health
-const CREDIT_RATING_STABILITY_MAX = 0.10; // Max score from credit rating company stability
+// Cache for board satisfaction breakdown (reduces repeated expensive calculations)
+interface CacheEntry {
+  breakdown: BoardSatisfactionBreakdown;
+  timestamp: number;
+  companyId: string;
+  gameWeek: number;
+  gameSeason: string;
+  gameYear: number;
+}
+
+let satisfactionCache: CacheEntry | null = null;
+const CACHE_TTL_MS = 5000; // 5 seconds cache - balances freshness with performance
 
 /**
  * Board Satisfaction Breakdown
@@ -73,17 +82,15 @@ function calculatePerformanceScore(metricDeltas: Record<string, number>): number
  * Company stability covers age, profit consistency, expense efficiency
  */
 function calculateStabilityScoreFromCreditRating(
-  assetHealthScore: number,
-  companyStabilityScore: number
+  assetHealthScore: number, // Already 0-1 normalized
+  companyStabilityScore: number // Already 0-1 normalized
 ): number {
-  // Normalize credit rating components to 0-1 scale
-  const normalizedAssetHealth = clamp01(assetHealthScore / CREDIT_RATING_ASSET_HEALTH_MAX);
-  const normalizedCompanyStability = clamp01(companyStabilityScore / CREDIT_RATING_STABILITY_MAX);
-  
+  // Credit rating components are now already normalized to 0-1,
+  // so we can use them directly with weights
   // Weighted combination: 60% asset health, 40% company stability
   // Asset health is more important for immediate stability
   // Company stability reflects long-term operational stability
-  return (normalizedAssetHealth * 0.6) + (normalizedCompanyStability * 0.4);
+  return (assetHealthScore * 0.6) + (companyStabilityScore * 0.4);
 }
 
 /**
@@ -135,8 +142,10 @@ export async function calculateBoardSatisfaction(): Promise<number> {
 
 /**
  * Get detailed board satisfaction breakdown for the current company
+ * OPTIMIZATION: Uses caching to avoid repeated expensive calculations
+ * @param storeSnapshot - If true, stores a snapshot after calculation (default: false)
  */
-export async function getBoardSatisfactionBreakdown(): Promise<BoardSatisfactionBreakdown> {
+export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = false): Promise<BoardSatisfactionBreakdown> {
   try {
     const companyId = getCurrentCompanyId();
     if (!companyId) {
@@ -163,6 +172,18 @@ export async function getBoardSatisfactionBreakdown(): Promise<BoardSatisfaction
           consistencyVolatility: 0
         }
       };
+    }
+
+    // OPTIMIZATION: Check cache first
+    const gameState = getGameState();
+    const now = Date.now();
+    if (satisfactionCache && 
+        satisfactionCache.companyId === companyId &&
+        satisfactionCache.gameWeek === gameState.week &&
+        satisfactionCache.gameSeason === gameState.season &&
+        satisfactionCache.gameYear === gameState.currentYear &&
+        (now - satisfactionCache.timestamp) < CACHE_TTL_MS) {
+      return satisfactionCache.breakdown;
     }
 
     const company = await companyService.getCompany(companyId);
@@ -199,8 +220,7 @@ export async function getBoardSatisfactionBreakdown(): Promise<BoardSatisfaction
       };
     }
 
-    // Get game state and financial data
-    const gameState = getGameState();
+    // Get financial data (gameState already fetched above)
     const [financialData, shareMetrics, totalDebt] = await Promise.all([
       calculateFinancialData('year'),
       getShareMetrics(companyId),
@@ -299,12 +319,12 @@ export async function getBoardSatisfactionBreakdown(): Promise<BoardSatisfaction
     // Calculate consistency score (use placeholder satisfaction, will update after calculating final satisfaction)
     let consistencyScore = await calculateBoardSatisfactionConsistency(companyId, 0);
 
-    // Calculate final satisfaction
+    // Calculate final satisfaction (INDEPENDENT of ownership)
+    // Ownership is applied as a multiplier (outsideShare%) when checking constraints, not in satisfaction calculation
     const satisfaction = 
       (performanceScore * BOARD_SATISFACTION_WEIGHTS.performanceScore) +
       (stabilityScore * BOARD_SATISFACTION_WEIGHTS.stabilityScore) +
-      (consistencyScore * BOARD_SATISFACTION_WEIGHTS.consistencyScore) +
-      ((1 - ownershipPressure) * BOARD_SATISFACTION_WEIGHTS.ownershipPressure); // Lower ownership pressure = higher satisfaction
+      (consistencyScore * BOARD_SATISFACTION_WEIGHTS.consistencyScore);
 
     // Clamp to 0-1
     const clampedSatisfaction = clamp01(satisfaction);
@@ -316,8 +336,7 @@ export async function getBoardSatisfactionBreakdown(): Promise<BoardSatisfaction
     const finalSatisfaction = 
       (performanceScore * BOARD_SATISFACTION_WEIGHTS.performanceScore) +
       (stabilityScore * BOARD_SATISFACTION_WEIGHTS.stabilityScore) +
-      (finalConsistencyScore * BOARD_SATISFACTION_WEIGHTS.consistencyScore) +
-      ((1 - ownershipPressure) * BOARD_SATISFACTION_WEIGHTS.ownershipPressure);
+      (finalConsistencyScore * BOARD_SATISFACTION_WEIGHTS.consistencyScore);
     
     const finalClampedSatisfaction = clamp01(finalSatisfaction);
 
@@ -344,23 +363,35 @@ export async function getBoardSatisfactionBreakdown(): Promise<BoardSatisfaction
       }
     };
     
-    // Store snapshot (non-blocking, fail silently if error)
-    // Reuse gameState already fetched earlier in function
-    insertBoardSatisfactionSnapshot({
+    // OPTIMIZATION: Update cache
+    satisfactionCache = {
+      breakdown,
+      timestamp: Date.now(),
       companyId,
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024,
-      satisfactionScore: finalClampedSatisfaction,
-      performanceScore,
-      stabilityScore,
-      consistencyScore: finalConsistencyScore,
-      ownershipPressure,
-      playerOwnershipPct
-    }).catch((error: any) => {
-      console.error('Error storing board satisfaction snapshot:', error);
-      // Non-blocking - don't throw
-    });
+      gameWeek: gameState.week || 1,
+      gameSeason: gameState.season || 'Spring',
+      gameYear: gameState.currentYear || 2024
+    };
+
+    // Store snapshot only if explicitly requested (e.g., from gameTick)
+    // This prevents unnecessary snapshot storage when called from UI or boardEnforcer
+    if (storeSnapshot) {
+      insertBoardSatisfactionSnapshot({
+        companyId,
+        week: gameState.week || 1,
+        season: gameState.season || 'Spring',
+        year: gameState.currentYear || 2024,
+        satisfactionScore: finalClampedSatisfaction,
+        performanceScore,
+        stabilityScore,
+        consistencyScore: finalConsistencyScore,
+        ownershipPressure,
+        playerOwnershipPct
+      }).catch((error: any) => {
+        console.error('Error storing board satisfaction snapshot:', error);
+        // Non-blocking - don't throw
+      });
+    }
 
     return breakdown;
   } catch (error) {
