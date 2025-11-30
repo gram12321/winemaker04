@@ -347,7 +347,8 @@ export async function getShareholderBreakdown(): Promise<ShareholderBreakdown> {
       outsideShares: 0,
       playerPct: 0,
       familyPct: 0,
-      outsidePct: 0
+      outsidePct: 0,
+      nonPlayerOwnershipPct: 0
     };
   }
 }

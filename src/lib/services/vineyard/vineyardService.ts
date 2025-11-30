@@ -14,7 +14,6 @@ import { getRandomFromArray } from '../../utils';
 import { formatNumber } from '../../utils/utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY, GRAPE_CONST } from '../../constants';
 import { addTransaction, getGameState } from '../index';
-import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
