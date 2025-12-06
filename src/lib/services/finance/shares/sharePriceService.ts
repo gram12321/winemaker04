@@ -400,30 +400,48 @@ export async function calculateMarketCap(): Promise<number> {
   }
 }
 
+// Promise-based cache for updateMarketValue to prevent parallel calls
+let updateMarketValuePromise: Promise<ShareMarketValueUpdateResult> | null = null;
+
 export async function updateMarketValue(): Promise<ShareMarketValueUpdateResult> {
-  try {
-    const companyId = getCurrentCompanyId();
-    const marketCap = await calculateMarketCap();
-    const sharePrice = await getCurrentSharePrice();
-    
-    // Only update market cap (share price is managed incrementally)
-    const updateResult = await updateCompanyShares(companyId, {
-      market_cap: marketCap
-    });
-    
-    if (!updateResult.success) {
-      return { success: false, error: updateResult.error || 'Failed to update market value' };
-    }
-    
-    return {
-      success: true,
-      marketCap,
-      sharePrice
-    };
-  } catch (error) {
-    console.error('Error updating market value:', error);
-    return { success: false, error: 'Failed to update market value' };
+  // If there's already an update in progress, return that promise
+  if (updateMarketValuePromise) {
+    return updateMarketValuePromise;
   }
+  
+  // Start updating and cache the promise
+  updateMarketValuePromise = (async () => {
+    try {
+      const companyId = getCurrentCompanyId();
+      const marketCap = await calculateMarketCap();
+      const sharePrice = await getCurrentSharePrice();
+      
+      // Only update market cap (share price is managed incrementally)
+      const updateResult = await updateCompanyShares(companyId, {
+        market_cap: marketCap
+      });
+      
+      if (!updateResult.success) {
+        updateMarketValuePromise = null; // Clear cache on error
+        return { success: false, error: updateResult.error || 'Failed to update market value' };
+      }
+      
+      const result = {
+        success: true as const,
+        marketCap,
+        sharePrice
+      };
+      
+      updateMarketValuePromise = null; // Clear cache after completion
+      return result;
+    } catch (error) {
+      console.error('Error updating market value:', error);
+      updateMarketValuePromise = null; // Clear cache on error
+      return { success: false, error: 'Failed to update market value' };
+    }
+  })();
+  
+  return updateMarketValuePromise;
 }
 
 export async function getMarketValue(): Promise<ShareMarketValue> {
@@ -460,7 +478,11 @@ export async function getMarketValue(): Promise<ShareMarketValue> {
   }
 }
 
-export async function getSharePriceBreakdown(): Promise<{
+export async function getSharePriceBreakdown(options?: {
+  shareMetrics?: Awaited<ReturnType<typeof getShareMetrics>>;
+  company?: Awaited<ReturnType<typeof companyService.getCompany>>;
+  sharesData?: Awaited<ReturnType<typeof getCompanyShares>>;
+}): Promise<{
   success: boolean;
   data?: {
     currentPrice: number;
@@ -525,12 +547,12 @@ export async function getSharePriceBreakdown(): Promise<{
 }> {
   try {
     const companyId = getCurrentCompanyId();
-    const company = await companyService.getCompany(companyId);
+    const company = options?.company ?? await companyService.getCompany(companyId);
     if (!company) {
       return { success: false, error: 'Company not found' };
     }
     
-    const sharesData = await getCompanyShares(companyId);
+    const sharesData = options?.sharesData ?? await getCompanyShares(companyId);
     if (!sharesData) {
       return { success: false, error: 'Share data not found' };
     }
@@ -540,7 +562,7 @@ export async function getSharePriceBreakdown(): Promise<{
       return { success: false, error: 'Share price not initialized' };
     }
     
-    const shareMetrics = await getShareMetrics();
+    const shareMetrics = options?.shareMetrics ?? await getShareMetrics();
     const basePrice = shareMetrics.bookValuePerShare;
     
     // Get improvement multipliers and calculate expected rates

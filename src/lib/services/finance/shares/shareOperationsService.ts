@@ -10,12 +10,13 @@ import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { updatePlayerBalance } from '../../user/userBalanceService';
 import { formatNumber } from '../../../utils/utils';
 import type { ShareOperationResult } from '../../../types';
+import type { BaseConstraintInfo } from '../../../types/constraintTypes';
 import { insertPrestigeEvent } from '../../../database/customers/prestigeEventsDB';
 import { v4 as uuidv4 } from 'uuid';
 import { DIVIDEND_CHANGE_PRESTIGE_CONFIG } from '../../../constants';
 import { calculateAbsoluteWeeks } from '../../../utils/utils';
-import { updateCompanyShares, getCompanyShares } from '../../../database/core/companySharesDB';
-import { boardEnforcer, calculateFinancialData, calculateTotalOutstandingLoans, loadTransactions } from '@/lib/services';
+import { updateCompanyShares, getCompanyShares, getYearlyShareOperations, incrementYearlyShareOperations } from '../../../database/core/companySharesDB';
+import { boardEnforcer, calculateFinancialData, calculateTotalOutstandingLoans, getShareMetrics, getShareholderBreakdown } from '@/lib/services';
 
 /**
  * Check financial constraints for share buyback
@@ -31,22 +32,9 @@ async function checkBuybackFinancialConstraints(
     return 'Insufficient funds to buy back shares';
   }
 
-  const gameState = getGameState();
-  const currentYear = gameState.currentYear || 2024;
-  
-  const transactions = await loadTransactions();
-  const buybackTransactions = transactions.filter(t => 
-    t.description.includes('Stock Buyback') && 
-    t.date.year === currentYear
-  );
-  
-  let sharesBoughtBackThisYear = 0;
-  buybackTransactions.forEach(t => {
-    const sharesMatch = t.description.match(/([\d,]+)\s+shares/);
-    if (sharesMatch) {
-      sharesBoughtBackThisYear += parseInt(sharesMatch[1].replace(/,/g, ''), 10);
-    }
-  });
+  const companyId = getCurrentCompanyId();
+  const yearlyOps = await getYearlyShareOperations(companyId);
+  const sharesBoughtBackThisYear = yearlyOps.sharesBoughtBackThisYear;
   
   const totalSharesThisYear = sharesBoughtBackThisYear + shares;
   const maxSharesPerYear = Math.floor(outstandingShares * 0.25);
@@ -118,28 +106,107 @@ async function checkIssuanceFinancialConstraints(
     return 'Share price is too low to issue new shares. Minimum required: €0.10 per share';
   }
 
+  // Per-operation limit: 50% of current total shares
   const maxSharesPerIssuance = Math.floor(currentTotalShares * 0.5);
   if (shares > maxSharesPerIssuance) {
     return `Cannot issue more than 50% of current total shares in a single operation. Maximum allowed: ${maxSharesPerIssuance.toLocaleString()} shares`;
   }
 
+  // Yearly limit: 100% of current total shares per year (can double shares in a year)
+  const companyId = getCurrentCompanyId();
+  const yearlyOps = await getYearlyShareOperations(companyId);
+  const sharesIssuedThisYear = yearlyOps.sharesIssuedThisYear;
+  
+  const totalSharesThisYear = sharesIssuedThisYear + shares;
+  const maxSharesPerYear = Math.floor(currentTotalShares * 1.0); // 100% of current total shares
+  
+  if (totalSharesThisYear > maxSharesPerYear) {
+    const remaining = Math.max(0, maxSharesPerYear - sharesIssuedThisYear);
+    return `Cannot issue more than 100% of current total shares per year. Already issued ${sharesIssuedThisYear.toLocaleString()} shares this year. Maximum allowed this year: ${maxSharesPerYear.toLocaleString()} shares. Remaining: ${remaining.toLocaleString()} shares`;
+  }
+
   return null;
 }
 
+// Constraint info types removed - use BaseConstraintInfo directly
+// Functions return BaseConstraintInfo + additional fields as plain objects
+
 /**
  * Get maximum shares that can be issued (for UI display)
- * Returns max shares based on financial constraints only
+ * Returns max shares based on all financial constraints (per-operation and yearly) AND board constraints
  */
-export async function getMaxIssuanceShares(): Promise<number> {
+export async function getMaxIssuanceShares(options?: {
+  sharePrice?: number;
+  shareholderBreakdown?: Awaited<ReturnType<typeof getShareholderBreakdown>>;
+  boardSatisfaction?: number;
+}): Promise<number> {
   try {
     const companyId = getCurrentCompanyId();
     if (!companyId) return 0;
 
+    const company = await companyService.getCompany(companyId);
+    if (!company) return 0;
+
     const sharesData = await getCompanyShares(companyId);
     if (!sharesData) return 0;
 
-    // Max is 50% of current total shares
-    return Math.floor(sharesData.totalShares * 0.5);
+    const currentTotalShares = sharesData.totalShares;
+
+    // Max per operation: 50% of current total shares
+    const maxByOperation = Math.floor(currentTotalShares * 0.5);
+
+    // Max per year: 100% of current total shares
+    const yearlyOps = await getYearlyShareOperations(companyId);
+    const sharesIssuedThisYear = yearlyOps.sharesIssuedThisYear;
+
+    const maxSharesPerYear = Math.floor(currentTotalShares * 1.0); // 100% of current total shares
+    const remainingYearlyLimit = Math.max(0, maxSharesPerYear - sharesIssuedThisYear);
+
+    // Hard limit: minimum of per-operation and yearly limits
+    const hardLimit = Math.min(maxByOperation, remainingYearlyLimit);
+
+    // Check board constraint limit
+    try {
+      // Use provided sharePrice or get from database (don't update market value)
+      let sharePrice = options?.sharePrice;
+      if (sharePrice === undefined) {
+        const { getMarketValue } = await import('../../index');
+        const marketData = await getMarketValue();
+        sharePrice = marketData.sharePrice;
+      }
+
+      const financialContext = {
+        outstandingShares: sharesData.outstandingShares,
+        totalShares: sharesData.totalShares,
+        sharePrice: sharePrice,
+        sharesIssuedThisYear: sharesIssuedThisYear
+      };
+
+      const boardLimitResult = await boardEnforcer.getActionLimit(
+        'share_issuance',
+        currentTotalShares,
+        financialContext,
+        {
+          shareholderBreakdown: options?.shareholderBreakdown,
+          satisfaction: options?.boardSatisfaction
+        }
+      );
+      
+      if (boardLimitResult && boardLimitResult.limit !== null) {
+        // Board limit is per-year, so we need to account for already issued shares
+        const boardYearlyLimit = boardLimitResult.limit;
+        const remainingBoardLimit = Math.max(0, boardYearlyLimit - sharesIssuedThisYear);
+        
+        // Return the minimum of hard limit and board limit
+        return Math.min(hardLimit, remainingBoardLimit);
+      }
+    } catch (boardError) {
+      console.error('Error checking board constraint for issuance:', boardError);
+      // If board check fails, return hard limit
+    }
+
+    // If no board constraint or check failed, return hard limit
+    return hardLimit;
   } catch (error) {
     console.error('Error calculating max issuance shares:', error);
     return 0;
@@ -148,9 +215,13 @@ export async function getMaxIssuanceShares(): Promise<number> {
 
 /**
  * Get maximum shares that can be bought back (for UI display)
- * Returns max shares based on all financial constraints
+ * Returns max shares based on all financial constraints AND board constraints
  */
-export async function getMaxBuybackShares(): Promise<number> {
+export async function getMaxBuybackShares(options?: {
+  sharePrice?: number;
+  shareholderBreakdown?: Awaited<ReturnType<typeof getShareholderBreakdown>>;
+  boardSatisfaction?: number;
+}): Promise<number> {
   try {
     const companyId = getCurrentCompanyId();
     if (!companyId) return 0;
@@ -164,11 +235,13 @@ export async function getMaxBuybackShares(): Promise<number> {
     const outstandingShares = sharesData.outstandingShares;
     const currentMoney = company.money || 0;
 
-    // Get share price
-    const { updateMarketValue, getMarketValue } = await import('../../index');
-    await updateMarketValue();
-    const marketData = await getMarketValue();
-    const sharePrice = marketData.sharePrice;
+    // Get share price (use provided or get from database, don't update)
+    let sharePrice = options?.sharePrice;
+    if (sharePrice === undefined) {
+      const { getMarketValue } = await import('../../index');
+      const marketData = await getMarketValue();
+      sharePrice = marketData.sharePrice;
+    }
 
     if (sharePrice <= 0) return 0;
 
@@ -176,21 +249,8 @@ export async function getMaxBuybackShares(): Promise<number> {
     const maxByCash = Math.floor(currentMoney / sharePrice);
 
     // Max based on yearly limit (25% per year)
-    const gameState = getGameState();
-    const currentYear = gameState.currentYear || 2024;
-    const transactions = await loadTransactions();
-    const buybackTransactions = transactions.filter(t => 
-      t.description.includes('Stock Buyback') && 
-      t.date.year === currentYear
-    );
-
-    let sharesBoughtBackThisYear = 0;
-    buybackTransactions.forEach(t => {
-      const sharesMatch = t.description.match(/([\d,]+)\s+shares/);
-      if (sharesMatch) {
-        sharesBoughtBackThisYear += parseInt(sharesMatch[1].replace(/,/g, ''), 10);
-      }
-    });
+    const yearlyOps = await getYearlyShareOperations(companyId);
+    const sharesBoughtBackThisYear = yearlyOps.sharesBoughtBackThisYear;
 
     const maxSharesPerYear = Math.floor(outstandingShares * 0.25);
     const remainingYearlyLimit = Math.max(0, maxSharesPerYear - sharesBoughtBackThisYear);
@@ -201,15 +261,43 @@ export async function getMaxBuybackShares(): Promise<number> {
     const debtRatio = financialData.totalAssets > 0 ? totalDebt / financialData.totalAssets : 0;
     const maxByDebtRatio = debtRatio > 0.3 ? 0 : outstandingShares;
 
-    // Take minimum of all constraints
-    const maxBuyback = Math.min(
+    // Hard limit: minimum of all financial constraints
+    const hardLimit = Math.min(
       outstandingShares, // Can't buy back more than outstanding
       maxByCash, // Limited by cash
       remainingYearlyLimit, // Limited by yearly limit
       maxByDebtRatio // Limited by debt ratio
     );
 
-    return Math.max(0, maxBuyback);
+    // Check board constraint limit
+    try {
+      const financialContext = {
+        cashMoney: currentMoney,
+        totalAssets: financialData.totalAssets,
+        debtRatio: debtRatio,
+        outstandingShares: outstandingShares,
+        totalShares: sharesData.totalShares,
+        sharePrice: sharePrice,
+        sharesBoughtBackThisYear: sharesBoughtBackThisYear
+      };
+
+      const boardLimitResult = await boardEnforcer.getActionLimit('share_buyback', outstandingShares, financialContext);
+      
+      if (boardLimitResult && boardLimitResult.limit !== null) {
+        // Board limit is per-year, so we need to account for already bought back shares
+        const boardYearlyLimit = boardLimitResult.limit;
+        const remainingBoardLimit = Math.max(0, boardYearlyLimit - sharesBoughtBackThisYear);
+        
+        // Return the minimum of hard limit and board limit
+        return Math.min(hardLimit, remainingBoardLimit);
+      }
+    } catch (boardError) {
+      console.error('Error checking board constraint for buyback:', boardError);
+      // If board check fails, return hard limit
+    }
+
+    // If no board constraint or check failed, return hard limit
+    return Math.max(0, hardLimit);
   } catch (error) {
     console.error('Error calculating max buyback shares:', error);
     return 0;
@@ -217,10 +305,13 @@ export async function getMaxBuybackShares(): Promise<number> {
 }
 
 /**
- * Get dividend rate limits (min/max) based on financial constraints (for UI display)
- * Returns { min: number, max: number } based on cash reserves and change limits
- * NOTE: Only decreases are restricted (10% limit). Increases are free (only limited by cash). */
-export async function getDividendRateLimits(): Promise<{ min: number; max: number }> {
+ * Get dividend rate limits (min/max) based on financial constraints AND board constraints (for UI display)
+ * Returns { min: number, max: number } based on cash reserves, change limits, and board approval
+ * NOTE: Only decreases are restricted (10% limit). Increases are free (only limited by cash and board). */
+export async function getDividendRateLimits(options?: {
+  shareholderBreakdown?: Awaited<ReturnType<typeof getShareholderBreakdown>>;
+  boardSatisfaction?: number;
+}): Promise<{ min: number; max: number }> {
   try {
     const companyId = getCurrentCompanyId();
     if (!companyId) return { min: 0, max: 0 };
@@ -256,15 +347,774 @@ export async function getDividendRateLimits(): Promise<{ min: number; max: numbe
     // Max is only limited by cash (no increase restriction)
     // Users can freely increase dividends up to cash limit
     // If oldRate is already above cash limit, allow it to stay but not increase further
-    const maxDividend = oldRate > maxByCash ? oldRate : maxByCash;
+    const hardMaxDividend = oldRate > maxByCash ? oldRate : maxByCash;
+    const hardMinDividend = minByChangeLimit;
 
+    // Check board constraint limit
+    try {
+      const financialData = await calculateFinancialData('year');
+      const shareMetrics = await getShareMetrics();
+      const profitMargin = shareMetrics.profitMargin || 0;
+      
+      const financialContext = {
+        cashMoney: currentMoney,
+        totalAssets: financialData.totalAssets,
+        profitMargin: profitMargin,
+        totalShares: totalShares,
+        oldRate: oldRate
+      };
+
+      // For dividend changes, the board constraint returns different values for increases vs decreases
+      // We need to check both directions to get the full range
+      // The formula uses newRate to determine if it's an increase or decrease
+      
+      let boardMax = hardMaxDividend;
+      let boardMin = hardMinDividend;
+      
+      // Check increase limit: use a rate clearly higher than current to get max allowed increase
+      // Use maxByCash as test rate (or oldRate * 1.2 if higher) to get the board's max allowed increase
+      const testIncreaseRate = oldRate > 0 
+        ? Math.max(oldRate * 1.2, maxByCash * 0.9) // Slightly below maxByCash to avoid cash constraint in test
+        : maxByCash * 0.9;
+      
+      if (testIncreaseRate > oldRate) {
+        const boardIncreaseResult = await boardEnforcer.getActionLimit(
+          'dividend_change',
+          testIncreaseRate,
+          financialContext,
+          {
+            shareholderBreakdown: options?.shareholderBreakdown,
+            satisfaction: options?.boardSatisfaction
+          }
+        );
+        if (boardIncreaseResult && boardIncreaseResult.limit !== null) {
+          // Board limit for increases (this is the maximum allowed rate)
+          boardMax = Math.min(hardMaxDividend, boardIncreaseResult.limit);
+        }
+      }
+      
+      // Check decrease limit: use a rate clearly lower than current to get min allowed decrease
+      // Use oldRate * 0.5 as test rate to get the board's min allowed decrease
+      if (oldRate > 0) {
+        const testDecreaseRate = oldRate * 0.5;
+        const boardDecreaseResult = await boardEnforcer.getActionLimit(
+          'dividend_change',
+          testDecreaseRate,
+          financialContext,
+          {
+            shareholderBreakdown: options?.shareholderBreakdown,
+            satisfaction: options?.boardSatisfaction
+          }
+        );
+        if (boardDecreaseResult && boardDecreaseResult.limit !== null) {
+          // Board limit for decreases (this is the minimum allowed rate)
+          boardMin = Math.max(hardMinDividend, boardDecreaseResult.limit);
+        }
+      }
+
+      return {
+        min: Math.max(0, boardMin),
+        max: Math.max(0, boardMax)
+      };
+    } catch (boardError) {
+      console.error('Error checking board constraint for dividend:', boardError);
+      // If board check fails, return hard limits
+    }
+
+    // If no board constraint or check failed, return hard limits
     return {
-      min: minByChangeLimit,
-      max: Math.max(0, maxDividend)
+      min: Math.max(0, hardMinDividend),
+      max: Math.max(0, hardMaxDividend)
     };
   } catch (error) {
     console.error('Error calculating dividend rate limits:', error);
     return { min: 0, max: 0 };
+  }
+}
+
+/**
+ * Get detailed constraint information for share issuance (for UI display)
+ * Returns BaseConstraintInfo + additional fields (maxShares, hardLimit, boardLimit)
+ */
+export async function getIssuanceConstraintInfo(options?: {
+  sharePrice?: number;
+  shareholderBreakdown?: Awaited<ReturnType<typeof getShareholderBreakdown>>;
+  boardSatisfaction?: number;
+}): Promise<BaseConstraintInfo & { maxShares: number; hardLimit: number; boardLimit: number | null }> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'none',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'No company selected',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'none',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'Company not found',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'none',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'Share data not found',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const currentTotalShares = sharesData.totalShares;
+    const yearlyOps = await getYearlyShareOperations(companyId);
+    const sharesIssuedThisYear = yearlyOps.sharesIssuedThisYear;
+
+    // Hard limits
+    const maxByOperation = Math.floor(currentTotalShares * 0.5);
+    const maxSharesPerYear = Math.floor(currentTotalShares * 1.0);
+    const remainingYearlyLimit = Math.max(0, maxSharesPerYear - sharesIssuedThisYear);
+    const hardLimit = Math.min(maxByOperation, remainingYearlyLimit);
+
+    let limitingFactor = '';
+    if (hardLimit === maxByOperation) {
+      limitingFactor = 'Per-operation limit (50% of total shares)';
+    } else {
+      limitingFactor = `Yearly limit (100% per year, ${sharesIssuedThisYear.toLocaleString()} already issued)`;
+    }
+
+    // Board limit and blocked status
+    let boardLimit: number | null = null;
+    let boardSatisfaction: number | undefined = undefined;
+    let boardReason = '';
+    let isBlocked = false;
+    let isLimited = false;
+    let blockReason = '';
+
+    try {
+      // Use provided sharePrice or get from database (don't update market value)
+      let sharePrice = options?.sharePrice;
+      if (sharePrice === undefined) {
+        const { getMarketValue } = await import('../../index');
+        const marketData = await getMarketValue();
+        sharePrice = marketData.sharePrice;
+      }
+
+      const financialContext = {
+        outstandingShares: sharesData.outstandingShares,
+        totalShares: sharesData.totalShares,
+        sharePrice: sharePrice,
+        sharesIssuedThisYear: sharesIssuedThisYear
+      };
+
+      // Check if action is allowed (to determine blocked status)
+      const boardCheck = await boardEnforcer.isActionAllowed(
+        'share_issuance',
+        1,
+        financialContext,
+        {
+          shareholderBreakdown: options?.shareholderBreakdown,
+          satisfaction: options?.boardSatisfaction
+        }
+      );
+      
+      if (!boardCheck.allowed) {
+        // Operation is completely blocked by board
+        isBlocked = true;
+        // Get threshold from board constants
+        const { BOARD_CONSTRAINTS } = await import('../../../constants/boardConstants');
+        const thresholdPercent = (BOARD_CONSTRAINTS.share_issuance.maxThreshold * 100).toFixed(0);
+        blockReason = boardCheck.message 
+          ? boardCheck.message.replace('Board approval required', `Board approval (of at least ${thresholdPercent}% satisfaction) required`)
+          : `Board approval (of at least ${thresholdPercent}% satisfaction) required for share issuance. Board satisfaction is too low to approve new share issuance.`;
+        boardSatisfaction = boardCheck.satisfaction;
+      } else {
+        // Check if it's limited (between startThreshold and maxThreshold)
+        const boardLimitResult = await boardEnforcer.getActionLimit(
+          'share_issuance',
+          currentTotalShares,
+          financialContext,
+          {
+            shareholderBreakdown: options?.shareholderBreakdown,
+            satisfaction: options?.boardSatisfaction
+          }
+        );
+        
+        if (boardLimitResult) {
+          boardSatisfaction = boardLimitResult.satisfaction;
+          
+          // Check if satisfaction is below startThreshold (limited but not blocked)
+          // share_issuance: startThreshold: 0.6, maxThreshold: 0.3
+          if (boardSatisfaction !== undefined && boardSatisfaction <= 0.6 && boardSatisfaction > 0.3) {
+            isLimited = true;
+          }
+          
+          if (boardLimitResult.limit !== null) {
+            const boardYearlyLimit = boardLimitResult.limit;
+            const remainingBoardLimit = Math.max(0, boardYearlyLimit - sharesIssuedThisYear);
+            boardLimit = remainingBoardLimit;
+            
+            if (boardSatisfaction !== undefined) {
+              boardReason = `Board satisfaction: ${(boardSatisfaction * 100).toFixed(1)}%`;
+              if (sharePrice < 0.50) {
+                boardReason += ` (Share price penalty: <€0.50)`;
+              }
+            }
+          }
+        }
+      }
+    } catch (boardError) {
+      console.error('Error checking board constraint for issuance:', boardError);
+    }
+
+    // Determine which constraint is limiting
+    // If blocked, maxShares should be 0
+    const maxShares = isBlocked ? 0 : (boardLimit !== null ? Math.min(hardLimit, boardLimit) : hardLimit);
+    let limitingConstraint: 'hard' | 'board' | 'none' = 'none';
+    let constraintReason = '';
+
+    if (isBlocked) {
+      limitingConstraint = 'board';
+      constraintReason = blockReason;
+    } else if (maxShares === 0) {
+      limitingConstraint = 'hard';
+      constraintReason = limitingFactor;
+    } else if (boardLimit !== null && boardLimit < hardLimit) {
+      limitingConstraint = 'board';
+      constraintReason = boardReason || 'Board approval required';
+    } else {
+      limitingConstraint = 'hard';
+      constraintReason = limitingFactor;
+    }
+
+    return {
+      maxShares,
+      limitingConstraint,
+      hardLimit,
+      boardLimit,
+      constraintReason,
+      isBlocked,
+      isLimited,
+      blockReason: isBlocked ? blockReason : undefined,
+      boardLimitDetails: boardLimit !== null || isBlocked ? {
+        satisfaction: boardSatisfaction,
+        reason: boardReason || blockReason
+      } : undefined
+    };
+  } catch (error) {
+    console.error('Error calculating issuance constraint info:', error);
+    return {
+      maxShares: 0,
+      limitingConstraint: 'none',
+      hardLimit: 0,
+      boardLimit: null,
+      constraintReason: 'Error calculating limits',
+      isBlocked: false,
+      isLimited: false
+    };
+  }
+}
+
+/**
+ * Get detailed constraint information for share buyback (for UI display)
+ * Returns BaseConstraintInfo + additional fields (maxShares, hardLimit, boardLimit)
+ */
+export async function getBuybackConstraintInfo(options?: {
+  sharePrice?: number;
+  shareholderBreakdown?: Awaited<ReturnType<typeof getShareholderBreakdown>>;
+  boardSatisfaction?: number;
+}): Promise<BaseConstraintInfo & { maxShares: number; hardLimit: number; boardLimit: number | null }> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'none',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'No company selected',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'none',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'Company not found',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'none',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'Share data not found',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const outstandingShares = sharesData.outstandingShares;
+    const currentMoney = company.money || 0;
+
+    // Use provided sharePrice or get from database (don't update market value)
+    let sharePrice = options?.sharePrice;
+    if (sharePrice === undefined) {
+      const { getMarketValue } = await import('../../index');
+      const marketData = await getMarketValue();
+      sharePrice = marketData.sharePrice;
+    }
+
+    if (sharePrice <= 0) {
+      return {
+        maxShares: 0,
+        limitingConstraint: 'hard',
+        hardLimit: 0,
+        boardLimit: null,
+        constraintReason: 'Invalid share price',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    // Hard limits
+    const maxByCash = Math.floor(currentMoney / sharePrice);
+    const yearlyOps = await getYearlyShareOperations(companyId);
+    const sharesBoughtBackThisYear = yearlyOps.sharesBoughtBackThisYear;
+    const maxSharesPerYear = Math.floor(outstandingShares * 0.25);
+    const remainingYearlyLimit = Math.max(0, maxSharesPerYear - sharesBoughtBackThisYear);
+
+    const financialData = await calculateFinancialData('year');
+    const totalDebt = await calculateTotalOutstandingLoans();
+    const debtRatio = financialData.totalAssets > 0 ? totalDebt / financialData.totalAssets : 0;
+    const maxByDebtRatio = debtRatio > 0.3 ? 0 : outstandingShares;
+
+    const hardLimit = Math.min(
+      outstandingShares,
+      maxByCash,
+      remainingYearlyLimit,
+      maxByDebtRatio
+    );
+
+    let limitingFactor = '';
+    if (hardLimit === 0 && debtRatio > 0.3) {
+      limitingFactor = 'Debt ratio exceeds 30%';
+    } else if (hardLimit === maxByCash) {
+      limitingFactor = `Cash balance (${formatNumber(currentMoney, { currency: true })})`;
+    } else if (hardLimit === remainingYearlyLimit) {
+      limitingFactor = `Yearly limit (25% per year, ${sharesBoughtBackThisYear.toLocaleString()} already bought back)`;
+    } else if (hardLimit === outstandingShares) {
+      limitingFactor = 'Outstanding shares available';
+    }
+
+    // Board limit and blocked status
+    let boardLimit: number | null = null;
+    let boardSatisfaction: number | undefined = undefined;
+    let boardReason = '';
+    let isBlocked = false;
+    let isLimited = false;
+    let blockReason = '';
+
+    try {
+      const financialContext = {
+        cashMoney: currentMoney,
+        totalAssets: financialData.totalAssets,
+        debtRatio: debtRatio,
+        outstandingShares: outstandingShares,
+        totalShares: sharesData.totalShares,
+        sharePrice: sharePrice,
+        sharesBoughtBackThisYear: sharesBoughtBackThisYear
+      };
+
+      // Check if action is allowed (to determine blocked status)
+      const boardCheck = await boardEnforcer.isActionAllowed(
+        'share_buyback',
+        1,
+        financialContext,
+        {
+          shareholderBreakdown: options?.shareholderBreakdown,
+          satisfaction: options?.boardSatisfaction
+        }
+      );
+      
+      if (!boardCheck.allowed) {
+        // Operation is completely blocked by board
+        isBlocked = true;
+        // Get threshold from board constants
+        const { BOARD_CONSTRAINTS } = await import('../../../constants/boardConstants');
+        const thresholdPercent = (BOARD_CONSTRAINTS.share_buyback.maxThreshold * 100).toFixed(0);
+        blockReason = boardCheck.message 
+          ? boardCheck.message.replace('Board approval required', `Board approval (of at least ${thresholdPercent}% satisfaction) required`)
+          : `Board approval (of at least ${thresholdPercent}% satisfaction) required for share buyback. Board satisfaction is too low to approve share repurchases.`;
+        boardSatisfaction = boardCheck.satisfaction;
+      } else {
+        // Check if it's limited (between startThreshold and maxThreshold)
+        const boardLimitResult = await boardEnforcer.getActionLimit(
+          'share_buyback',
+          outstandingShares,
+          financialContext,
+          {
+            shareholderBreakdown: options?.shareholderBreakdown,
+            satisfaction: options?.boardSatisfaction
+          }
+        );
+        
+        if (boardLimitResult) {
+          boardSatisfaction = boardLimitResult.satisfaction;
+          
+          // Check if satisfaction is below startThreshold (limited but not blocked)
+          // share_buyback: startThreshold: 0.5, maxThreshold: 0.2
+          if (boardSatisfaction !== undefined && boardSatisfaction <= 0.5 && boardSatisfaction > 0.2) {
+            isLimited = true;
+          }
+          
+          if (boardLimitResult.limit !== null) {
+            const boardYearlyLimit = boardLimitResult.limit;
+            const remainingBoardLimit = Math.max(0, boardYearlyLimit - sharesBoughtBackThisYear);
+            boardLimit = remainingBoardLimit;
+            
+            if (boardSatisfaction !== undefined) {
+              boardReason = `Board satisfaction: ${(boardSatisfaction * 100).toFixed(1)}%`;
+              if (debtRatio > 0.20 && debtRatio <= 0.30) {
+                boardReason += ` (Debt ratio concern: ${(debtRatio * 100).toFixed(1)}%)`;
+              }
+              const estimatedCost = remainingBoardLimit * sharePrice;
+              if (estimatedCost > currentMoney * 0.5) {
+                boardReason += ` (Cash availability concern)`;
+              }
+            }
+          }
+        }
+      }
+    } catch (boardError) {
+      console.error('Error checking board constraint for buyback:', boardError);
+    }
+
+    // Determine which constraint is limiting
+    // If blocked, maxShares should be 0
+    const maxShares = isBlocked ? 0 : (boardLimit !== null ? Math.min(hardLimit, boardLimit) : hardLimit);
+    let limitingConstraint: 'hard' | 'board' | 'none' = 'none';
+    let constraintReason = '';
+
+    if (isBlocked) {
+      limitingConstraint = 'board';
+      constraintReason = blockReason;
+    } else if (maxShares === 0) {
+      limitingConstraint = 'hard';
+      constraintReason = limitingFactor;
+    } else if (boardLimit !== null && boardLimit < hardLimit) {
+      limitingConstraint = 'board';
+      constraintReason = boardReason || 'Board approval required';
+    } else {
+      limitingConstraint = 'hard';
+      constraintReason = limitingFactor;
+    }
+
+    return {
+      maxShares,
+      limitingConstraint,
+      hardLimit,
+      boardLimit,
+      constraintReason,
+      isBlocked,
+      isLimited,
+      blockReason: isBlocked ? blockReason : undefined,
+      boardLimitDetails: boardLimit !== null || isBlocked ? {
+        satisfaction: boardSatisfaction,
+        reason: boardReason || blockReason
+      } : undefined
+    };
+  } catch (error) {
+    console.error('Error calculating buyback constraint info:', error);
+    return {
+      maxShares: 0,
+      limitingConstraint: 'none',
+      hardLimit: 0,
+      boardLimit: null,
+      constraintReason: 'Error calculating limits',
+      isBlocked: false,
+      isLimited: false
+    };
+  }
+}
+
+/**
+ * Get detailed constraint information for dividend changes (for UI display)
+ * Returns BaseConstraintInfo + additional fields (minRate, maxRate, hardMinRate, hardMaxRate, boardMinRate, boardMaxRate)
+ */
+export async function getDividendConstraintInfo(options?: {
+  shareholderBreakdown?: Awaited<ReturnType<typeof getShareholderBreakdown>>;
+  boardSatisfaction?: number;
+}): Promise<BaseConstraintInfo & { minRate: number; maxRate: number; hardMinRate: number; hardMaxRate: number; boardMinRate: number | null; boardMaxRate: number | null }> {
+  try {
+    const companyId = getCurrentCompanyId();
+    if (!companyId) {
+      return {
+        minRate: 0,
+        maxRate: 0,
+        limitingConstraint: 'none',
+        hardMinRate: 0,
+        hardMaxRate: 0,
+        boardMinRate: null,
+        boardMaxRate: null,
+        constraintReason: 'No company selected',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const company = await companyService.getCompany(companyId);
+    if (!company) {
+      return {
+        minRate: 0,
+        maxRate: 0,
+        limitingConstraint: 'none',
+        hardMinRate: 0,
+        hardMaxRate: 0,
+        boardMinRate: null,
+        boardMaxRate: null,
+        constraintReason: 'Company not found',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) {
+      return {
+        minRate: 0,
+        maxRate: 0,
+        limitingConstraint: 'none',
+        hardMinRate: 0,
+        hardMaxRate: 0,
+        boardMinRate: null,
+        boardMaxRate: null,
+        constraintReason: 'Share data not found',
+        isBlocked: false,
+        isLimited: false
+      };
+    }
+
+    const currentMoney = company.money || 0;
+    const oldRate = sharesData.dividendRate;
+    const totalShares = sharesData.totalShares;
+
+    // Hard limits
+    const maxByCash = totalShares > 0 ? currentMoney / (4 * totalShares) : 0;
+    const smallChangeThreshold = 0.005;
+    let minByChangeLimit = 0;
+
+    if (oldRate > 0) {
+      const minChange = oldRate * 0.1;
+      minByChangeLimit = Math.max(0, oldRate - Math.max(minChange, smallChangeThreshold));
+    }
+
+    const hardMaxRate = oldRate > maxByCash ? oldRate : maxByCash;
+    const hardMinRate = minByChangeLimit;
+
+    let limitingFactor = '';
+    if (hardMaxRate === maxByCash && oldRate <= maxByCash) {
+      limitingFactor = `Cash reserves (must have 1 year = 4 seasons)`;
+    } else if (hardMinRate > 0 && oldRate > 0) {
+      limitingFactor = `10% decrease limit per season`;
+    }
+
+    // Board limit and blocked status
+    let boardMinRate: number | null = null;
+    let boardMaxRate: number | null = null;
+    let boardSatisfaction: number | undefined = undefined;
+    let boardReason = '';
+    let isBlocked = false;
+    let isLimited = false;
+    let blockReason = '';
+
+    try {
+      const financialData = await calculateFinancialData('year');
+      const shareMetrics = await getShareMetrics();
+      const profitMargin = shareMetrics.profitMargin || 0;
+      
+      const financialContext = {
+        cashMoney: currentMoney,
+        totalAssets: financialData.totalAssets,
+        profitMargin: profitMargin,
+        totalShares: totalShares,
+        oldRate: oldRate
+      };
+
+      // Check if action is allowed (to determine blocked status)
+      // Test with a rate change to see if it's blocked
+      const testRate = oldRate > 0 ? oldRate * 1.1 : maxByCash * 0.9;
+      const boardCheck = await boardEnforcer.isActionAllowed(
+        'dividend_change',
+        testRate,
+        financialContext,
+        {
+          shareholderBreakdown: options?.shareholderBreakdown,
+          satisfaction: options?.boardSatisfaction
+        }
+      );
+      
+      if (!boardCheck.allowed) {
+        // Operation is completely blocked by board
+        isBlocked = true;
+        // Get threshold from board constants
+        const { BOARD_CONSTRAINTS } = await import('../../../constants/boardConstants');
+        const thresholdPercent = (BOARD_CONSTRAINTS.dividend_change.maxThreshold * 100).toFixed(0);
+        blockReason = boardCheck.message 
+          ? boardCheck.message.replace('Board approval required', `Board approval (of at least ${thresholdPercent}% satisfaction) required`)
+          : `Board approval (of at least ${thresholdPercent}% satisfaction) required for dividend changes. Board satisfaction is too low to approve dividend modifications.`;
+        boardSatisfaction = boardCheck.satisfaction;
+      } else {
+        // Check if it's limited (between startThreshold and maxThreshold)
+        const boardLimitResult = await boardEnforcer.getActionLimit(
+          'dividend_change',
+          testRate,
+          financialContext,
+          {
+            shareholderBreakdown: options?.shareholderBreakdown,
+            satisfaction: options?.boardSatisfaction
+          }
+        );
+        
+        if (boardLimitResult) {
+          boardSatisfaction = boardLimitResult.satisfaction;
+          
+          // Check if satisfaction is below startThreshold (limited but not blocked)
+          // dividend_change: startThreshold: 0.5, maxThreshold: 0.3
+          if (boardSatisfaction !== undefined && boardSatisfaction <= 0.5 && boardSatisfaction > 0.3) {
+            isLimited = true;
+          }
+        }
+
+        // Check increase limit
+        const testIncreaseRate = oldRate > 0 
+          ? Math.max(oldRate * 1.2, maxByCash * 0.9)
+          : maxByCash * 0.9;
+        
+        if (testIncreaseRate > oldRate) {
+          const boardIncreaseResult = await boardEnforcer.getActionLimit(
+            'dividend_change',
+            testIncreaseRate,
+            financialContext,
+            {
+              shareholderBreakdown: options?.shareholderBreakdown,
+              satisfaction: options?.boardSatisfaction
+            }
+          );
+          if (boardIncreaseResult && boardIncreaseResult.limit !== null) {
+            boardMaxRate = Math.min(hardMaxRate, boardIncreaseResult.limit);
+          }
+        }
+        
+        // Check decrease limit
+        if (oldRate > 0) {
+          const testDecreaseRate = oldRate * 0.5;
+          const boardDecreaseResult = await boardEnforcer.getActionLimit(
+            'dividend_change',
+            testDecreaseRate,
+            financialContext,
+            {
+              shareholderBreakdown: options?.shareholderBreakdown,
+              satisfaction: options?.boardSatisfaction
+            }
+          );
+          if (boardDecreaseResult && boardDecreaseResult.limit !== null) {
+            boardMinRate = Math.max(hardMinRate, boardDecreaseResult.limit);
+          }
+        }
+
+        if (boardSatisfaction !== undefined) {
+          boardReason = `Board satisfaction: ${(boardSatisfaction * 100).toFixed(1)}%`;
+        }
+      }
+    } catch (boardError) {
+      console.error('Error checking board constraint for dividend:', boardError);
+    }
+
+    // Determine which constraint is limiting
+    let minRate = hardMinRate;
+    let maxRate = hardMaxRate;
+    let limitingConstraint: 'hard' | 'board' | 'none' = 'none';
+    let constraintReason = '';
+
+    if (isBlocked) {
+      limitingConstraint = 'board';
+      constraintReason = blockReason;
+      // When blocked, rates should be clamped to current rate (no changes allowed)
+      minRate = oldRate;
+      maxRate = oldRate;
+    } else {
+      // Apply board limits if they exist and are more restrictive
+      if (boardMaxRate !== null && boardMaxRate < hardMaxRate) {
+        maxRate = boardMaxRate;
+        limitingConstraint = 'board';
+        constraintReason = boardReason || 'Board approval required';
+      } else if (boardMinRate !== null && boardMinRate > hardMinRate) {
+        minRate = boardMinRate;
+        limitingConstraint = 'board';
+        constraintReason = boardReason || 'Board approval required';
+      } else {
+        limitingConstraint = 'hard';
+        constraintReason = limitingFactor || 'Regulatory limits';
+      }
+    }
+
+    return {
+      minRate,
+      maxRate,
+      limitingConstraint,
+      hardMinRate,
+      hardMaxRate,
+      boardMinRate,
+      boardMaxRate,
+      constraintReason,
+      isBlocked,
+      isLimited,
+      blockReason: isBlocked ? blockReason : undefined,
+      boardLimitDetails: (boardMinRate !== null || boardMaxRate !== null || isBlocked) ? {
+        satisfaction: boardSatisfaction,
+        reason: boardReason || blockReason
+      } : undefined
+    };
+  } catch (error) {
+    console.error('Error calculating dividend constraint info:', error);
+    return {
+      minRate: 0,
+      maxRate: 0,
+      limitingConstraint: 'none',
+      hardMinRate: 0,
+      hardMaxRate: 0,
+      boardMinRate: null,
+      boardMaxRate: null,
+      constraintReason: 'Error calculating limits',
+      isBlocked: false,
+      isLimited: false
+    };
   }
 }
 
@@ -313,9 +1163,27 @@ export async function issueStock(
       return { success: false, error: financialCheck };
     }
 
-    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares);
+    // Prepare financial context for board constraint evaluation
+    // Track yearly issuance for per-year board limit (like buyback)
+    const yearlyOps = await getYearlyShareOperations(companyId);
+    
+    const financialContext = {
+      outstandingShares: sharesData.outstandingShares,
+      totalShares: sharesData.totalShares,
+      sharePrice: sharePrice,
+      sharesIssuedThisYear: yearlyOps.sharesIssuedThisYear // For yearly limit tracking
+    };
+
+    // Check board constraint (handles yearly limit internally)
+    const boardCheck = await boardEnforcer.isActionAllowed('share_issuance', shares, financialContext);
     if (!boardCheck.allowed) {
       return { success: false, error: boardCheck.message || 'Board approval required for share issuance' };
+    }
+    
+    // Check if shares exceed board limit (yearly limit is checked in isActionAllowed)
+    if (boardCheck.limit !== undefined && boardCheck.limit !== null) {
+      // For yearly limits, the check is already done in isActionAllowed
+      // This is just for consistency with the return structure
     }
 
     const capitalRaised = shares * sharePrice;
@@ -324,13 +1192,16 @@ export async function issueStock(
     const currentPlayerShares = sharesData.playerShares;
     const newTotalShares = currentTotalShares + shares;
     const newOutstandingShares = sharesData.outstandingShares + shares;
+    const newOutsideShares = sharesData.outsideShares + shares; // New shares go to outside investors
     const newPlayerShares = currentPlayerShares;
     const newPlayerOwnershipPct = (newPlayerShares / newTotalShares) * 100;
 
     const updateResult = await updateCompanyShares(companyId, {
       total_shares: newTotalShares,
       outstanding_shares: newOutstandingShares,
-      player_shares: newPlayerShares
+      player_shares: newPlayerShares,
+      outside_shares: newOutsideShares
+      // familyShares remains unchanged
     });
 
     if (!updateResult.success) {
@@ -344,6 +1215,9 @@ export async function issueStock(
       false,
       companyId
     );
+
+    // Increment yearly share operations tracking
+    await incrementYearlyShareOperations(companyId, 'issuance', shares);
 
     const { applyImmediateShareStructureAdjustment } = await import('./sharePriceService');
     await applyImmediateShareStructureAdjustment(
@@ -424,22 +1298,45 @@ export async function buyBackStock(
       return { success: false, error: financialCheck };
     }
 
-    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares);
+    // Prepare financial context for board constraint evaluation
+    // Track yearly buyback for per-year board limit
+    const yearlyOps = await getYearlyShareOperations(companyId);
+    
+    const financialData = await calculateFinancialData('year');
+    const totalDebt = await calculateTotalOutstandingLoans();
+    const debtRatio = financialData.totalAssets > 0 ? totalDebt / financialData.totalAssets : 0;
+    
+    const financialContext = {
+      cashMoney: currentMoney,
+      totalAssets: financialData.totalAssets,
+      debtRatio: debtRatio,
+      outstandingShares: currentOutstandingShares,
+      totalShares: sharesData.totalShares,
+      sharePrice: sharePrice,
+      sharesBoughtBackThisYear: yearlyOps.sharesBoughtBackThisYear // For yearly limit tracking
+    };
+
+    const boardCheck = await boardEnforcer.isActionAllowed('share_buyback', shares, financialContext);
     if (!boardCheck.allowed) {
       return { success: false, error: boardCheck.message || 'Board approval required for share buyback' };
     }
+    
+    // Yearly limit is checked in isActionAllowed, so no need for separate check here
 
     const currentTotalShares = sharesData.totalShares;
     const currentPlayerShares = sharesData.playerShares;
     const newTotalShares = currentTotalShares - shares;
     const newOutstandingShares = currentOutstandingShares - shares;
+    const newOutsideShares = sharesData.outsideShares - shares; // Buyback reduces outside shares
     const newPlayerShares = currentPlayerShares;
     const newPlayerOwnershipPct = newTotalShares > 0 ? (newPlayerShares / newTotalShares) * 100 : 100;
 
     const updateResult = await updateCompanyShares(companyId, {
       total_shares: newTotalShares,
       outstanding_shares: newOutstandingShares,
-      player_shares: newPlayerShares
+      player_shares: newPlayerShares,
+      outside_shares: newOutsideShares
+      // familyShares remains unchanged
     });
 
     if (!updateResult.success) {
@@ -453,6 +1350,9 @@ export async function buyBackStock(
       false,
       companyId
     );
+
+    // Increment yearly share operations tracking
+    await incrementYearlyShareOperations(companyId, 'buyback', shares);
 
     const { applyImmediateShareStructureAdjustment } = await import('./sharePriceService');
     await applyImmediateShareStructureAdjustment(
@@ -578,9 +1478,39 @@ export async function updateDividendRate(
       return { success: false, error: financialCheck };
     }
 
-    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate);
+    // Prepare financial context for board constraint evaluation
+    const financialData = await calculateFinancialData('year');
+    const shareMetrics = await getShareMetrics();
+    const profitMargin = shareMetrics.profitMargin || 0;
+    
+    const financialContext = {
+      cashMoney: currentMoney,
+      totalAssets: financialData.totalAssets,
+      profitMargin: profitMargin,
+      totalShares: sharesData.totalShares,
+      oldRate: oldRate
+    };
+
+    const boardCheck = await boardEnforcer.isActionAllowed('dividend_change', rate, financialContext);
     if (!boardCheck.allowed) {
       return { success: false, error: boardCheck.message || 'Board approval required for dividend changes' };
+    }
+    
+    // Check if rate exceeds board limit (if scaling constraint applies)
+    // For dividend changes, limit is the maximum allowed rate
+    if (boardCheck.limit !== undefined && boardCheck.limit !== null) {
+      if (rate > oldRate && rate > boardCheck.limit) {
+        return { 
+          success: false, 
+          error: `Dividend increase exceeds board-approved limit of ${formatNumber(boardCheck.limit, { currency: true, decimals: 4 })} per share. Maximum allowed: ${formatNumber(boardCheck.limit, { currency: true, decimals: 4 })} per share` 
+        };
+      }
+      if (rate < oldRate && rate < boardCheck.limit) {
+        return { 
+          success: false, 
+          error: `Dividend decrease exceeds board-approved limit. Minimum allowed: ${formatNumber(boardCheck.limit, { currency: true, decimals: 4 })} per share` 
+        };
+      }
     }
     const rateChange = rate - oldRate;
 

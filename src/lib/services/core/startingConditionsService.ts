@@ -182,6 +182,15 @@ export async function applyStartingConditions(
     const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
     const outstandingShares = TOTAL_SHARES - playerShares;
 
+    // Calculate family vs outside share distribution based on initial equity contributions
+    const totalNonPlayerEquity = familyContribution + outsideInvestment;
+    let familyShares = 0;
+    let outsideShares = outstandingShares;
+    if (totalNonPlayerEquity > 0 && outstandingShares > 0) {
+      familyShares = Math.round(outstandingShares * (familyContribution / totalNonPlayerEquity));
+      outsideShares = outstandingShares - familyShares;
+    }
+
     let startingLoanId: string | undefined;
     const availableTeams = getAllTeams();
 
@@ -193,7 +202,9 @@ export async function applyStartingConditions(
       outstandingShares: outstandingShares,
       playerShares: playerShares,
       initialOwnershipPct: playerOwnershipPct,
-      initialVineyardValue: vineyardValue // Store initial family contribution
+      initialVineyardValue: vineyardValue, // Store initial family contribution
+      familyShares: familyShares,
+      outsideShares: outsideShares
     });
 
     if (!companyUpdateSuccess) {

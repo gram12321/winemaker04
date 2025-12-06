@@ -27,6 +27,7 @@ export * from './components/grapeQualityBreakdown';
 export * from './components/CharacteristicSlider';
 export * from './components/StaffSkillBar';
 export * from './components/FeatureDisplay';
+export * from './constraints/ConstraintDisplay';
 
 // Modal exports (wildcard exports where possible)
 export * from './modals/UImodals/grapeQualityBreakdownModal';

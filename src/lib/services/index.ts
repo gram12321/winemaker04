@@ -49,7 +49,10 @@ export {
   areDividendsDue,
   getMaxBuybackShares,
   getMaxIssuanceShares,
-  getDividendRateLimits
+  getDividendRateLimits,
+  getIssuanceConstraintInfo,
+  getBuybackConstraintInfo,
+  getDividendConstraintInfo
 } from './finance/shares/shareOperationsService';
 
 export {
@@ -119,7 +122,7 @@ export * from './research/researchEnforcer';
 
 // Board services
 export { calculateBoardSatisfaction, getBoardSatisfactionBreakdown } from './board/boardSatisfactionService';
-export { boardEnforcer, BoardEnforcerService } from './board/boardEnforcer';
+export { boardEnforcer, BoardEnforcerService, getVineyardPurchaseConstraintInfo } from './board/boardEnforcer';
 export type { BoardSatisfactionBreakdown } from './board/boardSatisfactionService';
 export type { BoardEnforcementResult } from './board/boardEnforcer';
 

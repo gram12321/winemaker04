@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
-import { Button, Tabs, TabsList, TabsTrigger, TabsContent, Slider } from '@/components/ui';
+import { Button, Tabs, TabsList, TabsTrigger, TabsContent, Slider, ConstraintDisplay } from '@/components/ui';
 import { Label } from '@/components/ui/shadCN/label';
 import { formatNumber } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { companyService } from '@/lib/services/user/companyService';
-import { getMarketValue, updateMarketValue, getSharePriceBreakdown, issueStock, buyBackStock, updateDividendRate, calculateDividendPayment, areDividendsDue, getShareMetrics, getShareholderBreakdown, getHistoricalShareMetrics, getMaxBuybackShares, getMaxIssuanceShares, getDividendRateLimits, loadTransactions } from '@/lib/services';
+import { getMarketValue, updateMarketValue, getSharePriceBreakdown, issueStock, buyBackStock, updateDividendRate, calculateDividendPayment, areDividendsDue, getShareMetrics, getShareholderBreakdown, getHistoricalShareMetrics, getMaxBuybackShares, getMaxIssuanceShares, getDividendRateLimits, getIssuanceConstraintInfo, getBuybackConstraintInfo, getDividendConstraintInfo, loadTransactions } from '@/lib/services';
+import type { BaseConstraintInfo } from '@/lib/types/constraintTypes';
 import type { ShareMetrics, ShareholderBreakdown, ShareHistoricalMetric } from '@/lib/types';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import type { Company } from '@/lib/database';
@@ -14,6 +15,7 @@ import { getCompanyShares } from '@/lib/database/core/companySharesDB';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { listPrestigeEventsForUI } from '@/lib/database/customers/prestigeEventsDB';
 import type { PrestigeEvent } from '@/lib/types/types';
+
 
 export function ShareManagementPanel() {
   const gameState = useGameState();
@@ -50,10 +52,16 @@ export function ShareManagementPanel() {
   const [maxIssuanceShares, setMaxIssuanceShares] = useState(0);
   const [dividendMin, setDividendMin] = useState(0);
   const [dividendMax, setDividendMax] = useState(0);
+  const [issuanceConstraintInfo, setIssuanceConstraintInfo] = useState<(BaseConstraintInfo & { maxShares: number; hardLimit: number; boardLimit: number | null }) | null>(null);
+  const [buybackConstraintInfo, setBuybackConstraintInfo] = useState<(BaseConstraintInfo & { maxShares: number; hardLimit: number; boardLimit: number | null }) | null>(null);
+  const [dividendConstraintInfo, setDividendConstraintInfo] = useState<(BaseConstraintInfo & { minRate: number; maxRate: number; hardMinRate: number; hardMaxRate: number; boardMinRate: number | null; boardMaxRate: number | null }) | null>(null);
 
   // Load company data and market value
   useEffect(() => {
     const loadData = async () => {
+      const perfStart = performance.now();
+      console.log('[ShareManagementPanel] Starting data load...');
+      
       try {
         setLoading(true);
         const companyId = getCurrentCompanyId();
@@ -62,13 +70,46 @@ export function ShareManagementPanel() {
           return;
         }
 
-        const companyData = await companyService.getCompany(companyId);
+        // OPTIMIZATION: Load independent data in parallel (Phase 1)
+        console.time('[ShareManagementPanel] Phase 1 - Parallel data load');
+        const [
+          companyData,
+          shares,
+          isDue,
+          transactions,
+          breakdown,
+          historical,
+          prestigeEvents
+        ] = await Promise.all([
+          companyService.getCompany(companyId).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'companyService.getCompany'); return r; }),
+          getCompanyShares(companyId).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'getCompanyShares'); return r; }),
+          areDividendsDue().then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'areDividendsDue'); return r; }),
+          loadTransactions().catch(() => []).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'loadTransactions'); return r; }),
+          getShareholderBreakdown().then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'getShareholderBreakdown'); return r; }),
+          getHistoricalShareMetrics(2).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'getHistoricalShareMetrics'); return r; }),
+          listPrestigeEventsForUI().catch(() => []).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'listPrestigeEventsForUI'); return r; })
+        ]);
+        console.timeEnd('[ShareManagementPanel] Phase 1 - Parallel data load');
+
+        // Load share metrics with pre-loaded transactions (to avoid loading transactions again)
+        console.time('[ShareManagementPanel] getShareMetrics');
+        const metrics = await getShareMetrics({ transactions });
+        console.timeEnd('[ShareManagementPanel] getShareMetrics');
+
+        // Load share price breakdown after we have the data (use pre-calculated values)
+        console.time('[ShareManagementPanel] getSharePriceBreakdown');
+        const breakdownResult = await getSharePriceBreakdown({
+          shareMetrics: metrics,
+          company: companyData,
+          sharesData: shares
+        });
+        console.timeEnd('[ShareManagementPanel] getSharePriceBreakdown');
+
+        // Set early state updates for UI responsiveness
         if (companyData) {
           setCompany(companyData);
         }
 
-        // Get share data
-        const shares = await getCompanyShares(companyId);
         if (shares) {
           setSharesData({
             totalShares: shares.totalShares,
@@ -79,39 +120,17 @@ export function ShareManagementPanel() {
           setDividendRate(shares.dividendRate);
         }
 
-        // Update market value
-        await updateMarketValue();
-        const marketData = await getMarketValue();
-        setMarketValue(marketData);
-
-        // Check if dividends are due
-        const isDue = await areDividendsDue();
         setDividendsDue(isDue);
-
-        // Load share metrics
-        const metrics = await getShareMetrics();
         setShareMetrics(metrics);
-
-        // Load shareholder breakdown
-        const breakdown = await getShareholderBreakdown();
         setShareholderBreakdown(breakdown);
-
-        // Load historical metrics
-        const historical = await getHistoricalShareMetrics(2);
         setHistoricalMetrics(historical);
-        
-        // Load share price breakdown data
-        const breakdownResult = await getSharePriceBreakdown();
+
         if (breakdownResult.success && breakdownResult.data) {
           setSharePriceBreakdown(breakdownResult.data);
         }
 
-        // Load recent share structure changes and dividend changes
+        // Process recent share structure changes and dividend changes
         try {
-          const transactions = await loadTransactions();
-          const prestigeEvents = await listPrestigeEventsForUI();
-          
-          // Find recent share issuance/buyback transactions (last 12 weeks)
           const currentWeek = gameState.week || 1;
           const currentSeason = gameState.season || 'Spring';
           const currentYear = gameState.currentYear || 2024;
@@ -147,23 +166,17 @@ export function ShareManagementPanel() {
           setRecentShareChanges(shareTransactions);
           
           // Find recent dividend change prestige events (last 12 weeks)
-          // Events are already sorted by recency from listPrestigeEventsForUI
           const dividendEvents = prestigeEvents
             .filter((event: PrestigeEvent) => {
               if (event.type !== 'penalty') return false;
               const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
               if (metadata.event !== 'dividend_change') return false;
-              
-              // For timestamp-based filtering, we'll just take the most recent ones
-              // The listPrestigeEventsForUI already sorts by created_game_week descending
               return true;
             })
             .slice(0, 5) // Last 5 events (already sorted by recency)
             .map((event: PrestigeEvent) => {
               const metadata: any = (event as any).metadata?.payload ?? (event as any).metadata ?? {};
               
-              // Try to get week from metadata or use a simple date format
-              // If we have created_at, use that, otherwise use "Recent"
               let dateStr = 'Recent';
               if (event.created_at) {
                 try {
@@ -187,31 +200,96 @@ export function ShareManagementPanel() {
           console.error('Error loading recent share/dividend changes:', err);
         }
 
-        // Calculate max buyback shares using service function
-        const maxBuyback = await getMaxBuybackShares();
+        // OPTIMIZATION: Get market value (don't update - only update when user changes inputs)
+        console.time('[ShareManagementPanel] getMarketValue');
+        const marketData = await getMarketValue();
+        console.timeEnd('[ShareManagementPanel] getMarketValue');
+        setMarketValue(marketData);
+
+        // OPTIMIZATION: Pre-calculate board satisfaction once (used by all constraint checks)
+        console.time('[ShareManagementPanel] Pre-calculate board satisfaction');
+        const { calculateBoardSatisfaction } = await import('@/lib/services');
+        const boardSatisfaction = await calculateBoardSatisfaction();
+        console.timeEnd('[ShareManagementPanel] Pre-calculate board satisfaction');
+
+        // OPTIMIZATION: Batch constraint and limit checks in parallel (Phase 2)
+        // Pass pre-calculated values to avoid redundant calls
+        console.time('[ShareManagementPanel] Phase 2 - Constraint checks');
+        const [
+          maxBuyback,
+          buybackConstraint,
+          maxIssuance,
+          issuanceConstraint,
+          dividendLimits,
+          dividendConstraint
+        ] = await Promise.all([
+          getMaxBuybackShares({
+            sharePrice: marketData.sharePrice,
+            shareholderBreakdown: breakdown,
+            boardSatisfaction: boardSatisfaction
+          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getMaxBuybackShares'); return r; }),
+          getBuybackConstraintInfo({
+            sharePrice: marketData.sharePrice,
+            shareholderBreakdown: breakdown,
+            boardSatisfaction: boardSatisfaction
+          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getBuybackConstraintInfo'); return r; }),
+          getMaxIssuanceShares({
+            sharePrice: marketData.sharePrice,
+            shareholderBreakdown: breakdown,
+            boardSatisfaction: boardSatisfaction
+          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getMaxIssuanceShares'); return r; }),
+          getIssuanceConstraintInfo({
+            sharePrice: marketData.sharePrice,
+            shareholderBreakdown: breakdown,
+            boardSatisfaction: boardSatisfaction
+          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getIssuanceConstraintInfo'); return r; }),
+          getDividendRateLimits({
+            shareholderBreakdown: breakdown,
+            boardSatisfaction: boardSatisfaction
+          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getDividendRateLimits'); return r; }),
+          getDividendConstraintInfo({
+            shareholderBreakdown: breakdown,
+            boardSatisfaction: boardSatisfaction
+          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getDividendConstraintInfo'); return r; })
+        ]);
+        console.timeEnd('[ShareManagementPanel] Phase 2 - Constraint checks');
+
+        // Set constraint data
         setMaxBuybackShares(maxBuyback);
         if (buybackShares > maxBuyback) {
           setBuybackShares(maxBuyback);
         }
+        setBuybackConstraintInfo(buybackConstraint);
 
-        // Calculate max issuance shares using service function
-        const maxIssuance = await getMaxIssuanceShares();
         setMaxIssuanceShares(maxIssuance);
         if (issuingShares > maxIssuance) {
           setIssuingShares(maxIssuance);
         }
+        setIssuanceConstraintInfo(issuanceConstraint);
 
-        // Calculate dividend min/max using service function
-        const dividendLimits = await getDividendRateLimits();
-        setDividendMin(dividendLimits.min);
-        setDividendMax(dividendLimits.max);
+        // Set dividend constraint info
+        setDividendConstraintInfo(dividendConstraint);
+
+        // Use constraint info limits if available, otherwise fall back to dividendLimits
+        const effectiveMinRate = dividendConstraint.isBlocked ? dividendConstraint.minRate : dividendLimits.min;
+        const effectiveMaxRate = dividendConstraint.isBlocked ? dividendConstraint.maxRate : dividendLimits.max;
+        
+        setDividendMin(effectiveMinRate);
+        setDividendMax(effectiveMaxRate);
         
         // Clamp current dividend rate to new constraints
-        if (dividendRate > dividendLimits.max) {
-          setDividendRate(dividendLimits.max);
-        } else if (dividendRate < dividendLimits.min) {
-          setDividendRate(dividendLimits.min);
+        // Use the dividend rate from shares data (already set above)
+        if (shares) {
+          const currentDividendRate = shares.dividendRate;
+          if (currentDividendRate > effectiveMaxRate) {
+            setDividendRate(effectiveMaxRate);
+          } else if (currentDividendRate < effectiveMinRate) {
+            setDividendRate(effectiveMinRate);
+          }
         }
+        
+        const perfEnd = performance.now();
+        console.log(`[ShareManagementPanel] Total load time: ${(perfEnd - perfStart).toFixed(2)}ms`);
       } catch (err) {
         console.error('Error loading share management data:', err);
         setError('Failed to load share data');
@@ -222,6 +300,20 @@ export function ShareManagementPanel() {
 
     loadData();
   }, [gameState.money, gameState.economyPhase, gameState.week, gameState.season, gameState.currentYear]); // Reload when money, economy phase, week, season, or year changes
+
+  // Reset slider values when operations are blocked
+  useEffect(() => {
+    if (issuanceConstraintInfo?.isBlocked && issuingShares > 0) {
+      setIssuingShares(0);
+    }
+    if (buybackConstraintInfo?.isBlocked && buybackShares > 0) {
+      setBuybackShares(0);
+    }
+    if (dividendConstraintInfo?.isBlocked && sharesData) {
+      // When blocked, keep current rate (no changes allowed)
+      setDividendRate(sharesData.dividendRate);
+    }
+  }, [issuanceConstraintInfo?.isBlocked, buybackConstraintInfo?.isBlocked, dividendConstraintInfo?.isBlocked, sharesData]);
 
   const playerOwnershipPct = sharesData && sharesData.totalShares && sharesData.playerShares
     ? (sharesData.playerShares / sharesData.totalShares) * 100
@@ -599,7 +691,11 @@ export function ShareManagementPanel() {
             {/* Market Operations Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Issue Stock Card */}
-              <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors">
+              <Card className={`border-2 transition-colors ${
+                issuanceConstraintInfo?.isBlocked 
+                  ? 'border-red-400 bg-red-50/30' 
+                  : 'border-blue-200 hover:border-blue-400'
+              }`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Issue Stock</CardTitle>
               <CardDescription className="text-xs">Raise capital by issuing new shares</CardDescription>
@@ -608,9 +704,9 @@ export function ShareManagementPanel() {
               <div>
                 <Label htmlFor="issue-shares" className="text-xs">
                   Number of Shares
-                  {maxIssuanceShares > 0 && (
+                  {maxIssuanceShares > 0 && !issuanceConstraintInfo?.isBlocked && (
                     <span className="text-gray-500 ml-1">
-                      (Max: {formatNumber(maxIssuanceShares, { decimals: 0 })} - 50% of total shares)
+                      (Max: {formatNumber(maxIssuanceShares, { decimals: 0 })})
                     </span>
                   )}
                 </Label>
@@ -622,12 +718,25 @@ export function ShareManagementPanel() {
                     max={maxIssuanceShares}
                     step={1}
                     className="w-full"
+                    disabled={issuanceConstraintInfo?.isBlocked || maxIssuanceShares === 0}
                   />
                   <div className="flex justify-between text-xs text-gray-500">
                     <span>0</span>
                     <span>{formatNumber(maxIssuanceShares, { decimals: 0 })}</span>
                   </div>
                 </div>
+                {issuanceConstraintInfo && (
+                  <ConstraintDisplay
+                    constraintInfo={issuanceConstraintInfo}
+                    displayType="shares"
+                    maxValue={maxIssuanceShares}
+                    hardLimit={issuanceConstraintInfo.hardLimit}
+                    boardLimit={issuanceConstraintInfo.boardLimit}
+                    valueLabel=" shares"
+                    formatOptions={{ decimals: 0 }}
+                    sharePrice={marketValue.sharePrice}
+                  />
+                )}
               </div>
               <div className="bg-blue-50 rounded-md p-2 text-xs">
                 <div className="text-gray-600">Capital Raised:</div>
@@ -637,16 +746,20 @@ export function ShareManagementPanel() {
               </div>
               <Button
                 onClick={handleIssueStock}
-                disabled={isProcessing || issuingShares <= 0}
+                disabled={isProcessing || issuingShares <= 0 || issuanceConstraintInfo?.isBlocked || maxIssuanceShares === 0}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                {isProcessing ? 'Processing...' : 'Issue Stock'}
+                {isProcessing ? 'Processing...' : issuanceConstraintInfo?.isBlocked ? 'Blocked' : 'Issue Stock'}
               </Button>
             </CardContent>
               </Card>
 
               {/* Buy Back Stock Card */}
-              <Card className="border-2 border-purple-200 hover:border-purple-400 transition-colors">
+              <Card className={`border-2 transition-colors ${
+                buybackConstraintInfo?.isBlocked 
+                  ? 'border-red-400 bg-red-50/30' 
+                  : 'border-purple-200 hover:border-purple-400'
+              }`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Buy Back Stock</CardTitle>
               <CardDescription className="text-xs">Increase ownership by buying back shares</CardDescription>
@@ -655,9 +768,9 @@ export function ShareManagementPanel() {
               <div>
                 <Label htmlFor="buyback-shares" className="text-xs">
                   Number of Shares
-                  {maxBuybackShares > 0 && (
+                  {maxBuybackShares > 0 && !buybackConstraintInfo?.isBlocked && (
                     <span className="text-gray-500 ml-1">
-                      (Max: {formatNumber(maxBuybackShares, { decimals: 0 })} - respects balance, yearly limit, debt ratio)
+                      (Max: {formatNumber(maxBuybackShares, { decimals: 0 })})
                     </span>
                   )}
                 </Label>
@@ -669,12 +782,25 @@ export function ShareManagementPanel() {
                     max={maxBuybackShares}
                     step={1}
                     className="w-full"
+                    disabled={buybackConstraintInfo?.isBlocked || maxBuybackShares === 0}
                   />
                   <div className="flex justify-between text-xs text-gray-500">
                     <span>0</span>
                     <span>{formatNumber(maxBuybackShares, { decimals: 0 })}</span>
                   </div>
                 </div>
+                {buybackConstraintInfo && (
+                  <ConstraintDisplay
+                    constraintInfo={buybackConstraintInfo}
+                    displayType="shares"
+                    maxValue={maxBuybackShares}
+                    hardLimit={buybackConstraintInfo.hardLimit}
+                    boardLimit={buybackConstraintInfo.boardLimit}
+                    valueLabel=" shares"
+                    formatOptions={{ decimals: 0 }}
+                    sharePrice={marketValue.sharePrice}
+                  />
+                )}
               </div>
               <div className="bg-purple-50 rounded-md p-2 text-xs">
                 <div className="text-gray-600">Estimated Cost:</div>
@@ -689,21 +815,27 @@ export function ShareManagementPanel() {
               </div>
               <Button
                 onClick={handleBuyBackStock}
-                disabled={isProcessing || buybackShares <= 0 || buybackShares > maxBuybackShares}
+                disabled={isProcessing || buybackShares <= 0 || buybackShares > maxBuybackShares || buybackConstraintInfo?.isBlocked || maxBuybackShares === 0}
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 variant="outline"
               >
-                {isProcessing ? 'Processing...' : 'Buy Back Stock'}
+                {isProcessing ? 'Processing...' : buybackConstraintInfo?.isBlocked ? 'Blocked' : 'Buy Back Stock'}
               </Button>
             </CardContent>
               </Card>
 
               {/* Dividend Management Card */}
-              <Card className={`border-2 transition-colors ${dividendsDue ? 'border-yellow-400 hover:border-yellow-500 bg-yellow-50/30' : 'border-green-200 hover:border-green-400'}`}>
+              <Card className={`border-2 transition-colors ${
+                dividendConstraintInfo?.isBlocked 
+                  ? 'border-red-400 bg-red-50/30' 
+                  : dividendsDue 
+                  ? 'border-yellow-400 hover:border-yellow-500 bg-yellow-50/30' 
+                  : 'border-green-200 hover:border-green-400'
+              }`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center justify-between">
                 <span>Dividend Management</span>
-                {dividendsDue && (
+                {dividendsDue && !dividendConstraintInfo?.isBlocked && (
                   <span className="text-xs bg-yellow-500 text-white px-2 py-1 rounded-full font-semibold">
                     Due
                   </span>
@@ -715,7 +847,7 @@ export function ShareManagementPanel() {
               <div>
                 <Label htmlFor="dividend-rate" className="text-xs">
                   Current Dividend Rate (€ per share)
-                  {sharesData && (
+                  {sharesData && !dividendConstraintInfo?.isBlocked && (
                     <span className="text-gray-500 ml-1">
                       (Max decrease: 10% per season, Max: {formatNumber(dividendMax, { currency: true, decimals: 4 })})
                     </span>
@@ -732,6 +864,7 @@ export function ShareManagementPanel() {
                     max={dividendMax}
                     step={0.0001}
                     className="w-full"
+                    disabled={dividendConstraintInfo?.isBlocked || dividendMin >= dividendMax}
                   />
                   <div className="flex justify-between text-xs text-gray-500">
                     <span>{formatNumber(dividendMin, { currency: true, decimals: 4 })}</span>
@@ -741,8 +874,22 @@ export function ShareManagementPanel() {
                     Current: {formatNumber(dividendRate, { currency: true, decimals: 4 })}/share
                   </div>
                 </div>
+                {dividendConstraintInfo && (
+                  <ConstraintDisplay
+                    constraintInfo={dividendConstraintInfo}
+                    displayType="range"
+                    minValue={dividendConstraintInfo.minRate}
+                    maxValueRange={dividendConstraintInfo.maxRate}
+                    hardMinValue={dividendConstraintInfo.hardMinRate}
+                    hardMaxValue={dividendConstraintInfo.hardMaxRate}
+                    boardMinValue={dividendConstraintInfo.boardMinRate}
+                    boardMaxValue={dividendConstraintInfo.boardMaxRate}
+                    rangeLabel="/share"
+                    formatOptions={{ currency: true, decimals: 4 }}
+                  />
+                )}
               </div>
-              {dividendsDue && (
+              {dividendsDue && !dividendConstraintInfo?.isBlocked && (
                 <div className="bg-yellow-100 border border-yellow-300 rounded-md p-2 text-xs">
                   <div className="font-semibold text-yellow-800">⚠️ Dividends are due this week!</div>
                   <div className="text-yellow-700 mt-1">Pay dividends to avoid missing the payment deadline.</div>
@@ -762,11 +909,11 @@ export function ShareManagementPanel() {
               <div className="flex gap-2">
                 <Button
                   onClick={handleUpdateDividendRate}
-                  disabled={isProcessing}
+                  disabled={isProcessing || dividendConstraintInfo?.isBlocked || dividendMin >= dividendMax}
                   className="flex-1"
                   variant="outline"
                 >
-                  {isProcessing ? 'Updating...' : 'Update Rate'}
+                  {isProcessing ? 'Updating...' : dividendConstraintInfo?.isBlocked ? 'Blocked' : 'Update Rate'}
                 </Button>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-md p-2 text-xs">

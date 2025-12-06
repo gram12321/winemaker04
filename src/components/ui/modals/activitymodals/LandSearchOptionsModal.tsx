@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork } from '@/lib/services';
+import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork, getVineyardPurchaseConstraintInfo } from '@/lib/services';
+import type { BaseConstraintInfo } from '@/lib/types/constraintTypes';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
-import { Button } from '@/components/ui';
+import { Button, ConstraintDisplay } from '@/components/ui';
 import * as SliderPrimitive from '@radix-ui/react-slider';
+import { X } from 'lucide-react';
+import { getGameState } from '@/lib/services';
+import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 
 // Two-thumb slider built on Radix Slider primitives
 const DualSlider: React.FC<{
@@ -30,10 +34,9 @@ const DualSlider: React.FC<{
     </SliderPrimitive.Root>
   );
 };
-// import { Badge } from '@/components/ui/shadCN/badge';
-import { X } from 'lucide-react';
-import { getGameState } from '@/lib/services';
-import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+
+
+
 
 interface LandSearchOptionsModalProps {
   isOpen: boolean;
@@ -75,9 +78,26 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
   });
 
   const [redistributedProbabilities, setRedistributedProbabilities] = useState<Array<{region: string, probability: number}>>([]);
+  const [vineyardConstraintInfo, setVineyardConstraintInfo] = useState<(BaseConstraintInfo & { maxAmount: number; hardLimit: number; boardLimit: number | null; currentBalance: number }) | null>(null);
 
   // Get company prestige for calculations
   const gameState = getGameState();
+
+  // Load vineyard purchase constraint info
+  useEffect(() => {
+    const loadConstraintInfo = async () => {
+      try {
+        const constraintInfo = await getVineyardPurchaseConstraintInfo();
+        setVineyardConstraintInfo(constraintInfo);
+      } catch (error) {
+        console.error('Error loading vineyard purchase constraint info:', error);
+      }
+    };
+    
+    if (isOpen) {
+      loadConstraintInfo();
+    }
+  }, [isOpen, gameState.money, gameState.week, gameState.season, gameState.currentYear]);
 
   // Calculate preview stats whenever options change
   useEffect(() => {
@@ -515,7 +535,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 </label>
                 <input
                   type="range"
-                  min="3"
+                  min="1"
                   max="10"
                   step="1"
                   value={options.numberOfOptions}
@@ -523,7 +543,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>{formatNumber(3, { smartDecimals: true })}</span>
+                  <span>{formatNumber(1, { smartDecimals: true })}</span>
                   <span>{formatNumber(10, { smartDecimals: true })}</span>
                 </div>
               </div>
@@ -662,6 +682,69 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                   )}
                 </div>
               </div>
+
+              {/* Vineyard Purchase Constraints */}
+              <div>
+                <h3 className="text-lg font-medium text-white mb-4">Purchase Constraints</h3>
+                <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+                  {vineyardConstraintInfo ? (
+                    <>
+                      {/* Current Balance */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300">Current Balance:</span>
+                        <span className="text-white font-medium">{formatNumber(vineyardConstraintInfo.currentBalance, { currency: true })}</span>
+                      </div>
+                      
+                      {/* Maximum Purchase Amount */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300">Max Purchase:</span>
+                        <span className={`font-medium ${
+                          vineyardConstraintInfo.isBlocked 
+                            ? 'text-red-400' 
+                            : vineyardConstraintInfo.limitingConstraint === 'board'
+                            ? 'text-yellow-400'
+                            : 'text-green-400'
+                        }`}>
+                          {formatNumber(vineyardConstraintInfo.maxAmount, { currency: true })}
+                        </span>
+                      </div>
+                      
+                      {/* Constraint Display */}
+                      {vineyardConstraintInfo && (
+                        <ConstraintDisplay
+                          constraintInfo={vineyardConstraintInfo}
+                          displayType="currency"
+                          maxValue={vineyardConstraintInfo.maxAmount}
+                          hardLimit={vineyardConstraintInfo.hardLimit}
+                          boardLimit={vineyardConstraintInfo.boardLimit}
+                          currentBalance={vineyardConstraintInfo.currentBalance}
+                          formatOptions={{ currency: true }}
+                        />
+                      )}
+                      
+                      {/* Additional Info */}
+                      {vineyardConstraintInfo.boardLimitDetails && (
+                        <div className="text-xs text-gray-400 pt-2 border-t border-gray-700">
+                          {vineyardConstraintInfo.boardLimitDetails.satisfaction !== undefined && (
+                            <div>
+                              Board Satisfaction: {formatNumber(vineyardConstraintInfo.boardLimitDetails.satisfaction * 100, { decimals: 1 })}%
+                            </div>
+                          )}
+                          {vineyardConstraintInfo.boardLimitDetails.reason && (
+                            <div className="mt-1 italic">
+                              {vineyardConstraintInfo.boardLimitDetails.reason}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-400 text-center py-2">
+                      Loading constraint information...
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -677,9 +760,12 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            disabled={vineyardConstraintInfo?.isBlocked === true}
+            className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
-            Start Search ({formatNumber(previewStats.totalCost, { currency: true })})
+            {vineyardConstraintInfo?.isBlocked 
+              ? 'Blocked by Board' 
+              : `Start Search (${formatNumber(previewStats.totalCost, { currency: true })})`}
           </Button>
         </div>
       </div>

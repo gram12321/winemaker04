@@ -34,6 +34,7 @@ interface FinancialData {
 }
 
 let transactionsCache: Transaction[] = [];
+let transactionsLoadPromise: Promise<Transaction[]> | null = null; // Promise-based cache for parallel calls
 
 // Add a new transaction to the system
 export const addTransaction = async (
@@ -101,6 +102,7 @@ export const addTransaction = async (
     };
     
     transactionsCache.push(newTransaction);
+    transactionsLoadPromise = null; // Invalidate promise cache when new transaction is added
     
     transactionsCache.sort((a, b) => {
       if (a.date.year !== b.date.year) return b.date.year - a.date.year;
@@ -120,15 +122,33 @@ export const addTransaction = async (
 };
 
 // Load transactions from database
+// OPTIMIZATION: Uses promise-based caching to prevent parallel database calls
 export const loadTransactions = async (): Promise<Transaction[]> => {
-  try {
-    const transactions = await loadTransactionsDB();
-    transactionsCache = transactions;
-    return transactions;
-  } catch (error) {
-    console.error('Error loading transactions:', error);
-    return [];
+  // If there's already a load in progress, return that promise
+  if (transactionsLoadPromise) {
+    return transactionsLoadPromise;
   }
+  
+  // If cache is populated, return it immediately
+  if (transactionsCache.length > 0) {
+    return transactionsCache;
+  }
+  
+  // Start loading and cache the promise
+  transactionsLoadPromise = (async () => {
+    try {
+      const transactions = await loadTransactionsDB();
+      transactionsCache = transactions;
+      transactionsLoadPromise = null; // Clear promise cache after completion
+      return transactions;
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      transactionsLoadPromise = null; // Clear promise cache on error
+      return [];
+    }
+  })();
+  
+  return transactionsLoadPromise;
 };
 
 // Get transactions from cache or load from Supabase if cache is empty
@@ -139,6 +159,12 @@ export const getTransactions = (): Transaction[] => {
   }
   
   return transactionsCache;
+};
+
+// Clear transactions cache (useful when transactions are modified externally)
+export const clearTransactionsCache = (): void => {
+  transactionsCache = [];
+  transactionsLoadPromise = null;
 };
 
 // Calculate company value (total assets - total liabilities)

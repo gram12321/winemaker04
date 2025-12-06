@@ -41,6 +41,9 @@ export interface CompanyUpdateData {
   lastSharePriceUpdateWeek?: number;
   lastSharePriceUpdateSeason?: Season;
   lastSharePriceUpdateYear?: number;
+  // Share distribution
+  familyShares?: number;
+  outsideShares?: number;
 }
 
 export interface CompanyStats {
@@ -113,6 +116,8 @@ class CompanyService {
       }
 
       // Create company_shares record
+      // Note: familyShares and outsideShares will be calculated in applyStartingConditions
+      // when initialVineyardValue is known. For now, set both to 0.
       const companyId = result.data.id;
       const sharesResult = await createCompanyShares(companyId, {
         total_shares: TOTAL_SHARES,
@@ -121,7 +126,9 @@ class CompanyService {
         initial_ownership_pct: playerOwnershipPct,
         dividend_rate: 0.001, // Fixed per share in euros
         market_cap: 0,
-        share_price: 0
+        share_price: 0,
+        family_shares: 0, // Will be calculated in applyStartingConditions
+        outside_shares: outstandingShares // Initially all outstanding shares are outside (until vineyard is created)
       });
 
       if (!sharesResult.success) {
@@ -194,6 +201,8 @@ class CompanyService {
     if (updates.lastSharePriceUpdateWeek !== undefined) sharesUpdateData.last_share_price_update_week = updates.lastSharePriceUpdateWeek;
     if (updates.lastSharePriceUpdateSeason !== undefined) sharesUpdateData.last_share_price_update_season = updates.lastSharePriceUpdateSeason;
     if (updates.lastSharePriceUpdateYear !== undefined) sharesUpdateData.last_share_price_update_year = updates.lastSharePriceUpdateYear;
+    if (updates.familyShares !== undefined) sharesUpdateData.family_shares = updates.familyShares;
+    if (updates.outsideShares !== undefined) sharesUpdateData.outside_shares = updates.outsideShares;
 
     // Update company table (if there are non-share updates)
     let companyResult = { success: true };

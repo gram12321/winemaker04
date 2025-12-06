@@ -191,7 +191,10 @@ async function calculate48WeekRollingMetrics(
   }
 }
 
-export async function getShareMetrics(): Promise<ShareMetrics> {
+export async function getShareMetrics(options?: {
+  transactions?: Transaction[];
+  financialData?: Awaited<ReturnType<typeof calculateFinancialData>>;
+}): Promise<ShareMetrics> {
   try {
     const companyId = getCurrentCompanyId();
     const company = await companyService.getCompany(companyId);
@@ -233,12 +236,10 @@ export async function getShareMetrics(): Promise<ShareMetrics> {
     const gameState = getGameState();
     const currentYear = gameState.currentYear || 2024;
 
-    // Load data in parallel where possible
-    const [transactions, totalDebt, financialData] = await Promise.all([
-      loadTransactions().catch(() => [] as Transaction[]),
-      calculateTotalOutstandingLoans().catch(() => 0),
-      calculateFinancialData('year', { year: currentYear }).catch(() => null)
-    ]);
+    // Use provided data or load it
+    const transactions = options?.transactions ?? await loadTransactions().catch(() => [] as Transaction[]);
+    const financialData = options?.financialData ?? await calculateFinancialData('year', { year: currentYear }).catch(() => null);
+    const totalDebt = await calculateTotalOutstandingLoans().catch(() => 0);
 
     // Calculate basic metrics
     const basicMetrics = await calculateBasicPerShareMetrics(
@@ -306,24 +307,8 @@ export async function getShareholderBreakdown(): Promise<ShareholderBreakdown> {
 
     const totalShares = sharesDataForBreakdown.totalShares;
     const playerShares = sharesDataForBreakdown.playerShares;
-    const nonPlayerShares = Math.max(totalShares - playerShares, 0);
-
-    // Get initial equity contributions to calculate family vs public investor split
-    const financialData = await calculateFinancialData('all');
-    const familyContribution = financialData.familyContribution;
-    const outsideInvestment = financialData.outsideInvestment;
-    
-    // Calculate family and public investor shares based on their initial equity proportions
-    let familyShares = 0;
-    let outsideShares = nonPlayerShares;
-
-    const totalNonPlayerEquity = Math.max(familyContribution, 0) + Math.max(outsideInvestment, 0);
-
-    if (totalNonPlayerEquity > 0 && nonPlayerShares > 0) {
-      const familyShareRatio = Math.max(familyContribution, 0) / totalNonPlayerEquity;
-      familyShares = Math.round(nonPlayerShares * familyShareRatio);
-      outsideShares = Math.max(nonPlayerShares - familyShares, 0);
-    }
+    const familyShares = sharesDataForBreakdown.familyShares;
+    const outsideShares = sharesDataForBreakdown.outsideShares;
 
     const playerPct = totalShares > 0 ? (playerShares / totalShares) * 100 : 0;
     const familyPct = totalShares > 0 ? (familyShares / totalShares) * 100 : 0;

@@ -1,25 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/shadCN/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { formatNumber, getRangeColor } from '@/lib/utils';
 import { useGameState } from '@/hooks';
-import { 
-  getBoardSatisfactionBreakdown,
-  boardEnforcer,
-  getShareholderBreakdown,
-  calculateFinancialData,
-  calculateCreditRating,
-  type BoardSatisfactionBreakdown,
-  type CreditRatingBreakdown
-} from '@/lib/services';
+import { getBoardSatisfactionBreakdown, boardEnforcer, getShareholderBreakdown, calculateFinancialData, calculateCreditRating, getDividendRateLimits, getMarketValue, updateMarketValue, calculateTotalOutstandingLoans, getShareMetrics, type BoardSatisfactionBreakdown, type CreditRatingBreakdown } from '@/lib/services';
+import { getCompanyShares, getYearlyShareOperations } from '@/lib/database';
 import { getCurrentCompanyId } from '@/lib/utils';
-import { 
-  BOARD_CONSTRAINTS, 
-  BOARD_SATISFACTION_WEIGHTS, 
-  CREDIT_RATING_WEIGHTS,
-  type BoardConstraintType 
-} from '@/lib/constants';
+import { BOARD_CONSTRAINTS, BOARD_SATISFACTION_WEIGHTS, CREDIT_RATING_WEIGHTS, type BoardConstraintType } from '@/lib/constants';
 import { SimpleCard } from '@/components/ui';
 import { getBoardSatisfactionHistory } from '@/lib/database';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -225,10 +212,19 @@ export function BoardRoomPanel() {
   } | null>(null);
   const [effectiveSatisfaction, setEffectiveSatisfaction] = useState<number | null>(null);
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
-  const [expandedConstraints, setExpandedConstraints] = useState<Set<BoardConstraintType>>(new Set());
+  const [shareData, setShareData] = useState<{
+    totalShares: number;
+    outstandingShares: number;
+    sharePrice: number;
+    dividendRate: number;
+  } | null>(null);
+  const [dividendLimits, setDividendLimits] = useState<{ min: number; max: number } | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
+      const perfStart = performance.now();
+      console.log('[BoardRoomPanel] Starting data load...');
+      
       try {
         setLoading(true);
         const companyId = getCurrentCompanyId();
@@ -237,59 +233,113 @@ export function BoardRoomPanel() {
           return;
         }
 
-        // Load board satisfaction breakdown (uses current company)
-        const satisfactionBreakdown = await getBoardSatisfactionBreakdown();
+        // OPTIMIZATION: Load independent data in parallel (Phase 1)
+        console.time('[BoardRoomPanel] Phase 1 - Parallel data load');
+        const [
+          satisfactionBreakdown,
+          shareholderData,
+          history48Weeks,
+          history12Weeks,
+          financialData,
+          sharesData,
+          creditRating,
+          yearlyOps
+        ] = await Promise.all([
+          getBoardSatisfactionBreakdown().then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getBoardSatisfactionBreakdown'); return r; }),
+          getShareholderBreakdown().then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getShareholderBreakdown'); return r; }),
+          getBoardSatisfactionHistory(companyId, 48).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getBoardSatisfactionHistory(48)'); return r; }),
+          getBoardSatisfactionHistory(companyId, 12).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getBoardSatisfactionHistory(12)'); return r; }),
+          calculateFinancialData('year').then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'calculateFinancialData'); return r; }),
+          getCompanyShares(companyId).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getCompanyShares'); return r; }),
+          calculateCreditRating().then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'calculateCreditRating'); return r; }),
+          getYearlyShareOperations(companyId).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getYearlyShareOperations'); return r; })
+        ]);
+        console.timeEnd('[BoardRoomPanel] Phase 1 - Parallel data load');
+
+        // Set early state updates for UI responsiveness
         setBreakdown(satisfactionBreakdown);
-
-        // Load shareholder breakdown for pie chart
-        const shareholderData = await getShareholderBreakdown();
         setShareholderBreakdown(shareholderData);
-
-        // Load historical satisfaction data
-        const history = await getBoardSatisfactionHistory(companyId, 48); // Last 48 weeks
-        const historyData = history.map(snapshot => ({
-          period: `W${snapshot.week} ${snapshot.season.substring(0, 3)} ${snapshot.year}`,
-          satisfaction: snapshot.satisfactionScore,
-          performance: snapshot.performanceScore,
-          stability: snapshot.stabilityScore,
-          consistency: snapshot.consistencyScore,
-          ownership: 1 - snapshot.ownershipPressure // Convert ownership pressure to ownership factor
-        }));
-        setSatisfactionHistory(historyData);
-
-        // Load consistency history (last 12 weeks for details)
-        const consistencyHistory = await getBoardSatisfactionHistory(companyId, 12);
-        setConsistencyHistory(consistencyHistory.map(s => ({
-          period: `W${s.week} ${s.season.substring(0, 3)} ${s.year}`,
-          satisfaction: s.satisfactionScore
-        })));
-
-        // Get current company balance for scaling constraint calculations
-        const financialData = await calculateFinancialData('year');
-        const balance = financialData.cashMoney;
-        setCurrentBalance(balance);
-
-        // Get credit rating breakdown for stability score details
-        const creditRating = await calculateCreditRating();
         setCreditRatingBreakdown({
           assetHealth: creditRating.assetHealth,
           companyStability: creditRating.companyStability
         });
 
-        // Check constraint statuses
-        // Use effective satisfaction (satisfaction × nonPlayerOwnership%) for constraint checks
-        // Non-player ownership includes both family and public investors
+        // Process historical data
+        const historyData = history48Weeks.map(snapshot => ({
+          period: `W${snapshot.week} ${snapshot.season.substring(0, 3)} ${snapshot.year}`,
+          satisfaction: snapshot.satisfactionScore,
+          performance: snapshot.performanceScore,
+          stability: snapshot.stabilityScore,
+          consistency: snapshot.consistencyScore,
+          ownership: 1 - snapshot.ownershipPressure
+        }));
+        setSatisfactionHistory(historyData);
+
+        const consistencyHistoryData = history12Weeks.map(s => ({
+          period: `W${s.week} ${s.season.substring(0, 3)} ${s.year}`,
+          satisfaction: s.satisfactionScore
+        }));
+        setConsistencyHistory(consistencyHistoryData);
+
+        // Calculate effective satisfaction
         const rawSatisfaction = satisfactionBreakdown.satisfaction;
-        const nonPlayerOwnershipPct = shareholderData.nonPlayerOwnershipPct / 100; // Convert to 0-1
-        const effectiveSatisfactionValue = rawSatisfaction * nonPlayerOwnershipPct;
+        const nonPlayerOwnershipPct = shareholderData.nonPlayerOwnershipPct / 100;
+        const effectiveSatisfactionValue = rawSatisfaction * (1 - nonPlayerOwnershipPct);
         setEffectiveSatisfaction(effectiveSatisfactionValue);
-        
+
+        const balance = financialData.cashMoney;
+        setCurrentBalance(balance);
+
+        // OPTIMIZATION: Load dependent data in parallel (Phase 2)
+        // Market value update and share metrics can be parallel
+        console.time('[BoardRoomPanel] Phase 2 - Dependent data');
+        const [marketValueUpdate, shareMetrics, totalDebt] = await Promise.all([
+          updateMarketValue().then(() => { console.timeLog('[BoardRoomPanel] Phase 2 - Dependent data', 'updateMarketValue'); return getMarketValue(); }),
+          getShareMetrics().then(r => { console.timeLog('[BoardRoomPanel] Phase 2 - Dependent data', 'getShareMetrics'); return r; }),
+          calculateTotalOutstandingLoans().then(r => { console.timeLog('[BoardRoomPanel] Phase 2 - Dependent data', 'calculateTotalOutstandingLoans'); return r; })
+        ]);
+        console.timeEnd('[BoardRoomPanel] Phase 2 - Dependent data');
+
+        // Set share data
+        if (sharesData) {
+          setShareData({
+            totalShares: sharesData.totalShares,
+            outstandingShares: sharesData.outstandingShares,
+            sharePrice: marketValueUpdate.sharePrice,
+            dividendRate: sharesData.dividendRate
+          });
+        }
+
+        // Calculate debt ratio
+        const debtRatio = financialData.totalAssets > 0 
+          ? totalDebt / financialData.totalAssets 
+          : 0;
+
+        // OPTIMIZATION: Load dividend limits in parallel with constraint preparation
+        console.time('[BoardRoomPanel] getDividendRateLimits');
+        const divLimitsPromise = getDividendRateLimits();
+        console.timeEnd('[BoardRoomPanel] getDividendRateLimits');
+
+        // Prepare financial context for constraints (reuse already loaded data)
+        const sharesForContext = sharesData;
+        const marketDataForContext = marketValueUpdate;
+        const financialDataForContext = financialData;
+        const shareMetricsForContext = shareMetrics;
+        const sharesIssuedThisYear = yearlyOps.sharesIssuedThisYear;
+        const sharesBoughtBackThisYear = yearlyOps.sharesBoughtBackThisYear;
+
+        // Set dividend limits
+        const divLimits = await divLimitsPromise;
+        setDividendLimits(divLimits);
+
+        // OPTIMIZATION: Batch constraint limit checks in parallel
+        console.time('[BoardRoomPanel] Phase 3 - Constraint limit checks');
         const constraints: typeof activeConstraints = [];
-        
+        const constraintLimitPromises: Promise<{ type: BoardConstraintType; limit: number | null }>[] = [];
+
         for (const [type, constraint] of Object.entries(BOARD_CONSTRAINTS)) {
           const constraintType = type as BoardConstraintType;
           let status: 'none' | 'warning' | 'blocked' = 'none';
-          let limit: number | undefined = undefined;
 
           // Use effective satisfaction for constraint checks
           if (effectiveSatisfactionValue <= constraint.maxThreshold) {
@@ -297,24 +347,90 @@ export function BoardRoomPanel() {
           } else if (effectiveSatisfactionValue <= constraint.startThreshold) {
             status = 'warning';
           }
+
+          // For scaling constraints, prepare context and batch limit checks
+          if (constraint.scalingFormula) {
+            let contextValue: any = balance;
+            let financialContext: any = undefined;
             
-          // For scaling constraints, always get the limit to display (even when blocked)
-            if (constraint.scalingFormula) {
-            const limitResult = await boardEnforcer.getActionLimit(constraintType, balance);
-              if (limitResult) {
-                limit = limitResult.limit ?? undefined;
+            if (type === 'share_issuance') {
+              contextValue = sharesForContext?.totalShares || 0;
+              financialContext = {
+                outstandingShares: sharesForContext?.outstandingShares || 0,
+                totalShares: sharesForContext?.totalShares || 0,
+                sharePrice: marketDataForContext.sharePrice,
+                cashMoney: balance,
+                totalAssets: financialDataForContext.totalAssets,
+                debtRatio: debtRatio,
+                sharesIssuedThisYear: sharesIssuedThisYear
+              };
+            } else if (type === 'share_buyback') {
+              contextValue = sharesForContext?.outstandingShares || 0;
+              financialContext = {
+                outstandingShares: sharesForContext?.outstandingShares || 0,
+                totalShares: sharesForContext?.totalShares || 0,
+                sharePrice: marketDataForContext.sharePrice,
+                cashMoney: balance,
+                totalAssets: financialDataForContext.totalAssets,
+                debtRatio: debtRatio,
+                sharesBoughtBackThisYear: sharesBoughtBackThisYear
+              };
+            } else if (type === 'dividend_change') {
+              contextValue = sharesForContext?.dividendRate || 0;
+              financialContext = {
+                cashMoney: balance,
+                totalShares: sharesForContext?.totalShares || 0,
+                oldRate: sharesForContext?.dividendRate || 0,
+                profitMargin: shareMetricsForContext.profitMargin || 0
+              };
+            } else if (type === 'vineyard_purchase') {
+              contextValue = balance;
+              financialContext = {
+                cashMoney: balance,
+                totalAssets: financialDataForContext.totalAssets,
+                fixedAssets: financialDataForContext.fixedAssets,
+                currentAssets: financialDataForContext.currentAssets,
+                expensesPerSeason: financialDataForContext.expenses,
+                profitMargin: shareMetricsForContext.profitMargin || 0
+              };
             }
+
+            // Batch limit checks
+            constraintLimitPromises.push(
+              boardEnforcer.getActionLimit(constraintType, contextValue, financialContext)
+                .then(result => {
+                  console.timeLog('[BoardRoomPanel] Phase 3 - Constraint limit checks', `getActionLimit(${constraintType})`);
+                  return {
+                    type: constraintType,
+                    limit: result?.limit ?? null
+                  };
+                })
+            );
           }
 
           constraints.push({
             type: constraintType,
             constraint,
             status,
-            limit
+            limit: undefined // Will be set after parallel checks complete
           });
         }
 
-        setActiveConstraints(constraints);
+        // Wait for all constraint limit checks to complete
+        const limitResults = await Promise.all(constraintLimitPromises);
+        console.timeEnd('[BoardRoomPanel] Phase 3 - Constraint limit checks');
+        const limitMap = new Map(limitResults.map(r => [r.type, r.limit]));
+
+        // Update constraints with limits
+        const constraintsWithLimits = constraints.map(c => ({
+          ...c,
+          limit: limitMap.get(c.type) ?? c.limit
+        }));
+
+        setActiveConstraints(constraintsWithLimits);
+        
+        const perfEnd = performance.now();
+        console.log(`[BoardRoomPanel] Total load time: ${(perfEnd - perfStart).toFixed(2)}ms`);
       } catch (error) {
         console.error('Error loading board room data:', error);
       } finally {
@@ -573,10 +689,10 @@ export function BoardRoomPanel() {
                         Family: {formatNumber(shareholderBreakdown.familyPct, { decimals: 1 })}% • Public: {formatNumber(shareholderBreakdown.outsidePct, { decimals: 1 })}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        Effective Satisfaction: {formatNumber(breakdown.satisfaction * (shareholderBreakdown.nonPlayerOwnershipPct / 100) * 100, { decimals: 1 })}%
+                        Effective Satisfaction: {formatNumber(breakdown.satisfaction * (1 - shareholderBreakdown.nonPlayerOwnershipPct / 100) * 100, { decimals: 1 })}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        Constraints use: Satisfaction × Non-Player Ownership %
+                        Constraints use: Satisfaction × (1 - Non-Player Ownership %)
                       </div>
                     </>
                   ) : (
@@ -826,197 +942,366 @@ export function BoardRoomPanel() {
             </SimpleCard>
           </TabsContent>
 
-          <TabsContent value="constraints" className="space-y-4 mt-0">
-            {/* Effective Satisfaction Display with Visual Bar */}
+          <TabsContent value="constraints" className="space-y-6 mt-0">
+            {/* Effective Satisfaction Scale - Visual Reference */}
             {effectiveSatisfaction !== null && breakdown && shareholderBreakdown && shareholderBreakdown.nonPlayerOwnershipPct > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="text-sm font-semibold text-blue-900 mb-2">
-                  Effective Satisfaction (Used for Constraints)
-                </div>
-                <div className="flex items-center gap-4 mb-3">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-sm font-semibold text-blue-900 mb-1">
+                      Effective Satisfaction (Used for All Constraints)
+                    </div>
+                    <div className="text-xs text-blue-700">
+                      {formatNumber(breakdown.satisfaction * 100, { decimals: 1 })}% Satisfaction × (1 - {formatNumber(shareholderBreakdown.nonPlayerOwnershipPct, { decimals: 1 })}% Non-Player) ={' '}
+                      <span className="font-bold text-blue-900">
+                        {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
+                      </span>
+                    </div>
+                  </div>
                   <div className="text-2xl font-bold text-blue-700">
                     {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
                   </div>
-                  {/* Visual indicator bar */}
-                  <div className="flex-1">
-                    <div className="w-full bg-gray-200 rounded-full h-3 relative">
-                      {/* Current satisfaction indicator */}
-                      <div
-                        className={`h-3 rounded-full transition-all ${
-                          effectiveSatisfaction <= 0.2
-                            ? 'bg-red-500'
-                            : effectiveSatisfaction <= 0.5
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
-                        }`}
-                        style={{
-                          width: `${Math.min(effectiveSatisfaction * 100, 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
                 </div>
-                {/* Detailed Calculation */}
-                <div className="text-xs text-blue-800 space-y-1 pt-2 border-t border-blue-300">
-                  <div className="font-semibold mb-1">Calculation:</div>
-                  <div>
-                    {formatNumber(breakdown.satisfaction * 100, { decimals: 1 })}% (Raw Satisfaction) × {formatNumber(shareholderBreakdown.nonPlayerOwnershipPct, { decimals: 1 })}% (Non-Player Ownership: Family + Public Investors) ={' '}
-                    <span className="font-bold">
-                      {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
-                    </span>
+                
+                {/* Visual Scale with Threshold Markers */}
+                <div className="relative">
+                  <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-visible">
+                    {/* Satisfaction fill */}
+                    <div
+                      className={`h-4 rounded-full transition-all ${
+                        effectiveSatisfaction <= 0.2
+                          ? 'bg-red-500'
+                          : effectiveSatisfaction <= 0.5
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                      style={{
+                        width: `${Math.min(effectiveSatisfaction * 100, 100)}%`,
+                      }}
+                    />
+                    
+                    {/* Threshold markers for all constraints */}
+                    {activeConstraints.map(({ constraint }) => {
+                      const startPos = constraint.startThreshold * 100;
+                      const blockPos = constraint.maxThreshold * 100;
+                      return (
+                        <div key={constraint.type} className="contents">
+                          <div
+                            className="absolute top-0 w-0.5 h-4 bg-yellow-600 opacity-60"
+                            style={{ left: `${startPos}%` }}
+                            title={`${constraint.type.replace(/_/g, ' ')} starts limiting at ${formatNumber(startPos, { decimals: 0 })}%`}
+                          />
+                          <div
+                            className="absolute top-0 w-0.5 h-4 bg-red-600 opacity-60"
+                            style={{ left: `${blockPos}%` }}
+                            title={`${constraint.type.replace(/_/g, ' ')} blocks at ${formatNumber(blockPos, { decimals: 0 })}%`}
+                          />
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Current position indicator */}
+                    <div
+                      className="absolute top-0 w-1 h-4 bg-blue-900 border border-white rounded-full z-10"
+                      style={{ left: `${Math.min(effectiveSatisfaction * 100, 100)}%`, marginLeft: '-2px' }}
+                    />
                   </div>
-                  <div className="text-blue-600 italic mt-1">
-                    Constraints are applied based on effective satisfaction, not raw satisfaction. Non-player ownership includes both family and public investors.
+                  
+                  {/* Scale labels */}
+                  <div className="flex justify-between text-xs text-gray-600 mt-1">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Constraints List - Grid Layout 2x2 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {activeConstraints.map(({ type, constraint, status, limit }) => {
-                // Determine explicit status
-                const isBlocked = status === 'blocked';
-                const isLimited = status === 'warning';
-                const isExpanded = expandedConstraints.has(type);
+            {/* Constraints Grid - Scalable Layout */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Active Constraints ({activeConstraints.length})
+                </h3>
+                <div className="text-xs text-gray-500">
+                  Constraints scale based on effective satisfaction and financial health
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {activeConstraints.map(({ type, constraint, status, limit }) => {
+                  const isBlocked = status === 'blocked';
+                  const isLimited = status === 'warning';
+                  const constraintName = constraint.type
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, (l) => l.toUpperCase());
 
-                // Format constraint name
-                const constraintName = constraint.type
-                  .replace(/_/g, ' ')
-                  .replace(/\b\w/g, (l) => l.toUpperCase());
+                  // Calculate position on satisfaction scale
+                  const satisfactionPos = effectiveSatisfaction !== null ? effectiveSatisfaction * 100 : 0;
+                  const startPos = constraint.startThreshold * 100;
+                  const blockPos = constraint.maxThreshold * 100;
 
-                const toggleExpand = () => {
-                  setExpandedConstraints(prev => {
-                    const next = new Set(prev);
-                    if (next.has(type)) {
-                      next.delete(type);
-                    } else {
-                      next.add(type);
-                    }
-                    return next;
-                  });
-                };
-
-                return (
-                  <div
-                    key={type}
-                    className={`border rounded-md ${
-                      isBlocked
-                        ? 'border-red-300 bg-red-50'
-                        : isLimited
-                        ? 'border-yellow-300 bg-yellow-50'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    {/* Header */}
-                    <button
-                      onClick={toggleExpand}
-                      className="w-full px-3 py-2 flex items-center justify-between hover:bg-opacity-80 transition-colors"
+                  return (
+                    <div
+                      key={type}
+                      className={`border-2 rounded-lg p-4 transition-all ${
+                        isBlocked
+                          ? 'border-red-400 bg-red-50'
+                          : isLimited
+                          ? 'border-yellow-400 bg-yellow-50'
+                          : 'border-green-300 bg-green-50'
+                      }`}
                     >
-                      <div className="font-semibold text-xs text-gray-900">
-                        {constraintName}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`text-xs font-bold px-2 py-0.5 rounded ${
-                            isBlocked
-                              ? 'bg-red-600 text-white'
-                              : isLimited
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-green-600 text-white'
-                          }`}
-                        >
-                          {isBlocked ? 'BLOCKED' : isLimited ? 'LIMITED' : 'ALLOWED'}
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm text-gray-900 mb-1">
+                            {constraintName}
+                          </h4>
+                          <div
+                            className={`text-xs font-bold px-2 py-1 rounded inline-block ${
+                              isBlocked
+                                ? 'bg-red-600 text-white'
+                                : isLimited
+                                ? 'bg-yellow-600 text-white'
+                                : 'bg-green-600 text-white'
+                            }`}
+                          >
+                            {isBlocked ? 'BLOCKED' : isLimited ? 'LIMITED' : 'ALLOWED'}
+                          </div>
                         </div>
-                        <ChevronDown
-                          className={`h-3 w-3 text-gray-500 transition-transform ${
-                            isExpanded ? 'rotate-180' : ''
-                          }`}
-                        />
                       </div>
-                    </button>
 
-                    {/* Expandable Content */}
-                    {isExpanded && (
-                      <div className="px-3 pb-3 border-t border-gray-300">
-                        <div className="space-y-3 pt-2">
-                          {/* Status Explanation */}
-                          <div className="text-xs text-gray-700">
-                            {isBlocked
-                              ? 'This action is currently blocked by the board.'
-                              : isLimited
-                              ? 'This action is limited by the board.'
-                              : 'This action is fully allowed without restrictions.'}
-                          </div>
-
-                          {/* Threshold Values */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <div className="text-xs text-gray-500 mb-0.5">Start</div>
-                              <div className="text-xs font-semibold text-gray-900">
-                                {formatNumber(constraint.startThreshold * 100, {
-                                  decimals: 0,
-                                  forceDecimals: true,
-                                })}
-                                %
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-gray-500 mb-0.5">Block</div>
-                              <div className="text-xs font-semibold text-gray-900">
-                                {formatNumber(constraint.maxThreshold * 100, {
-                                  decimals: 0,
-                                  forceDecimals: true,
-                                })}
-                                %
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Limits/Restrictions (for scaling constraints) */}
-                          {constraint.scalingFormula && (
-                            <div className="pt-2 border-t border-gray-300">
-                              <div className="text-xs text-gray-500 mb-1.5">Scaling Limit</div>
-                              {limit !== undefined && limit !== null ? (
-                                <div className="space-y-1.5">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-700">Limit:</span>
-                                    <span className="text-xs font-semibold text-gray-900">
-                                      {formatNumber(limit, { currency: true })}
-                        </span>
-                                  </div>
-                                  {currentBalance !== null && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-xs text-gray-700">Balance:</span>
-                                      <span className="text-xs text-gray-600">
-                                        {formatNumber(currentBalance, { currency: true })}
-                        </span>
-                                    </div>
-                                  )}
-                                  <div className="text-xs text-gray-500 mt-1.5">
-                                    (1 - Satisfaction) × Balance
-                                  </div>
+                      {/* Visual Satisfaction Scale for This Constraint */}
+                      <div className="mb-4">
+                        <div className="text-xs text-gray-600 mb-1.5">
+                          Constraint Thresholds
                         </div>
-                              ) : (
-                          <div className="text-xs text-gray-600">
-                                  No limit (above threshold)
-                                </div>
-                              )}
-                          </div>
-                        )}
-
-                          {/* Constraint Message */}
-                          {isBlocked && (
-                            <div className="text-xs text-gray-600 italic pt-2 border-t border-gray-300">
-                              {constraint.message}
-                            </div>
+                        <div className="relative w-full bg-gray-200 rounded-full h-3">
+                          {/* Zones */}
+                          <div
+                            className="absolute left-0 h-3 bg-red-200 rounded-l-full"
+                            style={{ width: `${blockPos}%` }}
+                          />
+                          <div
+                            className="absolute h-3 bg-yellow-200"
+                            style={{ left: `${blockPos}%`, width: `${startPos - blockPos}%` }}
+                          />
+                          <div
+                            className="absolute right-0 h-3 bg-green-200 rounded-r-full"
+                            style={{ width: `${100 - startPos}%` }}
+                          />
+                          
+                          {/* Threshold markers */}
+                          <div
+                            className="absolute top-0 w-0.5 h-3 bg-yellow-700"
+                            style={{ left: `${startPos}%` }}
+                            title={`Limits start at ${formatNumber(startPos, { decimals: 0 })}%`}
+                          />
+                          <div
+                            className="absolute top-0 w-0.5 h-3 bg-red-700"
+                            style={{ left: `${blockPos}%` }}
+                            title={`Blocks at ${formatNumber(blockPos, { decimals: 0 })}%`}
+                          />
+                          
+                          {/* Current position */}
+                          {effectiveSatisfaction !== null && (
+                            <div
+                              className={`absolute top-0 w-1 h-3 border border-white rounded-full z-10 ${
+                                satisfactionPos <= blockPos
+                                  ? 'bg-red-600'
+                                  : satisfactionPos <= startPos
+                                  ? 'bg-yellow-600'
+                                  : 'bg-green-600'
+                              }`}
+                              style={{ left: `${Math.min(satisfactionPos, 100)}%`, marginLeft: '-2px' }}
+                            />
                           )}
                         </div>
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Block: {formatNumber(blockPos, { decimals: 0 })}%</span>
+                          <span>Limit: {formatNumber(startPos, { decimals: 0 })}%</span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+
+                      {/* Current Limit (if scaling constraint) */}
+                      {constraint.scalingFormula && (
+                        <div className="mb-3 p-2 bg-white rounded border border-gray-200">
+                          <div className="text-xs text-gray-600 mb-1">Current Limit</div>
+                          {(() => {
+                            // Display different values based on constraint type
+                            if (type === 'share_issuance') {
+                              // For share issuance: show max shares and value
+                              if (limit !== undefined && limit !== null && shareData) {
+                                const maxShares = Math.floor(limit);
+                                const maxValue = maxShares * shareData.sharePrice;
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="text-lg font-bold text-gray-900">
+                                      {formatNumber(maxShares, { decimals: 0 })} shares/year
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      ≈ {formatNumber(maxValue, { currency: true })} at {formatNumber(shareData.sharePrice, { currency: true })}/share
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      of {formatNumber(shareData.totalShares, { decimals: 0 })} total shares
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-sm font-semibold text-green-700">
+                                    No limit (above threshold)
+                                  </div>
+                                );
+                              }
+                            } else if (type === 'share_buyback') {
+                              // For share buyback: show max shares and value
+                              if (limit !== undefined && limit !== null && shareData) {
+                                const maxShares = Math.floor(limit);
+                                const maxValue = maxShares * shareData.sharePrice;
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="text-lg font-bold text-gray-900">
+                                      {formatNumber(maxShares, { decimals: 0 })} shares/year
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      ≈ {formatNumber(maxValue, { currency: true })} at {formatNumber(shareData.sharePrice, { currency: true })}/share
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      of {formatNumber(shareData.outstandingShares, { decimals: 0 })} outstanding shares
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-sm font-semibold text-green-700">
+                                    No limit (above threshold)
+                                  </div>
+                                );
+                              }
+                            } else if (type === 'dividend_change') {
+                              // For dividend change: show min/max rate
+                              if (shareData && dividendLimits) {
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-semibold text-gray-900">
+                                      Rate Range
+                                    </div>
+                                    <div className="text-xs text-gray-600 space-y-0.5">
+                                      <div>
+                                        Min: {formatNumber(dividendLimits.min, { currency: true, decimals: 4 })}/share
+                                      </div>
+                                      <div>
+                                        Max: {formatNumber(dividendLimits.max, { currency: true, decimals: 4 })}/share
+                                      </div>
+                                      {shareData.dividendRate > 0 && (
+                                        <div className="text-gray-500 mt-1">
+                                          Current: {formatNumber(shareData.dividendRate, { currency: true, decimals: 4 })}/share
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-sm font-semibold text-green-700">
+                                    {shareData ? 'No current dividend set' : 'Loading...'}
+                                  </div>
+                                );
+                              }
+                            } else {
+                              // For other constraints (vineyard_purchase): show currency amount
+                              if (limit !== undefined && limit !== null) {
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="text-lg font-bold text-gray-900">
+                                      {formatNumber(limit, { currency: true })}
+                                    </div>
+                                    {currentBalance !== null && (
+                                      <div className="text-xs text-gray-500">
+                                        of {formatNumber(currentBalance, { currency: true })} available
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-sm font-semibold text-green-700">
+                                    No limit (above threshold)
+                                  </div>
+                                );
+                              }
+                            }
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Scaling Formula Explanation */}
+                      {constraint.scalingFormula && effectiveSatisfaction !== null && (
+                        <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-200">
+                          <div className="text-xs font-semibold text-gray-700 mb-1">
+                            How Limits Scale
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-0.5">
+                            {type === 'vineyard_purchase' && (
+                              <>
+                                <div>Base: (1 - Satisfaction) × Balance</div>
+                                <div className="text-gray-500">
+                                  At {formatNumber(effectiveSatisfaction * 100, { decimals: 1 })}%: {formatNumber((1 - effectiveSatisfaction) * 100, { decimals: 1 })}% of balance
+                                </div>
+                                <div className="text-gray-500 mt-1">
+                                  Also considers: Fixed asset ratio, liquidity, profit margin
+                                </div>
+                              </>
+                            )}
+                            {type === 'share_issuance' && (
+                              <>
+                                <div>Base: {formatNumber(0.2 * 100, { decimals: 0 })}% to {formatNumber(0.5 * 100, { decimals: 0 })}% of total shares/year</div>
+                                <div className="text-gray-500">
+                                  At {formatNumber(effectiveSatisfaction * 100, { decimals: 1 })}%: {formatNumber((0.2 + effectiveSatisfaction * 0.3) * 100, { decimals: 1 })}% max
+                                </div>
+                                <div className="text-gray-500 mt-1">
+                                  Also considers: Share price (reduces if &lt;€0.50)
+                                </div>
+                              </>
+                            )}
+                            {type === 'share_buyback' && (
+                              <>
+                                <div>Base: {formatNumber(0.10 * 100, { decimals: 0 })}% to {formatNumber(0.25 * 100, { decimals: 0 })}% of outstanding shares/year</div>
+                                <div className="text-gray-500">
+                                  At {formatNumber(effectiveSatisfaction * 100, { decimals: 1 })}%: {formatNumber((0.10 + effectiveSatisfaction * 0.15) * 100, { decimals: 1 })}% max
+                                </div>
+                                <div className="text-gray-500 mt-1">
+                                  Also considers: Debt ratio (20-30%), cash availability
+                                </div>
+                              </>
+                            )}
+                            {type === 'dividend_change' && (
+                              <>
+                                <div>Base: {formatNumber(0.03 * 100, { decimals: 0 })}% to {formatNumber(0.10 * 100, { decimals: 0 })}% change per season</div>
+                                <div className="text-gray-500">
+                                  At {formatNumber(effectiveSatisfaction * 100, { decimals: 1 })}%: ±{formatNumber((0.03 + effectiveSatisfaction * 0.07) * 100, { decimals: 1 })}% max
+                                </div>
+                                <div className="text-gray-500 mt-1">
+                                  Also considers: Cash reserves, profit margin
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Status Message */}
+                      {isBlocked && (
+                        <div className="text-xs text-red-700 italic bg-red-100 p-2 rounded border border-red-200">
+                          {constraint.message}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </TabsContent>
         </Tabs>

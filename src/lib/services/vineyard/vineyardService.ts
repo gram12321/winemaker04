@@ -20,7 +20,7 @@ import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { updateGameState } from '@/lib/services/core/gameState';
-import { boardEnforcer } from '@/lib/services';
+import { boardEnforcer, calculateFinancialData, getShareMetrics } from '@/lib/services';
 
 
 // Helper functions for random vineyard generation
@@ -420,8 +420,21 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     }
 
     // Check board constraint for vineyard purchase
-    // For scaling constraints, pass total balance so formula can calculate limit
-    const boardLimit = await boardEnforcer.getActionLimit('vineyard_purchase', currentMoney);
+    // Prepare financial context for board constraint evaluation
+    const financialData = await calculateFinancialData('season');
+    const shareMetrics = await getShareMetrics();
+    
+    const financialContext = {
+      cashMoney: currentMoney,
+      totalAssets: financialData.totalAssets,
+      fixedAssets: financialData.fixedAssets,
+      currentAssets: financialData.currentAssets,
+      expensesPerSeason: financialData.expenses,
+      profitMargin: shareMetrics.profitMargin || 0
+    };
+    
+    // For scaling constraints, pass total balance and financial context
+    const boardLimit = await boardEnforcer.getActionLimit('vineyard_purchase', currentMoney, financialContext);
     
     if (boardLimit && boardLimit.limit !== null) {
       // Scaling constraint: check if purchase exceeds limit
@@ -435,7 +448,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
       }
     } else {
       // Threshold-only constraint: check if action is allowed
-      const boardCheck = await boardEnforcer.isActionAllowed('vineyard_purchase', option.totalPrice);
+      const boardCheck = await boardEnforcer.isActionAllowed('vineyard_purchase', option.totalPrice, financialContext);
       if (!boardCheck.allowed) {
         const errorMsg = boardCheck.message || 'Board approval required for vineyard purchases. Your purchase exceeds the approved budget limit.';
         await notificationService.addMessage(errorMsg, 'vineyardService.purchaseVineyard', 'Board Restriction', NotificationCategory.FINANCE_AND_STAFF);

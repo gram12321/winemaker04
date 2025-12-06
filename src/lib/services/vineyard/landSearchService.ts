@@ -151,11 +151,22 @@ export function calculateLandSearchCost(options: LandSearchOptions, _companyPres
   }
   
   // Initial + variable cost (average-then-power):
-  // cost = initialCost + baseCost * (totalMultiplier) * (n - 2)
+  // cost = initialCost + baseCost * (totalMultiplier) * propertyMultiplier
   // where totalMultiplier = (Σ constraints / count)^count
-  const n = Math.max(3, Math.min(10, options.numberOfOptions || 3));
-  const initialCost = 20000; // Fixed activation cost, independent of options
-  const finalCost = initialCost + (baseCost * totalMultiplier * (n - 2));
+  // propertyMultiplier scales symmetrically around 3: ±5000 per property
+  // 3 properties = 1.0x (baseline), 4 = 2.0x (+5000), 5 = 3.0x (+10000)
+  // 2 properties = 0.0x (-5000), 1 = -1.0x (-10000)
+  const n = Math.max(1, Math.min(10, options.numberOfOptions || 3));
+  const initialCost = 10000; // Fixed activation cost, independent of options
+  
+  // Symmetric scaling: propertyMultiplier = n - 3
+  // This gives: 1 = -2x, 2 = -1x, 3 = 0x, 4 = 1x, 5 = 2x, etc.
+  // But we want 3 = 1x baseline, so: propertyMultiplier = n - 2
+  // This gives: 1 = -1x, 2 = 0x, 3 = 1x, 4 = 2x, 5 = 3x
+  // Each step changes by 1.0x = 5000 (with baseCost = 5000)
+  const propertyMultiplier = n - 2; // 1→-1, 2→0, 3→1, 4→2, 5→3
+  
+  const finalCost = initialCost + (baseCost * totalMultiplier * propertyMultiplier);
   
   return Math.round(finalCost);
 }

@@ -31,6 +31,13 @@ export interface CompanyShares {
   lastSharePriceUpdate?: GameDate;
   // Initial family contribution (vineyard value at company creation)
   initialVineyardValue: number;
+  // Yearly share operations tracking
+  sharesIssuedThisYear: number;
+  sharesBoughtBackThisYear: number;
+  yearlyOperationsYear: number; // Track which year these counts are for
+  // Share distribution (family vs outside investors)
+  familyShares: number;
+  outsideShares: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +66,13 @@ export interface CompanySharesData {
   last_share_price_update_week?: number;
   last_share_price_update_season?: Season;
   last_share_price_update_year?: number;
+  // Yearly share operations tracking
+  shares_issued_this_year?: number;
+  shares_bought_back_this_year?: number;
+  yearly_operations_year?: number;
+  // Share distribution (family vs outside investors)
+  family_shares?: number;
+  outside_shares?: number;
 }
 
 /**
@@ -91,6 +105,11 @@ function mapCompanySharesFromDB(dbShares: any): CompanyShares {
       dbShares.last_share_price_update_year
     ),
     initialVineyardValue: Number(dbShares.initial_vineyard_value ?? 0),
+    sharesIssuedThisYear: Number(dbShares.shares_issued_this_year ?? 0),
+    sharesBoughtBackThisYear: Number(dbShares.shares_bought_back_this_year ?? 0),
+    yearlyOperationsYear: Number(dbShares.yearly_operations_year ?? 0),
+    familyShares: Number(dbShares.family_shares ?? 0),
+    outsideShares: Number(dbShares.outside_shares ?? 0),
     createdAt: new Date(dbShares.created_at),
     updatedAt: new Date(dbShares.updated_at)
   };
@@ -136,6 +155,10 @@ export async function getCompanyShares(companyId: string): Promise<CompanyShares
  */
 export async function createCompanyShares(companyId: string, sharesData: Partial<CompanySharesData>): Promise<{ success: boolean; error?: string }> {
   try {
+    const { getGameState } = await import('../../services/core/gameState');
+    const gameState = getGameState();
+    const currentYear = gameState.currentYear || 2024;
+    
     const sharesDataToInsert: CompanySharesData = {
       company_id: companyId,
       total_shares: sharesData.total_shares ?? 1000000,
@@ -154,7 +177,12 @@ export async function createCompanyShares(companyId: string, sharesData: Partial
       last_growth_trend_update_year: sharesData.last_growth_trend_update_year,
       last_share_price_update_week: sharesData.last_share_price_update_week,
       last_share_price_update_season: sharesData.last_share_price_update_season,
-      last_share_price_update_year: sharesData.last_share_price_update_year
+      last_share_price_update_year: sharesData.last_share_price_update_year,
+      shares_issued_this_year: sharesData.shares_issued_this_year ?? 0,
+      shares_bought_back_this_year: sharesData.shares_bought_back_this_year ?? 0,
+      yearly_operations_year: sharesData.yearly_operations_year ?? currentYear,
+      family_shares: sharesData.family_shares ?? 0,
+      outside_shares: sharesData.outside_shares ?? 0
     };
 
     const { error } = await supabase
@@ -215,6 +243,98 @@ export async function deleteCompanyShares(companyId: string): Promise<{ success:
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting company shares:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Get yearly share operations for current year (with auto-reset if year changed)
+ * Returns { sharesIssuedThisYear, sharesBoughtBackThisYear }
+ */
+export async function getYearlyShareOperations(companyId: string): Promise<{
+  sharesIssuedThisYear: number;
+  sharesBoughtBackThisYear: number;
+}> {
+  try {
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) {
+      return { sharesIssuedThisYear: 0, sharesBoughtBackThisYear: 0 };
+    }
+
+    const { getGameState } = await import('../../services/core/gameState');
+    const gameState = getGameState();
+    const currentYear = gameState.currentYear || 2024;
+
+    // If year changed, reset the counters
+    if (sharesData.yearlyOperationsYear !== currentYear) {
+      await updateCompanyShares(companyId, {
+        shares_issued_this_year: 0,
+        shares_bought_back_this_year: 0,
+        yearly_operations_year: currentYear
+      });
+      return { sharesIssuedThisYear: 0, sharesBoughtBackThisYear: 0 };
+    }
+
+    return {
+      sharesIssuedThisYear: sharesData.sharesIssuedThisYear,
+      sharesBoughtBackThisYear: sharesData.sharesBoughtBackThisYear
+    };
+  } catch (error) {
+    console.error('Error getting yearly share operations:', error);
+    return { sharesIssuedThisYear: 0, sharesBoughtBackThisYear: 0 };
+  }
+}
+
+/**
+ * Increment yearly share operations
+ */
+export async function incrementYearlyShareOperations(
+  companyId: string,
+  type: 'issuance' | 'buyback',
+  shares: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const sharesData = await getCompanyShares(companyId);
+    if (!sharesData) {
+      return { success: false, error: 'Company shares not found' };
+    }
+
+    const { getGameState } = await import('../../services/core/gameState');
+    const gameState = getGameState();
+    const currentYear = gameState.currentYear || 2024;
+
+    // If year changed, reset counters first
+    if (sharesData.yearlyOperationsYear !== currentYear) {
+      await updateCompanyShares(companyId, {
+        shares_issued_this_year: 0,
+        shares_bought_back_this_year: 0,
+        yearly_operations_year: currentYear
+      });
+    }
+
+    // Increment the appropriate counter
+    const currentIssued = sharesData.yearlyOperationsYear === currentYear 
+      ? sharesData.sharesIssuedThisYear 
+      : 0;
+    const currentBoughtBack = sharesData.yearlyOperationsYear === currentYear 
+      ? sharesData.sharesBoughtBackThisYear 
+      : 0;
+
+    if (type === 'issuance') {
+      await updateCompanyShares(companyId, {
+        shares_issued_this_year: currentIssued + shares,
+        yearly_operations_year: currentYear
+      });
+    } else {
+      await updateCompanyShares(companyId, {
+        shares_bought_back_this_year: currentBoughtBack + shares,
+        yearly_operations_year: currentYear
+      });
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error incrementing yearly share operations:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }

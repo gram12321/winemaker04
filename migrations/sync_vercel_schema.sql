@@ -198,6 +198,15 @@ CREATE TABLE company_shares (
   base_profit_margin numeric,
   base_expected_return_on_book_value numeric,
   
+  -- Yearly share operations tracking
+  shares_issued_this_year bigint DEFAULT 0 NOT NULL,
+  shares_bought_back_this_year bigint DEFAULT 0 NOT NULL,
+  yearly_operations_year integer DEFAULT 2024 NOT NULL,
+  
+  -- Share distribution (family vs outside investors)
+  family_shares bigint DEFAULT 0 NOT NULL,
+  outside_shares bigint DEFAULT 0 NOT NULL,
+  
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
@@ -223,6 +232,9 @@ COMMENT ON COLUMN company_shares.last_share_price_update_year IS 'Year when shar
 COMMENT ON COLUMN company_shares.base_revenue_growth IS 'Base revenue growth expectation (default: 0.10 = 10%). Future: NPC/Board room controlled.';
 COMMENT ON COLUMN company_shares.base_profit_margin IS 'Base profit margin expectation (default: 0.15 = 15%). Future: NPC/Board room controlled.';
 COMMENT ON COLUMN company_shares.base_expected_return_on_book_value IS 'Base expected return on book value (default: 0.10 = 10%). Future: NPC/Board room controlled.';
+COMMENT ON COLUMN company_shares.shares_issued_this_year IS 'Number of shares issued in the current year (resets when year changes)';
+COMMENT ON COLUMN company_shares.shares_bought_back_this_year IS 'Number of shares bought back in the current year (resets when year changes)';
+COMMENT ON COLUMN company_shares.yearly_operations_year IS 'The year that shares_issued_this_year and shares_bought_back_this_year are tracking (used for auto-reset when year changes)';
 
 -- User settings table
 CREATE TABLE user_settings (
