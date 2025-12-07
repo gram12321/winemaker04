@@ -59,9 +59,6 @@ export function ShareManagementPanel() {
   // Load company data and market value
   useEffect(() => {
     const loadData = async () => {
-      const perfStart = performance.now();
-      console.log('[ShareManagementPanel] Starting data load...');
-      
       try {
         setLoading(true);
         const companyId = getCurrentCompanyId();
@@ -71,7 +68,6 @@ export function ShareManagementPanel() {
         }
 
         // OPTIMIZATION: Load independent data in parallel (Phase 1)
-        console.time('[ShareManagementPanel] Phase 1 - Parallel data load');
         const [
           companyData,
           shares,
@@ -81,29 +77,24 @@ export function ShareManagementPanel() {
           historical,
           prestigeEvents
         ] = await Promise.all([
-          companyService.getCompany(companyId).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'companyService.getCompany'); return r; }),
-          getCompanyShares(companyId).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'getCompanyShares'); return r; }),
-          areDividendsDue().then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'areDividendsDue'); return r; }),
-          loadTransactions().catch(() => []).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'loadTransactions'); return r; }),
-          getShareholderBreakdown().then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'getShareholderBreakdown'); return r; }),
-          getHistoricalShareMetrics(2).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'getHistoricalShareMetrics'); return r; }),
-          listPrestigeEventsForUI().catch(() => []).then(r => { console.timeLog('[ShareManagementPanel] Phase 1 - Parallel data load', 'listPrestigeEventsForUI'); return r; })
+          companyService.getCompany(companyId),
+          getCompanyShares(companyId),
+          areDividendsDue(),
+          loadTransactions().catch(() => []),
+          getShareholderBreakdown(),
+          getHistoricalShareMetrics(2),
+          listPrestigeEventsForUI().catch(() => [])
         ]);
-        console.timeEnd('[ShareManagementPanel] Phase 1 - Parallel data load');
 
         // Load share metrics with pre-loaded transactions (to avoid loading transactions again)
-        console.time('[ShareManagementPanel] getShareMetrics');
         const metrics = await getShareMetrics({ transactions });
-        console.timeEnd('[ShareManagementPanel] getShareMetrics');
 
         // Load share price breakdown after we have the data (use pre-calculated values)
-        console.time('[ShareManagementPanel] getSharePriceBreakdown');
         const breakdownResult = await getSharePriceBreakdown({
           shareMetrics: metrics,
           company: companyData,
           sharesData: shares
         });
-        console.timeEnd('[ShareManagementPanel] getSharePriceBreakdown');
 
         // Set early state updates for UI responsiveness
         if (companyData) {
@@ -197,24 +188,19 @@ export function ShareManagementPanel() {
           
           setRecentDividendChanges(dividendEvents);
         } catch (err) {
-          console.error('Error loading recent share/dividend changes:', err);
+          // Error loading recent share/dividend changes
         }
 
         // OPTIMIZATION: Get market value (don't update - only update when user changes inputs)
-        console.time('[ShareManagementPanel] getMarketValue');
         const marketData = await getMarketValue();
-        console.timeEnd('[ShareManagementPanel] getMarketValue');
         setMarketValue(marketData);
 
         // OPTIMIZATION: Pre-calculate board satisfaction once (used by all constraint checks)
-        console.time('[ShareManagementPanel] Pre-calculate board satisfaction');
         const { calculateBoardSatisfaction } = await import('@/lib/services');
         const boardSatisfaction = await calculateBoardSatisfaction();
-        console.timeEnd('[ShareManagementPanel] Pre-calculate board satisfaction');
 
         // OPTIMIZATION: Batch constraint and limit checks in parallel (Phase 2)
         // Pass pre-calculated values to avoid redundant calls
-        console.time('[ShareManagementPanel] Phase 2 - Constraint checks');
         const [
           maxBuyback,
           buybackConstraint,
@@ -227,32 +213,31 @@ export function ShareManagementPanel() {
             sharePrice: marketData.sharePrice,
             shareholderBreakdown: breakdown,
             boardSatisfaction: boardSatisfaction
-          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getMaxBuybackShares'); return r; }),
+          }),
           getBuybackConstraintInfo({
             sharePrice: marketData.sharePrice,
             shareholderBreakdown: breakdown,
             boardSatisfaction: boardSatisfaction
-          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getBuybackConstraintInfo'); return r; }),
+          }),
           getMaxIssuanceShares({
             sharePrice: marketData.sharePrice,
             shareholderBreakdown: breakdown,
             boardSatisfaction: boardSatisfaction
-          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getMaxIssuanceShares'); return r; }),
+          }),
           getIssuanceConstraintInfo({
             sharePrice: marketData.sharePrice,
             shareholderBreakdown: breakdown,
             boardSatisfaction: boardSatisfaction
-          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getIssuanceConstraintInfo'); return r; }),
+          }),
           getDividendRateLimits({
             shareholderBreakdown: breakdown,
             boardSatisfaction: boardSatisfaction
-          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getDividendRateLimits'); return r; }),
+          }),
           getDividendConstraintInfo({
             shareholderBreakdown: breakdown,
             boardSatisfaction: boardSatisfaction
-          }).then(r => { console.timeLog('[ShareManagementPanel] Phase 2 - Constraint checks', 'getDividendConstraintInfo'); return r; })
+          })
         ]);
-        console.timeEnd('[ShareManagementPanel] Phase 2 - Constraint checks');
 
         // Set constraint data
         setMaxBuybackShares(maxBuyback);
@@ -287,11 +272,7 @@ export function ShareManagementPanel() {
             setDividendRate(effectiveMinRate);
           }
         }
-        
-        const perfEnd = performance.now();
-        console.log(`[ShareManagementPanel] Total load time: ${(perfEnd - perfStart).toFixed(2)}ms`);
       } catch (err) {
-        console.error('Error loading share management data:', err);
         setError('Failed to load share data');
       } finally {
         setLoading(false);
@@ -368,7 +349,6 @@ export function ShareManagementPanel() {
         setError(result.error || 'Failed to issue stock');
       }
     } catch (err) {
-      console.error('Error issuing stock:', err);
       setError('Failed to issue stock');
     } finally {
       setIsProcessing(false);
@@ -424,7 +404,6 @@ export function ShareManagementPanel() {
         setError(result.error || 'Failed to buy back stock');
       }
     } catch (err) {
-      console.error('Error buying back stock:', err);
       setError('Failed to buy back stock');
     } finally {
       setIsProcessing(false);
@@ -444,7 +423,6 @@ export function ShareManagementPanel() {
         setError(result.error || 'Failed to update dividend rate');
       }
     } catch (err) {
-      console.error('Error updating dividend rate:', err);
       setError('Failed to update dividend rate');
     } finally {
       setIsProcessing(false);
@@ -542,7 +520,7 @@ export function ShareManagementPanel() {
                         // Dispatch custom event for navigation
                         window.dispatchEvent(new CustomEvent('navigateToWinepedia'));
                       } catch (e) {
-                        console.error('Failed to set winepedia view:', e);
+                        // Failed to set winepedia view
                       }
                     }}
                     className="inline-flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"

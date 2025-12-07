@@ -1,6 +1,6 @@
 import { getShareholderBreakdown, calculateFinancialData, getShareMetrics } from '@/lib/services';
 import { calculateBoardSatisfaction, getBoardSatisfactionBreakdown } from './boardSatisfactionService';
-import { BOARD_CONSTRAINTS, type BoardConstraintType, type ScalingFormulaFinancialContext } from '@/lib/constants';
+import { BOARD_CONSTRAINTS, OWNERSHIP_WEIGHT_FACTOR, type BoardConstraintType, type ScalingFormulaFinancialContext } from '@/lib/constants';
 import type { BaseConstraintInfo } from '@/lib/types/constraintTypes';
 import { companyService } from '../user/companyService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
@@ -27,9 +27,10 @@ type BoardConstraintFinancialContext = ScalingFormulaFinancialContext;
  * Pattern mirrors researchEnforcer.ts
  * 
  * DESIGN PRINCIPLE:
- * - PRIMARY PARAMETER: Effective Satisfaction (satisfaction × (1 - non-player ownership %))
+ * - PRIMARY PARAMETER: Effective Satisfaction (satisfaction × (1 - non-player ownership % × OWNERSHIP_WEIGHT_FACTOR))
  *   This is the main driver for ALL board constraints. High satisfaction = lenient, low = strict.
  *   Higher non-player ownership = lower effective satisfaction = stricter constraints.
+ *   OWNERSHIP_WEIGHT_FACTOR (default 0.5) reduces the harshness when player has minority ownership.
  * 
  * - SECONDARY PARAMETERS: Financial Context (cash, debt ratio, profit margins, etc.)
  *   Each constraint may use additional financial parameters as modifiers.
@@ -67,7 +68,8 @@ class BoardEnforcerService {
       const satisfaction = preCalculatedValues?.satisfaction ?? await calculateBoardSatisfaction();
       const nonPlayerOwnershipPct = breakdown.nonPlayerOwnershipPct / 100;
       // Higher non-player ownership = lower effective satisfaction = stricter constraints
-      const effectiveSatisfaction = satisfaction * (1 - nonPlayerOwnershipPct);
+      // OWNERSHIP_WEIGHT_FACTOR reduces the impact to make it less harsh for minority ownership
+      const effectiveSatisfaction = satisfaction * (1 - nonPlayerOwnershipPct * OWNERSHIP_WEIGHT_FACTOR);
 
       const constraint = BOARD_CONSTRAINTS[constraintType];
       if (!constraint) {
@@ -171,7 +173,8 @@ class BoardEnforcerService {
       const satisfaction = preCalculatedValues?.satisfaction ?? await calculateBoardSatisfaction();
       const nonPlayerOwnershipPct = breakdown.nonPlayerOwnershipPct / 100;
       // Higher non-player ownership = lower effective satisfaction = stricter constraints
-      const effectiveSatisfaction = satisfaction * (1 - nonPlayerOwnershipPct);
+      // OWNERSHIP_WEIGHT_FACTOR reduces the impact to make it less harsh for minority ownership
+      const effectiveSatisfaction = satisfaction * (1 - nonPlayerOwnershipPct * OWNERSHIP_WEIGHT_FACTOR);
 
       if (effectiveSatisfaction > constraint.startThreshold) {
         return { limit: null, satisfaction: effectiveSatisfaction };

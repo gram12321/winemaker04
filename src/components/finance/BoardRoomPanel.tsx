@@ -6,7 +6,7 @@ import { useGameState } from '@/hooks';
 import { getBoardSatisfactionBreakdown, boardEnforcer, getShareholderBreakdown, calculateFinancialData, calculateCreditRating, getDividendRateLimits, getMarketValue, updateMarketValue, calculateTotalOutstandingLoans, getShareMetrics, type BoardSatisfactionBreakdown, type CreditRatingBreakdown } from '@/lib/services';
 import { getCompanyShares, getYearlyShareOperations } from '@/lib/database';
 import { getCurrentCompanyId } from '@/lib/utils';
-import { BOARD_CONSTRAINTS, BOARD_SATISFACTION_WEIGHTS, CREDIT_RATING_WEIGHTS, type BoardConstraintType } from '@/lib/constants';
+import { BOARD_CONSTRAINTS, BOARD_SATISFACTION_WEIGHTS, OWNERSHIP_WEIGHT_FACTOR, CREDIT_RATING_WEIGHTS, type BoardConstraintType } from '@/lib/constants';
 import { SimpleCard } from '@/components/ui';
 import { getBoardSatisfactionHistory } from '@/lib/database';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -222,9 +222,6 @@ export function BoardRoomPanel() {
 
   useEffect(() => {
     const loadData = async () => {
-      const perfStart = performance.now();
-      console.log('[BoardRoomPanel] Starting data load...');
-      
       try {
         setLoading(true);
         const companyId = getCurrentCompanyId();
@@ -234,7 +231,6 @@ export function BoardRoomPanel() {
         }
 
         // OPTIMIZATION: Load independent data in parallel (Phase 1)
-        console.time('[BoardRoomPanel] Phase 1 - Parallel data load');
         const [
           satisfactionBreakdown,
           shareholderData,
@@ -245,16 +241,15 @@ export function BoardRoomPanel() {
           creditRating,
           yearlyOps
         ] = await Promise.all([
-          getBoardSatisfactionBreakdown().then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getBoardSatisfactionBreakdown'); return r; }),
-          getShareholderBreakdown().then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getShareholderBreakdown'); return r; }),
-          getBoardSatisfactionHistory(companyId, 48).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getBoardSatisfactionHistory(48)'); return r; }),
-          getBoardSatisfactionHistory(companyId, 12).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getBoardSatisfactionHistory(12)'); return r; }),
-          calculateFinancialData('year').then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'calculateFinancialData'); return r; }),
-          getCompanyShares(companyId).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getCompanyShares'); return r; }),
-          calculateCreditRating().then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'calculateCreditRating'); return r; }),
-          getYearlyShareOperations(companyId).then(r => { console.timeLog('[BoardRoomPanel] Phase 1 - Parallel data load', 'getYearlyShareOperations'); return r; })
+          getBoardSatisfactionBreakdown(),
+          getShareholderBreakdown(),
+          getBoardSatisfactionHistory(companyId, 48),
+          getBoardSatisfactionHistory(companyId, 12),
+          calculateFinancialData('year'),
+          getCompanyShares(companyId),
+          calculateCreditRating(),
+          getYearlyShareOperations(companyId)
         ]);
-        console.timeEnd('[BoardRoomPanel] Phase 1 - Parallel data load');
 
         // Set early state updates for UI responsiveness
         setBreakdown(satisfactionBreakdown);
@@ -284,7 +279,8 @@ export function BoardRoomPanel() {
         // Calculate effective satisfaction
         const rawSatisfaction = satisfactionBreakdown.satisfaction;
         const nonPlayerOwnershipPct = shareholderData.nonPlayerOwnershipPct / 100;
-        const effectiveSatisfactionValue = rawSatisfaction * (1 - nonPlayerOwnershipPct);
+        // OWNERSHIP_WEIGHT_FACTOR reduces the impact to make it less harsh for minority ownership
+        const effectiveSatisfactionValue = rawSatisfaction * (1 - nonPlayerOwnershipPct * OWNERSHIP_WEIGHT_FACTOR);
         setEffectiveSatisfaction(effectiveSatisfactionValue);
 
         const balance = financialData.cashMoney;
@@ -292,13 +288,11 @@ export function BoardRoomPanel() {
 
         // OPTIMIZATION: Load dependent data in parallel (Phase 2)
         // Market value update and share metrics can be parallel
-        console.time('[BoardRoomPanel] Phase 2 - Dependent data');
         const [marketValueUpdate, shareMetrics, totalDebt] = await Promise.all([
-          updateMarketValue().then(() => { console.timeLog('[BoardRoomPanel] Phase 2 - Dependent data', 'updateMarketValue'); return getMarketValue(); }),
-          getShareMetrics().then(r => { console.timeLog('[BoardRoomPanel] Phase 2 - Dependent data', 'getShareMetrics'); return r; }),
-          calculateTotalOutstandingLoans().then(r => { console.timeLog('[BoardRoomPanel] Phase 2 - Dependent data', 'calculateTotalOutstandingLoans'); return r; })
+          updateMarketValue().then(() => getMarketValue()),
+          getShareMetrics(),
+          calculateTotalOutstandingLoans()
         ]);
-        console.timeEnd('[BoardRoomPanel] Phase 2 - Dependent data');
 
         // Set share data
         if (sharesData) {
@@ -316,9 +310,7 @@ export function BoardRoomPanel() {
           : 0;
 
         // OPTIMIZATION: Load dividend limits in parallel with constraint preparation
-        console.time('[BoardRoomPanel] getDividendRateLimits');
         const divLimitsPromise = getDividendRateLimits();
-        console.timeEnd('[BoardRoomPanel] getDividendRateLimits');
 
         // Prepare financial context for constraints (reuse already loaded data)
         const sharesForContext = sharesData;
@@ -333,7 +325,6 @@ export function BoardRoomPanel() {
         setDividendLimits(divLimits);
 
         // OPTIMIZATION: Batch constraint limit checks in parallel
-        console.time('[BoardRoomPanel] Phase 3 - Constraint limit checks');
         const constraints: typeof activeConstraints = [];
         const constraintLimitPromises: Promise<{ type: BoardConstraintType; limit: number | null }>[] = [];
 
@@ -398,13 +389,10 @@ export function BoardRoomPanel() {
             // Batch limit checks
             constraintLimitPromises.push(
               boardEnforcer.getActionLimit(constraintType, contextValue, financialContext)
-                .then(result => {
-                  console.timeLog('[BoardRoomPanel] Phase 3 - Constraint limit checks', `getActionLimit(${constraintType})`);
-                  return {
-                    type: constraintType,
-                    limit: result?.limit ?? null
-                  };
-                })
+                .then(result => ({
+                  type: constraintType,
+                  limit: result?.limit ?? null
+                }))
             );
           }
 
@@ -418,7 +406,6 @@ export function BoardRoomPanel() {
 
         // Wait for all constraint limit checks to complete
         const limitResults = await Promise.all(constraintLimitPromises);
-        console.timeEnd('[BoardRoomPanel] Phase 3 - Constraint limit checks');
         const limitMap = new Map(limitResults.map(r => [r.type, r.limit]));
 
         // Update constraints with limits
@@ -428,11 +415,8 @@ export function BoardRoomPanel() {
         }));
 
         setActiveConstraints(constraintsWithLimits);
-        
-        const perfEnd = performance.now();
-        console.log(`[BoardRoomPanel] Total load time: ${(perfEnd - perfStart).toFixed(2)}ms`);
       } catch (error) {
-        console.error('Error loading board room data:', error);
+        // Error loading board room data
       } finally {
         setLoading(false);
       }
@@ -689,10 +673,10 @@ export function BoardRoomPanel() {
                         Family: {formatNumber(shareholderBreakdown.familyPct, { decimals: 1 })}% • Public: {formatNumber(shareholderBreakdown.outsidePct, { decimals: 1 })}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        Effective Satisfaction: {formatNumber(breakdown.satisfaction * (1 - shareholderBreakdown.nonPlayerOwnershipPct / 100) * 100, { decimals: 1 })}%
+                        Effective Satisfaction: {formatNumber(breakdown.satisfaction * (1 - shareholderBreakdown.nonPlayerOwnershipPct / 100 * OWNERSHIP_WEIGHT_FACTOR) * 100, { decimals: 1 })}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        Constraints use: Satisfaction × (1 - Non-Player Ownership %)
+                        Constraints use: Satisfaction × (1 - Non-Player Ownership % × {formatNumber(OWNERSHIP_WEIGHT_FACTOR, { decimals: 1 })})
                       </div>
                     </>
                   ) : (
@@ -711,7 +695,7 @@ export function BoardRoomPanel() {
             {satisfactionHistory.length > 0 && (
               <SimpleCard title="Satisfaction Trend (Last 48 Weeks)">
                 <div className="text-xs text-gray-500 mb-2">
-                  Note: Historical data shows raw satisfaction scores. Constraints use effective satisfaction (satisfaction × non-player ownership %).
+                  Note: Historical data shows raw satisfaction scores. Constraints use effective satisfaction (satisfaction × (1 - non-player ownership % × {formatNumber(OWNERSHIP_WEIGHT_FACTOR, { decimals: 1 })} weight)).
                 </div>
                 <div className="w-full" style={{ height: '256px' }}>
                   <ResponsiveContainer width="100%" height={256}>
@@ -952,7 +936,7 @@ export function BoardRoomPanel() {
                       Effective Satisfaction (Used for All Constraints)
                     </div>
                     <div className="text-xs text-blue-700">
-                      {formatNumber(breakdown.satisfaction * 100, { decimals: 1 })}% Satisfaction × (1 - {formatNumber(shareholderBreakdown.nonPlayerOwnershipPct, { decimals: 1 })}% Non-Player) ={' '}
+                      {formatNumber(breakdown.satisfaction * 100, { decimals: 1 })}% Satisfaction × (1 - {formatNumber(shareholderBreakdown.nonPlayerOwnershipPct, { decimals: 1 })}% Non-Player × {formatNumber(OWNERSHIP_WEIGHT_FACTOR, { decimals: 1 })} weight) ={' '}
                       <span className="font-bold text-blue-900">
                         {formatNumber(effectiveSatisfaction * 100, { decimals: 1, forceDecimals: true })}%
                       </span>

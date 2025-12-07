@@ -65,8 +65,15 @@ export interface BoardConstraint {
 /**
  * Board Satisfaction Component Weights
  * Formula: Satisfaction = (performance × 0.40) + (stability × 0.25) + (consistency × 0.20)
- * Effective Satisfaction (for constraints) = Satisfaction × NonPlayerOwnership%
+ * Effective Satisfaction (for constraints) = Satisfaction × (1 - NonPlayerOwnership% × OWNERSHIP_WEIGHT_FACTOR)
+ * 
+ * OWNERSHIP_WEIGHT_FACTOR: Reduces the impact of non-player ownership on effective satisfaction.
+ * Lower values (e.g., 0.5) make constraints less harsh when player has minority ownership.
+ * Example: With 79.6% non-player ownership and 0.5 weight factor:
+ *   effective = satisfaction × (1 - 0.796 × 0.5) = satisfaction × 0.602 (instead of 0.204)
  */
+export const OWNERSHIP_WEIGHT_FACTOR = 0.5; // Weight factor for non-player ownership impact (0.0 to 1.0)
+
 export const BOARD_SATISFACTION_WEIGHTS = {
   performanceScore: 0.40,
   stabilityScore: 0.25,
