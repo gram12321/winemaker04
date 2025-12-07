@@ -41,6 +41,7 @@ export interface BoardSatisfactionBreakdown {
     };
     consistencyVolatility: number; // Lower is better
   };
+  isGracePeriodActive?: boolean; // Whether satisfaction is boosted by new company grace period
 }
 
 /**
@@ -93,7 +94,7 @@ async function calculateBoardSatisfactionConsistency(
 ): Promise<number> {
   try {
     const history = await getBoardSatisfactionHistory(companyId, 12);
-    
+
     if (history.length < 4) {
       return 0.7;
     }
@@ -159,12 +160,12 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
 
     const gameState = getGameState();
     const now = Date.now();
-    if (satisfactionCache && 
-        satisfactionCache.companyId === companyId &&
-        satisfactionCache.gameWeek === gameState.week &&
-        satisfactionCache.gameSeason === gameState.season &&
-        satisfactionCache.gameYear === gameState.currentYear &&
-        (now - satisfactionCache.timestamp) < CACHE_TTL_MS) {
+    if (satisfactionCache &&
+      satisfactionCache.companyId === companyId &&
+      satisfactionCache.gameWeek === gameState.week &&
+      satisfactionCache.gameSeason === gameState.season &&
+      satisfactionCache.gameYear === gameState.currentYear &&
+      (now - satisfactionCache.timestamp) < CACHE_TTL_MS) {
       return satisfactionCache.breakdown;
     }
 
@@ -175,7 +176,7 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
 
     const shareholderBreakdown = await getShareholderBreakdown();
     const playerOwnershipPct = shareholderBreakdown.playerPct;
-    
+
     if (playerOwnershipPct >= 100) {
       return {
         satisfaction: 1.0,
@@ -278,29 +279,41 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
       creditRating.assetHealth.score,
       creditRating.companyStability.score
     );
-    
-    const cashRatio = financialData.totalAssets > 0 
-      ? financialData.cashMoney / financialData.totalAssets 
+
+    const cashRatio = financialData.totalAssets > 0
+      ? financialData.cashMoney / financialData.totalAssets
       : 0;
-    const debtRatio = financialData.totalAssets > 0 
-      ? totalDebt / financialData.totalAssets 
+    const debtRatio = financialData.totalAssets > 0
+      ? totalDebt / financialData.totalAssets
       : 0;
     const fixedAssetRatioValue = creditRating.assetHealth.fixedAssetRatio;
 
     let consistencyScore = await calculateBoardSatisfactionConsistency(companyId, 0);
 
-    const satisfaction = 
+    let satisfaction =
       (performanceScore * BOARD_SATISFACTION_WEIGHTS.performanceScore) +
       (stabilityScore * BOARD_SATISFACTION_WEIGHTS.stabilityScore) +
       (consistencyScore * BOARD_SATISFACTION_WEIGHTS.consistencyScore);
 
+    // Apply grace period: if first year, ensure satisfaction is at least the default (generous) value
+    if (gracePeriods.isFirstYear) {
+      satisfaction = Math.max(satisfaction, BOARD_SATISFACTION_DEFAULTS.newCompany);
+    }
+
     const clampedSatisfaction = clamp01(satisfaction);
     const finalConsistencyScore = await calculateBoardSatisfactionConsistency(companyId, clampedSatisfaction);
-    const finalSatisfaction = 
+
+    // Recalculate based on possibly boosted satisfaction for consistency tracking
+    let finalSatisfaction =
       (performanceScore * BOARD_SATISFACTION_WEIGHTS.performanceScore) +
       (stabilityScore * BOARD_SATISFACTION_WEIGHTS.stabilityScore) +
       (finalConsistencyScore * BOARD_SATISFACTION_WEIGHTS.consistencyScore);
-    
+
+    // Apply grace period again to final calculation to be safe
+    if (gracePeriods.isFirstYear) {
+      finalSatisfaction = Math.max(finalSatisfaction, BOARD_SATISFACTION_DEFAULTS.newCompany);
+    }
+
     const finalClampedSatisfaction = clamp01(finalSatisfaction);
 
     const breakdown: BoardSatisfactionBreakdown = {
@@ -323,9 +336,10 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
           fixedAssetRatio: fixedAssetRatioValue
         },
         consistencyVolatility: 1 - finalConsistencyScore // Convert to volatility (higher = less consistent)
-      }
+      },
+      isGracePeriodActive: gracePeriods.isFirstYear
     };
-    
+
     // OPTIMIZATION: Update cache
     satisfactionCache = {
       breakdown,
@@ -337,20 +351,20 @@ export async function getBoardSatisfactionBreakdown(storeSnapshot: boolean = fal
     };
 
     if (storeSnapshot) {
-        insertBoardSatisfactionSnapshot({
-          companyId,
-          week: gameState.week || 1,
-          season: gameState.season || 'Spring',
-          year: gameState.currentYear || 2024,
-          satisfactionScore: finalClampedSatisfaction,
-          performanceScore,
-          stabilityScore,
-          consistencyScore: finalConsistencyScore,
-          ownershipPressure,
-          playerOwnershipPct
-        }).catch((error: any) => {
-          console.error('Error storing board satisfaction snapshot:', error);
-        });
+      insertBoardSatisfactionSnapshot({
+        companyId,
+        week: gameState.week || 1,
+        season: gameState.season || 'Spring',
+        year: gameState.currentYear || 2024,
+        satisfactionScore: finalClampedSatisfaction,
+        performanceScore,
+        stabilityScore,
+        consistencyScore: finalConsistencyScore,
+        ownershipPressure,
+        playerOwnershipPct
+      }).catch((error: any) => {
+        console.error('Error storing board satisfaction snapshot:', error);
+      });
     }
 
     return breakdown;
