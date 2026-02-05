@@ -39,14 +39,14 @@ export const CLEARING_TASKS = {
   CLEAR_VEGETATION: {
     id: 'clear-vegetation',
     name: 'Clear vegetation',
-    healthImprovement: 0.10, // +10% health
+    healthImprovement: 0.15, // +15% health (balanced to allow net positive with full clearing)
     rate: 0.5, // hectares/week
     initialWork: 5
   },
   REMOVE_DEBRIS: {
     id: 'remove-debris',
     name: 'Remove debris',
-    healthImprovement: 0.05, // +5% health
+    healthImprovement: 0.10, // +10% health (balanced to allow net positive with full clearing)
     rate: 0.4, // hectares/week
     initialWork: 3
   },

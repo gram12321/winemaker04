@@ -764,6 +764,9 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
 /**
  * Process weekly risk accumulation for all time-based features
  * Also processes pendingFeatures on vineyards (features that develop before harvest)
+ * 
+ * CRITICAL: Applies feature effects atomically with feature state updates to prevent
+ * UI from showing inconsistent state during game tick (features updated but grapeQuality stale)
  */
 export async function processWeeklyFeatureRisks(): Promise<void> {
   try {
@@ -786,9 +789,20 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
       }
       
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
+        // CRITICAL: Apply feature effects immediately to avoid UI showing inconsistent state
+        // This ensures grapeQuality, balance, and characteristics are updated atomically with features
+        const batchWithUpdatedFeatures = { ...batch, features: updatedFeatures };
+        const batchWithEffects = applyFeatureEffectsToBatch(batchWithUpdatedFeatures);
+        
         batchUpdates.push({
           id: batch.id,
-          updates: { features: updatedFeatures }
+          updates: {
+            features: updatedFeatures,
+            grapeQuality: batchWithEffects.grapeQuality,
+            balance: batchWithEffects.balance,
+            characteristics: batchWithEffects.characteristics,
+            breakdown: batchWithEffects.breakdown
+          }
         });
       }
     }

@@ -761,8 +761,8 @@ export async function handlePartialHarvesting(
     // Calculate how much to harvest this tick
     const yieldThisTick = Math.max(0, expectedHarvestedByNow - previouslyHarvested);
     
-    // Only create wine batch if we're harvesting at least 5kg this tick
-    if (yieldThisTick >= 5) {
+    // Only create wine batch if we're harvesting at least 0.1kg this tick (allow small batches)
+    if (yieldThisTick >= 0.1) {
       const gameState = getGameState();
       
       // Create harvest dates: start is activity start, end is current date
@@ -779,11 +779,13 @@ export async function handlePartialHarvesting(
       };
       
       // Create wine batch for this tick's harvest
+      // Round to 2 decimal places to preserve small batches
+      const roundedYield = Math.round(yieldThisTick * 100) / 100;
       await createWineBatchFromHarvest(
         vineyard.id,
         vineyard.name,
         vineyard.grape,
-        Math.round(yieldThisTick),
+        roundedYield,
         harvestStartDate,
         harvestEndDate
       );

@@ -252,15 +252,6 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Apply feature effects directly to wine batches (modify grapeQuality/balance)
-    (async () => {
-      try {
-        await applyWeeklyFeatureEffects();
-      } catch (error) {
-        console.warn('Error during weekly feature effect application:', error);
-      }
-    })(),
-
     // Update aging progress for all bottled wines
     (async () => {
       try {
@@ -379,6 +370,16 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   // OPTIMIZATION: Wait for all tasks to complete in parallel
   await Promise.all(weeklyTasks);
 
+  // SAFETY NET: Apply feature effects to ensure all batches are consistent
+  // Note: processWeeklyFeatureRisks now applies effects atomically when features change
+  // This acts as a safety net for edge cases (e.g., batches created outside normal flow)
+  // Will only update batches that actually need updating (idempotent check)
+  try {
+    await applyWeeklyFeatureEffects();
+  } catch (error) {
+    console.warn('Error during weekly feature effect application:', error);
+  }
+
   try {
     await enforceEmergencyQuickLoanIfNeeded();
   } catch (error) {
@@ -389,9 +390,10 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
 };
 
 /**
- * Apply feature effects directly to wine batches
+ * Apply feature effects directly to wine batches (safety net)
  * Updates grapeQuality and balance based on present features
- * Called after processWeeklyFeatureRisks to ensure features are up-to-date
+ * Note: processWeeklyFeatureRisks now applies effects atomically when features change
+ * This function acts as a safety net to catch any batches that weren't updated
  * Skips sold-out bottled wines (quantity === 0) as they should not continue developing
  */
 async function applyWeeklyFeatureEffects(): Promise<void> {

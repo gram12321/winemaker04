@@ -575,6 +575,18 @@ export const WineModal: React.FC<WineModalProps> = ({
                         const totalEffect = effects.reduce((sum, effect) => sum + effect.modifier, 0);
                         const baseVal = currentVal - totalEffect;
                         
+                        // Group effects by description and sum their modifiers
+                        const groupedEffects = effects.reduce((acc, effect) => {
+                          const existing = acc.find(e => e.description === effect.description);
+                          if (existing) {
+                            existing.modifier += effect.modifier;
+                            existing.count = (existing.count || 1) + 1;
+                          } else {
+                            acc.push({ ...effect, count: 1 });
+                          }
+                          return acc;
+                        }, [] as Array<{ characteristic: keyof WineBatch['characteristics']; modifier: number; description: string; count: number }>);
+                        
                         return (
                           <div key={key as string} className="border rounded p-3 bg-white">
                             <div className="flex items-center justify-between mb-2">
@@ -586,13 +598,18 @@ export const WineModal: React.FC<WineModalProps> = ({
                             </div>
                             <div className="text-xs text-muted-foreground mb-2">{wineBatch.grape} Base: {formatNumber(baseVal,{decimals:2,forceDecimals:true})}</div>
                             <div className="space-y-1">
-                              {effects.length === 0 ? (
+                              {groupedEffects.length === 0 ? (
                                 <div className="text-xs text-muted-foreground">No effects.</div>
                               ) : (
                                 <>
-                                  {effects.map((e, idx) => (
+                                  {groupedEffects.map((e, idx) => (
                                     <div key={idx} className="flex items-center justify-between p-2 rounded bg-gray-50">
-                                      <div className="text-xs">{e.description}</div>
+                                      <div className="text-xs flex items-center gap-1">
+                                        {e.description}
+                                        {e.count > 1 && (
+                                          <span className="text-[10px] text-muted-foreground">({e.count}×)</span>
+                                        )}
+                                      </div>
                                       <div className={`text-xs font-semibold ${e.modifier>=0?'text-green-700':'text-red-700'}`}>
                                         {e.modifier>=0?'+':''}{formatNumber(e.modifier,{decimals:3,forceDecimals:true})}
                                       </div>

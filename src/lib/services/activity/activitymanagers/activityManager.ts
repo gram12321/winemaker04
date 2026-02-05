@@ -50,7 +50,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
         const gameState = getGameState();
         const currentSeason = gameState.season;
 
-        if (remainingYield > 1) { // Only create batch if at least 1kg remaining
+        if (remainingYield > 0.1) { // Only create batch if at least 0.1kg remaining (allow small batches)
           // Create harvest dates: start is activity start, end is current date
           const harvestStartDate = {
             week: activity.gameWeek,
@@ -64,11 +64,13 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
             year: gameState.currentYear || 2024
           };
 
+          // Round to 2 decimal places to preserve small batches
+          const roundedYield = Math.round(remainingYield * 100) / 100;
           await createWineBatchFromHarvest(
             vineyard.id,
             vineyard.name,
             activity.params.grape,
-            remainingYield,
+            roundedYield,
             harvestStartDate,
             harvestEndDate
           );
