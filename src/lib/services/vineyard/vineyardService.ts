@@ -29,6 +29,20 @@ function getRandomFromObject<T>(obj: Record<string, T>): string {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
+/**
+ * Determine appropriate vineyard status based on current season
+ * Used for both newly planted vineyards and starting condition vineyards
+ * @param isPlanted - Whether the vineyard has grapes planted
+ * @returns 'Growing' if planted and in growing season, 'Planted' if planted and in winter, 'Barren' if not planted
+ */
+export function getPlantedVineyardStatus(isPlanted: boolean): 'Growing' | 'Planted' | 'Barren' {
+  if (!isPlanted) return 'Barren';
+  
+  const currentSeason = getGameState().season;
+  const isGrowingSeason = currentSeason === 'Spring' || currentSeason === 'Summer' || currentSeason === 'Fall';
+  return isGrowingSeason ? 'Growing' : 'Planted';
+}
+
 // Convert a vineyard purchase option to a full Vineyard object (domain-level, used by purchase flow)
 function convertPurchaseOptionToVineyard(option: VineyardPurchaseOption): Omit<Vineyard, 'id'> {
   // Generate realistic health with some variation (0.4 to 0.8)
@@ -280,11 +294,8 @@ export async function completePlanting(vineyardId: string, targetDensity: number
     return false;
   }
 
-  // Determine final status based on current season
-  // If planting completes during a growing season, allow ripening immediately
-  const currentSeason = getGameState().season;
-  const isGrowingSeason = currentSeason === 'Spring' || currentSeason === 'Summer' || currentSeason === 'Fall';
-  const finalStatus = isGrowingSeason ? 'Growing' : 'Planted';
+  // Determine final status based on current season (always planted at this point)
+  const finalStatus = getPlantedVineyardStatus(true);
 
   const updatedVineyard: Vineyard = {
     ...vineyard,

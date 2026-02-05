@@ -4,7 +4,7 @@ import { createStaff, addStaff } from '../user/staffService';
 import { assignStaffToTeam, getAllTeams } from '../user/teamService';
 import { supabase } from '@/lib/database';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
-import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName } from '../vineyard/vineyardService';
+import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
 import { calculateInitialShareCount } from '@/lib/constants/financeConstants';
 import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
@@ -353,6 +353,9 @@ export async function applyStartingConditions(
     const startingVineAge = condition.startingVineyard.startingVineAge;
     const isPlanted = startingGrape !== null;
 
+    // Determine initial status based on current season (uses shared logic from vineyardService)
+    const vineyardStatus = getPlantedVineyardStatus(isPlanted);
+
     const { error: vineyardError } = await supabase
       .from('vineyards')
       .insert({
@@ -365,7 +368,7 @@ export async function applyStartingConditions(
         altitude: vineyardPreview.altitude,
         aspect: previewAspect,
         density: isPlanted ? DEFAULT_VINE_DENSITY : 0, // Planted vineyards have full density
-        status: isPlanted ? 'Planted' : 'Barren',
+        status: vineyardStatus,
         grape_variety: startingGrape,
         vine_age: isPlanted ? startingVineAge : null,
         ripeness: 0,

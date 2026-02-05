@@ -239,27 +239,45 @@ class BoardEnforcerService {
       };
     }
 
-    // Check if action is allowed (to determine blocked status)
-    const boardCheck = await this.isActionAllowed(constraintType, 1, financialContext);
+    // Get shareholder breakdown and satisfaction for constraint evaluation
+    const breakdown = await getShareholderBreakdown();
+    if (breakdown.playerPct >= 100) {
+      // Full ownership - no constraints
+      return {
+        limitingConstraint: 'hard',
+        constraintReason: hardLimitReason || 'Available balance',
+        isBlocked: false,
+        isLimited: false,
+        boardLimit: null,
+        hardLimit
+      };
+    }
+
+    const satisfaction = await calculateBoardSatisfaction();
+    const nonPlayerOwnershipPct = breakdown.nonPlayerOwnershipPct / 100;
+    const effectiveSatisfaction = satisfaction * (1 - nonPlayerOwnershipPct * OWNERSHIP_WEIGHT_FACTOR);
     
     let boardLimit: number | null = null;
-    let boardSatisfaction: number | undefined = undefined;
+    let boardSatisfaction: number = effectiveSatisfaction;
     let boardReason = '';
     let isBlocked = false;
     let isLimited = false;
     let blockReason = '';
 
-    if (!boardCheck.allowed) {
+    // Check if action is completely blocked (satisfaction too low)
+    if (effectiveSatisfaction <= constraint.maxThreshold) {
       // Operation is completely blocked by board
       isBlocked = true;
       const thresholdPercent = (constraint.maxThreshold * 100).toFixed(0);
-      blockReason = boardCheck.message 
-        ? boardCheck.message.replace('Board approval required', `Board approval (of at least ${thresholdPercent}% satisfaction) required`)
+      blockReason = constraint.message 
+        ? constraint.message.replace('Board approval required', `Board approval (of at least ${thresholdPercent}% satisfaction) required`)
         : `Board approval (of at least ${thresholdPercent}% satisfaction) required. Board satisfaction is too low.`;
-      boardSatisfaction = boardCheck.satisfaction;
     } else {
-      // Check if it's limited (between startThreshold and maxThreshold)
-      const boardLimitResult = await this.getActionLimit(constraintType, contextValue, financialContext);
+      // Not blocked - check if it's limited (between startThreshold and maxThreshold)
+      const boardLimitResult = await this.getActionLimit(constraintType, contextValue, financialContext, {
+        shareholderBreakdown: breakdown,
+        satisfaction
+      });
       
       if (boardLimitResult) {
         boardSatisfaction = boardLimitResult.satisfaction;
