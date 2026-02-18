@@ -18,8 +18,7 @@ import {
   CONTRACT_PRICING,
   MULTI_YEAR_CONFIG,
   COMPLEXITY_THRESHOLDS,
-  CUSTOMER_MAX_WINE_AGE,
-  AVAILABLE_CHARACTERISTICS
+  CUSTOMER_MAX_WINE_AGE
 } from '../../constants/contractConstants';
 
 // ===== REQUIREMENT DIFFICULTY SYSTEM =====
@@ -1035,6 +1034,7 @@ function generateAspectRequirement(_customer: Customer, targetDifficulty: number
  * Requires wine to have at least X amount of a specific characteristic
  */
 function generateCharacteristicMinRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  const { AVAILABLE_CHARACTERISTICS } = require('../../constants/contractConstants');
   const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
   
   // Map difficulty to minimum thresholds (inverse of max - higher minimum = harder)
@@ -1071,6 +1071,7 @@ function generateCharacteristicMinRequirement(_customer: Customer, targetDifficu
  * Requires wine to have at most X amount of a specific characteristic
  */
 function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  const { AVAILABLE_CHARACTERISTICS } = require('../../constants/contractConstants');
   const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
   
   // Map difficulty to maximum thresholds (lower max = harder)
@@ -1107,6 +1108,7 @@ function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficu
  * Requires the wine's characteristic to be within a certain distance from ideal for that characteristic
  */
 function generateCharacteristicBalanceRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  const { AVAILABLE_CHARACTERISTICS } = require('../../constants/contractConstants');
   const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
   
   // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter balance required)
