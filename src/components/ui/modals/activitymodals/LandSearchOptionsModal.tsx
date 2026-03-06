@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork, getVineyardPurchaseConstraintInfo } from '@/lib/services';
+import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork } from '@/lib/services';
 import type { BaseConstraintInfo } from '@/lib/types/constraintTypes';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
@@ -8,6 +8,7 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
 import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 // Two-thumb slider built on Radix Slider primitives
 const DualSlider: React.FC<{
@@ -87,7 +88,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
   useEffect(() => {
     const loadConstraintInfo = async () => {
       try {
-        const constraintInfo = await getVineyardPurchaseConstraintInfo();
+        const constraintInfo = await getBoardShareFeature().constraints.getVineyardPurchaseConstraintInfo();
         setVineyardConstraintInfo(constraintInfo);
       } catch (error) {
         console.error('Error loading vineyard purchase constraint info:', error);

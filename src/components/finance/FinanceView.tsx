@@ -17,18 +17,18 @@ import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { ResearchPanel } from './ResearchPanel';
 import { StaffWageSummary } from './StaffWageSummary';
-import { ShareManagementPanel } from './ShareManagementPanel';
-import { BoardRoomPanel } from './BoardRoomPanel';
 import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { loadTransactions } from '@/lib/services';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 export default function FinanceView() {
   const [activeTab, setActiveTab] = useState('income');
   const [activePeriod, setActivePeriod] = useState<'weekly' | 'season' | 'year' | 'all'>('weekly');
   const gameState = useGameState();
   const transactions = useGameStateWithData(loadTransactions, []);
+  const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getFinanceTabs(), []);
 
   const currentYear = gameState.currentYear ?? new Date().getFullYear();
   const currentSeason = useMemo<SeasonName>(() => {
@@ -129,6 +129,23 @@ export default function FinanceView() {
     };
   }, [currentYear, currentSeason, currentWeek, selectedYear, selectedSeason, selectedWeek]);
 
+  useEffect(() => {
+    const tabIds = new Set(['income', 'cashflow', 'loans', 'upgrades', ...boardShareTabs.map(tab => tab.id)]);
+    if (!tabIds.has(activeTab)) {
+      setActiveTab('income');
+    }
+  }, [activeTab, boardShareTabs]);
+
+  const activeTabLabel = useMemo(() => {
+    const dynamicTab = boardShareTabs.find(tab => tab.id === activeTab);
+    if (dynamicTab) return dynamicTab.activeLabel;
+
+    if (activeTab === 'income') return 'Income & Balance';
+    if (activeTab === 'cashflow') return 'Cash Flow';
+    if (activeTab === 'loans') return 'Loans';
+    return 'Research & Upgrades';
+  }, [activeTab, boardShareTabs]);
+
   const renderPeriodSelectors = () => {
     if (activePeriod === 'all') {
       return null;
@@ -226,7 +243,7 @@ export default function FinanceView() {
               <p className="text-white/90 text-sm mt-1">Track your financial performance and growth</p>
             </div>
             <div className="text-white/80 text-sm">
-              {activeTab === 'income' ? 'Income & Balance' : activeTab === 'cashflow' ? 'Cash Flow' : activeTab === 'loans' ? 'Loans' : activeTab === 'shares' ? 'Share Management' : activeTab === 'board' ? 'Board Room' : 'Research & Upgrades'}
+              {activeTabLabel}
             </div>
           </div>
         </div>
@@ -249,16 +266,14 @@ export default function FinanceView() {
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'loans' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Loans
           </TabsTrigger>
-          <TabsTrigger
-            value="shares"
-            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'shares' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
-            Shares
-          </TabsTrigger>
-          <TabsTrigger
-            value="board"
-            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'board' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
-            Board Room
-          </TabsTrigger>
+          {boardShareTabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === tab.id ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
           <TabsTrigger
             value="upgrades"
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'upgrades' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
@@ -308,12 +323,11 @@ export default function FinanceView() {
         <TabsContent value="loans">
           <LoansView />
         </TabsContent>
-        <TabsContent value="shares">
-          <ShareManagementPanel />
-        </TabsContent>
-        <TabsContent value="board">
-          <BoardRoomPanel />
-        </TabsContent>
+        {boardShareTabs.map((tab) => (
+          <TabsContent key={tab.id} value={tab.id}>
+            {tab.render()}
+          </TabsContent>
+        ))}
         <TabsContent value="upgrades">
           <ResearchPanel />
         </TabsContent>

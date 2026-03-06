@@ -110,3 +110,5 @@ export interface BoardShareFeature {
   starting: BoardShareStartingHooks;
   ui: BoardShareUiHooks;
 }
+
+export type BoardShareRuntimeFeature = Pick<BoardShareFeature, 'ticks' | 'constraints' | 'starting'>;

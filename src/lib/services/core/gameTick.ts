@@ -8,6 +8,7 @@ import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, resto
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -73,7 +74,7 @@ const executeGameTick = async (): Promise<void> => {
     // If we're back to Spring, increment year
     if (season === 'Spring') {
       currentYear += 1;
-      await onNewYear(previousYear, currentYear);
+      await onNewYear(previousYear, currentYear, { week, season, year: currentYear });
       await notificationService.addMessage(`A new year has begun! Welcome to ${currentYear}!`, 'time.newYear', 'New Year Events', NotificationCategory.TIME_CALENDAR);
     }
 
@@ -95,22 +96,12 @@ const executeGameTick = async (): Promise<void> => {
   // Pass season change info and all collected messages if we just changed seasons
   await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
 
-  // Automatically pay dividends on season change (week 1 of each season)
+  // Board/share seasonal hooks (e.g. dividends on season start)
   if (week === 1) {
     try {
-      const { payDividends } = await import('../index');
-      const result = await payDividends();
-      if (result.success && result.totalPayment && result.totalPayment > 0) {
-        // Dividends paid successfully - notification handled by payDividends
-      } else if (result.error && result.error === 'Insufficient funds to pay dividends') {
-        // Silently skip if insufficient funds (automatic payment)
-      } else if (result.error && result.error === 'Dividend rate is not set or is zero') {
-        // Silently skip if no dividend rate set
-      }
-      // Other errors are silently ignored for automatic payments
+      await getBoardShareFeature().ticks.onSeasonStart({ week, season, year: currentYear });
     } catch (error) {
-      console.warn('Error automatically paying dividends:', error);
-      // Don't fail game tick if dividend payment fails
+      console.warn('Error running board/share season-start hooks:', error);
     }
   }
 
@@ -156,7 +147,11 @@ const onSeasonChange = async (_previousSeason: string, _newSeason: string, skipN
 /**
  * Handle effects that happen at the start of a new year
  */
-const onNewYear = async (_previousYear: number, _newYear: number): Promise<void> => {
+const onNewYear = async (
+  _previousYear: number,
+  _newYear: number,
+  context?: { week: number; season: string; year: number }
+): Promise<void> => {
   // New year notification is handled in the main processGameTick function
   // Update vineyard ages
   await updateVineyardAges();
@@ -164,13 +159,15 @@ const onNewYear = async (_previousYear: number, _newYear: number): Promise<void>
   // Update vineyard vine yields
   await updateVineyardVineYields();
 
-  // Update growth trend multipliers based on performance vs expectations
+  // Run board/share yearly hooks (e.g. growth trend updates)
   try {
-    const { updateGrowthTrend } = await import('../finance/shares/growthTrendService');
-    await updateGrowthTrend();
+    await getBoardShareFeature().ticks.onYearStart({
+      week: context?.week ?? 1,
+      season: context?.season ?? 'Spring',
+      year: context?.year ?? _newYear
+    });
   } catch (error) {
-    console.error('Error updating growth trend on new year:', error);
-    // Don't fail the entire year transition if growth trend update fails
+    console.error('Error running board/share year-start hooks:', error);
   }
 
   // TODO: Add other yearly effects when ready
@@ -270,41 +267,16 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Adjust share price incrementally (weekly incremental update)
+    // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
     (async () => {
       try {
-        const { adjustSharePriceIncrementally } = await import('../index');
-        await adjustSharePriceIncrementally();
+        await getBoardShareFeature().ticks.onWeekAdvanced({
+          week: gameState.week || 1,
+          season: gameState.season || 'Spring',
+          year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
+        });
       } catch (error) {
-        console.warn('Error during incremental share price adjustment:', error);
-      }
-    })(),
-
-    // OPTIMIZATION: Defer board satisfaction snapshot to avoid heavy calculation every week
-    // Only calculate if company is public (has non-player shareholders)
-    // This reduces gameTick latency significantly
-    (async () => {
-      try {
-        const { getCurrentCompany } = await import('../index');
-        const company = await getCurrentCompany();
-        if (!company) return;
-        
-        // Check if company has non-player shareholders (public company)
-        const { getCompanyShares } = await import('../../database/core/companySharesDB');
-        const shares = await getCompanyShares(company.id);
-        
-        // Only calculate if there are non-player shareholders (public company)
-        // 100% player-owned companies don't need board satisfaction tracking
-        if (shares && shares.outstandingShares > 0) {
-          const { getBoardSatisfactionBreakdown } = await import('../board/boardSatisfactionService');
-          // Fire and forget - don't block game tick
-          // Pass storeSnapshot=true to trigger snapshot storage during game tick
-          void getBoardSatisfactionBreakdown(true).catch(err => 
-            console.warn('Error storing board satisfaction snapshot:', err)
-          );
-        }
-      } catch (error) {
-        console.warn('Error checking company shares for board satisfaction:', error);
+        console.warn('Error running board/share week-advanced hooks:', error);
       }
     })()
   ];

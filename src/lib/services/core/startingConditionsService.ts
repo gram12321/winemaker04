@@ -6,7 +6,6 @@ import { supabase } from '@/lib/database';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
-import { calculateInitialShareCount } from '@/lib/constants/financeConstants';
 import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
 import { companyService } from '../user/companyService';
@@ -19,6 +18,7 @@ import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vine
 import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
 import { researchEnforcer } from '../research/researchEnforcer';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -173,23 +173,17 @@ export async function applyStartingConditions(
     const outsideInvestment = outsideInvestmentAmount ?? 0;
     const familyContribution = vineyardValue;
     const playerShareContribution = playerCashContributionAmount;
-    const totalContributions = playerShareContribution + familyContribution + outsideInvestment;
-    
-    // Calculate share structure based on total contributions (initial capital)
-    const playerOwnershipPct = totalContributions > 0 ? (playerShareContribution / totalContributions) * 100 : 100;
-    // Calculate share count based on total capital and target share price (€50)
-    const TOTAL_SHARES = calculateInitialShareCount(totalContributions);
-    const playerShares = Math.round(TOTAL_SHARES * (playerOwnershipPct / 100));
-    const outstandingShares = TOTAL_SHARES - playerShares;
-
-    // Calculate family vs outside share distribution based on initial equity contributions
-    const totalNonPlayerEquity = familyContribution + outsideInvestment;
-    let familyShares = 0;
-    let outsideShares = outstandingShares;
-    if (totalNonPlayerEquity > 0 && outstandingShares > 0) {
-      familyShares = Math.round(outstandingShares * (familyContribution / totalNonPlayerEquity));
-      outsideShares = outstandingShares - familyShares;
-    }
+    const ownership = getBoardShareFeature().starting.getStartingOwnership({
+      playerCashContribution: playerShareContribution,
+      familyContribution,
+      outsideInvestment
+    });
+    const playerOwnershipPct = ownership.playerOwnershipPct;
+    const TOTAL_SHARES = ownership.totalShares;
+    const playerShares = ownership.playerShares;
+    const outstandingShares = ownership.outstandingShares;
+    const familyShares = ownership.familyShares;
+    const outsideShares = ownership.outsideShares;
 
     let startingLoanId: string | undefined;
     const availableTeams = getAllTeams();
@@ -543,4 +537,5 @@ function buildMentorWelcomeMessage(condition: StartingCondition, vineyardPreview
         : `Welcome to ${condition.name}! ${vineyardName} is ready to become the first chapter of your story.`;
   }
 }
+
 

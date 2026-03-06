@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PageProps } from '@/lib/types/UItypes';
-import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, LendersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab, ShareMarketTab } from '@/components/pages/winepedia/index';
+import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, LendersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab } from '@/components/pages/winepedia/index';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 interface WinepediaProps extends PageProps {
   view?: string;
@@ -8,6 +9,24 @@ interface WinepediaProps extends PageProps {
 
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
+  const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getWinepediaTabs(), []);
+
+  const tabs = useMemo(() => ([
+    { id: 'grapeVarieties', label: 'Grape Varieties', component: GrapeVarietiesTab },
+    { id: 'grapeQuality', label: 'Grape Quality', component: WineQualityTab },
+    { id: 'dynamicRange', label: 'Dynamic Range', component: DynamicRangeTab },
+    { id: 'crossTraitPenalty', label: 'Cross-Trait Penalty', component: CrossTraitPenaltyTab },
+    { id: 'customerTypes', label: 'Customer Types', component: CustomerTypesTab },
+    { id: 'countries', label: 'Countries', component: CountriesTab },
+    { id: 'wineRegions', label: 'Wine Regions', component: WineRegionsTab },
+    { id: 'winemaking', label: 'Winemaking', component: WinemakingTab },
+    { id: 'mathematicalModels', label: 'Mathematical Models', component: MathematicalModelsTab },
+    { id: 'yieldProjection', label: 'Yield Projection', component: YieldProjectionTab },
+    { id: 'customers', label: 'Customers', component: CustomersTab },
+    { id: 'lenders', label: 'Lenders', component: LendersTab },
+    { id: 'economy', label: 'Economy', component: EconomyTab },
+    ...boardShareTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component }))
+  ]), [boardShareTabs]);
 
   useEffect(() => {
     if (view === 'customers') {
@@ -22,22 +41,12 @@ export default function Winepedia({ view }: WinepediaProps) {
     } catch {}
   }, [view]);
 
-  const tabs = [
-    { id: 'grapeVarieties', label: 'Grape Varieties', component: GrapeVarietiesTab },
-    { id: 'grapeQuality', label: 'Grape Quality', component: WineQualityTab },
-    { id: 'dynamicRange', label: 'Dynamic Range', component: DynamicRangeTab },
-    { id: 'crossTraitPenalty', label: 'Cross-Trait Penalty', component: CrossTraitPenaltyTab },
-    { id: 'customerTypes', label: 'Customer Types', component: CustomerTypesTab },
-    { id: 'countries', label: 'Countries', component: CountriesTab },
-    { id: 'wineRegions', label: 'Wine Regions', component: WineRegionsTab },
-    { id: 'winemaking', label: 'Winemaking', component: WinemakingTab },
-    { id: 'mathematicalModels', label: 'Mathematical Models', component: MathematicalModelsTab },
-    { id: 'yieldProjection', label: 'Yield Projection', component: YieldProjectionTab },
-    { id: 'customers', label: 'Customers', component: CustomersTab },
-    { id: 'lenders', label: 'Lenders', component: LendersTab },
-    { id: 'economy', label: 'Economy', component: EconomyTab },
-    { id: 'shareMarket', label: 'Share Market', component: ShareMarketTab }
-  ];
+  useEffect(() => {
+    const availableTabIds = new Set(tabs.map(tab => tab.id));
+    if (!availableTabIds.has(activeTab)) {
+      setActiveTab('grapeVarieties');
+    }
+  }, [activeTab, tabs]);
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || GrapeVarietiesTab;
 

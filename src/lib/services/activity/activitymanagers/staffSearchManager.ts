@@ -12,7 +12,7 @@ import {
   calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
   calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
-import { boardEnforcer } from '@/lib/services';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 /**
  * Generate random staff candidates based on search parameters
@@ -153,11 +153,13 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
       return null;
     }
 
-    // Check board constraint for staff hiring
-    const boardCheck = await boardEnforcer.isActionAllowed('staff_hiring', undefined);
+    // Check modularized board/share constraint for staff hiring
+    const boardCheck = await getBoardShareFeature().constraints.checkStaffHiring({
+      candidateName: candidate.name
+    });
     if (!boardCheck.allowed) {
       await notificationService.addMessage(
-        boardCheck.message || `Board approval required to hire ${candidate.name}. Board satisfaction is too low to approve new staff hires.`,
+        boardCheck.errorMessage || `Board approval required to hire ${candidate.name}. Board satisfaction is too low to approve new staff hires.`,
         'staffSearchManager.startHiringProcess',
         'Board Restriction',
         NotificationCategory.FINANCE_AND_STAFF

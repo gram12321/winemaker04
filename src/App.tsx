@@ -23,6 +23,7 @@ import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
 import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
+import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { Analytics } from '@vercel/analytics/react';
 
 function App() {
@@ -103,15 +104,13 @@ function App() {
   const handleTimeAdvance = () => {
   };
 
-  // Listen for custom navigation events (e.g., from ShareManagementPanel)
+  // Register modularized app-level listeners for optional features (e.g., board/share)
   useEffect(() => {
-    const handleNavigateToWinepedia = () => {
-      setCurrentPage('winepedia');
-    };
-
-    window.addEventListener('navigateToWinepedia', handleNavigateToWinepedia);
+    const unregister = getBoardShareFeature().ui.registerAppEventListeners?.({
+      navigateToWinepedia: () => setCurrentPage('winepedia')
+    });
     return () => {
-      window.removeEventListener('navigateToWinepedia', handleNavigateToWinepedia);
+      unregister?.();
     };
   }, []);
 
