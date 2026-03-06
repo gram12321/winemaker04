@@ -1,0 +1,22 @@
+Original prompt: PLEASE IMPLEMENT THIS PLAN: Board/Share Detachment Plan
+
+- 2026-03-06: Continuing prior in-progress strip work on branch feature/no-board-share.
+- Missing docs referenced by skill in this repo: .github/copilot-instructions.md, DESIGN.md.
+- Next actions: run typecheck, remove remaining board/share exports and tests, simplify finance contribution model, fix compile errors, run tests, commit C and D.
+- 2026-03-06: Implemented stripped branch behavior.
+  - Removed board/share UI modules and active runtime wiring.
+  - Added no-op boardShare seam implementation and made it default.
+  - Removed board/share service implementations and share valuation test.
+  - Removed board/share exports from service and constants barrels.
+  - Simplified company creation/update to stop runtime writes to company_shares.
+  - Simplified finance equity model to `contributedCapital + retainedEarnings`.
+  - Removed public share-specific types from `src/lib/types/types.ts`.
+- Validation:
+  - `npx tsc --noEmit` passed.
+  - `npx vitest run` passed (11 files, 137 tests passed, 1 skipped).
+  - `npm run build` passed.
+- Notes:
+  - `npm run lint` is unavailable (no lint script in package.json).
+  - DB share/board tables are left in schema and related DB adapters/constants remain in repo but are not used by runtime on this branch.
+- Remaining optional cleanup (not required for current plan):
+  - Remove dormant DB adapter files and constants for board/share if you want a stricter hard-delete branch.
