@@ -18,7 +18,6 @@ import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vine
 import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
 import { researchEnforcer } from '../research/researchEnforcer';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -103,9 +102,7 @@ export function generateVineyardPreview(condition: StartingCondition): VineyardP
 export async function applyStartingConditions(
   companyId: string,
   country: StartingCountry,
-  vineyardPreview: VineyardPreview,
-  outsideInvestmentAmount?: number, // Public investment in euros (0 to 1,000,000)
-  playerCashContribution?: number // Optional player cash contribution (for subsequent companies)
+  vineyardPreview: VineyardPreview
 ): Promise<ApplyStartingConditionsResult> {
   try {
     const condition = STARTING_CONDITIONS[country];
@@ -132,12 +129,10 @@ export async function applyStartingConditions(
 
     // Determine player cash contribution
     // For first company: use country-specific base investment
-    // For subsequent companies: use provided playerCashContribution or default to base
+    // For subsequent companies: use country-specific base investment
     let playerCashContributionAmount: number;
     if (isFirstCompany) {
       playerCashContributionAmount = FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION;
-    } else if (playerCashContribution !== undefined) {
-      playerCashContributionAmount = playerCashContribution;
     } else {
       playerCashContributionAmount = condition.startingMoney;
     }
@@ -170,35 +165,12 @@ export async function applyStartingConditions(
       vineyardValue = Math.round(adjustedLandValuePerHectare * vineyardPreview.hectares);
     }
     
-    const outsideInvestment = outsideInvestmentAmount ?? 0;
-    const familyContribution = vineyardValue;
-    const playerShareContribution = playerCashContributionAmount;
-    const ownership = getBoardShareFeature().starting.getStartingOwnership({
-      playerCashContribution: playerShareContribution,
-      familyContribution,
-      outsideInvestment
-    });
-    const playerOwnershipPct = ownership.playerOwnershipPct;
-    const TOTAL_SHARES = ownership.totalShares;
-    const playerShares = ownership.playerShares;
-    const outstandingShares = ownership.outstandingShares;
-    const familyShares = ownership.familyShares;
-    const outsideShares = ownership.outsideShares;
-
     let startingLoanId: string | undefined;
     const availableTeams = getAllTeams();
 
-    // 1. Update company metadata via service (starting country and share structure)
-    // Store initial vineyard value for family contribution tracking
+    // 1. Update company metadata via service
     const { success: companyUpdateSuccess, error: companyUpdateError } = await companyService.updateCompany(companyId, {
-      startingCountry: country,
-      totalShares: TOTAL_SHARES,
-      outstandingShares: outstandingShares,
-      playerShares: playerShares,
-      initialOwnershipPct: playerOwnershipPct,
-      initialVineyardValue: vineyardValue, // Store initial family contribution
-      familyShares: familyShares,
-      outsideShares: outsideShares
+      startingCountry: country
     });
 
     if (!companyUpdateSuccess) {
@@ -230,7 +202,7 @@ export async function applyStartingConditions(
       }
     }
 
-    // 3. Add starting capital (player cash investment + public investment)
+    // 3. Add starting capital (player cash investment)
     let workingMoney = company.money ?? 0;
     
     if (playerCashContributionAmount !== 0) {
@@ -249,22 +221,6 @@ export async function applyStartingConditions(
       }
     }
     
-    if (outsideInvestment > 0) {
-      try {
-        await addTransaction(
-          outsideInvestment,
-          'Public investment committed',
-          TRANSACTION_CATEGORIES.INITIAL_INVESTMENT,
-          false,
-          companyId
-        );
-        workingMoney += outsideInvestment;
-      } catch (transactionError) {
-        console.error('Error adding public investment:', transactionError);
-        return { success: false, error: 'Failed to record public investment' };
-      }
-    }
-
     // 4. Apply optional starting loan before staffing to ensure capital reflects loan
     if (condition.startingLoan) {
       const loanResult = await applyStartingLoan(condition.startingLoan);
