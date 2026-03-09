@@ -83,7 +83,9 @@ export const DEFAULT_FINANCIAL_DATA = {
   allVineyardsValue: 0,
   wineValue: 0,
   grapesValue: 0,
-  contributedCapital: 0,
+  playerContribution: 0,
+  familyContribution: 0,
+  outsideInvestment: 0,
   retainedEarnings: 0,
   totalEquity: 0
 } as const;

@@ -26,7 +26,9 @@ interface FinancialData {
   wineValue: number;
   grapesValue: number;
   // Equity components
-  contributedCapital: number;
+  playerContribution: number;
+  familyContribution: number;
+  outsideInvestment: number;
   retainedEarnings: number;
   totalEquity: number;
 }
@@ -290,12 +292,51 @@ export const calculateFinancialData = async (
   const currentAssets = wineValue + grapesValue;
   const totalAssets = cashMoney + fixedAssets + currentAssets;
   
-  // Contributed capital is tracked as positive initial-investment transactions.
-  const contributedCapital = transactions.reduce((sum, transaction) => {
-    if (transaction.category !== TRANSACTION_CATEGORIES.INITIAL_INVESTMENT) return sum;
-    if (transaction.amount <= 0) return sum;
-    return sum + transaction.amount;
-  }, 0);
+  // Calculate equity components from all transactions (not filtered by period)
+  let playerContribution = 0;
+  let outsideInvestment = 0;
+  
+  transactions.forEach(transaction => {
+    const description = transaction.description || '';
+    const isInitialInvestmentCategory = transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT;
+    const isPositiveCapital = transaction.amount > 0;
+
+    const isPlayerContribution =
+      description === 'Initial Capital: Player cash contribution' ||
+      (isInitialInvestmentCategory && description.includes('Player cash contribution'));
+
+    if (isPlayerContribution) {
+      playerContribution += transaction.amount;
+      return;
+    }
+
+    const isOutsideInvestment =
+      description === 'Public investment committed' ||
+      (isInitialInvestmentCategory && description.includes('Public investment')) ||
+      (isInitialInvestmentCategory && description.startsWith('Stock Issuance'));
+
+    if (isOutsideInvestment && isPositiveCapital) {
+      outsideInvestment += transaction.amount;
+    }
+  });
+  
+  // Family contribution is the initial vineyard value at company creation
+  // Get it from company_shares table
+  const companyId = getCurrentCompanyId();
+  let familyContribution = 0;
+  
+  if (companyId) {
+    const { getCompanyShares } = await import('../../database/core/companySharesDB');
+    const sharesData = await getCompanyShares(companyId);
+    if (sharesData && sharesData.initialVineyardValue) {
+      familyContribution = sharesData.initialVineyardValue;
+    } else {
+      // Fallback: use current vineyard value for companies created before this tracking was added
+      familyContribution = allVineyardsValue;
+    }
+  } else {
+    familyContribution = allVineyardsValue;
+  }
   
   // Calculate retained earnings: all-time net income (excluding initial investments and loans)
   let allTimeIncome = 0;
@@ -314,7 +355,7 @@ export const calculateFinancialData = async (
   });
   
   const retainedEarnings = allTimeIncome - allTimeExpenses;
-  const totalEquity = contributedCapital + retainedEarnings;
+  const totalEquity = playerContribution + familyContribution + outsideInvestment + retainedEarnings;
   
   return {
     income,
@@ -330,7 +371,9 @@ export const calculateFinancialData = async (
     allVineyardsValue,
     wineValue,
     grapesValue,
-    contributedCapital,
+    playerContribution,
+    familyContribution,
+    outsideInvestment,
     retainedEarnings,
     totalEquity
   };
@@ -428,7 +471,7 @@ function filterTransactionsLastNWeeks(
  */
 export async function calculateFinancialDataRollingNWeeks(
   weeksBack: number = 48,
-  _companyId?: string
+  companyId?: string
 ): Promise<FinancialData> {
   const gameState = getGameState();
   const currentDate = {
@@ -518,12 +561,49 @@ export async function calculateFinancialDataRollingNWeeks(
   const currentAssets = wineValue + grapesValue;
   const totalAssets = cashMoney + fixedAssets + currentAssets;
   
-  // Contributed capital is tracked as positive initial-investment transactions.
-  const contributedCapital = transactions.reduce((sum, transaction) => {
-    if (transaction.category !== TRANSACTION_CATEGORIES.INITIAL_INVESTMENT) return sum;
-    if (transaction.amount <= 0) return sum;
-    return sum + transaction.amount;
-  }, 0);
+  // Calculate equity components from all transactions (not filtered by period)
+  let playerContribution = 0;
+  let outsideInvestment = 0;
+  
+  transactions.forEach(transaction => {
+    const description = transaction.description || '';
+    const isInitialInvestmentCategory = transaction.category === TRANSACTION_CATEGORIES.INITIAL_INVESTMENT;
+    const isPositiveCapital = transaction.amount > 0;
+
+    const isPlayerContribution =
+      description === 'Initial Capital: Player cash contribution' ||
+      (isInitialInvestmentCategory && description.includes('Player cash contribution'));
+
+    if (isPlayerContribution) {
+      playerContribution += transaction.amount;
+      return;
+    }
+
+    const isOutsideInvestment =
+      description === 'Public investment committed' ||
+      (isInitialInvestmentCategory && description.includes('Public investment')) ||
+      (isInitialInvestmentCategory && description.startsWith('Stock Issuance'));
+
+    if (isOutsideInvestment && isPositiveCapital) {
+      outsideInvestment += transaction.amount;
+    }
+  });
+  
+  const effectiveCompanyId = companyId || getCurrentCompanyId() || '';
+  let familyContribution = 0;
+  
+  if (effectiveCompanyId) {
+    const { getCompanyShares } = await import('../../database/core/companySharesDB');
+    const sharesData = await getCompanyShares(effectiveCompanyId);
+    if (sharesData && sharesData.initialVineyardValue) {
+      familyContribution = sharesData.initialVineyardValue;
+    } else {
+      // Fallback: use current vineyard value for companies created before this tracking was added
+      familyContribution = allVineyardsValue;
+    }
+  } else {
+    familyContribution = allVineyardsValue;
+  }
   
   // Calculate retained earnings: all-time net income (excluding initial investments and loans)
   let allTimeIncome = 0;
@@ -542,7 +622,7 @@ export async function calculateFinancialDataRollingNWeeks(
   });
   
   const retainedEarnings = allTimeIncome - allTimeExpenses;
-  const totalEquity = contributedCapital + retainedEarnings;
+  const totalEquity = playerContribution + familyContribution + outsideInvestment + retainedEarnings;
   
   return {
     income,
@@ -558,7 +638,9 @@ export async function calculateFinancialDataRollingNWeeks(
     allVineyardsValue,
     wineValue,
     grapesValue,
-    contributedCapital,
+    playerContribution,
+    familyContribution,
+    outsideInvestment,
     retainedEarnings,
     totalEquity
   };

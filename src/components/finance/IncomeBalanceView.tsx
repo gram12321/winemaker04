@@ -183,7 +183,7 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-gray-600">Contributed Capital</span>
                       <span className="text-blue-600 font-medium">
-                        {formatNumber(financialData.contributedCapital, { currency: true })}
+                        {formatNumber(financialData.playerContribution + financialData.familyContribution + financialData.outsideInvestment, { currency: true })}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
@@ -310,7 +310,16 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
             <div className="mb-2">
               <div className="text-xs font-medium text-gray-600 mb-1">Contributed Capital</div>
               <div className="ml-2 space-y-1">
-                <DataRow label="Total Contributed Capital" value={financialData.contributedCapital} valueClass="text-blue-600 font-semibold" />
+                <DataRow label="Player Contribution (Cash)" value={financialData.playerContribution} valueClass="text-blue-600" />
+                <DataRow label="Family Contribution (Vineyards)" value={financialData.familyContribution} valueClass="text-blue-600" />
+                <DataRow label="Public Investment (Cash)" value={financialData.outsideInvestment} valueClass="text-blue-600" />
+              </div>
+              <div className="ml-2 mt-1 pt-1 border-t border-gray-200">
+                <DataRow 
+                  label="Total Contributed Capital" 
+                  value={financialData.playerContribution + financialData.familyContribution + financialData.outsideInvestment} 
+                  valueClass="text-blue-600 font-semibold" 
+                />
               </div>
             </div>
             <DataRow label="Retained Earnings" value={financialData.retainedEarnings} valueClass={getColorClass(financialData.retainedEarnings >= 0 ? 0.8 : 0.2)} />
