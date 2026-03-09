@@ -1,16 +1,27 @@
 // Contract fulfillment service - handles contract fulfillment, rejection, and expiration
 import { WineContract, WineBatch, ContractRequirement, GameDate, Vineyard } from '../../types/types';
-import { getContractById, updateContractStatus, getPendingContracts, updateContractProgress } from '../../database/sales/contractDB';
-import { getWineBatchById, saveWineBatch } from '../../database/activities/inventoryDB';
-import { loadVineyards } from '../../database/activities/vineyardDB';
+import { getContractById, updateContractStatus, getPendingContracts, updateContractProgress, loadWineContracts } from '@/lib/database/sales';
+import { getWineBatchById, saveWineBatch } from '@/lib/database/wine';
+import { loadVineyards } from '@/lib/database/vineyard';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from './relationshipService';
 import { getGameState, getCurrentPrestige } from '../core/gameState';
 import { addSalePrestigeEvent } from '../prestige/prestigeService';
-import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate, triggerTopicUpdate } from '../core/gameUpdateBus';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
+
+export async function getAllWineContracts(status?: WineContract['status']): Promise<WineContract[]> {
+  try {
+    const contracts = await loadWineContracts();
+    if (!status) return contracts;
+    return contracts.filter(contract => contract.status === status);
+  } catch (error) {
+    console.error('Error loading wine contracts:', error);
+    return [];
+  }
+}
 
 // ===== CONTRACT VALIDATION =====
 
@@ -230,7 +241,7 @@ export async function getEligibleWinesForContract(contract: WineContract): Promi
   validation: Awaited<ReturnType<typeof validateWineAgainstContract>>;
 }[]> {
   // Import here to avoid circular dependency
-  const { loadWineBatches } = await import('../../database/activities/inventoryDB');
+  const { loadWineBatches } = await import('@/lib/database/wine');
   
   const allBatches = await loadWineBatches();
   const bottledWines = allBatches.filter(b => b.state === 'bottled' && b.quantity > 0);
@@ -543,3 +554,4 @@ function isDateAfter(date1: GameDate, date2: GameDate): boolean {
   
   return date1.week > date2.week;
 }
+

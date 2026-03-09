@@ -2,7 +2,7 @@
 
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { NotificationCategory } from '../../types/types';
+import { NotificationCategory } from '@/lib/types/shared/coreTypes';
 
 const NOTIFICATIONS_TABLE = 'notifications';
 
@@ -173,3 +173,4 @@ export const clearNotificationFilters = async (): Promise<void> => {
     // Silently fail
   }
 };
+

@@ -1,6 +1,6 @@
 // Weekly decay system for prestige events and relationship boosts
-import { listPrestigeEventsForDecay, updatePrestigeEventAmount, deletePrestigeEvents } from '../../database/customers/prestigeEventsDB';
-import { listRelationshipBoostsForDecay, updateRelationshipBoostAmount, deleteRelationshipBoosts } from '../../database/customers/relationshipBoostsDB';
+import { listPrestigeEventsForDecay, updatePrestigeEventAmount, deletePrestigeEvents } from '@/lib/database/prestige';
+import { listRelationshipBoostsForDecay, updateRelationshipBoostAmount, deleteRelationshipBoosts } from '@/lib/database/sales';
 
 /**
  * Apply one week of decay to prestige events only.
@@ -59,3 +59,4 @@ export async function decayRelationshipBoostsOneWeek(): Promise<void> {
     console.error('Failed to apply weekly decay to relationship boosts:', error);
   }
 }
+

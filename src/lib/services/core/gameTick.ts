@@ -3,12 +3,12 @@ import { generateSophisticatedWineOrders, notificationService, progressActivitie
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
-import { triggerGameUpdate } from '@/hooks/useGameUpdates';
+import { triggerGameUpdate } from '@/lib/services/core/gameUpdateBus';
+import { runFeatureSeasonStartHooks, runFeatureWeekAdvancedHooks, runFeatureYearStartHooks } from '@/lib/services/core/featureComposition';
 import { NotificationCategory, calculateAbsoluteWeeks, hasMinimizedModals, restoreAllMinimizedModals } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/constants';
 import { WineBatch } from '@/lib/types/types';
-import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/wine';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -96,13 +96,9 @@ const executeGameTick = async (): Promise<void> => {
   // Pass season change info and all collected messages if we just changed seasons
   await checkAndTriggerBookkeeping(newSeason, economyPhaseMessage, wageMessage);
 
-  // Board/share seasonal hooks (e.g. dividends on season start)
+  // Run registered feature seasonal hooks (e.g. board/share dividends on season start)
   if (week === 1) {
-    try {
-      await getBoardShareFeature().ticks.onSeasonStart({ week, season, year: currentYear });
-    } catch (error) {
-      console.warn('Error running board/share season-start hooks:', error);
-    }
+    await runFeatureSeasonStartHooks({ week, season, year: currentYear });
   }
 
   // Update vineyard ripeness and status based on current season and week
@@ -159,16 +155,12 @@ const onNewYear = async (
   // Update vineyard vine yields
   await updateVineyardVineYields();
 
-  // Run board/share yearly hooks (e.g. growth trend updates)
-  try {
-    await getBoardShareFeature().ticks.onYearStart({
-      week: context?.week ?? 1,
-      season: context?.season ?? 'Spring',
-      year: context?.year ?? _newYear
-    });
-  } catch (error) {
-    console.error('Error running board/share year-start hooks:', error);
-  }
+  // Run registered feature yearly hooks (e.g. board/share growth trend updates)
+  await runFeatureYearStartHooks({
+    week: context?.week ?? 1,
+    season: context?.season ?? 'Spring',
+    year: context?.year ?? _newYear
+  });
 
   // TODO: Add other yearly effects when ready
   // - Annual financial summaries
@@ -267,17 +259,13 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
-    // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
+    // Run registered feature weekly hooks (e.g. board/share price adjustment + snapshots)
     (async () => {
-      try {
-        await getBoardShareFeature().ticks.onWeekAdvanced({
-          week: gameState.week || 1,
-          season: gameState.season || 'Spring',
-          year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
-        });
-      } catch (error) {
-        console.warn('Error running board/share week-advanced hooks:', error);
-      }
+      await runFeatureWeekAdvancedHooks({
+        week: gameState.week || 1,
+        season: gameState.season || 'Spring',
+        year: gameState.currentYear || GAME_INITIALIZATION.STARTING_YEAR
+      });
     })()
   ];
 
@@ -461,4 +449,5 @@ async function submitWeeklyHighscores(): Promise<void> {
     console.error('Failed to submit weekly highscores:', error);
   }
 }
+
 

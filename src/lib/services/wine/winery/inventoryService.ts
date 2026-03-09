@@ -1,9 +1,9 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { WineBatch, GrapeVariety, WineCharacteristics, GameDate } from '../../../types/types';
-import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
-import { loadVineyards } from '../../../database/activities/vineyardDB';
-import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
+import { saveWineBatch, loadWineBatches, updateWineBatch } from '@/lib/database/wine';
+import { loadVineyards } from '@/lib/database/vineyard';
+import { triggerGameUpdate } from '../../core/gameUpdateBus';
 import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
@@ -324,3 +324,5 @@ function getHarvestEffectDescription(characteristic: string): string {
       return 'Harvest Effects';
   }
 }
+
+

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Staff, StaffSkills, Nationality } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
-import { saveStaffToDb, loadStaffFromDb, deleteStaffFromDb } from '@/lib/database/core/staffDB';
+import { saveStaffToDb, loadStaffFromDb, deleteStaffFromDb } from '@/lib/database/user';
 import {
   getMaleNamesForNationality,
   getFemaleNamesForNationality,
@@ -235,3 +235,4 @@ export async function awardExperience(staffId: string, amount: number, categorie
   // Save to database
   await saveStaffToDb(updatedStaff);
 }
+

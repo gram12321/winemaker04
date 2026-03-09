@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { GameState } from '../../types/types';
+import type { GameState } from '@/lib/types/shared/gameStateTypes';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 
 const GAME_STATE_TABLE = 'game_state';
@@ -61,3 +61,4 @@ export const loadGameState = async (): Promise<Partial<GameState> | null> => {
     return null;
   }
 };
+

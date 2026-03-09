@@ -7,7 +7,7 @@ import { companyService } from '../user/companyService';
 import { Company, loadGameState, saveGameState } from '@/lib/database';
 import { initializeStaffSystem } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate } from './gameUpdateBus';
 import { initializeEconomyPhase } from '../finance/economyService';
 
 // Current active company and game state

@@ -2,8 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Activity, ActivityCreationOptions, ActivityProgress, NotificationCategory } from '@/lib/types/types';
 import { getGameState, updateGameState, notificationService, completePlanting, createWineBatchFromHarvest, calculateVineyardYield, completeClearingActivity, getTeamForCategory, handlePartialPlanting, handlePartialHarvesting } from '@/lib/services';
 import { completeLandSearch } from './landSearchManager';
-import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activities/activityDB';
-import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardDB';
+import { saveActivityToDb, loadActivitiesFromDb, updateActivityInDb, removeActivityFromDb, hasActiveActivity } from '@/lib/database/activity';
+import { loadVineyards, saveVineyard } from '@/lib/database/vineyard';
 import { awardExperience } from '@/lib/services/user/staffService';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
@@ -11,7 +11,7 @@ import { completeResearch } from './researchManager';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { completeLenderSearch } from './lenderSearchManager';
 import { completeTakeLoan } from './takeLoanManager';
-import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
+import { triggerGameUpdateImmediate } from '@/lib/services/core/gameUpdateBus';
 import { formatNumber } from '@/lib/utils';
 
 
@@ -245,6 +245,32 @@ export async function getActivityById(activityId: string): Promise<Activity | nu
   return activities.find(activity => activity.id === activityId) || null;
 }
 
+export async function updateActivityStaffAssignments(
+  activityId: string,
+  assignedStaffIds: string[]
+): Promise<boolean> {
+  try {
+    const activity = await getActivityById(activityId);
+    if (!activity) return false;
+
+    const success = await updateActivityInDb(activityId, {
+      params: {
+        ...activity.params,
+        assignedStaffIds
+      }
+    });
+
+    if (success) {
+      triggerGameUpdateImmediate();
+    }
+
+    return success;
+  } catch (error) {
+    console.error('Error updating activity staff assignments:', error);
+    return false;
+  }
+}
+
 /**
  * Cancel an activity
  */
@@ -454,3 +480,4 @@ export async function initializeActivitySystem(): Promise<void> {
     updateGameState({ activities: [] });
   }
 }
+

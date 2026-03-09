@@ -1,6 +1,6 @@
 // Customer database service - handles Supabase CRUD operations for customers
 import { supabase } from '../core/supabase';
-import { Customer, CustomerType } from '../../types/types';
+import type { Customer, CustomerType } from '@/lib/types/features/salesTypes';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { getCompanyQuery } from '../../utils/companyUtils';
 import { SALES_CONSTANTS } from '../../constants/constants';
@@ -253,3 +253,4 @@ export async function checkCustomersExist(): Promise<boolean> {
     return false;
   }
 }
+

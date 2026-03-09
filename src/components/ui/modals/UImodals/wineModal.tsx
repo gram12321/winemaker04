@@ -10,12 +10,11 @@ import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { getGrapeQualityCategory, getGrapeQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { GrapeQualityFactorsBreakdown } from '../../components/grapeQualityBreakdown';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
+import { getAllVineyards, getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBalance } from '@/hooks';
 
 interface WineModalProps extends DialogProps {
@@ -40,7 +39,7 @@ export const WineModal: React.FC<WineModalProps> = ({
   // Load vineyard data
   useEffect(() => {
     if (wineBatch && wineBatch.vineyardId) {
-      loadVineyards().then((vineyards) => {
+      getAllVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setVineyard(foundVineyard || null);
       }).catch((error) => {

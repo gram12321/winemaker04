@@ -2,6 +2,8 @@ import { notificationService } from '@/lib/services';
 import { Season, NotificationCategory } from '../../types/types';
 import { getExistingScore, upsertHighscore, loadHighscores, getCompanyScore, countHigherScores, countTotalScores, deleteHighscores, loadHighscoresRange, type ScoreType, type HighscoreData, type HighscoreEntry } from '@/lib/database';
 
+export type { ScoreType, HighscoreEntry } from '@/lib/database';
+
 export interface HighscoreSubmission {
   companyId: string;
   companyName: string;

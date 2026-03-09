@@ -1,7 +1,7 @@
 import { getGameState, updateGameState } from '@/lib/services';
 import { WorkCategory, NotificationCategory } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
-import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
+import { removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activity';
 import { calculateTotalBookkeepingWork } from '../workcalculators/bookkeepingWorkCalculator';
 import { notificationService } from '@/lib/services';
 import { v4 as uuidv4 } from 'uuid';
@@ -176,3 +176,4 @@ async function cleanupIncompleteBookkeeping(): Promise<void> {
     incompleteBookkeeping.map(task => removeActivityFromDb(task.id))
   );
 }
+

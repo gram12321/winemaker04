@@ -1,7 +1,7 @@
 // Contract generation service - creates requirement-based contracts from customers
 import { WineContract, ContractRequirement, ContractRequirementType, Customer, CustomerType, GameDate } from '../../types/types';
 import { getAllCustomers } from './createCustomer';
-import { saveWineContract, getPendingContracts } from '../../database/sales/contractDB';
+import { saveWineContract, getPendingContracts } from '@/lib/database/sales';
 import { getGameState, getCurrentPrestige } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -1199,3 +1199,4 @@ function generateMultiYearTerms() {
     deliveriesCompleted: 0
   };
 }
+

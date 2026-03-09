@@ -1,6 +1,6 @@
 import { supabase } from '../core/supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { PrestigeEvent } from '../../types/types';
+import type { PrestigeEvent } from '@/lib/types/features/prestigeTypes';
 
 export interface PrestigeEventRow {
   id: string;
@@ -107,5 +107,6 @@ export async function deletePrestigeEvents(ids: string[]): Promise<void> {
     .eq('company_id', getCurrentCompanyId());
   if (error) throw error;
 }
+
 
 

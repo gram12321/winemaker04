@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Loan, PendingLoanWarning } from '../../types/types';
+import type { Loan, PendingLoanWarning } from '@/lib/types/features/financeTypes';
 import { getCurrentCompanyId, getCompanyQuery } from '../../utils/companyUtils';
 import { buildGameDate } from '../dbMapperUtils';
 
@@ -391,3 +391,4 @@ export async function getLoanWarningStats(): Promise<{
     return { total: 0, unacknowledged: 0, bySeverity: {} };
   }
 }
+

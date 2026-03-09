@@ -1,5 +1,5 @@
-import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { loadVineyards, saveVineyard } from '@/lib/database/vineyard';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { CLEARING_TASKS } from '../../constants/activityConstants';
 
 /**
@@ -165,3 +165,4 @@ export async function getClearableVineyards(): Promise<Array<{ id: string; name:
     return [];
   }
 }
+

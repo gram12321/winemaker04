@@ -1,5 +1,6 @@
 import { supabase } from '../core/supabase';
-import { WineBatch, GrapeVariety } from '../../types/types';
+import type { WineBatch } from '@/lib/types/features/wineTypes';
+import type { GrapeVariety } from '@/lib/types/features/vineyardTypes';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { buildGameDate } from '../dbMapperUtils';

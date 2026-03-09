@@ -3,6 +3,9 @@ export * from './core/gameState';
 export * from './core/notificationService';
 export * from './core/gameTick';
 export * from './core/startingConditionsService';
+export * from './core/gameUpdateBus';
+export * from './core/featureComposition';
+export * from './core/featureNamespaces';
 
 // User services
 export * from './user/authService';
@@ -18,6 +21,7 @@ export * from './user/wineLogService';
 export * from './finance/creditRatingService';
 export * from './finance/economyService';
 export * from './finance/financeService';
+export * from './finance/cashflowService';
 export * from './finance/lenderService';
 export * from './finance/loanService';
 export * from './finance/wageService';

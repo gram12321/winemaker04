@@ -1,4 +1,14 @@
-// Database barrel exports - CRUD only (no business logic)
+// Feature-owned database repository barrels
+export * as activityDb from './activity';
+export * as financeDb from './finance';
+export * as prestigeDb from './prestige';
+export * as researchDb from './research';
+export * as salesDb from './sales';
+export * as userDb from './user';
+export * as vineyardDb from './vineyard';
+export * as wineDb from './wine';
+
+// Legacy broad exports (kept for wildcard ergonomics)
 export * from './activities/vineyardDB';
 export * from './activities/inventoryDB';
 export * from './core/gamestateDB';

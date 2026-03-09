@@ -1,11 +1,11 @@
 import { getGameState } from '../core/gameState';
-import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
+import { loadVineyards, saveVineyard } from '@/lib/database/vineyard';
 import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
-import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
+import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '@/lib/database/prestige';
 import { getMaxLandValue } from '../wine/winescore/grapeQualityCalculation';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import { calculateCompanyValue } from '../finance/financeService';
@@ -426,7 +426,7 @@ export async function updateBaseVineyardPrestigeEvent(vineyardId: string): Promi
  */
 export async function updateCellarCollectionPrestige(): Promise<void> {
   try {
-    const { loadWineBatches } = await import('../../database/activities/inventoryDB');
+    const { loadWineBatches } = await import('@/lib/database/wine');
     const allBatches = await loadWineBatches();
 
     // Filter aged wines (5+ years, bottled, not oxidized, still in inventory)
@@ -1230,3 +1230,4 @@ export async function addResearchPrestigeEvent(
 
   triggerGameUpdate();
 }
+

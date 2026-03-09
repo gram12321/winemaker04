@@ -3,7 +3,7 @@ import { WineBatch, WineLogEntry } from '../../types/types';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from './highscoreService';
 import { getGameState, getCurrentCompany } from '../core/gameState';
-import { insertWineLogEntry, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
+import { insertWineLogEntry, loadWineLog, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -93,6 +93,15 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
  */
 export async function getVineyardWineHistory(vineyardId: string): Promise<WineLogEntry[]> {
   return await loadWineLogByVineyard(vineyardId);
+}
+
+export async function getAllWineLogEntries(): Promise<WineLogEntry[]> {
+  try {
+    return await loadWineLog();
+  } catch (error) {
+    console.error('Error loading wine log entries:', error);
+    return [];
+  }
 }
 
 

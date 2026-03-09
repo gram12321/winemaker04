@@ -5,9 +5,7 @@ import { Building2, TrendingUp, Trophy, Calendar, BarChart3, Wine, ChevronLeft, 
 import { formatGameDateFromObject, calculateCompanyWeeks, formatGameDate, formatNumber } from '@/lib/utils/utils';
 import { formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory, StoryPortrait } from '@/lib/utils';
 import { useGameState, useGameUpdates } from '@/hooks';
-import { getCurrentCompany, highscoreService } from '@/lib/services';
-import { type ScoreType } from '@/lib/database';
-import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
+import { getAllWineBatches, getCurrentCompany, highscoreService, type ScoreType } from '@/lib/services';
 import { NavigationProps } from '../../lib/types/UItypes';
 
 type MentorWelcomeData = {
@@ -117,7 +115,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   
   const loadCellarStats = async () => {
     try {
-      const batches = await loadWineBatches();
+      const batches = await getAllWineBatches();
       const bottledWines = batches.filter(b => b.state === 'bottled');
       const agedWines = bottledWines.filter(b => (b.agingProgress || 0) >= 260); // 5+ years
       

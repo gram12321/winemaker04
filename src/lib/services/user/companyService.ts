@@ -17,6 +17,8 @@ import {
 } from '@/lib/database';
 import { initializeLenders } from '../finance/lenderService';
 
+export type { Company } from '@/lib/database';
+
 export interface CompanyCreateData {
   name: string;
   associateWithUser?: boolean;

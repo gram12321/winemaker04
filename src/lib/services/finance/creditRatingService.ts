@@ -1,5 +1,5 @@
 import { calculateFinancialData, calculateCompanyValue } from './financeService';
-import { loadActiveLoans } from '../../database/core/loansDB';
+import { loadActiveLoans } from '@/lib/database/finance';
 import { loadTransactions } from './financeService';
 import { calculateCompanyWeeks, clamp01 } from '@/lib/utils';
 import { getCurrentCompany } from '../core/gameState';
@@ -509,5 +509,6 @@ async function calculateNegativeBalancePenalty(
     score: totalPenalty
   };
 }
+
 
 

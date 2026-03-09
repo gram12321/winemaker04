@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { WineLogEntry, GrapeVariety } from '../../types/types';
+import type { WineLogEntry } from '@/lib/types/features/wineTypes';
+import type { GrapeVariety } from '@/lib/types/features/vineyardTypes';
 import { buildGameDate } from '../dbMapperUtils';
 
 const WINE_LOG_TABLE = 'wine_log';
@@ -138,4 +139,5 @@ export const getWineProductionSummary = async (): Promise<{
     return { totalWinesProduced: 0, totalBottlesProduced: 0 };
   }
 };
+
 

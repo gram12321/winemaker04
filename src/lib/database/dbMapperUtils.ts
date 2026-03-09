@@ -1,4 +1,4 @@
-import { Season, GameDate } from '../types/types';
+import type { Season, GameDate } from '@/lib/types/shared/coreTypes';
 
 /**
  * Database Mapper Utilities
@@ -47,4 +47,5 @@ export function buildGameDate(
 export function toOptionalDate(value: any): Date | undefined {
   return value ? new Date(value) : undefined;
 }
+
 

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
-import { calculateEstimatedPrice, getCurrentPrestige } from '@/lib/services';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
+import { calculateEstimatedPrice, getAllVineyards, getCurrentPrestige } from '@/lib/services';
 
 /**
  * Shared hook for calculating wine prices with prestige bonuses
@@ -22,7 +21,7 @@ export function useWinePriceCalculator() {
       try {
         const [currentPrestige, vineyardsData] = await Promise.all([
           getCurrentPrestige(),
-          loadVineyards()
+          getAllVineyards()
         ]);
         setPriceCalcData({ prestige: currentPrestige, vineyards: vineyardsData });
       } catch (error) {

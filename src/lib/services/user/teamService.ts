@@ -6,8 +6,8 @@ import { StaffTeam, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { saveTeamToDb, loadTeamsFromDb, deleteTeamFromDb, saveTeamsToDb } from '@/lib/database/core/teamDB';
-import { saveStaffToDb } from '@/lib/database/core/staffDB';
+import { saveTeamToDb, loadTeamsFromDb, deleteTeamFromDb, saveTeamsToDb } from '@/lib/database/user';
+import { saveStaffToDb } from '@/lib/database/user';
 
 // ===== DEFAULT TEAMS =====
 
@@ -377,4 +377,5 @@ export async function resetTeamsToDefault(): Promise<void> {
 
   await notificationService.addMessage('Teams reset to default configuration', 'teamService.resetTeamsToDefault', 'Team Reset', NotificationCategory.STAFF_MANAGEMENT);
 }
+
 

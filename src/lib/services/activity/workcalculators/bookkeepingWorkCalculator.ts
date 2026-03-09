@@ -2,7 +2,7 @@ import { Transaction, Season, WorkCategory } from '@/lib/types/types';
 import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { getGameState, getCurrentPrestige, getTransactions, notificationService } from '@/lib/services';
-import { loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
+import { loadActivitiesFromDb } from '@/lib/database/activity';
 import { NotificationCategory } from '@/lib/types/types';
 import { SEASON_ORDER } from '@/lib/constants';
 
@@ -209,3 +209,4 @@ export async function completeBookkeeping(activity: any): Promise<void> {
     NotificationCategory.ACTIVITIES_TASKS
   );
 }
+

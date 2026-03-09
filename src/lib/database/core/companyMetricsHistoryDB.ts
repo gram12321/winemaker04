@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { getGameState } from '../../services/core/gameState';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
 import { toOptionalNumber } from '../dbMapperUtils';
 
@@ -42,6 +41,12 @@ export interface CompanyMetricsSnapshotData {
   profit_margin_48w?: number;  // Profit margin (48-week rolling) at snapshot time
   revenue_growth_48w?: number;  // Revenue growth (48-week rolling) at snapshot time
   created_at?: string;
+}
+
+export interface CompanyMetricsLookupDate {
+  week: number;
+  season: string;
+  year: number;
 }
 
 /**
@@ -145,6 +150,7 @@ export async function insertCompanyMetricsSnapshot(data: {
  */
 export async function getCompanyMetricsSnapshotNWeeksAgo(
   weeksAgo: number,
+  currentDate?: CompanyMetricsLookupDate,
   companyId?: string
 ): Promise<CompanyMetricsSnapshot | null> {
   try {
@@ -155,19 +161,17 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
       return null;
     }
 
-    // Calculate target date
-    const gameState = getGameState();
-    const currentDate = {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
+    const lookupDate: CompanyMetricsLookupDate = currentDate || {
+      week: 1,
+      season: 'Spring',
+      year: 2024
     };
 
     // Calculate target date by subtracting weeks
     const currentAbsoluteWeeks = calculateAbsoluteWeeks(
-      currentDate.week,
-      currentDate.season,
-      currentDate.year,
+      lookupDate.week,
+      lookupDate.season,
+      lookupDate.year,
       1,
       'Spring',
       2024
@@ -180,7 +184,7 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
     // Calculate approximate target season/year based on weeks
     const weeksPerYear = 48; // 4 seasons * 12 weeks
     const approximateYearsAgo = Math.floor(weeksAgo / weeksPerYear);
-    const targetYear = currentDate.year - approximateYearsAgo;
+    const targetYear = lookupDate.year - approximateYearsAgo;
     
     // Query only snapshots from target year and nearby years (max 3 years = ~144 weeks)
     // This reduces data transfer significantly
@@ -189,7 +193,7 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
       .select('*')
       .eq('company_id', companyId)
       .gte('snapshot_year', Math.max(2024, targetYear - 1)) // Include previous year for safety
-      .lte('snapshot_year', currentDate.year) // Don't query future
+      .lte('snapshot_year', lookupDate.year) // Don't query future
       .order('snapshot_year', { ascending: false })
       .order('snapshot_season', { ascending: false })
       .order('snapshot_week', { ascending: false })
@@ -280,6 +284,7 @@ export async function getCompanyMetricsSnapshotNWeeksAgo(
  * Ordered by date (oldest first)
  */
 export async function getCompanyMetricsHistory(
+  currentDate?: CompanyMetricsLookupDate,
   companyId?: string,
   weeksBack: number = 48 * 2 // Default: 2 years 48 weeks in a gameyear
 ): Promise<CompanyMetricsSnapshot[]> {
@@ -291,18 +296,17 @@ export async function getCompanyMetricsHistory(
       return [];
     }
 
-    const gameState = getGameState();
-    const currentDate = {
-      week: gameState.week || 1,
-      season: gameState.season || 'Spring',
-      year: gameState.currentYear || 2024
+    const lookupDate: CompanyMetricsLookupDate = currentDate || {
+      week: 1,
+      season: 'Spring',
+      year: 2024
     };
 
     // Calculate start date by subtracting weeks
     const currentAbsoluteWeeks = calculateAbsoluteWeeks(
-      currentDate.week,
-      currentDate.season,
-      currentDate.year,
+      lookupDate.week,
+      lookupDate.season,
+      lookupDate.year,
       1,
       'Spring',
       2024
@@ -314,7 +318,7 @@ export async function getCompanyMetricsHistory(
     // Calculate approximate start year based on weeksBack
     const weeksPerYear = 48; // 4 seasons * 12 weeks
     const approximateYearsBack = Math.ceil(weeksBack / weeksPerYear);
-    const startYear = Math.max(2024, currentDate.year - approximateYearsBack - 1); // Add buffer
+    const startYear = Math.max(2024, lookupDate.year - approximateYearsBack - 1); // Add buffer
     
     // Query only snapshots within the date range - database does the filtering
     const maxSnapshots = Math.min(weeksBack + 20, 100); // Reduced limit, database filters
@@ -323,7 +327,7 @@ export async function getCompanyMetricsHistory(
       .select('*')
       .eq('company_id', companyId)
       .gte('snapshot_year', startYear) // Database-level filtering
-      .lte('snapshot_year', currentDate.year)
+      .lte('snapshot_year', lookupDate.year)
       .order('snapshot_year', { ascending: true })
       .order('snapshot_season', { ascending: true })
       .order('snapshot_week', { ascending: true })

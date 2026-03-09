@@ -3,8 +3,8 @@ import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';
-import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
-import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
+import { updateWineBatch } from '@/lib/database/wine';
+import { loadWineBatches } from '@/lib/database/wine';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 
@@ -198,3 +198,4 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     console.error('Error completing crushing activity:', error);
   }
 }
+

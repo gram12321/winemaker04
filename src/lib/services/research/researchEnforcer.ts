@@ -1,5 +1,5 @@
 import { UnlockType, ResearchProject, RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
-import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
+import { getUnlockedResearchIds } from '@/lib/database/research';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
 /**
@@ -125,3 +125,4 @@ class ResearchEnforcerService {
 
 export const researchEnforcer = new ResearchEnforcerService();
 export { ResearchEnforcerService };
+

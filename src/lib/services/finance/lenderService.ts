@@ -5,7 +5,7 @@ import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION } from '../.
 import { LENDER_NAMES } from '../../constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { randomInRange } from '../../utils/utils';
-import { saveLenders, loadLenders, checkLendersExist } from '../../database/core/lendersDB';
+import { saveLenders, loadLenders, checkLendersExist } from '@/lib/database/finance';
 
 /**
  * Generate lender name based on type
@@ -210,3 +210,4 @@ export async function getAvailableLenders(creditRating: number, companyPrestige?
     return [];
   }
 }
+

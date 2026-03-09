@@ -3,15 +3,15 @@ import { WineFeature, FeatureConfig, FeatureImpact, FeatureRiskInfo, Accumulatio
 import { getAllFeatureConfigs, getTimeBasedFeatures, getEventTriggeredFeatures, getFeatureConfig } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { isActionAvailable } from '../winery/wineryService';
 import { getColorClass, getColorCategory } from '../../../utils/utils';
-import { loadWineBatches, bulkUpdateWineBatches } from '../../../database/activities/inventoryDB';
-import { loadVineyards } from '../../../database/activities/vineyardDB';
+import { loadWineBatches, bulkUpdateWineBatches } from '@/lib/database/wine';
+import { loadVineyards } from '@/lib/database/vineyard';
 import { notificationService } from '../../core/notificationService';
 import { NotificationCategory } from '../../../types/types';
 import { addFeaturePrestigeEvent } from '../../prestige/prestigeService';
 import { getBottleAgingSeverity } from './agingService';
 import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
-import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
+import { bulkUpdateVineyards } from '@/lib/database/vineyard';
 import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 
 // ===== CORE INTERFACES =====
@@ -1968,3 +1968,5 @@ function generateOptionLabel(options: any, event: 'harvest' | 'crushing' | 'ferm
       return 'Default';
   }
 }
+
+

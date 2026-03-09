@@ -1,14 +1,14 @@
 import { AchievementConfig, AchievementWithStatus, AchievementUnlock, AchievementCategory, AchievementLevel, Transaction } from '../../types/types';
 import { ALL_ACHIEVEMENTS, achievementLevels } from '../../constants/achievementConstants';
-import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked, getAchievementUnlock } from '../../database/core/achievementsDB';
-import { insertPrestigeEvent, listPrestigeEvents } from '../../database/customers/prestigeEventsDB';
+import { unlockAchievement, getAllAchievementUnlocks, isAchievementUnlocked, getAchievementUnlock } from '@/lib/database/user';
+import { insertPrestigeEvent, listPrestigeEvents } from '@/lib/database/prestige';
 import { getGameState, calculateFinancialData, calculateCompanyValue, loadTransactions } from '../index';
 import { calculateAbsoluteWeeks } from '../../utils';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { loadVineyards } from '../../database/activities/vineyardDB';
+import { loadVineyards } from '@/lib/database/vineyard';
 import { loadWineLogByVineyard } from '../../database';
 import { v4 as uuidv4 } from 'uuid';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatNumber as formatNumberUtil, getBadgeColorClasses } from '../../utils/utils';
@@ -258,8 +258,8 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   ]);
   
   // OPTIMIZATION: Use lightweight summary queries instead of loading full datasets
-  const { getSalesSummary } = await import('../../database/customers/salesDB');
-  const { getWineProductionSummary } = await import('../../database/core/wineLogDB');
+  const { getSalesSummary } = await import('@/lib/database/sales');
+  const { getWineProductionSummary } = await import('@/lib/database/user');
   
   const [salesSummary, productionSummary] = await Promise.all([
     getSalesSummary(),
@@ -1043,4 +1043,5 @@ export function getAchievementsByCategory(category: string): AchievementConfig[]
 export function getAchievementsByLevel(level: number): AchievementConfig[] {
   return ALL_ACHIEVEMENTS.filter(achievement => achievement.achievementLevel === level);
 }
+
 

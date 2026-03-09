@@ -1,15 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Separator } from '@/components/ui';
 import { Loan, LenderType, NotificationCategory } from '@/lib/types/types';
-import { loadActiveLoans } from '@/lib/database/core/loansDB';
-import { getGameState, getAvailableLenders, calculateLenderAvailability, notificationService } from '@/lib/services';
-import { loadLenders } from '@/lib/database/core/lendersDB';
+import { getGameState, getAvailableLenders, calculateLenderAvailability, notificationService, getActiveLoans, getAllLenders, calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty, repayLoanInFull, makeExtraLoanPayment, calculateCreditRating } from '@/lib/services';
 import { formatPercent, formatNumber, getCreditRatingCategory, getCreditRatingDescription, getBadgeColorClasses, getLenderTypeColorClass, getEconomyPhaseColorClass } from '@/lib/utils';
-import { calculateTotalInterest, calculateTotalExpenses, calculateRemainingInterest, estimatePrepaymentPenalty, repayLoanInFull, makeExtraLoanPayment } from '@/lib/services/finance/loanService';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { LenderSearchOptionsModal } from '@/components/ui';
 // LenderSearchResultsModal is now handled globally by GlobalSearchResultsDisplay
-import { calculateCreditRating } from '@/lib/services';
 import { useGameStateWithData } from '@/hooks';
 import { LENDER_TYPE_DISTRIBUTION, LOAN_EXTRA_PAYMENT, LOAN_PREPAYMENT } from '@/lib/constants';
 
@@ -49,14 +45,14 @@ export default function LoansView() {
       // Calculate comprehensive credit rating
       const creditBreakdown = await calculateCreditRating();
 
-      const loans = await loadActiveLoans();
+      const loans = await getActiveLoans();
 
       // Calculate lender availability breakdown
       const currentCreditRating = creditBreakdown.finalRating;
       const companyPrestige = gameState.prestige || 0;
 
       // Get all lenders (not just available ones) for the breakdown
-      const allLenders = await loadLenders();
+      const allLenders = await getAllLenders();
       const availableLenders = await getAvailableLenders(currentCreditRating * 100, companyPrestige);
 
       const lenderAvailabilityBreakdown = allLenders.map(lender => {
@@ -77,11 +73,11 @@ export default function LoansView() {
     } catch (error) {
       console.error('Error loading loans data:', error);
       // Fallback to game state credit rating
-      const loans = await loadActiveLoans();
+      const loans = await getActiveLoans();
       const currentCreditRating = gameState.creditRating || 0.5;
       const companyPrestige = gameState.prestige || 0;
 
-      const allLenders = await loadLenders();
+      const allLenders = await getAllLenders();
       const availableLenders = await getAvailableLenders(currentCreditRating * 100, companyPrestige);
 
       const lenderAvailabilityBreakdown = allLenders.map(lender => {

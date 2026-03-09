@@ -11,11 +11,11 @@ import { addTransaction } from '../finance/financeService';
 import { companyService } from '../user/companyService';
 import { getAllLenders } from '../finance/lenderService';
 import { applyForLoan } from '../finance/loanService';
-import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
+import { insertPrestigeEvent } from '@/lib/database/prestige';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
-import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
+import { unlockResearch } from '@/lib/database/research';
 import { researchEnforcer } from '../research/researchEnforcer';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
 
@@ -493,5 +493,6 @@ function buildMentorWelcomeMessage(condition: StartingCondition, vineyardPreview
         : `Welcome to ${condition.name}! ${vineyardName} is ready to become the first chapter of your story.`;
   }
 }
+
 
 

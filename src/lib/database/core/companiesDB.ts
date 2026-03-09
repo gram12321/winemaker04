@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Season } from '../../types/types';
+import type { Season } from '@/lib/types/shared/coreTypes';
 import { toOptionalString } from '../dbMapperUtils';
 
 const COMPANIES_TABLE = 'companies';
@@ -227,4 +227,5 @@ export const getCompanyStats = async (userId?: string): Promise<any[]> => {
     return [];
   }
 };
+
 

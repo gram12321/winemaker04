@@ -1,15 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { WineBatch } from '@/lib/types/types';
-import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
-import { loadWineOrders } from '@/lib/database/customers/salesDB';
 import { WineModal } from '../ui';
 import { NavigationProps } from '../../lib/types/UItypes';
 import WineCellarTab from './sales/WineCellarTab';
 import OrdersTab from './sales/OrdersTab';
 import ContractsTab from './sales/ContractsTab';
-import { getWineBatchDisplayName } from '@/lib/services';
-import { loadWineContracts } from '@/lib/database/sales/contractDB';
+import { getAllWineBatches, getAllWineOrders, getAllWineContracts, getWineBatchDisplayName } from '@/lib/services';
 
 interface SalesProps extends NavigationProps {
   // Inherits onNavigateToWinepedia from NavigationProps
@@ -27,18 +24,18 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
   // Use consolidated hooks for reactive data loading
   const allOrders = useGameStateWithData(
-    () => loadWineOrders(),
+    () => getAllWineOrders(),
     []
   );
 
   const allBatches = useGameStateWithData(
-    () => loadWineBatches(),
+    () => getAllWineBatches(),
     [],
     { topic: 'wine_batches' }
   );
 
   const allContracts = useGameStateWithData(
-    () => loadWineContracts(),
+    () => getAllWineContracts(),
     [],
     { topic: 'contracts' }
   );

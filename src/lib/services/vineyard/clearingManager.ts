@@ -4,7 +4,7 @@ import { createActivity } from '../activity/activitymanagers/activityManager';
 import { updateVineyardHealth } from './clearingService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '@/lib/types/types';
-import { loadVineyards } from '../../database/activities/vineyardDB';
+import { loadVineyards } from '@/lib/database/vineyard';
 import { calculateClearingWork } from '../activity/workcalculators/clearingWorkCalculator';
 
 export interface ClearingActivityOptions {
@@ -140,3 +140,4 @@ export async function completeClearingActivity(activity: Activity): Promise<void
     );
   }
 }
+

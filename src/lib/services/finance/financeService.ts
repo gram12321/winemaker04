@@ -1,11 +1,11 @@
 import { getGameState, updateGameState } from '../core/gameState';
 import type { Transaction } from '@/lib/types/types';
-import { loadVineyards } from '../../database/activities/vineyardDB';
-import { loadWineBatches } from '../../database/activities/inventoryDB';
+import { loadVineyards } from '@/lib/database/vineyard';
+import { loadWineBatches } from '@/lib/database/wine';
 import { SEASON_ORDER, TRANSACTION_CATEGORIES, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 import { CAPITAL_FLOW_TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { companyService } from '../user/companyService';
 import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
 import { calculateTotalOutstandingLoans } from './loanService';
@@ -587,3 +587,4 @@ function filterTransactionByPeriod(
       return false;
   }
 }
+

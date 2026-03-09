@@ -4,16 +4,25 @@ import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
 import { getAllCustomers } from './createCustomer';
 import { notificationService } from '../core/notificationService';
-import { loadWineBatches } from '../../database/activities/inventoryDB';
-import { loadVineyards } from '../../database/activities/vineyardDB';
+import { loadWineBatches } from '@/lib/database/wine';
+import { loadVineyards } from '@/lib/database/vineyard';
 import { SALES_CONSTANTS } from '../../constants/constants';
-import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate, triggerTopicUpdate } from '../core/gameUpdateBus';
 import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
 import { getGameState } from '../core/gameState';
 import { getPendingOrders } from './salesService';
 import { createRelationshipBoost } from './relationshipService';
-import { updateWineOrderStatus } from '../../database/customers/salesDB';
+import { loadWineOrders, updateWineOrderStatus } from '@/lib/database/sales';
 import { calculateAbsoluteWeeks } from '../../utils/utils';
+
+export async function getAllWineOrders(status?: WineOrder['status']): Promise<WineOrder[]> {
+  try {
+    return await loadWineOrders(status);
+  } catch (error) {
+    console.error('Error loading wine orders:', error);
+    return [];
+  }
+}
 
 
 /**
@@ -217,4 +226,5 @@ export async function expireOldOrders(): Promise<number> {
     return 0;
   }
 }
+
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { getCurrentPrestige, processGameTick, clearLastCompanyIdForLogout } from '@/lib/services';
+import { getCurrentPrestige, processGameTick, clearLastCompanyIdForLogout, getMainNavigationItems, getAccountNavigationItems } from '@/lib/services';
 import { formatGameDate, formatNumber } from '@/lib/utils';
 import { NAVIGATION_EMOJIS } from '@/lib/utils';
 import { Button, Badge, Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui';
@@ -79,14 +79,14 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
     setMobileMenuOpen(false);
   };
 
-  const navItems = [
-    { id: 'dashboard', label: 'Company', icon: NAVIGATION_EMOJIS.dashboard },
-    { id: 'finance', label: 'Finance', icon: NAVIGATION_EMOJIS.finance },
-    { id: 'staff', label: 'Staff', icon: '👥' },
-    { id: 'vineyard', label: 'Vineyard', icon: NAVIGATION_EMOJIS.vineyard },
-    { id: 'winery', label: 'Winery', icon: NAVIGATION_EMOJIS.winery },
-    { id: 'sales', label: 'Sales', icon: NAVIGATION_EMOJIS.sales }
-  ];
+  const navItems = useMemo(() => (
+    getMainNavigationItems().map((item) => ({
+      ...item,
+      icon: item.iconKey === 'staff' ? '👥' : NAVIGATION_EMOJIS[item.iconKey]
+    }))
+  ), []);
+
+  const accountItems = useMemo(() => getAccountNavigationItems(), []);
 
   return (
     <>
@@ -101,9 +101,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             <nav className="hidden lg:flex space-x-1">
               {navItems.map((item) => (
                 <Button
-                  key={item.id}
-                  onClick={() => handleNavigation(item.id)}
-                  variant={currentPage === item.id ? "secondary" : "ghost"}
+                  key={item.pageId}
+                  onClick={() => handleNavigation(item.pageId)}
+                  variant={currentPage === item.pageId ? "secondary" : "ghost"}
                   size="sm"
                   className="bg-transparent hover:bg-red-700 text-white border-0"
                 >
@@ -292,15 +292,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                   {currentCompany?.name || gameState.companyName || 'My Winery'}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleNavigation('profile')}>
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigation('settings')}>
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigation('admin')}>
-                  Admin Dashboard
-                </DropdownMenuItem>
+                {accountItems.map(({ pageId, label }) => (
+                  <DropdownMenuItem key={pageId} onClick={() => handleNavigation(pageId)}>
+                    {label}
+                  </DropdownMenuItem>
+                ))}
                 {onBackToLogin && (
                   <>
                     <DropdownMenuSeparator />
@@ -310,18 +306,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuItem onClick={() => handleNavigation('achievements')}>
-                  Achievements
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigation('wine-log')}>
-                  Wine Production Log
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigation('highscores')}>
-                  Global Leaderboards
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigation('winepedia')}>
-                  Wine-Pedia
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => {
@@ -412,11 +396,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               
               {navItems.map((item) => (
                 <Button
-                  key={item.id}
+                  key={item.pageId}
                   variant="ghost"
-                  onClick={() => handleNavigation(item.id)}
+                  onClick={() => handleNavigation(item.pageId)}
                   className={`w-full justify-start text-left mb-1 py-3 text-foreground ${
-                    currentPage === item.id ? "bg-muted" : ""
+                    currentPage === item.pageId ? "bg-muted" : ""
                   }`}
                 >
                   <span className="mr-3 text-lg">{item.icon}</span>
@@ -427,33 +411,27 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             
             <div className="mt-auto pt-6 border-t">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Account</h3>
-              {[
-                { id: 'profile', label: 'Profile' },
-                { id: 'settings', label: 'Settings' },
-                { id: 'admin', label: 'Admin Dashboard' },
-                { id: 'highscores', label: 'Highscores' },
-                { id: 'achievements', label: 'Achievements' },
-                { id: 'wine-log', label: 'Wine Production Log' },
-                { id: 'winepedia', label: 'Wine-Pedia' }
-              ].map(({ id, label }) => (
+              {accountItems.map(({ pageId, label }) => (
                 <Button
-                  key={id}
+                  key={pageId}
                   variant="ghost"
-                  onClick={() => handleNavigation(id)}
+                  onClick={() => handleNavigation(pageId)}
                   className="w-full justify-start text-left py-2 text-foreground"
                 >
                   {label}
                 </Button>
               ))}
               
-              <Button
-                variant="ghost"
-                onClick={onBackToLogin}
-                className="w-full justify-start text-left py-2 text-destructive hover:text-destructive mt-2"
-              >
-                <LogOut className="mr-3 h-4 w-4" />
-                Switch Company
-              </Button>
+              {onBackToLogin && (
+                <Button
+                  variant="ghost"
+                  onClick={onBackToLogin}
+                  className="w-full justify-start text-left py-2 text-destructive hover:text-destructive mt-2"
+                >
+                  <LogOut className="mr-3 h-4 w-4" />
+                  Switch Company
+                </Button>
+              )}
               
               <Button
                 variant="ghost"
@@ -514,3 +492,4 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
 };
 
 export default Header;
+

@@ -7,9 +7,7 @@ import { calculateAsymmetricalMultiplier } from '@/lib/utils/calculator';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
 import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
-import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
-import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
+import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease, updateInventoryBatch, triggerTopicUpdate } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 
@@ -592,12 +590,11 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
     }
 
     try {
-      const updatedWine: WineBatch = {
-        ...wine,
-        askingPrice: newPrice
-      };
-      
-      await saveWineBatch(updatedWine);
+      const updated = await updateInventoryBatch(wine.id, { askingPrice: newPrice });
+      if (!updated) {
+        throw new Error(`Failed to update asking price for batch ${wine.id}`);
+      }
+
       // Notify only cellar-related subscribers
       triggerTopicUpdate('wine_batches');
       setEditingPrices(prev => {

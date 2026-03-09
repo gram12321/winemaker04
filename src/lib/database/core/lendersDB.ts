@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Lender } from '../../types/types';
+import type { Lender } from '@/lib/types/features/financeTypes';
 import { getCurrentCompanyId, getCompanyQuery } from '../../utils/companyUtils';
 
 export async function saveLenders(lenders: Lender[], companyId?: string): Promise<void> {
@@ -124,3 +124,4 @@ export async function checkLendersExist(companyId?: string): Promise<boolean> {
     return false;
   }
 }
+

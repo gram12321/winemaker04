@@ -3,12 +3,11 @@ import { Vineyard, WineBatch } from '@/lib/types/types';
 import { GrapeQualityFactorsDisplay } from './grapeQualityBar';
 import { getVineyardGrapeQualityFactors, getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
 import { getFeatureImpacts } from '@/lib/services/wine/features/featureService';
-import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, formatPercent, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getGrapeQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
-import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
+import { getAllVineyards, getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
 
 interface GrapeQualityFactorsBreakdownProps {
@@ -43,7 +42,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
   // Load vineyard data for wine batches
   useEffect(() => {
     if (wineBatch && !vineyard) {
-      loadVineyards().then((vineyards) => {
+      getAllVineyards().then((vineyards) => {
         const foundVineyard = vineyards.find(v => v.id === wineBatch.vineyardId);
         setWineBatchVineyard(foundVineyard || null);
       }).catch((error) => {

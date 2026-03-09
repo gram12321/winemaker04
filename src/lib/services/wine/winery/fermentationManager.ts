@@ -1,6 +1,6 @@
 import { WineBatch } from '../../../types/types';
 import { updateInventoryBatch } from './inventoryService';
-import { loadWineBatches, bulkUpdateWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
+import { loadWineBatches, bulkUpdateWineBatches, updateWineBatch } from '@/lib/database/wine';
 import { getGameState } from '../../core/gameState';
 import { recordBottledWine } from '../../user/wineLogService';
 import { processEventTrigger } from '../features/featureService';
@@ -11,7 +11,7 @@ import { FermentationOptions, applyWeeklyFermentationEffects } from '../characte
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
-import { loadVineyards } from '../../../database/activities/vineyardDB';
+import { loadVineyards } from '@/lib/database/vineyard';
 
 /**
  * Fermentation Manager
@@ -219,3 +219,5 @@ export async function processWeeklyFermentation(): Promise<void> {
     console.error('Error processing weekly fermentation:', error);
   }
 }
+
+

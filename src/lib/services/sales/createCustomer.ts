@@ -4,7 +4,7 @@ import { Customer, CustomerCountry, CustomerType } from '../../types/types';
 import { CUSTOMER_REGIONAL_DATA, SALES_CONSTANTS, CUSTOMER_MARKET_SHARE_MULTIPLIERS } from '../../constants/constants';
 import { NAMES } from '../../constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
-import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '../../database/customers/customerDB';
+import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '@/lib/database/sales';
 import { calculateRelationshipBreakdown } from './relationshipService';
 import { loadFormattedRelationshipBreakdown } from '../../utils/utils';
 
@@ -361,4 +361,18 @@ export async function getAllCustomers(): Promise<Customer[]> {
     return [];
   }
 }
+
+/**
+ * Get active customers with ongoing relationship relevance.
+ */
+export async function getActiveCustomers(): Promise<Customer[]> {
+  try {
+    const customers = await loadActiveCustomers();
+    return customers || [];
+  } catch (error) {
+    console.error('[Customer Service] Failed to get active customers:', error);
+    return [];
+  }
+}
+
 

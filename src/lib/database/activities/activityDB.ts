@@ -1,4 +1,4 @@
-import { Activity } from '@/lib/types/types';
+import type { Activity } from '@/lib/types/features/activityTypes';
 import { supabase } from '../core/supabase';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
@@ -198,3 +198,4 @@ export async function hasActiveActivity(targetId: string, category?: string): Pr
     return false;
   }
 }
+

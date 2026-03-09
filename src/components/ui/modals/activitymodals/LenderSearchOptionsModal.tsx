@@ -3,12 +3,8 @@ import { LenderSearchOptions, LenderType, Lender } from '@/lib/types/types';
 import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
 import { Button, Label, Slider, Card, CardContent, CardHeader, CardTitle, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
-import { getGameState, calculateLoanTerms } from '@/lib/services';
-import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services';
+import { getGameState, calculateLoanTerms, calculateLenderSearchCost, calculateLenderSearchWork, getScaledLoanAmountLimit, getCurrentCreditRating, calculateTotalAssets, getAllLenders } from '@/lib/services';
 import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
-import { getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/services/finance/loanService';
-import { calculateTotalAssets } from '@/lib/services/finance/financeService';
-import { loadLenders } from '@/lib/database/core/lendersDB';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 interface LenderSearchOptionsModalProps {
@@ -131,7 +127,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
           maxAllowed = Math.min(limitInfo.maxAllowed, selectedLender.maxLoanAmount);
         } else {
           // For lender search mode, calculate max across all lenders
-          const allLenders = await loadLenders();
+          const allLenders = await getAllLenders();
           const maxAllowedPromises = allLenders
             .filter(lender => !lender.blacklisted)
             .map(lender => getScaledLoanAmountLimit(lender, creditRating, { totalAssets }));

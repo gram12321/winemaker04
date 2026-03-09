@@ -3,19 +3,27 @@ import { Loan, LoanCategory, Lender, EconomyPhase, LenderType, GameDate, Pending
 import { LENDER_TYPE_MULTIPLIERS, CREDIT_RATING, LOAN_DEFAULT, DURATION_INTEREST_MODIFIERS, LOAN_MISSED_PAYMENT_PENALTIES, EMERGENCY_QUICK_LOAN, EMERGENCY_RESTRUCTURE, LOAN_EXTRA_PAYMENT, ADMINISTRATION_LOAN_PENALTIES, LOAN_PREPAYMENT } from '../../constants/loanConstants';
 import { TRANSACTION_CATEGORIES, SEASON_ORDER } from '@/lib/constants';
 import { getGameState, updateGameState } from '../core/gameState';
-import { addTransaction, calculateTotalAssets } from './financeService';
-import { insertLoan, loadActiveLoans, updateLoan, clearLoanWarning } from '../../database/core/loansDB';
-import { loadLenders, updateLenderBlacklist } from '../../database/core/lendersDB';
+import { calculateTotalAssets } from './financeService';
+import { recordCashflowEntry } from './cashflowService';
+import {
+  insertLoan,
+  loadActiveLoans,
+  updateLoan,
+  clearLoanWarning,
+  setLoanWarning,
+  getFirstUnacknowledgedLoanWarning,
+  acknowledgeLoanWarning
+} from '@/lib/database/finance';
+import { loadLenders, updateLenderBlacklist } from '@/lib/database/finance';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { calculateCreditRating } from './creditRatingService';
 import { calculateLenderAvailability } from './lenderService';
-import { insertPrestigeEvent } from '../../database/customers/prestigeEventsDB';
+import { insertPrestigeEvent } from '@/lib/database/prestige';
 import { calculateAbsoluteWeeks, formatNumber, formatPercent } from '../../utils/utils';
-import { loadVineyards, deleteVineyards } from '../../database/activities/vineyardDB';
-import { loadWineBatches, bulkUpdateWineBatches } from '../../database/activities/inventoryDB';
-import { setLoanWarning } from '../../database/core/loansDB';
+import { loadVineyards, deleteVineyards } from '@/lib/database/vineyard';
+import { loadWineBatches, bulkUpdateWineBatches } from '@/lib/database/wine';
 import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/economyConstants';
 
 /**
@@ -77,6 +85,32 @@ export async function getCurrentCreditRating(): Promise<number> {
     // Fallback to game state credit rating
     const gameState = getGameState();
     return gameState.creditRating || CREDIT_RATING.DEFAULT_RATING;
+  }
+}
+
+export async function getActiveLoans(): Promise<Loan[]> {
+  try {
+    return await loadActiveLoans();
+  } catch (error) {
+    console.error('Error loading active loans:', error);
+    return [];
+  }
+}
+
+export async function getFirstPendingLoanWarning(): Promise<PendingLoanWarning | null> {
+  try {
+    return await getFirstUnacknowledgedLoanWarning();
+  } catch (error) {
+    console.error('Error loading pending loan warning:', error);
+    return null;
+  }
+}
+
+export async function acknowledgePendingLoanWarning(loanId: string): Promise<void> {
+  try {
+    await acknowledgeLoanWarning(loanId);
+  } catch (error) {
+    console.error('Error acknowledging loan warning:', error);
   }
 }
 
@@ -246,7 +280,7 @@ export async function applyForLoan(
 
     if (!options.skipTransactions) {
       // Add principal amount to company money
-      await addTransaction(
+      await recordCashflowEntry(
         principalAmount,
         `Loan received from ${lender.name}`,
         TRANSACTION_CATEGORIES.LOAN_RECEIVED,
@@ -254,7 +288,7 @@ export async function applyForLoan(
       );
 
       // Deduct origination fee from company money
-      await addTransaction(
+      await recordCashflowEntry(
         -originationFee,
         `Origination fee for loan from ${lender.name}`,
         TRANSACTION_CATEGORIES.LOAN_ORIGINATION_FEE,
@@ -826,7 +860,7 @@ async function liquidateBottledInventory(
     );
 
     for (const entry of soldEntries) {
-      await addTransaction(
+      await recordCashflowEntry(
         entry.proceeds,
         `${transactionLabel}: ${entry.summary}`,
         TRANSACTION_CATEGORIES.WINE_SALES,
@@ -873,7 +907,7 @@ async function seizeVineyardForRestructure(
   const valueRecovered = target.vineyardTotalValue;
   const saleProceeds = valueRecovered * (1 - penaltyRate);
 
-  await addTransaction(
+  await recordCashflowEntry(
     saleProceeds,
     `Forced vineyard seizure: ${target.name}`,
     TRANSACTION_CATEGORIES.VINEYARD_SALE,
@@ -1630,14 +1664,14 @@ export async function makeExtraLoanPayment(loanId: string): Promise<void> {
   }
 
   // Apply payment transactions
-  await addTransaction(
+  await recordCashflowEntry(
     -Math.round(loan.seasonalPayment),
     `Extra payment to ${loan.lenderName}`,
     TRANSACTION_CATEGORIES.LOAN_PAYMENT,
     false
   );
 
-  await addTransaction(
+  await recordCashflowEntry(
     -administrationFee,
     `Administration fee for extra payment to ${loan.lenderName}`,
     TRANSACTION_CATEGORIES.LOAN_EXTRA_PAYMENT_FEE,
@@ -1769,7 +1803,7 @@ async function processLoanPayment(
 
     if (availableMoney >= loan.seasonalPayment) {
       // Sufficient funds - make full payment
-      await addTransaction(
+      await recordCashflowEntry(
         -loan.seasonalPayment,
         `Loan payment to ${loan.lenderName}`,
         TRANSACTION_CATEGORIES.LOAN_PAYMENT,
@@ -1826,7 +1860,7 @@ async function processLoanPayment(
       return null;
     } else if (availableMoney > 0) {
       // Partial payment - use all available funds
-      await addTransaction(
+      await recordCashflowEntry(
         -availableMoney,
         `Partial loan payment to ${loan.lenderName} (${formatNumber(availableMoney, { currency: true })} of ${formatNumber(loan.seasonalPayment, { currency: true })} due)`,
         TRANSACTION_CATEGORIES.LOAN_PAYMENT,
@@ -2007,7 +2041,7 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
     }
 
     // Deduct remaining balance from company money
-    await addTransaction(
+    await recordCashflowEntry(
       -loan.remainingBalance,
       `Early loan payoff to ${loan.lenderName}`,
       TRANSACTION_CATEGORIES.LOAN_PAYMENT,
@@ -2015,7 +2049,7 @@ export async function repayLoanInFull(loanId: string): Promise<void> {
     );
 
     if (prepaymentPenalty > 0) {
-      await addTransaction(
+      await recordCashflowEntry(
         -prepaymentPenalty,
         `Early payoff indemnity for ${loan.lenderName}`,
         TRANSACTION_CATEGORIES.LOAN_PREPAYMENT_FEE,
@@ -2237,7 +2271,7 @@ async function applyWarning3Penalties(
     // Use all available money to repay loan
     const paymentAmount = Math.min(availableMoney, loan.remainingBalance);
 
-    await addTransaction(
+    await recordCashflowEntry(
       -paymentAmount,
       `Emergency loan payment to ${loan.lenderName} using all available funds`,
       TRANSACTION_CATEGORIES.LOAN_PAYMENT,
@@ -2417,7 +2451,7 @@ async function seizeVineyardsForDebt(
 
     // Add sale proceeds to user money
     if (saleProceeds > 0) {
-      await addTransaction(
+      await recordCashflowEntry(
         saleProceeds,
         `Forced vineyard sale by ${loan.lenderName} - ${vineyardsToRemove.length} vineyard(s) sold (${formatNumber(valueRecovered, { currency: true })} value, ${formatNumber(saleProceeds, { currency: true })} after 25% penalty)`,
         TRANSACTION_CATEGORIES.VINEYARD_SALE,
@@ -2512,4 +2546,6 @@ async function defaultOnLoan(loanId: string): Promise<void> {
     // Silent error handling
   }
 }
+
+
 

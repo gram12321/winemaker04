@@ -1,33 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import Header from './components/layout/Header';
-import CompanyOverview from './components/pages/CompanyOverview';
-import Vineyard from './components/pages/Vineyard';
-import Winery from './components/pages/Winery';
-import Sales from './components/pages/Sales';
-import Finance from './components/pages/Finance';
-import { StaffPage } from './components/pages/Staff';
-import { Profile } from './components/pages/Profile';
-import { Settings } from './components/pages/Settings';
-import { AdminDashboard } from './components/pages/AdminDashboard';
-import { Achievements } from './components/pages/Achievements';
-import { WineLog } from './components/pages/WineLog';
-import Winepedia from './components/pages/Winepedia';
-import { Login } from './components/pages/Login';
-import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
 import { LoanWarningModalDisplay } from './components/layout/LoanWarningModalDisplay';
 import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
-import { Company } from '@/lib/database';
-import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
-import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
+import {
+  type AppPageId,
+  type Company,
+  setActiveCompany,
+  resetGameState,
+  getCurrentCompany,
+  getCurrentPrestige,
+  runFeatureStartupHooks,
+  registerAppFeatureEventListeners
+} from './lib/services';
 import { Analytics } from '@vercel/analytics/react';
+import { renderAppPage, isPublicAppPage } from './app/pageRegistry';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState<AppPageId>('login');
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
   
@@ -43,7 +36,7 @@ function App() {
       
       if (lastInitializedCompanyIdRef.current !== existingCompany.id) {
         lastInitializedCompanyIdRef.current = existingCompany.id;
-        initializeGameForCompany();
+        void initializeGameForCompany(existingCompany.id);
       }
       return;
     }
@@ -60,33 +53,23 @@ function App() {
       
       if (lastInitializedCompanyIdRef.current !== company.id) {
         lastInitializedCompanyIdRef.current = company.id;
-        await initializeGameForCompany();
+        await initializeGameForCompany(company.id);
       }
     } catch (error) {
       console.error('Error setting active company:', error);
     }
   };
 
-  const initializeGameForCompany = async () => {
+  const initializeGameForCompany = async (companyId: string) => {
     try {
-      // Ensure customers are initialized when a company becomes active
       const currentPrestige = await getCurrentPrestige();
-      await initializeCustomers(currentPrestige);
-      
-      // Pre-load all customer relationships in the background (non-blocking)
-      // This makes "Show All Customers" load instantly
-      preloadAllCustomerRelationships().catch(error => {
-        console.error('Error preloading customer relationships:', error);
+
+      await runFeatureStartupHooks({
+        companyId,
+        currentPrestige
       });
-      
-      // Initialize activity system
-      await initializeActivitySystem();
-      
     } catch (error) {
       console.error('Error initializing game for company:', error);
-
-    } finally {
-
     }
   };
 
@@ -98,107 +81,50 @@ function App() {
   };
 
   const handleNavigate = (page: string) => {
-    setCurrentPage(page);
+    setCurrentPage(page as AppPageId);
   };
 
   const handleTimeAdvance = () => {
   };
 
-  // Register modularized app-level listeners for optional features (e.g., board/share)
   useEffect(() => {
-    const unregister = getBoardShareFeature().ui.registerAppEventListeners?.({
+    const unregister = registerAppFeatureEventListeners({
       navigateToWinepedia: () => setCurrentPage('winepedia')
     });
+
     return () => {
       unregister?.();
     };
   }, []);
 
   const renderCurrentPage = () => {
-    if (!currentCompany && currentPage !== 'login' && currentPage !== 'highscores') {
-      return <Login onCompanySelected={handleCompanySelected} />;
+    if (!currentCompany && !isPublicAppPage(currentPage)) {
+      return renderAppPage('login', {
+        currentCompany,
+        onCompanySelected: handleCompanySelected,
+        onBackToLogin: handleBackToLogin,
+        onNavigate: handleNavigate
+      });
     }
 
-    switch (currentPage) {
-      case 'login':
-        return <Login onCompanySelected={handleCompanySelected} />;
-      case 'company-overview':
-        return currentCompany ? (
-          <CompanyOverview 
-            onNavigate={handleNavigate}
-          />
-        ) : (
-          <Login onCompanySelected={handleCompanySelected} />
-        );
-      case 'dashboard':
-        return <CompanyOverview onNavigate={setCurrentPage} />;
-      case 'vineyard':
-        return <Vineyard />;
-      case 'winery':
-        return <Winery />;
-      case 'sales':
-        return <Sales onNavigateToWinepedia={() => setCurrentPage('winepedia-customers')} />;
-      case 'finance':
-        return <Finance />;
-      case 'staff':
-        return <StaffPage title="Staff Management" />;
-      case 'profile':
-        return (
-          <Profile 
-            currentCompany={currentCompany}
-            onCompanySelected={handleCompanySelected}
-            onBackToLogin={handleBackToLogin}
-          />
-        );
-      case 'settings':
-        return (
-          <Settings 
-            currentCompany={currentCompany}
-            onBack={() => setCurrentPage('company-overview')}
-            onSignOut={handleBackToLogin}
-          />
-        );
-      case 'admin':
-        return (
-          <AdminDashboard 
-            onBack={() => setCurrentPage('company-overview')}
-            onNavigateToLogin={handleBackToLogin}
-          />
-        );
-      case 'achievements':
-        return (
-          <Achievements
-            currentCompany={currentCompany}
-            onBack={() => setCurrentPage('company-overview')}
-          />
-        );
-      case 'wine-log':
-        return (
-          <WineLog
-            currentCompany={currentCompany}
-          />
-        );
-      case 'highscores':
-        return (
-          <Highscores 
-            currentCompanyId={currentCompany?.id}
-            onBack={() => setCurrentPage(currentCompany ? 'company-overview' : 'login')}
-          />
-        );
-      case 'winepedia':
-        return <Winepedia />;
-      case 'winepedia-customers':
-        return <Winepedia view="customers" />;
-      default:
-        return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
-    }
+    return renderAppPage(currentPage, {
+      currentCompany,
+      onCompanySelected: handleCompanySelected,
+      onBackToLogin: handleBackToLogin,
+      onNavigate: handleNavigate
+    });
   };
 
   // Show login page if no company is selected
   if (!isGameInitialized && currentPage === 'login') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-        <Login onCompanySelected={handleCompanySelected} />
+        {renderAppPage('login', {
+          currentCompany,
+          onCompanySelected: handleCompanySelected,
+          onBackToLogin: handleBackToLogin,
+          onNavigate: handleNavigate
+        })}
         <Toaster />
       </div>
     );

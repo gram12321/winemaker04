@@ -6,7 +6,7 @@
  */
 
 import { supabase } from './supabase';
-import { Season, GameDate } from '../../types/types';
+import type { Season, GameDate } from '@/lib/types/shared/coreTypes';
 import { toOptionalNumber, buildGameDate } from '../dbMapperUtils';
 
 const COMPANY_SHARES_TABLE = 'company_shares';
@@ -153,12 +153,12 @@ export async function getCompanyShares(companyId: string): Promise<CompanyShares
 /**
  * Create company shares record (called when company is created)
  */
-export async function createCompanyShares(companyId: string, sharesData: Partial<CompanySharesData>): Promise<{ success: boolean; error?: string }> {
+export async function createCompanyShares(
+  companyId: string,
+  sharesData: Partial<CompanySharesData>,
+  currentYear: number = 2024
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const { getGameState } = await import('../../services/core/gameState');
-    const gameState = getGameState();
-    const currentYear = gameState.currentYear || 2024;
-    
     const sharesDataToInsert: CompanySharesData = {
       company_id: companyId,
       total_shares: sharesData.total_shares ?? 1000000,
@@ -251,7 +251,10 @@ export async function deleteCompanyShares(companyId: string): Promise<{ success:
  * Get yearly share operations for current year (with auto-reset if year changed)
  * Returns { sharesIssuedThisYear, sharesBoughtBackThisYear }
  */
-export async function getYearlyShareOperations(companyId: string): Promise<{
+export async function getYearlyShareOperations(
+  companyId: string,
+  currentYear: number = 2024
+): Promise<{
   sharesIssuedThisYear: number;
   sharesBoughtBackThisYear: number;
 }> {
@@ -260,10 +263,6 @@ export async function getYearlyShareOperations(companyId: string): Promise<{
     if (!sharesData) {
       return { sharesIssuedThisYear: 0, sharesBoughtBackThisYear: 0 };
     }
-
-    const { getGameState } = await import('../../services/core/gameState');
-    const gameState = getGameState();
-    const currentYear = gameState.currentYear || 2024;
 
     // If year changed, reset the counters
     if (sharesData.yearlyOperationsYear !== currentYear) {
@@ -291,17 +290,14 @@ export async function getYearlyShareOperations(companyId: string): Promise<{
 export async function incrementYearlyShareOperations(
   companyId: string,
   type: 'issuance' | 'buyback',
-  shares: number
+  shares: number,
+  currentYear: number = 2024
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const sharesData = await getCompanyShares(companyId);
     if (!sharesData) {
       return { success: false, error: 'Company shares not found' };
     }
-
-    const { getGameState } = await import('../../services/core/gameState');
-    const gameState = getGameState();
-    const currentYear = gameState.currentYear || 2024;
 
     // If year changed, reset counters first
     if (sharesData.yearlyOperationsYear !== currentYear) {
@@ -338,4 +334,5 @@ export async function incrementYearlyShareOperations(
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 }
+
 

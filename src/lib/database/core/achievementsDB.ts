@@ -1,8 +1,10 @@
 import { supabase } from './supabase';
-import { AchievementUnlock, GameDate } from '../../types/types';
+import type { AchievementUnlock } from '@/lib/types/features/achievementTypes';
+import type { GameDate } from '@/lib/types/shared/coreTypes';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { buildGameDate } from '../dbMapperUtils';
+import { ALL_ACHIEVEMENTS } from '../../constants/achievementConstants';
 
 /**
  * Database table schema for achievements (existing table):
@@ -88,8 +90,7 @@ function achievementUnlockToRow(unlock: Partial<AchievementUnlock> & { achieveme
  */
 export async function unlockAchievement(unlock: Omit<AchievementUnlock, 'id'>): Promise<AchievementUnlock> {
   // Get achievement config to fill in name and description
-  const { getAchievementConfig } = await import('../../services/user/achievementService');
-  const config = getAchievementConfig(unlock.achievementId);
+  const config = ALL_ACHIEVEMENTS.find(achievement => achievement.id === unlock.achievementId);
 
   const row = achievementUnlockToRow({
     ...unlock,
@@ -246,4 +247,5 @@ export async function getTotalAchievementCount(companyId?: string): Promise<numb
   const unlocks = await getAllAchievementUnlocks(companyId);
   return unlocks.length;
 }
+
 

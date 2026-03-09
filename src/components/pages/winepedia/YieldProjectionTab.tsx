@@ -10,6 +10,11 @@ import { GRAPE_VARIETIES } from '@/lib/types/types';
 // Use existing constants from vineyardConstants
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES, REGION_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 
+const toChartNumber = (value: unknown): number => {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 function createVineyard(overrides: Partial<Vineyard>): Vineyard {
   return {
     id: 'projection',
@@ -274,8 +279,8 @@ export function YieldProjectionTab() {
                     <XAxis dataKey="ripeness" domain={[0, 1]} tickFormatter={(v) => formatNumber(v, { decimals: 1, forceDecimals: true })} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
                     <RechartsTooltip 
-                      formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
-                      labelFormatter={(value: number) => `Ripeness: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                      formatter={(value) => [formatNumber(toChartNumber(value), { decimals: 0 }), 'Yield (kg)']}
+                      labelFormatter={(value) => `Ripeness: ${formatNumber(toChartNumber(value), { decimals: 2, forceDecimals: true })}`}
                     />
                     <ReferenceLine x={ripeness} stroke="#16a34a" strokeDasharray="4 4" />
                     <Line type="monotone" dataKey="yieldKg" stroke="#22c55e" strokeWidth={2} dot={false} />
@@ -292,8 +297,8 @@ export function YieldProjectionTab() {
                     <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
                     <RechartsTooltip 
-                      formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
-                      labelFormatter={(value: number) => `Age: ${formatNumber(value, { decimals: 0 })} years`}
+                      formatter={(value) => [formatNumber(toChartNumber(value), { decimals: 0 }), 'Yield (kg)']}
+                      labelFormatter={(value) => `Age: ${formatNumber(toChartNumber(value), { decimals: 0 })} years`}
                     />
                     <ReferenceLine x={vineyardAge} stroke="#be123c" strokeDasharray="4 4" />
                     <Line type="monotone" dataKey="yieldKg" stroke="#e11d48" strokeWidth={2} dot={false} />
@@ -316,8 +321,8 @@ export function YieldProjectionTab() {
                     <XAxis dataKey="hectares" tickFormatter={(v) => `${formatNumber(v, { decimals: 2 })} ha`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
                     <RechartsTooltip 
-                      formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
-                      labelFormatter={(value: number) => `Hectares: ${formatNumber(value, { decimals: 2 })} ha`}
+                      formatter={(value) => [formatNumber(toChartNumber(value), { decimals: 0 }), 'Yield (kg)']}
+                      labelFormatter={(value) => `Hectares: ${formatNumber(toChartNumber(value), { decimals: 2 })} ha`}
                     />
                     <ReferenceLine x={hectares} stroke="#1d4ed8" strokeDasharray="4 4" />
                     <Line type="monotone" dataKey="yieldKg" stroke="#2563eb" strokeWidth={2} dot />
@@ -341,11 +346,11 @@ export function YieldProjectionTab() {
                     <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 2, forceDecimals: true })} />
                     <RechartsTooltip 
-                      formatter={(value: number, name: string) => [
-                        formatNumber(value, { decimals: 2, forceDecimals: true }), 
+                      formatter={(value, name) => [
+                        formatNumber(toChartNumber(value), { decimals: 2, forceDecimals: true }), 
                         name === 'baseline' ? 'Baseline' : name === 'min' ? 'Min Possible' : 'Max Possible'
                       ]}
-                      labelFormatter={(value: number) => `Age: ${formatNumber(value, { decimals: 0 })} years`}
+                      labelFormatter={(value) => `Age: ${formatNumber(toChartNumber(value), { decimals: 0 })} years`}
                     />
                     <ReferenceLine x={vineyardAge} stroke="#9333ea" strokeDasharray="4 4" />
                     <Area 
@@ -440,4 +445,5 @@ export function YieldProjectionTab() {
 }
 
 export default YieldProjectionTab;
+
 

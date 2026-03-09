@@ -2,7 +2,7 @@
 // Pure CRUD operations for staff data persistence in Supabase
 
 import { supabase } from './supabase';
-import { Staff } from '@/lib/types/types';
+import type { Staff } from '@/lib/types/features/staffTypes';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { buildGameDate } from '../dbMapperUtils';
 
@@ -180,3 +180,4 @@ export async function getStaffByIdFromDb(staffId: string): Promise<Staff | null>
     return null;
   }
 }
+

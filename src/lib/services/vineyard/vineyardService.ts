@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Vineyard, GrapeVariety, Aspect, ASPECTS } from '../../types/types';
-import { saveVineyard, loadVineyards } from '../../database/activities/vineyardDB';
-import { deleteVineyards } from '../../database/activities/vineyardDB';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { saveVineyard, loadVineyards } from '@/lib/database/vineyard';
+import { deleteVineyards } from '@/lib/database/vineyard';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { addVineyardAchievementPrestigeEvent, getBaseVineyardPrestige, updateBaseVineyardPrestigeEvent, calculateVineyardPrestigeFromEvents, calculateCurrentPrestige } from '../prestige/prestigeService';
 import {
   calculateLandValue,
@@ -18,9 +18,9 @@ import { VineyardPurchaseOption } from './landSearchService';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
-import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
+import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activity';
 import { updateGameState } from '@/lib/services/core/gameState';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { checkVineyardPurchaseConstraint } from '@/lib/services/core/featureComposition';
 
 
 // Helper functions for random vineyard generation
@@ -431,7 +431,7 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     }
 
     // Check modularized board/share constraint for vineyard purchase
-    const constraintResult = await getBoardShareFeature().constraints.checkVineyardPurchase({
+    const constraintResult = await checkVineyardPurchaseConstraint({
       currentMoney,
       purchaseAmount: option.totalPrice,
       totalAssets: 0,
@@ -498,4 +498,5 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     };
   }
 }
+
 

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { GameDate } from '../../types/types';
+import type { GameDate } from '@/lib/types/shared/coreTypes';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { buildGameDate } from '../dbMapperUtils';
@@ -154,4 +154,5 @@ export async function getUnlockedResearchIds(companyId?: string): Promise<string
   const unlocks = await getAllResearchUnlocks(companyId);
   return unlocks.map(unlock => unlock.researchId);
 }
+
 

@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Switch, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, ScrollArea, StartingConditionsModal } from '../ui';
 import { Building2, Trophy, User, UserPlus } from 'lucide-react';
-import { companyService, highscoreService, createNewCompany, authService } from '@/lib/services';
-import { type Company, type HighscoreEntry, type AuthUser, getUserById, insertUser } from '@/lib/database';
+import { companyService, highscoreService, createNewCompany, authService, type Company, type HighscoreEntry, type AuthUser } from '@/lib/services';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { AVATAR_OPTIONS } from '@/lib/utils/icons';
 import ReactMarkdown from 'react-markdown';
@@ -120,7 +119,7 @@ export function Login({ onCompanySelected }: LoginProps) {
       
       // If multiple users exist, load them and show user selection UI
       const loadedUsers = await Promise.all(
-        uniqueUserIds.map(userId => getUserById(userId))
+        uniqueUserIds.map(userId => authService.getUserProfileById(userId))
       );
       
       const validUsers = loadedUsers.filter((user): user is AuthUser => !!user);
@@ -138,7 +137,7 @@ export function Login({ onCompanySelected }: LoginProps) {
 
   const loadCompanyLinkedUser = async (userId: string) => {
     try {
-      const user = await getUserById(userId);
+      const user = await authService.getUserProfileById(userId);
       
       if (user) {
         // Set the user state manually
@@ -195,25 +194,12 @@ export function Login({ onCompanySelected }: LoginProps) {
       return;
     }
 
-    const result = await insertUser({
-      name: newUserName.trim(),
-      created_at: new Date().toISOString()
-    });
+    const result = await authService.createUserProfile(newUserName);
 
-    if (result.success && result.data) {
-      const newUser: AuthUser = {
-        id: result.data.id,
-        email: result.data.email,
-        name: result.data.name,
-        avatar: result.data.avatar,
-        avatarColor: result.data.avatar_color,
-        createdAt: new Date(result.data.created_at),
-        updatedAt: new Date(result.data.updated_at)
-      };
-      
+    if (result.success && result.user) {
       setNewUserName('');
       setShowCreateUser(false);
-      setCurrentUser(newUser);
+      setCurrentUser(result.user);
     } else {
       setError(result.error || 'Failed to create user');
     }

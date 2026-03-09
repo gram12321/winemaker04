@@ -3,16 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Staff } from '@/lib/types/types';
-import { updateActivityInDb } from '@/lib/database/activities/activityDB';
 import { calculateStaffWorkContribution, calculateEstimatedWeeks, getRelevantSkillName } from '@/lib/services/activity';
-import { notificationService } from '@/lib/services';
+import { notificationService, getTeamForCategory, updateActivityStaffAssignments } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber, getFlagIcon, getSpecializationIcon, getSkillColor } from '@/lib/utils';
 import { getSkillLevelInfo, SPECIALIZED_ROLES } from '@/lib/constants/staffConstants';
 import { Button, StaffSkillBarsList } from '@/components/ui';
 import { useGameState } from '@/hooks';
-import { getTeamForCategory } from '@/lib/services';
 
 interface StaffAssignmentModalProps {
   isOpen: boolean;
@@ -61,16 +58,9 @@ export const StaffAssignmentModal: React.FC<StaffAssignmentModalProps> = ({
   const handleSave = async () => {
     try {
       // Update activity with new staff assignments
-      const success = await updateActivityInDb(activity.id, {
-        params: {
-          ...activity.params,
-          assignedStaffIds: selectedStaffIds
-        }
-      });
+      const success = await updateActivityStaffAssignments(activity.id, selectedStaffIds);
 
       if (success) {
-        // Trigger immediate UI update
-        triggerGameUpdateImmediate();
         await notificationService.addMessage(`Assigned ${selectedStaffIds.length} staff to ${activity.title}`, 'staffAssignmentModal.handleSave', 'Staff Assignment', NotificationCategory.STAFF_MANAGEMENT);
         onClose();
       } else {

@@ -4,7 +4,7 @@ import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { getGameState } from '../core/gameState';
 import { calculateCurrentPrestige } from '../prestige/prestigeService';
 import { calculateInvertedSkewedMultiplier } from '../../utils/calculator';
-import { insertRelationshipBoost, getRelationshipBoostsByCustomer } from '../../database/customers/relationshipBoostsDB';
+import { insertRelationshipBoost, getRelationshipBoostsByCustomer } from '@/lib/database/sales';
 
 /**
  * Create a relationship boost when an order is accepted
@@ -192,6 +192,7 @@ export function formatRelationshipBreakdown(breakdown: RelationshipBreakdown): s
 
   return lines.join('\n');
 }
+
 
 
 

@@ -1,8 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useGameStateWithData } from '@/hooks';
-import { getAllVineyards } from '@/lib/services';
-import { loadWineLog } from '@/lib/database';
-import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
+import { getAllVineyards, getAllWineLogEntries, getAllWineBatches } from '@/lib/services';
 import { WineLogEntry, WineBatch } from '@/lib/types/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle, CardDescription, WineModal } from '../ui';
 import { Wine, Award, BarChart3 } from 'lucide-react';
@@ -24,12 +22,12 @@ export function WineLog({ currentCompany }: WineLogProps) {
   const [wineModalOpen, setWineModalOpen] = useState(false);
   const [selectedWineBatch, setSelectedWineBatch] = useState<WineBatch | null>(null);
   
-  const wineLog = useGameStateWithData(loadWineLog, []);
+  const wineLog = useGameStateWithData(getAllWineLogEntries, []);
   const vineyards = useGameStateWithData(getAllVineyards, []);
   
   // Load current wine batches to link log entries to live wines
   const allBatches = useGameStateWithData(
-    () => loadWineBatches(),
+    () => getAllWineBatches(),
     []
   );
 

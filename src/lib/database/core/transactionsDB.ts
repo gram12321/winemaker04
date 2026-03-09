@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { Season, Transaction } from '../../types/types';
+import type { Season } from '@/lib/types/shared/coreTypes';
+import type { Transaction } from '@/lib/types/features/financeTypes';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { SEASON_ORDER } from '@/lib/constants';
 import { buildGameDate } from '../dbMapperUtils';
@@ -97,4 +98,5 @@ export const loadTransactions = async (): Promise<Transaction[]> => {
     return [];
   }
 };
+
 

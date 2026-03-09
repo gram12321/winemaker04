@@ -1,7 +1,9 @@
 import { supabase } from '../../database/core/supabase';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
-import { getUserById, updateUser, deleteUser, type AuthUser } from '@/lib/database';
+import { getUserById, updateUser, deleteUser, insertUser, type AuthUser } from '@/lib/database';
+
+export type { AuthUser } from '@/lib/database';
 
 export interface SignUpData {
   email: string;
@@ -75,6 +77,68 @@ class AuthService {
 
   public getCurrentUser(): AuthUser | null {
     return this.currentUser;
+  }
+
+  public async getUserProfileById(userId: string): Promise<AuthUser | null> {
+    try {
+      return await getUserById(userId);
+    } catch (error) {
+      console.error('Error loading user profile by ID:', error);
+      return null;
+    }
+  }
+
+  public async createUserProfile(name: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+    try {
+      const result = await insertUser({
+        name: name.trim(),
+        created_at: new Date().toISOString()
+      });
+
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to create user profile' };
+      }
+
+      const user: AuthUser = {
+        id: result.data.id,
+        email: result.data.email,
+        name: result.data.name,
+        avatar: result.data.avatar,
+        avatarColor: result.data.avatar_color,
+        createdAt: new Date(result.data.created_at),
+        updatedAt: new Date(result.data.updated_at)
+      };
+
+      return { success: true, user };
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  public async updateUserProfileById(
+    userId: string,
+    updates: Partial<Pick<AuthUser, 'name' | 'avatar' | 'avatarColor'>>
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await updateUser(userId, {
+        name: updates.name,
+        avatar: updates.avatar,
+        avatar_color: updates.avatarColor
+      });
+    } catch (error) {
+      console.error('Error updating user profile by ID:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  public async deleteUserProfileById(userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await deleteUser(userId);
+    } catch (error) {
+      console.error('Error deleting user profile by ID:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
   }
 
   public isAuthenticated(): boolean {

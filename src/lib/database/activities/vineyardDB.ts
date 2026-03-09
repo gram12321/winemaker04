@@ -1,5 +1,5 @@
 import { supabase } from '../core/supabase';
-import { Vineyard } from '../../types/types';
+import type { Vineyard } from '@/lib/types/features/vineyardTypes';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 
 const VINEYARDS_TABLE = 'vineyards';

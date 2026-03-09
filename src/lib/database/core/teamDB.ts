@@ -2,7 +2,7 @@
 // Pure CRUD operations for team data persistence in Supabase
 
 import { supabase } from './supabase';
-import { StaffTeam } from '@/lib/types/types';
+import type { StaffTeam } from '@/lib/types/features/staffTypes';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 
 /**
@@ -179,3 +179,4 @@ export async function saveTeamsToDb(teams: StaffTeam[]): Promise<boolean> {
     return false;
   }
 }
+

@@ -2,8 +2,8 @@ import { Vineyard, Activity, GameDate } from '../../types/types';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { calculateGrapeSuitabilityContribution, calculateAdjustedLandValue, calculateLandValue } from './vineyardValueCalc';
 import { RIPENESS_INCREASE, ASPECT_RIPENESS_MODIFIERS, SEASONAL_RIPENESS_RANDOMNESS } from '../../constants/vineyardConstants';
-import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '../../database/activities/vineyardDB';
-import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '../../database/activities/activityDB';
+import { loadVineyards, saveVineyard, bulkUpdateVineyards } from '@/lib/database/vineyard';
+import { loadActivitiesFromDb, removeActivityFromDb, updateActivityInDb } from '@/lib/database/activity';
 import { WorkCategory } from '../../services/activity';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
@@ -812,4 +812,5 @@ export async function handlePartialHarvesting(
     console.error(`Error in partial harvesting for activity ${activity.id}:`, error);
   }
 }
+
 

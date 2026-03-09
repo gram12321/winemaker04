@@ -1,6 +1,6 @@
 // Customer acquisition service - handles company prestige-based customer generation
-import { loadWineBatches } from '../../database/activities/inventoryDB';
-import { loadWineOrders } from '../../database/customers/salesDB';
+import { loadWineBatches } from '@/lib/database/wine';
+import { loadWineOrders } from '@/lib/database/sales';
 import { getCurrentPrestige, getGameState } from '../core/gameState';
 import { PRESTIGE_ORDER_GENERATION } from '../../constants/constants';
 import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -102,3 +102,4 @@ export async function generateCustomer(options: { dryRun?: boolean } = {}): Prom
     }
   };
 }
+

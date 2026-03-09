@@ -1,9 +1,9 @@
 // Sales service for wine order management (fulfillment and rejection)
 import { WineOrder, WineBatch } from '../../types/types';
-import { loadWineOrders, updateWineOrderStatus, saveWineOrder, getOrderById } from '../../database/customers/salesDB';
-import { saveWineBatch, getWineBatchById } from '../../database/activities/inventoryDB';
-import { loadVineyards } from '../../database/activities/vineyardDB';
-import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
+import { loadWineOrders, updateWineOrderStatus, saveWineOrder, getOrderById } from '@/lib/database/sales';
+import { saveWineBatch, getWineBatchById } from '@/lib/database/wine';
+import { loadVineyards } from '@/lib/database/vineyard';
+import { triggerGameUpdate } from '../core/gameUpdateBus';
 import { addTransaction } from '../finance/financeService';
 import { createRelationshipBoost } from '../sales/relationshipService';
 import { addSalePrestigeEvent, addVineyardSalePrestigeEvent, getBaseVineyardPrestige, addFeaturePrestigeEvent } from '../prestige/prestigeService';
@@ -169,4 +169,5 @@ export async function rejectWineOrder(orderId: string): Promise<boolean> {
   triggerGameUpdate();
   return true;
 }
+
 

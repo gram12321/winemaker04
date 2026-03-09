@@ -6,8 +6,8 @@ import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getFermentationMethodInfo, getFermentationTemperatureInfo, FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
-import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
-import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
+import { updateWineBatch } from '@/lib/database/wine';
+import { loadWineBatches } from '@/lib/database/wine';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 
@@ -167,3 +167,4 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
     console.error('Error completing fermentation setup activity:', error);
   }
 }
+

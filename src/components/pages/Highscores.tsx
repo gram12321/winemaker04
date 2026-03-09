@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Button } from '../ui';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
-import { highscoreService } from '@/lib/services';
-import { type HighscoreEntry, type ScoreType } from '@/lib/database';
+import { highscoreService, type HighscoreEntry, type ScoreType } from '@/lib/services';
 import { formatNumber, formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 

@@ -6,10 +6,10 @@ import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
 import { calculateLenderSearchWork, calculateLenderSearchCost } from '../workcalculators/lenderSearchWorkCalculator';
-import { loadLenders } from '../../../database/core/lendersDB';
+import { loadLenders } from '@/lib/database/finance';
 import { calculateLenderAvailability } from '../../finance/lenderService';
 import { calculateEffectiveInterestRate, calculateOriginationFee, getCurrentCreditRating, getScaledLoanAmountLimit } from '../../finance/loanService';
-import { triggerGameUpdate } from '@/hooks/useGameUpdates';
+import { triggerGameUpdate } from '@/lib/services/core/gameUpdateBus';
 import { calculateTotalAssets } from '../../finance/financeService';
 
 /**
@@ -218,4 +218,6 @@ export function clearPendingLenderSearchResults(): void {
     pendingLenderSearchResults: undefined
   });
 }
+
+
 

@@ -1,6 +1,6 @@
 // Database operations for wine contracts
 import { supabase } from '../core/supabase';
-import { WineContract } from '../../types/types';
+import type { WineContract } from '@/lib/types/features/salesTypes';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { toOptionalDate } from '../dbMapperUtils';
 
@@ -237,3 +237,4 @@ export async function getContractsByCustomerId(customerId: string): Promise<Wine
 
   return data.map(mapRowToContract);
 }
+

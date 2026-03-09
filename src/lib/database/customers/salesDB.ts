@@ -1,6 +1,7 @@
 // Table names for legacy operations
 import { supabase } from '../core/supabase';
-import { WineOrder, CustomerType, Season } from '../../types/types';
+import type { WineOrder, CustomerType } from '@/lib/types/features/salesTypes';
+import type { Season } from '@/lib/types/shared/coreTypes';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { buildGameDate } from '../dbMapperUtils';
 
@@ -158,4 +159,5 @@ export const updateWineOrderStatus = async (orderId: string, status: 'fulfilled'
     // Silently fail
   }
 };
+
 

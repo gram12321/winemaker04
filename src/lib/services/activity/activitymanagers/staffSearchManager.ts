@@ -12,7 +12,7 @@ import {
   calculateStaffSearchCost, calculateSearchWork, calculateHiringWorkRange,
   calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
-import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { checkStaffHiringConstraint } from '@/lib/services/core/featureComposition';
 
 /**
  * Generate random staff candidates based on search parameters
@@ -154,7 +154,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     }
 
     // Check modularized board/share constraint for staff hiring
-    const boardCheck = await getBoardShareFeature().constraints.checkStaffHiring({
+    const boardCheck = await checkStaffHiringConstraint({
       candidateName: candidate.name
     });
     if (!boardCheck.allowed) {

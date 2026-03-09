@@ -281,7 +281,7 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
   const { generateOrder } = await import('../sales/generateOrder');
   const { getAllCustomers } = await import('../sales/createCustomer');
   const { getAllWineBatches } = await import('../wine/winery/inventoryService');
-  const { loadVineyards } = await import('../../database/activities/vineyardDB');
+  const { loadVineyards } = await import('@/lib/database/vineyard');
   const { getCurrentPrestige } = await import('../core/gameState');
   const { SALES_CONSTANTS } = await import('../../constants/constants');
 
@@ -379,7 +379,7 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
 export async function adminGenerateTestContract(): Promise<{ success: boolean; message: string }> {
   const { getAllCustomers } = await import('../sales/createCustomer');
   const { generateContractForCustomer } = await import('../sales/contractGenerationService');
-  const { saveWineContract } = await import('../../database/sales/contractDB');
+  const { saveWineContract } = await import('@/lib/database/sales');
 
   // Get or create customers
   let allCustomers = await getAllCustomers();
@@ -632,3 +632,4 @@ export async function adminFullDatabaseReset(): Promise<void> {
     throw new Error(errorMessage);
   }
 }
+
