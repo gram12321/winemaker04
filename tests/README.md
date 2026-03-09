@@ -48,7 +48,7 @@ Target modules:
 - [x] `@/lib/services/vineyard/vineyardValueCalc.ts` (grape suitability) - ✅ 12 tests
 - [x] `@/lib/services/wine/characteristics/fermentationCharacteristics.ts` (fermentation effects) - ✅ 14 tests
 - [x] `@/lib/services/finance/wageService.ts` (wage calculations) - ✅ 8 tests
-- [x] `@/lib/services/finance/loanService.ts` (loan calculations) - ✅ 15 tests
+- [x] `@/lib/services` loan exports (loan calculations) - ✅ 15 tests
 
 **Total Phase 1 Progress: 65 tests across 6 test files**
 
