@@ -3,7 +3,7 @@ import { WarningModal } from '@/components/ui';
 import { PendingLoanWarning } from '@/lib/types/types';
 import { getFirstUnacknowledgedLoanWarning, acknowledgeLoanWarning } from '@/lib/database/core/loansDB';
 import { setModalMinimized, isModalMinimized } from '@/lib/utils';
-import { acceptForcedLoanRestructure, declineForcedLoanRestructure } from '@/lib/services/finance/loanService';
+import { acceptForcedLoanRestructure, declineForcedLoanRestructure } from '@/lib/features/loanLender/services/finance/loanService';
 
 /**
  * Display loan warning modals from database only

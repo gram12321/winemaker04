@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, processSeasonalLoanPayments, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, enforceEmergencyQuickLoanIfNeeded, restructureForcedLoansIfNeeded } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
@@ -9,6 +9,7 @@ import { GAME_INITIALIZATION, SEASON_ORDER, WEEKS_PER_SEASON } from '@/lib/const
 import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -121,7 +122,7 @@ const executeGameTick = async (): Promise<void> => {
 
   if (isNewYearTick) {
     triggerGameUpdate();
-    await restructureForcedLoansIfNeeded();
+    await getLoanLenderFeature().ticks.restructureForcedLoansIfNeeded();
   }
 
   // Trigger final UI refresh after all weekly effects are processed
@@ -331,7 +332,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
     weeklyTasks.push(
       (async () => {
         try {
-          await processSeasonalLoanPayments();
+          await getLoanLenderFeature().ticks.processSeasonalLoanPayments();
         } catch (error) {
           console.warn('Error during seasonal loan payments:', error);
         }
@@ -353,7 +354,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   }
 
   try {
-    await enforceEmergencyQuickLoanIfNeeded();
+    await getLoanLenderFeature().ticks.enforceEmergencyQuickLoanIfNeeded();
   } catch (error) {
     console.warn('Error enforcing emergency quick loan:', error);
   }

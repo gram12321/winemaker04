@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameState } from '@/hooks';
-import { LandSearchResultsModal, StaffSearchResultsModal, LenderSearchResultsModal } from '@/components/ui';
-import { clearPendingLandSearchResults, clearPendingCandidates, clearPendingLenderSearchResults } from '@/lib/services';
+import { LandSearchResultsModal, StaffSearchResultsModal } from '@/components/ui';
+import { clearPendingLandSearchResults, clearPendingCandidates } from '@/lib/services';
 import { getMinimizedModals, restoreModal, isModalMinimized } from '@/lib/utils';
 
 type ModalType = 'land' | 'staff' | 'lender' | 'loan';
@@ -10,14 +10,13 @@ import { Maximize2 } from 'lucide-react';
 
 /**
  * Global display for search result modals
- * Shows land search, staff search, and lender search results regardless of current page
+ * Shows cross-page search result modals that are not owned by an isolated feature
  * Uses the existing game state system for reactivity
  */
 export function GlobalSearchResultsDisplay() {
   const gameState = useGameState();
   const [showLandResults, setShowLandResults] = useState(false);
   const [showStaffResults, setShowStaffResults] = useState(false);
-  const [showLenderResults, setShowLenderResults] = useState(false);
   const [minimizedModals, setMinimizedModals] = useState<ModalType[]>([]);
 
   // Track minimized modals and auto-show when restored
@@ -36,8 +35,6 @@ export function GlobalSearchResultsDisplay() {
           setShowLandResults(true);
         } else if (type === 'staff' && gameState.pendingStaffCandidates?.candidates) {
           setShowStaffResults(true);
-        } else if (type === 'lender' && gameState.pendingLenderSearchResults?.offers?.length) {
-          setShowLenderResults(true);
         }
       });
       
@@ -66,19 +63,6 @@ export function GlobalSearchResultsDisplay() {
     }
   }, [gameState.pendingStaffCandidates, showStaffResults]);
 
-  // Check for pending lender search results
-  useEffect(() => {
-    if (gameState.pendingLenderSearchResults?.offers && 
-        gameState.pendingLenderSearchResults.offers.length > 0) {
-      if (!showLenderResults) {
-        setShowLenderResults(true);
-      }
-    } else if (!gameState.pendingLenderSearchResults && showLenderResults) {
-      // Reset when results are cleared
-      setShowLenderResults(false);
-    }
-  }, [gameState.pendingLenderSearchResults, showLenderResults]);
-
   const handleCloseLandResults = () => {
     setShowLandResults(false);
     clearPendingLandSearchResults();
@@ -87,11 +71,6 @@ export function GlobalSearchResultsDisplay() {
   const handleCloseStaffResults = () => {
     setShowStaffResults(false);
     clearPendingCandidates();
-  };
-
-  const handleCloseLenderResults = () => {
-    setShowLenderResults(false);
-    clearPendingLenderSearchResults();
   };
 
   const getModalTitle = (type: ModalType): string => {
@@ -116,8 +95,6 @@ export function GlobalSearchResultsDisplay() {
       setShowLandResults(true);
     } else if (type === 'staff' && gameState.pendingStaffCandidates?.candidates) {
       setShowStaffResults(true);
-    } else if (type === 'lender' && gameState.pendingLenderSearchResults?.offers?.length) {
-      setShowLenderResults(true);
     }
   };
 
@@ -138,16 +115,6 @@ export function GlobalSearchResultsDisplay() {
           isOpen={showStaffResults && !isModalMinimized('staff')}
           onClose={handleCloseStaffResults}
           candidates={gameState.pendingStaffCandidates.candidates}
-        />
-      )}
-
-      {/* Lender Search Results Modal */}
-      {gameState.pendingLenderSearchResults?.offers && 
-       gameState.pendingLenderSearchResults.offers.length > 0 && (
-        <LenderSearchResultsModal
-          isOpen={showLenderResults && !isModalMinimized('lender')}
-          onClose={handleCloseLenderResults}
-          offers={gameState.pendingLenderSearchResults.offers}
         />
       )}
 

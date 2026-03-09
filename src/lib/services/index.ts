@@ -15,11 +15,11 @@ export * from './user/achievementService';
 export * from './user/wineLogService';
 
 // Finance services
-export * from './finance/creditRatingService';
 export * from './finance/economyService';
 export * from './finance/financeService';
-export * from './finance/lenderService';
-export * from './finance/loanService';
+export * from '@/lib/features/loanLender/services/finance/creditRatingService';
+export * from '@/lib/features/loanLender/services/finance/lenderService';
+export * from '@/lib/features/loanLender/services/finance/loanService';
 export * from './finance/wageService';
 
 // Admin services

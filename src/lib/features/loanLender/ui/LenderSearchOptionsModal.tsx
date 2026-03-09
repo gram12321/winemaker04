@@ -1,14 +1,17 @@
+import { v4 as uuidv4 } from 'uuid';
 import React, { useState, useEffect } from 'react';
 import { LenderSearchOptions, LenderType, Lender } from '@/lib/types/types';
 import { formatNumber, formatPercent, getLenderTypeColorClass } from '@/lib/utils';
 import { Button, Label, Slider, Card, CardContent, CardHeader, CardTitle, Badge, Separator } from '@/components/ui';
 import { X } from 'lucide-react';
-import { getGameState, calculateLoanTerms } from '@/lib/services';
-import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services';
+import { getGameState } from '@/lib/services/core/gameState';
+import { calculateLoanTerms, getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/features/loanLender/services/finance/loanService';
+import { getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
+import { startLenderSearch } from '@/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager';
+import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
+import { calculateLenderSearchCost, calculateLenderSearchWork } from '@/lib/services/activity/workcalculators/lenderSearchWorkCalculator';
 import { LOAN_AMOUNT_RANGES, LOAN_DURATION_RANGES, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
-import { getScaledLoanAmountLimit, getCurrentCreditRating } from '@/lib/services/finance/loanService';
 import { calculateTotalAssets } from '@/lib/services/finance/financeService';
-import { loadLenders } from '@/lib/database/core/lendersDB';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 interface LenderSearchOptionsModalProps {
@@ -131,7 +134,7 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
           maxAllowed = Math.min(limitInfo.maxAllowed, selectedLender.maxLoanAmount);
         } else {
           // For lender search mode, calculate max across all lenders
-          const allLenders = await loadLenders();
+          const allLenders = await getAllLenders();
           const maxAllowedPromises = allLenders
             .filter(lender => !lender.blacklisted)
             .map(lender => getScaledLoanAmountLimit(lender, creditRating, { totalAssets }));
@@ -211,10 +214,6 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
       setError(null);
 
       if (selectedLender) {
-        // Direct loan application mode
-        const { startTakeLoan } = await import('@/lib/services');
-        const { v4: uuidv4 } = await import('uuid');
-        
         const loanOffer = {
           id: uuidv4(),
           lender: selectedLender,
@@ -230,8 +229,6 @@ export const LenderSearchOptionsModal: React.FC<LenderSearchOptionsModalProps> =
         
         await startTakeLoan(loanOffer, true); // true = adjusted (work penalty)
       } else {
-        // Lender search mode
-        const { startLenderSearch } = await import('@/lib/services');
         const activityId = await startLenderSearch(options);
         if (activityId) {
           onClose();

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PageProps } from '@/lib/types/UItypes';
-import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, LendersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab } from '@/components/pages/winepedia/index';
+import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab } from '@/components/pages/winepedia/index';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 
 interface WinepediaProps extends PageProps {
   view?: string;
@@ -9,6 +10,7 @@ interface WinepediaProps extends PageProps {
 
 export default function Winepedia({ view }: WinepediaProps) {
   const [activeTab, setActiveTab] = useState(view === 'customers' ? 'customers' : 'grapeVarieties');
+  const loanLenderTabs = useMemo(() => getLoanLenderFeature().ui.getWinepediaTabs(), []);
   const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getWinepediaTabs(), []);
 
   const tabs = useMemo(() => ([
@@ -23,10 +25,10 @@ export default function Winepedia({ view }: WinepediaProps) {
     { id: 'mathematicalModels', label: 'Mathematical Models', component: MathematicalModelsTab },
     { id: 'yieldProjection', label: 'Yield Projection', component: YieldProjectionTab },
     { id: 'customers', label: 'Customers', component: CustomersTab },
-    { id: 'lenders', label: 'Lenders', component: LendersTab },
+    ...loanLenderTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component })),
     { id: 'economy', label: 'Economy', component: EconomyTab },
     ...boardShareTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component }))
-  ]), [boardShareTabs]);
+  ]), [boardShareTabs, loanLenderTabs]);
 
   useEffect(() => {
     if (view === 'customers') {

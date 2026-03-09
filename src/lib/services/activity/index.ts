@@ -6,8 +6,8 @@ export * from './activitymanagers/activityManager';
 export * from './activitymanagers/staffSearchManager';
 export * from './activitymanagers/bookkeepingManager';
 export * from './activitymanagers/landSearchManager';
-export * from './activitymanagers/lenderSearchManager';
-export * from './activitymanagers/takeLoanManager';
+export * from '@/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager';
+export * from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
 export * from '@/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager';
 
 // Work calculators

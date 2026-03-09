@@ -33,8 +33,6 @@ export * from './constraints/ConstraintDisplay';
 export * from './modals/UImodals/grapeQualityBreakdownModal';
 export * from './modals/activitymodals/LandSearchOptionsModal';
 export * from './modals/activitymodals/LandSearchResultsModal';
-export * from './modals/activitymodals/LenderSearchOptionsModal';
-export * from './modals/activitymodals/LenderSearchResultsModal';
 export * from './modals/UImodals/BalanceBreakdownModal';
 export * from './modals/UImodals/WarningModal';
 export * from './modals/activitymodals/StaffSearchOptionsModal';

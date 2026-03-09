@@ -6,7 +6,6 @@ export { WineRegionsTab } from './WineRegionsTab';
 export { WinemakingTab } from './WinemakingTab';
 export { MathematicalModelsTab } from './MathematicalModelsTab';
 export { CustomersTab } from './CustomersTab';
-export { LendersTab } from './LendersTab';
 export { YieldProjectionTab } from './YieldProjectionTab';
 export { DynamicRangeTab } from './DynamicRangeTab';
 export { CrossTraitPenaltyTab } from './CrossTraitPenaltyTab';

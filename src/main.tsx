@@ -2,9 +2,12 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { configureLoanLenderFeature } from '@/lib/features/loanLender';
+import { activeLoanLenderFeature } from '@/lib/features/loanLender/active';
 import { configureResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { activeResearchUpgradeFeature } from '@/lib/features/researchUpgrade/active';
 
+configureLoanLenderFeature(activeLoanLenderFeature);
 configureResearchUpgradeFeature(activeResearchUpgradeFeature);
 
 const Root = import.meta.env.PROD ? (

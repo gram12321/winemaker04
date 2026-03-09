@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SimpleCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from '@/components/ui';
 import { Lender } from '@/lib/types/types';
-import { loadLenders } from '@/lib/database/core/lendersDB';
+import { getAllLenders } from '@/lib/features/loanLender/services/finance/lenderService';
 import { formatNumber, formatPercent, getLenderTypeColorClass, getColorClass } from '@/lib/utils/utils';
 
 export function LendersTab() {
@@ -18,7 +18,7 @@ export function LendersTab() {
   const loadLendersData = async () => {
     try {
       setLoading(true);
-      const lendersData = await loadLenders();
+      const lendersData = await getAllLenders();
       setLenders(lendersData);
     } catch (error) {
       console.error('Error loading lenders data:', error);

@@ -8,10 +8,9 @@ import { awardExperience } from '@/lib/services/user/staffService';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
-import { completeLenderSearch } from './lenderSearchManager';
-import { completeTakeLoan } from './takeLoanManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber } from '@/lib/utils';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 
@@ -142,11 +141,11 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   },
 
   [WorkCategory.LENDER_SEARCH]: async (activity: Activity) => {
-    await completeLenderSearch(activity);
+    await getLoanLenderFeature().workflow.completeLenderSearch(activity);
   },
 
   [WorkCategory.TAKE_LOAN]: async (activity: Activity) => {
-    await completeTakeLoan(activity);
+    await getLoanLenderFeature().workflow.completeTakeLoan(activity);
   },
 
   [WorkCategory.FINANCE_AND_STAFF]: async (activity: Activity) => {

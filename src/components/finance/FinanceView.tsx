@@ -16,11 +16,11 @@ import {
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
 import { StaffWageSummary } from './StaffWageSummary';
-import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { loadTransactions } from '@/lib/services';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 export default function FinanceView() {
@@ -28,11 +28,12 @@ export default function FinanceView() {
   const [activePeriod, setActivePeriod] = useState<'weekly' | 'season' | 'year' | 'all'>('weekly');
   const gameState = useGameState();
   const transactions = useGameStateWithData(loadTransactions, []);
+  const loanLenderTabs = useMemo(() => getLoanLenderFeature().ui.getFinanceTabs(), []);
   const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getFinanceTabs(), []);
   const researchUpgradeTabs = useMemo(() => getResearchUpgradeFeature().ui.getFinanceTabs(), []);
   const featureTabs = useMemo(
-    () => [...boardShareTabs, ...researchUpgradeTabs],
-    [boardShareTabs, researchUpgradeTabs]
+    () => [...loanLenderTabs, ...boardShareTabs, ...researchUpgradeTabs],
+    [loanLenderTabs, boardShareTabs, researchUpgradeTabs]
   );
 
   const currentYear = gameState.currentYear ?? new Date().getFullYear();
@@ -135,7 +136,7 @@ export default function FinanceView() {
   }, [currentYear, currentSeason, currentWeek, selectedYear, selectedSeason, selectedWeek]);
 
   useEffect(() => {
-    const tabIds = new Set(['income', 'cashflow', 'loans', ...featureTabs.map(tab => tab.id)]);
+    const tabIds = new Set(['income', 'cashflow', ...featureTabs.map(tab => tab.id)]);
     if (!tabIds.has(activeTab)) {
       setActiveTab('income');
     }
@@ -147,7 +148,6 @@ export default function FinanceView() {
 
     if (activeTab === 'income') return 'Income & Balance';
     if (activeTab === 'cashflow') return 'Cash Flow';
-    if (activeTab === 'loans') return 'Loans';
     return 'Finance Management';
   }, [activeTab, featureTabs]);
 
@@ -266,11 +266,6 @@ export default function FinanceView() {
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'cashflow' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Cash Flow
           </TabsTrigger>
-          <TabsTrigger
-            value="loans"
-            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'loans' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
-            Loans
-          </TabsTrigger>
           {featureTabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
@@ -319,9 +314,6 @@ export default function FinanceView() {
         </TabsContent>
         <TabsContent value="cashflow">
           <CashFlowView />
-        </TabsContent>
-        <TabsContent value="loans">
-          <LoansView />
         </TabsContent>
         {featureTabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id}>

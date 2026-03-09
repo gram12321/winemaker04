@@ -15,7 +15,7 @@ import {
   type Company,
   type CompanyData
 } from '@/lib/database';
-import { initializeLenders } from '../finance/lenderService';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 
 export interface CompanyCreateData {
   name: string;
@@ -89,7 +89,7 @@ class CompanyService {
 
       if (company) {
         try {
-          await initializeLenders(company.id);
+          await getLoanLenderFeature().setup.initializeLenders(company.id);
         } catch (error) {
           console.warn('Failed to initialize lenders for new company:', error);
         }

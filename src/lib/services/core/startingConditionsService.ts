@@ -9,13 +9,12 @@ import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } fro
 import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
 import { companyService } from '../user/companyService';
-import { getAllLenders } from '../finance/lenderService';
-import { applyForLoan } from '../finance/loanService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 // Preview vineyard type (not yet saved to database)
@@ -428,34 +427,7 @@ interface StartingLoanResult {
 
 async function applyStartingLoan(config: StartingLoanConfig): Promise<StartingLoanResult> {
   try {
-    const lenders = await getAllLenders();
-    if (!lenders || lenders.length === 0) {
-      return { success: false, error: 'No lenders available for starting loan' };
-    }
-
-    const lender = lenders.find((entry) => entry.type === config.lenderType && !entry.blacklisted);
-    if (!lender) {
-      return { success: false, error: `No ${config.lenderType} lenders available for starting loan` };
-    }
-
-    const { principal, durationSeasons } = config;
-    const interestOverride = config.interestRate;
-
-    const loanId = await applyForLoan(
-      lender.id,
-      principal,
-      durationSeasons,
-      lender,
-      {
-        loanCategory: 'standard',
-        skipAdministrationPenalty: config.skipAdministrationPenalty ?? true,
-        skipTransactions: true,
-        overrideBaseRate: interestOverride,
-        overrideEffectiveRate: interestOverride,
-        skipLimitCheck: true
-      }
-    );
-
+    const loanId = await getLoanLenderFeature().setup.applyStartingLoan(config);
     return { success: true, loanId };
   } catch (error) {
     console.error('Error applying starting loan:', error);

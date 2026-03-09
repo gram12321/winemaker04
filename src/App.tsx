@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './components/layout/Header';
 import CompanyOverview from './components/pages/CompanyOverview';
 import Vineyard from './components/pages/Vineyard';
@@ -16,7 +16,6 @@ import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/shadCN/toaster';
 import { ActivityPanel } from './components/layout/ActivityPanel';
-import { LoanWarningModalDisplay } from './components/layout/LoanWarningModalDisplay';
 import { GlobalSearchResultsDisplay } from './components/layout/GlobalSearchResultsDisplay';
 import { useCustomerRelationshipUpdates } from './hooks/useCustomerRelationshipUpdates';
 import { usePrestigeUpdates } from './hooks/usePrestigeAndVineyardValueUpdates';
@@ -24,12 +23,14 @@ import { Company } from '@/lib/database';
 import { setActiveCompany, resetGameState, getCurrentCompany, getCurrentPrestige } from './lib/services/core/gameState';
 import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelationships } from './lib/services';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { Analytics } from '@vercel/analytics/react';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isGameInitialized, setIsGameInitialized] = useState(false);
+  const loanLenderAppOverlays = useMemo(() => getLoanLenderFeature().ui.getAppOverlays(), []);
   
   const lastInitializedCompanyIdRef = useRef<string | null>(null);
   useCustomerRelationshipUpdates();
@@ -222,10 +223,9 @@ function App() {
         <ActivityPanel />
       )}
 
-      {/* Loan Warning Modal - displays critical loan warnings */}
-      {isGameInitialized && currentCompany && (
-        <LoanWarningModalDisplay />
-      )}
+      {isGameInitialized && currentCompany && loanLenderAppOverlays.map((overlay) => (
+        <div key={overlay.id}>{overlay.render()}</div>
+      ))}
 
       {/* Global Search Results Modals - displays search results regardless of current page */}
       {isGameInitialized && currentCompany && (

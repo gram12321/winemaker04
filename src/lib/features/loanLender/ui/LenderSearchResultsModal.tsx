@@ -3,10 +3,11 @@ import { LoanOffer } from '@/lib/types/types';
 import { formatNumber, formatPercent, getLenderTypeColorClass, setModalMinimized } from '@/lib/utils';
 import { Button, Label, Slider, Badge, Separator } from '@/components/ui';
 import { X, Minimize2 } from 'lucide-react';
-import { startTakeLoan, getGameState, calculateLoanTerms } from '@/lib/services';
+import { getGameState } from '@/lib/services/core/gameState';
+import { calculateLoanTerms, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
+import { startTakeLoan } from '@/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { WarningModal } from '@/components/ui';
-import { getScaledLoanAmountLimit } from '@/lib/services/finance/loanService';
 import { calculateTotalAssets } from '@/lib/services/finance/financeService';
 
 interface LenderSearchResultsModalProps {
