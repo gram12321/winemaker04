@@ -1,14 +1,14 @@
 import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
-import { getGameState } from '../../core/gameState';
-import { createActivity } from './activityManager';
+import { getGameState } from '@/lib/services/core/gameState';
+import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
-import { calculateResearchWork, calculateResearchCost } from '../workcalculators/researchWorkCalculator';
+import { calculateResearchWork, calculateResearchCost } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
 import { getResearchProject } from '@/lib/constants/researchConstants';
-import { addResearchPrestigeEvent } from '../../prestige/prestigeService';
-import { unlockResearch } from '@/lib/database';
+import { addResearchPrestigeEvent } from '@/lib/services/prestige/prestigeService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
+import { getResearchUpgradeFeature } from '../../..';
 
 /**
  * Start a research activity
@@ -128,11 +128,11 @@ export async function completeResearch(activity: Activity): Promise<void> {
                   );
                   
                   // Record the research completion in database (always, even if no unlocks)
-                  await unlockResearch({
+                  await getResearchUpgradeFeature().setup.grantResearchUnlock({
                         researchId: projectId,
                         companyId,
-                        unlockedAt: gameDate,
-                        unlockedAtTimestamp: absoluteWeeks,
+                        gameDate,
+                        absoluteWeeks,
                         metadata: {
                               unlocks: project.unlocks || []
                         }

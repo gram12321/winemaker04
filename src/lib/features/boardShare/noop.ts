@@ -1,6 +1,6 @@
 import { calculateInitialShareCount } from '@/lib/constants/financeConstants';
 import { getGameState } from '@/lib/services/core/gameState';
-import type { BoardShareFeature } from './contracts';
+import type { BoardShareFeature } from './featureTypes';
 
 export const noBoardShareFeature: BoardShareFeature = {
   ticks: {

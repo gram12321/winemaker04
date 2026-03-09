@@ -15,13 +15,13 @@ import {
 } from "@/components/ui";
 import { IncomeBalanceView } from './IncomeBalanceView';
 import { CashFlowView } from './CashFlowView';
-import { ResearchPanel } from './ResearchPanel';
 import { StaffWageSummary } from './StaffWageSummary';
 import LoansView from './LoansView';
 import { FINANCE_TAB_STYLES, FINANCE_BUTTON_STYLES, SEASONS, WEEKS_PER_SEASON, type SeasonName } from '@/lib/constants';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { loadTransactions } from '@/lib/services';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 export default function FinanceView() {
   const [activeTab, setActiveTab] = useState('income');
@@ -29,6 +29,11 @@ export default function FinanceView() {
   const gameState = useGameState();
   const transactions = useGameStateWithData(loadTransactions, []);
   const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getFinanceTabs(), []);
+  const researchUpgradeTabs = useMemo(() => getResearchUpgradeFeature().ui.getFinanceTabs(), []);
+  const featureTabs = useMemo(
+    () => [...boardShareTabs, ...researchUpgradeTabs],
+    [boardShareTabs, researchUpgradeTabs]
+  );
 
   const currentYear = gameState.currentYear ?? new Date().getFullYear();
   const currentSeason = useMemo<SeasonName>(() => {
@@ -130,21 +135,21 @@ export default function FinanceView() {
   }, [currentYear, currentSeason, currentWeek, selectedYear, selectedSeason, selectedWeek]);
 
   useEffect(() => {
-    const tabIds = new Set(['income', 'cashflow', 'loans', 'upgrades', ...boardShareTabs.map(tab => tab.id)]);
+    const tabIds = new Set(['income', 'cashflow', 'loans', ...featureTabs.map(tab => tab.id)]);
     if (!tabIds.has(activeTab)) {
       setActiveTab('income');
     }
-  }, [activeTab, boardShareTabs]);
+  }, [activeTab, featureTabs]);
 
   const activeTabLabel = useMemo(() => {
-    const dynamicTab = boardShareTabs.find(tab => tab.id === activeTab);
+    const dynamicTab = featureTabs.find(tab => tab.id === activeTab);
     if (dynamicTab) return dynamicTab.activeLabel;
 
     if (activeTab === 'income') return 'Income & Balance';
     if (activeTab === 'cashflow') return 'Cash Flow';
     if (activeTab === 'loans') return 'Loans';
-    return 'Research & Upgrades';
-  }, [activeTab, boardShareTabs]);
+    return 'Finance Management';
+  }, [activeTab, featureTabs]);
 
   const renderPeriodSelectors = () => {
     if (activePeriod === 'all') {
@@ -266,7 +271,7 @@ export default function FinanceView() {
             className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'loans' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
             Loans
           </TabsTrigger>
-          {boardShareTabs.map((tab) => (
+          {featureTabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
@@ -274,11 +279,6 @@ export default function FinanceView() {
               {tab.label}
             </TabsTrigger>
           ))}
-          <TabsTrigger
-            value="upgrades"
-            className={`${FINANCE_TAB_STYLES.trigger} ${activeTab === 'upgrades' ? FINANCE_TAB_STYLES.active : FINANCE_TAB_STYLES.inactive}`}>
-            Research and Upgrades
-          </TabsTrigger>
         </TabsList>
 
         {activeTab === 'income' && (
@@ -323,14 +323,11 @@ export default function FinanceView() {
         <TabsContent value="loans">
           <LoansView />
         </TabsContent>
-        {boardShareTabs.map((tab) => (
+        {featureTabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id}>
             {tab.render()}
           </TabsContent>
         ))}
-        <TabsContent value="upgrades">
-          <ResearchPanel />
-        </TabsContent>
       </Tabs>
     </div>
   );

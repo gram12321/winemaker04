@@ -1,4 +1,4 @@
-import type { BoardShareFeature } from './contracts';
+import type { BoardShareFeature } from './featureTypes';
 import { noBoardShareFeature } from './noop';
 
 let boardShareFeature: BoardShareFeature = noBoardShareFeature;

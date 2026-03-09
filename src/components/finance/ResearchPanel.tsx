@@ -13,8 +13,8 @@ import { WorkCategory } from '@/lib/types/types';
 import { RESEARCH_PROJECTS, ResearchProject } from '@/lib/constants/researchConstants';
 import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
 import { useGameUpdates } from '@/hooks/useGameUpdates';
-import { startResearch } from '@/lib/services/activity/activitymanagers/researchManager';
 import { calculateResearchWork, calculateResearchCost } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 export function ResearchPanel() {
       const [activeResearch, setActiveResearch] = useState<Set<string>>(new Set());
@@ -54,8 +54,7 @@ export function ResearchPanel() {
                   return;
             }
 
-            // Use the research manager to start research
-            await startResearch(project.id);
+            await getResearchUpgradeFeature().workflow.startResearch(project.id);
 
             // Refresh status
             await loadResearchStatus();

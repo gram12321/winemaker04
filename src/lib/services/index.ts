@@ -60,7 +60,7 @@ export * from './sales/expirationService';
 export * from './prestige/prestigeService';
 
 // Research services
-export * from './research/researchEnforcer';
+export * from '@/lib/features/researchUpgrade/services/research/researchEnforcer';
 
 // Activity system
 export * from './activity';

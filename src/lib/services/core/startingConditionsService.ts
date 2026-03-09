@@ -15,9 +15,8 @@ import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
-import { unlockResearch } from '@/lib/database/core/researchUnlocksDB';
-import { researchEnforcer } from '../research/researchEnforcer';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 // Preview vineyard type (not yet saved to database)
 export interface VineyardPreview {
@@ -391,20 +390,13 @@ export async function applyStartingConditions(
           gameDate.year
         );
 
-        const requiredResearch = researchEnforcer.getRequiredResearch('grape', condition.startingUnlockedGrape);
-        if (requiredResearch) {
-          await unlockResearch({
-            researchId: requiredResearch.id,
-            companyId,
-            unlockedAt: gameDate,
-            unlockedAtTimestamp: absoluteWeeks,
-            metadata: {
-              source: 'starting_conditions',
-              country: condition.id,
-              grape: condition.startingUnlockedGrape
-            }
-          });
-        }
+        await getResearchUpgradeFeature().setup.grantStartingGrapeUnlock({
+          companyId,
+          grape: condition.startingUnlockedGrape,
+          countryId: condition.id,
+          gameDate,
+          absoluteWeeks
+        });
       } catch (grapeUnlockError) {
         console.error('Error unlocking starting grape:', grapeUnlockError);
         // Don't fail the entire process if grape unlock fails

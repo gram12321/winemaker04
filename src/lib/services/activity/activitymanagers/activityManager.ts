@@ -7,12 +7,12 @@ import { loadVineyards, saveVineyard } from '@/lib/database/activities/vineyardD
 import { awardExperience } from '@/lib/services/user/staffService';
 import { WORK_CATEGORY_INFO } from '@/lib/constants/activityConstants';
 import { completeCrushing, completeFermentationSetup, completeBookkeeping, calculateStaffWorkContribution, calculateIndividualStaffContribution, WorkCategory } from '@/lib/services/activity';
-import { completeResearch } from './researchManager';
 import { completeStaffSearch, completeHiringProcess } from './staffSearchManager';
 import { completeLenderSearch } from './lenderSearchManager';
 import { completeTakeLoan } from './takeLoanManager';
 import { triggerGameUpdateImmediate } from '@/hooks/useGameUpdates';
 import { formatNumber } from '@/lib/utils';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 
 
@@ -126,7 +126,7 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   [WorkCategory.ADMINISTRATION_AND_RESEARCH]: async (activity: Activity) => {
     // For now, all activities in this category are treated as research or generic maintenance
     // If we distinguish them, we check activity.type or params
-    await completeResearch(activity);
+    await getResearchUpgradeFeature().workflow.completeResearch(activity);
   },
 
   [WorkCategory.STAFF_SEARCH]: async (activity: Activity) => {
