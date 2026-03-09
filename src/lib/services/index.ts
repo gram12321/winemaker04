@@ -21,6 +21,64 @@ export * from './finance/financeService';
 export * from './finance/lenderService';
 export * from './finance/loanService';
 export * from './finance/wageService';
+// Share services - explicit exports to avoid naming conflicts
+export {
+  adjustSharePriceIncrementally,
+  initializeSharePriceDeterministically,
+  applyImmediateShareStructureAdjustment,
+  getCurrentSharePrice,
+  calculateSharePrice,
+  getSharePriceBreakdown,
+  calculateMarketCap,
+  updateMarketValue,
+  getMarketValue
+} from './finance/shares/sharePriceService';
+
+export {
+  getShareMetrics,
+  getShareholderBreakdown,
+  getHistoricalShareMetrics
+} from './finance/shares/shareMetricsService';
+
+export {
+  issueStock,
+  buyBackStock,
+  updateDividendRate,
+  payDividends,
+  calculateDividendPayment,
+  areDividendsDue,
+  getMaxBuybackShares,
+  getMaxIssuanceShares,
+  getDividendRateLimits,
+  getIssuanceConstraintInfo,
+  getBuybackConstraintInfo,
+  getDividendConstraintInfo
+} from './finance/shares/shareOperationsService';
+
+export {
+  calculateMarketCap as calcMarketCap,
+  calculateExpectedImprovementRates,
+  getImprovementMultipliers,
+  calculateFixedAssetRatio,
+  calculateTrendDelta,
+  calculateImprovementMultiplier,
+  calculateMarketCapRequirement
+} from './finance/shares/shareCalculations';
+
+export {
+  calculateGracePeriods,
+  calculateProfitabilityImprovements,
+  calculateTrendBasedImprovements,
+  calculateMetricDeltas
+} from './finance/shares/sharePriceAdjustmentHelpers';
+
+export {
+  getCurrentMetricValues,
+  getPreviousMetricValues48WeeksAgo,
+  getCurrent48WeekValues,
+  calculateAnchorFactorDetails,
+  formatMultiplierBreakdownForDisplay
+} from './finance/shares/sharePriceBreakdownHelpers';
 
 // Admin services
 export * from './admin/adminService';
@@ -61,6 +119,12 @@ export * from './prestige/prestigeService';
 
 // Research services
 export * from './research/researchEnforcer';
+
+// Board services
+export { calculateBoardSatisfaction, getBoardSatisfactionBreakdown } from './board/boardSatisfactionService';
+export { boardEnforcer, BoardEnforcerService, getVineyardPurchaseConstraintInfo } from './board/boardEnforcer';
+export type { BoardSatisfactionBreakdown } from './board/boardSatisfactionService';
+export type { BoardEnforcementResult } from './board/boardEnforcer';
 
 // Activity system
 export * from './activity';

@@ -20,6 +20,7 @@ import { NotificationCategory } from '../../types/types';
 import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { updateGameState } from '@/lib/services/core/gameState';
+import { calculateFinancialData, getShareMetrics } from '@/lib/services';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 
 
@@ -431,14 +432,17 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
     }
 
     // Check modularized board/share constraint for vineyard purchase
+    const financialData = await calculateFinancialData('season');
+    const shareMetrics = await getShareMetrics();
+
     const constraintResult = await getBoardShareFeature().constraints.checkVineyardPurchase({
       currentMoney,
       purchaseAmount: option.totalPrice,
-      totalAssets: 0,
-      fixedAssets: 0,
-      currentAssets: 0,
-      expensesPerSeason: 0,
-      profitMargin: 0
+      totalAssets: financialData.totalAssets,
+      fixedAssets: financialData.fixedAssets,
+      currentAssets: financialData.currentAssets,
+      expensesPerSeason: financialData.expenses,
+      profitMargin: shareMetrics.profitMargin || 0
     });
 
     if (!constraintResult.allowed) {

@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../shadCN/dialog';
 import { Button } from '../../shadCN/button';
 import { ScrollArea } from '../../shadCN/scroll-area';
+import { Slider } from '../../shadCN/slider';
+import { Label } from '../../shadCN/label';
 import { StartingCountry, STARTING_CONDITIONS, getStartingCountries } from '@/lib/constants/startingConditions';
 import {
   generateVineyardPreview,
@@ -45,8 +47,10 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   const [selectedCountry, setSelectedCountry] = useState<StartingCountry>('France');
   const [vineyardPreviews, setVineyardPreviews] = useState<Record<StartingCountry, VineyardPreview | null>>({} as Record<StartingCountry, VineyardPreview | null>);
   const [isApplying, setIsApplying] = useState(false);
+  const [outsideInvestment, setOutsideInvestment] = useState<number>(0); // Public investment: 0 to 1,000,000€
   const [playerBalance, setPlayerBalance] = useState<number>(0);
   const [isFirstCompany, setIsFirstCompany] = useState<boolean>(true);
+  const [playerCashContribution, setPlayerCashContribution] = useState<number>(0);
   
   const selectedCondition = STARTING_CONDITIONS[selectedCountry];
   
@@ -65,6 +69,12 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
           const otherCompanies = userCompanies.filter(c => c.id !== companyId);
           const isFirst = otherCompanies.length === 0;
           setIsFirstCompany(isFirst);
+          
+          // Set initial player cash contribution (for subsequent companies)
+          // Default to 0 so user can adjust up to their available balance
+          if (!isFirst) {
+            setPlayerCashContribution(0);
+          }
         } else {
           // No userId means anonymous company - always first company behavior
           setIsFirstCompany(true);
@@ -81,7 +91,15 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
       loadPlayerData();
     }
   }, [isOpen, companyId, selectedCondition.startingMoney]);
-
+  
+  // Reset player cash contribution to 0 when country changes (for subsequent companies)
+  // This ensures the slider starts at 0 and user can adjust up to their available balance
+  useEffect(() => {
+    if (!isFirstCompany) {
+      setPlayerCashContribution(0);
+    }
+  }, [selectedCountry, isFirstCompany]);
+  
   // Generate preview once per country when modal opens
   useEffect(() => {
     if (!isOpen) {
@@ -141,13 +159,26 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
   
   // Calculate derived values (after selectedCondition is defined)
   const familyContribution = estimatedVineyardValue;
-  const playerCashContribution = isFirstCompany
+  const playerShareContribution = isFirstCompany
     ? FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
-    : selectedCondition.startingMoney;
-  const canAffordContribution = isFirstCompany || (playerBalance >= playerCashContribution);
+    : playerCashContribution;
+  const maxPlayerCashContribution = isFirstCompany
+    ? FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION
+    : Math.max(0, playerBalance);
+  const canAffordContribution = isFirstCompany || (playerBalance >= playerShareContribution);
+  const baseOutsideInvestmentCap = Math.max(playerShareContribution || 0, FIRST_COMPANY_PLAYER_CASH_CONTRIBUTION);
+  const MAX_OUTSIDE_INVESTMENT = baseOutsideInvestmentCap * 10; // Allow up to 10x player equity
+  const safeOutsideInvestment = Math.min(outsideInvestment, MAX_OUTSIDE_INVESTMENT);
+  const totalContributions = playerShareContribution + familyContribution + safeOutsideInvestment;
   const loanPrincipal = selectedCondition.startingLoan?.principal ?? 0;
-  const liquidStartingCapital = playerCashContribution + loanPrincipal;
-  const totalStartingAssets = liquidStartingCapital + familyContribution;
+  const liquidStartingCapital = playerShareContribution + safeOutsideInvestment + loanPrincipal;
+  const playerOwnershipPct = totalContributions > 0 ? (playerShareContribution / totalContributions) * 100 : 100;
+  const familyOwnershipPct = totalContributions > 0 ? (familyContribution / totalContributions) * 100 : 0;
+  const outsideOwnershipPct = totalContributions > 0 ? (safeOutsideInvestment / totalContributions) * 100 : 0;
+  
+  useEffect(() => {
+    setOutsideInvestment((prev) => Math.min(prev, MAX_OUTSIDE_INVESTMENT));
+  }, [MAX_OUTSIDE_INVESTMENT]);
   
   const modalTitle = companyName
     ? `Select Starting Conditions for ${companyName}`
@@ -167,7 +198,11 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     // Validate player contribution for subsequent companies
     if (!isFirstCompany) {
       if (!canAffordContribution) {
-        alert(`Insufficient balance. You have ${formatNumber(playerBalance, { currency: true })} but need ${formatNumber(playerCashContribution, { currency: true })} in cash for this company.`);
+        alert(`Insufficient balance. You have ${formatNumber(playerBalance, { currency: true })} but need ${formatNumber(playerShareContribution, { currency: true })} in cash for this company.`);
+        return;
+      }
+      if (playerCashContribution < 0) {
+        alert('Player cash contribution cannot be negative');
         return;
       }
     }
@@ -177,7 +212,9 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
       const result: ApplyStartingConditionsResult = await applyStartingConditions(
         companyId,
         selectedCountry,
-        vineyardPreview
+        vineyardPreview,
+        safeOutsideInvestment,
+        isFirstCompany ? undefined : playerCashContribution
       );
       
       if (result.success) {
@@ -333,103 +370,187 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                 </div>
               </div>
 
-              {/* Starting Capital Section */}
+              {/* Ownership & Investment Section */}
               <div className="bg-blue-50 rounded-lg p-4 space-y-4 border border-blue-200">
-                <h3 className="font-semibold text-blue-900">Starting Capital</h3>
-
+                <h3 className="font-semibold text-blue-900">Company Ownership</h3>
+                
+                {/* Player Balance Display (for subsequent companies) */}
                 {!isFirstCompany && (
-                  <div className="bg-white rounded-md p-3 border border-blue-300">
-                    <div className="flex justify-between items-center text-sm">
+                  <div className="bg-white rounded-md p-3 border border-blue-300 mb-3">
+                    <div className="flex justify-between items-center text-sm mb-2">
                       <span className="text-gray-700 font-semibold">Your Balance:</span>
-                      <span className={`font-semibold ${canAffordContribution ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`font-semibold ${playerBalance >= playerShareContribution ? 'text-green-600' : 'text-red-600'}`}>
                         {formatNumber(playerBalance, { currency: true })}
                       </span>
                     </div>
                     {!canAffordContribution && (
                       <div className="text-xs text-red-600 mt-1">
-                        Insufficient balance for required starting cash.
+                        ⚠️ Insufficient balance for this contribution
                       </div>
                     )}
                   </div>
                 )}
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Player Cash Contribution:</span>
-                    <span className={`font-semibold ${canAffordContribution ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(playerCashContribution, { currency: true })}
-                    </span>
-                  </div>
-
-                  {vineyardPreview && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Starting Vineyard Value:</span>
-                      <span className="font-semibold text-amber-600">
-                        {formatNumber(familyContribution, { currency: true })}
-                      </span>
+                
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      {/* Player Cash Contribution - editable for subsequent companies */}
+                      {!isFirstCompany ? (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <Label htmlFor="player-cash-contribution" className="text-gray-700">
+                              Player Cash Contribution:
+                            </Label>
+                            <span className="font-semibold text-green-600">
+                              {formatNumber(playerShareContribution, { currency: true })}
+                            </span>
+                          </div>
+                          {maxPlayerCashContribution > 0 ? (
+                            <>
+                              <Slider
+                                id="player-cash-contribution"
+                                value={[playerCashContribution]}
+                                onValueChange={(value) => {
+                                  const newValue = Math.max(0, Math.min(maxPlayerCashContribution, value[0]));
+                                  setPlayerCashContribution(newValue);
+                                }}
+                                min={0}
+                                max={maxPlayerCashContribution}
+                                step={Math.max(1, Math.floor(maxPlayerCashContribution / 100) || 1)}
+                                className="w-full"
+                              />
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>€0</span>
+                                <span>{formatNumber(maxPlayerCashContribution, { currency: true })}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-2 text-xs text-yellow-700">
+                              No liquid funds available for an additional cash contribution.
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-600">
+                            Available balance: <span className="font-semibold">{formatNumber(playerBalance, { currency: true })}</span>
+                            {maxPlayerCashContribution >= 0 && (
+                              <> • Max cash: <span className="font-semibold">{formatNumber(maxPlayerCashContribution, { currency: true })}</span></>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-700">Player Cash Contribution:</span>
+                          <span className="font-semibold text-green-600">
+                            {formatNumber(playerShareContribution, { currency: true })}
+                          </span>
+                        </div>
+                      )}
+                      {vineyardPreview && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-700">Family Vineyard Contribution:</span>
+                          <span className="font-semibold text-amber-600">
+                            {formatNumber(familyContribution, { currency: true })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-sm pt-1 border-t border-blue-200">
+                        <span className="text-gray-700 font-semibold">Player Equity Contribution:</span>
+                        <span className={`font-semibold ${canAffordContribution ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatNumber(playerShareContribution, { currency: true })}
+                        </span>
+                      </div>
+                      {!isFirstCompany && !canAffordContribution && (
+                        <div className="text-xs text-red-600 mt-1">
+                          Required: {formatNumber(playerShareContribution, { currency: true })}, Available: {formatNumber(playerBalance, { currency: true })}
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {selectedCondition.startingLoan && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Starting Loan Proceeds:</span>
-                      <span className="font-semibold text-blue-600">
-                        {formatNumber(loanPrincipal, { currency: true })}
-                      </span>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Public Investment:</span>
+                        <span className="font-semibold text-blue-600">
+                          {formatNumber(safeOutsideInvestment, { currency: true })}
+                        </span>
+                      </div>
+                      
+                      <Slider
+                        value={[safeOutsideInvestment]}
+                        onValueChange={(value) => setOutsideInvestment(Math.min(value[0], MAX_OUTSIDE_INVESTMENT))}
+                        min={0}
+                        max={MAX_OUTSIDE_INVESTMENT}
+                        step={10000}
+                        className="w-full"
+                      />
+                      
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>€0</span>
+                        <span>{formatNumber(MAX_OUTSIDE_INVESTMENT, { currency: true })}</span>
+                      </div>
                     </div>
-                  )}
-
-                  <div className="pt-2 border-t border-blue-200 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Liquid Starting Capital:</span>
-                      <span className="font-semibold text-gray-900">
-                        {formatNumber(liquidStartingCapital, { currency: true })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Total Starting Assets:</span>
-                      <span className="font-semibold text-gray-900">
-                        {formatNumber(totalStartingAssets, { currency: true })}
-                      </span>
+                    
+                    <div className="pt-2 border-t border-blue-200 space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Total Contributions:</span>
+                        <span className="font-semibold text-gray-900">
+                          {formatNumber(totalContributions, { currency: true })}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Player Ownership:</span>
+                        <span className="font-semibold text-green-600">
+                          {playerOwnershipPct.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Family Ownership:</span>
+                        <span className="font-semibold text-amber-600">
+                          {familyOwnershipPct.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Public Investor Ownership:</span>
+                        <span className="font-semibold text-blue-600">
+                          {outsideOwnershipPct.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <p className="text-xs text-blue-800/80">
-                  Outside investors and ownership splits are disabled on this branch.
-                </p>
               </div>
 
               {vineyardPreview && (
                 <div className="bg-green-50 rounded-lg p-4 space-y-3 border border-green-200">
                   <h3 className="font-semibold text-green-900">Starting Vineyard Preview</h3>
-
+                  
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Name:</span>
                       <span className="font-semibold">{vineyardPreview.name}</span>
                     </div>
-
+                    
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Size:</span>
                       <span className="font-semibold">{vineyardPreview.hectares} hectares</span>
                     </div>
-
+                    
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Soil:</span>
                       <span className="font-semibold">{vineyardPreview.soil.join(', ')}</span>
                     </div>
-
+                    
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Altitude:</span>
                       <span className="font-semibold">{vineyardPreview.altitude}m</span>
                     </div>
-
+                    
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Aspect:</span>
                       <span className="font-semibold">{vineyardPreview.aspect}</span>
                     </div>
-
+                    
                     {selectedCondition.startingUnlockedGrape && (
                       <>
                         <div className="flex justify-between items-center">
@@ -447,9 +568,9 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
                       </>
                     )}
                   </div>
-
+                  
                   <p className="text-xs text-gray-600 italic">
-                    {selectedCondition.startingUnlockedGrape
+                    {selectedCondition.startingUnlockedGrape 
                       ? `This vineyard comes with ${selectedCondition.startingUnlockedGrape} vines that are ${selectedCondition.startingVineyard.startingVineAge} years old. You can purchase additional land later.`
                       : 'This vineyard will be granted to you when you start. You can purchase additional land later.'}
                   </p>
@@ -513,5 +634,4 @@ export const StartingConditionsModal: React.FC<StartingConditionsModalProps> = (
     </Dialog>
   );
 };
-
 

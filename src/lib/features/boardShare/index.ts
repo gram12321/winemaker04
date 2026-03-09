@@ -1,7 +1,15 @@
 import type { BoardShareFeature } from './contracts';
-import { noBoardShareFeature } from './noop';
+import { activeBoardShareRuntimeFeature } from './runtime';
 
-let boardShareFeature: BoardShareFeature = noBoardShareFeature;
+const noUiBoardShareHooks: BoardShareFeature['ui'] = {
+  getFinanceTabs: () => [],
+  getWinepediaTabs: () => []
+};
+
+let boardShareFeature: BoardShareFeature = {
+  ...activeBoardShareRuntimeFeature,
+  ui: noUiBoardShareHooks
+};
 
 export function configureBoardShareFeature(feature: BoardShareFeature): void {
   boardShareFeature = feature;
