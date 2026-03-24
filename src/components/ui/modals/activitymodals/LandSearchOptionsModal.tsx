@@ -687,6 +687,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
               {/* Vineyard Purchase Constraints */}
               <div>
                 <h3 className="text-lg font-medium text-white mb-4">Purchase Constraints</h3>
+                {/* Readd-board branch intentionally keeps board-driven purchase limits in this modal. */}
                 <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                   {vineyardConstraintInfo ? (
                     <>
