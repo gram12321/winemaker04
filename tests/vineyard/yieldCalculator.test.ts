@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateVineyardYield } from '@/lib/services/vineyard/vineyardManager';
+import { calculateVineyardYield, calculateBaselineVineYieldForAge } from '@/lib/services/vineyard/vineyardManager';
 import { type Vineyard } from '@/lib/types/types';
 
 // Base test vineyard: 1 hectare of Sangiovese in Tuscany
@@ -275,5 +275,20 @@ describe('calculateVineyardYield - Core Yield Formula', () => {
       expect(yield_).toBeLessThan(maxYield);
       expect(yield_).toBeLessThan(maxYield * 0.15); // Within reasonable range
     });
+  });
+});
+
+describe('calculateBaselineVineYieldForAge - Age Baseline Mapping', () => {
+  it('matches baseline yield milestones used by yearly progression', () => {
+    expect(calculateBaselineVineYieldForAge(0)).toBeCloseTo(0.02, 4);
+    expect(calculateBaselineVineYieldForAge(1)).toBeCloseTo(0.10, 4);
+    expect(calculateBaselineVineYieldForAge(4)).toBeCloseTo(0.85, 4);
+    expect(calculateBaselineVineYieldForAge(5)).toBeCloseTo(1.00, 4);
+    expect(calculateBaselineVineYieldForAge(7)).toBeCloseTo(1.00, 4);
+  });
+
+  it('normalizes non-integer and negative ages safely', () => {
+    expect(calculateBaselineVineYieldForAge(4.9)).toBeCloseTo(0.85, 4);
+    expect(calculateBaselineVineYieldForAge(-3)).toBeCloseTo(0.02, 4);
   });
 });

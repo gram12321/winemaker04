@@ -582,6 +582,27 @@ export function calculateVineYieldProgression(age: number, currentVineYield: num
 }
 
 /**
+ * Calculate deterministic baseline vine yield for a given vine age.
+ * Uses yearly expected deltas without randomness and mirrors progression charts.
+ */
+export function calculateBaselineVineYieldForAge(vineAge: number): number {
+  let currentYield = 0.02;
+  const normalizedAge = Math.max(0, Math.floor(vineAge));
+
+  for (let age = 0; age < normalizedAge; age++) {
+    const { expectedDelta, targetValue } = calculateVineYieldProgression(age, currentYield);
+
+    if (targetValue !== undefined) {
+      currentYield = Math.max(0.01, targetValue);
+    } else {
+      currentYield = Math.max(0.01, currentYield + expectedDelta);
+    }
+  }
+
+  return currentYield;
+}
+
+/**
  * Update vineyard vine yield factors at the start of a new year
  * Uses piecewise progression with randomness (50-150% of baseline delta)
  */

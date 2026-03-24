@@ -13,6 +13,7 @@ import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
 import { getGameState } from './gameState';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
 import { calculateLandValue, calculateAdjustedLandValue } from '../vineyard/vineyardValueCalc';
+import { calculateBaselineVineYieldForAge } from '../vineyard/vineyardManager';
 import { getPlayerBalance, updatePlayerBalance, setPlayerBalance } from '../user/userBalanceService';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
@@ -300,6 +301,7 @@ export async function applyStartingConditions(
     const startingGrape = condition.startingUnlockedGrape ?? null;
     const startingVineAge = condition.startingVineyard.startingVineAge;
     const isPlanted = startingGrape !== null;
+    const startingVineYield = isPlanted ? calculateBaselineVineYieldForAge(startingVineAge) : 0.02;
 
     // Determine initial status based on current season (uses shared logic from vineyardService)
     const vineyardStatus = getPlantedVineyardStatus(isPlanted);
@@ -320,7 +322,7 @@ export async function applyStartingConditions(
         grape_variety: startingGrape,
         vine_age: isPlanted ? startingVineAge : null,
         ripeness: 0,
-        vine_yield: 0.02,
+        vine_yield: startingVineYield,
         vineyard_health: 0.6, // Default starting health
         vineyard_prestige: 0,
         land_value: adjustedLandValuePerHectare, // Use adjusted value if planted, base value if not
