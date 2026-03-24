@@ -123,9 +123,31 @@ const completionHandlers: Record<WorkCategory, (activity: Activity) => Promise<v
   },
 
   [WorkCategory.ADMINISTRATION_AND_RESEARCH]: async (activity: Activity) => {
-    // For now, all activities in this category are treated as research or generic maintenance
-    // If we distinguish them, we check activity.type or params
-    await getResearchUpgradeFeature().workflow.completeResearch(activity);
+    const activityType = typeof activity.params?.type === 'string'
+      ? activity.params.type.toLowerCase()
+      : '';
+    const isBookkeepingActivity =
+      activityType === 'bookkeeping' ||
+      activity.title.includes('Bookkeeping') ||
+      (activity.params?.prevSeason !== undefined && activity.params?.prevYear !== undefined);
+
+    if (isBookkeepingActivity) {
+      await completeBookkeeping(activity);
+      return;
+    }
+
+    const isResearchActivity =
+      activityType === 'research' ||
+      typeof activity.params?.researchId === 'string';
+
+    if (isResearchActivity) {
+      await getResearchUpgradeFeature().workflow.completeResearch(activity);
+      return;
+    }
+
+    console.warn(
+      `Unknown administration/research activity type for ${activity.id}; no completion handler executed.`
+    );
   },
 
   [WorkCategory.STAFF_SEARCH]: async (activity: Activity) => {

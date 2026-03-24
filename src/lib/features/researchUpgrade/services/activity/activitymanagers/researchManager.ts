@@ -76,13 +76,21 @@ export async function startResearch(projectId: string): Promise<string | null> {
  */
 export async function completeResearch(activity: Activity): Promise<void> {
       try {
-            const projectId = activity.params.researchId as string;
-            const project = getResearchProject(projectId);
+            const projectId = activity.params?.researchId as string | undefined;
+            const activityType = typeof activity.params?.type === 'string' ? activity.params.type.toLowerCase() : '';
+
+            // Ignore non-research activities that share category routes.
+            if (!projectId && activityType && activityType !== 'research') {
+                  return;
+            }
+
+            const project = projectId ? getResearchProject(projectId) : undefined;
 
             if (!project) {
                   console.error('No research project found in activity params');
                   return;
             }
+            const resolvedProjectId = project.id;
 
             // Grant monetary reward (for grants)
             if (project.rewardAmount && project.rewardAmount > 0) {
@@ -96,7 +104,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
 
             // Grant prestige reward
             if (project.prestigeReward && project.prestigeReward > 0) {
-                  await addResearchPrestigeEvent(project.title, projectId, project.prestigeReward);
+                  await addResearchPrestigeEvent(project.title, resolvedProjectId, project.prestigeReward);
             }
 
             // Build completion message
@@ -129,7 +137,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
                   
                   // Record the research completion in database (always, even if no unlocks)
                   await getResearchUpgradeFeature().setup.grantResearchUnlock({
-                        researchId: projectId,
+                        researchId: resolvedProjectId,
                         companyId,
                         gameDate,
                         absoluteWeeks,

@@ -54,6 +54,7 @@ export async function checkAndTriggerBookkeeping(
         totalWork,
         activityDetails,
         params: {
+          type: 'bookkeeping',
           prevSeason: seasonData.prevSeason,
           prevYear: seasonData.prevYear,
           transactionCount: seasonData.transactionCount,

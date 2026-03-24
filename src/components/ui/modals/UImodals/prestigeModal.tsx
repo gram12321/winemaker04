@@ -67,7 +67,7 @@ type CalculationData =
  */
 interface PrestigeModalProps extends DialogProps {
   totalPrestige: number;
-  eventBreakdown: PrestigeEvent[];
+  eventBreakdown?: PrestigeEvent[];
   companyPrestige?: number;
   vineyardPrestige?: number;
   vineyards?: Array<{
@@ -82,11 +82,26 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   isOpen,
   onClose,
   totalPrestige,
-  eventBreakdown,
+  eventBreakdown: rawEventBreakdown,
   companyPrestige = 0,
   vineyardPrestige = 0,
-  vineyards = []
+  vineyards: rawVineyards = []
 }) => {
+  const eventBreakdown = Array.isArray(rawEventBreakdown)
+    ? rawEventBreakdown.filter((event): event is PrestigeEvent => Boolean(event && typeof event.type === 'string'))
+    : [];
+
+  const vineyards = Array.isArray(rawVineyards)
+    ? rawVineyards
+      .filter((vineyard): vineyard is NonNullable<typeof rawVineyards>[number] => Boolean(vineyard && typeof vineyard.id === 'string'))
+      .map((vineyard) => ({
+        ...vineyard,
+        events: Array.isArray(vineyard.events)
+          ? vineyard.events.filter((event): event is PrestigeEvent => Boolean(event && typeof event.type === 'string'))
+          : []
+      }))
+    : [];
+
   // State initialization
   const [selectedVineyard, setSelectedVineyard] = useState<string>('all');
   const [selectedWine, setSelectedWine] = useState<string>('all');
@@ -134,7 +149,10 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
     }
   };
 
-  const formatAmount = (amount: number) => formatNumber(amount, { decimals: 2, forceDecimals: true });
+  const formatAmount = (amount: number | null | undefined) => {
+    const safeAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
+    return formatNumber(safeAmount, { decimals: 2, forceDecimals: true });
+  };
 
   // Memoized CalculationTooltip component
   const CalculationTooltip = useCallback(({ children, calculationData }: { children: React.ReactNode; calculationData: CalculationData }) => {
@@ -659,10 +677,12 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
   };
 
   // Helper function to group events by type and feature name
-  const groupEventsByTypeAndFeature = (events: PrestigeEvent[]) => {
+  const groupEventsByTypeAndFeature = (events: PrestigeEvent[] = []) => {
     const groups = new Map<string, number>();
 
-    for (const event of events) {
+    for (const event of events ?? []) {
+      if (!event || typeof event.type !== 'string') continue;
+
       if (event.type === 'wine_feature' && event.metadata) {
         const metadata: any = event.metadata;
         const featureName = metadata.featureName || 'Unknown Feature';
