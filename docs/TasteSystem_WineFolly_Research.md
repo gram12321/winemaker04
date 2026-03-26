@@ -94,6 +94,8 @@ Flavor families can hold deeper descriptors. Example mapping:
 
 6. Fault descriptors:
 - volatile acidity, reductive sulfur, oxidized/cooked
+- Fault flavor output is derived from Feature state/events; the Feature system remains simulation source of truth for fault and non-fault behavior.
+- Features modify declared targets (structure channels, flavor descriptors, and/or anchors), then indexes are recomputed from those results.
 
 ### Structure Channels (renamed from Balance channels)
 
@@ -143,6 +145,7 @@ interface TasteMetrics {
 ## Hidden Wine Anchors (Expanded Core Design)
 
 All anchor ideas are part of the main design (not split into v1/v1.5 tiers).
+Terroir/process influences should prefer an anchor-mediated path as canonical flow; direct and anchor paths are only combined when explicitly marked as intentional stacking.
 
 ### Chemical Anchors
 
@@ -170,6 +173,8 @@ All anchor ideas are part of the main design (not split into v1/v1.5 tiers).
 9. `diurnalShift`
 10. `vineyardHealth`
 
+These anchor effects should not be duplicated by parallel direct modifiers on the same target unless intentional stacking is declared and tuned.
+
 ### Process Anchors
 
 1. `harvestTiming`
@@ -180,6 +185,8 @@ All anchor ideas are part of the main design (not split into v1/v1.5 tiers).
 6. `leesContact`
 7. `bottleAgingState`
 8. `featureHistory` (noble rot, oxidation, green flavor, etc.)
+
+Anchor entries should carry status in implementation (`active`, `derived_partial`, `placeholder_todo`) so not-yet-implemented concepts stay explicit design intent.
 
 ### Game-Concept Connections
 
@@ -199,6 +206,10 @@ Anchors are directly linked to existing gameplay concepts:
 
 5. Altitude and future wind/weather systems:
 - modify anchor drift and flavor/structure transformations.
+6. Source-impact registry:
+- Maintain a source -> target path map (`direct`, `anchor`, or intentional stacked) for migration safety and to avoid accidental double influence.
+7. Implementation visibility:
+- Explicitly mark placeholder anchors (for example `glycerolMouthfeel`, `windExposure`, `oakProgram`, `leesContact`) with `placeholder_todo` status until runtime systems exist.
 
 ## Synergy/Clash Architecture (Can Replace Current Rules)
 
@@ -274,11 +285,12 @@ tasteIndex = clamp01(
 1. Initialize anchors from grape + vineyard + agricultural state + process choices.
 2. Compute structure channels under anchor constraints.
 3. Compute `structureIndex` (renamed from balance index).
-4. Generate flavor descriptor vector (primary/secondary/tertiary transforms).
-5. Aggregate descriptor -> family vectors.
-6. Run flavor synergy/clash engine.
-7. Compute `tasteIndex` from flavor profile + harmony/complexity/intensity.
-8. Compose final wine score from `structureIndex` and `tasteIndex`.
+4. Apply active feature effects (fault and non-fault) into declared target paths.
+5. Generate flavor descriptor vector (primary/secondary/tertiary transforms).
+6. Aggregate descriptor -> family vectors (including `faults` family from feature-informed descriptors).
+7. Run flavor synergy/clash engine.
+8. Compute `tasteIndex` from flavor profile + harmony/complexity/intensity.
+9. Compose final wine score from `structureIndex` and `tasteIndex`.
 
 ## Suggested File-Level Architecture
 
