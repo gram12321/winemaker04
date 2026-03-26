@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Vineyard, WineBatch } from '@/lib/types/types';
-import { GrapeQualityFactorsDisplay } from './grapeQualityBar';
-import { getVineyardGrapeQualityFactors, getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
+import { LandValueModifierFactorsDisplay } from './landValueModifierBar';
+import { getVineyardLandValueModifierFactors, getMaxLandValue } from '@/lib/services/wine/winescore/landValueModifierCalculation';
 import { getFeatureImpacts } from '@/lib/services/wine/features/featureService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber, formatPercent, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
-import { getGrapeQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
+import { getQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
 
-interface GrapeQualityFactorsBreakdownProps {
+interface LandValueModifierFactorsBreakdownProps {
   vineyard?: Vineyard;
   wineBatch?: WineBatch;
   className?: string;
   showFactorDetails?: boolean;
 }
 
-export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdownProps> = ({
+export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactorsBreakdownProps> = ({
   vineyard,
   wineBatch,
   className = "",
@@ -52,34 +52,34 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
     }
   }, [wineBatch, vineyard]);
 
-  // Get grape quality factors from centralized calculation
-  const getGrapeQualityFactors = () => {
+  // Get land-value modifier factors from centralized calculation
+  const getLandValueModifierFactors = () => {
     if (vineyard) {
-      return getVineyardGrapeQualityFactors(vineyard);
+      return getVineyardLandValueModifierFactors(vineyard);
     } else if (wineBatch && wineBatchVineyard) {
 
-      return getVineyardGrapeQualityFactors(wineBatchVineyard);
+      return getVineyardLandValueModifierFactors(wineBatchVineyard);
     } else if (wineBatch) {
 
-      throw new Error(`Vineyard data not found for wine batch ${wineBatch.id}. Cannot calculate grape quality factors.`);
+      throw new Error(`Vineyard data not found for wine batch ${wineBatch.id}. Cannot calculate land-value modifier factors.`);
     }
     
     // No vineyard or wine batch provided - fail hard
-    throw new Error('No vineyard or wine batch provided. Cannot calculate grape quality factors.');
+    throw new Error('No vineyard or wine batch provided. Cannot calculate land-value modifier factors.');
   };
 
-  // Get grape quality factors with error handling
-  let factors: any, rawValues: any, grapeQualityScore: number, grapeQualityCategory: string;
-  const baseQualityFromBatch = wineBatch?.bornGrapeQuality;
+  // Get land-value modifier factors with error handling
+  let factors: any, rawValues: any, landValueModifierScore: number, landValueCategory: string;
+  const baseQualityFromBatch = wineBatch?.bornTasteIndex;
   
   try {
-    const grapeQualityData = getGrapeQualityFactors();
-    factors = grapeQualityData.factors;
-    rawValues = grapeQualityData.rawValues;
+    const landValueModifierData = getLandValueModifierFactors();
+    factors = landValueModifierData.factors;
+    rawValues = landValueModifierData.rawValues;
 
 
-    grapeQualityScore = Math.max(0, Math.min(1, grapeQualityData.grapeQualityScore));
-    grapeQualityCategory = getGrapeQualityCategory(grapeQualityScore);
+    landValueModifierScore = Math.max(0, Math.min(1, landValueModifierData.landValueModifierScore));
+    landValueCategory = getQualityCategory(landValueModifierScore);
   } catch (error) {
 
     return (
@@ -88,9 +88,9 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
           <div className="flex items-center gap-2 text-red-800">
             <span className="text-red-600">⚠️</span>
             <div>
-              <h3 className="font-medium">Grape Quality Analysis Unavailable</h3>
+              <h3 className="font-medium">Land Value Modifier Analysis Unavailable</h3>
               <p className="text-sm text-red-600 mt-1">
-                {error instanceof Error ? error.message : 'Unable to calculate grape quality factors.'}
+                {error instanceof Error ? error.message : 'Unable to calculate land-value modifier factors.'}
               </p>
             </div>
           </div>
@@ -101,18 +101,18 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
 
   return (
     <div className={`space-y-4 ${className}`}>
-        {/* Grape Quality Score Overview */}
+        {/* Land Value Modifier Overview */}
         <div className="p-3 bg-white rounded border border-blue-300">
           <div className="text-sm">
             <div className="flex justify-between mb-1">
-              <span>Grape Quality Score:</span>
-              <span className={`font-mono ${getColorClass(grapeQualityScore)}`}>
-                {formatNumber(grapeQualityScore, { smartDecimals: true })}
+              <span>Land Value Modifier:</span>
+              <span className={`font-mono ${getColorClass(landValueModifierScore)}`}>
+                {formatNumber(landValueModifierScore, { smartDecimals: true })}
               </span>
             </div>
             <div className="flex justify-between mb-1">
-              <span>Grape Quality Category:</span>
-              <span className="font-medium">{grapeQualityCategory}</span>
+              <span>Land Value Category:</span>
+              <span className="font-medium">{landValueCategory}</span>
             </div>
             <UnifiedTooltip
               content={
@@ -145,15 +145,15 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                     <div className="mt-2 pt-2 border-t border-gray-600">
                       <TooltipRow 
                         label="Final Score:" 
-                        value={formatNumber(grapeQualityScore, { smartDecimals: true })}
-                        valueRating={grapeQualityScore}
+                        value={formatNumber(landValueModifierScore, { smartDecimals: true })}
+                        valueRating={landValueModifierScore}
                         monospaced
                       />
                     </div>
                   </TooltipSection>
                 </div>
               }
-              title="Grape Quality Calculation"
+              title="Land Value Modifier Calculation"
               side="top"
               sideOffset={8}
               className="max-w-xs"
@@ -169,14 +169,14 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
           </div>
         </div>
 
-        {/* Grape Quality Factors Display */}
-        <GrapeQualityFactorsDisplay
+        {/* Land Value Modifier Factors Display */}
+        <LandValueModifierFactorsDisplay
           factors={factors}
           vineyard={vineyard}
           showValues={true}
           rawValues={rawValues}
-          showGrapeQualityScore={false}
-          title="Grape Quality Factors"
+          showLandValueModifierScore={false}
+          title="Land Value Modifier Factors"
           className="bg-white rounded border"
         />
 
@@ -184,7 +184,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
         {wineBatch && (
           <FeatureImpactsSection 
             wineBatch={wineBatch}
-            baseQuality={baseQualityFromBatch ?? grapeQualityScore}
+            baseQuality={baseQualityFromBatch ?? landValueModifierScore}
           />
         )}
 
@@ -250,7 +250,7 @@ export const GrapeQualityFactorsBreakdown: React.FC<GrapeQualityFactorsBreakdown
                                         />
 
                                         <div className="text-xs font-medium mt-2 mb-1 text-purple-300">Global Normalization:</div>
-                                        <div className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the grape quality index calculation.</div>
+                                        <div className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the land value modifier calculation.</div>
                                       </div>
                                     </TooltipSection>
                                   </div>
@@ -679,17 +679,17 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
     (impact) => Math.abs(impact.qualityImpact) >= 0.001
   );
   
-  const currentGrapeQuality = wineBatch.grapeQuality ?? 0;
+  const currentTasteIndex = wineBatch.tasteIndex;
   const totalFeatureImpact = featureImpacts.reduce((sum, impact) => sum + impact.qualityImpact, 0);
-  const derivedBaseline = clamp01(currentGrapeQuality - totalFeatureImpact);
+  const derivedBaseline = clamp01(currentTasteIndex - totalFeatureImpact);
   
-  const providedBaseline = baseQuality ?? wineBatch.bornGrapeQuality ?? derivedBaseline;
+  const providedBaseline = baseQuality ?? wineBatch.bornTasteIndex ?? derivedBaseline;
   const shouldFallbackToDerived = 
-    Math.abs(currentGrapeQuality - providedBaseline) < 0.0005 &&
+    Math.abs(currentTasteIndex - providedBaseline) < 0.0005 &&
     Math.abs(totalFeatureImpact) >= 0.0005;
   
   const baselineQuality = clamp01(shouldFallbackToDerived ? derivedBaseline : providedBaseline);
-  const qualityDifference = currentGrapeQuality - baselineQuality;
+  const qualityDifference = currentTasteIndex - baselineQuality;
   
   if (featureImpacts.length === 0) {
     return (
@@ -699,7 +699,7 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
             <span className="font-medium">Feature Impacts:</span>
             <span className="text-gray-500">None</span>
           </div>
-          <div className="text-xs text-gray-500">No wine features currently affecting grape quality</div>
+          <div className="text-xs text-gray-500">No wine features currently affecting taste index</div>
         </div>
       </div>
     );
@@ -726,11 +726,11 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
         </div>
         
         <div className="flex justify-between text-lg font-bold">
-          <span>Final Grape Quality:</span>
-          <span className={`font-mono ${getColorClass(currentGrapeQuality)}`}>
-            {formatNumber(currentGrapeQuality, { decimals: 2, forceDecimals: true })}
+          <span>Final Taste Index:</span>
+          <span className={`font-mono ${getColorClass(currentTasteIndex)}`}>
+            {formatNumber(currentTasteIndex, { decimals: 2, forceDecimals: true })}
             <span className="text-sm font-normal ml-2">
-              ({getGrapeQualityCategory(currentGrapeQuality)})
+              ({getQualityCategory(currentTasteIndex)})
             </span>
           </span>
         </div>
@@ -758,3 +758,6 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
     </div>
   );
 }
+
+
+

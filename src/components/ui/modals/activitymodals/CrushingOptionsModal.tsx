@@ -375,8 +375,8 @@ MAX PRESSURE BY METHOD:
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-blue-700">Current Quality:</span>
-                  <span className={`font-mono ${getColorClass(batch?.grapeQuality || 0)}`}>
-                    {formatNumber((batch?.grapeQuality || 0) * 100, { smartDecimals: true })}%
+                  <span className={`font-mono ${getColorClass(batch?.tasteIndex || 0)}`}>
+                    {formatNumber((batch?.tasteIndex || 0) * 100, { smartDecimals: true })}%
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -387,8 +387,8 @@ MAX PRESSURE BY METHOD:
                 </div>
                 <div className="flex justify-between border-t border-blue-300 pt-1">
                   <span className="text-blue-800 font-medium">After Crushing:</span>
-                  <span className={`font-mono font-medium ${getColorClass(Math.max(0, Math.min(1, (batch?.grapeQuality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))))}`}>
-                    {formatNumber(Math.max(0, Math.min(1, (batch?.grapeQuality || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100, { smartDecimals: true })}%
+                  <span className={`font-mono font-medium ${getColorClass(Math.max(0, Math.min(1, (batch?.tasteIndex || 0) + calculatePressingQualityPenalty(options.pressingIntensity))))}`}>
+                    {formatNumber(Math.max(0, Math.min(1, (batch?.tasteIndex || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100, { smartDecimals: true })}%
                   </span>
                 </div>
               </div>

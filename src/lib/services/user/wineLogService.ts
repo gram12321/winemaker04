@@ -4,6 +4,13 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from './highscoreService';
 import { getGameState, getCurrentCompany } from '../core/gameState';
 import { insertWineLogEntry, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
+import { calculateWineScore, getTasteIndex } from '../wine/winescore/wineScoreCalculation';
+
+const getEntryTasteIndex = (entry: Pick<WineLogEntry, 'tasteIndex'>): number =>
+  entry.tasteIndex;
+
+const getEntryWineScore = (entry: Pick<WineLogEntry, 'wineScore' | 'tasteIndex' | 'balance'>): number =>
+  entry.wineScore ?? ((getEntryTasteIndex(entry) + entry.balance) / 2);
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -22,9 +29,10 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
     // Use bottled snapshots for historical records (immutable values at bottling time)
     // This ensures WineLog reflects the wine's quality at the moment it was bottled,
     // not its current quality which may continue evolving in the cellar
-    const grapeQuality = wineBatch.bottledGrapeQuality ?? wineBatch.grapeQuality;
+    const tasteIndex = wineBatch.bottledTasteIndex ?? getTasteIndex(wineBatch);
+    const landValueModifier = wineBatch.bottledLandValueModifier ?? wineBatch.landValueModifier;
     const balance = wineBatch.bottledBalance ?? wineBatch.balance;
-    const wineScore = wineBatch.bottledWineScore ?? ((grapeQuality + balance) / 2);
+    const wineScore = wineBatch.bottledWineScore ?? calculateWineScore({ ...wineBatch, tasteIndex, balance });
 
     const wineLogData: WineLogData = {
       id: uuidv4(),
@@ -34,7 +42,8 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       grape_variety: wineBatch.grape,
       vintage: wineBatch.harvestStartDate.year,
       quantity: wineBatch.quantity,
-      grape_quality: grapeQuality, // Use bottled snapshot
+      grape_quality: tasteIndex, // Stored in grape_quality column
+      land_value_modifier: landValueModifier,
       balance: balance, // Use bottled snapshot
       wine_score: wineScore, // Use bottled snapshot
       characteristics: wineBatch.characteristics,
@@ -68,7 +77,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
             vintage: wineBatch.harvestStartDate.year,
             grape: wineBatch.grape,
             quantity: wineBatch.quantity,
-            grapeQuality: wineBatch.grapeQuality,
+            tasteIndex,
             balance: wineBatch.balance,
             wineScore: wineScore,
             price: wineBatch.estimatedPrice
@@ -154,12 +163,12 @@ export async function calculateVineyardStats(vineyardId: string): Promise<Vineya
   }
 
   const totalBottles = history.reduce((sum, entry) => sum + entry.quantity, 0);
-  const averageQuality = history.reduce((sum, entry) => sum + entry.grapeQuality, 0) / history.length;
+  const averageQuality = history.reduce((sum, entry) => sum + getEntryTasteIndex(entry), 0) / history.length;
   const averageBalance = history.reduce((sum, entry) => sum + entry.balance, 0) / history.length;
   const averagePrice = history.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / history.length;
   
   const bestVintage = history.reduce((best, entry) => 
-    !best || entry.grapeQuality > best.quality ? { year: entry.vintage, quality: entry.grapeQuality } : best
+    !best || getEntryTasteIndex(entry) > best.quality ? { year: entry.vintage, quality: getEntryTasteIndex(entry) } : best
   , null as { year: number; quality: number } | null);
 
   const mostRecentVintage = history[0]; // Already sorted by bottled date descending
@@ -239,8 +248,8 @@ export function calculateVineyardAnalytics(
   // Production metrics
   const totalBottles = vineyardEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   const totalRevenue = vineyardEntries.reduce((sum, entry) => sum + (entry.quantity * entry.estimatedPrice), 0);
-  const avgQuality = vineyardEntries.reduce((sum, entry) => sum + entry.grapeQuality, 0) / vineyardEntries.length;
-  const avgWineScore = vineyardEntries.reduce((sum, entry) => sum + ((entry.grapeQuality + entry.balance) / 2), 0) / vineyardEntries.length;
+  const avgQuality = vineyardEntries.reduce((sum, entry) => sum + getEntryTasteIndex(entry), 0) / vineyardEntries.length;
+  const avgWineScore = vineyardEntries.reduce((sum, entry) => sum + getEntryWineScore(entry), 0) / vineyardEntries.length;
   const avgPrice = vineyardEntries.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / vineyardEntries.length;
   
   // Find vineyard for hectare calculations
@@ -250,15 +259,15 @@ export function calculateVineyardAnalytics(
   const bottlesPerHectare = totalBottles / hectares;
   
   // Wine score consistency (standard deviation)
-  const wineScores = vineyardEntries.map(e => (e.grapeQuality + e.balance) / 2);
+  const wineScores = vineyardEntries.map(e => getEntryWineScore(e));
   const scoreVariance = wineScores.reduce((sum, s) => sum + Math.pow(s - avgWineScore, 2), 0) / wineScores.length;
   const scoreStdDev = Math.sqrt(scoreVariance);
   const consistencyScore = Math.max(0, 100 - (scoreStdDev * 100));
   
   // Best wine (by wine score)
   const bestWine = vineyardEntries.reduce((best, entry) => {
-    const entryScore = (entry.grapeQuality + entry.balance) / 2;
-    const bestScore = best ? (best.grapeQuality + best.balance) / 2 : 0;
+    const entryScore = getEntryWineScore(entry);
+    const bestScore = best ? getEntryWineScore(best) : 0;
     return !best || entryScore > bestScore ? entry : best;
   });
   
@@ -268,7 +277,7 @@ export function calculateVineyardAnalytics(
     const entries = allWineLogGroups[v.id] || [];
     return {
       id: v.id,
-      avgWineScore: entries.reduce((sum, e) => sum + ((e.grapeQuality + e.balance) / 2), 0) / entries.length,
+      avgWineScore: entries.reduce((sum, e) => sum + getEntryWineScore(e), 0) / entries.length,
       avgPrice: entries.reduce((sum, e) => sum + e.estimatedPrice, 0) / entries.length,
       revenuePerHa: entries.reduce((sum, e) => sum + (e.quantity * e.estimatedPrice), 0) / (v.hectares || 1)
     };
@@ -287,10 +296,10 @@ export function calculateVineyardAnalytics(
   const firstHalf = vineyardEntries.slice(0, midpoint);
   const secondHalf = vineyardEntries.slice(midpoint);
   const firstHalfAvg = firstHalf.length > 0 
-    ? firstHalf.reduce((sum, e) => sum + ((e.grapeQuality + e.balance) / 2), 0) / firstHalf.length 
+    ? firstHalf.reduce((sum, e) => sum + getEntryWineScore(e), 0) / firstHalf.length 
     : 0;
   const secondHalfAvg = secondHalf.length > 0 
-    ? secondHalf.reduce((sum, e) => sum + ((e.grapeQuality + e.balance) / 2), 0) / secondHalf.length 
+    ? secondHalf.reduce((sum, e) => sum + getEntryWineScore(e), 0) / secondHalf.length 
     : 0;
   const scoreTrend = vineyardEntries.length > 1 ? secondHalfAvg - firstHalfAvg : null;
   
@@ -299,7 +308,7 @@ export function calculateVineyardAnalytics(
     if (!acc[entry.vintage]) {
       acc[entry.vintage] = { totalScore: 0, count: 0 };
     }
-    acc[entry.vintage].totalScore += (entry.grapeQuality + entry.balance) / 2;
+    acc[entry.vintage].totalScore += getEntryWineScore(entry);
     acc[entry.vintage].count += 1;
     return acc;
   }, {} as Record<number, { totalScore: number; count: number }>);
@@ -317,7 +326,7 @@ export function calculateVineyardAnalytics(
       if (!acc[entry.grape]) {
         acc[entry.grape] = { scores: [], prices: [], count: 0 };
       }
-      acc[entry.grape].scores.push((entry.grapeQuality + entry.balance) / 2);
+      acc[entry.grape].scores.push(getEntryWineScore(entry));
       acc[entry.grape].prices.push(entry.estimatedPrice);
       acc[entry.grape].count += 1;
       return acc;
@@ -351,7 +360,7 @@ export function calculateVineyardAnalytics(
   );
   
   const avgAgingQuality = agedWinesFromVineyard.length > 0
-    ? agedWinesFromVineyard.reduce((sum, b) => sum + b.grapeQuality, 0) / agedWinesFromVineyard.length
+    ? agedWinesFromVineyard.reduce((sum, b) => sum + getTasteIndex(b), 0) / agedWinesFromVineyard.length
     : null;
   
   return {

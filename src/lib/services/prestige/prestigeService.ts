@@ -6,7 +6,7 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { upsertPrestigeEventBySource, insertPrestigeEvent, listPrestigeEvents, listPrestigeEventsForUI } from '../../database/customers/prestigeEventsDB';
-import { getMaxLandValue } from '../wine/winescore/grapeQualityCalculation';
+import { getMaxLandValue } from '../wine/winescore/landValueModifierCalculation';
 import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/types';
 import { calculateCompanyValue } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
@@ -1113,7 +1113,7 @@ export async function addFeaturePrestigeEvent(
             return calculateCompanyManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.grapeQuality,
+              batch.tasteIndex,
               eventContext.currentCompanyPrestige || 1,
               levelConfig.scalingFactors,
               levelConfig.maxImpact
@@ -1122,7 +1122,7 @@ export async function addFeaturePrestigeEvent(
             return calculateVineyardManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.grapeQuality,
+              batch.tasteIndex,
               eventContext.vineyard?.vineyardPrestige || 1,
               levelConfig.scalingFactors,
               levelConfig.maxImpact
@@ -1187,7 +1187,7 @@ export async function addFeaturePrestigeEvent(
         wineName: `${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         batchSize: batch.quantity,
-        grapeQuality: batch.grapeQuality,
+        tasteIndex: batch.tasteIndex,
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,
@@ -1230,3 +1230,4 @@ export async function addResearchPrestigeEvent(
 
   triggerGameUpdate();
 }
+

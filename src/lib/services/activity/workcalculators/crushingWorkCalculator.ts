@@ -7,6 +7,7 @@ import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
+import { getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 /**
  * Calculate work required for crushing wine batches
@@ -154,7 +155,8 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
     
     // Apply direct quality penalty (if any)
-    const finalQuality = Math.max(0, Math.min(1, batch.grapeQuality + qualityPenalty));
+    const currentTasteIndex = getTasteIndex(batch);
+    const finalTasteIndex = Math.max(0, Math.min(1, currentTasteIndex + qualityPenalty));
 
     // Note: Special features were removed for this iteration
 
@@ -167,14 +169,19 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     };
 
     // Process crushing event triggers (e.g., green flavor, oxidation from fragile grapes)
-    const updatedBatch = { ...batch, characteristics: modifiedCharacteristics, breakdown: combinedBreakdown, grapeQuality: finalQuality };
+    const updatedBatch = {
+      ...batch,
+      characteristics: modifiedCharacteristics,
+      breakdown: combinedBreakdown,
+      tasteIndex: finalTasteIndex
+    };
     const batchWithEventFeatures = await processEventTrigger(
       updatedBatch,
       'crushing',
       { options: crushingOptions, batch: updatedBatch }  // Pass context with options and batch for event triggers
     );
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and grapeQuality
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste index
     // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
     await updateWineBatch(batchId, {
       state: 'must_ready',
@@ -182,7 +189,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      grapeQuality: batchWithEventFeatures.grapeQuality || finalQuality
+      tasteIndex: batchWithEventFeatures.tasteIndex
     });
 
     // Deduct costs if any

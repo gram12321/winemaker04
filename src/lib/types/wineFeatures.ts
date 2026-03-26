@@ -269,7 +269,7 @@ export interface PrestigeConfig {
     
     // For batch/vineyard level
     batchSizeWeight?: number;     // Batch size weight (log scaling)
-    qualityWeight?: number;       // Grape quality weight (linear)
+    qualityWeight?: number;       // Taste index weight (linear)
   };
   
   decayRate: number;    // Weekly decay rate
@@ -315,3 +315,4 @@ export interface FeatureRiskInfo {
   qualityImpact?: number;
   description?: string;
 }
+

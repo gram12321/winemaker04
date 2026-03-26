@@ -251,7 +251,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                             <span>Available: {formatNumber(wine.quantity)} bottles</span>
-                            <span>Quality: {(wine.grapeQuality * 100).toFixed(0)}%</span>
+                            <span>Taste: {(wine.tasteIndex * 100).toFixed(0)}%</span>
                             <span>Balance: {(wine.balance * 100).toFixed(0)}%</span>
                           </div>
                           <div className="flex items-center gap-3 mt-1">

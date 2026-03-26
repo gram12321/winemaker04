@@ -4,7 +4,7 @@ import { getGameState, getCurrentCompany } from '../lib/services/core/gameState'
 import { updateBasePrestigeEvent } from '../lib/services/prestige/prestigeService';
 import { decayPrestigeEventsOneWeek, decayRelationshipBoostsOneWeek } from '../lib/services/prestige/prestigeDecayService';
 import { useGameUpdates } from './useGameUpdates';
-import { getMaxLandValue } from '@/lib/services/wine/winescore/grapeQualityCalculation';
+import { getMaxLandValue } from '@/lib/services/wine/winescore/landValueModifierCalculation';
 import { calculateCompanyValue } from '../lib/services/finance/financeService';
 import { recalculateVineyardValues } from '@/lib/services/vineyard/vineyardManager';
 
@@ -138,3 +138,4 @@ export function usePrestigeUpdates() {
   }, [subscribe]);
 
 }
+

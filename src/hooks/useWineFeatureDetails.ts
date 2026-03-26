@@ -4,10 +4,10 @@ import { getPresentFeaturesSorted, getAllVineyards } from '@/lib/services';
 import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface FeatureDetails {
-  currentGrapeQuality: number;
-  grapeQualityPenalty: number;
+  currentTasteIndex: number;
+  tasteIndexPenalty: number;
   presentFeatures: Array<{ feature: any; config: any }>;
-  hasQualityAffectingFeatures: boolean;
+  hasTasteAffectingFeatures: boolean;
   priceImpact: {
     currentPrice: number;
     priceWithoutFeatures: number;
@@ -30,15 +30,15 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
 
     const calculateFeatureDetails = async () => {
       try {
-        // Use current grape quality (feature effects are already applied)
-        const currentGrapeQuality = wineBatch.grapeQuality;
-        const grapeQualityPenalty = wineBatch.bornGrapeQuality - currentGrapeQuality;
+        const currentTasteIndex = wineBatch.tasteIndex;
+        const baselineTasteIndex = wineBatch.bornTasteIndex;
+        const tasteIndexPenalty = baselineTasteIndex - currentTasteIndex;
         const presentFeatures = getPresentFeaturesSorted(wineBatch);
-        const hasQualityAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);
+        const hasTasteAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);
 
         // Calculate price impact using complete service layer functions (async)
         let priceImpact = null;
-        if (hasQualityAffectingFeatures && grapeQualityPenalty > 0.001) {
+        if (hasTasteAffectingFeatures && tasteIndexPenalty > 0.001) {
           try {
             // Get vineyard data for accurate price calculation
             const vineyards = await getAllVineyards();
@@ -51,7 +51,8 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
               // Calculate price without features (remove all features temporarily)
               const wineWithoutFeatures: WineBatch = {
                 ...wineBatch,
-                features: [] // Remove all features for comparison
+                features: [], // Remove all features for comparison
+                tasteIndex: baselineTasteIndex
               };
               const priceWithoutFeatures = calculateEstimatedPrice(wineWithoutFeatures, vineyard);
               const priceDifference = priceWithoutFeatures - currentPrice;
@@ -68,10 +69,10 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
         }
 
         setFeatureDetails({
-          currentGrapeQuality,
-          grapeQualityPenalty,
+          currentTasteIndex,
+          tasteIndexPenalty,
           presentFeatures,
-          hasQualityAffectingFeatures,
+          hasTasteAffectingFeatures,
           priceImpact
         });
       } catch (error) {

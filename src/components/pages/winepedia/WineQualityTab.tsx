@@ -1,12 +1,12 @@
 import { SimpleCard } from '@/components/ui';
-import { getGrapeQualityInfo, getColorClass, getColorCategory, formatNumber } from '@/lib/utils/utils';
+import { getQualityInfo, getColorClass, getColorCategory, formatNumber } from '@/lib/utils/utils';
 
 export function WineQualityTab() {
   return (
     <div className="space-y-6">
       <SimpleCard
-        title="Grape Quality Categories"
-        description="Understanding grape quality ratings and what they mean for your winery"
+        title="Land Value Modifier Categories"
+        description="Understanding land-value modifier ratings and what they mean for your winery"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -23,10 +23,10 @@ export function WineQualityTab() {
               { min: 0.0, max: 0.1 }
             ].map((quality, index) => {
               const sampleQuality = (quality.min + quality.max) / 2;
-              const qualityInfo = getGrapeQualityInfo(sampleQuality);
+              const qualityInfo = getQualityInfo(sampleQuality);
               const colorClass = getColorClass(sampleQuality);
               const qualityLabel = getColorCategory(sampleQuality);
-              
+
               return (
                 <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
@@ -45,29 +45,29 @@ export function WineQualityTab() {
           </div>
         </div>
       </SimpleCard>
-      
+
       <SimpleCard
         title="Quality Factors"
-        description="What influences grape quality in your winery"
+        description="What influences land value modifier and taste index in your winery"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-semibold text-gray-800 mb-3">Grape Quality</h4>
+              <h4 className="font-semibold text-gray-800 mb-3">Land Value Modifier</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Grape variety characteristics</li>
-                <li>• Vineyard location and terroir</li>
-                <li>• Harvest timing and conditions</li>
-                <li>• Vine age and health</li>
+                <li>- Regional land value and price band</li>
+                <li>- Vineyard prestige and reputation</li>
+                <li>- Altitude and aspect regional fit</li>
+                <li>- Overgrowth and density penalties</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-800 mb-3">Winemaking Process</h4>
+              <h4 className="font-semibold text-gray-800 mb-3">Taste Index (Dynamic)</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Fermentation control and timing</li>
-                <li>• Aging conditions and duration</li>
-                <li>• Wine balance and characteristics</li>
-                <li>• Bottling and storage practices</li>
+                <li>- Harvest-derived baseline characteristics</li>
+                <li>- Fermentation and cellar feature effects</li>
+                <li>- Bottle evolution over time</li>
+                <li>- Interaction with balance in wine score</li>
               </ul>
             </div>
           </div>
@@ -76,3 +76,4 @@ export function WineQualityTab() {
     </div>
   );
 }
+

@@ -201,6 +201,7 @@ export const GREEN_FLAVOR_FEATURE: FeatureConfig = {
       ? 'Strong green flavors'
       : 'Severe green, harsh taste';
     
-    return `Green Flavor: ${severityPercentFormatted}% severity\n\nThis indicates the intensity of green, unripe flavors:\n• ${severityPercentFormatted}% = ${description}\n\nGreen flavors reduce grape quality and marketability.`;
+    return `Green Flavor: ${severityPercentFormatted}% severity\n\nThis indicates the intensity of green, unripe flavors:\n• ${severityPercentFormatted}% = ${description}\n\nGreen flavors reduce taste index and marketability.`;
   }
 };
+

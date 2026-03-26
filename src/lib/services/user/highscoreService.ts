@@ -102,7 +102,7 @@ class HighscoreService {
       'highest_vintage_quantity',
       'most_productive_vineyard',
       'highest_wine_score',
-      'highest_grape_quality',
+      'highest_taste_index',
       'highest_balance',
       'highest_price',
       'lowest_price'
@@ -207,7 +207,7 @@ class HighscoreService {
       vintage: number;
       grape: string;
       quantity: number;
-      grapeQuality: number;
+      tasteIndex: number;
       balance: number;
       wineScore: number;
       price: number;
@@ -244,8 +244,8 @@ class HighscoreService {
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_grape_quality',
-          scoreValue: wineData.grapeQuality
+          scoreType: 'highest_taste_index',
+          scoreValue: wineData.tasteIndex
         },
         {
           ...baseSubmission,
@@ -341,7 +341,7 @@ class HighscoreService {
       'highest_vintage_quantity': 'Highest Single Vintage Quantity',
       'most_productive_vineyard': 'Most Productive Vineyard',
       'highest_wine_score': 'Highest Wine Score',
-      'highest_grape_quality': 'Highest Grape Quality',
+      'highest_taste_index': 'Highest Taste Index',
       'highest_balance': 'Highest Balance',
       'highest_price': 'Highest Price',
       'lowest_price': 'Lowest Price'
@@ -359,7 +359,7 @@ class HighscoreService {
       'highest_vintage_quantity': 'bottles',
       'most_productive_vineyard': 'bottles',
       'highest_wine_score': '%',
-      'highest_grape_quality': '%',
+      'highest_taste_index': '%',
       'highest_balance': '%',
       'highest_price': '€',
       'lowest_price': '€'
@@ -406,3 +406,4 @@ class HighscoreService {
 
 export const highscoreService = new HighscoreService();
 export default highscoreService;
+

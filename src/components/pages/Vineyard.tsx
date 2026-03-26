@@ -69,7 +69,7 @@ const buildTooltipContent = (type: string, data: any) => {
         <div className={tooltipStyles.text}>
           <TooltipSection>
             <p className={tooltipStyles.title}>Ripeness: {formatNumber(value * 100, { smartDecimals: true })}%</p>
-            <p className={tooltipStyles.muted}>Ripeness affects grape quality and harvest yield. Higher ripeness produces better grapes.</p>
+            <p className={tooltipStyles.muted}>Ripeness affects taste index baseline and harvest yield. Higher ripeness produces better grapes.</p>
           </TooltipSection>
           <TooltipSection title="Quality Impact">
             <TooltipRow label="Current Level:" value={value < 0.3 ? 'Very Low' : value < 0.7 ? 'Moderate' : 'Good'} valueRating={value} />
@@ -115,11 +115,11 @@ const buildTooltipContent = (type: string, data: any) => {
           <TooltipSection title="Rating Scale">
             <TooltipRow label="Rating:" value={value < 0.3 ? 'Poor' : value < 0.5 ? 'Below Average' : value < 0.7 ? 'Good' : value < 0.9 ? 'Excellent' : 'Perfect'} valueRating={value} />
             <p className={tooltipStyles.muted}>
-              {value < 0.3 ? 'Poor rating significantly reduces grape quality.'
-               : value < 0.5 ? 'Below average rating reduces grape quality.'
-               : value < 0.7 ? 'Good rating provides decent grape quality.'
-               : value < 0.9 ? 'Excellent rating provides high grape quality.'
-               : 'Perfect rating provides maximum grape quality.'}
+              {value < 0.3 ? 'Poor rating significantly reduces land-value modifier.'
+               : value < 0.5 ? 'Below average rating reduces land-value modifier.'
+               : value < 0.7 ? 'Good rating provides a decent land-value modifier.'
+               : value < 0.9 ? 'Excellent rating provides a high land-value modifier.'
+               : 'Perfect rating provides the maximum land-value modifier.'}
             </p>
           </TooltipSection>
         </div>
@@ -783,7 +783,7 @@ const Vineyard: React.FC = () => {
                             const colors = getBadgeColorClasses(rating);
                             return (
                               <UnifiedTooltip
-                                content={buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects grape quality. Each region has an optimal altitude range for grape growing.' })}
+                                content={buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects land-value modifier. Each region has an optimal altitude range for grape growing.' })}
                                 title="Altitude Rating Details"
                                 side="top"
                                 className="max-w-sm"
@@ -806,7 +806,7 @@ const Vineyard: React.FC = () => {
                             const colors = getBadgeColorClasses(rating);
                             return (
                               <UnifiedTooltip
-                                content={buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and grape quality.' })}
+                                content={buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and land-value modifier.' })}
                                 title="Aspect Rating Details"
                                 side="top"
                                 className="max-w-sm"
@@ -1070,7 +1070,7 @@ const Vineyard: React.FC = () => {
                               const colors = getBadgeColorClasses(rating);
                               return (
                                 <UnifiedTooltip
-                                  content={buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects grape quality. Each region has an optimal altitude range for grape growing.' })}
+                                  content={buildTooltipContent('rating', { label: 'Altitude Rating', value: rating, description: 'Altitude affects land-value modifier. Each region has an optimal altitude range for grape growing.' })}
                                   title="Altitude Rating Details"
                                   side="top"
                                   className="max-w-sm"
@@ -1095,7 +1095,7 @@ const Vineyard: React.FC = () => {
                               const colors = getBadgeColorClasses(rating);
                               return (
                                 <UnifiedTooltip
-                                  content={buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and grape quality.' })}
+                                  content={buildTooltipContent('rating', { label: 'Aspect Rating', value: rating, description: 'Aspect (direction the vineyard faces) affects sun exposure and land-value modifier.' })}
                                   title="Aspect Rating Details"
                                   side="top"
                                   className="max-w-sm"

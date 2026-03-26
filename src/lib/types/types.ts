@@ -140,19 +140,22 @@ export interface WineBatch {
   fermentationProgress?: number; // 0-100% for fermentation tracking
 
   // Wine quality properties (0-1 scale)
-  // Quality lifecycle: born (harvest) → current (evolving) → bottled (snapshot)
-  bornGrapeQuality: number; // Original vineyard quality at harvest (immutable)
+  // Lifecycle: born (harvest) -> current (evolving) -> bottled (snapshot)
+  bornLandValueModifier: number; // Static terroir/land index at harvest (immutable)
+  landValueModifier: number; // Current land-value modifier (static in normal flow)
+  bornTasteIndex: number; // Taste index at harvest (immutable baseline)
+  tasteIndex: number; // Current taste index (modified by features throughout lifecycle)
   bornBalance: number; // Original balance at harvest (immutable)
-  grapeQuality: number; // Current grape quality (modified by features throughout lifecycle)
   balance: number; // Current wine balance (modified by features throughout lifecycle)
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
 
   // Bottling snapshots (frozen values at bottling time for WineLog)
-  bottledGrapeQuality?: number; // Grape quality at bottling (snapshot for historical records)
+  bottledTasteIndex?: number; // Taste index at bottling (snapshot for historical records)
+  bottledLandValueModifier?: number; // Land-value modifier at bottling (snapshot for historical records)
   bottledBalance?: number; // Balance at bottling (snapshot for historical records)
-  bottledWineScore?: number; // Wine score at bottling (snapshot for historical records)
+  bottledWineScore?: number; // Wine score at bottling (taste index + balance) / 2
 
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {
@@ -194,9 +197,10 @@ export interface WineLogEntry {
   grape: GrapeVariety;
   vintage: number; // Year the grapes were harvested
   quantity: number; // Bottles produced
-  grapeQuality: number; // Overall grape quality (0-1)
+  tasteIndex: number; // Dynamic taste index (0-1)
+  landValueModifier: number; // Static terroir/land index (0-1)
   balance: number; // Wine balance/body (0-1)
-  wineScore: number; // Overall wine score (grape quality + balance) / 2
+  wineScore: number; // Overall wine score (taste index + balance) / 2
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
@@ -228,7 +232,7 @@ export interface Customer {
 
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
-  wineTradition: number; // Affects wine grape quality preferences and price premiums
+  wineTradition: number; // Affects wine taste-index preferences and price premiums
   marketShare: number; // Affects order size multipliers (0-1 scale)
 
   // Behavioral multipliers (calculated from characteristics)
@@ -803,7 +807,7 @@ export type AchievementConditionType =
   | 'total_vineyard_value'          // Check if combined vineyard value >= threshold
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
-  | 'wine_grape_quality_threshold'        // Check if wine grape quality >= threshold
+  | 'wine_taste_index_threshold'        // Check if wine taste index >= threshold
   | 'wine_balance_threshold'        // Check if wine balance >= threshold
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold
@@ -978,3 +982,5 @@ export interface GameState {
   loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
   pendingForcedLoanRestructure?: ForcedLoanRestructureOffer | null;
 }
+
+

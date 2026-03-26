@@ -11,6 +11,7 @@ import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpd
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
+import { getTasteIndex } from '../wine/winescore/wineScoreCalculation';
 
 // ===== CONTRACT VALIDATION =====
 
@@ -48,8 +49,8 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
   
   switch (requirement.type) {
     case 'quality':
-      // Use grapeQuality from WineBatch (0-1 scale)
-      const quality = wine.grapeQuality || 0;
+      // "Quality" contract requirement now targets dynamic taste index (0-1 scale)
+      const quality = getTasteIndex(wine);
       if (quality < requirement.value) {
         return {
           isValid: false,

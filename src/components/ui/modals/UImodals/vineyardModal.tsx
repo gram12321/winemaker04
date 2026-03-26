@@ -11,7 +11,7 @@ import { formatNumber, getBadgeColorClasses, getFlagIcon, formatPercent, getColo
 import { getAltitudeRating, getAspectRating, calculateVineyardExpectedYield } from '@/lib/services';
 import { REGION_ALTITUDE_RANGES, REGION_ASPECT_RATINGS, REGION_PRESTIGE_RANKINGS, REGION_PRICE_RANGES } from '@/lib/constants';
 import { getRegionalPriceRange } from '@/lib/services';
-import { getVineyardGrapeQualityFactors } from '@/lib/services/wine/winescore/grapeQualityCalculation';
+import { getVineyardLandValueModifierFactors } from '@/lib/services/wine/winescore/landValueModifierCalculation';
 
 interface VineyardModalProps extends DialogProps {
   vineyard: VineyardType | null;
@@ -576,7 +576,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
           {/* Land Value Factor (detailed) */}
           {(() => {
             try {
-              const qualityData = getVineyardGrapeQualityFactors(vineyard);
+              const qualityData = getVineyardLandValueModifierFactors(vineyard);
               const factors = qualityData.factors;
               return (
                 <Card>
@@ -684,6 +684,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
 };
 
 export default VineyardModal;
+
 
 
 

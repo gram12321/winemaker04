@@ -77,9 +77,9 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         state: batch.state,
         fermentation_progress: Math.round(batch.fermentationProgress || 0),
         fermentation_options: batch.fermentationOptions, 
-        born_grape_quality: batch.bornGrapeQuality ?? batch.grapeQuality,
+        born_grape_quality: batch.bornLandValueModifier,
         born_balance: batch.bornBalance ?? batch.balance,
-        grape_quality: batch.grapeQuality,
+        grape_quality: batch.tasteIndex,
         balance: batch.balance,
         characteristics: batch.characteristics, 
         breakdown: batch.breakdown, 
@@ -124,9 +124,11 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
       const grapeVariety = row.grape_variety as GrapeVariety;
       const grapeData = GRAPE_CONST[grapeVariety] || GRAPE_CONST['Chardonnay']; // Fallback to Chardonnay
       
-      const bornGrapeQuality = row.born_grape_quality ?? row.grape_quality;
+      const bornLandValueModifier = row.born_grape_quality;
       const bornBalance = row.born_balance ?? row.balance;
-      const grapeQuality = row.grape_quality;
+      const tasteIndex = row.grape_quality;
+      const landValueModifier = row.born_grape_quality;
+      const bornTasteIndex = row.born_taste_index ?? row.born_grape_quality ?? row.grape_quality;
       const balance = row.balance;
       
       return {
@@ -138,9 +140,11 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         state: row.state,
         fermentationProgress: row.fermentation_progress || 0,
         fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
-        bornGrapeQuality, // Original grape quality at harvest
+        bornLandValueModifier,
         bornBalance, // Original balance at harvest
-        grapeQuality: grapeQuality,
+        landValueModifier,
+        tasteIndex,
+        bornTasteIndex,
         balance: balance,
         characteristics: row.characteristics || {
           acidity: 0.5,
@@ -234,7 +238,8 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           state: updatedBatch.state,
           fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
           fermentation_options: updatedBatch.fermentationOptions,
-          grape_quality: updatedBatch.grapeQuality,
+          born_grape_quality: updatedBatch.bornLandValueModifier,
+          grape_quality: updatedBatch.tasteIndex,
           balance: updatedBatch.balance,
           characteristics: updatedBatch.characteristics,
           breakdown: updatedBatch.breakdown,

@@ -11,6 +11,7 @@ import { useGameUpdates, useWinePriceCalculator } from '@/hooks';
 import { NavigationProps, LoadingProps } from '@/lib/types/UItypes';
 import { getCurrentCompany } from '@/lib/services';
 import { SALES_CONSTANTS } from '@/lib/constants';
+import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 /**
  * Create minimal customer object for relationship breakdown from order data
@@ -77,7 +78,22 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   const ordersPageSize = 20;
 
   // Use shared price calculator hook for consistent pricing with prestige bonuses
-  const { getAskingPrice } = useWinePriceCalculator();
+  const { getAskingPrice, prestige, vineyards } = useWinePriceCalculator();
+
+  const vineyardById = useMemo(
+    () => new Map(vineyards.map((vineyard) => [vineyard.id, vineyard])),
+    [vineyards]
+  );
+
+  const getBatchForOrder = useCallback((order: WineOrder): WineBatch | null => {
+    const batchFromInventory = allBatches.find((batch) => batch.id === order.wineBatchId);
+    if (batchFromInventory) return batchFromInventory;
+
+    const bottledMatch = bottledWines.find((batch) => batch.id === order.wineBatchId);
+    if (bottledMatch) return bottledMatch;
+
+    return null;
+  }, [allBatches, bottledWines]);
 
   // Helper function to create company-scoped customer key
   const getCustomerKey = (customerId: string): string => {
@@ -122,33 +138,28 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
   );
 
   // Helper function to get asking price for an order
-  const getAskingPriceForOrder = (order: WineOrder): number => {
+  const getAskingPriceForOrder = useCallback((order: WineOrder): number => {
     // Use the asking price at order time if available, otherwise fall back to current asking price
     if (order.askingPriceAtOrderTime !== undefined && order.askingPriceAtOrderTime !== null) {
       return order.askingPriceAtOrderTime;
     }
     
     // Fallback to current asking price for old orders without stored asking price
-    const wineBatch = bottledWines.find(batch => batch.id === order.wineBatchId);
+    const wineBatch = getBatchForOrder(order);
     if (!wineBatch) return 0;
     
     // Use the shared price calculator (includes prestige bonuses)
     return getAskingPrice(wineBatch);
-  };
+  }, [getAskingPrice, getBatchForOrder]);
 
   const getCurrentAskingPriceForOrder = useCallback((order: WineOrder): number => {
-    const batchFromInventory = allBatches.find(b => b.id === order.wineBatchId);
-    if (batchFromInventory) {
-      return getAskingPrice(batchFromInventory);
-    }
-
-    const bottledMatch = bottledWines.find(batch => batch.id === order.wineBatchId);
-    if (bottledMatch) {
-      return getAskingPrice(bottledMatch);
+    const currentBatch = getBatchForOrder(order);
+    if (currentBatch) {
+      return getAskingPrice(currentBatch);
     }
 
     return getAskingPriceForOrder(order);
-  }, [allBatches, bottledWines, getAskingPrice]);
+  }, [getAskingPrice, getAskingPriceForOrder, getBatchForOrder]);
 
   // Define sortable columns for orders
   const orderColumns: SortableColumn<WineOrder>[] = [
@@ -215,9 +226,9 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
 
   // Helper to fetch current inventory for an order's batch
   const getInventoryForOrder = useCallback((order: WineOrder): number => {
-    const batch = allBatches.find(b => b.id === order.wineBatchId);
+    const batch = getBatchForOrder(order);
     return batch ? batch.quantity : 0;
-  }, [allBatches]);
+  }, [getBatchForOrder]);
 
   // Paginate sorted orders
   const paginatedOrders = useMemo(() => {
@@ -605,6 +616,17 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                 paginatedOrders.map((order) => {
                   const orderAskingPrice = getAskingPriceForOrder(order);
                   const currentAskingPrice = getCurrentAskingPriceForOrder(order);
+                  const orderBatch = getBatchForOrder(order);
+                  const orderVineyard = orderBatch ? vineyardById.get(orderBatch.vineyardId) : undefined;
+                  const estimatedPriceBreakdown = orderBatch
+                    ? calculateEstimatedPriceBreakdown(
+                        orderBatch,
+                        orderVineyard,
+                        prestige,
+                        orderVineyard?.vineyardPrestige
+                      )
+                    : null;
+                  const currentEstimatedPrice = estimatedPriceBreakdown?.finalPrice ?? 0;
                   const effectiveAskingPrice = orderAskingPrice || currentAskingPrice;
                   const hasAskingPriceShift = Math.abs(currentAskingPrice - orderAskingPrice) > 0.005;
                   const premiumPercent = effectiveAskingPrice > 0
@@ -784,6 +806,26 @@ const OrdersTab: React.FC<OrdersTabProps> = ({
                                   <div>Order Asking Price: <span className="font-medium">{formatNumber(orderAskingPrice, { currency: true, decimals: 2 })}</span></div>
                                   {hasAskingPriceShift && (
                                     <div>Current Asking Price: <span className="font-medium">{formatNumber(currentAskingPrice, { currency: true, decimals: 2 })}</span></div>
+                                  )}
+                                  {estimatedPriceBreakdown && (
+                                    <>
+                                      <div className="border-t pt-1 mt-1">
+                                        <div className="font-medium">Current Estimated Value</div>
+                                        <div>Estimated Price: <span className="font-medium">{formatNumber(currentEstimatedPrice, { currency: true, decimals: 2 })}</span></div>
+                                        <div>Wine Score: <span className="font-medium">{formatPercent(estimatedPriceBreakdown.wineScore, 1, true)}</span></div>
+                                        <div>Score Curve: <span className="font-medium">{formatNumber(estimatedPriceBreakdown.wineScoreMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                        <div>Land Value Multiplier: <span className="font-medium">{formatNumber(estimatedPriceBreakdown.landValuePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                        {Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005 && (
+                                          <div>Feature Multiplier: <span className="font-medium">{formatNumber(estimatedPriceBreakdown.featurePriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                        )}
+                                        {Math.abs(estimatedPriceBreakdown.companyPrestigeMultiplier - 1) > 0.0005 && (
+                                          <div>Company Prestige: <span className="font-medium">{formatNumber(estimatedPriceBreakdown.companyPrestigeMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                        )}
+                                        {Math.abs(estimatedPriceBreakdown.vineyardPrestigeMultiplier - 1) > 0.0005 && (
+                                          <div>Vineyard Prestige: <span className="font-medium">{formatNumber(estimatedPriceBreakdown.vineyardPrestigeMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
+                                        )}
+                                      </div>
+                                    </>
                                   )}
                                   <div>Customer Multiplier: <span className="font-medium">{formatNumber(order.calculationData.finalPriceMultiplier, { decimals: 3, forceDecimals: true })}x</span></div>
                                   <div>Relationship Bonus: <span className="font-medium">{formatNumber((order.calculationData.relationshipBonusMultiplier ?? 1), { decimals: 3, forceDecimals: true })}x</span></div>

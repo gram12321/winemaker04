@@ -3,7 +3,7 @@ import { WineCharacteristics, Vineyard } from '../../../types/types';
 export interface HarvestInputs {
   baseCharacteristics: WineCharacteristics;
   ripeness: number; // 0-1
-  qualityFactor: number; // 0-1 (vine/grape quality)
+  qualityFactor: number; // 0-1 (land-value modifier input)
   suitability: number; // 0-1 (region × grape suitability)
   altitude: number; // meters
   medianAltitude: number; // meters
@@ -68,11 +68,11 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
     { characteristic: 'aroma', modifier: ripenessCentered * 0.05, description: 'Grape Ripeness' }
   );
 
-  // Quality factor effects (color-aware emphasis)
+  // Land-value modifier effects (color-aware emphasis)
   const q = qualityFactor - 0.5;
-  effects.push({ characteristic: 'body', modifier: q * (grapeColor === 'white' ? 0.18 : 0.15), description: 'Grape Quality' });
-  effects.push({ characteristic: 'aroma', modifier: q * (grapeColor === 'white' ? 0.22 : 0.18), description: 'Grape Quality' });
-  effects.push({ characteristic: 'tannins', modifier: q * (grapeColor === 'red' ? 0.22 : 0.12), description: 'Grape Quality' });
+  effects.push({ characteristic: 'body', modifier: q * (grapeColor === 'white' ? 0.18 : 0.15), description: 'Land Value Modifier' });
+  effects.push({ characteristic: 'aroma', modifier: q * (grapeColor === 'white' ? 0.22 : 0.18), description: 'Land Value Modifier' });
+  effects.push({ characteristic: 'tannins', modifier: q * (grapeColor === 'red' ? 0.22 : 0.12), description: 'Land Value Modifier' });
 
   // Altitude effects
   effects.push(

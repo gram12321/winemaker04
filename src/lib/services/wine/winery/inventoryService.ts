@@ -8,7 +8,7 @@ import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConstants';
-import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
+import { calculateLandValueModifier } from '../winescore/landValueModifierCalculation';
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
@@ -69,8 +69,11 @@ function combineWineBatches(
   const existingWeight = existingBatch.quantity / totalQuantity;
   const newWeight = newQuantity / totalQuantity;
   
-  // Calculate weighted averages for quality properties
-  const combinedQuality = (existingBatch.grapeQuality * existingWeight) + (newQuality * newWeight);
+  // Calculate weighted averages for index properties
+  const existingTasteIndex = existingBatch.tasteIndex;
+  const existingLandValueModifier = existingBatch.landValueModifier;
+  const combinedTasteIndex = (existingTasteIndex * existingWeight) + (newQuality * newWeight);
+  const combinedLandValueModifier = (existingLandValueModifier * existingWeight) + (newQuality * newWeight);
   const combinedBalance = (existingBatch.balance * existingWeight) + (newBalance * newWeight);
   
   // Combine characteristics using weighted averages
@@ -110,7 +113,11 @@ function combineWineBatches(
   return {
     ...existingBatch,
     quantity: totalQuantity,
-    grapeQuality: combinedQuality,
+    bornLandValueModifier: combinedLandValueModifier,
+    bornBalance: combinedBalance,
+    landValueModifier: combinedLandValueModifier,
+    tasteIndex: combinedTasteIndex,
+    bornTasteIndex: combinedTasteIndex,
     balance: combinedBalance,
     characteristics: combinedCharacteristics,
     breakdown: combinedBreakdown
@@ -157,7 +164,7 @@ export async function createWineBatchFromHarvest(
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,
-    qualityFactor: calculateGrapeQuality(vineyard), // Use actual vineyard grape quality instead of hardcoded 0.5
+    qualityFactor: calculateLandValueModifier(vineyard), // Use actual vineyard land-value modifier instead of hardcoded 0.5
     suitability,
     altitude,
     medianAltitude: (minAlt + maxAlt) / 2,
@@ -171,7 +178,7 @@ export async function createWineBatchFromHarvest(
   const balanceResult = calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   
   // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
-  const quality = calculateGrapeQuality(vineyard);
+  const quality = calculateLandValueModifier(vineyard);
   
   // Check for existing compatible wine batch
   const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestStartDate.year);
@@ -225,10 +232,12 @@ export async function createWineBatchFromHarvest(
       state: 'grapes',
       fermentationProgress: 0,
       // Set born values (immutable snapshots at harvest)
-      bornGrapeQuality: quality, // Original vineyard quality
+      bornLandValueModifier: quality,
       bornBalance: balanceResult.score, // Original balance
-      // Set current values (will be modified by features)
-      grapeQuality: quality, // Use vineyard quality (land value, prestige, altitude, etc.)
+      // Set current values (taste evolves with processing/features)
+      landValueModifier: quality,
+      bornTasteIndex: quality,
+      tasteIndex: quality,
       balance: balanceResult.score, // Use calculated balance from wine characteristics
       characteristics,
       breakdown, // Store breakdown data
@@ -311,7 +320,7 @@ function getHarvestEffectDescription(characteristic: string): string {
     case 'acidity':
       return 'Grape Ripeness';
     case 'aroma':
-      return 'Grape Quality';
+      return 'Land Value Modifier';
     case 'body':
       return 'Vineyard Altitude';
     case 'spice':
@@ -324,3 +333,5 @@ function getHarvestEffectDescription(characteristic: string): string {
       return 'Harvest Effects';
   }
 }
+
+

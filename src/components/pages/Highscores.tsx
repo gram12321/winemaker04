@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, Table
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { highscoreService } from '@/lib/services';
 import { type HighscoreEntry, type ScoreType } from '@/lib/database';
-import { formatNumber, formatPercent, getColorClass, getGrapeQualityCategory, getWineBalanceCategory } from '@/lib/utils';
+import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineBalanceCategory } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 interface HighscoresProps extends PageProps, CompanyProps {
@@ -19,7 +19,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     highest_vintage_quantity: [],
     most_productive_vineyard: [],
     highest_wine_score: [],
-    highest_grape_quality: [],
+    highest_taste_index: [],
     highest_balance: [],
     highest_price: [],
     lowest_price: []
@@ -39,7 +39,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       highestVintageQuantityScores,
       mostProductiveVineyardScores,
       highestWineScoreScores,
-      highestGrapeQualityScores,
+      highestTasteIndexScores,
       highestBalanceScores,
       highestPriceScores,
       lowestPriceScores
@@ -49,7 +49,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       highscoreService.getHighscores('highest_vintage_quantity', 50),
       highscoreService.getHighscores('most_productive_vineyard', 50),
       highscoreService.getHighscores('highest_wine_score', 50),
-      highscoreService.getHighscores('highest_grape_quality', 50),
+      highscoreService.getHighscores('highest_taste_index', 50),
       highscoreService.getHighscores('highest_balance', 50),
       highscoreService.getHighscores('highest_price', 50),
       highscoreService.getHighscores('lowest_price', 50)
@@ -61,7 +61,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       highest_vintage_quantity: highestVintageQuantityScores,
       most_productive_vineyard: mostProductiveVineyardScores,
       highest_wine_score: highestWineScoreScores,
-      highest_grape_quality: highestGrapeQualityScores,
+      highest_taste_index: highestTasteIndexScores,
       highest_balance: highestBalanceScores,
       highest_price: highestPriceScores,
       lowest_price: lowestPriceScores
@@ -105,8 +105,8 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         return 'Vineyard Production';
       case 'highest_wine_score':
         return 'Wine Score';
-      case 'highest_grape_quality':
-        return 'Grape Quality';
+      case 'highest_taste_index':
+        return 'Taste Index';
       case 'highest_balance':
         return 'Balance';
       case 'highest_price':
@@ -130,7 +130,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         return '🍇';
       case 'highest_wine_score':
         return '🏆';
-      case 'highest_grape_quality':
+      case 'highest_taste_index':
         return '⭐';
       case 'highest_balance':
         return '⚖️';
@@ -148,12 +148,12 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   ), []);
 
   const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_grape_quality', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
+    ['highest_wine_score', 'highest_taste_index', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
   ), []);
 
   const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number, index: number, totalScores: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
-    if (scoreType === 'highest_wine_score' || scoreType === 'highest_grape_quality' || scoreType === 'highest_balance') {
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index' || scoreType === 'highest_balance') {
       return getColorClass(scoreValue);
     }
     
@@ -170,8 +170,8 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   }, []);
 
   const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
-    if (scoreType === 'highest_wine_score' || scoreType === 'highest_grape_quality') {
-      return getGrapeQualityCategory(scoreValue);
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index') {
+      return getQualityCategory(scoreValue);
     }
     if (scoreType === 'highest_balance') {
       return getWineBalanceCategory(scoreValue);
@@ -497,14 +497,14 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                  {renderHighscoreTable('highest_wine_score')}
                </TabsContent>
 
-               <TabsContent value="highest_grape_quality" className="space-y-4">
+               <TabsContent value="highest_taste_index" className="space-y-4">
                  <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Highest Grape Quality</h3>
+                   <h3 className="text-lg font-semibold">Highest Taste Index</h3>
                    <p className="text-sm text-muted-foreground">
-                     Best grape quality achieved
+                     Best taste index achieved
                    </p>
                  </div>
-                 {renderHighscoreTable('highest_grape_quality')}
+                 {renderHighscoreTable('highest_taste_index')}
                </TabsContent>
 
                <TabsContent value="highest_balance" className="space-y-4">
@@ -556,3 +556,5 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     </div>
   );
 }
+
+

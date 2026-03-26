@@ -21,7 +21,7 @@ interface ProductionHistoryTabProps {
 // Component for combined balance and quality display (historical data)
 const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
   const balancePercentage = formatNumber(entry.balance * 100, { smartDecimals: true });
-  const qualityPercentage = formatNumber(entry.grapeQuality * 100, { smartDecimals: true });
+  const tastePercentage = formatNumber(entry.tasteIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
@@ -29,7 +29,7 @@ const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) 
         <span className="font-medium">Balance:</span> <span className="font-medium">{balancePercentage}%</span>
       </div>
       <div>
-        <span className="font-medium">Quality:</span> <span className="font-medium">{qualityPercentage}%</span>
+        <span className="font-medium">Taste:</span> <span className="font-medium">{tastePercentage}%</span>
       </div>
     </div>
   );
@@ -37,14 +37,14 @@ const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) 
 
 // Component for wine score display with tooltip (historical data)
 const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
-  const wineScore = (entry.grapeQuality + entry.balance) / 2;
+  const wineScore = entry.wineScore ?? ((entry.tasteIndex + entry.balance) / 2);
   
   return (
     <UnifiedTooltip
       content={
         <div className="space-y-1 text-xs">
           <div className="font-semibold">Wine Score Calculation</div>
-          <div>Grape Quality: <span className="font-medium">{formatPercent(entry.grapeQuality, 1, true)}</span></div>
+          <div>Taste Index: <span className="font-medium">{formatPercent(entry.tasteIndex, 1, true)}</span></div>
           <div>Balance: <span className="font-medium">{formatPercent(entry.balance, 1, true)}</span></div>
           <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
         </div>

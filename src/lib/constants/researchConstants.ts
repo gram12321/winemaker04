@@ -190,7 +190,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             complexity: 5,
             benefits: [
                   'Improved vineyard quality assessment',
-                  '+10% grape quality in suitable soils',
+                  '+10% taste index in suitable soils',
                   'Better land purchase decisions'
             ],
             category: 'technology',
@@ -275,3 +275,4 @@ export function getResearchProject(id: string): ResearchProject | undefined {
 export function getResearchProjectsByCategory(category: ResearchProject['category']): ResearchProject[] {
       return RESEARCH_PROJECTS.filter(project => project.category === category);
 }
+

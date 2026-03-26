@@ -15,7 +15,7 @@ export default function Winepedia({ view }: WinepediaProps) {
 
   const tabs = useMemo(() => ([
     { id: 'grapeVarieties', label: 'Grape Varieties', component: GrapeVarietiesTab },
-    { id: 'grapeQuality', label: 'Grape Quality', component: WineQualityTab },
+    { id: 'landValueModifier', label: 'Land Value Modifier', component: WineQualityTab },
     { id: 'dynamicRange', label: 'Dynamic Range', component: DynamicRangeTab },
     { id: 'crossTraitPenalty', label: 'Cross-Trait Penalty', component: CrossTraitPenaltyTab },
     { id: 'customerTypes', label: 'Customer Types', component: CustomerTypesTab },
@@ -80,3 +80,4 @@ export default function Winepedia({ view }: WinepediaProps) {
     </div>
   );
 }
+

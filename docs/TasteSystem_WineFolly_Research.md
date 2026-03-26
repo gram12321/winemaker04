@@ -314,6 +314,19 @@ tasteIndex = clamp01(
 5. Implement new interaction engine (migrating old rule ideas).
 6. Connect Taste tab and contracts/customer preference systems to new flavor outputs.
 
+## Migration Notes (Current Codebase)
+
+1. Finance double-count issue:
+- Status: addressed in current implementation by removing extra quality multiplication on top of `estimatedPrice` in finance asset valuation.
+
+2. Crushing quality penalty reset risk:
+- Status: intentionally deferred to taste-system redesign.
+- Current limitation: feature recomputation rebuilds `tasteIndex` from `bornTasteIndex` baseline, so non-feature process penalties (for example pressing-intensity penalty at crushing) can be overwritten unless carried in baseline/source model.
+- Required in redesign:
+  - explicit source-impact registry path for process penalties (`direct` vs `anchor`),
+  - persistent baseline model for taste inputs (not reconstructed from current value),
+  - deterministic recompute pipeline that preserves process deltas and then applies feature deltas in ordered stages.
+
 ## References (Wine Folly)
 
 - https://winefolly.com/tips/wine-aroma-wheel-100-flavors/

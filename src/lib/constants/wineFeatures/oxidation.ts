@@ -185,7 +185,7 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       ? 'Significant oxidation - clearly affected'
       : 'Severe oxidation - wine may be undrinkable';
     
-    return `Oxidation: ${severityPercentFormatted}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercentFormatted}% = ${description}\n\nOxidation reduces grape quality and can make it unsellable.`;
+    return `Oxidation: ${severityPercentFormatted}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercentFormatted}% = ${description}\n\nOxidation reduces taste index and can make it unsellable.`;
   }
 };
 
@@ -212,3 +212,4 @@ export const OXIDATION_PRESTIGE_DECAY = {
   COMPANY: 0.995,  // ~20 years (1040 weeks)
   VINEYARD: 0.98   // ~3 years (156 weeks)
 } as const;
+

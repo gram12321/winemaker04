@@ -19,6 +19,7 @@ export interface WineLogData {
   vintage: number;
   quantity: number;
   grape_quality: number;
+  land_value_modifier?: number;
   balance: number;
   wine_score: number;
   characteristics: any;
@@ -48,7 +49,8 @@ function mapWineLogFromDB(row: any): WineLogEntry {
     grape: row.grape_variety as GrapeVariety,
     vintage: row.vintage,
     quantity: row.quantity,
-    grapeQuality: row.grape_quality,
+    tasteIndex: row.grape_quality,
+    landValueModifier: row.land_value_modifier ?? 0,
     balance: row.balance,
     wineScore: row.wine_score,
     characteristics: row.characteristics,

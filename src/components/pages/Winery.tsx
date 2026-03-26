@@ -7,7 +7,7 @@ import { Button, CrushingOptionsModal, WineModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
-import { getGrapeQualityCategory, getColorClass, getCharacteristicDisplayName, formatNumber, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
+import { getQualityCategory, getColorClass, getCharacteristicDisplayName, formatNumber, getCharacteristicEffectColorInfo, getCharacteristicEffectColorClass } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
@@ -25,15 +25,15 @@ const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   );
 };
 
-// Component for grape quality category display
-const GrapeQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const qualityCategory = getGrapeQualityCategory(batch.grapeQuality);
-  const colorClass = getColorClass(batch.grapeQuality);
-  const qualityPercentage = formatNumber(batch.grapeQuality * 100, { smartDecimals: true });
+// Component for taste index category display
+const TasteIndexDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const qualityCategory = getQualityCategory(batch.tasteIndex);
+  const colorClass = getColorClass(batch.tasteIndex);
+  const qualityPercentage = formatNumber(batch.tasteIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Grape Quality: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+      Taste Index: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
     </div>
   );
 };
@@ -277,7 +277,7 @@ const Winery: React.FC = () => {
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
                       <WineBatchBalanceDisplay batch={batch} />
-                      <GrapeQualityDisplay batch={batch} />
+                      <TasteIndexDisplay batch={batch} />
                       
                       <div className="text-xs font-medium text-gray-800 mt-3">
                         Current Activity: <span className="text-purple-600">
@@ -371,3 +371,4 @@ const Winery: React.FC = () => {
 };
 
 export default Winery;
+

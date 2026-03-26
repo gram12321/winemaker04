@@ -11,6 +11,7 @@ import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../uti
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
 import { getFeatureImpacts } from '../features/featureService';
 import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
+import { getTasteIndex } from './wineScoreCalculation';
 
 export function getMaxLandValue(): number {
   let maxValue = 0;
@@ -49,7 +50,7 @@ function calculateOvergrowthQualityPenalty(overgrowth: Vineyard['overgrowth']): 
   // Calculate weighted average of overgrowth years
   // Different overgrowth types have different quality impacts
   const overgrowthYears = combineOvergrowthYears(overgrowth, undefined, {
-    vegetation: 1.0,  // High impact - overgrown vines = poor grape quality
+    vegetation: 1.0,  // High impact - overgrown vines = low land-value modifier
     debris: 0.8,      // Medium-high impact - poor drainage = stressed vines
     uproot: 1.2,      // Highest impact - neglected old vines = declining quality
     replant: 1.1      // High impact - over-mature vines = past peak
@@ -71,7 +72,7 @@ function calculateOvergrowthQualityPenalty(overgrowth: Vineyard['overgrowth']): 
 
 /**
  * Calculate density quality penalty based on vine density
- * High density leads to competition for resources, reducing grape quality
+ * High density leads to competition for resources, reducing land-value modifier
  * Progressive system: no penalty at 1500 vines/ha, max penalty at 10000 vines/ha
  * @param density - Vine density (vines/hectare)
  * @returns Quality multiplier (0-1, where 1 = no penalty, 0.5 = 50% penalty)
@@ -92,18 +93,18 @@ function calculateDensityQualityPenalty(density: number): number {
   return Math.max(0.5, Math.min(1.0, penalty));
 }
 
-export function calculateGrapeQuality(vineyard: Vineyard): number {
+export function calculateLandValueModifier(vineyard: Vineyard): number {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue || 50000);
   const boundedVineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
   const densityPenalty = calculateDensityQualityPenalty(vineyard.density || 0);
   
-  const wineQuality = ((normalizedLandValue * 0.6) + (boundedVineyardPrestige * 0.4)) * overgrowthPenalty * densityPenalty;
+  const landValueModifier = ((normalizedLandValue * 0.6) + (boundedVineyardPrestige * 0.4)) * overgrowthPenalty * densityPenalty;
   
-  return Math.max(0, Math.min(1, wineQuality));
+  return Math.max(0, Math.min(1, landValueModifier));
 }
 
-export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
+export function getVineyardLandValueModifierFactors(vineyard: Vineyard): {
   factors: {
     landValue: number;
     vineyardPrestige: number;
@@ -125,7 +126,7 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
     densityPenalty: string;
   };
   grapeSuitabilityComponents: GrapeSuitabilityMetrics | null;
-  grapeQualityScore: number;
+  landValueModifierScore: number;
 } {
   const normalizedLandValue = normalizeLandValue(vineyard.landValue );
   const vineyardPrestige = BoundedVineyardPrestigeFactor(vineyard).boundedFactor;
@@ -150,7 +151,7 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
 
   const overgrowthPenalty = calculateOvergrowthQualityPenalty(vineyard.overgrowth);
   const densityPenalty = calculateDensityQualityPenalty(vineyard.density || 0);
-  const grapeQualityScore = calculateGrapeQuality(vineyard);
+  const landValueModifierScore = calculateLandValueModifier(vineyard);
 
   // Format overgrowth penalty for display
   const overgrowthDisplay = vineyard.overgrowth ? 
@@ -184,15 +185,15 @@ export function getVineyardGrapeQualityFactors(vineyard: Vineyard): {
       densityPenalty: densityDisplay
     },
     grapeSuitabilityComponents,
-    grapeQualityScore
+    landValueModifierScore
   };
 }
 
 // ===== QUALITY BREAKDOWN FOR UI =====
 
-export interface GrapeQualityBreakdown {
-  bornGrapeQuality: number; // Original quality at harvest
-  currentGrapeQuality: number; // Current quality (with feature effects)
+export interface TasteIndexBreakdown {
+  bornTasteIndex: number; // Original quality at harvest
+  currentTasteIndex: number; // Current quality (with feature effects)
   featureImpacts: Array<{
     featureId: string;
     featureName: string;
@@ -204,18 +205,18 @@ export interface GrapeQualityBreakdown {
 }
 
 /**
- * Get detailed grape quality breakdown for UI display
- * Used by GrapeQualityFactorsBreakdown and WineModal components
+ * Get detailed taste index breakdown for UI display
+ * Used by LandValueModifierFactorsBreakdown and WineModal components
  * 
  * @param batch - Wine batch to analyze
  * @returns Comprehensive quality breakdown with feature impacts
  */
-export function getGrapeQualityBreakdown(batch: WineBatch): GrapeQualityBreakdown {
-  const bornGrapeQuality = batch.bornGrapeQuality; // Original quality at harvest
-  const currentGrapeQuality = batch.grapeQuality; // Current quality (with feature effects applied)
+export function getTasteIndexBreakdown(batch: WineBatch): TasteIndexBreakdown {
+  const bornTasteIndex = batch.bornTasteIndex; // Baseline index at harvest
+  const currentTasteIndex = getTasteIndex(batch); // Current taste index (feature effects applied)
   const featureImpacts = getFeatureImpacts(batch);
   
-  const grapeQualityImpacts = featureImpacts.map((impact: any) => ({
+  const tasteIndexImpacts = featureImpacts.map((impact: any) => ({
     featureId: impact.featureId,
     featureName: impact.featureName,
     icon: impact.icon,
@@ -223,13 +224,16 @@ export function getGrapeQualityBreakdown(batch: WineBatch): GrapeQualityBreakdow
     impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
   }));
   
-  const totalFeatureImpact = currentGrapeQuality - bornGrapeQuality;
+  const totalFeatureImpact = currentTasteIndex - bornTasteIndex;
   
   return {
-    bornGrapeQuality,
-    currentGrapeQuality,
-    featureImpacts: grapeQualityImpacts,
+    bornTasteIndex,
+    currentTasteIndex,
+    featureImpacts: tasteIndexImpacts,
     totalFeatureImpact
   };
 }
+
+
+
 

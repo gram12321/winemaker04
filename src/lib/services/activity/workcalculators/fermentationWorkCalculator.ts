@@ -151,7 +151,7 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       features: batchWithEventFeatures.features,
       characteristics: batchWithEventFeatures.characteristics,
       breakdown: batchWithEventFeatures.breakdown,
-      grapeQuality: batchWithEventFeatures.grapeQuality
+      tasteIndex: batchWithEventFeatures.tasteIndex
     });
 
     // Deduct costs if any

@@ -364,7 +364,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
 
 /**
  * Apply feature effects directly to wine batches (safety net)
- * Updates grapeQuality and balance based on present features
+ * Updates taste index and balance based on present features
  * Note: processWeeklyFeatureRisks now applies effects atomically when features change
  * This function acts as a safety net to catch any batches that weren't updated
  * Skips sold-out bottled wines (quantity === 0) as they should not continue developing
@@ -389,14 +389,14 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
     .filter((updatedBatch, index) => {
       // Only include batches that actually changed
       const originalBatch = activeBatches[index];
-      return updatedBatch.grapeQuality !== originalBatch.grapeQuality ||
+      return updatedBatch.tasteIndex !== originalBatch.tasteIndex ||
         updatedBatch.balance !== originalBatch.balance ||
         JSON.stringify(updatedBatch.characteristics) !== JSON.stringify(originalBatch.characteristics);
     })
     .map(updatedBatch => ({
       id: updatedBatch.id,
       updates: {
-        grapeQuality: updatedBatch.grapeQuality,
+        tasteIndex: updatedBatch.tasteIndex,
         balance: updatedBatch.balance,
         characteristics: updatedBatch.characteristics,
         breakdown: updatedBatch.breakdown

@@ -126,6 +126,7 @@ export const BOTTLE_AGING_FEATURE: FeatureConfig = {
       ? 'Well-aged - pronounced complexity'
       : 'Fully matured - maximum aging benefits';
     
-    return `Bottle Aging: ${severityPercentFormatted}% developed\n\nThis shows how much complexity and smoothness has developed through aging:\n• ${severityPercentFormatted}% = ${description}\n\nAging improves grape quality, characteristics, and increases value.`;
+    return `Bottle Aging: ${severityPercentFormatted}% developed\n\nThis shows how much complexity and smoothness has developed through aging:\n• ${severityPercentFormatted}% = ${description}\n\nAging improves taste index, characteristics, and increases value.`;
   }
 };
+

@@ -7,6 +7,10 @@ import { calculateVineyardYield } from '@/lib/services';
 import { Vineyard, GrapeVariety } from '@/lib/types/types';
 import { DEFAULT_VINE_DENSITY } from '@/lib/constants';
 
+const toNumber = (value: unknown): number => (
+  typeof value === 'number' && Number.isFinite(value) ? value : Number(value ?? 0)
+);
+
 export function MathematicalModelsTab() {
   const chartData = useMemo(() => {
     const generateSkewedData = () => {
@@ -339,7 +343,7 @@ export function MathematicalModelsTab() {
             <div>
               <h4 className="font-semibold mb-2">Usage in Game:</h4>
               <div className="space-y-1 text-sm">
-                <div>• <strong>Grape Quality Index</strong> - Converts grape quality score to 0-1 index</div>
+                <div>• <strong>Land Value Modifier Index</strong> - Converts land-value score to 0-1 index</div>
                 <div>• <strong>Customer Market Share</strong> - Generates realistic market share distribution</div>
                 <div>• <strong>Order Rejection Probability</strong> - Calculates rejection probability based on price ratio</div>
               </div>
@@ -352,8 +356,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Output']}
-                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 3, forceDecimals: true }), 'Output']}
+                        labelFormatter={(value) => `Input: ${formatNumber(toNumber(value), { decimals: 2, forceDecimals: true })}`}
                       />
                       <Line type="monotone" dataKey="output" stroke="#3b82f6" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -397,8 +401,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="input" domain={[0, 2000]} tickFormatter={(value) => formatNumber(value, { decimals: 0 })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Normalized']}
-                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 0 })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 3, forceDecimals: true }), 'Normalized']}
+                        labelFormatter={(value) => `Input: ${formatNumber(toNumber(value), { decimals: 0 })}`}
                       />
                       <Line type="monotone" dataKey="normalized" stroke="#2563eb" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -461,8 +465,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Output']}
-                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 3, forceDecimals: true }), 'Output']}
+                        labelFormatter={(value) => `Input: ${formatNumber(toNumber(value), { decimals: 2, forceDecimals: true })}`}
                       />
                       <Line type="monotone" dataKey="output" stroke="#ef4444" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -545,8 +549,8 @@ export function MathematicalModelsTab() {
                         return formatNumber(value, { decimals: 0, forceDecimals: true });
                       }} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 1, forceDecimals: true }) + 'x', 'Multiplier']}
-                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 1, forceDecimals: true }) + 'x', 'Multiplier']}
+                        labelFormatter={(value) => `Input: ${formatNumber(toNumber(value), { decimals: 2, forceDecimals: true })}`}
                       />
                       <Line type="monotone" dataKey="multiplier" stroke="#10b981" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -605,8 +609,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Output']}
-                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 3, forceDecimals: true }), 'Output']}
+                        labelFormatter={(value) => `Input: ${formatNumber(toNumber(value), { decimals: 2, forceDecimals: true })}`}
                       />
                       <Line type="monotone" dataKey="output" stroke="#dc2626" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -665,8 +669,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="prestige" domain={[0, 2000]} tickFormatter={(value) => formatNumber(value, { decimals: 0 })} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Normalized']}
-                        labelFormatter={(value: number) => `Prestige: ${formatNumber(value, { decimals: 0 })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 3, forceDecimals: true }), 'Normalized']}
+                        labelFormatter={(value) => `Prestige: ${formatNumber(toNumber(value), { decimals: 0 })}`}
                       />
                       <Line type="monotone" dataKey="normalized" stroke="#7c3aed" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -736,8 +740,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="input" domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 1, forceDecimals: true })} />
                       <YAxis domain={[0.7, 1.3]} allowDataOverflow={false} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true }) + 'x'} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 2, forceDecimals: true }) + 'x', 'Multiplier']}
-                        labelFormatter={(value: number) => `Input: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 2, forceDecimals: true }) + 'x', 'Multiplier']}
+                        labelFormatter={(value) => `Input: ${formatNumber(toNumber(value), { decimals: 2, forceDecimals: true })}`}
                       />
                       <Line type="monotone" dataKey="multiplier" stroke="#8b5cf6" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -794,8 +798,8 @@ export function MathematicalModelsTab() {
                       <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(value) => `${value}y`} />
                       <YAxis domain={[0, 1]} tickFormatter={(value) => formatNumber(value, { decimals: 2, forceDecimals: true })} />
                       <RechartsTooltip
-                        formatter={(value: number) => [formatNumber(value, { decimals: 3, forceDecimals: true }), 'Modifier']}
-                        labelFormatter={(value: number) => `Age: ${value} years`}
+                        formatter={(value) => [formatNumber(toNumber(value), { decimals: 3, forceDecimals: true }), 'Modifier']}
+                        labelFormatter={(value) => `Age: ${toNumber(value)} years`}
                       />
                       <Line type="monotone" dataKey="modifier" stroke="#f59e0b" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -834,8 +838,8 @@ export function MathematicalModelsTab() {
                     <XAxis dataKey="ripeness" domain={[0, 1]} tickFormatter={(v) => formatNumber(v, { decimals: 1, forceDecimals: true })} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
                     <RechartsTooltip
-                      formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
-                      labelFormatter={(value: number) => `Ripeness: ${formatNumber(value, { decimals: 2, forceDecimals: true })}`}
+                      formatter={(value) => [formatNumber(toNumber(value), { decimals: 0 }), 'Yield (kg)']}
+                      labelFormatter={(value) => `Ripeness: ${formatNumber(toNumber(value), { decimals: 2, forceDecimals: true })}`}
                     />
                     <Line type="monotone" dataKey="yieldKg" stroke="#22c55e" strokeWidth={2} dot={false} />
                   </LineChart>
@@ -851,8 +855,8 @@ export function MathematicalModelsTab() {
                     <XAxis dataKey="age" domain={[0, 200]} tickFormatter={(v) => `${v}y`} />
                     <YAxis tickFormatter={(v) => formatNumber(v, { decimals: 0 }) + ' kg'} />
                     <RechartsTooltip
-                      formatter={(value: number) => [formatNumber(value, { decimals: 0 }), 'Yield (kg)']}
-                      labelFormatter={(value: number) => `Age: ${formatNumber(value, { decimals: 0 })} years`}
+                      formatter={(value) => [formatNumber(toNumber(value), { decimals: 0 }), 'Yield (kg)']}
+                      labelFormatter={(value) => `Age: ${formatNumber(toNumber(value), { decimals: 0 })} years`}
                     />
                     <Line type="monotone" dataKey="yieldKg" stroke="#e11d48" strokeWidth={2} dot={false} />
                   </LineChart>
@@ -897,3 +901,4 @@ export function MathematicalModelsTab() {
     </SimpleCard>
   );
 }
+

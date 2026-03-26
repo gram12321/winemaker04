@@ -21,16 +21,16 @@ export * from './shadCN/avatar';
 export * from './shadCN/dropdown-menu';
 // Component exports (wildcard exports)
 export * from './components/characteristicBar';
-export * from './components/grapeQualityBar';
+export * from './components/landValueModifierBar';
 export * from './components/BalanceScoreBreakdown';
-export * from './components/grapeQualityBreakdown';
+export * from './components/landValueModifierBreakdown';
 export * from './components/CharacteristicSlider';
 export * from './components/StaffSkillBar';
 export * from './components/FeatureDisplay';
 export * from './constraints/ConstraintDisplay';
 
 // Modal exports (wildcard exports where possible)
-export * from './modals/UImodals/grapeQualityBreakdownModal';
+export * from './modals/UImodals/landValueModifierBreakdownModal';
 export * from './modals/activitymodals/LandSearchOptionsModal';
 export * from './modals/activitymodals/LandSearchResultsModal';
 export * from './modals/UImodals/BalanceBreakdownModal';
@@ -55,3 +55,4 @@ export { default as PrestigeModal } from './modals/UImodals/prestigeModal';
 
 // Type exports (for default exports that also export types)
 export type { ActivityOptionField, ActivityWorkEstimate } from './activities/activityOptionsModal';
+

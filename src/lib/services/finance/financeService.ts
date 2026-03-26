@@ -10,6 +10,7 @@ import { companyService } from '../user/companyService';
 import { insertTransaction as insertTransactionDB, loadTransactions as loadTransactionsDB, type TransactionData } from '@/lib/database';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { calculateAbsoluteWeeks } from '@/lib/utils/utils';
+import { calculateLandValuePriceMultiplier } from '../wine/winescore/wineScoreCalculation';
 
 interface FinancialData {
   income: number;
@@ -273,16 +274,17 @@ export const calculateFinancialData = async (
   const wineValue = wineBatches.reduce((sum, batch) => {
     const stageMultiplier = batch.state === 'bottled' ? 1 :
                             batch.state === 'must_ready' || batch.state === 'must_fermenting' ? 0.5 : 0.3;
-    const qualityMultiplier = batch.grapeQuality || 0.5;
-    
-    return sum + (batch.quantity * stageMultiplier * qualityMultiplier * (batch.estimatedPrice || 10));
+
+    // Estimated price already includes wine score and land-value effects; don't multiply quality again.
+    return sum + (batch.quantity * stageMultiplier * (batch.estimatedPrice || 10));
   }, 0);
   
   const grapesValue = wineBatches.reduce((sum, batch) => {
     if (batch.state !== 'grapes') return sum;
-    
-    const qualityMultiplier = batch.grapeQuality || 0.5;
-    return sum + (batch.quantity * qualityMultiplier * 5);
+
+    // Use static terroir influence for grape-stage valuation.
+    const landValuePriceMultiplier = calculateLandValuePriceMultiplier(batch);
+    return sum + (batch.quantity * landValuePriceMultiplier * 5);
   }, 0);
   
   const cashMoney = gameState.money || 0;
@@ -501,16 +503,17 @@ export async function calculateFinancialDataRollingNWeeks(
   const wineValue = wineBatches.reduce((sum, batch) => {
     const stageMultiplier = batch.state === 'bottled' ? 1 :
                             batch.state === 'must_ready' || batch.state === 'must_fermenting' ? 0.5 : 0.3;
-    const qualityMultiplier = batch.grapeQuality || 0.5;
-    
-    return sum + (batch.quantity * stageMultiplier * qualityMultiplier * (batch.estimatedPrice || 10));
+
+    // Estimated price already includes wine score and land-value effects; don't multiply quality again.
+    return sum + (batch.quantity * stageMultiplier * (batch.estimatedPrice || 10));
   }, 0);
   
   const grapesValue = wineBatches.reduce((sum, batch) => {
     if (batch.state !== 'grapes') return sum;
-    
-    const qualityMultiplier = batch.grapeQuality || 0.5;
-    return sum + (batch.quantity * qualityMultiplier * 5);
+
+    // Use static terroir influence for grape-stage valuation.
+    const landValuePriceMultiplier = calculateLandValuePriceMultiplier(batch);
+    return sum + (batch.quantity * landValuePriceMultiplier * 5);
   }, 0);
   
   const cashMoney = gameState.money || 0;

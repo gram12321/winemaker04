@@ -13,7 +13,7 @@ export type ScoreType =
   | 'highest_vintage_quantity'
   | 'most_productive_vineyard'
   | 'highest_wine_score'
-  | 'highest_grape_quality'
+  | 'highest_taste_index'
   | 'highest_balance'
   | 'highest_price'
   | 'lowest_price';
@@ -266,4 +266,5 @@ export const deleteHighscores = async (scoreType?: ScoreType): Promise<{ success
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
 };
+
 

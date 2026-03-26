@@ -98,7 +98,14 @@ const CUSTOMER_TYPE_CONFIGS: Record<CustomerType, CustomerTypeConfig> = {
 // Base pricing and sales constants
 export const SALES_CONSTANTS = {
   // Base rate per bottle for wine pricing calculations
-  BASE_RATE_PER_BOTTLE: 25, // €25 base rate
+  BASE_RATE_PER_BOTTLE: 25, // �25 base rate
+  
+  // Core price model multipliers used by estimated-price calculations
+  PRICE_MULTIPLIERS: {
+    LAND_VALUE_MIN_MULTIPLIER: 0.2,
+    LAND_VALUE_MAX_MULTIPLIER: 3.0,
+    PRESTIGE_MAX_BONUS: 2.5 // +250% at normalized prestige 1.0
+  },
   
   // Maximum price to prevent database overflow (numeric(10,2) field limit)
   MAX_PRICE: 99999999.99, // €99,999,999.99 maximum price per bottle
@@ -174,15 +181,4 @@ export const CUSTOMER_MARKET_SHARE_MULTIPLIERS: Record<CustomerType, number> = {
   'Chain Store': 1.0       // Large chain stores
 } as const;
 
-// Note: Customer name data has been moved to src/lib/constants/names.ts
-// This provides a centralized location for all name generation (vineyards and customers)
 
-// ===== WINE CHARACTERISTICS CONSTANTS =====
-// Note: Wine characteristics constants have been moved to src/lib/constants/grapeConstants.ts
-
-// ===== FUTURE CONSTANTS =====
-// This file can be extended with other game constants as needed:
-// - Vineyard constants (land values, prestige factors)
-// - Winery constants (fermentation rates, aging effects)
-// - Financial constants (loan rates, taxes)
-// - Time constants (season lengths, aging periods)

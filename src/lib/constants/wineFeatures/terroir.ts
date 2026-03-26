@@ -116,6 +116,7 @@ export const TERROIR_FEATURE: FeatureConfig = {
       ? 'Strong development - pronounced terroir'
       : 'Full development - maximum vineyard character';
     
-    return `Terroir Expression: ${severityPercentFormatted}% developed\n\nThis represents how much vineyard character has developed in this wine:\n• ${severityPercentFormatted}% = ${description}\n\nTerroir grows over time and affects grape quality and characteristics.`;
+    return `Terroir Expression: ${severityPercentFormatted}% developed\n\nThis represents how much vineyard character has developed in this wine:\n• ${severityPercentFormatted}% = ${description}\n\nTerroir grows over time and affects taste index and characteristics.`;
   }
 };
+

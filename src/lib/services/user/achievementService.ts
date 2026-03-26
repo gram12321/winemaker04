@@ -115,8 +115,8 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
       return `${num} Hectares`;
 
     // Rating/score thresholds
-    case 'wine_grape_quality_threshold':
-      return `${num} Grape Quality`;
+    case 'wine_taste_index_threshold':
+      return `${num} Taste Index`;
     case 'wine_balance_threshold':
       return `${num} Balance`;
     case 'wine_score_threshold':
@@ -233,7 +233,7 @@ interface AchievementCheckContext {
     hectares: number;
   }>;
   wineLogEntries: Array<{
-    grapeQuality: number;
+    tasteIndex: number;
     balance: number;
     estimatedPrice: number;
     vintage: number;
@@ -361,7 +361,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     totalAchievementsCount,
     vineyards: vineyardData,
     wineLogEntries: allWineLogEntries.map(entry => ({
-      grapeQuality: entry.grapeQuality,
+      tasteIndex: entry.tasteIndex,
       balance: entry.balance,
       estimatedPrice: entry.estimatedPrice,
       vintage: entry.vintage
@@ -606,9 +606,9 @@ function checkAchievementCondition(
         unit: 'varieties'
       };
       
-    case 'wine_grape_quality_threshold':
-      // Check if produced a wine with grape quality rating >= threshold
-      const maxQuality = Math.max(...context.wineLogEntries.map(e => e.grapeQuality), 0);
+    case 'wine_taste_index_threshold':
+      // Check if produced a wine with quality index >= threshold
+      const maxQuality = Math.max(...context.wineLogEntries.map(e => e.tasteIndex), 0);
       return {
         isMet: maxQuality >= (condition.threshold || 0),
         progress: maxQuality,
@@ -628,7 +628,7 @@ function checkAchievementCondition(
       
     case 'wine_score_threshold':
       // Check if produced a wine with wine score >= threshold
-      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.grapeQuality + e.balance) / 2), 0);
+      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.tasteIndex + e.balance) / 2), 0);
       return {
         isMet: maxWineScore >= (condition.threshold || 0),
         progress: maxWineScore,
@@ -1043,4 +1043,5 @@ export function getAchievementsByCategory(category: string): AchievementConfig[]
 export function getAchievementsByLevel(level: number): AchievementConfig[] {
   return ALL_ACHIEVEMENTS.filter(achievement => achievement.achievementLevel === level);
 }
+
 

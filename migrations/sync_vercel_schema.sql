@@ -548,6 +548,7 @@ CREATE TABLE wine_log (
     vintage integer NOT NULL,
     quantity integer NOT NULL,
     grape_quality numeric NOT NULL CHECK (grape_quality >= 0 AND grape_quality <= 1),
+    land_value_modifier numeric CHECK (land_value_modifier >= 0 AND land_value_modifier <= 1),
     balance numeric NOT NULL CHECK (balance >= 0 AND balance <= 1),
     wine_score numeric NOT NULL CHECK (wine_score >= 0 AND wine_score <= 1),
     characteristics jsonb DEFAULT '{"body": 0.5, "aroma": 0.5, "spice": 0.5, "acidity": 0.5, "tannins": 0.5, "sweetness": 0.5}'::jsonb,
@@ -1317,4 +1318,3 @@ CREATE INDEX IF NOT EXISTS idx_company_metrics_history_date ON company_metrics_h
 -- 2. Test your Vercel deployment
 -- 3. Use this file for future schema updates
 -- ============================================================
-

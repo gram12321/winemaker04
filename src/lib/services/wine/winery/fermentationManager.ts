@@ -10,8 +10,7 @@ import { calculateFermentationWork } from '../../activity/workcalculators/fermen
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
-import { calculateGrapeQuality } from '../winescore/grapeQualityCalculation';
-import { loadVineyards } from '../../../database/activities/vineyardDB';
+import { calculateWineScore, getTasteIndex } from '../winescore/wineScoreCalculation';
 
 /**
  * Fermentation Manager
@@ -73,7 +72,9 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   const gameState = getGameState();
 
   // Calculate wine score at bottling for snapshot
-  const bottledWineScore = (batch.grapeQuality + batch.balance) / 2;
+  const bottledWineScore = calculateWineScore(batch);
+  const bottledTasteIndex = getTasteIndex(batch);
+  const bottledLandValueModifier = batch.landValueModifier;
 
   // Preserve all wine batch values and update necessary fields + create bottling snapshots
   const success = await updateInventoryBatch(batchId, {
@@ -85,7 +86,8 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       year: gameState.currentYear || 2024
     },
     // Create immutable snapshots at bottling for historical records (WineLog)
-    bottledGrapeQuality: batch.grapeQuality,
+    bottledTasteIndex,
+    bottledLandValueModifier,
     bottledBalance: batch.balance,
     bottledWineScore: bottledWineScore
   });
@@ -106,11 +108,11 @@ export async function bottleWine(batchId: string): Promise<boolean> {
         // Update batch if features modified characteristics or breakdown
         if (batchWithEventFeatures.characteristics !== bottledBatch.characteristics ||
           batchWithEventFeatures.breakdown !== bottledBatch.breakdown ||
-          batchWithEventFeatures.grapeQuality !== bottledBatch.grapeQuality) {
+          batchWithEventFeatures.tasteIndex !== bottledBatch.tasteIndex) {
           await updateWineBatch(batchId, {
             characteristics: batchWithEventFeatures.characteristics,
             breakdown: batchWithEventFeatures.breakdown,
-            grapeQuality: batchWithEventFeatures.grapeQuality,
+            tasteIndex: batchWithEventFeatures.tasteIndex,
             features: batchWithEventFeatures.features
           });
         }
@@ -167,10 +169,6 @@ export async function processWeeklyFermentation(): Promise<void> {
 
     if (fermentingBatches.length === 0) return;
 
-    // OPTIMIZATION: Load vineyards once before processing all batches
-    const vineyards = await loadVineyards();
-    const vineyardMap = new Map(vineyards.map(v => [v.id, v]));
-
     // OPTIMIZATION: Collect all updates to perform bulk update
     const updates: Array<{ id: string; updates: Partial<WineBatch> }> = [];
 
@@ -187,9 +185,7 @@ export async function processWeeklyFermentation(): Promise<void> {
       // Recalculate balance based on new characteristics
       const balanceResult = calculateWineBalance(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
 
-      // Calculate quality from vineyard factors (using pre-loaded vineyards)
-      const vineyard = vineyardMap.get(batch.vineyardId);
-      const newQuality = vineyard ? calculateGrapeQuality(vineyard) : batch.grapeQuality;
+      const currentTasteIndex = getTasteIndex(batch);
 
       // Combine existing breakdown with new fermentation breakdown
       const combinedBreakdown = {
@@ -204,7 +200,7 @@ export async function processWeeklyFermentation(): Promise<void> {
         id: batch.id,
         updates: {
           characteristics: newCharacteristics,
-          grapeQuality: newQuality,
+          tasteIndex: currentTasteIndex,
           balance: balanceResult.score,
           breakdown: combinedBreakdown
         }

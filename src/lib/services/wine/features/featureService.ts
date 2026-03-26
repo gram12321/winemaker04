@@ -13,6 +13,7 @@ import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
 import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
+import { getTasteIndex } from '../winescore/wineScoreCalculation';
 
 // ===== CORE INTERFACES =====
 
@@ -372,7 +373,8 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   // Filter out feature effects from breakdown (we'll add fresh ones)
   const nonFeatureEffects = existingBreakdownEffects.filter(e => !featureNames.has(e.description));
   
-  let currentGrapeQuality = batch.bornGrapeQuality;
+  const baselineTasteIndex = batch.bornTasteIndex;
+  let currentTasteIndex = baselineTasteIndex;
   let modifiedCharacteristics = { ...baseCharacteristics };
   const breakdownEffects = [...nonFeatureEffects];
   
@@ -382,7 +384,7 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     if (!config) continue;
     
     // Apply quality effect
-    currentGrapeQuality = applyQualityEffect(currentGrapeQuality, batch, config, feature.severity);
+    currentTasteIndex = applyQualityEffect(currentTasteIndex, batch, config, feature.severity);
     
     // Apply characteristic effects
     if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
@@ -407,7 +409,8 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   
   return {
     ...batch,
-    grapeQuality: Math.max(0, Math.min(1, currentGrapeQuality)),
+    tasteIndex: Math.max(0, Math.min(1, currentTasteIndex)),
+    bornTasteIndex: baselineTasteIndex,
     characteristics: modifiedCharacteristics,
     balance: balanceResult.score,
     breakdown: {
@@ -516,9 +519,11 @@ export function previewFeatureRisks(
     grape: context.grape,
     quantity: 0,
     state: 'grapes' as const,
-    bornGrapeQuality: 0,
+    bornLandValueModifier: 0,
     bornBalance: 0,
-    grapeQuality: 0,
+    landValueModifier: 0,
+    tasteIndex: 0,
+    bornTasteIndex: 0,
     balance: 0,
     characteristics: { acidity: 0, aroma: 0, body: 0, spice: 0, sweetness: 0, tannins: 0 },
     estimatedPrice: 0,
@@ -766,7 +771,7 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
  * Also processes pendingFeatures on vineyards (features that develop before harvest)
  * 
  * CRITICAL: Applies feature effects atomically with feature state updates to prevent
- * UI from showing inconsistent state during game tick (features updated but grapeQuality stale)
+ * UI from showing inconsistent state during game tick (features updated but tasteIndex stale)
  */
 export async function processWeeklyFeatureRisks(): Promise<void> {
   try {
@@ -790,7 +795,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
       
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
         // CRITICAL: Apply feature effects immediately to avoid UI showing inconsistent state
-        // This ensures grapeQuality, balance, and characteristics are updated atomically with features
+        // This ensures tasteIndex, balance, and characteristics are updated atomically with features
         const batchWithUpdatedFeatures = { ...batch, features: updatedFeatures };
         const batchWithEffects = applyFeatureEffectsToBatch(batchWithUpdatedFeatures);
         
@@ -798,7 +803,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
           id: batch.id,
           updates: {
             features: updatedFeatures,
-            grapeQuality: batchWithEffects.grapeQuality,
+            tasteIndex: batchWithEffects.tasteIndex,
             balance: batchWithEffects.balance,
             characteristics: batchWithEffects.characteristics,
             breakdown: batchWithEffects.breakdown
@@ -1102,6 +1107,7 @@ export function getNextWineryAction(batch: WineBatch): 'crush' | 'ferment' | 'bo
 function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severity: number): number {
   const effect = config.effects.quality;
   if (!effect) return 0;
+  const tasteIndex = getTasteIndex(batch);
   
   switch (effect.type) {
     case 'linear':
@@ -1111,7 +1117,7 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
       return 0;
       
     case 'power':
-      const penaltyFactor = Math.pow(batch.grapeQuality, effect.exponent!);
+      const penaltyFactor = Math.pow(tasteIndex, effect.exponent!);
       const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
       return -scaledPenalty;
       
@@ -1123,7 +1129,7 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
       
     case 'custom':
       if (effect.calculate) {
-        return effect.calculate(batch.grapeQuality, severity, batch.proneToOxidation);
+        return effect.calculate(tasteIndex, severity, batch.proneToOxidation);
       }
       return 0;
       
@@ -1144,17 +1150,17 @@ function applyModifier(modifier: number | ((severity: number) => number), severi
  * Apply a single feature's quality effect
  */
 function applyQualityEffect(
-  grapeQuality: number,
+  tasteIndex: number,
   batch: WineBatch,
   config: FeatureConfig,
   severity: number
 ): number {
   const effect = config.effects.quality;
-  if (!effect) return grapeQuality;
+  if (!effect) return tasteIndex;
   
   switch (effect.type) {
     case 'power': {
-      const penaltyFactor = Math.pow(grapeQuality, effect.exponent!);
+      const penaltyFactor = Math.pow(tasteIndex, effect.exponent!);
       const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
       
       let severityMultiplier = 1.0;
@@ -1162,32 +1168,32 @@ function applyQualityEffect(
         severityMultiplier = 0.85 - (batch.proneToOxidation * 0.2);
       }
       
-      return grapeQuality * (1 - scaledPenalty) * severityMultiplier;
+      return tasteIndex * (1 - scaledPenalty) * severityMultiplier;
     }
       
     case 'linear': {
       const amount = typeof effect.amount === 'function' 
         ? effect.amount(severity) 
         : (effect.amount! * severity);
-      return grapeQuality + amount;
+      return tasteIndex + amount;
     }
       
     case 'bonus': {
       const bonus = typeof effect.amount === 'function' 
         ? effect.amount(severity) 
         : effect.amount!;
-      return grapeQuality + bonus;
+      return tasteIndex + bonus;
     }
       
     case 'custom': {
       if (effect.calculate) {
-        return effect.calculate(grapeQuality, severity, batch.proneToOxidation);
+        return effect.calculate(tasteIndex, severity, batch.proneToOxidation);
       }
-      return grapeQuality;
+      return tasteIndex;
     }
       
     default:
-      return grapeQuality;
+      return tasteIndex;
   }
 }
 
