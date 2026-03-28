@@ -31,7 +31,7 @@ interface SunExample {
 const DIFFICULTY_COMPONENT_LABELS: Record<keyof GrapeDifficultyComponents, string> = {
   handling: 'Handling',
   yield: 'Yield',
-  balance: 'Balance',
+  structure: 'Structure',
   aging: 'Aging',
   grapeSuitability: 'Grape Suitability',
 };
@@ -397,14 +397,14 @@ export const GrapeInfoView: React.FC<GrapeInfoViewProps> = ({ grapeName, onClose
                             {DIFFICULTY_COMPONENT_LABELS[componentKey]}
                           </div>
                         </UnifiedTooltip>
-                      ) : componentKey === 'balance' ? (
+                      ) : componentKey === 'structure' ? (
                         <UnifiedTooltip
-                          title="Balance Difficulty"
+                          title="Structure Difficulty"
                           content={
                             <div className={tooltipStyles.text}>
-                              <p>Balance difficulty measures how far the grape&apos;s base characteristics sit from the &quot;balanced&quot; sweet spots.</p>
+                              <p>Structure difficulty measures how far the grape&apos;s base characteristics sit from ideal ranges for each channel.</p>
                               <p className="mt-2">The more extreme the natural profile (acidity, body, tannins, etc.), the more work it takes to craft a harmonious wine.</p>
-                              <p className="mt-2">Balance score = average deviation from the balanced characteristic ranges.</p>
+                              <p className="mt-2">Structure index = derived from average deviation from those ideal characteristic ranges.</p>
                             </div>
                           }
                           side="top"

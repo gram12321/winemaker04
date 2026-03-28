@@ -1,24 +1,24 @@
 import { WineCharacteristics } from '@/lib/types/types';
-import { BalanceCalculationResult, CharacteristicCalculation } from '../types/balanceCalculationsTypes';
-import { CharacteristicKey, RuleConfig } from '../types/balanceRulesTypes';
+import { StructureIndexCalculationResult, CharacteristicCalculation } from '../types/structureCalculationsTypes';
+import { CharacteristicKey, RuleConfig } from '../types/structureRulesTypes';
 import { applyDynamicRangeAdjustments } from './rangeCalculator';
 import { calculateRules } from './ruleCalculator';
 import { RULES } from '../config/rules';
 
 /**
- * Calculate wine balance score using the rule algorithm
+ * Calculate wine structure index using the rule algorithm
  * @param characteristics - Wine characteristics object
- * @param baseRanges - Base balanced ranges for each characteristic
+ * @param baseRanges - Base ideal ranges for each characteristic
  * @param rangeConfig - Range adjustment configuration (optional, defaults to empty)
  * @param ruleConfig - Rule configuration (optional, defaults to RULES)
- * @returns Complete balance calculation result
+ * @returns Complete structure index calculation result
  */
-export function calculateWineBalance(
+export function calculateStructureIndex(
   characteristics: WineCharacteristics,
   baseRanges: Record<keyof WineCharacteristics, readonly [number, number]>,
   rangeConfig: any = {},
   ruleConfig: RuleConfig = RULES
-): BalanceCalculationResult {
+): StructureIndexCalculationResult {
   // 1) Derive adjusted ranges using config-driven shifts
   const adjustedRanges = applyDynamicRangeAdjustments(characteristics, baseRanges, rangeConfig);
 
@@ -62,10 +62,10 @@ export function calculateWineBalance(
   const averageDeduction = count > 0 ? (totalDeduction / count) : 0;
 
   // 5) Map to score
-  const balanceScore = Math.max(0, 1 - (averageDeduction * 2));
+  const structureIndex = Math.max(0, 1 - (averageDeduction * 2));
 
   return {
-    score: balanceScore,
+    score: structureIndex,
     qualifies: false,
     adjustedRanges: adjustedRanges
   };
@@ -74,7 +74,7 @@ export function calculateWineBalance(
 /**
  * Calculate detailed breakdown for each characteristic using rule system
  * @param characteristics - Wine characteristics object
- * @param baseRanges - Base balanced ranges for each characteristic
+ * @param baseRanges - Base ideal ranges for each characteristic
  * @param rangeConfig - Range adjustment configuration (optional, defaults to empty)
  * @param ruleConfig - Rule configuration (optional, defaults to RULES)
  * @returns Detailed calculation breakdown for each characteristic

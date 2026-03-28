@@ -1,5 +1,5 @@
 import { WineCharacteristics } from '@/lib/types/types';
-import { RangeAdjustmentConfig, Direction } from '../types/balanceRulesTypes';
+import { RangeAdjustmentConfig, Direction } from '../types/structureRulesTypes';
 
 /**
  * Apply dynamic range adjustments based on wine characteristics

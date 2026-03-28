@@ -1,45 +1,43 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
+import { StructureIndexBreakdown } from '../../components/StructureIndexBreakdown';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
 import { Button } from '../../shadCN/button';
 import { DialogProps } from '@/lib/types/UItypes';
 
 /**
- * Balance Breakdown Modal
- * Modal for displaying detailed wine balance score breakdown
+ * Structure index breakdown modal
  */
 
-interface BalanceBreakdownModalProps extends DialogProps {
+interface StructureIndexBreakdownModalProps extends DialogProps {
   characteristics: WineCharacteristics;
   wineName?: string;
 }
 
-export const BalanceBreakdownModal: React.FC<BalanceBreakdownModalProps> = ({
+export const StructureIndexBreakdownModal: React.FC<StructureIndexBreakdownModalProps> = ({
   isOpen,
   onClose,
   characteristics,
   wineName = "Wine"
 }) => {
-  // Render
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto scrollbar-styled">
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl font-semibold">
-            Balance Score Breakdown - {wineName}
+            Structure Index Breakdown - {wineName}
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Detailed breakdown of wine balance score calculations and characteristics
+            Detailed breakdown of wine structure index calculations and characteristics
           </DialogDescription>
         </DialogHeader>
         
-                <div className="mt-4">
-                  <BalanceScoreBreakdown 
-                    characteristics={characteristics} 
-                    showWineStyleRules={true}
-                  />
-                </div>
+        <div className="mt-4">
+          <StructureIndexBreakdown 
+            characteristics={characteristics} 
+            showWineStyleRules={true}
+          />
+        </div>
         
         <div className="flex justify-end mt-6">
           <Button onClick={onClose} variant="outline">

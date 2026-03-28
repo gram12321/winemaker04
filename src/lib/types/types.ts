@@ -113,11 +113,11 @@ export interface WineCharacteristics {
   tannins: number;      // 0-1 scale
 }
 
-// Balance calculation result interface
-export interface BalanceResult {
-  score: number;        // 0-1 balance score
+// Structure index calculation result
+export interface StructureIndexResult {
+  score: number;        // 0-1 structure index
   qualifies: boolean;   // Whether wine qualifies for any archetype (placeholder)
-  adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from balance calculation
+  adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from structure calculation
 }
 
 // Wine batch state - unified system replacing separate stage/process
@@ -145,8 +145,8 @@ export interface WineBatch {
   landValueModifier: number; // Current land-value modifier (static in normal flow)
   bornTasteIndex: number; // Taste index at harvest (immutable baseline)
   tasteIndex: number; // Current taste index (modified by features throughout lifecycle)
-  bornBalance: number; // Original balance at harvest (immutable)
-  balance: number; // Current wine balance (modified by features throughout lifecycle)
+  bornStructureIndex: number; // Original structure index at harvest (immutable)
+  structureIndex: number; // Current structure index (modified by features throughout lifecycle)
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
@@ -154,8 +154,8 @@ export interface WineBatch {
   // Bottling snapshots (frozen values at bottling time for WineLog)
   bottledTasteIndex?: number; // Taste index at bottling (snapshot for historical records)
   bottledLandValueModifier?: number; // Land-value modifier at bottling (snapshot for historical records)
-  bottledBalance?: number; // Balance at bottling (snapshot for historical records)
-  bottledWineScore?: number; // Wine score at bottling (taste index + balance) / 2
+  bottledStructureIndex?: number; // Structure index at bottling (snapshot for historical records)
+  bottledWineScore?: number; // Wine score at bottling (taste index + structure index) / 2
 
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {
@@ -199,8 +199,8 @@ export interface WineLogEntry {
   quantity: number; // Bottles produced
   tasteIndex: number; // Dynamic taste index (0-1)
   landValueModifier: number; // Static terroir/land index (0-1)
-  balance: number; // Wine balance/body (0-1)
-  wineScore: number; // Overall wine score (taste index + balance) / 2
+  structureIndex: number; // Structure index (0-1)
+  wineScore: number; // Overall wine score (taste index + structure index) / 2
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
@@ -308,12 +308,12 @@ export interface WineOrder {
 // ===== CONTRACT TYPES =====
 
 // Requirement types for contracts
-export type ContractRequirementType = 'quality' | 'minimumVintage' | 'specificVintage' | 'balance' | 'landValue' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicBalance';
+export type ContractRequirementType = 'quality' | 'minimumVintage' | 'specificVintage' | 'structureIndex' | 'landValue' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicDeviation';
 
 // Individual contract requirement
 export interface ContractRequirement {
   type: ContractRequirementType;
-  value: number; // For quality/balance/altitude: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
+  value: number; // For quality/structure index/altitude: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
   params?: {
     minAge?: number; // For minimumVintage requirements
     maxAge?: number; // For minimumVintage requirements (optional)
@@ -808,7 +808,7 @@ export type AchievementConditionType =
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
   | 'wine_taste_index_threshold'        // Check if wine taste index >= threshold
-  | 'wine_balance_threshold'        // Check if wine balance >= threshold
+  | 'wine_structure_index_threshold' // Check if wine structure index >= threshold
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold
   | 'sales_price_percentage'        // Check if sales price is X% over/under estimated

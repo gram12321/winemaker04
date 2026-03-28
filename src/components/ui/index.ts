@@ -22,7 +22,7 @@ export * from './shadCN/dropdown-menu';
 // Component exports (wildcard exports)
 export * from './components/characteristicBar';
 export * from './components/landValueModifierBar';
-export * from './components/BalanceScoreBreakdown';
+export * from './components/StructureIndexBreakdown';
 export * from './components/landValueModifierBreakdown';
 export * from './components/CharacteristicSlider';
 export * from './components/StaffSkillBar';
@@ -33,7 +33,7 @@ export * from './constraints/ConstraintDisplay';
 export * from './modals/UImodals/landValueModifierBreakdownModal';
 export * from './modals/activitymodals/LandSearchOptionsModal';
 export * from './modals/activitymodals/LandSearchResultsModal';
-export * from './modals/UImodals/BalanceBreakdownModal';
+export * from './modals/UImodals/StructureIndexBreakdownModal';
 export * from './modals/UImodals/WarningModal';
 export * from './modals/activitymodals/StaffSearchOptionsModal';
 export * from './modals/activitymodals/StaffSearchResultsModal';

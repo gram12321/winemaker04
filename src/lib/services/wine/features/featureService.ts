@@ -12,7 +12,7 @@ import { getBottleAgingSeverity } from './agingService';
 import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
-import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
+import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { getTasteIndex } from '../winescore/wineScoreCalculation';
 
 // ===== CORE INTERFACES =====
@@ -346,7 +346,7 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
 // ===== EFFECT CALCULATIONS =====
 
 /**
- * Apply feature effects directly to wine batch quality, characteristics, and balance
+ * Apply feature effects directly to wine batch quality, characteristics, and structure index
  * This modifies the batch in-place and should be called during game ticks
  */
 export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
@@ -404,15 +404,15 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     }
   }
   
-  // Recalculate balance with modified characteristics
-  const balanceResult = calculateWineBalance(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+  // Recalculate structure index with modified characteristics
+  const structureIndexResult = calculateStructureIndex(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   
   return {
     ...batch,
     tasteIndex: Math.max(0, Math.min(1, currentTasteIndex)),
     bornTasteIndex: baselineTasteIndex,
     characteristics: modifiedCharacteristics,
-    balance: balanceResult.score,
+    structureIndex: structureIndexResult.score,
     breakdown: {
       effects: breakdownEffects
     }
@@ -520,11 +520,11 @@ export function previewFeatureRisks(
     quantity: 0,
     state: 'grapes' as const,
     bornLandValueModifier: 0,
-    bornBalance: 0,
+    bornStructureIndex: 0,
     landValueModifier: 0,
     tasteIndex: 0,
     bornTasteIndex: 0,
-    balance: 0,
+    structureIndex: 0,
     characteristics: { acidity: 0, aroma: 0, body: 0, spice: 0, sweetness: 0, tannins: 0 },
     estimatedPrice: 0,
     grapeColor: 'red' as const,
@@ -795,7 +795,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
       
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
         // CRITICAL: Apply feature effects immediately to avoid UI showing inconsistent state
-        // This ensures tasteIndex, balance, and characteristics are updated atomically with features
+        // This ensures tasteIndex, structure index, and characteristics are updated atomically with features
         const batchWithUpdatedFeatures = { ...batch, features: updatedFeatures };
         const batchWithEffects = applyFeatureEffectsToBatch(batchWithUpdatedFeatures);
         
@@ -804,7 +804,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
           updates: {
             features: updatedFeatures,
             tasteIndex: batchWithEffects.tasteIndex,
-            balance: batchWithEffects.balance,
+            structureIndex: batchWithEffects.structureIndex,
             characteristics: batchWithEffects.characteristics,
             breakdown: batchWithEffects.breakdown
           }

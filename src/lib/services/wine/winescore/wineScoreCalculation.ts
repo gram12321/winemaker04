@@ -6,7 +6,7 @@ import { clamp01 } from '../../../utils/utils';
 
 export interface EstimatedPriceBreakdown {
   tasteIndex: number;
-  balance: number;
+  structureIndex: number;
   wineScore: number;
   baseRate: number;
   basePrice: number;
@@ -85,8 +85,8 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
 
 export function calculateWineScore(wineBatch: WineBatch): number {
   const tasteIndex = getTasteIndex(wineBatch);
-  const balance = clamp01(wineBatch.balance);
-  return (tasteIndex + balance) / 2;
+  const structureIndex = clamp01(wineBatch.structureIndex);
+  return (tasteIndex + structureIndex) / 2;
 }
 
 function resolvePrestigeMultiplier(prestige?: number): number {
@@ -102,8 +102,8 @@ export function calculateEstimatedPriceBreakdown(
   vineyardPrestige?: number
 ): EstimatedPriceBreakdown {
   const tasteIndex = getTasteIndex(wineBatch);
-  const balance = clamp01(wineBatch.balance);
-  const wineScore = (tasteIndex + balance) / 2;
+  const structureIndex = clamp01(wineBatch.structureIndex);
+  const wineScore = (tasteIndex + structureIndex) / 2;
   const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
   const basePrice = wineScore * baseRate;
   const wineScoreMultiplier = calculateAsymmetricalMultiplier(wineScore);
@@ -121,7 +121,7 @@ export function calculateEstimatedPriceBreakdown(
 
   return {
     tasteIndex,
-    balance,
+    structureIndex,
     wineScore,
     baseRate,
     basePrice,

@@ -18,15 +18,15 @@ interface ProductionHistoryTabProps {
   handleWineDetailsClick: (entry: WineLogEntry) => void;
 }
 
-// Component for combined balance and quality display (historical data)
-const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
-  const balancePercentage = formatNumber(entry.balance * 100, { smartDecimals: true });
+// Component for combined structure index and taste display (historical data)
+const StructureAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
+  const structurePercentage = formatNumber(entry.structureIndex * 100, { smartDecimals: true });
   const tastePercentage = formatNumber(entry.tasteIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
       <div>
-        <span className="font-medium">Balance:</span> <span className="font-medium">{balancePercentage}%</span>
+        <span className="font-medium">Structure:</span> <span className="font-medium">{structurePercentage}%</span>
       </div>
       <div>
         <span className="font-medium">Taste:</span> <span className="font-medium">{tastePercentage}%</span>
@@ -37,7 +37,7 @@ const BalanceAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) 
 
 // Component for wine score display with tooltip (historical data)
 const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
-  const wineScore = entry.wineScore ?? ((entry.tasteIndex + entry.balance) / 2);
+  const wineScore = entry.wineScore ?? ((entry.tasteIndex + entry.structureIndex) / 2);
   
   return (
     <UnifiedTooltip
@@ -45,7 +45,7 @@ const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
         <div className="space-y-1 text-xs">
           <div className="font-semibold">Wine Score Calculation</div>
           <div>Taste Index: <span className="font-medium">{formatPercent(entry.tasteIndex, 1, true)}</span></div>
-          <div>Balance: <span className="font-medium">{formatPercent(entry.balance, 1, true)}</span></div>
+          <div>Structure: <span className="font-medium">{formatPercent(entry.structureIndex, 1, true)}</span></div>
           <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
         </div>
       }
@@ -103,7 +103,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                   <th className="pb-3">Vintage</th>
                   <th className="pb-3">Harvest Period</th>
                   <th className="pb-3">Bottles</th>
-                  <th className="pb-3">Balance & Quality</th>
+                  <th className="pb-3">Taste & Structure</th>
                   <th className="pb-3">Score</th>
                   <th className="pb-3">Price</th>
                   <th className="pb-3">Bottled</th>
@@ -134,7 +134,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                         <div className="font-medium">{entry.quantity} bottles</div>
                       </td>
                       <td className="py-3">
-                        <BalanceAndQualityDisplay entry={entry} />
+                        <StructureAndQualityDisplay entry={entry} />
                       </td>
                       <td className="py-3">
                         <WineScoreDisplay entry={entry} />
@@ -222,7 +222,7 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
 
                   {/* Card Body */}
                   <div className="p-4 space-y-3">
-                    {/* Score and Balance/Quality */}
+                    {/* Score and taste/structure */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-xs text-gray-500 uppercase mb-1">Wine Score</div>
@@ -237,9 +237,9 @@ const ProductionHistoryTab: React.FC<ProductionHistoryTabProps> = ({
                       </div>
                     </div>
                     
-                    {/* Balance & Quality Details */}
+                    {/* Taste & structure details */}
                     <div>
-                      <BalanceAndQualityDisplay entry={entry} />
+                      <StructureAndQualityDisplay entry={entry} />
                     </div>
 
                     <div className="border-t pt-3 space-y-2">

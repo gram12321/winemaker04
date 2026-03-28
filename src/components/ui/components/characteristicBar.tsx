@@ -1,16 +1,16 @@
 import React from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
-import { getColorClass, formatNumber, getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
+import { getColorClass, formatNumber, getWineStructureCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
-import { useWineBalance } from '@/hooks';
+import { useWineStructureIndex } from '@/hooks';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../shadCN/tooltip';
 
 interface CharacteristicBarProps {
   characteristicName: keyof WineCharacteristics;
   label: string;
   value: number;
-  adjustedRanges: [number, number]; // Adjusted ranges from balance calculation (always provided)
+  adjustedRanges: [number, number]; // Adjusted ranges from structure index calculation (always provided)
   showValue?: boolean;
   className?: string;
   // Optional tooltip text to explain deltas (e.g., from harvest debug)
@@ -45,7 +45,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
   const displayValue = Math.max(0, Math.min(1, value));
   const baseDisplay = typeof baseValue === 'number' ? Math.max(0, Math.min(1, baseValue)) : undefined;
   
-  // Use adjustedRanges (always provided from balance calculation)
+  // Use adjustedRanges (always provided from structure calculation)
   const [rMin, rMax] = adjustedRanges;
 
   // Build tooltip content JSX
@@ -59,7 +59,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
     const totalDistance = distanceInside + penalty;
 
     let status = 'Average';
-    if (displayValue >= rMin && displayValue <= rMax) status = 'In balanced range';
+    if (displayValue >= rMin && displayValue <= rMax) status = 'In ideal range';
     else if (displayValue < rMin - 0.2 || displayValue > rMax + 0.2) status = 'Far outside range';
     else status = 'Slightly outside range';
 
@@ -137,7 +137,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
     );
   };
   
-  // Get color class based on whether value is in balanced range
+  // Get color class based on whether value is in the ideal range
   // Uses the balanced strategy from getRangeColor which handles ideal ranges
   const getValueColor = () => {
     return getRangeColor(displayValue, 0, 1, 'balanced', rMin, rMax).text;
@@ -180,7 +180,7 @@ export const CharacteristicBar: React.FC<CharacteristicBarProps> = ({
               className="absolute inset-0 bg-gray-200 rounded-full"
             ></div>
             
-            {/* Adjusted ranges (green) - shows optimal zone from balance calculation */}
+            {/* Adjusted ranges (green) - shows optimal zone from structure calculation */}
             <div 
               className="absolute top-0 bottom-0 bg-green-500/60 rounded-full"
               style={{
@@ -229,10 +229,10 @@ interface WineCharacteristicsDisplayProps {
   tooltips?: Partial<Record<keyof WineCharacteristics, string>>;
   // Optional map of base reference values to show as markers
   baseValues?: Partial<Record<keyof WineCharacteristics, number>>;
-  // Show balance score at the top
-  showBalanceScore?: boolean;
-  // Optional pre-calculated balance value (if not provided, will recalculate from characteristics)
-  balanceValue?: number;
+  // Show structure index at the top
+  showStructureIndex?: boolean;
+  // Optional pre-calculated structure index (if not provided, will recalculate from characteristics)
+  structureIndexValue?: number;
 }
 
 export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProps> = ({
@@ -245,34 +245,33 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
   title = "Wine Characteristics",
   tooltips,
   baseValues,
-  showBalanceScore = false,
-  balanceValue
+  showStructureIndex = false,
+  structureIndexValue
 }) => {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   
-  // Always calculate balance to get adjustedRanges (always defined, equals base ranges if no adjustments)
-  const calculatedBalance = useWineBalance(characteristics);
+  // Always calculate structure index to get adjustedRanges (always defined, equals base ranges if no adjustments)
+  const calculatedStructure = useWineStructureIndex(characteristics);
   
-  // Use provided balance value or calculated balance for score display
-  const balanceResult = balanceValue !== undefined 
-    ? { score: balanceValue, qualifies: true, adjustedRanges: calculatedBalance?.adjustedRanges || {} as any }
-    : calculatedBalance;
+  // Use provided structure value or calculated value for index display
+  const structureIndexResult = structureIndexValue !== undefined 
+    ? { score: structureIndexValue, qualifies: true, adjustedRanges: calculatedStructure?.adjustedRanges || {} as any }
+    : calculatedStructure;
 
-  // Use adjustedRanges from balance calculation (always available since characteristics is provided), override with prop if provided
-  // calculatedBalance.adjustedRanges is always defined when characteristics is provided
-  const effectiveAdjustedRanges = adjustedRangesOverride || calculatedBalance?.adjustedRanges!;
+  // Use adjustedRanges from structure calculation (always available since characteristics is provided), override with prop if provided
+  const effectiveAdjustedRanges = adjustedRangesOverride || calculatedStructure?.adjustedRanges!;
 
   const content = (
     <div className="space-y-1">
-      {/* Balance Score Display */}
-      {showBalanceScore && balanceResult && (
+      {/* Structure index display */}
+      {showStructureIndex && structureIndexResult && (
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium">Current Balance Score:</span>
+          <span className="text-sm font-medium">Current Structure Index:</span>
           <div className="text-right">
-            <div className={`text-2xl font-bold ${getColorClass(balanceResult.score)}`}>
-              {formatNumber(balanceResult.score, { decimals: 2, forceDecimals: true })}
+            <div className={`text-2xl font-bold ${getColorClass(structureIndexResult.score)}`}>
+              {formatNumber(structureIndexResult.score, { decimals: 2, forceDecimals: true })}
             </div>
-            <div className="text-sm text-gray-600">{getWineBalanceCategory(balanceResult.score)}</div>
+            <div className="text-sm text-gray-600">{getWineStructureCategory(structureIndexResult.score)}</div>
           </div>
         </div>
       )}

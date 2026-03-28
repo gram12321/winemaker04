@@ -9,8 +9,8 @@ import { calculateWineScore, getTasteIndex } from '../wine/winescore/wineScoreCa
 const getEntryTasteIndex = (entry: Pick<WineLogEntry, 'tasteIndex'>): number =>
   entry.tasteIndex;
 
-const getEntryWineScore = (entry: Pick<WineLogEntry, 'wineScore' | 'tasteIndex' | 'balance'>): number =>
-  entry.wineScore ?? ((getEntryTasteIndex(entry) + entry.balance) / 2);
+const getEntryWineScore = (entry: Pick<WineLogEntry, 'wineScore' | 'tasteIndex' | 'structureIndex'>): number =>
+  entry.wineScore ?? ((getEntryTasteIndex(entry) + entry.structureIndex) / 2);
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -31,8 +31,8 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
     // not its current quality which may continue evolving in the cellar
     const tasteIndex = wineBatch.bottledTasteIndex ?? getTasteIndex(wineBatch);
     const landValueModifier = wineBatch.bottledLandValueModifier ?? wineBatch.landValueModifier;
-    const balance = wineBatch.bottledBalance ?? wineBatch.balance;
-    const wineScore = wineBatch.bottledWineScore ?? calculateWineScore({ ...wineBatch, tasteIndex, balance });
+    const structureIndexSnapshot = wineBatch.bottledStructureIndex ?? wineBatch.structureIndex;
+    const wineScore = wineBatch.bottledWineScore ?? calculateWineScore({ ...wineBatch, tasteIndex, structureIndex: structureIndexSnapshot });
 
     const wineLogData: WineLogData = {
       id: uuidv4(),
@@ -44,7 +44,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       quantity: wineBatch.quantity,
       grape_quality: tasteIndex, // Stored in grape_quality column
       land_value_modifier: landValueModifier,
-      balance: balance, // Use bottled snapshot
+      structure_index: structureIndexSnapshot,
       wine_score: wineScore, // Use bottled snapshot
       characteristics: wineBatch.characteristics,
       estimated_price: wineBatch.estimatedPrice,
@@ -78,7 +78,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
             grape: wineBatch.grape,
             quantity: wineBatch.quantity,
             tasteIndex,
-            balance: wineBatch.balance,
+            structureIndex: wineBatch.structureIndex,
             wineScore: wineScore,
             price: wineBatch.estimatedPrice
           }
@@ -112,7 +112,7 @@ export interface VineyardStats {
   totalBottles: number;
   totalVintages: number;
   averageQuality: number;
-  averageBalance: number;
+  averageStructureIndex: number;
   averagePrice: number;
   bestVintage?: { year: number; quality: number };
   mostRecentVintage?: WineLogEntry;
@@ -157,14 +157,14 @@ export async function calculateVineyardStats(vineyardId: string): Promise<Vineya
       totalBottles: 0,
       totalVintages: 0,
       averageQuality: 0,
-      averageBalance: 0,
+      averageStructureIndex: 0,
       averagePrice: 0
     };
   }
 
   const totalBottles = history.reduce((sum, entry) => sum + entry.quantity, 0);
   const averageQuality = history.reduce((sum, entry) => sum + getEntryTasteIndex(entry), 0) / history.length;
-  const averageBalance = history.reduce((sum, entry) => sum + entry.balance, 0) / history.length;
+  const averageStructureIndex = history.reduce((sum, entry) => sum + entry.structureIndex, 0) / history.length;
   const averagePrice = history.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / history.length;
   
   const bestVintage = history.reduce((best, entry) => 
@@ -177,7 +177,7 @@ export async function calculateVineyardStats(vineyardId: string): Promise<Vineya
     totalBottles,
     totalVintages: history.length,
     averageQuality,
-    averageBalance,
+    averageStructureIndex,
     averagePrice,
     bestVintage: bestVintage || undefined,
     mostRecentVintage

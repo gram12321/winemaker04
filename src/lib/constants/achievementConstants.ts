@@ -238,15 +238,15 @@ export const WINE_GRAPE_QUALITY_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-// Wine Balance Threshold (realistic for 99.999 max)
-export const WINE_BALANCE_ACHIEVEMENTS = createTieredAchievements(
-  'wine_balance',
-  'Balance Virtuoso',
-  'Produce a wine with balance rating of {threshold}',
+// Wine structure index threshold (realistic for 99.999 max)
+export const WINE_STRUCTURE_INDEX_ACHIEVEMENTS = createTieredAchievements(
+  'wine_structure_index',
+  'Structure Virtuoso',
+  'Produce a wine with structure index rating of {threshold}',
   '⚖️',
   'production',
-  'wine_balance_threshold',
-  [80, 85, 90, 95, 99], // Balance rating: 80, 85, 90, 95, 99 (max ~99.999)
+  'wine_structure_index_threshold',
+  [80, 85, 90, 95, 99], // Structure index rating: 80, 85, 90, 95, 99 (max ~99.999)
   []
 );
 
@@ -474,7 +474,7 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...BOTTLE_PRODUCTION_ACHIEVEMENTS,
   ...DIFFERENT_GRAPES_ACHIEVEMENTS,
   ...WINE_GRAPE_QUALITY_ACHIEVEMENTS,
-  ...WINE_BALANCE_ACHIEVEMENTS,
+  ...WINE_STRUCTURE_INDEX_ACHIEVEMENTS,
   ...WINE_SCORE_ACHIEVEMENTS,
   ...WINE_PRICE_ACHIEVEMENTS,
   

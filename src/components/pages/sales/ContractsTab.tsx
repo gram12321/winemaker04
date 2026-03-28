@@ -136,8 +136,8 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
         return `Age ≥ ${req.params?.minAge || 0} years`;
       case 'specificVintage':
         return `Vintage: ${req.params?.targetYear || req.value}`;
-      case 'balance':
-        return `Balance ≥ ${(req.value * 100).toFixed(0)}%`;
+      case 'structureIndex':
+        return `Structure ≥ ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
         return `Land Value ≥ €${(req.value / 1000).toFixed(0)}k/ha`;
       case 'grape':
@@ -155,9 +155,9 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
       case 'characteristicMax':
         const maxChar = req.params?.targetCharacteristic || 'characteristic';
         return `${maxChar.charAt(0).toUpperCase() + maxChar.slice(1)} ≤ ${(req.value * 100).toFixed(0)}%`;
-      case 'characteristicBalance':
+      case 'characteristicDeviation':
         const balChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} Balance ≤ ${(req.value * 100).toFixed(0)}%`;
+        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} deviation ≤ ${(req.value * 100).toFixed(0)}%`;
       default:
         return 'Unknown';
     }
@@ -334,7 +334,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
           <div>
             <p className="font-semibold text-blue-900 mb-1">About Contracts</p>
             <p className="text-blue-800">
-              Contracts are special orders from customers with specific requirements (quality, vintage, balance, etc.). 
+              Contracts are special orders from customers with specific requirements (quality, vintage, structure index, etc.). 
               They typically offer higher prices than regular orders but require wines that meet all specified criteria.
             </p>
           </div>

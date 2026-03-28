@@ -202,7 +202,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             description: 'Study advanced fermentation control methods',
             complexity: 6,
             benefits: [
-                  '+5% wine balance improvement',
+                  '+5% wine structure index improvement',
                   'Reduced fermentation time by 10%',
                   'Better wine characteristics control'
             ],

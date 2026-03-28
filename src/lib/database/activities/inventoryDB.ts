@@ -78,9 +78,9 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         fermentation_progress: Math.round(batch.fermentationProgress || 0),
         fermentation_options: batch.fermentationOptions, 
         born_grape_quality: batch.bornLandValueModifier,
-        born_balance: batch.bornBalance ?? batch.balance,
+        born_structure_index: batch.bornStructureIndex,
         grape_quality: batch.tasteIndex,
-        balance: batch.balance,
+        structure_index: batch.structureIndex,
         characteristics: batch.characteristics, 
         breakdown: batch.breakdown, 
         estimated_price: batch.estimatedPrice,
@@ -125,11 +125,11 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
       const grapeData = GRAPE_CONST[grapeVariety] || GRAPE_CONST['Chardonnay']; // Fallback to Chardonnay
       
       const bornLandValueModifier = row.born_grape_quality;
-      const bornBalance = row.born_balance ?? row.balance;
+      const structureIndex = row.structure_index ?? row.balance ?? 0;
+      const bornStructureIndex = row.born_structure_index ?? row.born_balance ?? structureIndex;
       const tasteIndex = row.grape_quality;
       const landValueModifier = row.born_grape_quality;
       const bornTasteIndex = row.born_taste_index ?? row.born_grape_quality ?? row.grape_quality;
-      const balance = row.balance;
       
       return {
         id: row.id,
@@ -141,11 +141,11 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         fermentationProgress: row.fermentation_progress || 0,
         fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
         bornLandValueModifier,
-        bornBalance, // Original balance at harvest
+        bornStructureIndex,
         landValueModifier,
         tasteIndex,
         bornTasteIndex,
-        balance: balance,
+        structureIndex,
         characteristics: row.characteristics || {
           acidity: 0.5,
           aroma: 0.5,
@@ -239,8 +239,9 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
           fermentation_options: updatedBatch.fermentationOptions,
           born_grape_quality: updatedBatch.bornLandValueModifier,
+          born_structure_index: updatedBatch.bornStructureIndex,
           grape_quality: updatedBatch.tasteIndex,
-          balance: updatedBatch.balance,
+          structure_index: updatedBatch.structureIndex,
           characteristics: updatedBatch.characteristics,
           breakdown: updatedBatch.breakdown,
           estimated_price: updatedBatch.estimatedPrice,

@@ -69,12 +69,12 @@ export interface WeightedRequirementType {
 export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequirementType[]> = {
   'Restaurant': [
     { type: 'quality', weight: 1 },
-    { type: 'balance', weight: 1 },
+    { type: 'structureIndex', weight: 1 },
     { type: 'minimumVintage', weight: 1 },
     { type: 'grapeColor', weight: 1 },
     { type: 'characteristicMin', weight: 0.3 },
     { type: 'characteristicMax', weight: 0.3 },
-    { type: 'characteristicBalance', weight: 0.3 }
+    { type: 'characteristicDeviation', weight: 0.3 }
   ],
   'Wine Shop': [
     { type: 'quality', weight: 1 },
@@ -86,20 +86,20 @@ export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequ
     { type: 'aspect', weight: 1 },
     { type: 'characteristicMin', weight: 0.3 },
     { type: 'characteristicMax', weight: 0.3 },
-    { type: 'characteristicBalance', weight: 0.3 }
+    { type: 'characteristicDeviation', weight: 0.3 }
   ],
   'Private Collector': [
     { type: 'quality', weight: 1 },
     { type: 'minimumVintage', weight: 1 },
     { type: 'specificVintage', weight: 1 },
-    { type: 'balance', weight: 1 },
+    { type: 'structureIndex', weight: 1 },
     { type: 'landValue', weight: 1 },
     { type: 'grape', weight: 1 },
     { type: 'altitude', weight: 1 },
     { type: 'aspect', weight: 1 },
     { type: 'characteristicMin', weight: 0.3 },
     { type: 'characteristicMax', weight: 0.3 },
-    { type: 'characteristicBalance', weight: 0.3 }
+    { type: 'characteristicDeviation', weight: 0.3 }
   ],
   'Chain Store': [
     { type: 'quality', weight: 1 },
@@ -208,7 +208,7 @@ export const DIFFICULTY_THRESHOLDS = {
     hard: { maxYears: 12, scoreRange: [0.4, 0.9] },
     expert: { maxYears: 20, scoreRange: [0.9, 1.0] }
   },
-  balance: {
+  structureIndex: {
     easy: { max: 0.6, scoreRange: [0, 0.2] },
     medium: { max: 0.75, scoreRange: [0.2, 0.4] },
     hard: { max: 0.85, scoreRange: [0.4, 0.7] },

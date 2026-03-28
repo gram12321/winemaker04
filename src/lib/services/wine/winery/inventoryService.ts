@@ -6,7 +6,7 @@ import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
 import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
-import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConstants';
 import { calculateLandValueModifier } from '../winescore/landValueModifierCalculation';
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
@@ -54,7 +54,7 @@ async function findCompatibleWineBatch(
  * @param existingBatch - The existing wine batch to combine with
  * @param newQuantity - Quantity of new grapes to add
  * @param newQuality - Quality of new grapes
- * @param newBalance - Balance of new grapes
+ * @param newStructureIndex - Structure index of new grapes
  * @param newCharacteristics - Characteristics of new grapes
  * @returns Updated wine batch with combined properties
  */
@@ -62,7 +62,7 @@ function combineWineBatches(
   existingBatch: WineBatch,
   newQuantity: number,
   newQuality: number,
-  newBalance: number,
+  newStructureIndex: number,
   newCharacteristics: WineCharacteristics
 ): WineBatch {
   const totalQuantity = existingBatch.quantity + newQuantity;
@@ -74,7 +74,7 @@ function combineWineBatches(
   const existingLandValueModifier = existingBatch.landValueModifier;
   const combinedTasteIndex = (existingTasteIndex * existingWeight) + (newQuality * newWeight);
   const combinedLandValueModifier = (existingLandValueModifier * existingWeight) + (newQuality * newWeight);
-  const combinedBalance = (existingBatch.balance * existingWeight) + (newBalance * newWeight);
+  const combinedStructureIndex = (existingBatch.structureIndex * existingWeight) + (newStructureIndex * newWeight);
   
   // Combine characteristics using weighted averages
   const combinedCharacteristics: WineCharacteristics = {
@@ -114,11 +114,11 @@ function combineWineBatches(
     ...existingBatch,
     quantity: totalQuantity,
     bornLandValueModifier: combinedLandValueModifier,
-    bornBalance: combinedBalance,
+    bornStructureIndex: combinedStructureIndex,
     landValueModifier: combinedLandValueModifier,
     tasteIndex: combinedTasteIndex,
     bornTasteIndex: combinedTasteIndex,
-    balance: combinedBalance,
+    structureIndex: combinedStructureIndex,
     characteristics: combinedCharacteristics,
     breakdown: combinedBreakdown
     // Note: finalPrice will be recalculated after combination
@@ -174,8 +174,8 @@ export async function createWineBatchFromHarvest(
     density: vineyard.density || 0
   });
   
-  // Calculate balance using the sophisticated balance system
-  const balanceResult = calculateWineBalance(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+  // Calculate structure index using the rule system
+  const structureIndexResult = calculateStructureIndex(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
   
   // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
   const quality = calculateLandValueModifier(vineyard);
@@ -189,7 +189,7 @@ export async function createWineBatchFromHarvest(
       existingBatch,
       quantity,
       quality, // Use vineyard quality
-      balanceResult.score, // Use balance score
+      structureIndexResult.score, // Structure index
       characteristics
     );
     
@@ -233,12 +233,12 @@ export async function createWineBatchFromHarvest(
       fermentationProgress: 0,
       // Set born values (immutable snapshots at harvest)
       bornLandValueModifier: quality,
-      bornBalance: balanceResult.score, // Original balance
+      bornStructureIndex: structureIndexResult.score,
       // Set current values (taste evolves with processing/features)
       landValueModifier: quality,
       bornTasteIndex: quality,
       tasteIndex: quality,
-      balance: balanceResult.score, // Use calculated balance from wine characteristics
+      structureIndex: structureIndexResult.score,
       characteristics,
       breakdown, // Store breakdown data
       estimatedPrice: 0, // Will be calculated below

@@ -8,7 +8,7 @@ import { createActivity } from '../../activity/activitymanagers/activityManager'
 import { WorkCategory } from '../../activity';
 import { calculateFermentationWork } from '../../activity/workcalculators/fermentationWorkCalculator';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
-import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteIndex } from '../winescore/wineScoreCalculation';
 
@@ -88,7 +88,7 @@ export async function bottleWine(batchId: string): Promise<boolean> {
     // Create immutable snapshots at bottling for historical records (WineLog)
     bottledTasteIndex,
     bottledLandValueModifier,
-    bottledBalance: batch.balance,
+    bottledStructureIndex: batch.structureIndex,
     bottledWineScore: bottledWineScore
   });
 
@@ -182,8 +182,8 @@ export async function processWeeklyFermentation(): Promise<void> {
         temperature: batch.fermentationOptions.temperature
       });
 
-      // Recalculate balance based on new characteristics
-      const balanceResult = calculateWineBalance(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+      // Recalculate structure index based on new characteristics
+      const structureIndexResult = calculateStructureIndex(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
 
       const currentTasteIndex = getTasteIndex(batch);
 
@@ -201,7 +201,7 @@ export async function processWeeklyFermentation(): Promise<void> {
         updates: {
           characteristics: newCharacteristics,
           tasteIndex: currentTasteIndex,
-          balance: balanceResult.score,
+          structureIndex: structureIndexResult.score,
           breakdown: combinedBreakdown
         }
       });

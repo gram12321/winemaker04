@@ -5,7 +5,7 @@ export { usePrestigeUpdates } from './usePrestigeAndVineyardValueUpdates';
 export { useLoadingState } from './useLoadingState';
 export { useTableSortWithAccessors } from './useTableSort';
 export type { SortableColumn } from './useTableSort';
-export * from './useWineBalance';
+export * from './useWineStructureIndex';
 export * from './useWineCombinedScore';
 export { useCustomerData } from './useCustomerData';
 export { useWinePriceCalculator } from './useWinePriceCalculator';

@@ -404,7 +404,7 @@ MAX PRESSURE BY METHOD:
                   const percentage = formatNumber(effect.modifier * 100, { smartDecimals: true });
                   const sign = effect.modifier > 0 ? '+' : '';
                   
-                  // Use balance-aware color coding for effects
+                  // Use ideal-range-aware color coding for effects
                   const currentValue = batch?.characteristics[effect.characteristic as keyof typeof batch.characteristics] || 0;
                   const balancedRange = BASE_BALANCED_RANGES[effect.characteristic as keyof typeof BASE_BALANCED_RANGES];
                   const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];

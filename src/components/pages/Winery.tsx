@@ -1,6 +1,6 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
+import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
 import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
 import { Button, CrushingOptionsModal, WineModal } from '../ui';
@@ -13,14 +13,14 @@ import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermen
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { CharacteristicIcon } from '@/lib/utils/icons';
 
-const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const balanceResult = useWineBatchBalance(batch);
-  const formattedBalance = useFormattedBalance(balanceResult);
-  const balanceQuality = useBalanceQuality(balanceResult);
+const WineBatchStructureDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const structureResult = useWineBatchStructureIndex(batch);
+  const formattedStructureIndex = useFormattedStructureIndex(structureResult);
+  const structureQuality = useStructureIndexQuality(structureResult);
   
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Balance: <span className="font-medium">{formattedBalance}</span> ({balanceQuality})
+      Structure: <span className="font-medium">{formattedStructureIndex}</span> ({structureQuality})
     </div>
   );
 };
@@ -80,7 +80,7 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
             </div>
           );
           
-          // Use balance-aware color coding for fermentation effects
+          // Use ideal-range-aware color coding for fermentation effects
           const currentValue = batch.characteristics[effect.characteristic] || 0;
           const balancedRange = BASE_BALANCED_RANGES[effect.characteristic];
           const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
@@ -276,7 +276,7 @@ const Winery: React.FC = () => {
                       <div className="text-xs text-gray-600">
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
-                      <WineBatchBalanceDisplay batch={batch} />
+                      <WineBatchStructureDisplay batch={batch} />
                       <TasteIndexDisplay batch={batch} />
                       
                       <div className="text-xs font-medium text-gray-800 mt-3">

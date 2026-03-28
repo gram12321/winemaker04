@@ -117,8 +117,8 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
     // Rating/score thresholds
     case 'wine_taste_index_threshold':
       return `${num} Taste Index`;
-    case 'wine_balance_threshold':
-      return `${num} Balance`;
+    case 'wine_structure_index_threshold':
+      return `${num} Structure`;
     case 'wine_score_threshold':
       return `${num} Score`;
     case 'prestige_threshold':
@@ -234,7 +234,7 @@ interface AchievementCheckContext {
   }>;
   wineLogEntries: Array<{
     tasteIndex: number;
-    balance: number;
+    structureIndex: number;
     estimatedPrice: number;
     vintage: number;
   }>;
@@ -271,7 +271,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   const totalWinesProduced = productionSummary.totalWinesProduced;
   const totalBottlesProduced = productionSummary.totalBottlesProduced;
   
-  // Load wine log entries for quality/balance/price tracking
+  // Load wine log entries for quality/structure index/price tracking
   const allWineLogEntries = [];
   for (const vineyard of vineyards) {
     try {
@@ -362,7 +362,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     vineyards: vineyardData,
     wineLogEntries: allWineLogEntries.map(entry => ({
       tasteIndex: entry.tasteIndex,
-      balance: entry.balance,
+      structureIndex: entry.structureIndex,
       estimatedPrice: entry.estimatedPrice,
       vintage: entry.vintage
     }))
@@ -616,19 +616,19 @@ function checkAchievementCondition(
         unit: 'quality'
       };
       
-    case 'wine_balance_threshold':
-      // Check if produced a wine with balance rating >= threshold
-      const maxBalance = Math.max(...context.wineLogEntries.map(e => e.balance), 0);
+    case 'wine_structure_index_threshold':
+      // Check if produced a wine with structure index >= threshold
+      const maxStructureIndex = Math.max(...context.wineLogEntries.map(e => e.structureIndex), 0);
       return {
-        isMet: maxBalance >= (condition.threshold || 0),
-        progress: maxBalance,
+        isMet: maxStructureIndex >= (condition.threshold || 0),
+        progress: maxStructureIndex,
         target: condition.threshold,
-        unit: 'balance'
+        unit: 'structure'
       };
       
     case 'wine_score_threshold':
       // Check if produced a wine with wine score >= threshold
-      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.tasteIndex + e.balance) / 2), 0);
+      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.tasteIndex + e.structureIndex) / 2), 0);
       return {
         isMet: maxWineScore >= (condition.threshold || 0),
         progress: maxWineScore,

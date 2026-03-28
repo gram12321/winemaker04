@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, Table
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react';
 import { highscoreService } from '@/lib/services';
 import { type HighscoreEntry, type ScoreType } from '@/lib/database';
-import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineBalanceCategory } from '@/lib/utils';
+import { formatNumber, formatPercent, getColorClass, getQualityCategory, getWineStructureCategory } from '@/lib/utils';
 import { PageProps, CompanyProps } from '../../lib/types/UItypes';
 
 interface HighscoresProps extends PageProps, CompanyProps {
@@ -20,7 +20,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     most_productive_vineyard: [],
     highest_wine_score: [],
     highest_taste_index: [],
-    highest_balance: [],
+    highest_structure_index: [],
     highest_price: [],
     lowest_price: []
   });
@@ -40,7 +40,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       mostProductiveVineyardScores,
       highestWineScoreScores,
       highestTasteIndexScores,
-      highestBalanceScores,
+      highestStructureIndexScores,
       highestPriceScores,
       lowestPriceScores
     ] = await Promise.all([
@@ -50,7 +50,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       highscoreService.getHighscores('most_productive_vineyard', 50),
       highscoreService.getHighscores('highest_wine_score', 50),
       highscoreService.getHighscores('highest_taste_index', 50),
-      highscoreService.getHighscores('highest_balance', 50),
+      highscoreService.getHighscores('highest_structure_index', 50),
       highscoreService.getHighscores('highest_price', 50),
       highscoreService.getHighscores('lowest_price', 50)
     ]);
@@ -62,7 +62,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       most_productive_vineyard: mostProductiveVineyardScores,
       highest_wine_score: highestWineScoreScores,
       highest_taste_index: highestTasteIndexScores,
-      highest_balance: highestBalanceScores,
+      highest_structure_index: highestStructureIndexScores,
       highest_price: highestPriceScores,
       lowest_price: lowestPriceScores
     });
@@ -107,8 +107,8 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         return 'Wine Score';
       case 'highest_taste_index':
         return 'Taste Index';
-      case 'highest_balance':
-        return 'Balance';
+      case 'highest_structure_index':
+        return 'Structure';
       case 'highest_price':
         return 'Highest Price';
       case 'lowest_price':
@@ -132,7 +132,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
         return '🏆';
       case 'highest_taste_index':
         return '⭐';
-      case 'highest_balance':
+      case 'highest_structure_index':
         return '⚖️';
       case 'highest_price':
         return '💰';
@@ -148,12 +148,12 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
   ), []);
 
   const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_taste_index', 'highest_balance', 'highest_price', 'lowest_price'] as ScoreType[]
+    ['highest_wine_score', 'highest_taste_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as ScoreType[]
   ), []);
 
   const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number, index: number, totalScores: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
-    if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index' || scoreType === 'highest_balance') {
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index' || scoreType === 'highest_structure_index') {
       return getColorClass(scoreValue);
     }
     
@@ -173,8 +173,8 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
     if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index') {
       return getQualityCategory(scoreValue);
     }
-    if (scoreType === 'highest_balance') {
-      return getWineBalanceCategory(scoreValue);
+    if (scoreType === 'highest_structure_index') {
+      return getWineStructureCategory(scoreValue);
     }
     return null;
   }, []);
@@ -276,7 +276,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                           formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
                           scoreType.includes('price') ? 
                             formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
-                            scoreType.includes('quality') || scoreType.includes('balance') ?
+                            scoreType.includes('quality') || scoreType.includes('structure') ?
                               formatPercent(score.scoreValue, 1, true) :
                               formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
                         }
@@ -348,7 +348,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                           formatNumber(score.scoreValue, { decimals: 1, forceDecimals: true }) :
                           scoreType.includes('price') ?
                             formatNumber(score.scoreValue, { currency: true, decimals: 2 }) :
-                            scoreType.includes('quality') || scoreType.includes('balance') ?
+                            scoreType.includes('quality') || scoreType.includes('structure') ?
                               formatPercent(score.scoreValue, 1, true) :
                               formatNumber(score.scoreValue, { decimals: 0, forceDecimals: true })
                         }
@@ -507,14 +507,14 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
                  {renderHighscoreTable('highest_taste_index')}
                </TabsContent>
 
-               <TabsContent value="highest_balance" className="space-y-4">
+               <TabsContent value="highest_structure_index" className="space-y-4">
                  <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Best Balance</h3>
+                   <h3 className="text-lg font-semibold">Best Structure</h3>
                    <p className="text-sm text-muted-foreground">
-                     Most perfectly balanced wines
+                     Highest structure index wines
                    </p>
                  </div>
-                 {renderHighscoreTable('highest_balance')}
+                 {renderHighscoreTable('highest_structure_index')}
                </TabsContent>
 
                <TabsContent value="highest_price" className="space-y-4">

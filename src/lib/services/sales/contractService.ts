@@ -84,13 +84,12 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
       }
       return { isValid: true, reason: '' };
       
-    case 'balance':
-      // Use balance from WineBatch (0-1 scale)
-      const balance = wine.balance || 0;
-      if (balance < requirement.value) {
+    case 'structureIndex':
+      const structureIndex = wine.structureIndex || 0;
+      if (structureIndex < requirement.value) {
         return {
           isValid: false,
-          reason: `Balance ${(balance * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
+          reason: `Structure index ${(structureIndex * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
         };
       }
       return { isValid: true, reason: '' };
@@ -200,8 +199,8 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
       }
       return { isValid: true, reason: '' };
       
-    case 'characteristicBalance':
-      // Characteristic balance requirement (max distance from ideal)
+    case 'characteristicDeviation':
+      // Characteristic deviation requirement (max distance from ideal)
       if (!wine.characteristics || !requirement.params?.targetCharacteristic) {
         return { isValid: false, reason: 'Wine has no characteristics data' };
       }

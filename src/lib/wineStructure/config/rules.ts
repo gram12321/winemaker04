@@ -1,4 +1,4 @@
-import { RuleConfig } from '../types/balanceRulesTypes';
+import { RuleConfig } from '../types/structureRulesTypes';
 
 // Rule configuration - supports both cross-trait and non-cross-trait for both penalties and synergies
 export const RULES: RuleConfig = {
@@ -9,7 +9,7 @@ export const RULES: RuleConfig = {
       targets: ['sweetness'],
       condition: (wine) => wine.acidity > 0.7 && wine.sweetness > 0.6,
       name: "Clashing Sweetness",
-      description: "High acidity makes sweet wines taste overly tart and unbalanced.",
+      description: "High acidity makes sweet wines taste overly tart and structurally awkward.",
       requirement: "(acidity>0.7, sweetness>0.6)",
       k: 0.4, // High scaling - acidity/sweetness clash is very noticeable
       p: 1.5, // High power - effect compounds quickly
@@ -68,7 +68,7 @@ export const RULES: RuleConfig = {
       targets: ['spice'],
       condition: (wine) => wine.sweetness > 0.7 && wine.spice > 0.6,
       name: "Sweet-Spice Clash",
-      description: "High sweetness clashes with high spice, creating an unbalanced wine.",
+      description: "High sweetness clashes with high spice, creating a wine that lacks cohesion.",
       requirement: "(sweetness>0.7, spice>0.6)",
       k: 0.45, // Very high scaling - sweet/spice clash is extremely noticeable
       p: 1.7, // Very high power - this clash becomes unbearable quickly
@@ -92,7 +92,7 @@ export const RULES: RuleConfig = {
       targets: ['sweetness'],
       condition: (wine) => wine.tannins > 0.7 && wine.sweetness > 0.5,
       name: "Tannin-Sweet Clash",
-      description: "High tannins clash with sweet wines, creating harsh, unbalanced wines.",
+      description: "High tannins clash with sweet wines, creating harsh, structurally awkward wines.",
       requirement: "(tannins>0.7, sweetness>0.5)",
       k: 0.4, // High scaling - tannin/sweet clash is very harsh
       p: 1.5, // High power - harshness compounds quickly
@@ -127,7 +127,7 @@ export const RULES: RuleConfig = {
       targets: ['body'],
       condition: (wine) => wine.aroma > 0.7 && wine.body < 0.6,
       name: "Aroma-Body Mismatch",
-      description: "High aroma without matching body creates unbalanced wines.",
+      description: "High aroma without matching body creates wines that feel out of proportion.",
       requirement: "(aroma>0.7, body<0.6)",
       k: 0.2, // Lower scaling - aroma/body mismatch is subtle
       p: 1.2, // Standard power - builds up normally
@@ -138,7 +138,7 @@ export const RULES: RuleConfig = {
       targets: ['spice'],
       condition: (wine) => wine.aroma < 0.4 && wine.spice > 0.6,
       name: "Aroma-Spice Imbalance",
-      description: "Low aroma with high spice creates harsh, unbalanced wines.",
+      description: "Low aroma with high spice creates harsh, disjointed wines.",
       requirement: "(aroma<0.4, spice>0.6)",
       k: 0.25, // Moderate scaling - spice without aroma is harsh
       p: 1.4, // Higher power - harshness compounds quickly
@@ -151,7 +151,7 @@ export const RULES: RuleConfig = {
       targets: ['acidity'],
       condition: (wine) => wine.spice > 0.7 && wine.acidity > 0.6,
       name: "Spice-Acid Clash",
-      description: "High spice clashes with high acidity, creating harsh, unbalanced wines.",
+      description: "High spice clashes with high acidity, creating harsh, disjointed wines.",
       requirement: "(spice>0.7, acidity>0.6)",
       k: 0.4, // High scaling - spice/acid clash is very harsh
       p: 1.6, // Very high power - harshness compounds rapidly
@@ -162,7 +162,7 @@ export const RULES: RuleConfig = {
       targets: ['body'],
       condition: (wine) => wine.spice > 0.8 && wine.body < 0.4,
       name: "Spice-Body Overwhelm",
-      description: "High spice overwhelms light-bodied wines, making them feel thin and unbalanced.",
+      description: "High spice overwhelms light-bodied wines, making them feel thin and top-heavy.",
       requirement: "(spice>0.8, body<0.4)",
       k: 0.5, // Very high scaling - overwhelming spice is very noticeable
       p: 1.8, // Very high power - overwhelming effect compounds rapidly
@@ -211,11 +211,11 @@ export const RULES: RuleConfig = {
       sources: ['body', 'spice'],
       targets: ['body', 'spice'],
       condition: (wine) => wine.body >= 0.6 && wine.body <= 0.8 && wine.spice >= 0.6 && wine.spice <= 0.8,
-      name: "Balanced Body & Spice",
-      description: "When body and spice are both in the balanced range, they work harmoniously.",
+      name: "Harmonious Body & Spice",
+      description: "When body and spice are both in the ideal range, they work harmoniously.",
       requirement: "(body 0.6-0.8, spice 0.6-0.8)",
-      k: 0.25, // Moderate scaling - balanced wines are pleasant
-      p: 1.1, // Lower power - balance is subtle but important
+      k: 0.25, // Moderate scaling - harmonious integration is pleasant
+      p: 1.1, // Lower power - synergy is subtle but important
       cap: 0.75
     },
     {
@@ -244,11 +244,11 @@ export const RULES: RuleConfig = {
       sources: ['acidity', 'sweetness'],
       targets: ['acidity', 'sweetness'],
       condition: (wine) => wine.acidity >= 0.4 && wine.acidity <= 0.6 && wine.sweetness >= 0.4 && wine.sweetness <= 0.6,
-      name: "Classic Balance",
+      name: "Classic Structure",
       description: "Acidity and sweetness in harmony - the foundation of great wine.",
       requirement: "(acidity 0.4-0.6, sweetness 0.4-0.6)",
-      k: 0.4, // High scaling - classic balance is fundamental
-      p: 1.1, // Lower power - balance is foundational, not compounding
+      k: 0.4, // High scaling - classic structure is fundamental
+      p: 1.1, // Lower power - structure harmony is foundational, not compounding
       cap: 0.6
     },
     {
@@ -256,7 +256,7 @@ export const RULES: RuleConfig = {
       targets: ['aroma', 'body'],
       condition: (wine) => wine.aroma > wine.body && wine.sweetness >= 0.4 && wine.sweetness <= 0.6,
       name: "Elegant Complexity",
-      description: "Aroma leads body with balanced sweetness for refined wines.",
+      description: "Aroma leads body with moderate sweetness for refined wines.",
       requirement: "(aroma>body, sweetness 0.4-0.6)",
       k: 0.25, // Moderate scaling - elegance is subtle but important
       p: 1.2, // Standard power - elegance builds normally

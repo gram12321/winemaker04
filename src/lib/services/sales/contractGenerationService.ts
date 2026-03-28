@@ -86,8 +86,8 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       score = 0.6;
       break;
       
-    case 'balance':
-      // Balance thresholds: <60% easy, 60-75% medium, 75-85% hard, >85% expert
+    case 'structureIndex':
+      // Structure index thresholds: <60% easy, 60-75% medium, 75-85% hard, >85% expert
       if (requirement.value < 0.6) {
         difficulty = 'easy';
         score = requirement.value * 0.33; // 0-0.2
@@ -203,8 +203,8 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       }
       break;
       
-    case 'characteristicBalance':
-      // Balance distance thresholds (lower = harder): >15% easy, 5-15% medium, 2-5% hard, <2% expert
+    case 'characteristicDeviation':
+      // Deviation thresholds (lower = harder): >15% easy, 5-15% medium, 2-5% hard, <2% expert
       const distancePercent = requirement.value * 100; // Convert to percentage
       if (distancePercent > 15) {
         difficulty = 'easy';
@@ -760,8 +760,8 @@ function generateRequirementWithDifficulty(
       return generateMinimumVintageRequirement(customer, actualDifficulty);
     case 'specificVintage':
       return generateSpecificVintageRequirement(customer);
-    case 'balance':
-      return generateBalanceRequirement(customer, actualDifficulty);
+    case 'structureIndex':
+      return generateStructureIndexRequirement(customer, actualDifficulty);
     case 'landValue':
       return generateLandValueRequirement(customer, actualDifficulty);
     case 'grape':
@@ -776,8 +776,8 @@ function generateRequirementWithDifficulty(
       return generateCharacteristicMinRequirement(customer, actualDifficulty);
     case 'characteristicMax':
       return generateCharacteristicMaxRequirement(customer, actualDifficulty);
-    case 'characteristicBalance':
-      return generateCharacteristicBalanceRequirement(customer, actualDifficulty);
+    case 'characteristicDeviation':
+      return generatecharacteristicDeviationRequirement(customer, actualDifficulty);
     default:
       return generateQualityRequirement(customer, actualDifficulty);
   }
@@ -874,32 +874,32 @@ function generateSpecificVintageRequirement(customer: Customer): ContractRequire
 }
 
 /**
- * Generate balance requirement with target difficulty
+ * Generate structure index requirement with target difficulty
  */
-function generateBalanceRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  // Map difficulty to balance thresholds
-  // 0.0-0.2 = 40-60% balance (easy)
-  // 0.2-0.4 = 60-75% balance (medium)
-  // 0.4-0.7 = 75-85% balance (hard)
-  // 0.7-1.0 = 85-95% balance (expert)
+function generateStructureIndexRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  // Map difficulty to structure index thresholds
+  // 0.0-0.2 = 40-60% structure index (easy)
+  // 0.2-0.4 = 60-75% structure index (medium)
+  // 0.4-0.7 = 75-85% structure index (hard)
+  // 0.7-1.0 = 85-95% structure index (expert)
   
-  let minBalance = 0.4;
+  let minStructureIndex = 0.4;
   if (targetDifficulty < 0.2) {
-    minBalance = 0.4 + targetDifficulty * 1.0; // 40-60%
+    minStructureIndex = 0.4 + targetDifficulty * 1.0; // 40-60%
   } else if (targetDifficulty < 0.4) {
-    minBalance = 0.6 + (targetDifficulty - 0.2) * 0.75; // 60-75%
+    minStructureIndex = 0.6 + (targetDifficulty - 0.2) * 0.75; // 60-75%
   } else if (targetDifficulty < 0.7) {
-    minBalance = 0.75 + (targetDifficulty - 0.4) * 0.33; // 75-85%
+    minStructureIndex = 0.75 + (targetDifficulty - 0.4) * 0.33; // 75-85%
   } else {
-    minBalance = 0.85 + (targetDifficulty - 0.7) * 0.33; // 85-95%
+    minStructureIndex = 0.85 + (targetDifficulty - 0.7) * 0.33; // 85-95%
   }
   
   const variance = Math.random() * 0.04 - 0.02;
-  minBalance = Math.max(0.3, Math.min(0.95, minBalance + variance));
+  minStructureIndex = Math.max(0.3, Math.min(0.95, minStructureIndex + variance));
   
   return {
-    type: 'balance',
-    value: Math.round(minBalance * 100) / 100
+    type: 'structureIndex',
+    value: Math.round(minStructureIndex * 100) / 100
   };
 }
 
@@ -1103,17 +1103,17 @@ function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficu
 }
 
 /**
- * Generate characteristic balance requirement (e.g., "Sweetness Balance: maxDistance ≤ 0.15")
+ * Generate characteristic deviation requirement (e.g., "Sweetness deviation: maxDistance ≤ 0.15")
  * Requires the wine's characteristic to be within a certain distance from ideal for that characteristic
  */
-function generateCharacteristicBalanceRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+function generatecharacteristicDeviationRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
   const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
   
-  // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter balance required)
-  // 0.0-0.2 = 0.25-0.15 (easy - loose balance)
-  // 0.2-0.4 = 0.15-0.05 (medium - moderate balance)
-  // 0.4-0.7 = 0.05-0.02 (hard - tight balance)
-  // 0.7-1.0 = smaller than 0.02 (expert - very tight balance)
+  // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter deviation bound)
+  // 0.0-0.2 = 0.25-0.15 (easy - loose)
+  // 0.2-0.4 = 0.15-0.05 (medium - moderate)
+  // 0.4-0.7 = 0.05-0.02 (hard - tight)
+  // 0.7-1.0 = smaller than 0.02 (expert - very tight)
   
   let maxDistance = 0.25;
   if (targetDifficulty < 0.2) {
@@ -1130,7 +1130,7 @@ function generateCharacteristicBalanceRequirement(_customer: Customer, targetDif
   maxDistance = Math.max(0.05, Math.min(0.30, maxDistance + variance));
   
   return {
-    type: 'characteristicBalance',
+    type: 'characteristicDeviation',
     value: Math.round(maxDistance * 100) / 100,
     params: {
       targetCharacteristic: characteristic

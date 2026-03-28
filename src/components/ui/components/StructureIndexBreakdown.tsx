@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
-import { calculateWineBalance, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/balance';
+import { calculateStructureIndex, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber } from '@/lib/utils';
 import { ChevronDownIcon, ChevronRightIcon, getCharacteristicIconSrc } from '@/lib/utils/icons';
-import { getWineBalanceCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
+import { getWineStructureCategory, getRangeColor, getRatingForRange } from '@/lib/utils/utils';
 
 
-interface BalanceScoreBreakdownProps {
+interface StructureIndexBreakdownProps {
   characteristics: WineCharacteristics;
   className?: string;
   showWineStyleRules?: boolean;
 }
 
-export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({ 
+export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = ({ 
   characteristics, 
   className = "",
   showWineStyleRules = false
@@ -26,7 +26,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
   const [filteredSource, setFilteredSource] = useState<string | null>(null);
 
   // Calculate all results using the new clean system
-  const balanceResult = calculateWineBalance(
+  const structureIndexResult = calculateStructureIndex(
     characteristics, 
     BASE_BALANCED_RANGES, 
     RANGE_ADJUSTMENTS, 
@@ -122,7 +122,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   monospaced
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                                  Distance from the midpoint of the balanced range. Lower values are better.
+                                  Distance from the midpoint of the ideal range. Lower values are better.
                                 </div>
                               </TooltipSection>
                         </div>
@@ -153,7 +153,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   monospaced
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                                  Distance outside the balanced range. Values outside the range incur penalties. Lower values are better.
+                                  Distance outside the ideal range. Values outside the range incur penalties. Lower values are better.
                                 </div>
                               </TooltipSection>
                         </div>
@@ -184,7 +184,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   monospaced
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                                  Penalty is calculated as 2× the distance outside the balanced range. Lower values are better.
+                                  Penalty is calculated as 2× the distance outside the ideal range. Lower values are better.
                                 </div>
                               </TooltipSection>
                         </div>
@@ -266,7 +266,7 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
                                   monospaced
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-300">
-                                  Final calculated distance after all scaling and synergy adjustments. Lower values contribute to better balance score.
+                                  Final calculated distance after all scaling and synergy adjustments. Lower values contribute to a better structure index.
                                 </div>
                               </TooltipSection>
                         </div>
@@ -801,14 +801,14 @@ export const BalanceScoreBreakdown: React.FC<BalanceScoreBreakdownProps> = ({
               </span>
             </div>
             <div className="flex justify-between mb-1">
-              <span>Balance Score (1 - 2×Avg):</span>
-              <span className="font-mono font-medium">{formatNumber(balanceResult.score, { smartDecimals: true })}</span>
+              <span>Structure Index (1 - 2×Avg):</span>
+              <span className="font-mono font-medium">{formatNumber(structureIndexResult.score, { smartDecimals: true })}</span>
             </div>
             <div className="flex justify-between text-lg font-bold">
               <span>Final Score:</span>
               <div className="text-right">
-                <div>{formatNumber(balanceResult.score * 100, { smartDecimals: true })}%</div>
-                <div className="text-sm font-normal text-gray-600">{getWineBalanceCategory(balanceResult.score)}</div>
+                <div>{formatNumber(structureIndexResult.score * 100, { smartDecimals: true })}%</div>
+                <div className="text-sm font-normal text-gray-600">{getWineStructureCategory(structureIndexResult.score)}</div>
               </div>
             </div>
           </div>

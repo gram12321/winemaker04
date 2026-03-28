@@ -1,4 +1,4 @@
-import { RangeAdjustmentConfig } from '../types/balanceRulesTypes';
+import { RangeAdjustmentConfig } from '../types/structureRulesTypes';
 
 // Range adjustment rules - simple, clean configuration
 export const RANGE_ADJUSTMENTS: RangeAdjustmentConfig = {

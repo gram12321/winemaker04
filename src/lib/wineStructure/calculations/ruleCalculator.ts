@@ -1,6 +1,6 @@
 import { WineCharacteristics } from '@/lib/types/types';
-import { Rule, RuleConfig, CharacteristicKey } from '../types/balanceRulesTypes';
-import { PenaltyScalingResult, SynergyReductionResult } from '../types/balanceCalculationsTypes';
+import { Rule, RuleConfig, CharacteristicKey } from '../types/structureRulesTypes';
+import { PenaltyScalingResult, SynergyReductionResult } from '../types/structureCalculationsTypes';
 
 /**
  * Calculator for both penalties and synergies using the same mathematical approach

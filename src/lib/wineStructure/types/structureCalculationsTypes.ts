@@ -1,7 +1,7 @@
 import { WineCharacteristics } from '@/lib/types/types';
 
 // Calculation result types
-export interface BalanceCalculationResult {
+export interface StructureIndexCalculationResult {
   score: number;
   qualifies: boolean;
   adjustedRanges: Record<keyof WineCharacteristics, [number, number]>;

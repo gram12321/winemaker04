@@ -67,7 +67,7 @@ export function WineQualityTab() {
                 <li>- Harvest-derived baseline characteristics</li>
                 <li>- Fermentation and cellar feature effects</li>
                 <li>- Bottle evolution over time</li>
-                <li>- Interaction with balance in wine score</li>
+                <li>- Interaction with structure index in wine score</li>
               </ul>
             </div>
           </div>

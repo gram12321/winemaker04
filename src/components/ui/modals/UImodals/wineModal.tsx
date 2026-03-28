@@ -9,14 +9,14 @@ import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Ra
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
-import { getQualityCategory, getQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
+import { getQualityCategory, getQualityDescription, getWineStructureCategory, getWineStructureDescription, getColorClass } from '@/lib/utils/utils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { LandValueModifierFactorsBreakdown } from '../../components/landValueModifierBreakdown';
-import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
+import { StructureIndexBreakdown } from '../../components/StructureIndexBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
-import { useWineBalance, useWinePriceCalculator } from '@/hooks';
+import { useWineStructureIndex, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface WineModalProps extends DialogProps {
@@ -27,7 +27,7 @@ interface WineModalProps extends DialogProps {
 /**
  * Unified Wine Modal
  * Comprehensive wine details in a tabbed interface
- * Replaces separate TasteIndexBreakdownModal, BalanceBreakdownModal, and expand/collapse patterns
+ * Replaces separate TasteIndexBreakdownModal, structure breakdown modal, and expand/collapse patterns
  */
 export const WineModal: React.FC<WineModalProps> = ({ 
   isOpen, 
@@ -54,9 +54,9 @@ export const WineModal: React.FC<WineModalProps> = ({
     }
   }, [wineBatch]);
 
-  // Calculate current balance from characteristics (reflects feature evolution)
-  const balanceResult = useWineBalance(wineBatch?.characteristics || null);
-  const currentBalance: number = balanceResult?.score ?? wineBatch?.balance ?? 0;
+  // Calculate current structure index from characteristics (reflects feature evolution)
+  const structureIndexResult = useWineStructureIndex(wineBatch?.characteristics || null);
+  const currentStructureIndex: number = structureIndexResult?.score ?? wineBatch?.structureIndex ?? 0;
 
   // Calculate wine age using service layer
   const weeksSinceHarvest = wineBatch ? getWineAgeFromHarvest(wineBatch.harvestStartDate || { week: 1, season: 'Spring', year: 2024 }) : 0;
@@ -80,7 +80,7 @@ export const WineModal: React.FC<WineModalProps> = ({
   const displayName = wineName || getWineBatchDisplayName(wineBatch);
   const currentTasteIndex: number = wineBatch.tasteIndex;
   const landValueModifier: number = wineBatch.landValueModifier;
-  const currentWineScore = (currentTasteIndex + currentBalance) / 2;
+  const currentWineScore = (currentTasteIndex + currentStructureIndex) / 2;
   const hasFeatureMultiplier = Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005;
   const hasCompanyPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.companyPrestigeMultiplier - 1) > 0.0005;
   const hasVineyardPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
@@ -133,7 +133,7 @@ export const WineModal: React.FC<WineModalProps> = ({
           <DialogHeader>
             <DialogTitle className="text-base">Wine Details</DialogTitle>
             <DialogDescription className="text-xs">
-              Comprehensive analysis of taste, land-value modifier, balance, and feature effects.
+              Comprehensive analysis of taste, land-value modifier, structure, and feature effects.
             </DialogDescription>
           </DialogHeader>
 
@@ -148,9 +148,9 @@ export const WineModal: React.FC<WineModalProps> = ({
                 <Award className="h-3 w-3" />
                 Land Value
               </TabsTrigger>
-              <TabsTrigger value="balance" className="flex items-center gap-1">
+              <TabsTrigger value="structure" className="flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                Balance
+                Structure
               </TabsTrigger>
               <TabsTrigger value="features" className="flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
@@ -239,27 +239,27 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </div>
                       
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Balance:</span>
+                        <span className="text-muted-foreground">Structure:</span>
                         <UnifiedTooltip
                           content={
                             <div className={tooltipStyles.text}>
-                              <TooltipSection title="Balance Score Details">
-                                <TooltipRow
-                                  label="Balance Score:"
-                                  value={formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
-                                  valueRating={currentBalance}
+                              <TooltipSection title="Structure Index Details">
+                                <TooltipRow 
+                                  label="Structure Index:"
+                                  value={formatNumber(currentStructureIndex, { decimals: 2, forceDecimals: true })}
+                                  valueRating={currentStructureIndex}
                                 />
                                 <TooltipRow
                                   label="Category:"
-                                  value={getWineBalanceCategory(currentBalance)}
+                                  value={getWineStructureCategory(currentStructureIndex)}
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600">
-                                  <div className="text-xs text-gray-300">{getWineBalanceDescription(currentBalance)}</div>
+                                  <div className="text-xs text-gray-300">{getWineStructureDescription(currentStructureIndex)}</div>
                                 </div>
                               </TooltipSection>
                             </div>
                           }
-                          title="Balance Score Details"
+                          title="Structure Index Details"
                           side="top"
                           sideOffset={8}
                           className="max-w-xs"
@@ -268,10 +268,10 @@ export const WineModal: React.FC<WineModalProps> = ({
                           triggerClassName="text-right cursor-help"
                         >
                           <div className="text-right cursor-help">
-                            <div className={`font-medium ${getColorClass(currentBalance)}`}>
-                              {formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
+                            <div className={`font-medium ${getColorClass(currentStructureIndex)}`}>
+                              {formatNumber(currentStructureIndex, { decimals: 2, forceDecimals: true })}
                             </div>
-                            <div className="text-xs text-gray-500">{getWineBalanceCategory(currentBalance)}</div>
+                            <div className="text-xs text-gray-500">{getWineStructureCategory(currentStructureIndex)}</div>
                           </div>
                         </UnifiedTooltip>
                       </div>
@@ -489,14 +489,14 @@ export const WineModal: React.FC<WineModalProps> = ({
               )}
             </TabsContent>
 
-            {/* Balance Tab */}
-            <TabsContent value="balance" className="mt-4">
+            {/* Structure tab */}
+            <TabsContent value="structure" className="mt-4">
               <div className="space-y-4">
-                {/* Balance Score Bar */}
+                {/* Structure index bar */}
                 <Card>
                   <CardHeader className="py-3">
                     <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" /> Balance Score
+                      <TrendingUp className="h-4 w-4" /> Structure Index
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="py-3">
@@ -505,13 +505,13 @@ export const WineModal: React.FC<WineModalProps> = ({
                       showValues={true}
                       collapsible={false}
                       title=""
-                      showBalanceScore={true}
+                      showStructureIndex={true}
                     />
                   </CardContent>
                 </Card>
 
-                {/* Balance Breakdown */}
-                <BalanceScoreBreakdown 
+                {/* Structure breakdown */}
+                <StructureIndexBreakdown 
                   characteristics={wineBatch.characteristics}
                   showWineStyleRules={true}
                 />
@@ -639,7 +639,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                       showValues={true}
                       collapsible={false}
                       title=""
-                      showBalanceScore={false}
+                      showStructureIndex={false}
                     />
                   </CardContent>
                 </Card>
