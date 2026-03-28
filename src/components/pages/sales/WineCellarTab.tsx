@@ -124,7 +124,9 @@ const EstimatedPriceDisplay: React.FC<{
  const hasCompanyPrestige = Math.abs(breakdown.companyPrestigeMultiplier - 1) > 0.0005;
  const hasVineyardPrestige = Math.abs(breakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
 
- const { presentFeatures, hasTasteAffectingFeatures, priceImpact } = featureDetails;
+ const { presentFeatures, hasPriceAffectingFeatures, priceImpact } = featureDetails;
+ const hasMaterialPriceDelta = priceImpact && Math.abs(priceImpact.priceDifference) > 0.01;
+ const isFeaturePremium = hasMaterialPriceDelta ? priceImpact!.priceDifference > 0 : false;
 
  return (
  <div className="space-y-1">
@@ -135,13 +137,13 @@ const EstimatedPriceDisplay: React.FC<{
  <div>Taste Index: <span className="font-medium">{formatPercent(breakdown.tasteIndex, 1, true)}</span></div>
  <div>Structure: <span className="font-medium">{formatPercent(breakdown.structureIndex, 1, true)}</span></div>
  <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
- {hasTasteAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
+ {hasPriceAffectingFeatures && hasMaterialPriceDelta && (
  <>
- <div className="text-red-600 text-[10px]">
- Price reduced by {formatNumber(priceImpact.priceDifference, { currency: true, decimals: 2 })} due to:
+ <div className={`text-[10px] ${isFeaturePremium ? 'text-green-600' : 'text-red-600'}`}>
+ Price {isFeaturePremium ? 'increased' : 'reduced'} by {formatNumber(Math.abs(priceImpact!.priceDifference), { currency: true, decimals: 2 })} due to:
  </div>
  <div className="text-[10px] text-gray-600">
- Reduction: {formatPercent(priceImpact.priceDifference / Math.max(0.0001, priceImpact.priceWithoutFeatures), 1, true)}
+ Change: {formatPercent(Math.abs(priceImpact!.priceDifference) / Math.max(0.0001, priceImpact!.priceWithoutFeatures), 1, true)}
  </div>
  <div className="ml-2 text-[10px] text-gray-600">
  {presentFeatures.map((f: any, idx: number) => (
