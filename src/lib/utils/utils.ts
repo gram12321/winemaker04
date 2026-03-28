@@ -42,8 +42,8 @@ export function clamp01(value: number): number {
  * formatNumber(15, { smartMaxDecimals: true }) // "15" (0 decimals for large numbers)
  * 
  * // Currency formatting
- * formatNumber(1234.56, { currency: true }) // "â‚¬1,235"
- * formatNumber(1234567, { currency: true, compact: true }) // "â‚¬1.2M"
+ * formatNumber(1234.56, { currency: true }) // "€1,235"
+ * formatNumber(1234567, { currency: true, compact: true }) // "€1.2M"
  * 
  * // Compact notation
  * formatNumber(1234567, { compact: true }) // "1.2M"
@@ -55,7 +55,7 @@ export function formatNumber(value: number, options?: {
   smartDecimals?: boolean;
   smartMaxDecimals?: boolean; // when true, reduce decimals for larger numbers (0-1%: 2-3 decimals, 1-10%: 1 decimal, 10%+: 0 decimals)
   adaptiveNearOne?: boolean; // when true, increase decimals near 1.0 (e.g., 0.95-1.0)
-  currency?: boolean; // when true, formats as currency with â‚¬ symbol
+  currency?: boolean; // when true, formats as currency with € symbol
   compact?: boolean; // when true, uses compact notation (K, M, B, T)
   percent?: boolean; // when true, formats as a percentage
   percentIsDecimal?: boolean; // when percent is true: input is decimal (0-1) if true, else 0-100
@@ -136,7 +136,7 @@ export function formatNumber(value: number, options?: {
     }
   }
   
-  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 â†’ 0.9870)
+  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 → 0.9870)
   // This ALWAYS takes precedence over smart options when near 1.0
   if (adaptiveNearOne && value < 1 && value >= 0.95) {
     calculatedDecimals = Math.max(calculatedDecimals, 4);
@@ -194,9 +194,9 @@ export function formatNumber(value: number, options?: {
     
     // Handle values > 0 and < 1: show 2 decimals after first non-zero digit
     // BUT respect adaptiveNearOne first (takes precedence)
-    // Example: 0.999999 â†’ 0.99999 (adaptiveNearOne: 5 decimals)
-    // Example: 0.00044 â†’ 0.00044 (first non-zero at pos 4, show positions 4-5, need 5 total decimals)
-    // Example: 0.123 â†’ 0.12 (first non-zero at pos 1, show positions 1-2, need 2 total decimals)
+    // Example: 0.999999 → 0.99999 (adaptiveNearOne: 5 decimals)
+    // Example: 0.00044 → 0.00044 (first non-zero at pos 4, show positions 4-5, need 5 total decimals)
+    // Example: 0.123 → 0.12 (first non-zero at pos 1, show positions 1-2, need 2 total decimals)
     
     // Check adaptiveNearOne first (takes precedence over new logic)
     if (adaptiveNearOne && value >= 0.95) {
@@ -215,7 +215,7 @@ export function formatNumber(value: number, options?: {
     
     // Use logarithmic approach to find the order of magnitude
     // This handles floating point precision better than string conversion
-    // log10(0.00044) â‰ˆ -3.357, so first non-zero is at position ceil(3.357) = 4
+    // log10(0.00044) ≈ -3.357, so first non-zero is at position ceil(3.357) = 4
     const log10 = Math.log10(absValue);
     const firstNonZeroPosition = Math.ceil(-log10);
     
@@ -455,13 +455,13 @@ export function getWineBalanceDescription(balance: number): string {
 }
 
 const GRAPE_DIFFICULTY_LEVELS: Array<{ max: number; category: string; description: string }> = [
-  { max: 0.1, category: 'Carte Blanche', description: 'Practically tends itselfâ€”point it at a vineyard and relax.' },
+  { max: 0.1, category: 'Carte Blanche', description: 'Practically tends itself—point it at a vineyard and relax.' },
   { max: 0.2, category: 'Easy Rider', description: 'Low-maintenance and forgiving; almost any site will do the trick.' },
   { max: 0.3, category: 'Comfort Zone', description: 'Happy in most conditions, but appreciates a little attention.' },
   { max: 0.4, category: 'Needs Attention', description: 'Thrives when you nudge it toward its preferred conditions.' },
   { max: 0.5, category: 'Requires Finesse', description: 'Rewards careful site selection and well-timed intervention.' },
-  { max: 0.6, category: 'Temperamental', description: 'Picky about climate and pamperingâ€”expect some mood swings.' },
-  { max: 0.7, category: 'Prima Donna', description: 'Demands the best of everything, and lets you know when it isnâ€™t happy.' },
+  { max: 0.6, category: 'Temperamental', description: 'Picky about climate and pampering—expect some mood swings.' },
+  { max: 0.7, category: 'Prima Donna', description: 'Demands the best of everything, and lets you know when it isn’t happy.' },
   { max: 0.8, category: 'High-Wire Act', description: 'Success feels like a stunt; one misstep and quality nosedives.' },
   { max: 0.9, category: 'Freaking Impossible', description: 'For masochists only. Everything has to line up perfectly.' },
 ];
@@ -475,7 +475,7 @@ export function getGrapeDifficultyDescription(difficulty: number): string {
   const level = GRAPE_DIFFICULTY_LEVELS.find(entry => difficulty <= entry.max);
   return level
     ? level.description
-    : 'Only the bravest winemakers dare attempt thisâ€”prepare for constant fires to put out.';
+    : 'Only the bravest winemakers dare attempt this—prepare for constant fires to put out.';
 }
 
 // ========================================
@@ -812,7 +812,7 @@ export function formatSeasonChangeNotification(
   const sections: string[] = [];
   
   // Main season change header
-  sections.push(`ðŸŽ‰ ${seasonChangeMessage}`);
+  sections.push(`🎉 ${seasonChangeMessage}`);
   
   // Only add spacing if there are other sections
   const hasOtherSections = !!(bookkeepingMessage || economyPhaseMessage || wageMessage);
@@ -822,7 +822,7 @@ export function formatSeasonChangeNotification(
   
   // Bookkeeping section
   if (bookkeepingMessage) {
-    sections.push('ðŸ“‹ Bookkeeping:');
+    sections.push('📋 Bookkeeping:');
     sections.push(`   ${bookkeepingMessage}`);
     // Add spacing if there are more sections after this
     if (economyPhaseMessage || wageMessage) {
@@ -832,7 +832,7 @@ export function formatSeasonChangeNotification(
   
   // Economy phase section
   if (economyPhaseMessage) {
-    sections.push('ðŸ’° Economy:');
+    sections.push('💰 Economy:');
     sections.push(`   ${economyPhaseMessage}`);
     // Add spacing if there are more sections after this
     if (wageMessage) {
@@ -842,7 +842,7 @@ export function formatSeasonChangeNotification(
   
   // Wage payment section
   if (wageMessage) {
-    sections.push('ðŸ’¼ Staff Wages:');
+    sections.push('💼 Staff Wages:');
     sections.push(`   ${wageMessage}`);
   }
   
