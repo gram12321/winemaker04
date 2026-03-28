@@ -48,10 +48,10 @@ export function WineQualityTab() {
 
       <SimpleCard
         title="Quality Factors"
-        description="What influences land value modifier and taste index in your winery"
+        description="What influences land value modifier, taste index, and structure index in your winery"
       >
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <h4 className="font-semibold text-gray-800 mb-3">Land Value Modifier</h4>
               <ul className="space-y-2 text-sm text-gray-600">
@@ -62,12 +62,21 @@ export function WineQualityTab() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-800 mb-3">Taste Index (Dynamic)</h4>
+              <h4 className="font-semibold text-gray-800 mb-3">Taste Index (Flavor Domain)</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li>- Harvest-derived baseline characteristics</li>
-                <li>- Fermentation and cellar feature effects</li>
-                <li>- Bottle evolution over time</li>
-                <li>- Interaction with balance in wine score</li>
+                <li>- Grape baseline descriptors and flavor families</li>
+                <li>- Anchor-driven terroir, process, and aging deltas</li>
+                <li>- Feature-driven flavor faults and bonuses</li>
+                <li>- Harmony, complexity, intensity, and typicity metrics</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-800 mb-3">Structure Index</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li>- Acidity, aroma, body, spice, sweetness, and tannins</li>
+                <li>- Rule-based structure interactions and penalties</li>
+                <li>- Updated each week as characteristics evolve</li>
+                <li>- Combined with Taste Index into Wine Score</li>
               </ul>
             </div>
           </div>

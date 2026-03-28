@@ -3,6 +3,7 @@ import { WineBatch, GrapeVariety } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { buildGameDate } from '../dbMapperUtils';
+import { calculateTasteIndexForBatch } from '../../services/wine/taste/tasteIndexService';
 
 const WINE_BATCHES_TABLE = 'wine_batches';
 
@@ -131,7 +132,7 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
       const bornTasteIndex = row.born_taste_index ?? row.born_grape_quality ?? row.grape_quality;
       const balance = row.balance;
       
-      return {
+      const batch: WineBatch = {
         id: row.id,
         vineyardId: row.vineyard_id,
         vineyardName: row.vineyard_name,
@@ -170,6 +171,16 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         batchNumber: row.batch_number ?? undefined,
         batchGroupSize: row.batch_group_size ?? undefined
       };
+
+      // Recompute taste index from current flavor/feature state so legacy saves
+      // migrate naturally to the new taste model without schema churn.
+      const recalculatedTasteIndex = calculateTasteIndexForBatch(batch);
+      batch.tasteIndex = recalculatedTasteIndex;
+      if (row.born_taste_index === null || row.born_taste_index === undefined) {
+        batch.bornTasteIndex = recalculatedTasteIndex;
+      }
+
+      return batch;
     });
   } catch (error) {
     return [];

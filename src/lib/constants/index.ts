@@ -23,3 +23,7 @@ export * from './wineFeatures/terroir';
 export * from './wineFeatures/bottleAging';
 export * from './wineFeatures/lateHarvest';
 export * from './wineFeatures/commonFeaturesUtil';
+
+// Taste and anchors
+export * from './taste';
+export * from './anchors';

@@ -9,6 +9,7 @@ import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateWineBalance, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConstants';
 import { calculateLandValueModifier } from '../winescore/landValueModifierCalculation';
+import { calculateTasteIndexForBatch } from '../taste/tasteIndexService';
 import { generateDefaultCharacteristics } from '../characteristics/defaultCharacteristics';
 import { modifyHarvestCharacteristics } from '../characteristics/harvestCharacteristics';
 import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
@@ -70,9 +71,7 @@ function combineWineBatches(
   const newWeight = newQuantity / totalQuantity;
   
   // Calculate weighted averages for index properties
-  const existingTasteIndex = existingBatch.tasteIndex;
   const existingLandValueModifier = existingBatch.landValueModifier;
-  const combinedTasteIndex = (existingTasteIndex * existingWeight) + (newQuality * newWeight);
   const combinedLandValueModifier = (existingLandValueModifier * existingWeight) + (newQuality * newWeight);
   const combinedBalance = (existingBatch.balance * existingWeight) + (newBalance * newWeight);
   
@@ -109,20 +108,26 @@ function combineWineBatches(
     effects: harvestEffects
   };
 
-  // Return updated batch with combined properties
-  return {
+  const combinedBatch: WineBatch = {
     ...existingBatch,
     quantity: totalQuantity,
     bornLandValueModifier: combinedLandValueModifier,
     bornBalance: combinedBalance,
     landValueModifier: combinedLandValueModifier,
-    tasteIndex: combinedTasteIndex,
-    bornTasteIndex: combinedTasteIndex,
+    tasteIndex: existingBatch.tasteIndex,
+    bornTasteIndex: existingBatch.bornTasteIndex,
     balance: combinedBalance,
     characteristics: combinedCharacteristics,
     breakdown: combinedBreakdown
     // Note: finalPrice will be recalculated after combination
   };
+
+  const recalculatedTasteIndex = calculateTasteIndexForBatch(combinedBatch);
+  combinedBatch.tasteIndex = recalculatedTasteIndex;
+  combinedBatch.bornTasteIndex = recalculatedTasteIndex;
+
+  // Return updated batch with combined properties
+  return combinedBatch;
 }
 
 // Create wine batch from harvest
@@ -236,8 +241,8 @@ export async function createWineBatchFromHarvest(
       bornBalance: balanceResult.score, // Original balance
       // Set current values (taste evolves with processing/features)
       landValueModifier: quality,
-      bornTasteIndex: quality,
-      tasteIndex: quality,
+      bornTasteIndex: 0,
+      tasteIndex: 0,
       balance: balanceResult.score, // Use calculated balance from wine characteristics
       characteristics,
       breakdown, // Store breakdown data
@@ -250,6 +255,10 @@ export async function createWineBatchFromHarvest(
       harvestStartDate: harvestStartDate,
       harvestEndDate: harvestEndDate
     };
+
+    const initializedTasteIndex = calculateTasteIndexForBatch(wineBatch, vineyard);
+    wineBatch.bornTasteIndex = initializedTasteIndex;
+    wineBatch.tasteIndex = initializedTasteIndex;
 
     // Calculate estimated price using the pricing service with prestige multipliers
     const prestigeData = await calculateCurrentPrestige();

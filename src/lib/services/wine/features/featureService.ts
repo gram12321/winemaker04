@@ -14,6 +14,7 @@ import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
 import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
 import { getTasteIndex } from '../winescore/wineScoreCalculation';
+import { calculateTasteIndexForBatch } from '../taste/tasteIndexService';
 
 // ===== CORE INTERFACES =====
 
@@ -374,7 +375,6 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   const nonFeatureEffects = existingBreakdownEffects.filter(e => !featureNames.has(e.description));
   
   const baselineTasteIndex = batch.bornTasteIndex;
-  let currentTasteIndex = baselineTasteIndex;
   let modifiedCharacteristics = { ...baseCharacteristics };
   const breakdownEffects = [...nonFeatureEffects];
   
@@ -382,9 +382,6 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   for (const feature of presentFeatures) {
     const config = configs.find(c => c.id === feature.id);
     if (!config) continue;
-    
-    // Apply quality effect
-    currentTasteIndex = applyQualityEffect(currentTasteIndex, batch, config, feature.severity);
     
     // Apply characteristic effects
     if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
@@ -406,10 +403,15 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   
   // Recalculate balance with modified characteristics
   const balanceResult = calculateWineBalance(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+  const recalculatedTasteIndex = calculateTasteIndexForBatch({
+    ...batch,
+    characteristics: modifiedCharacteristics,
+    balance: balanceResult.score
+  });
   
   return {
     ...batch,
-    tasteIndex: Math.max(0, Math.min(1, currentTasteIndex)),
+    tasteIndex: Math.max(0, Math.min(1, recalculatedTasteIndex)),
     bornTasteIndex: baselineTasteIndex,
     characteristics: modifiedCharacteristics,
     balance: balanceResult.score,
@@ -1144,57 +1146,6 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
  */
 function applyModifier(modifier: number | ((severity: number) => number), severity: number): number {
   return typeof modifier === 'function' ? modifier(severity) : modifier * severity;
-}
-
-/**
- * Apply a single feature's quality effect
- */
-function applyQualityEffect(
-  tasteIndex: number,
-  batch: WineBatch,
-  config: FeatureConfig,
-  severity: number
-): number {
-  const effect = config.effects.quality;
-  if (!effect) return tasteIndex;
-  
-  switch (effect.type) {
-    case 'power': {
-      const penaltyFactor = Math.pow(tasteIndex, effect.exponent!);
-      const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
-      
-      let severityMultiplier = 1.0;
-      if (config.id === 'oxidation') {
-        severityMultiplier = 0.85 - (batch.proneToOxidation * 0.2);
-      }
-      
-      return tasteIndex * (1 - scaledPenalty) * severityMultiplier;
-    }
-      
-    case 'linear': {
-      const amount = typeof effect.amount === 'function' 
-        ? effect.amount(severity) 
-        : (effect.amount! * severity);
-      return tasteIndex + amount;
-    }
-      
-    case 'bonus': {
-      const bonus = typeof effect.amount === 'function' 
-        ? effect.amount(severity) 
-        : effect.amount!;
-      return tasteIndex + bonus;
-    }
-      
-    case 'custom': {
-      if (effect.calculate) {
-        return effect.calculate(tasteIndex, severity, batch.proneToOxidation);
-      }
-      return tasteIndex;
-    }
-      
-    default:
-      return tasteIndex;
-  }
 }
 
 function previewEventRisksInternal(

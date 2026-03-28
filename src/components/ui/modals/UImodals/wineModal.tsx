@@ -5,12 +5,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../shadCN/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Badge } from '../../shadCN/badge';
 import { TooltipSection, TooltipRow, tooltipStyles, UnifiedTooltip } from '../../shadCN/tooltip';
-import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar } from 'lucide-react';
+import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar as RadarIcon } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { getQualityCategory, getQualityDescription, getWineBalanceCategory, getWineBalanceDescription, getColorClass } from '@/lib/utils/utils';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
+import { FAMILY_TO_DESCRIPTORS } from '@/lib/constants/taste/flavorFamilies';
 import { LandValueModifierFactorsBreakdown } from '../../components/landValueModifierBreakdown';
 import { BalanceScoreBreakdown } from '../../components/BalanceScoreBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
@@ -18,10 +19,100 @@ import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
 import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBalance, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateTasteEvaluationDetails } from '@/lib/services/wine/taste/tasteIndexService';
+import type { FlavorFamilyId } from '@/lib/types/taste';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar, ResponsiveContainer } from 'recharts';
 
 interface WineModalProps extends DialogProps {
   wineBatch: WineBatch | null;
   wineName?: string;
+}
+
+const FLAVOR_FAMILY_LABELS: Record<FlavorFamilyId, string> = {
+  flower: 'Floral',
+  citrus: 'Citrus',
+  treeFruit: 'Tree Fruit',
+  tropicalFruit: 'Tropical',
+  redFruit: 'Red Fruit',
+  blackFruit: 'Black Fruit',
+  driedFruit: 'Dried Fruit',
+  spiceFlavor: 'Spice',
+  vegetable: 'Vegetable',
+  earth: 'Earth',
+  microbial: 'Microbial',
+  oakAging: 'Oak Aging',
+  generalAging: 'General Aging',
+  faults: 'Faults'
+};
+
+const FLAVOR_WHEEL_ORDER: FlavorFamilyId[] = [
+  'blackFruit',
+  'redFruit',
+  'spiceFlavor',
+  'driedFruit',
+  'earth',
+  'citrus',
+  'flower',
+  'generalAging'
+];
+
+const FLAVOR_WHEEL_COLORS: Record<FlavorFamilyId, string> = {
+  blackFruit: '#7f1d1d',
+  redFruit: '#be123c',
+  spiceFlavor: '#0f766e',
+  driedFruit: '#9a3412',
+  earth: '#166534',
+  citrus: '#65a30d',
+  flower: '#4f46e5',
+  generalAging: '#b45309',
+  treeFruit: '#ea580c',
+  tropicalFruit: '#dc2626',
+  vegetable: '#15803d',
+  microbial: '#65a30d',
+  oakAging: '#ca8a04',
+  faults: '#7f1d1d'
+};
+
+const formatDescriptorLabel = (value: string): string => (
+  value.replace(/([A-Z])/g, ' $1').replace(/^./, (v) => v.toUpperCase())
+);
+
+const formatOriginStageLabel = (stage: string): string => {
+  if (stage === 'baseline') return 'Baseline';
+  if (stage === 'anchor') return 'Anchors';
+  if (stage === 'process') return 'Process';
+  if (stage === 'feature') return 'Features';
+  if (stage === 'interaction') return 'Interactions';
+  return formatDescriptorLabel(stage);
+};
+
+const formatOriginSourceLabel = (source: string): string => {
+  if (source.startsWith('grapeBaseline.')) {
+    const grape = source.replace('grapeBaseline.', '');
+    return `Grape Baseline (${grape})`;
+  }
+  if (source.startsWith('anchor.')) {
+    return `Anchor: ${formatDescriptorLabel(source.replace('anchor.', ''))}`;
+  }
+  if (source.startsWith('process.')) {
+    return `Process: ${formatDescriptorLabel(source.replace('process.', '').replace(/\./g, ' '))}`;
+  }
+  if (source.startsWith('feature.')) {
+    return `Feature: ${formatDescriptorLabel(source.replace('feature.', ''))}`;
+  }
+  if (source.startsWith('interaction.')) {
+    return `Interaction: ${formatDescriptorLabel(source.replace('interaction.', '').replace(/\./g, ' '))}`;
+  }
+  return formatDescriptorLabel(source.replace(/\./g, ' '));
+};
+
+interface PolarTickProps {
+  payload?: {
+    value?: string;
+  };
+  x?: string | number;
+  y?: string | number;
+  textAnchor?: 'start' | 'middle' | 'end' | 'inherit';
 }
 
 /**
@@ -74,18 +165,82 @@ export const WineModal: React.FC<WineModalProps> = ({
     [wineBatch, vineyard, prestige]
   );
 
+  const tasteDetails = useMemo(
+    () => {
+      if (!wineBatch) return null;
+      return calculateTasteEvaluationDetails(wineBatch, vineyard || undefined);
+    },
+    [wineBatch, vineyard]
+  );
+
+  const tasteEvaluation = tasteDetails?.evaluation ?? null;
+
+  const flavorFamilyRows = useMemo(() => {
+    if (!tasteEvaluation) return [];
+    return Object.entries(tasteEvaluation.families)
+      .sort(([, a], [, b]) => b - a)
+      .map(([familyId, value]) => ({
+        familyId: familyId as FlavorFamilyId,
+        label: FLAVOR_FAMILY_LABELS[familyId as FlavorFamilyId] || familyId,
+        value
+      }));
+  }, [tasteEvaluation]);
+
+  const descriptorRows = useMemo(() => {
+    if (!tasteEvaluation) return [];
+    return Object.entries(tasteEvaluation.descriptors)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([descriptorId, value]) => ({
+        descriptorId,
+        label: descriptorId.replace(/([A-Z])/g, ' $1').replace(/^./, (v) => v.toUpperCase()),
+        value
+      }));
+  }, [tasteEvaluation]);
+
+  const flavorWheelData = useMemo(() => {
+    if (!tasteEvaluation) return [];
+    return FLAVOR_WHEEL_ORDER.map((familyId) => {
+      const value = tasteEvaluation.families[familyId] || 0;
+      return {
+        familyId,
+        family: FLAVOR_FAMILY_LABELS[familyId],
+        value,
+        valuePercent: Number((value * 100).toFixed(2)),
+        color: FLAVOR_WHEEL_COLORS[familyId]
+      };
+    });
+  }, [tasteEvaluation]);
+
+  const flavorOriginRows = useMemo(() => {
+    if (!tasteDetails) return [];
+    return [...tasteDetails.profileOrigins.familyOrigins].sort((a, b) => b.value - a.value);
+  }, [tasteDetails]);
+
+  const metricRows: Array<{ key: 'harmony' | 'complexity' | 'intensity' | 'typicity' | 'layerBalance'; label: string }> = [
+    { key: 'harmony', label: 'Harmony' },
+    { key: 'complexity', label: 'Complexity' },
+    { key: 'intensity', label: 'Intensity' },
+    { key: 'typicity', label: 'Typicity' },
+    { key: 'layerBalance', label: 'Layer Balance' }
+  ];
+
   // Early return AFTER all hooks are called
-  if (!wineBatch || !estimatedPriceBreakdown) return null;
+  if (!wineBatch || !estimatedPriceBreakdown || !tasteEvaluation || !tasteDetails) return null;
 
   const displayName = wineName || getWineBatchDisplayName(wineBatch);
-  const currentTasteIndex: number = wineBatch.tasteIndex;
+  const currentTasteIndex: number = tasteEvaluation.tasteIndex;
   const landValueModifier: number = wineBatch.landValueModifier;
-  const currentWineScore = (currentTasteIndex + currentBalance) / 2;
+  const currentWineScore = estimatedPriceBreakdown.wineScore;
   const hasFeatureMultiplier = Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005;
   const hasCompanyPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.companyPrestigeMultiplier - 1) > 0.0005;
   const hasVineyardPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
   const tasteCategory = getQualityCategory(currentTasteIndex);
   const tasteColorClass = getColorClass(currentTasteIndex);
+  const complexityComponents = tasteDetails.metricExplainability.complexity.components;
+  const descriptorEntropy = complexityComponents.find((component) => component.label === 'Descriptor entropy')?.value ?? 0;
+  const familyEntropy = complexityComponents.find((component) => component.label === 'Family entropy')?.value ?? 0;
+  const activeDescriptorRatio = complexityComponents.find((component) => component.label === 'Active descriptor ratio')?.value ?? 0;
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
   const characteristicIconSrc: Record<string,string> = {
     body: getCharacteristicIconSrc('body'),
@@ -115,7 +270,7 @@ export const WineModal: React.FC<WineModalProps> = ({
               </div>
               <div className="text-white/80 text-xs flex items-center gap-2">
                 <Calendar className="h-3 w-3" />
-                {wineBatch.harvestStartDate.year} Vintage • {weeksSinceHarvest} weeks old
+                {wineBatch.harvestStartDate.year} Vintage - {weeksSinceHarvest} weeks old
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -133,7 +288,7 @@ export const WineModal: React.FC<WineModalProps> = ({
           <DialogHeader>
             <DialogTitle className="text-base">Wine Details</DialogTitle>
             <DialogDescription className="text-xs">
-              Comprehensive analysis of taste, land-value modifier, balance, and feature effects.
+              Comprehensive analysis of taste, land-value modifier, structure, and feature effects.
             </DialogDescription>
           </DialogHeader>
 
@@ -150,14 +305,14 @@ export const WineModal: React.FC<WineModalProps> = ({
               </TabsTrigger>
               <TabsTrigger value="balance" className="flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                Balance
+                Structure
               </TabsTrigger>
               <TabsTrigger value="features" className="flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
                 Features
               </TabsTrigger>
               <TabsTrigger value="taste" className="flex items-center gap-1">
-                <Radar className="h-3 w-3" />
+                <RadarIcon className="h-3 w-3" />
                 Taste
               </TabsTrigger>
               <TabsTrigger value="origins" className="flex items-center gap-1">
@@ -239,13 +394,13 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </div>
                       
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Balance:</span>
+                        <span className="text-muted-foreground">Structure:</span>
                         <UnifiedTooltip
                           content={
                             <div className={tooltipStyles.text}>
-                              <TooltipSection title="Balance Score Details">
+                              <TooltipSection title="Structure Index Details">
                                 <TooltipRow
-                                  label="Balance Score:"
+                                  label="Structure Index:"
                                   value={formatNumber(currentBalance, { decimals: 2, forceDecimals: true })}
                                   valueRating={currentBalance}
                                 />
@@ -259,7 +414,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                               </TooltipSection>
                             </div>
                           }
-                          title="Balance Score Details"
+                          title="Structure Index Details"
                           side="top"
                           sideOffset={8}
                           className="max-w-xs"
@@ -489,14 +644,14 @@ export const WineModal: React.FC<WineModalProps> = ({
               )}
             </TabsContent>
 
-            {/* Balance Tab */}
+            {/* Structure Tab */}
             <TabsContent value="balance" className="mt-4">
               <div className="space-y-4">
-                {/* Balance Score Bar */}
+                {/* Structure Index Bar */}
                 <Card>
                   <CardHeader className="py-3">
                     <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" /> Balance Score
+                      <TrendingUp className="h-4 w-4" /> Structure Index
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="py-3">
@@ -510,7 +665,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                   </CardContent>
                 </Card>
 
-                {/* Balance Breakdown */}
+                {/* Structure Breakdown */}
                 <BalanceScoreBreakdown 
                   characteristics={wineBatch.characteristics}
                   showWineStyleRules={true}
@@ -601,48 +756,410 @@ export const WineModal: React.FC<WineModalProps> = ({
               </div>
             </TabsContent>
 
-            {/* Taste Diagram Tab */}
+            {/* Taste Tab */}
             <TabsContent value="taste" className="mt-4">
               <div className="space-y-4">
                 <Card>
                   <CardHeader className="py-3">
                     <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <Radar className="h-4 w-4" /> Taste Profile Diagram
+                      <RadarIcon className="h-4 w-4" /> Flavor Wheel
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="py-3">
-                    <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                      <div className="text-center">
-                        <Radar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Taste Profile</h3>
-                        <p className="text-sm text-gray-500 mb-4">
-                          Spiderweb diagram showing wine characteristics
-                        </p>
-                        <div className="text-xs text-gray-400">
-                          Coming Soon: Interactive taste visualization
-                          </div>
-                        </div>
+                    {flavorWheelData.length > 2 ? (
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={flavorWheelData}>
+                            <PolarGrid stroke="#d1d5db" />
+                            <PolarAngleAxis
+                              dataKey="family"
+                              tick={(props: PolarTickProps) => {
+                                const { payload, x, y, textAnchor } = props;
+                                if (x === undefined || y === undefined) return null;
+                                const datum = flavorWheelData.find((row) => row.family === payload?.value);
+                                return (
+                                  <text
+                                    x={x}
+                                    y={y}
+                                    textAnchor={textAnchor}
+                                    fill={datum?.color || '#4b5563'}
+                                    fontSize={12}
+                                  >
+                                    {payload?.value}
+                                  </text>
+                                );
+                              }}
+                            />
+                            <PolarRadiusAxis
+                              angle={90}
+                              domain={[0, 100]}
+                              tickCount={6}
+                              tick={false}
+                              axisLine={false}
+                            />
+                            <RechartsRadar
+                              name="Flavor Intensity"
+                              dataKey="valuePercent"
+                              stroke="#1d4ed8"
+                              fill="#3b82f6"
+                              fillOpacity={0.2}
+                              strokeWidth={2}
+                              isAnimationActive={false}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                {/* Characteristics for Reference */}
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" /> Characteristics Reference
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-3">
-                    <WineCharacteristicsDisplay 
-                      characteristics={wineBatch.characteristics}
-                      showValues={true}
-                      collapsible={false}
-                      title=""
-                      showBalanceScore={false}
-                    />
+                    ) : (
+                      <div className="text-sm text-gray-500">Insufficient flavor data for radar display.</div>
+                    )}
+                    <div className="mt-2 text-[11px] text-gray-500">
+                      Wheel uses fixed Wine-Folly-style family order so visual shape stays stable between renders.
+                    </div>
                   </CardContent>
                 </Card>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Taste Metrics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                      {metricRows.map(({ key, label }) => {
+                        const explain = tasteDetails.metricExplainability[key];
+                        return (
+                          <UnifiedTooltip
+                            key={key}
+                            content={
+                              <div className="text-xs space-y-2">
+                                <div className="font-semibold">{label}</div>
+                                <div>{explain.description}</div>
+                                <div className="text-gray-500">{explain.formula}</div>
+                                <div className="border-t border-gray-200 pt-1">
+                                  {explain.components.map((component) => (
+                                    <div key={component.label} className="space-y-0.5">
+                                      <div className="flex justify-between gap-2">
+                                        <span>{component.label}</span>
+                                        <span className="font-medium">
+                                          {formatNumber(component.value * 100, { smartDecimals: true })}%
+                                        </span>
+                                      </div>
+                                      {component.note && (
+                                        <div className="text-[11px] text-gray-500">{component.note}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            }
+                            side="top"
+                            className="max-w-sm"
+                            variant="panel"
+                            density="compact"
+                          >
+                            <div className="border rounded p-2 cursor-help">
+                              <div className="text-xs text-gray-500">{label}</div>
+                              <div className={`font-semibold ${getColorClass(explain.score)}`}>
+                                {formatNumber(explain.score * 100, { smartDecimals: true })}%
+                              </div>
+                            </div>
+                          </UnifiedTooltip>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Metric Definitions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3 text-xs space-y-2">
+                    <div className="text-gray-600">
+                      These terms are normalized to 0-1 and feed Harmony and Complexity directly.
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="border rounded p-2">
+                        <div className="font-semibold">harmonyRaw</div>
+                        <div className="text-gray-600">
+                          Weighted average pair compatibility before clamping. Positive values mean synergy dominates; negative values mean clash dominates.
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-1">
+                          Current: {formatNumber(tasteDetails.interactionSummary.harmonyRaw, { decimals: 3, forceDecimals: true })}
+                        </div>
+                      </div>
+                      <div className="border rounded p-2">
+                        <div className="font-semibold">descriptorEntropy</div>
+                        <div className="text-gray-600">
+                          Shannon-style spread across all descriptors. Higher means flavor intensity is distributed across many descriptors rather than concentrated in a few.
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-1">
+                          Current: {formatNumber(descriptorEntropy, { decimals: 3, forceDecimals: true })}
+                        </div>
+                      </div>
+                      <div className="border rounded p-2">
+                        <div className="font-semibold">familyEntropy</div>
+                        <div className="text-gray-600">
+                          Shannon-style spread across flavor families. Higher means better family-level diversity instead of one dominant family.
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-1">
+                          Current: {formatNumber(familyEntropy, { decimals: 3, forceDecimals: true })}
+                        </div>
+                      </div>
+                      <div className="border rounded p-2">
+                        <div className="font-semibold">activeDescriptorRatio</div>
+                        <div className="text-gray-600">
+                          Share of descriptors above activity threshold (at least 25%). Higher means more descriptors are materially present.
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-1">
+                          Current: {formatNumber(activeDescriptorRatio * 100, { smartDecimals: true })}% active
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Taste Index Calculation</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3 text-xs space-y-2">
+                    <div className="text-gray-600">{tasteDetails.indexFormula}</div>
+                    <div className="border rounded divide-y">
+                      {tasteDetails.indexTerms.map((term) => (
+                        <div key={term.metric} className="px-2 py-1.5 flex justify-between">
+                          <span className="capitalize">
+                            {term.metric} ({formatNumber(term.weight * 100, { smartDecimals: true })}%)
+                          </span>
+                          <span className="font-medium">
+                            {formatNumber(term.weight, { decimals: 2, forceDecimals: true })} × {formatNumber(term.metricValue, { decimals: 3, forceDecimals: true })} = {formatNumber(term.contribution, { decimals: 3, forceDecimals: true })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-2 border-t border-gray-200 flex justify-between text-sm">
+                      <span className="font-medium">Taste Index</span>
+                      <span className={`font-semibold ${getColorClass(tasteEvaluation.tasteIndex)}`}>
+                        {formatNumber(tasteEvaluation.tasteIndex * 100, { smartDecimals: true })}%
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Synergy and Clash Contributions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div className="space-y-2">
+                        <div className="font-semibold text-green-700">Top Synergies</div>
+                        {tasteDetails.interactionSummary.topSynergies.length === 0 ? (
+                          <div className="text-gray-500">No positive family interactions detected.</div>
+                        ) : (
+                          tasteDetails.interactionSummary.topSynergies.map((interaction) => (
+                            <div key={`${interaction.familyA}-${interaction.familyB}`} className="border rounded px-2 py-1.5">
+                              <div className="flex justify-between">
+                                <span>{FLAVOR_FAMILY_LABELS[interaction.familyA]} + {FLAVOR_FAMILY_LABELS[interaction.familyB]}</span>
+                                <span className="font-medium text-green-700">
+                                  +{formatNumber(interaction.normalizedContribution, { decimals: 3, forceDecimals: true })}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-gray-500">
+                                Compatibility {formatNumber(interaction.compatibility, { decimals: 2, forceDecimals: true })}, pair weight {formatNumber(interaction.pairWeight, { decimals: 3, forceDecimals: true })}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="font-semibold text-red-700">Top Clashes</div>
+                        {tasteDetails.interactionSummary.topClashes.length === 0 ? (
+                          <div className="text-gray-500">No negative family interactions detected.</div>
+                        ) : (
+                          tasteDetails.interactionSummary.topClashes.map((interaction) => (
+                            <div key={`${interaction.familyA}-${interaction.familyB}`} className="border rounded px-2 py-1.5">
+                              <div className="flex justify-between">
+                                <span>{FLAVOR_FAMILY_LABELS[interaction.familyA]} + {FLAVOR_FAMILY_LABELS[interaction.familyB]}</span>
+                                <span className="font-medium text-red-700">
+                                  {formatNumber(interaction.normalizedContribution, { decimals: 3, forceDecimals: true })}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-gray-500">
+                                Compatibility {formatNumber(interaction.compatibility, { decimals: 2, forceDecimals: true })}, pair weight {formatNumber(interaction.pairWeight, { decimals: 3, forceDecimals: true })}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-[11px] text-gray-500">
+                      harmonyRaw is the weighted average of family-pair compatibility, with pair mass = sum(f[a]*f[b]) across active pairs.
+                      Current harmonyRaw: {formatNumber(tasteDetails.interactionSummary.harmonyRaw, { decimals: 3, forceDecimals: true })}, pair mass: {formatNumber(tasteDetails.interactionSummary.pairMass, { decimals: 3, forceDecimals: true })}.
+                      Harmony metric then applies: clamp01(0.5 + 0.5*harmonyRaw).
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Flavor Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3">
+                    <div className="text-[11px] text-gray-600 mb-3">
+                      Descriptors are atomic flavor notes, while Flavor Families are grouped categories built from descriptors.
+                      Some families currently contain one descriptor (for example, Black Fruit), so the same name can appear in both lists.
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-gray-600">Flavor Families</div>
+                        {flavorFamilyRows.map((row) => (
+                          <div key={row.familyId} className="text-xs">
+                            <div className="flex justify-between">
+                              <UnifiedTooltip
+                                content={
+                                  <div className="text-xs space-y-1">
+                                    <div className="font-semibold">{row.label}</div>
+                                    <div>
+                                      Descriptors: {FAMILY_TO_DESCRIPTORS[row.familyId]
+                                        .map((descriptorId) => descriptorId.replace(/([A-Z])/g, ' $1').replace(/^./, (v) => v.toUpperCase()))
+                                        .join(', ')}
+                                    </div>
+                                    <div className="text-gray-500">This family contributes to harmony, complexity, and intensity metrics.</div>
+                                  </div>
+                                }
+                                side="top"
+                                className="max-w-sm"
+                                variant="panel"
+                                density="compact"
+                              >
+                                <span className="cursor-help">{row.label}</span>
+                              </UnifiedTooltip>
+                              <span className="font-medium">{formatNumber(row.value * 100, { smartDecimals: true })}%</span>
+                            </div>
+                            <div className="mt-1 h-1.5 rounded bg-gray-100 overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{ width: `${Math.max(1, row.value * 100)}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                        <details className="mt-2 rounded border border-gray-200 p-2">
+                          <summary className="cursor-pointer font-medium text-[11px] text-gray-700">Expand full family-to-descriptor map</summary>
+                          <div className="mt-2 space-y-1 text-[11px]">
+                            {Object.entries(FAMILY_TO_DESCRIPTORS).map(([familyId, descriptorIds]) => (
+                              <div key={familyId}>
+                                <span className="font-medium">{FLAVOR_FAMILY_LABELS[familyId as FlavorFamilyId]}:</span>{' '}
+                                {descriptorIds.map((descriptorId) => descriptorId.replace(/([A-Z])/g, ' $1').replace(/^./, (v) => v.toUpperCase())).join(', ')}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-gray-600">Top Descriptors</div>
+                        {descriptorRows.map((row) => (
+                          <div key={row.descriptorId} className="text-xs">
+                            <div className="flex justify-between">
+                              <span>{row.label}</span>
+                              <span className="font-medium">{formatNumber(row.value * 100, { smartDecimals: true })}%</span>
+                            </div>
+                            <div className="mt-1 h-1.5 rounded bg-gray-100 overflow-hidden">
+                              <div className="h-full bg-amber-500" style={{ width: `${Math.max(1, row.value * 100)}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium">Flavor Origins</CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3 text-xs space-y-3">
+                    <div className="text-gray-600">
+                      Origins show how flavor was built in raw space before normalization to 0-1 descriptor intensity.
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                      {tasteDetails.profileOrigins.stageTotals.map((stageTotal) => (
+                        <div key={stageTotal.stage} className="border rounded p-2">
+                          <div className="font-medium">{formatOriginStageLabel(stageTotal.stage)}</div>
+                          <div className={`text-[11px] ${stageTotal.signedDeltaRaw >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                            Signed: {stageTotal.signedDeltaRaw >= 0 ? '+' : ''}{formatNumber(stageTotal.signedDeltaRaw, { decimals: 3, forceDecimals: true })}
+                          </div>
+                          <div className="text-[11px] text-gray-500">
+                            Absolute: {formatNumber(stageTotal.absoluteDeltaRaw, { decimals: 3, forceDecimals: true })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      {flavorOriginRows.map((familyOrigin) => {
+                        const descriptorIds = FAMILY_TO_DESCRIPTORS[familyOrigin.familyId];
+                        return (
+                          <details key={familyOrigin.familyId} className="rounded border border-gray-200 p-2">
+                            <summary className="cursor-pointer flex items-center justify-between gap-2">
+                              <span className="font-medium">{FLAVOR_FAMILY_LABELS[familyOrigin.familyId]}</span>
+                              <span>{formatNumber(familyOrigin.value * 100, { smartDecimals: true })}%</span>
+                            </summary>
+                            <div className="mt-2 space-y-2">
+                              <div>
+                                <div className="text-[11px] font-medium text-gray-700">All Source Drivers</div>
+                                {familyOrigin.topSources.length === 0 ? (
+                                  <div className="text-[11px] text-gray-500">No tracked drivers for this family.</div>
+                                ) : (
+                                  <div className="space-y-1 mt-1">
+                                    {familyOrigin.topSources.map((source) => (
+                                      <div key={`${source.stage}-${source.source}`} className="flex justify-between text-[11px]">
+                                        <span>{formatOriginSourceLabel(source.source)}</span>
+                                        <span className={source.impactRaw >= 0 ? 'text-green-700' : 'text-red-700'}>
+                                          {source.impactRaw >= 0 ? '+' : ''}{formatNumber(source.impactRaw, { decimals: 3, forceDecimals: true })} ({formatOriginStageLabel(source.stage)})
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <div className="text-[11px] font-medium text-gray-700">Family Descriptors</div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1">
+                                  {descriptorIds.map((descriptorId) => {
+                                    const descriptorOrigin = tasteDetails.profileOrigins.descriptorOrigins[descriptorId];
+                                    const allTerms = descriptorOrigin?.terms || [];
+                                    return (
+                                      <div key={descriptorId} className="rounded bg-gray-50 p-1.5 text-[11px]">
+                                        <div className="flex justify-between">
+                                          <span>{formatDescriptorLabel(descriptorId)}</span>
+                                          <span>{formatNumber((descriptorOrigin?.normalizedValue || 0) * 100, { smartDecimals: true })}%</span>
+                                        </div>
+                                        {allTerms.length === 0 ? (
+                                          <div className="text-gray-500">No tracked drivers</div>
+                                        ) : allTerms.map((term, index) => (
+                                          <div key={`${descriptorId}-${term.source}-${index}`} className="flex justify-between text-gray-600">
+                                            <span>
+                                              {formatOriginSourceLabel(term.source)}
+                                              {term.occurrences && term.occurrences > 1 ? ` (${term.occurrences}x)` : ''}
+                                            </span>
+                                            <span className={term.deltaRaw >= 0 ? 'text-green-700' : 'text-red-700'}>
+                                              {term.deltaRaw >= 0 ? '+' : ''}{formatNumber(term.deltaRaw, { decimals: 3, forceDecimals: true })}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
               </div>
             </TabsContent>
 
@@ -694,7 +1211,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                                       <div className="text-xs flex items-center gap-1">
                                         {e.description}
                                         {e.count > 1 && (
-                                          <span className="text-[10px] text-muted-foreground">({e.count}×)</span>
+                                          <span className="text-[10px] text-muted-foreground">({e.count}x)</span>
                                         )}
                                       </div>
                                       <div className={`text-xs font-semibold ${e.modifier>=0?'text-green-700':'text-red-700'}`}>

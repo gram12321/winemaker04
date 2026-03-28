@@ -30,7 +30,7 @@ const BatchBadge: React.FC<{ batch: WineBatch; className?: string }> = ({ batch,
 };
 
 
-// Component for combined balance and quality display
+// Component for combined structure and taste display
 const BalanceAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
  const balanceResult = useWineBatchBalance(batch);
  const formattedBalance = useFormattedBalance(balanceResult);
@@ -45,7 +45,7 @@ const BalanceAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => 
  return (
  <div className="text-xs text-gray-600 space-y-1">
  <div>
- <span className="font-medium">Balance:</span> <span className={`font-medium ${balanceColorClass}`}>{formattedBalance}</span> ({balanceQuality})
+ <span className="font-medium">Structure:</span> <span className={`font-medium ${balanceColorClass}`}>{formattedBalance}</span> ({balanceQuality})
  </div>
  <div>
  <span className="font-medium">Taste:</span> <span className={`font-medium ${qualityColorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
@@ -83,10 +83,10 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
  <div>Current Taste Index: <span className="font-medium">{formatPercent(currentTasteIndex, 1, true)}</span></div>
  </>
  )}
- <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
+ <div>Structure: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
  <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
  <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
- Formula: (Taste Index + Balance) / 2
+ Formula: (Taste Index + Structure Index) / 2
  </div>
  </div>
  }
@@ -124,7 +124,9 @@ const EstimatedPriceDisplay: React.FC<{
  const hasCompanyPrestige = Math.abs(breakdown.companyPrestigeMultiplier - 1) > 0.0005;
  const hasVineyardPrestige = Math.abs(breakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
 
- const { presentFeatures, hasTasteAffectingFeatures, priceImpact } = featureDetails;
+ const { presentFeatures, hasPriceAffectingFeatures, priceImpact } = featureDetails;
+ const hasMaterialPriceDelta = priceImpact && Math.abs(priceImpact.priceDifference) > 0.01;
+ const isFeaturePremium = hasMaterialPriceDelta ? (priceImpact.priceDifference > 0) : false;
 
  return (
  <div className="space-y-1">
@@ -133,15 +135,15 @@ const EstimatedPriceDisplay: React.FC<{
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Estimated Price Calculation</div>
  <div>Taste Index: <span className="font-medium">{formatPercent(breakdown.tasteIndex, 1, true)}</span></div>
- <div>Balance: <span className="font-medium">{formatPercent(breakdown.balance, 1, true)}</span></div>
+ <div>Structure: <span className="font-medium">{formatPercent(breakdown.structureIndex, 1, true)}</span></div>
  <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
- {hasTasteAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
+ {hasPriceAffectingFeatures && hasMaterialPriceDelta && (
  <>
- <div className="text-red-600 text-[10px]">
- Price reduced by {formatNumber(priceImpact.priceDifference, { currency: true, decimals: 2 })} due to:
+ <div className={`${isFeaturePremium ? 'text-green-700' : 'text-red-600'} text-[10px]`}>
+ Price {isFeaturePremium ? 'increased' : 'reduced'} by {formatNumber(Math.abs(priceImpact!.priceDifference), { currency: true, decimals: 2 })} due to:
  </div>
  <div className="text-[10px] text-gray-600">
- Reduction: {formatPercent(priceImpact.priceDifference / Math.max(0.0001, priceImpact.priceWithoutFeatures), 1, true)}
+ Change: {formatPercent(Math.abs(priceImpact!.priceDifference) / Math.max(0.0001, priceImpact!.priceWithoutFeatures), 1, true)}
  </div>
  <div className="ml-2 text-[10px] text-gray-600">
  {presentFeatures.map((f: any, idx: number) => (
@@ -511,7 +513,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  sortable: true,
  accessor: (wine) => wine.agingProgress || 0
  },
- { key: 'balance' as any, label: 'Balance & Quality', sortable: false },
+ { key: 'balance' as any, label: 'Structure & Taste', sortable: false },
  {
  key: 'wineScore' as any,
  label: 'Score',
@@ -899,7 +901,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  >
  Aging Progress
  </TableHead>
- <TableHead>Balance & Quality</TableHead>
+ <TableHead>Structure & Taste</TableHead>
  <TableHead
  sortable
  onSort={() => handleCellarSort('wineScore' as any)}

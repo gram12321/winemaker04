@@ -1,12 +1,14 @@
 import { WineBatch, Vineyard } from '../../../types/types';
 import { SALES_CONSTANTS } from '../../../constants/constants';
 import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
+import { calculateTasteIndexForBatch } from '../taste/tasteIndexService';
+import { getStructureIndex } from '../structure/structureIndexService';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../../utils/calculator';
 import { clamp01 } from '../../../utils/utils';
 
 export interface EstimatedPriceBreakdown {
   tasteIndex: number;
-  balance: number;
+  structureIndex: number;
   wineScore: number;
   baseRate: number;
   basePrice: number;
@@ -21,7 +23,7 @@ export interface EstimatedPriceBreakdown {
 }
 
 export function getTasteIndex(wineBatch: WineBatch): number {
-  return clamp01(wineBatch.tasteIndex);
+  return clamp01(calculateTasteIndexForBatch(wineBatch));
 }
 
 function getLandValueModifier(wineBatch: WineBatch): number {
@@ -85,8 +87,8 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
 
 export function calculateWineScore(wineBatch: WineBatch): number {
   const tasteIndex = getTasteIndex(wineBatch);
-  const balance = clamp01(wineBatch.balance);
-  return (tasteIndex + balance) / 2;
+  const structureIndex = getStructureIndex(wineBatch);
+  return (tasteIndex + structureIndex) / 2;
 }
 
 function resolvePrestigeMultiplier(prestige?: number): number {
@@ -102,8 +104,8 @@ export function calculateEstimatedPriceBreakdown(
   vineyardPrestige?: number
 ): EstimatedPriceBreakdown {
   const tasteIndex = getTasteIndex(wineBatch);
-  const balance = clamp01(wineBatch.balance);
-  const wineScore = (tasteIndex + balance) / 2;
+  const structureIndex = getStructureIndex(wineBatch);
+  const wineScore = (tasteIndex + structureIndex) / 2;
   const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
   const basePrice = wineScore * baseRate;
   const wineScoreMultiplier = calculateAsymmetricalMultiplier(wineScore);
@@ -121,7 +123,7 @@ export function calculateEstimatedPriceBreakdown(
 
   return {
     tasteIndex,
-    balance,
+    structureIndex,
     wineScore,
     baseRate,
     basePrice,
