@@ -3,6 +3,7 @@ import { WineBatch, GrapeVariety } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { buildGameDate } from '../dbMapperUtils';
+import { parseWineAnchorsFromDb } from '../../services/wine/anchors/wineAnchorService';
 
 const WINE_BATCHES_TABLE = 'wine_batches';
 
@@ -90,6 +91,7 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         fragile: batch.fragile,
         prone_to_oxidation: batch.proneToOxidation,
         features: batch.features || [], // Store features as JSONB array
+        wine_anchors: batch.wineAnchors,
         harvest_start_week: Math.round(batch.harvestStartDate.week),
         harvest_start_season: batch.harvestStartDate.season,
         harvest_start_year: Math.round(batch.harvestStartDate.year),
@@ -161,7 +163,8 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         naturalYield: row.natural_yield || grapeData.naturalYield,
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
-        features: row.features || [], 
+        features: row.features || [],
+        wineAnchors: parseWineAnchorsFromDb(row.wine_anchors),
         harvestStartDate: buildGameDate(row.harvest_start_week, row.harvest_start_season, row.harvest_start_year)!,
         harvestEndDate: buildGameDate(row.harvest_end_week, row.harvest_end_season, row.harvest_end_year)!,
         bottledDate: buildGameDate(row.bottled_week, row.bottled_season, row.bottled_year),
@@ -251,6 +254,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           fragile: updatedBatch.fragile,
           prone_to_oxidation: updatedBatch.proneToOxidation,
           features: updatedBatch.features || [],
+          wine_anchors: updatedBatch.wineAnchors,
           harvest_start_week: Math.round(updatedBatch.harvestStartDate.week),
           harvest_start_season: updatedBatch.harvestStartDate.season,
           harvest_start_year: Math.round(updatedBatch.harvestStartDate.year),

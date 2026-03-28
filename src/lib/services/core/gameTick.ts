@@ -1,6 +1,8 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
+import { DEFAULT_WINE_ANCHOR_VALUES, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
+import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
@@ -387,11 +389,13 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
   const updates = activeBatches
     .map(batch => applyFeatureEffectsToBatch(batch))
     .filter((updatedBatch, index) => {
-      // Only include batches that actually changed
       const originalBatch = activeBatches[index];
+      // Characteristic tweaks flow through structure/taste; anchors have their own column — no separate key walk.
       return updatedBatch.tasteIndex !== originalBatch.tasteIndex ||
         updatedBatch.structureIndex !== originalBatch.structureIndex ||
-        JSON.stringify(updatedBatch.characteristics) !== JSON.stringify(originalBatch.characteristics);
+        WINE_ANCHOR_KEYS.some(
+          (k) => updatedBatch.wineAnchors[k] !== originalBatch.wineAnchors[k]
+        );
     })
     .map(updatedBatch => ({
       id: updatedBatch.id,
@@ -399,7 +403,8 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
         tasteIndex: updatedBatch.tasteIndex,
         structureIndex: updatedBatch.structureIndex,
         characteristics: updatedBatch.characteristics,
-        breakdown: updatedBatch.breakdown
+        breakdown: updatedBatch.breakdown,
+        wineAnchors: updatedBatch.wineAnchors
       }
     }));
 
@@ -424,12 +429,21 @@ async function updateBottledWineAging(): Promise<void> {
   if (bottledWines.length === 0) return;
 
   // OPTIMIZATION: Collect all updates for bulk operation
-  const updates = bottledWines.map((batch: WineBatch) => ({
-    id: batch.id,
-    updates: {
-      agingProgress: (batch.agingProgress || 0) + 1
-    }
-  }));
+  const updates = bottledWines.map((batch: WineBatch) => {
+    const nextAging = (batch.agingProgress || 0) + 1;
+    const batchNext: WineBatch = { ...batch, agingProgress: nextAging };
+    const wineAnchors = applyFeatureLayerAnchors(
+      batchNext,
+      batch.wineAnchors ?? DEFAULT_WINE_ANCHOR_VALUES
+    );
+    return {
+      id: batch.id,
+      updates: {
+        agingProgress: nextAging,
+        wineAnchors
+      }
+    };
+  });
 
   // OPTIMIZATION: Single bulk update instead of N individual saves
   await bulkUpdateWineBatches(updates);

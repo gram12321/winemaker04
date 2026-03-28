@@ -8,6 +8,7 @@ import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 import { getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { applyCrushingToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 
 /**
  * Calculate work required for crushing wine batches
@@ -181,6 +182,9 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       { options: crushingOptions, batch: updatedBatch }  // Pass context with options and batch for event triggers
     );
 
+    const opts = crushingOptions as CrushingOptions;
+    const wineAnchors = applyCrushingToWineAnchors(batchWithEventFeatures.wineAnchors, opts);
+
     // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste index
     // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
     await updateWineBatch(batchId, {
@@ -189,7 +193,8 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      tasteIndex: batchWithEventFeatures.tasteIndex
+      tasteIndex: batchWithEventFeatures.tasteIndex,
+      wineAnchors
     });
 
     // Deduct costs if any

@@ -15,6 +15,10 @@ import { REGION_ALTITUDE_RANGES } from '../../../constants/vineyardConstants';
 import { initializeBatchFeatures, processEventTrigger } from '../features/featureService';
 import { SEASON_ORDER, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '@/lib/constants';
 import { calculateGrapeSuitabilityMetrics } from '../../vineyard/vineyardValueCalc';
+import {
+  combineWineAnchorSets,
+  computeHarvestWineAnchors
+} from '../anchors/wineAnchorService';
 
 /**
  * Inventory Service
@@ -56,6 +60,7 @@ async function findCompatibleWineBatch(
  * @param newQuality - Quality of new grapes
  * @param newStructureIndex - Structure index of new grapes
  * @param newCharacteristics - Characteristics of new grapes
+ * @param newWineAnchors - Anchors for the incoming harvest portion
  * @returns Updated wine batch with combined properties
  */
 function combineWineBatches(
@@ -63,7 +68,8 @@ function combineWineBatches(
   newQuantity: number,
   newQuality: number,
   newStructureIndex: number,
-  newCharacteristics: WineCharacteristics
+  newCharacteristics: WineCharacteristics,
+  newWineAnchors: WineBatch['wineAnchors']
 ): WineBatch {
   const totalQuantity = existingBatch.quantity + newQuantity;
   const existingWeight = existingBatch.quantity / totalQuantity;
@@ -120,7 +126,13 @@ function combineWineBatches(
     bornTasteIndex: combinedTasteIndex,
     structureIndex: combinedStructureIndex,
     characteristics: combinedCharacteristics,
-    breakdown: combinedBreakdown
+    breakdown: combinedBreakdown,
+    wineAnchors: combineWineAnchorSets(
+      existingBatch.wineAnchors,
+      newWineAnchors,
+      existingBatch.quantity,
+      newQuantity
+    )
     // Note: finalPrice will be recalculated after combination
   };
 }
@@ -161,10 +173,20 @@ export async function createWineBatchFromHarvest(
     vineyard.soil
   );
   const suitability = suitabilityMetrics.overall;
+
+  const quality = calculateLandValueModifier(vineyard);
+
+  const wineAnchors = computeHarvestWineAnchors(vineyard, grape, {
+    minAltitude: minAlt,
+    maxAltitude: maxAlt,
+    ripeness: vineyard.ripeness || 0.5,
+    landValueModifier: quality
+  });
+
   const { characteristics, breakdown } = modifyHarvestCharacteristics({
     baseCharacteristics: base,
     ripeness: vineyard.ripeness || 0.5,
-    qualityFactor: calculateLandValueModifier(vineyard), // Use actual vineyard land-value modifier instead of hardcoded 0.5
+    qualityFactor: quality,
     suitability,
     altitude,
     medianAltitude: (minAlt + maxAlt) / 2,
@@ -173,12 +195,8 @@ export async function createWineBatchFromHarvest(
     overgrowth: vineyard.overgrowth,
     density: vineyard.density || 0
   });
-  
-  // Calculate structure index using the rule system
+
   const structureIndexResult = calculateStructureIndex(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
-  
-  // Calculate quality from vineyard factors (land value, prestige, altitude, etc.)
-  const quality = calculateLandValueModifier(vineyard);
   
   // Check for existing compatible wine batch
   const existingBatch = await findCompatibleWineBatch(vineyardId, grape, harvestStartDate.year);
@@ -190,7 +208,8 @@ export async function createWineBatchFromHarvest(
       quantity,
       quality, // Use vineyard quality
       structureIndexResult.score, // Structure index
-      characteristics
+      characteristics,
+      wineAnchors
     );
     
     // Recalculate estimated price for the combined batch with prestige multipliers
@@ -248,7 +267,8 @@ export async function createWineBatchFromHarvest(
       proneToOxidation: grapeMetadata.proneToOxidation,
       features: initializeBatchFeatures(), // Initialize features array
       harvestStartDate: harvestStartDate,
-      harvestEndDate: harvestEndDate
+      harvestEndDate: harvestEndDate,
+      wineAnchors
     };
 
     // Calculate estimated price using the pricing service with prestige multipliers

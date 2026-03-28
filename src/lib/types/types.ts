@@ -120,6 +120,68 @@ export interface StructureIndexResult {
   adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from structure calculation
 }
 
+/**
+ * Backend-only wine anchors (0–1): **upstream** wine identity (terroir + variety + process).
+ * `WineCharacteristics` / structure / flavor are **downstream** — what the player tastes — and must not
+ * feed back into anchor computation (see `computeHarvestWineAnchors`, `wineAnchorProcess`).
+ */
+export interface WineAnchorValues {
+  // --- Juice & chemistry (must / wine body, not raw copies of a single characteristic) ---
+  /** Sweetness potential in the anchor space */
+  residualSugar: number;
+  /** Alcohol potential from ripeness, sun, body, region */
+  alcoholPotential: number;
+  /** Single acidity axis: tart/crisp (from grape acidity + site + ripeness — not duplicate pH + TA) */
+  juiceAcidity: number;
+  /** Tannin + color extract for reds; light structure for whites */
+  phenolicExtract: number;
+  /** Aromatic lift */
+  aromaticIntensity: number;
+  /** Body / glycerol / mouthfeel */
+  textureRichness: number;
+
+  // --- Process (winery steps) ---
+  leesContact: number;
+  /** Press / extraction at crush */
+  crushingExtraction: number;
+  /** Method + temperature as one profile (set at fermentation start) */
+  fermentationProfile: number;
+  /** Skin contact built up at crush, ferment start, and each fermenting week */
+  skinContactEvolution: number;
+
+  // --- Terroir (grape ↔ place fit) ---
+  regionalTypicity: number;
+  /** Suitability + mineral soil keywords blended in computation */
+  soilAffinity: number;
+  solarClimateFit: number;
+
+  // --- Vineyard (plot & microclimate) ---
+  /** Vine age curve + land/health (one intuitive “age of site” axis) */
+  vineAgeCharacter: number;
+  rowCompetition: number;
+  /** Understory / clearing / wild edge */
+  siteWildness: number;
+  siteAltitude: number;
+  /** Warm vs cool slope aspect */
+  aspectWarmth: number;
+  /** Wind, heat load, diurnal range — one field */
+  microclimateBlend: number;
+  vineyardHealth: number;
+  harvestTiming: number;
+
+  // --- Grape identity & cellar life ---
+  varietyCharacter: number;
+  colorIntensity: number;
+  /** Oxidative evolution: variety + health + faults + age */
+  oxidativeCharacter: number;
+  /** Oak + bottle evolution */
+  cellarEvolution: number;
+  /** How many features have “touched” the batch */
+  featureFootprint: number;
+}
+
+export type WineAnchorId = keyof WineAnchorValues;
+
 // Wine batch state - unified system replacing separate stage/process
 export type WineBatchState =
   | 'grapes'           // Ready for crushing
@@ -180,6 +242,9 @@ export interface WineBatch {
 
   // Wine Features Framework (faults and positive features)
   features: WineFeature[];
+
+  /** Hidden backend anchors (0–1); computed at harvest, persisted; not shown in UI yet */
+  wineAnchors: WineAnchorValues;
 
   harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
   harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch

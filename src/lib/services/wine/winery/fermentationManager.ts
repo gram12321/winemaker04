@@ -11,6 +11,7 @@ import { FermentationOptions, applyWeeklyFermentationEffects } from '../characte
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteIndex } from '../winescore/wineScoreCalculation';
+import { applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
 
 /**
  * Fermentation Manager
@@ -195,6 +196,11 @@ export async function processWeeklyFermentation(): Promise<void> {
         ]
       };
 
+      const wineAnchors = applyWeeklyFermentationContactToWineAnchors(
+        batch.wineAnchors,
+        batch.fermentationOptions
+      );
+
       // Collect update instead of immediately saving
       updates.push({
         id: batch.id,
@@ -202,7 +208,8 @@ export async function processWeeklyFermentation(): Promise<void> {
           characteristics: newCharacteristics,
           tasteIndex: currentTasteIndex,
           structureIndex: structureIndexResult.score,
-          breakdown: combinedBreakdown
+          breakdown: combinedBreakdown,
+          wineAnchors
         }
       });
     }

@@ -14,6 +14,8 @@ import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
 import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { getTasteIndex } from '../winescore/wineScoreCalculation';
+import { DEFAULT_WINE_ANCHOR_VALUES } from '../anchors/wineAnchorService';
+import { applyFeatureLayerAnchors } from '../anchors/wineAnchorProcess';
 
 // ===== CORE INTERFACES =====
 
@@ -406,7 +408,10 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   
   // Recalculate structure index with modified characteristics
   const structureIndexResult = calculateStructureIndex(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
-  
+
+  let wineAnchors = batch.wineAnchors ?? DEFAULT_WINE_ANCHOR_VALUES;
+  wineAnchors = applyFeatureLayerAnchors(batch, wineAnchors);
+
   return {
     ...batch,
     tasteIndex: Math.max(0, Math.min(1, currentTasteIndex)),
@@ -415,7 +420,8 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     structureIndex: structureIndexResult.score,
     breakdown: {
       effects: breakdownEffects
-    }
+    },
+    wineAnchors
   };
 }
 
@@ -532,7 +538,8 @@ export function previewFeatureRisks(
     fragile: 0,
     proneToOxidation: 0,
     harvestStartDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
-    harvestEndDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 }
+    harvestEndDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
+    wineAnchors: { ...DEFAULT_WINE_ANCHOR_VALUES }
   };
   
   const risks = previewEventRisksInternal(targetBatch, event, context);
@@ -806,7 +813,8 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
             tasteIndex: batchWithEffects.tasteIndex,
             structureIndex: batchWithEffects.structureIndex,
             characteristics: batchWithEffects.characteristics,
-            breakdown: batchWithEffects.breakdown
+            breakdown: batchWithEffects.breakdown,
+            wineAnchors: batchWithEffects.wineAnchors
           }
         });
       }

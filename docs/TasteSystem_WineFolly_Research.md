@@ -1,6 +1,6 @@
 ![1774727117201](image/TasteSystem_WineFolly_Research/1774727117201.png)# Taste System: Wine Folly Research + Integrated Design
 
-Date: 2026-03-26
+Date: 2026-03-26 · Phase 1 anchors doc sync: 2026-03-28
 
 ## Objective
 
@@ -8,7 +8,7 @@ Build a large `Taste` system that feeds `tasteIndex` as a true flavor index (0-1
 
 Design goals:
 
-1. `tasteIndex` is built from flavor subcomponents, similar to how the current `balance` index is built from structure subcomponents.
+1. `tasteIndex` is built from flavor subcomponents, similar to how the `structureIndex` is built from structure subcomponents.
 2. Flavor modeling follows Wine Folly ideas (primary/secondary/tertiary, wheel families, climate/process/aging effects).
 3. Hidden backend wine anchors constrain evolution so wines feel physically plausible (not free sliders).
 4. Existing rule ideas can be migrated, but the rules engine can be enhanced or replaced if the new system is better.
@@ -142,74 +142,69 @@ interface TasteMetrics {
 }
 ```
 
-## Hidden Wine Anchors (Expanded Core Design)
+## Hidden Wine Anchors
 
-All anchor ideas are part of the main design (not split into v1/v1.5 tiers).
-Terroir/process influences should prefer an anchor-mediated path as canonical flow; direct and anchor paths are only combined when explicitly marked as intentional stacking.
+Terroir and process influences should prefer an **anchor-mediated** path as the canonical flow. **Phase 1** introduces a single persisted schema (`WineAnchorValues`, 0–1) and services that own harvest initialization and process updates. The research lists below (lab-style chemistry, separate wind vs heat, oak program details, etc.) remain **design targets** where phase 1 uses **merged fields**; future phases can split or add keys without changing the overall direction.
 
-### Chemical Anchors
+### Phase 1 (implemented)
 
-1. `residualSugar`
-2. `alcoholABV`
-3. `pH`
-4. `totalAcidity`
-5. `phenolicLoad`
-6. `anthocyaninLoad` (red color/depth potential)
-7. `aromaticPotential`
-8. `glycerolMouthfeel`
-9. `volatileAcidityPotential`
-10. `oxidationSensitivity`
+**Purpose:** Anchors are **upstream** (hidden wine identity). `WineCharacteristics`, structure channels, and future flavor vectors are **downstream** — what the player tastes. Harvest and process anchor code must **not** read harvested `WineCharacteristics`, to avoid circularity with taste/structure recomputation.
 
-### Vineyard/Terroir Anchors
+**Storage:** `WineBatch.wineAnchors` (JSONB), type `WineAnchorValues` in `src/lib/types/types.ts`. Defaults and DB parsing: `DEFAULT_WINE_ANCHOR_VALUES`, `parseWineAnchorsFromDb`, `combineWineAnchorSets` in `src/lib/services/wine/anchors/wineAnchorService.ts`.
 
-1. `grapeVarietyProfile`
-2. `grapeColor`
-3. `vineAge`
-4. `altitude`
-5. `aspect`
-6. `soilProfile`
-7. `windExposure`
-8. `seasonHeatLoad`
-9. `diurnalShift`
-10. `vineyardHealth`
+**Code:**
 
-These anchor effects should not be duplicated by parallel direct modifiers on the same target unless intentional stacking is declared and tuned.
+| Area | File | Role |
+|------|------|------|
+| Harvest + shared math | `wineAnchorService.ts` | `computeHarvestWineAnchors`, `weightedMean`, grape/ site priors, `WINE_ANCHOR_KEYS` |
+| Crush / ferment / features | `wineAnchorProcess.ts` | `applyCrushingToWineAnchors`, `applyFermentationSetupToWineAnchors`, `applyWeeklyFermentationContactToWineAnchors`, `applyFeatureLayerAnchors` |
 
-### Process Anchors
+**Pipeline (after phase 1):**
 
-1. `harvestTiming`
-2. `fermentationMethod`
-3. `fermentationTemperatureCurve`
-4. `macerationIntensity`
-5. `oakProgram` (type/toast/time)
-6. `leesContact`
-7. `bottleAgingState`
-8. `featureHistory` (noble rot, oxidation, green flavor, etc.)
+1. **Harvest:** `computeHarvestWineAnchors(vineyard, grape, { minAltitude, maxAltitude, ripeness, landValueModifier })` — `GRAPE_CONST`, variety priors, suitability metrics, ripeness, vineyard state (no tasted stats).
+2. **Crushing:** updates `crushingExtraction`, `skinContactEvolution`.
+3. **Fermentation setup:** updates `fermentationProfile`, `leesContact`, `skinContactEvolution`.
+4. **Weekly fermentation:** further `skinContactEvolution`, `leesContact`.
+5. **Feature / cellar layer:** `applyFeatureLayerAnchors` — `oxidativeCharacter`, `cellarEvolution`, `featureFootprint` from features, batch aging signals, grape priors (not `batch.characteristics`).
 
-Anchor entries should carry status in implementation (`active`, `derived_partial`, `placeholder_todo`) so not-yet-implemented concepts stay explicit design intent.
+**Implemented keys (`WineAnchorValues`) — grouped:**
 
-### Game-Concept Connections
+- **Juice and chemistry:** `residualSugar`, `alcoholPotential`, `juiceAcidity` (single axis; not separate pH + TA), `phenolicExtract`, `aromaticIntensity`, `textureRichness`
+- **Process (winery):** `leesContact`, `crushingExtraction`, `fermentationProfile`, `skinContactEvolution`
+- **Terroir:** `regionalTypicity`, `soilAffinity`, `solarClimateFit`
+- **Vineyard:** `vineAgeCharacter`, `rowCompetition`, `siteWildness`, `siteAltitude`, `aspectWarmth`, `microclimateBlend`, `vineyardHealth`, `harvestTiming`
+- **Grape identity and cellar life:** `varietyCharacter`, `colorIntensity`, `oxidativeCharacter`, `cellarEvolution`, `featureFootprint`
 
-Anchors are directly linked to existing gameplay concepts:
+**Research → phase 1 mapping (consolidation, not omission of intent):**
 
-1. Ripeness (agricultural):
-- feeds sugar/acid/phenolic anchor initialization.
+| Research / expanded design | Phase 1 |
+|----------------------------|---------|
+| `alcoholABV` | `alcoholPotential` |
+| `pH`, `totalAcidity` | `juiceAcidity` (one scalar) |
+| `phenolicLoad`, anthocyanin / red depth | `phenolicExtract`, `colorIntensity` |
+| `aromaticPotential` | `aromaticIntensity` |
+| `glycerolMouthfeel` | `textureRichness` |
+| `oxidationSensitivity` | `oxidativeCharacter` (harvest + feature paths) |
+| `grapeVarietyProfile`, color | `varietyCharacter`, `colorIntensity` + grape constants |
+| `vineAge`, altitude, aspect, soil, heat, diurnal, wind | `vineAgeCharacter`, `siteAltitude`, `aspectWarmth`, `soilAffinity`, `microclimateBlend` (bundles wind / heat / diurnal feel), `solarClimateFit`, `regionalTypicity` |
+| `windExposure` | folded into `microclimateBlend` (no separate key yet) |
+| `fermentationMethod`, temperature curve | `fermentationProfile` (scalar from method + temperature) |
+| `macerationIntensity` | `skinContactEvolution`, `crushingExtraction` |
+| `leesContact` | `leesContact` |
+| `oakProgram` | not a dedicated anchor; tertiary oak-like evolution partly via `cellarEvolution` and features when present |
+| `bottleAgingState` | `cellarEvolution` + batch aging inputs in feature layer |
+| `featureHistory` | `featureFootprint`, `oxidativeCharacter` |
+| `volatileAcidityPotential` | not a separate anchor yet |
 
-2. Sweetness, Tannins, Aroma, Body:
-- remain structure channels, but are constrained by anchors.
 
-3. Structure Index:
-- computed from structure channels and structure interaction logic.
 
-4. Grape Type and Vine Age:
-- seed baseline flavor families and anchor ceilings/floors.
+### Game-Concept Connections (phase 1 and beyond)
 
-5. Altitude and future wind/weather systems:
-- modify anchor drift and flavor/structure transformations.
-6. Source-impact registry:
-- Maintain a source -> target path map (`direct`, `anchor`, or intentional stacked) for migration safety and to avoid accidental double influence.
-7. Implementation visibility:
-- Explicitly mark placeholder anchors (for example `glycerolMouthfeel`, `windExposure`, `oakProgram`, `leesContact`) with `placeholder_todo` status until runtime systems exist.
+1. **Ripeness (agricultural):** feeds sugar, alcohol, acid, phenolic, and timing anchors at harvest.
+2. **Structure channels** (`acidity`, `aroma`, `body`, etc.): remain the tasted/derived layer; anchors constrain initialization and evolution paths where services connect them.
+3. **Structure index:** computed from structure channels (and interactions), not from anchors directly.
+4. **Grape type and vine age:** seed priors for harvest anchors; future flavor families will consume anchor + structure outputs.
+5. **Source–impact registry:** still a migration target — avoid double-applying the same real-world cause via both a direct modifier and an anchor bump unless intentionally stacked and tuned.
 
 ## Synergy/Clash Architecture (Can Replace Current Rules)
 
@@ -282,6 +277,8 @@ tasteIndex = clamp01(
 
 ## Calculation Flow (End-to-End)
 
+**Phase 1 covers step 1** (anchors from grape, vineyard, ripeness, then crush/ferment/feature updates) **and participates in step 4** where feature services update batches and anchor layer. Steps 5–8 remain **target design**; current game still uses existing characteristics / `tasteIndex` plumbing where implemented.
+
 1. Initialize anchors from grape + vineyard + agricultural state + process choices.
 2. Compute structure channels under anchor constraints.
 3. Compute `structureIndex` (renamed from balance index).
@@ -294,25 +291,31 @@ tasteIndex = clamp01(
 
 ## Suggested File-Level Architecture
 
-1. `src/lib/types/taste.ts`
-2. `src/lib/types/anchors.ts`
-3. `src/lib/constants/taste/flavorFamilies.ts`
-4. `src/lib/constants/taste/tasteDescriptors.ts`
-5. `src/lib/constants/taste/tasteCompatibilityMatrix.ts`
-6. `src/lib/constants/anchors/anchorRanges.ts`
-7. `src/lib/services/wine/structure/structureIndexService.ts`
-8. `src/lib/services/wine/taste/tasteProfileService.ts`
-9. `src/lib/services/wine/taste/tasteIndexService.ts`
-10. `src/lib/services/wine/anchors/wineAnchorService.ts`
+**Phase 1 (in place):**
+
+- `WineAnchorValues`, `WineAnchorId` — `src/lib/types/types.ts` (standalone `anchors.ts` optional later)
+- `src/lib/services/wine/anchors/wineAnchorService.ts` — harvest anchors, defaults, parse/merge
+- `src/lib/services/wine/anchors/wineAnchorProcess.ts` — crush, ferment, weekly contact, feature-layer anchors
+
+**Still planned (not required for phase 1):**
+
+1. `src/lib/types/taste.ts` (or equivalent) for flavor-only types
+2. `src/lib/constants/taste/flavorFamilies.ts`
+3. `src/lib/constants/taste/tasteDescriptors.ts`
+4. `src/lib/constants/taste/tasteCompatibilityMatrix.ts`
+5. `src/lib/constants/anchors/anchorRanges.ts` (optional tuning)
+6. `src/lib/services/wine/structure/structureIndexService.ts` (naming may differ; structure index exists in codebase)
+7. `src/lib/services/wine/taste/tasteProfileService.ts`
+8. `src/lib/services/wine/taste/tasteIndexService.ts`
 
 ## Rollout Strategy
 
-1. Lock terminology and target data model (`Structure`, `Flavor`, anchor set).
-2. Implement anchor storage + initialization.
-3. Rename balance concept to structure concept across UI/service layer.
-4. Implement flavor families + descriptors.
-5. Implement new interaction engine (migrating old rule ideas).
-6. Connect Taste tab and contracts/customer preference systems to new flavor outputs.
+1. Lock terminology and target data model (`Structure`, `Flavor`, anchor set). — **Ongoing; phase 1 locks `WineAnchorValues`.**
+2. Implement anchor storage + initialization. — **Done (JSONB + harvest + process + feature layer updates).**
+3. Rename balance concept to structure concept across UI/service layer. — **Done in codebase (structure index / naming).**
+4. Implement flavor families + descriptors. — **Not started (taste wheel layer).**
+5. Implement new interaction engine (migrating old rule ideas). — **Not started.**
+6. Connect Taste tab and contracts/customer preference systems to new flavor outputs. — **Not started.**
 
 ## Migration Notes (Current Codebase)
 
@@ -347,4 +350,5 @@ tasteIndex = clamp01(
 
 ## Inference Notes
 
-- Type models, anchors, interaction architecture, and formulas are implementation proposals inferred from Wine Folly concepts and current game design direction.
+- Flavor-family types, descriptor vectors, synergy matrices, and taste-index formulas in this doc remain **design proposals** until implemented.
+- **`WineAnchorValues` and phase 1 services** are **implemented** and take precedence over the older expanded bullet lists (chemical/vineyard/process) where the two differ; those lists remain useful as a **conceptual backlog** for splitting merged fields (e.g. `juiceAcidity` → pH + TA) when gameplay needs it.
