@@ -805,7 +805,7 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
               <span className="font-mono font-medium">{formatNumber(structureIndexResult.score, { smartDecimals: true })}</span>
             </div>
             <div className="flex justify-between text-lg font-bold">
-              <span>Final Score:</span>
+              <span>Structure index:</span>
               <div className="text-right">
                 <div>{formatNumber(structureIndexResult.score * 100, { smartDecimals: true })}%</div>
                 <div className="text-sm font-normal text-gray-600">{getWineStructureCategory(structureIndexResult.score)}</div>

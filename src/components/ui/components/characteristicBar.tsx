@@ -281,7 +281,7 @@ export const WineCharacteristicsDisplay: React.FC<WineCharacteristicsDisplayProp
         .map(([key, value]) => {
           const charKey = key as keyof WineCharacteristics;
           const ranges = effectiveAdjustedRanges?.[charKey];
-          // adjustedRanges should always be defined from balance calculation
+          // adjustedRanges should always be defined from structure index calculation
           if (!ranges) {
             console.error(`Missing adjustedRanges for ${key}`);
             return null;

@@ -1,4 +1,4 @@
-# Taste System: Wine Folly Research + Integrated Design
+![1774727117201](image/TasteSystem_WineFolly_Research/1774727117201.png)# Taste System: Wine Folly Research + Integrated Design
 
 Date: 2026-03-26
 

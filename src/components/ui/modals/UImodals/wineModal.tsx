@@ -87,14 +87,6 @@ export const WineModal: React.FC<WineModalProps> = ({
   const tasteCategory = getQualityCategory(currentTasteIndex);
   const tasteColorClass = getColorClass(currentTasteIndex);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
-  const characteristicIconSrc: Record<string,string> = {
-    body: getCharacteristicIconSrc('body'),
-    aroma: getCharacteristicIconSrc('aroma'),
-    spice: getCharacteristicIconSrc('spice'),
-    acidity: getCharacteristicIconSrc('acidity'),
-    sweetness: getCharacteristicIconSrc('sweetness'),
-    tannins: getCharacteristicIconSrc('tannins')
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -678,7 +670,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                           <div key={key as string} className="border rounded p-3 bg-white">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <img src={characteristicIconSrc[key as string]} alt={`${key} icon`} className="h-5 w-5 object-contain" />
+                                <img src={getCharacteristicIconSrc(key)} alt={`${key} icon`} className="h-5 w-5 object-contain" />
                                 <span className="font-medium capitalize">{key}</span>
                               </div>
                               <span className={`text-xs px-2 py-0.5 rounded ${getColorClass(currentVal)} bg-gray-50`}>{formatNumber(currentVal,{decimals:2,forceDecimals:true})}</span>

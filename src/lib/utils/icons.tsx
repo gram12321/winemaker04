@@ -153,21 +153,34 @@ interface CharacteristicIconProps {
   tooltip?: boolean | string | React.ReactNode;
 }
 
-// Direct mapping of characteristic names to icon file paths
+/**
+ * Resolve a URL for a file under Vite `public/` (respects `base` in vite.config).
+ * Example: `assets/icons/characteristics/icon_acidity.png` → `/assets/...` or `/my-base/assets/...`.
+ */
+export function resolvePublicAssetUrl(path: string): string {
+  const normalized = path.replace(/^\/+/, '');
+  const base = import.meta.env.BASE_URL;
+  return base.endsWith('/') ? `${base}${normalized}` : `${base}/${normalized}`;
+}
+
+// Paths are relative to `public/` (no leading slash)
 const CHARACTERISTIC_ICON_MAP: Record<keyof WineCharacteristics, string> = {
-  acidity: '/assets/icons/characteristics/icon_acidity.png',
-  aroma: '/assets/icons/characteristics/icon_aroma.png',
-  body: '/assets/icons/characteristics/icon_body.png',
-  spice: '/assets/icons/characteristics/icon_spice.png',
-  sweetness: '/assets/icons/characteristics/icon_sweetness.png',
-  tannins: '/assets/icons/characteristics/icon_tannins.png'
+  acidity: 'assets/icons/characteristics/icon_acidity.png',
+  aroma: 'assets/icons/characteristics/icon_aroma.png',
+  body: 'assets/icons/characteristics/icon_body.png',
+  spice: 'assets/icons/characteristics/icon_spice.png',
+  sweetness: 'assets/icons/characteristics/icon_sweetness.png',
+  tannins: 'assets/icons/characteristics/icon_tannins.png'
 };
 
 /**
  * Get icon path for a wine characteristic (uses direct mapping, no transformations)
  */
 export function getCharacteristicIconSrc(characteristic: keyof WineCharacteristics | string): string {
-  return CHARACTERISTIC_ICON_MAP[characteristic as keyof WineCharacteristics] || `/assets/icons/characteristics/icon_${characteristic}.png`;
+  const key = characteristic as keyof WineCharacteristics;
+  const relative =
+    CHARACTERISTIC_ICON_MAP[key] ?? `assets/icons/characteristics/icon_${characteristic}.png`;
+  return resolvePublicAssetUrl(relative);
 }
 
 export const CharacteristicIcon: React.FC<CharacteristicIconProps> = ({
@@ -285,22 +298,22 @@ interface GrapeIconProps {
   tooltip?: boolean | string | React.ReactNode;
 }
 
-// Direct mapping of grape variety names to icon file paths (file names are already correct)
+// Paths are relative to `public/` (no leading slash)
 const GRAPE_ICON_MAP: Record<GrapeVariety, string> = {
-  'Barbera': '/assets/icons/grape/icon_barbera.png',
-  'Chardonnay': '/assets/icons/grape/icon_chardonnay.png',
-  'Pinot Noir': '/assets/icons/grape/icon_pinot_noir.png',
-  'Primitivo': '/assets/icons/grape/icon_primitivo.png',
-  'Sauvignon Blanc': '/assets/icons/grape/icon_sauvignon_blanc.png',
-  'Tempranillo': '/assets/icons/grape/icon_tempranillo.png',
-  'Sangiovese': '/assets/icons/grape/icon_sangiovese.png'
+  'Barbera': 'assets/icons/grape/icon_barbera.png',
+  'Chardonnay': 'assets/icons/grape/icon_chardonnay.png',
+  'Pinot Noir': 'assets/icons/grape/icon_pinot_noir.png',
+  'Primitivo': 'assets/icons/grape/icon_primitivo.png',
+  'Sauvignon Blanc': 'assets/icons/grape/icon_sauvignon_blanc.png',
+  'Tempranillo': 'assets/icons/grape/icon_tempranillo.png',
+  'Sangiovese': 'assets/icons/grape/icon_sangiovese.png'
 };
 
 /**
  * Get icon path for a grape variety (uses direct mapping, no transformations)
  */
 export function getGrapeIconSrc(variety: GrapeVariety): string {
-  return GRAPE_ICON_MAP[variety];
+  return resolvePublicAssetUrl(GRAPE_ICON_MAP[variety]);
 }
 
 export const GrapeIcon: React.FC<GrapeIconProps> = ({
