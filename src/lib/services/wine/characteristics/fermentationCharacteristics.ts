@@ -1,9 +1,12 @@
-import { WineCharacteristics } from '../../../types/types';
+import { WineCharacteristics, WineAnchorValues } from '../../../types/types';
+import { scaleCharacteristicEffectModifiersByAnchors } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 
 export interface FermentationInputs {
   baseCharacteristics: WineCharacteristics;
   method: 'Basic' | 'Temperature Controlled' | 'Extended Maceration';
   temperature: 'Ambient' | 'Cool' | 'Warm';
+  /** Weekly tick snapshot before `applyWeeklyFermentationContactToWineAnchors`. */
+  wineAnchors?: WineAnchorValues;
 }
 
 export interface FermentationOptions {
@@ -84,7 +87,11 @@ function applyEffects(
  * Get combined fermentation effects without applying them
  * Used for displaying expected changes in UI
  */
-export function getCombinedFermentationEffects(method: FermentationInputs['method'], temperature: FermentationInputs['temperature']): FermentationEffect[] {
+export function getCombinedFermentationEffects(
+  method: FermentationInputs['method'],
+  temperature: FermentationInputs['temperature'],
+  wineAnchors?: WineAnchorValues
+): FermentationEffect[] {
   const effects: FermentationEffect[] = [];
 
   // Add fermentation method effects
@@ -93,7 +100,7 @@ export function getCombinedFermentationEffects(method: FermentationInputs['metho
   // Add temperature effects
   effects.push(...FERMENTATION_TEMPERATURE_EFFECTS[temperature]);
 
-  return effects;
+  return wineAnchors ? scaleCharacteristicEffectModifiersByAnchors(wineAnchors, effects) : effects;
 }
 
 /**
@@ -104,10 +111,10 @@ export function applyWeeklyFermentationEffects(inputs: FermentationInputs): {
   characteristics: WineCharacteristics;
   breakdown: FermentationBreakdown;
 } {
-  const { baseCharacteristics, method, temperature } = inputs;
+  const { baseCharacteristics, method, temperature, wineAnchors } = inputs;
 
   // Get combined effects
-  const effects = getCombinedFermentationEffects(method, temperature);
+  const effects = getCombinedFermentationEffects(method, temperature, wineAnchors);
 
   // Apply all effects
   const finalCharacteristics = applyEffects(baseCharacteristics, effects);

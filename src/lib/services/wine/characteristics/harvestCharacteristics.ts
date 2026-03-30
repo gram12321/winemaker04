@@ -1,4 +1,5 @@
-import { WineCharacteristics, Vineyard } from '../../../types/types';
+import { WineCharacteristics, Vineyard, WineAnchorValues } from '../../../types/types';
+import { scaleCharacteristicEffectModifiersByAnchors } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 
 export interface HarvestInputs {
   baseCharacteristics: WineCharacteristics;
@@ -11,6 +12,8 @@ export interface HarvestInputs {
   grapeColor: 'red' | 'white';
   overgrowth?: Vineyard['overgrowth'];
   density?: number; // Vine density (vines/hectare)
+  /** When set, each harvest delta is scaled by anchor-derived multipliers (same `computeHarvestWineAnchors` snapshot). */
+  wineAnchors?: WineAnchorValues;
 }
 
 export interface HarvestEffect {
@@ -49,7 +52,7 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
   characteristics: WineCharacteristics;
   breakdown: HarvestBreakdown;
 } {
-  const { baseCharacteristics, ripeness, qualityFactor, suitability, altitude, medianAltitude, maxAltitude, grapeColor, overgrowth, density } = inputs;
+  const { baseCharacteristics, ripeness, qualityFactor, suitability, altitude, medianAltitude, maxAltitude, grapeColor, overgrowth, density, wineAnchors } = inputs;
 
   // Normalize altitude effect to roughly [-1, 1]
   const denom = Math.max(1, maxAltitude - medianAltitude);
@@ -152,14 +155,18 @@ export function modifyHarvestCharacteristics(inputs: HarvestInputs): {
     effects.push({ characteristic: 'sweetness', modifier: -reductionScale * 0.5, description: 'Vine Density' });
   }
 
+  const scaledEffects = wineAnchors
+    ? scaleCharacteristicEffectModifiersByAnchors(wineAnchors, effects)
+    : effects;
+
   // Apply all effects
-  const finalCharacteristics = applyEffects(baseCharacteristics, effects);
+  const finalCharacteristics = applyEffects(baseCharacteristics, scaledEffects);
 
   return {
     characteristics: finalCharacteristics,
     breakdown: {
       base: baseCharacteristics,
-      effects,
+      effects: scaledEffects,
       final: finalCharacteristics
     }
   };

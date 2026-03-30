@@ -3,6 +3,7 @@ import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
@@ -149,7 +150,8 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       qualityPenalty
     } = modifyCrushingCharacteristics({
       baseCharacteristics: batch.characteristics,
-      ...crushingOptions as CrushingOptions
+      ...(crushingOptions as CrushingOptions),
+      wineAnchors: resolveWineAnchors(batch.wineAnchors)
     });
 
     // Apply yield multiplier to batch quantity
@@ -183,7 +185,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     );
 
     const opts = crushingOptions as CrushingOptions;
-    const wineAnchors = applyCrushingToWineAnchors(batchWithEventFeatures.wineAnchors, opts);
+    const wineAnchors = applyCrushingToWineAnchors(resolveWineAnchors(batchWithEventFeatures.wineAnchors), opts);
 
     // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste index
     // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects

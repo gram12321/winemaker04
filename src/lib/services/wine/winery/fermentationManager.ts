@@ -8,6 +8,7 @@ import { createActivity } from '../../activity/activitymanagers/activityManager'
 import { WorkCategory } from '../../activity';
 import { calculateFermentationWork } from '../../activity/workcalculators/fermentationWorkCalculator';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
+import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteIndex } from '../winescore/wineScoreCalculation';
@@ -180,7 +181,8 @@ export async function processWeeklyFermentation(): Promise<void> {
       const { characteristics: newCharacteristics, breakdown } = applyWeeklyFermentationEffects({
         baseCharacteristics: batch.characteristics,
         method: batch.fermentationOptions.method,
-        temperature: batch.fermentationOptions.temperature
+        temperature: batch.fermentationOptions.temperature,
+        wineAnchors: resolveWineAnchors(batch.wineAnchors)
       });
 
       // Recalculate structure index based on new characteristics
@@ -197,7 +199,7 @@ export async function processWeeklyFermentation(): Promise<void> {
       };
 
       const wineAnchors = applyWeeklyFermentationContactToWineAnchors(
-        batch.wineAnchors,
+        resolveWineAnchors(batch.wineAnchors),
         batch.fermentationOptions
       );
 

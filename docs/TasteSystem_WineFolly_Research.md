@@ -144,13 +144,13 @@ interface TasteMetrics {
 
 ## Hidden Wine Anchors
 
-Terroir and process influences should prefer an **anchor-mediated** path as the canonical flow. **Phase 1** introduces a single persisted schema (`WineAnchorValues`, 0–1) and services that own harvest initialization and process updates. The research lists below (lab-style chemistry, separate wind vs heat, oak program details, etc.) remain **design targets** where phase 1 uses **merged fields**; future phases can split or add keys without changing the overall direction.
+Terroir and process influences should prefer an **anchor-mediated** path as the canonical flow. **Phase 1** introduces a single persisted schema (`WineAnchorValues`, 0–1) and services that own harvest initialization and process updates. The research lists below (lab-style chemistry, separate wind vs heat, etc.) remain **design targets** where phase 1 uses **merged fields**; future phases can split or add keys without changing the overall direction.
 
 ### Phase 1 (implemented)
 
 **Purpose:** Anchors are **upstream** (hidden wine identity). `WineCharacteristics`, structure channels, and future flavor vectors are **downstream** — what the player tastes. Harvest and process anchor code must **not** read harvested `WineCharacteristics`, to avoid circularity with taste/structure recomputation.
 
-**Storage:** `WineBatch.wineAnchors` (JSONB), type `WineAnchorValues` in `src/lib/types/types.ts`. Defaults and DB parsing: `DEFAULT_WINE_ANCHOR_VALUES`, `parseWineAnchorsFromDb`, `combineWineAnchorSets` in `src/lib/services/wine/anchors/wineAnchorService.ts`.
+**Storage:** `WineBatch.wineAnchors` (JSONB), type `WineAnchorValues` in `src/lib/types/types.ts`. Neutral baseline (all keys 0.5): `NEUTRAL_WINE_ANCHORS` and `resolveWineAnchors()`; DB parsing: `parseWineAnchorsFromDb`, `combineWineAnchorSets` in `src/lib/services/wine/anchors/wineAnchorService.ts`.
 
 **Code:**
 
@@ -191,12 +191,9 @@ Terroir and process influences should prefer an **anchor-mediated** path as the 
 | `fermentationMethod`, temperature curve | `fermentationProfile` (scalar from method + temperature) |
 | `macerationIntensity` | `skinContactEvolution`, `crushingExtraction` |
 | `leesContact` | `leesContact` |
-| `oakProgram` | not a dedicated anchor; tertiary oak-like evolution partly via `cellarEvolution` and features when present |
 | `bottleAgingState` | `cellarEvolution` + batch aging inputs in feature layer |
 | `featureHistory` | `featureFootprint`, `oxidativeCharacter` |
 | `volatileAcidityPotential` | not a separate anchor yet |
-
-
 
 ### Game-Concept Connections (phase 1 and beyond)
 
@@ -220,7 +217,7 @@ Key requirement: migrate useful old ideas, not necessarily old formulas.
 - synergy/clash over flavor families/descriptors.
 
 3. `crossDomainInteractions`:
-- structure <-> flavor coupling (for example high tannin supports black-fruit/oak styles, high acidity supports citrus/fresh styles).
+- structure <-> flavor coupling (for example high tannin supports black-fruit styles, high acidity supports citrus/fresh styles).
 
 ### Migration Principle from Existing Rules
 

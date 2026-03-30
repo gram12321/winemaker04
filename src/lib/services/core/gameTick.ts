@@ -1,7 +1,7 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
-import { DEFAULT_WINE_ANCHOR_VALUES, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
+import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
@@ -434,7 +434,7 @@ async function updateBottledWineAging(): Promise<void> {
     const batchNext: WineBatch = { ...batch, agingProgress: nextAging };
     const wineAnchors = applyFeatureLayerAnchors(
       batchNext,
-      batch.wineAnchors ?? DEFAULT_WINE_ANCHOR_VALUES
+      resolveWineAnchors(batch.wineAnchors)
     );
     return {
       id: batch.id,

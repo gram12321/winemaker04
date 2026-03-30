@@ -45,6 +45,7 @@ export * from './wine/features/featureService';
 export * from './wine/features/agingService';
 export * from './wine/features/grapeDifficulty';
 export * from './wine/anchors/wineAnchorService';
+export * from './wine/anchors/wineAnchorCharacteristicBridge';
 
 // Sales services
 export * from './sales/salesService';

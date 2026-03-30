@@ -14,8 +14,9 @@ import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
 import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { getTasteIndex } from '../winescore/wineScoreCalculation';
-import { DEFAULT_WINE_ANCHOR_VALUES } from '../anchors/wineAnchorService';
+import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '../anchors/wineAnchorProcess';
+import { anchorModifierScaleForCharacteristic } from '../anchors/wineAnchorCharacteristicBridge';
 
 // ===== CORE INTERFACES =====
 
@@ -121,7 +122,8 @@ export function initializeBatchFeatures(): WineFeature[] {
 export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
   const configs = getAllFeatureConfigs();
   const features = batch.features || [];
-  
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
+
   const relevantFeatures = configs
     .map(config => {
       const feature = features.find(f => f.id === config.id);
@@ -209,8 +211,9 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
           const currentEffect = applyModifier(modifier, currentSeverityForEffects);
           // Calculate effect at next severity (after weekly growth)
           const nextEffect = applyModifier(modifier, nextSeverity);
+          const scale = anchorModifierScaleForCharacteristic(anchorContext, characteristic);
           // Weekly effect is the difference (change per week)
-          weeklyEffects[characteristic] = nextEffect - currentEffect;
+          weeklyEffects[characteristic] = (nextEffect - currentEffect) * scale;
         });
       }
       
@@ -257,7 +260,9 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
       const characteristicEffects: Record<string, number> = {};
       if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
         config.effects.characteristics.forEach(({ characteristic, modifier }) => {
-          characteristicEffects[characteristic] = applyModifier(modifier, displaySeverity);
+          const raw = applyModifier(modifier, displaySeverity);
+          characteristicEffects[characteristic] =
+            raw * anchorModifierScaleForCharacteristic(anchorContext, characteristic);
         });
       }
       
@@ -319,7 +324,8 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
 export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
   const configs = getAllFeatureConfigs();
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
-  
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
+
   return presentFeatures.map(feature => {
     const config = configs.find(c => c.id === feature.id);
     if (!config) return null;
@@ -329,7 +335,9 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
     const characteristicModifiers: Partial<Record<keyof WineCharacteristics, number>> = {};
     if (config.effects.characteristics) {
       for (const effect of config.effects.characteristics) {
-        characteristicModifiers[effect.characteristic] = applyModifier(effect.modifier, feature.severity);
+        const raw = applyModifier(effect.modifier, feature.severity);
+        characteristicModifiers[effect.characteristic] =
+          raw * anchorModifierScaleForCharacteristic(anchorContext, effect.characteristic);
       }
     }
     
@@ -379,7 +387,8 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   let currentTasteIndex = baselineTasteIndex;
   let modifiedCharacteristics = { ...baseCharacteristics };
   const breakdownEffects = [...nonFeatureEffects];
-  
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
+
   // Apply quality and characteristic effects from all present features
   for (const feature of presentFeatures) {
     const config = configs.find(c => c.id === feature.id);
@@ -391,11 +400,12 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     // Apply characteristic effects
     if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
       for (const effect of config.effects.characteristics) {
-        const modifier = applyModifier(effect.modifier, feature.severity);
-        
+        const raw = applyModifier(effect.modifier, feature.severity);
+        const modifier = raw * anchorModifierScaleForCharacteristic(anchorContext, effect.characteristic);
+
         const currentValue = modifiedCharacteristics[effect.characteristic];
         modifiedCharacteristics[effect.characteristic] = Math.max(0, Math.min(1, currentValue + modifier));
-        
+
         // Add fresh feature effect to breakdown
         breakdownEffects.push({
           characteristic: effect.characteristic,
@@ -409,7 +419,7 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   // Recalculate structure index with modified characteristics
   const structureIndexResult = calculateStructureIndex(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
 
-  let wineAnchors = batch.wineAnchors ?? DEFAULT_WINE_ANCHOR_VALUES;
+  let wineAnchors = resolveWineAnchors(batch.wineAnchors);
   wineAnchors = applyFeatureLayerAnchors(batch, wineAnchors);
 
   return {
@@ -470,6 +480,7 @@ export function calculateFeaturePriceMultiplier(
 export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Partial<Record<keyof WineCharacteristics, number>> {
   const configs = getAllFeatureConfigs();
   const modifiers: Partial<Record<keyof WineCharacteristics, number>> = {};
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
 
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
 
@@ -478,7 +489,8 @@ export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Parti
     if (!config?.effects.characteristics) continue;
 
     for (const effect of config.effects.characteristics) {
-      const modifier = applyModifier(effect.modifier, feature.severity);
+      const raw = applyModifier(effect.modifier, feature.severity);
+      const modifier = raw * anchorModifierScaleForCharacteristic(anchorContext, effect.characteristic);
       modifiers[effect.characteristic] = (modifiers[effect.characteristic] || 0) + modifier;
     }
   }
@@ -539,7 +551,7 @@ export function previewFeatureRisks(
     proneToOxidation: 0,
     harvestStartDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
     harvestEndDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
-    wineAnchors: { ...DEFAULT_WINE_ANCHOR_VALUES }
+    wineAnchors: { ...resolveWineAnchors(undefined) }
   };
   
   const risks = previewEventRisksInternal(targetBatch, event, context);

@@ -11,6 +11,7 @@ import { getQualityCategory, getColorClass, getCharacteristicDisplayName, format
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { CharacteristicIcon } from '@/lib/utils/icons';
 
 const WineBatchStructureDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
@@ -63,7 +64,7 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
   const temperature = batch.fermentationOptions.temperature;
   
   // Get combined effects for this fermentation setup
-  const effects = getCombinedFermentationEffects(method, temperature);
+  const effects = getCombinedFermentationEffects(method, temperature, resolveWineAnchors(batch.wineAnchors));
   
   if (effects.length === 0) return null;
   

@@ -193,7 +193,8 @@ export async function createWineBatchFromHarvest(
     maxAltitude: maxAlt,
     grapeColor: GRAPE_CONST[grape].grapeColor,
     overgrowth: vineyard.overgrowth,
-    density: vineyard.density || 0
+    density: vineyard.density || 0,
+    wineAnchors
   });
 
   const structureIndexResult = calculateStructureIndex(characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);

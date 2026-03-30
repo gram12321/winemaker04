@@ -11,6 +11,7 @@ import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 import { applyFermentationSetupToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 
 /**
  * Calculate work required for fermentation setup
@@ -145,7 +146,10 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
     );
 
     const opts = fermentationOptions as FermentationOptions;
-    const wineAnchors = applyFermentationSetupToWineAnchors(batchWithEventFeatures.wineAnchors, opts);
+    const wineAnchors = applyFermentationSetupToWineAnchors(
+      resolveWineAnchors(batchWithEventFeatures.wineAnchors),
+      opts
+    );
 
     // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
     // Also update characteristics and breakdown if they were modified by feature effects

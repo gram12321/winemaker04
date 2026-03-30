@@ -138,7 +138,11 @@ const ANCHOR_KEYS = WINE_ANCHOR_KEYS;
 
 const MID = 0.5;
 
-export const DEFAULT_WINE_ANCHOR_VALUES: WineAnchorValues = {
+/**
+ * Every anchor at 0.5 — the implicit state when nothing has nudged a key yet.
+ * Prefer `resolveWineAnchors(batch.wineAnchors)` when reading; persist real values once harvest/process runs.
+ */
+export const NEUTRAL_WINE_ANCHORS: WineAnchorValues = {
   residualSugar: MID,
   alcoholPotential: MID,
   juiceAcidity: MID,
@@ -166,6 +170,11 @@ export const DEFAULT_WINE_ANCHOR_VALUES: WineAnchorValues = {
   cellarEvolution: MID,
   featureFootprint: MID
 };
+
+/** Missing/null `wineAnchors` means “never set” → treat as neutral 0.5 on all keys. */
+export function resolveWineAnchors(anchors: WineAnchorValues | undefined | null): WineAnchorValues {
+  return anchors ?? NEUTRAL_WINE_ANCHORS;
+}
 
 // =============================================================================
 // Harvest: compute full anchor set
@@ -434,7 +443,7 @@ export function combineWineAnchorSets(
 }
 
 export function parseWineAnchorsFromDb(raw: unknown): WineAnchorValues {
-  const base = { ...DEFAULT_WINE_ANCHOR_VALUES };
+  const base = { ...NEUTRAL_WINE_ANCHORS };
   if (!raw || typeof raw !== 'object') {
     return base;
   }
