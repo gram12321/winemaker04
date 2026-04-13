@@ -310,8 +310,8 @@ tasteIndex = clamp01(
 1. Lock terminology and target data model (`Structure`, `Flavor`, anchor set). — **Ongoing; phase 1 locks `WineAnchorValues`.**
 2. Implement anchor storage + initialization. — **Done (JSONB + harvest + process + feature layer updates).**
 3. Rename balance concept to structure concept across UI/service layer. — **Done in codebase (structure index / naming).**
-4. Implement flavor families + descriptors. — **Not started (taste wheel layer).**
-5. Implement new interaction engine (migrating old rule ideas). — **Not started.**
+4. Implement flavor families + descriptors. — **Partially done:** `computeWineTasteProfile`, 14 families, 26 descriptors, sigmoid normalization + structure→flavor cross-domain nudges, synergy matrix harmony, flavor-quality composite; Taste tab **radar wheel** (`WineTasteWheel`) + bars (`WineTasteProfilePanel`). Economy `batch.tasteIndex` unchanged; **flavor quality (model)** is a separate readout.
+5. Implement new interaction engine (migrating old rule ideas). — **Partial:** flavor-domain pairwise matrix in `tasteCompatibilityMatrix.ts`; structure interactions / full engine still open.
 6. Connect Taste tab and contracts/customer preference systems to new flavor outputs. — **Not started.**
 
 ## Migration Notes (Current Codebase)

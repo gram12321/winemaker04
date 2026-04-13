@@ -3,6 +3,8 @@ import { useMemo } from 'react';
 import { WineBatch, WineCharacteristics, StructureIndexResult } from '../lib/types/types';
 import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../lib/wineStructure';
 import { getWineStructureCategory } from '../lib/utils/utils';
+import { resolveWineAnchors } from '../lib/services/wine/anchors/wineAnchorService';
+import { getAnchorAdjustedStructureRanges } from '../lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 
 /**
  * Hook to calculate structure index for a wine batch
@@ -10,7 +12,11 @@ import { getWineStructureCategory } from '../lib/utils/utils';
 export function useWineBatchStructureIndex(wineBatch: WineBatch | null): StructureIndexResult | null {
   return useMemo(() => {
     if (!wineBatch) return null;
-    return calculateStructureIndex(wineBatch.characteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+    const ranges = getAnchorAdjustedStructureRanges(
+      BASE_BALANCED_RANGES,
+      resolveWineAnchors(wineBatch.wineAnchors)
+    );
+    return calculateStructureIndex(wineBatch.characteristics, ranges, RANGE_ADJUSTMENTS, RULES);
   }, [wineBatch]);
 }
 

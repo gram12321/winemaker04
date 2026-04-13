@@ -120,6 +120,79 @@ export interface StructureIndexResult {
   adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from structure calculation
 }
 
+/** Wine Folly–style wheel families; values 0–1. Derived in `wineTasteProfileService` (not persisted). */
+export const FLAVOR_FAMILY_IDS = [
+  'flower',
+  'citrus',
+  'treeFruit',
+  'tropicalFruit',
+  'redFruit',
+  'blackFruit',
+  'driedFruit',
+  'spiceFlavor',
+  'vegetable',
+  'earth',
+  'microbial',
+  'oakAging',
+  'generalAging',
+  'faults'
+] as const;
+
+export type FlavorFamilyId = (typeof FLAVOR_FAMILY_IDS)[number];
+
+export type WineFlavorFamilyProfile = Record<FlavorFamilyId, number>;
+
+/** Second-level tasting notes derived with families (UI only). */
+export const WINE_TASTE_DESCRIPTOR_IDS = [
+  'citrusZest',
+  'orchardFruit',
+  'stoneMelon',
+  'tropicalNotes',
+  'redBerry',
+  'darkFruit',
+  'driedConcentrated',
+  'floralLift',
+  'herbalGreen',
+  'pepperBakingSpice',
+  'earthMineral',
+  'yeastLees',
+  'oakToastVanilla',
+  'bottleEvolved',
+  'faultEdge',
+  'whiteFloral',
+  'greenApple',
+  'yellowApple',
+  'pearNotes',
+  'whitePeach',
+  'grapefruit',
+  'orangeZest',
+  'tropicalIsland',
+  'honeyed',
+  'leatheryTobacco',
+  'graphiteMineral'
+] as const;
+
+export type WineTasteDescriptorId = (typeof WINE_TASTE_DESCRIPTOR_IDS)[number];
+
+export type WineTasteDescriptorProfile = Record<WineTasteDescriptorId, number>;
+
+/** Aggregate taste readouts (computed, not persisted). */
+export interface WineTasteComputedMetrics {
+  intensity: number;
+  complexity: number;
+  harmony: number;
+  typicity: number;
+  layerBalance: number;
+  /** Doc-aligned composite from harmony, complexity, intensity, typicity (does not replace economy `batch.tasteIndex`). */
+  flavorQualityIndex: number;
+}
+
+export interface WineTasteProfileBundle {
+  flavorFamilies: WineFlavorFamilyProfile;
+  descriptors: WineTasteDescriptorProfile;
+  metrics: WineTasteComputedMetrics;
+}
+
 /**
  * Backend-only wine anchors (0–1): **upstream** wine identity (terroir + variety + process).
  * `WineCharacteristics` / structure / flavor are **downstream** — what the player tastes — and must not

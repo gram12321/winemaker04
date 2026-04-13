@@ -27,6 +27,9 @@ export * from './components/landValueModifierBreakdown';
 export * from './components/CharacteristicSlider';
 export * from './components/StaffSkillBar';
 export * from './components/FeatureDisplay';
+export * from './components/WineAnchorInfluenceCallout';
+export * from './components/WineTasteProfilePanel';
+export * from './components/WineTasteWheel';
 export * from './constraints/ConstraintDisplay';
 
 // Modal exports (wildcard exports where possible)

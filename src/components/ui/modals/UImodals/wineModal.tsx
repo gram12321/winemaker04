@@ -15,8 +15,10 @@ import { LandValueModifierFactorsBreakdown } from '../../components/landValueMod
 import { StructureIndexBreakdown } from '../../components/StructureIndexBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
+import { WineAnchorInfluenceCallout } from '../../components/WineAnchorInfluenceCallout';
+import { WineTasteProfilePanel } from '../../components/WineTasteProfilePanel';
 import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
-import { useWineStructureIndex, useWinePriceCalculator } from '@/hooks';
+import { useWineBatchStructureIndex, useWinePriceCalculator } from '@/hooks';
 import { calculateEstimatedPriceBreakdown } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface WineModalProps extends DialogProps {
@@ -54,9 +56,10 @@ export const WineModal: React.FC<WineModalProps> = ({
     }
   }, [wineBatch]);
 
-  // Calculate current structure index from characteristics (reflects feature evolution)
-  const structureIndexResult = useWineStructureIndex(wineBatch?.characteristics || null);
-  const currentStructureIndex: number = structureIndexResult?.score ?? wineBatch?.structureIndex ?? 0;
+  // Structure index + ideal bands respect batch wine profile (anchors), same as Structure tab breakdown
+  const batchStructureResult = useWineBatchStructureIndex(wineBatch);
+  const currentStructureIndex: number =
+    batchStructureResult?.score ?? wineBatch?.structureIndex ?? 0;
 
   // Calculate wine age using service layer
   const weeksSinceHarvest = wineBatch ? getWineAgeFromHarvest(wineBatch.harvestStartDate || { week: 1, season: 'Spring', year: 2024 }) : 0;
@@ -125,7 +128,7 @@ export const WineModal: React.FC<WineModalProps> = ({
           <DialogHeader>
             <DialogTitle className="text-base">Wine Details</DialogTitle>
             <DialogDescription className="text-xs">
-              Comprehensive analysis of taste, land-value modifier, structure, and feature effects.
+              Taste, land value, structure, features, and origins—including how your wine profile shapes modifiers and scores.
             </DialogDescription>
           </DialogHeader>
 
@@ -484,6 +487,12 @@ export const WineModal: React.FC<WineModalProps> = ({
             {/* Structure tab */}
             <TabsContent value="structure" className="mt-4">
               <div className="space-y-4">
+                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="structure" />
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Computed flavor wheel and tasting notes are on the <span className="font-medium text-foreground">Taste</span>{' '}
+                  tab; here you see structure channels and balance rules.
+                </p>
+
                 {/* Structure index bar */}
                 <Card>
                   <CardHeader className="py-3">
@@ -494,6 +503,8 @@ export const WineModal: React.FC<WineModalProps> = ({
                   <CardContent className="py-3">
                     <WineCharacteristicsDisplay 
                       characteristics={wineBatch.characteristics}
+                      adjustedRanges={batchStructureResult?.adjustedRanges}
+                      structureIndexValue={currentStructureIndex}
                       showValues={true}
                       collapsible={false}
                       title=""
@@ -505,6 +516,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                 {/* Structure breakdown */}
                 <StructureIndexBreakdown 
                   characteristics={wineBatch.characteristics}
+                  wineAnchors={wineBatch.wineAnchors}
                   showWineStyleRules={true}
                 />
               </div>
@@ -513,6 +525,12 @@ export const WineModal: React.FC<WineModalProps> = ({
             {/* Features Tab */}
             <TabsContent value="features" className="mt-4">
               <div className="space-y-4">
+                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="features" />
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  See how present features skew fault, lees, and aging flavors on the{' '}
+                  <span className="font-medium text-foreground">Taste</span> tab wheel.
+                </p>
+
                 {/* 3-Column Horizontal Grid */}
                 <div className="grid grid-cols-3 gap-4">
                   {/* Column 1: Evolving Features */}
@@ -593,57 +611,85 @@ export const WineModal: React.FC<WineModalProps> = ({
               </div>
             </TabsContent>
 
-            {/* Taste Diagram Tab */}
+            {/* Taste tab — quality read and how profile connects; no duplicate characteristic grid */}
             <TabsContent value="taste" className="mt-4">
               <div className="space-y-4">
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <Radar className="h-4 w-4" /> Taste Profile Diagram
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-3">
-                    <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                      <div className="text-center">
-                        <Radar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Taste Profile</h3>
-                        <p className="text-sm text-gray-500 mb-4">
-                          Spiderweb diagram showing wine characteristics
-                        </p>
-                        <div className="text-xs text-gray-400">
-                          Coming Soon: Interactive taste visualization
+                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="taste" />
+
+                <WineTasteProfilePanel batch={wineBatch} />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2">
+                        <Award className="h-4 w-4" /> Taste index
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-3 text-sm space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Current</span>
+                        <div className="text-right">
+                          <div className={`text-2xl font-bold ${getColorClass(currentTasteIndex)}`}>
+                            {formatNumber(currentTasteIndex, { decimals: 2, forceDecimals: true })}
                           </div>
+                          <div className="text-xs text-muted-foreground">{getQualityCategory(currentTasteIndex)}</div>
                         </div>
                       </div>
+                      {typeof wineBatch.bornTasteIndex === 'number' &&
+                        Math.abs(wineBatch.bornTasteIndex - currentTasteIndex) > 0.004 && (
+                          <div className="flex justify-between text-xs border-t pt-2 text-muted-foreground">
+                            <span>At harvest snapshot</span>
+                            <span className="font-mono">
+                              {formatNumber(wineBatch.bornTasteIndex, { decimals: 2, forceDecimals: true })}
+                            </span>
+                          </div>
+                        )}
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Features, processing penalties, and land-value quality move this index. Your wine profile shapes how
+                        strongly those effects shift structure underneath—not the taste number itself.
+                      </p>
                     </CardContent>
                   </Card>
 
-                {/* Characteristics for Reference */}
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-xs font-medium flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" /> Characteristics Reference
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-3">
-                    <WineCharacteristicsDisplay 
-                      characteristics={wineBatch.characteristics}
-                      showValues={true}
-                      collapsible={false}
-                      title=""
-                      showStructureIndex={false}
-                    />
-                  </CardContent>
-                </Card>
+                  <Card>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs font-medium flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" /> Overall wine score
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-3 text-sm space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Taste + structure (÷2)</span>
+                        <div className="text-right">
+                          <div className={`text-2xl font-bold ${getColorClass(currentWineScore)}`}>
+                            {formatNumber(currentWineScore, { decimals: 2, forceDecimals: true })}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Structure uses the <span className="font-medium text-foreground">Structure</span> tab (channels +
+                        rules). Price also applies land value and feature multipliers on the Overview tab.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </TabsContent>
 
             {/* Origins Tab */}
             <TabsContent value="origins" className="mt-4">
               <div className="space-y-4">
+                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="origins" />
+
                 <Card>
                   <CardHeader className="py-3">
-                    <CardTitle className="text-xs font-medium">Characteristic Origins</CardTitle>
+                    <CardTitle className="text-xs font-medium">Characteristic origins</CardTitle>
+                    <p className="text-[11px] text-muted-foreground font-normal mt-1 leading-relaxed">
+                      Stacked modifiers by source. Harvest and winery steps were applied with strength shaped by your batch
+                      wine profile; features continue to update that profile over time. The{' '}
+                      <span className="font-medium text-foreground">Taste</span> tab turns the same state into flavor
+                      families and notes (0–1 bars).
+                    </p>
                   </CardHeader>
                   <CardContent className="py-3 text-sm space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

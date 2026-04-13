@@ -10,6 +10,9 @@ import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 import { getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { applyCrushingToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
+import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 
 /**
  * Calculate work required for crushing wine batches
@@ -187,15 +190,25 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     const opts = crushingOptions as CrushingOptions;
     const wineAnchors = applyCrushingToWineAnchors(resolveWineAnchors(batchWithEventFeatures.wineAnchors), opts);
 
+    const charsAfterCrush = batchWithEventFeatures.characteristics || modifiedCharacteristics;
+    const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+    const structureIndexResult = calculateStructureIndex(
+      charsAfterCrush,
+      structureRanges,
+      RANGE_ADJUSTMENTS,
+      RULES
+    );
+
     // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste index
     // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
     await updateWineBatch(batchId, {
       state: 'must_ready',
-      characteristics: batchWithEventFeatures.characteristics || modifiedCharacteristics,
+      characteristics: charsAfterCrush,
       breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
       tasteIndex: batchWithEventFeatures.tasteIndex,
+      structureIndex: structureIndexResult.score,
       wineAnchors
     });
 

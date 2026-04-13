@@ -16,7 +16,10 @@ import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES
 import { getTasteIndex } from '../winescore/wineScoreCalculation';
 import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '../anchors/wineAnchorProcess';
-import { anchorModifierScaleForCharacteristic } from '../anchors/wineAnchorCharacteristicBridge';
+import {
+  getAnchorAdjustedStructureRanges,
+  scaleCharacteristicModifierByAnchors
+} from '../anchors/wineAnchorCharacteristicBridge';
 
 // ===== CORE INTERFACES =====
 
@@ -211,9 +214,12 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
           const currentEffect = applyModifier(modifier, currentSeverityForEffects);
           // Calculate effect at next severity (after weekly growth)
           const nextEffect = applyModifier(modifier, nextSeverity);
-          const scale = anchorModifierScaleForCharacteristic(anchorContext, characteristic);
-          // Weekly effect is the difference (change per week)
-          weeklyEffects[characteristic] = (nextEffect - currentEffect) * scale;
+          const delta = nextEffect - currentEffect;
+          weeklyEffects[characteristic] = scaleCharacteristicModifierByAnchors(
+            anchorContext,
+            characteristic as keyof WineCharacteristics,
+            delta
+          );
         });
       }
       
@@ -261,8 +267,11 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
       if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
         config.effects.characteristics.forEach(({ characteristic, modifier }) => {
           const raw = applyModifier(modifier, displaySeverity);
-          characteristicEffects[characteristic] =
-            raw * anchorModifierScaleForCharacteristic(anchorContext, characteristic);
+          characteristicEffects[characteristic] = scaleCharacteristicModifierByAnchors(
+            anchorContext,
+            characteristic as keyof WineCharacteristics,
+            raw
+          );
         });
       }
       
@@ -336,8 +345,11 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
     if (config.effects.characteristics) {
       for (const effect of config.effects.characteristics) {
         const raw = applyModifier(effect.modifier, feature.severity);
-        characteristicModifiers[effect.characteristic] =
-          raw * anchorModifierScaleForCharacteristic(anchorContext, effect.characteristic);
+        characteristicModifiers[effect.characteristic] = scaleCharacteristicModifierByAnchors(
+          anchorContext,
+          effect.characteristic,
+          raw
+        );
       }
     }
     
@@ -401,7 +413,7 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
       for (const effect of config.effects.characteristics) {
         const raw = applyModifier(effect.modifier, feature.severity);
-        const modifier = raw * anchorModifierScaleForCharacteristic(anchorContext, effect.characteristic);
+        const modifier = scaleCharacteristicModifierByAnchors(anchorContext, effect.characteristic, raw);
 
         const currentValue = modifiedCharacteristics[effect.characteristic];
         modifiedCharacteristics[effect.characteristic] = Math.max(0, Math.min(1, currentValue + modifier));
@@ -415,12 +427,17 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
       }
     }
   }
-  
-  // Recalculate structure index with modified characteristics
-  const structureIndexResult = calculateStructureIndex(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
 
   let wineAnchors = resolveWineAnchors(batch.wineAnchors);
   wineAnchors = applyFeatureLayerAnchors(batch, wineAnchors);
+
+  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+  const structureIndexResult = calculateStructureIndex(
+    modifiedCharacteristics,
+    structureRanges,
+    RANGE_ADJUSTMENTS,
+    RULES
+  );
 
   return {
     ...batch,
@@ -490,7 +507,7 @@ export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Parti
 
     for (const effect of config.effects.characteristics) {
       const raw = applyModifier(effect.modifier, feature.severity);
-      const modifier = raw * anchorModifierScaleForCharacteristic(anchorContext, effect.characteristic);
+      const modifier = scaleCharacteristicModifierByAnchors(anchorContext, effect.characteristic, raw);
       modifiers[effect.characteristic] = (modifiers[effect.characteristic] || 0) + modifier;
     }
   }

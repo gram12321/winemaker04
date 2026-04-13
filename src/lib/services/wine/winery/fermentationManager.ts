@@ -9,6 +9,7 @@ import { WorkCategory } from '../../activity';
 import { calculateFermentationWork } from '../../activity/workcalculators/fermentationWorkCalculator';
 import { FermentationOptions, applyWeeklyFermentationEffects } from '../characteristics/fermentationCharacteristics';
 import { resolveWineAnchors } from '../anchors/wineAnchorService';
+import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
 import { calculateWineScore, getTasteIndex } from '../winescore/wineScoreCalculation';
@@ -185,8 +186,18 @@ export async function processWeeklyFermentation(): Promise<void> {
         wineAnchors: resolveWineAnchors(batch.wineAnchors)
       });
 
-      // Recalculate structure index based on new characteristics
-      const structureIndexResult = calculateStructureIndex(newCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
+      const wineAnchors = applyWeeklyFermentationContactToWineAnchors(
+        resolveWineAnchors(batch.wineAnchors),
+        batch.fermentationOptions
+      );
+
+      const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+      const structureIndexResult = calculateStructureIndex(
+        newCharacteristics,
+        structureRanges,
+        RANGE_ADJUSTMENTS,
+        RULES
+      );
 
       const currentTasteIndex = getTasteIndex(batch);
 
@@ -197,11 +208,6 @@ export async function processWeeklyFermentation(): Promise<void> {
           ...breakdown.effects
         ]
       };
-
-      const wineAnchors = applyWeeklyFermentationContactToWineAnchors(
-        resolveWineAnchors(batch.wineAnchors),
-        batch.fermentationOptions
-      );
 
       // Collect update instead of immediately saving
       updates.push({

@@ -11,6 +11,9 @@ import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
 import { applyFermentationSetupToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
+import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 
 /**
@@ -151,6 +154,14 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       opts
     );
 
+    const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+    const structureIndexResult = calculateStructureIndex(
+      batchWithEventFeatures.characteristics,
+      structureRanges,
+      RANGE_ADJUSTMENTS,
+      RULES
+    );
+
     // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
     // Also update characteristics and breakdown if they were modified by feature effects
     await updateWineBatch(batchId, {
@@ -160,6 +171,7 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       characteristics: batchWithEventFeatures.characteristics,
       breakdown: batchWithEventFeatures.breakdown,
       tasteIndex: batchWithEventFeatures.tasteIndex,
+      structureIndex: structureIndexResult.score,
       wineAnchors
     });
 

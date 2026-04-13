@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { WineCharacteristics } from '@/lib/types/types';
+import React, { useMemo, useState } from 'react';
+import { WineAnchorValues, WineCharacteristics } from '@/lib/types/types';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { calculateStructureIndex, calculateCharacteristicBreakdown, calculateRules, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
+import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
 import { formatNumber } from '@/lib/utils';
@@ -11,12 +13,15 @@ import { getWineStructureCategory, getRangeColor, getRatingForRange } from '@/li
 
 interface StructureIndexBreakdownProps {
   characteristics: WineCharacteristics;
+  /** When set (e.g. from `WineBatch.wineAnchors`), ideal ranges follow anchor potential. */
+  wineAnchors?: WineAnchorValues | null;
   className?: string;
   showWineStyleRules?: boolean;
 }
 
 export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = ({ 
-  characteristics, 
+  characteristics,
+  wineAnchors = null,
   className = "",
   showWineStyleRules = false
 }) => {
@@ -25,17 +30,22 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
   const [synergiesExpanded, setSynergiesExpanded] = useState(false);
   const [filteredSource, setFilteredSource] = useState<string | null>(null);
 
+  const baseRangesForCalc = useMemo(() => {
+    if (wineAnchors == null) return BASE_BALANCED_RANGES;
+    return getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, resolveWineAnchors(wineAnchors));
+  }, [wineAnchors]);
+
   // Calculate all results using the new clean system
   const structureIndexResult = calculateStructureIndex(
     characteristics, 
-    BASE_BALANCED_RANGES, 
+    baseRangesForCalc, 
     RANGE_ADJUSTMENTS, 
     RULES
   );
   
   const breakdown = calculateCharacteristicBreakdown(
     characteristics, 
-    BASE_BALANCED_RANGES, 
+    baseRangesForCalc, 
     RANGE_ADJUSTMENTS, 
     RULES
   );
@@ -364,7 +374,7 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
                                               <TooltipRow 
                                                 label="Current:" 
                                                 value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
+                                                valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', baseRangesForCalc[char as keyof WineCharacteristics][0], baseRangesForCalc[char as keyof WineCharacteristics][1])}
                                               />
                                             </TooltipSection>
                                           </div>
@@ -416,7 +426,7 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
                                             key={t}
                                             label={t} 
                                             value={formatNumber(characteristics[t as keyof WineCharacteristics], { decimals: 2, forceDecimals: true })}
-                                            valueRating={getRatingForRange(characteristics[t as keyof WineCharacteristics], 0, 1, 'balanced', BASE_BALANCED_RANGES[t as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[t as keyof WineCharacteristics][1])}
+                                            valueRating={getRatingForRange(characteristics[t as keyof WineCharacteristics], 0, 1, 'balanced', baseRangesForCalc[t as keyof WineCharacteristics][0], baseRangesForCalc[t as keyof WineCharacteristics][1])}
                                           />
                                         ))}
                                       </div>
@@ -454,7 +464,7 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
                                 // Get detailed penalty breakdown using existing calculation logic
                                 const { detailedBreakdown } = calculateRules(
                                   characteristics, 
-                                  BASE_BALANCED_RANGES, 
+                                  baseRangesForCalc, 
                                   RULES, 
                                   false, // not dry run
                                   true // return detailed breakdown
@@ -600,7 +610,7 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
                                                 <TooltipRow 
                                                   label="Current:" 
                                                   value={formatNumber(currentValue, { decimals: 2, forceDecimals: true })}
-                                                  valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', BASE_BALANCED_RANGES[char as keyof WineCharacteristics][0], BASE_BALANCED_RANGES[char as keyof WineCharacteristics][1])}
+                                                  valueRating={getRatingForRange(currentValue, 0, 1, 'balanced', baseRangesForCalc[char as keyof WineCharacteristics][0], baseRangesForCalc[char as keyof WineCharacteristics][1])}
                                                 />
                                               </TooltipSection>
                                             </div>
@@ -682,7 +692,7 @@ export const StructureIndexBreakdown: React.FC<StructureIndexBreakdownProps> = (
                                   // Get detailed synergy breakdown using existing calculation logic
                                   const { synergyBreakdown } = calculateRules(
                                     characteristics, 
-                                    BASE_BALANCED_RANGES, 
+                                    baseRangesForCalc, 
                                     RULES, 
                                     false, // not dry run
                                     true // return detailed breakdown
