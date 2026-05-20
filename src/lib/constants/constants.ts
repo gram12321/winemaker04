@@ -1,4 +1,4 @@
-// ===== GAME CORE CONSTANTS =====
+﻿// ===== GAME CORE CONSTANTS =====
 
 import { CustomerType, DifficultyPreference } from '../types/types';
 
@@ -98,7 +98,7 @@ const CUSTOMER_TYPE_CONFIGS: Record<CustomerType, CustomerTypeConfig> = {
 // Base pricing and sales constants
 export const SALES_CONSTANTS = {
   // Base rate per bottle for wine pricing calculations
-  BASE_RATE_PER_BOTTLE: 25, // �25 base rate
+  BASE_RATE_PER_BOTTLE: 25, // €25 base rate
   
   // Core price model multipliers used by estimated-price calculations
   PRICE_MULTIPLIERS: {
@@ -180,5 +180,6 @@ export const CUSTOMER_MARKET_SHARE_MULTIPLIERS: Record<CustomerType, number> = {
   'Wine Shop': 0.9,        // Medium wine shops
   'Chain Store': 1.0       // Large chain stores
 } as const;
+
 
 

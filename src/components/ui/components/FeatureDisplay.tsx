@@ -542,7 +542,7 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }
             const isQuality = key === 'quality';
             
             // For quality: positive = good (green), negative = bad (red)
-            // For characteristics: use balance-aware coloring
+            // For characteristics: use ideal-range-aware coloring
             let bgClass: string;
             let colorClass: string;
             
@@ -551,7 +551,7 @@ function WeeklyEffectsDisplay({ combinedWeeklyEffects, evolvingFeatures, batch }
               // Use intensity based on absolute value for quality
               colorClass = getRangeColor(totalEffect, -0.5, 0.5, 'higher_better').text;
             } else {
-              // Characteristic: determine if moving towards balance
+              // Characteristic: determine if moving towards ideal range
               // Use effective current value (base + active effects) for accurate evaluation
               // Ensure we always use the calculated effective value, not fallback to base
               const baseValue = batch.characteristics[key as keyof typeof batch.characteristics] || 0;
@@ -632,7 +632,7 @@ function CombinedEffectsDisplay({ combinedActiveEffects, totalQualityEffect, act
             const percentage = formatNumber(totalEffect * 100, { smartDecimals: true });
             const sign = totalEffect > 0 ? '+' : '';
             
-            // Use balance-aware color coding for characteristic effects
+            // Use ideal-range-aware color coding for characteristic effects
             // For combined effects, we need to evaluate against the base value (before active effects)
             // because combinedActiveEffects represents the total change from base
             const currentValue = batch.characteristics[characteristic as keyof typeof batch.characteristics] || 0;

@@ -18,7 +18,7 @@ import { clamp01 } from '@/lib/utils/utils';
 type DifficultyComponentKey =
   | 'handling'
   | 'yield'
-  | 'balance'
+  | 'structure'
   | 'aging'
   | 'grapeSuitability';
 
@@ -27,7 +27,7 @@ export type DifficultyTier = 'low' | 'medium' | 'high';
 export interface GrapeDifficultyComponents {
   handling: number;
   yield: number;
-  balance: number;
+  structure: number;
   aging: number;
   grapeSuitability: number;
 }
@@ -71,7 +71,7 @@ export interface GrapeDifficultyBreakdown {
 const COMPONENT_WEIGHTS: Record<DifficultyComponentKey, number> = {
   handling: 0.35,
   yield: 0.2,
-  balance: 0.2,
+  structure: 0.2,
   aging: 0.1,
   grapeSuitability: 0.15,
 };
@@ -178,7 +178,7 @@ function calculateYieldComponent(grape: GrapeVariety): number {
   return clamp01(1 - data.naturalYield);
 }
 
-function calculateBalanceComponent(grape: GrapeVariety): number {
+function calculateStructureComponent(grape: GrapeVariety): number {
   const data = GRAPE_CONST[grape];
   const characteristicKeys = Object.keys(BASE_BALANCED_RANGES) as Array<keyof WineCharacteristics>;
 
@@ -374,14 +374,14 @@ function deriveTier(score: number): DifficultyTier {
 function calculateComponents(grape: GrapeVariety) {
   const handling = calculateHandlingComponent(grape);
   const yieldComponent = calculateYieldComponent(grape);
-  const balance = calculateBalanceComponent(grape);
+  const structure = calculateStructureComponent(grape);
   const aging = calculateAgingComponent(grape);
   const grapeSuitabilityData = calculateGrapeSuitabilityData(grape);
 
   const components: GrapeDifficultyComponents = {
     handling,
     yield: yieldComponent,
-    balance,
+    structure,
     aging,
     grapeSuitability: grapeSuitabilityData.componentValue,
   };

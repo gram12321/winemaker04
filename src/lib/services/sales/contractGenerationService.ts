@@ -15,6 +15,8 @@ import {
   CONTRACT_MIN_QUANTITIES,
   AVAILABLE_GRAPES,
   AVAILABLE_GRAPE_COLORS,
+  AVAILABLE_SITE_COUNTRIES,
+  AVAILABLE_SITE_REGIONS,
   CONTRACT_PRICING,
   MULTI_YEAR_CONFIG,
   COMPLEXITY_THRESHOLDS,
@@ -45,8 +47,8 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
   let difficulty: RequirementDifficulty = 'easy';
   
   switch (requirement.type) {
-    case 'quality':
-      // Quality thresholds: <50% easy, 50-70% medium, 70-85% hard, >85% expert
+    case 'tasteQuality':
+      // Taste quality thresholds: <50% easy, 50-70% medium, 70-85% hard, >85% expert
       if (requirement.value < 0.5) {
         difficulty = 'easy';
         score = requirement.value * 0.4; // 0-0.2
@@ -86,8 +88,8 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       score = 0.6;
       break;
       
-    case 'balance':
-      // Balance thresholds: <60% easy, 60-75% medium, 75-85% hard, >85% expert
+    case 'structureIndex':
+      // Structure index thresholds: <60% easy, 60-75% medium, 75-85% hard, >85% expert
       if (requirement.value < 0.6) {
         difficulty = 'easy';
         score = requirement.value * 0.33; // 0-0.2
@@ -131,6 +133,18 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       // Grape color requirement is easy (red/white split)
       difficulty = 'easy';
       score = 0.2;
+      break;
+
+    case 'country':
+      // Country requirements are broad site parameters.
+      difficulty = 'easy';
+      score = 0.18;
+      break;
+
+    case 'region':
+      // Region requirements are narrower than country, but still easier than exact vintage.
+      difficulty = 'medium';
+      score = 0.32;
       break;
       
     case 'altitude':
@@ -203,8 +217,8 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       }
       break;
       
-    case 'characteristicBalance':
-      // Balance distance thresholds (lower = harder): >15% easy, 5-15% medium, 2-5% hard, <2% expert
+    case 'characteristicDeviation':
+      // Deviation thresholds (lower = harder): >15% easy, 5-15% medium, 2-5% hard, <2% expert
       const distancePercent = requirement.value * 100; // Convert to percentage
       if (distancePercent > 15) {
         difficulty = 'easy';
@@ -736,7 +750,7 @@ async function generateRequirements(customer: Customer): Promise<ContractRequire
   
   // Ensure at least one requirement
   if (requirements.length === 0) {
-    requirements.push(generateQualityRequirement(customer, 0.3)); // Easy fallback
+    requirements.push(generateTasteQualityRequirement(customer, 0.3)); // Easy fallback
   }
   
   return requirements;
@@ -754,20 +768,24 @@ function generateRequirementWithDifficulty(
   const actualDifficulty = Math.max(0, Math.min(1, targetDifficulty + (Math.random() * variance * 2 - variance)));
   
   switch (type) {
-    case 'quality':
-      return generateQualityRequirement(customer, actualDifficulty);
+    case 'tasteQuality':
+      return generateTasteQualityRequirement(customer, actualDifficulty);
     case 'minimumVintage':
       return generateMinimumVintageRequirement(customer, actualDifficulty);
     case 'specificVintage':
       return generateSpecificVintageRequirement(customer);
-    case 'balance':
-      return generateBalanceRequirement(customer, actualDifficulty);
+    case 'structureIndex':
+      return generateStructureIndexRequirement(customer, actualDifficulty);
     case 'landValue':
       return generateLandValueRequirement(customer, actualDifficulty);
     case 'grape':
       return generateGrapeRequirement(customer);
     case 'grapeColor':
       return generateGrapeColorRequirement(customer);
+    case 'country':
+      return generateCountryRequirement(customer);
+    case 'region':
+      return generateRegionRequirement(customer);
     case 'altitude':
       return generateAltitudeRequirement(customer, actualDifficulty);
     case 'aspect':
@@ -776,23 +794,23 @@ function generateRequirementWithDifficulty(
       return generateCharacteristicMinRequirement(customer, actualDifficulty);
     case 'characteristicMax':
       return generateCharacteristicMaxRequirement(customer, actualDifficulty);
-    case 'characteristicBalance':
-      return generateCharacteristicBalanceRequirement(customer, actualDifficulty);
+    case 'characteristicDeviation':
+      return generatecharacteristicDeviationRequirement(customer, actualDifficulty);
     default:
-      return generateQualityRequirement(customer, actualDifficulty);
+      return generateTasteQualityRequirement(customer, actualDifficulty);
   }
 }
 
 /**
- * Generate quality requirement with target difficulty
+ * Generate taste quality requirement with target difficulty
  * difficulty: 0-1 scale (0=easy, 1=expert)
  */
-function generateQualityRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  // Map difficulty to quality thresholds
-  // 0.0-0.2 = 30-50% quality (easy)
-  // 0.2-0.4 = 50-70% quality (medium)
-  // 0.4-0.7 = 70-85% quality (hard)
-  // 0.7-1.0 = 85-95% quality (expert)
+function generateTasteQualityRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  // Map difficulty to taste quality thresholds
+  // 0.0-0.2 = 30-50% taste quality (easy)
+  // 0.2-0.4 = 50-70% taste quality (medium)
+  // 0.4-0.7 = 70-85% taste quality (hard)
+  // 0.7-1.0 = 85-95% taste quality (expert)
   
   let minQuality = 0.3;
   if (targetDifficulty < 0.2) {
@@ -810,7 +828,7 @@ function generateQualityRequirement(_customer: Customer, targetDifficulty: numbe
   minQuality = Math.max(0.2, Math.min(0.95, minQuality + variance));
   
   return {
-    type: 'quality',
+    type: 'tasteQuality',
     value: Math.round(minQuality * 100) / 100
   };
 }
@@ -874,32 +892,32 @@ function generateSpecificVintageRequirement(customer: Customer): ContractRequire
 }
 
 /**
- * Generate balance requirement with target difficulty
+ * Generate structure index requirement with target difficulty
  */
-function generateBalanceRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  // Map difficulty to balance thresholds
-  // 0.0-0.2 = 40-60% balance (easy)
-  // 0.2-0.4 = 60-75% balance (medium)
-  // 0.4-0.7 = 75-85% balance (hard)
-  // 0.7-1.0 = 85-95% balance (expert)
+function generateStructureIndexRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  // Map difficulty to structure index thresholds
+  // 0.0-0.2 = 40-60% structure index (easy)
+  // 0.2-0.4 = 60-75% structure index (medium)
+  // 0.4-0.7 = 75-85% structure index (hard)
+  // 0.7-1.0 = 85-95% structure index (expert)
   
-  let minBalance = 0.4;
+  let minStructureIndex = 0.4;
   if (targetDifficulty < 0.2) {
-    minBalance = 0.4 + targetDifficulty * 1.0; // 40-60%
+    minStructureIndex = 0.4 + targetDifficulty * 1.0; // 40-60%
   } else if (targetDifficulty < 0.4) {
-    minBalance = 0.6 + (targetDifficulty - 0.2) * 0.75; // 60-75%
+    minStructureIndex = 0.6 + (targetDifficulty - 0.2) * 0.75; // 60-75%
   } else if (targetDifficulty < 0.7) {
-    minBalance = 0.75 + (targetDifficulty - 0.4) * 0.33; // 75-85%
+    minStructureIndex = 0.75 + (targetDifficulty - 0.4) * 0.33; // 75-85%
   } else {
-    minBalance = 0.85 + (targetDifficulty - 0.7) * 0.33; // 85-95%
+    minStructureIndex = 0.85 + (targetDifficulty - 0.7) * 0.33; // 85-95%
   }
   
   const variance = Math.random() * 0.04 - 0.02;
-  minBalance = Math.max(0.3, Math.min(0.95, minBalance + variance));
+  minStructureIndex = Math.max(0.3, Math.min(0.95, minStructureIndex + variance));
   
   return {
-    type: 'balance',
-    value: Math.round(minBalance * 100) / 100
+    type: 'structureIndex',
+    value: Math.round(minStructureIndex * 100) / 100
   };
 }
 
@@ -931,6 +949,37 @@ function generateGrapeColorRequirement(_customer: Customer): ContractRequirement
     value: 1, // Binary: must match
     params: {
       targetGrapeColor
+    }
+  };
+}
+
+/**
+ * Generate country site-parameter requirement.
+ */
+function generateCountryRequirement(_customer: Customer): ContractRequirement {
+  const targetCountry = AVAILABLE_SITE_COUNTRIES[Math.floor(Math.random() * AVAILABLE_SITE_COUNTRIES.length)];
+
+  return {
+    type: 'country',
+    value: 1,
+    params: {
+      targetCountry
+    }
+  };
+}
+
+/**
+ * Generate region site-parameter requirement.
+ */
+function generateRegionRequirement(_customer: Customer): ContractRequirement {
+  const target = AVAILABLE_SITE_REGIONS[Math.floor(Math.random() * AVAILABLE_SITE_REGIONS.length)];
+
+  return {
+    type: 'region',
+    value: 1,
+    params: {
+      targetCountry: target.country,
+      targetRegion: target.region
     }
   };
 }
@@ -1103,17 +1152,17 @@ function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficu
 }
 
 /**
- * Generate characteristic balance requirement (e.g., "Sweetness Balance: maxDistance ≤ 0.15")
+ * Generate characteristic deviation requirement (e.g., "Sweetness deviation: maxDistance ≤ 0.15")
  * Requires the wine's characteristic to be within a certain distance from ideal for that characteristic
  */
-function generateCharacteristicBalanceRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+function generatecharacteristicDeviationRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
   const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
   
-  // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter balance required)
-  // 0.0-0.2 = 0.25-0.15 (easy - loose balance)
-  // 0.2-0.4 = 0.15-0.05 (medium - moderate balance)
-  // 0.4-0.7 = 0.05-0.02 (hard - tight balance)
-  // 0.7-1.0 = smaller than 0.02 (expert - very tight balance)
+  // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter deviation bound)
+  // 0.0-0.2 = 0.25-0.15 (easy - loose)
+  // 0.2-0.4 = 0.15-0.05 (medium - moderate)
+  // 0.4-0.7 = 0.05-0.02 (hard - tight)
+  // 0.7-1.0 = smaller than 0.02 (expert - very tight)
   
   let maxDistance = 0.25;
   if (targetDifficulty < 0.2) {
@@ -1130,7 +1179,7 @@ function generateCharacteristicBalanceRequirement(_customer: Customer, targetDif
   maxDistance = Math.max(0.05, Math.min(0.30, maxDistance + variance));
   
   return {
-    type: 'characteristicBalance',
+    type: 'characteristicDeviation',
     value: Math.round(maxDistance * 100) / 100,
     params: {
       targetCharacteristic: characteristic

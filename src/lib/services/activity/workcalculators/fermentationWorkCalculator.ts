@@ -10,6 +10,12 @@ import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
+import { applyFermentationSetupToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
+import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 /**
  * Calculate work required for fermentation setup
@@ -143,15 +149,42 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       { options: fermentationOptions, batch: updatedBatch }  // Pass context with options and batch
     );
 
-    // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
-    // Also update characteristics and breakdown if they were modified by feature effects
-    await updateWineBatch(batchId, {
+    const opts = fermentationOptions as FermentationOptions;
+    const wineAnchors = applyFermentationSetupToWineAnchors(
+      resolveWineAnchors(batchWithEventFeatures.wineAnchors),
+      opts
+    );
+
+    const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+    const structureIndexResult = calculateStructureIndex(
+      batchWithEventFeatures.characteristics,
+      structureRanges,
+      RANGE_ADJUSTMENTS,
+      RULES
+    );
+
+    const batchAfterFermentationSetup: WineBatch = {
+      ...batchWithEventFeatures,
       state: 'must_fermenting',
-      fermentationOptions: fermentationOptions as FermentationOptions,
+      fermentationOptions: opts,
       features: batchWithEventFeatures.features,
       characteristics: batchWithEventFeatures.characteristics,
       breakdown: batchWithEventFeatures.breakdown,
-      tasteIndex: batchWithEventFeatures.tasteIndex
+      structureIndex: structureIndexResult.score,
+      wineAnchors
+    };
+
+    // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
+    // Also update characteristics and breakdown if they were modified by feature effects
+    await updateWineBatch(batchId, {
+      state: batchAfterFermentationSetup.state,
+      fermentationOptions: batchAfterFermentationSetup.fermentationOptions,
+      features: batchAfterFermentationSetup.features,
+      characteristics: batchAfterFermentationSetup.characteristics,
+      breakdown: batchAfterFermentationSetup.breakdown,
+      tasteQualityIndex: getTasteQualityIndex(batchAfterFermentationSetup),
+      structureIndex: batchAfterFermentationSetup.structureIndex,
+      wineAnchors: batchAfterFermentationSetup.wineAnchors
     });
 
     // Deduct costs if any
@@ -167,3 +200,4 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
     console.error('Error completing fermentation setup activity:', error);
   }
 }
+

@@ -113,12 +113,96 @@ export interface WineCharacteristics {
   tannins: number;      // 0-1 scale
 }
 
-// Balance calculation result interface
-export interface BalanceResult {
-  score: number;        // 0-1 balance score
+// Structure index calculation result
+export interface StructureIndexResult {
+  score: number;        // 0-1 structure index
   qualifies: boolean;   // Whether wine qualifies for any archetype (placeholder)
-  adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from balance calculation
+  adjustedRanges: Record<keyof WineCharacteristics, [number, number]>; // Adjusted ranges from structure calculation
 }
+
+/** Wine Folly–style wheel families; values 0–1. Derived in `wineTasteProfileService` (not persisted). */
+export const FLAVOR_FAMILY_IDS = [
+  'flower',
+  'citrus',
+  'treeFruit',
+  'tropicalFruit',
+  'redFruit',
+  'blackFruit',
+  'driedFruit',
+  'spiceFlavor',
+  'vegetable',
+  'earth',
+  'microbial',
+  'oakAging',
+  'generalAging',
+  'faults'
+] as const;
+
+export type FlavorFamilyId = (typeof FLAVOR_FAMILY_IDS)[number];
+
+export type WineFlavorFamilyProfile = Record<FlavorFamilyId, number>;
+
+/** Second-level tasting notes derived with families (UI only). */
+export const WINE_TASTE_DESCRIPTOR_IDS = [
+  'citrusZest',
+  'orchardFruit',
+  'stoneMelon',
+  'tropicalNotes',
+  'redBerry',
+  'darkFruit',
+  'driedConcentrated',
+  'floralLift',
+  'herbalGreen',
+  'pepperBakingSpice',
+  'earthMineral',
+  'yeastLees',
+  'oakToastVanilla',
+  'bottleEvolved',
+  'faultEdge',
+  'whiteFloral',
+  'greenApple',
+  'yellowApple',
+  'pearNotes',
+  'whitePeach',
+  'grapefruit',
+  'orangeZest',
+  'tropicalIsland',
+  'honeyed',
+  'leatheryTobacco',
+  'graphiteMineral'
+] as const;
+
+export type WineTasteDescriptorId = (typeof WINE_TASTE_DESCRIPTOR_IDS)[number];
+
+export type WineTasteDescriptorProfile = Record<WineTasteDescriptorId, number>;
+
+/** Aggregate taste readouts (computed, not persisted). */
+export interface WineTasteProfileBundle {
+  flavorFamilies: WineFlavorFamilyProfile;
+  descriptors: WineTasteDescriptorProfile;
+  descriptorFamilies: Record<FlavorFamilyId, WineTasteDescriptorId[]>;
+}
+
+/**
+ * Backend-only wine anchors (0–1): **upstream** wine identity (terroir + variety + process).
+ * `WineCharacteristics` / structure / flavor are **downstream** — what the player tastes — and must not
+ * feed back into anchor computation (see `computeHarvestWineAnchors`, `wineAnchorProcess`).
+ */
+export interface WineAnchorValues {
+  sugarPotential: number;
+  acidPotential: number;
+  phenolicPotential: number;
+  aromaticPotential: number;
+  bodyPotential: number;
+  extractionState: number;
+  fermentationState: number;
+  leesState: number;
+  oxidationPressure: number;
+  maturationState: number;
+  terroirExpression: number;
+  processFootprint: number;
+}
+export type WineAnchorId = keyof WineAnchorValues;
 
 // Wine batch state - unified system replacing separate stage/process
 export type WineBatchState =
@@ -139,23 +223,23 @@ export interface WineBatch {
   state: WineBatchState;
   fermentationProgress?: number; // 0-100% for fermentation tracking
 
-  // Wine quality properties (0-1 scale)
-  // Lifecycle: born (harvest) -> current (evolving) -> bottled (snapshot)
-  bornLandValueModifier: number; // Static terroir/land index at harvest (immutable)
-  landValueModifier: number; // Current land-value modifier (static in normal flow)
-  bornTasteIndex: number; // Taste index at harvest (immutable baseline)
-  tasteIndex: number; // Current taste index (modified by features throughout lifecycle)
-  bornBalance: number; // Original balance at harvest (immutable)
-  balance: number; // Current wine balance (modified by features throughout lifecycle)
+  // Wine scoring properties (0-1 scale)
+  // Lifecycle: harvest snapshot -> current -> bottling snapshot
+  landValueModifierHarvestSnapshot: number; // Immutable site-value snapshot at harvest
+  structureIndexHarvestSnapshot: number; // Immutable structure snapshot at harvest
+  tasteQualityIndexHarvestSnapshot: number; // Immutable taste quality snapshot at harvest
+  landValueModifier: number; // Current land-value modifier
+  structureIndex: number; // Current structure index
+  tasteQualityIndex: number; // Current taste quality index
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
 
   // Bottling snapshots (frozen values at bottling time for WineLog)
-  bottledTasteIndex?: number; // Taste index at bottling (snapshot for historical records)
-  bottledLandValueModifier?: number; // Land-value modifier at bottling (snapshot for historical records)
-  bottledBalance?: number; // Balance at bottling (snapshot for historical records)
-  bottledWineScore?: number; // Wine score at bottling (taste index + balance) / 2
+  tasteQualityIndexBottlingSnapshot?: number;
+  landValueModifierBottlingSnapshot?: number;
+  structureIndexBottlingSnapshot?: number;
+  wineScoreBottlingSnapshot?: number;
 
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {
@@ -181,6 +265,9 @@ export interface WineBatch {
   // Wine Features Framework (faults and positive features)
   features: WineFeature[];
 
+  /** Hidden backend anchors (0–1); computed at harvest, persisted; not shown in UI yet */
+  wineAnchors: WineAnchorValues;
+
   harvestStartDate: GameDate; // first week/season/year grapes were harvested for this batch
   harvestEndDate: GameDate; // last week/season/year grapes were harvested for this batch
   bottledDate?: GameDate; // When bottling is completed
@@ -197,10 +284,10 @@ export interface WineLogEntry {
   grape: GrapeVariety;
   vintage: number; // Year the grapes were harvested
   quantity: number; // Bottles produced
-  tasteIndex: number; // Dynamic taste index (0-1)
+  tasteQualityIndex: number; // Taste quality snapshot (0-1)
   landValueModifier: number; // Static terroir/land index (0-1)
-  balance: number; // Wine balance/body (0-1)
-  wineScore: number; // Overall wine score (taste index + balance) / 2
+  structureIndex: number; // Structure index (0-1)
+  wineScore: number; // Overall wine score
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
@@ -232,7 +319,7 @@ export interface Customer {
 
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
-  wineTradition: number; // Affects wine taste-index preferences and price premiums
+  wineTradition: number; // Affects wine taste-quality preferences and price premiums
   marketShare: number; // Affects order size multipliers (0-1 scale)
 
   // Behavioral multipliers (calculated from characteristics)
@@ -242,6 +329,9 @@ export interface Customer {
   relationship?: number; // 0-100 scale for relationship strength
   activeCustomer?: boolean; // True if customer has placed orders (actively interacting with company)
   difficultyPreference?: DifficultyPreference; // Difficulty affinity used when valuing wines
+  // TODO: If customer taste preferences are added, model them as one unified market-preference
+  // layer covering both structure and taste. Do not add taste-only preferences before structure
+  // has the same concept.
 }
 
 // Wine order interface for sales operations
@@ -308,16 +398,18 @@ export interface WineOrder {
 // ===== CONTRACT TYPES =====
 
 // Requirement types for contracts
-export type ContractRequirementType = 'quality' | 'minimumVintage' | 'specificVintage' | 'balance' | 'landValue' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicBalance';
+export type ContractRequirementType = 'tasteQuality' | 'minimumVintage' | 'specificVintage' | 'structureIndex' | 'landValue' | 'country' | 'region' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicDeviation';
 
 // Individual contract requirement
 export interface ContractRequirement {
   type: ContractRequirementType;
-  value: number; // For quality/balance/altitude: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
+  value: number; // For taste quality/structure index/altitude/aspect: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
   params?: {
     minAge?: number; // For minimumVintage requirements
     maxAge?: number; // For minimumVintage requirements (optional)
     targetYear?: number; // For specificVintage requirements
+    targetCountry?: string; // For country/region site parameter requirements
+    targetRegion?: string; // For region site parameter requirements
     targetGrape?: GrapeVariety; // For grape requirements
     targetGrapeColor?: 'red' | 'white'; // For grapeColor requirements
     targetCharacteristic?: keyof WineCharacteristics; // For characteristic requirements (acidity, aroma, body, spice, sweetness, tannins)
@@ -620,7 +712,7 @@ export interface Activity {
   completedWork: number;
   targetId?: string; // vineyard ID, building ID, etc.
   params: Record<string, any>; // grape variety, density, etc.
-  status: 'active' | 'cancelled';
+  status: 'active' | 'paused' | 'cancelled';
   gameWeek: number;
   gameSeason: string;
   gameYear: number;
@@ -807,8 +899,8 @@ export type AchievementConditionType =
   | 'total_vineyard_value'          // Check if combined vineyard value >= threshold
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
-  | 'wine_taste_index_threshold'        // Check if wine taste index >= threshold
-  | 'wine_balance_threshold'        // Check if wine balance >= threshold
+  | 'wine_taste_quality_index_threshold'        // Check if wine taste quality >= threshold
+  | 'wine_structure_index_threshold' // Check if wine structure index >= threshold
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold
   | 'sales_price_percentage'        // Check if sales price is X% over/under estimated
@@ -982,5 +1074,4 @@ export interface GameState {
   loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
   pendingForcedLoanRestructure?: ForcedLoanRestructureOffer | null;
 }
-
 

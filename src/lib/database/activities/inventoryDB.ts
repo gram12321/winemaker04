@@ -3,6 +3,7 @@ import { WineBatch, GrapeVariety } from '../../types/types';
 import { getCompanyQuery, getCurrentCompanyId } from '../../utils/companyUtils';
 import { GRAPE_CONST } from '../../constants/grapeConstants';
 import { buildGameDate } from '../dbMapperUtils';
+import { parseWineAnchorsFromDb } from '../../services/wine/anchors/wineAnchorService';
 
 const WINE_BATCHES_TABLE = 'wine_batches';
 
@@ -77,10 +78,12 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         state: batch.state,
         fermentation_progress: Math.round(batch.fermentationProgress || 0),
         fermentation_options: batch.fermentationOptions, 
-        born_grape_quality: batch.bornLandValueModifier,
-        born_balance: batch.bornBalance ?? batch.balance,
-        grape_quality: batch.tasteIndex,
-        balance: batch.balance,
+        land_value_modifier_harvest_snapshot: batch.landValueModifierHarvestSnapshot,
+        structure_index_harvest_snapshot: batch.structureIndexHarvestSnapshot,
+        taste_quality_index_harvest_snapshot: batch.tasteQualityIndexHarvestSnapshot,
+        land_value_modifier: batch.landValueModifier,
+        taste_quality_index: batch.tasteQualityIndex,
+        structure_index: batch.structureIndex,
         characteristics: batch.characteristics, 
         breakdown: batch.breakdown, 
         estimated_price: batch.estimatedPrice,
@@ -90,6 +93,7 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         fragile: batch.fragile,
         prone_to_oxidation: batch.proneToOxidation,
         features: batch.features || [], // Store features as JSONB array
+        wine_anchors: batch.wineAnchors,
         harvest_start_week: Math.round(batch.harvestStartDate.week),
         harvest_start_season: batch.harvestStartDate.season,
         harvest_start_year: Math.round(batch.harvestStartDate.year),
@@ -101,6 +105,10 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         bottled_week: batch.bottledDate ? Math.round(batch.bottledDate.week) : null,
         bottled_season: batch.bottledDate?.season,
         bottled_year: batch.bottledDate ? Math.round(batch.bottledDate.year) : null,
+        taste_quality_index_bottling_snapshot: batch.tasteQualityIndexBottlingSnapshot ?? null,
+        land_value_modifier_bottling_snapshot: batch.landValueModifierBottlingSnapshot ?? null,
+        structure_index_bottling_snapshot: batch.structureIndexBottlingSnapshot ?? null,
+        wine_score_bottling_snapshot: batch.wineScoreBottlingSnapshot ?? null,
         aging_progress: Math.round(batch.agingProgress || 0)
       });
 
@@ -124,12 +132,12 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
       const grapeVariety = row.grape_variety as GrapeVariety;
       const grapeData = GRAPE_CONST[grapeVariety] || GRAPE_CONST['Chardonnay']; // Fallback to Chardonnay
       
-      const bornLandValueModifier = row.born_grape_quality;
-      const bornBalance = row.born_balance ?? row.balance;
-      const tasteIndex = row.grape_quality;
-      const landValueModifier = row.born_grape_quality;
-      const bornTasteIndex = row.born_taste_index ?? row.born_grape_quality ?? row.grape_quality;
-      const balance = row.balance;
+      const landValueModifierHarvestSnapshot = row.land_value_modifier_harvest_snapshot ?? 0;
+      const structureIndex = row.structure_index ?? 0;
+      const structureIndexHarvestSnapshot = row.structure_index_harvest_snapshot ?? structureIndex;
+      const tasteQualityIndex = row.taste_quality_index ?? 0.5;
+      const landValueModifier = row.land_value_modifier ?? landValueModifierHarvestSnapshot;
+      const tasteQualityIndexHarvestSnapshot = row.taste_quality_index_harvest_snapshot ?? tasteQualityIndex;
       
       return {
         id: row.id,
@@ -140,12 +148,12 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         state: row.state,
         fermentationProgress: row.fermentation_progress || 0,
         fermentationOptions: row.fermentation_options || undefined, // Load fermentation options
-        bornLandValueModifier,
-        bornBalance, // Original balance at harvest
+        landValueModifierHarvestSnapshot,
+        structureIndexHarvestSnapshot,
         landValueModifier,
-        tasteIndex,
-        bornTasteIndex,
-        balance: balance,
+        tasteQualityIndex,
+        tasteQualityIndexHarvestSnapshot,
+        structureIndex,
         characteristics: row.characteristics || {
           acidity: 0.5,
           aroma: 0.5,
@@ -161,10 +169,15 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         naturalYield: row.natural_yield || grapeData.naturalYield,
         fragile: row.fragile || grapeData.fragile,
         proneToOxidation: row.prone_to_oxidation || grapeData.proneToOxidation,
-        features: row.features || [], 
+        features: row.features || [],
+        wineAnchors: parseWineAnchorsFromDb(row.wine_anchors),
         harvestStartDate: buildGameDate(row.harvest_start_week, row.harvest_start_season, row.harvest_start_year)!,
         harvestEndDate: buildGameDate(row.harvest_end_week, row.harvest_end_season, row.harvest_end_year)!,
         bottledDate: buildGameDate(row.bottled_week, row.bottled_season, row.bottled_year),
+        tasteQualityIndexBottlingSnapshot: row.taste_quality_index_bottling_snapshot ?? undefined,
+        landValueModifierBottlingSnapshot: row.land_value_modifier_bottling_snapshot ?? undefined,
+        structureIndexBottlingSnapshot: row.structure_index_bottling_snapshot ?? undefined,
+        wineScoreBottlingSnapshot: row.wine_score_bottling_snapshot ?? undefined,
         
         agingProgress: row.aging_progress || 0,
         batchNumber: row.batch_number ?? undefined,
@@ -238,9 +251,12 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           state: updatedBatch.state,
           fermentation_progress: Math.round(updatedBatch.fermentationProgress || 0),
           fermentation_options: updatedBatch.fermentationOptions,
-          born_grape_quality: updatedBatch.bornLandValueModifier,
-          grape_quality: updatedBatch.tasteIndex,
-          balance: updatedBatch.balance,
+          land_value_modifier_harvest_snapshot: updatedBatch.landValueModifierHarvestSnapshot,
+          structure_index_harvest_snapshot: updatedBatch.structureIndexHarvestSnapshot,
+          taste_quality_index_harvest_snapshot: updatedBatch.tasteQualityIndexHarvestSnapshot,
+          land_value_modifier: updatedBatch.landValueModifier,
+          taste_quality_index: updatedBatch.tasteQualityIndex,
+          structure_index: updatedBatch.structureIndex,
           characteristics: updatedBatch.characteristics,
           breakdown: updatedBatch.breakdown,
           estimated_price: updatedBatch.estimatedPrice,
@@ -250,6 +266,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           fragile: updatedBatch.fragile,
           prone_to_oxidation: updatedBatch.proneToOxidation,
           features: updatedBatch.features || [],
+          wine_anchors: updatedBatch.wineAnchors,
           harvest_start_week: Math.round(updatedBatch.harvestStartDate.week),
           harvest_start_season: updatedBatch.harvestStartDate.season,
           harvest_start_year: Math.round(updatedBatch.harvestStartDate.year),
@@ -261,6 +278,10 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           bottled_week: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.week) : null,
           bottled_season: updatedBatch.bottledDate?.season,
           bottled_year: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.year) : null,
+          taste_quality_index_bottling_snapshot: updatedBatch.tasteQualityIndexBottlingSnapshot ?? null,
+          land_value_modifier_bottling_snapshot: updatedBatch.landValueModifierBottlingSnapshot ?? null,
+          structure_index_bottling_snapshot: updatedBatch.structureIndexBottlingSnapshot ?? null,
+          wine_score_bottling_snapshot: updatedBatch.wineScoreBottlingSnapshot ?? null,
           aging_progress: Math.round(updatedBatch.agingProgress || 0)
         };
       })
@@ -277,3 +298,21 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
     throw error;
   }
 };
+
+export const deleteWineBatch = async (batchId: string): Promise<boolean> => {
+  try {
+    const companyId = getCurrentCompanyId();
+    const { error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .delete()
+      .eq('id', batchId)
+      .eq('company_id', companyId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting wine batch:', error);
+    return false;
+  }
+};
+

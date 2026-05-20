@@ -533,7 +533,7 @@ export function MathematicalModelsTab() {
               <h4 className="font-semibold mb-2">Usage in Game:</h4>
               <div className="space-y-1 text-sm">
                 <div>• <strong>Wine Pricing</strong> - Quality multiplier for final wine price calculation</div>
-                <div>• <strong>Formula:</strong> finalPrice = basePrice × calculateAsymmetricalMultiplier(qualityIndex)</div>
+                <div>• <strong>Formula:</strong> finalPrice = basePrice × calculateAsymmetricalMultiplier(tasteQualityIndex)</div>
                 <div>• <strong>Example:</strong> 0.95 quality wine gets 15.28x price multiplier, 0.99 quality gets 5,000x multiplier</div>
               </div>
               <div className="mt-3">
@@ -597,7 +597,7 @@ export function MathematicalModelsTab() {
             <div>
               <h4 className="font-semibold mb-2">Usage in Game:</h4>
               <div className="space-y-1 text-sm">
-                <div>• <strong>Land Value Normalization</strong> - Quality index land factor</div>
+                <div>• <strong>Land Value Normalization</strong> - Taste quality land factor</div>
                 <div>• <strong>Formula:</strong> normalized = calculateAsymmetricalScaler01(landValue / maxGlobalValue)</div>
               </div>
               <div className="mt-3">

@@ -102,8 +102,8 @@ class HighscoreService {
       'highest_vintage_quantity',
       'most_productive_vineyard',
       'highest_wine_score',
-      'highest_taste_index',
-      'highest_balance',
+      'highest_taste_quality_index',
+      'highest_structure_index',
       'highest_price',
       'lowest_price'
     ];
@@ -207,8 +207,8 @@ class HighscoreService {
       vintage: number;
       grape: string;
       quantity: number;
-      tasteIndex: number;
-      balance: number;
+      tasteQualityIndex: number;
+      structureIndex: number;
       wineScore: number;
       price: number;
       bottledAt?: string; // ISO date string used as achievedAt
@@ -244,13 +244,13 @@ class HighscoreService {
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_taste_index',
-          scoreValue: wineData.tasteIndex
+          scoreType: 'highest_taste_quality_index',
+          scoreValue: wineData.tasteQualityIndex
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_balance',
-          scoreValue: wineData.balance
+          scoreType: 'highest_structure_index',
+          scoreValue: wineData.structureIndex
         },
         {
           ...baseSubmission,
@@ -341,8 +341,8 @@ class HighscoreService {
       'highest_vintage_quantity': 'Highest Single Vintage Quantity',
       'most_productive_vineyard': 'Most Productive Vineyard',
       'highest_wine_score': 'Highest Wine Score',
-      'highest_taste_index': 'Highest Taste Index',
-      'highest_balance': 'Highest Balance',
+      'highest_taste_quality_index': 'Highest Taste Quality',
+      'highest_structure_index': 'Highest Structure Index',
       'highest_price': 'Highest Price',
       'lowest_price': 'Lowest Price'
     };
@@ -359,8 +359,8 @@ class HighscoreService {
       'highest_vintage_quantity': 'bottles',
       'most_productive_vineyard': 'bottles',
       'highest_wine_score': '%',
-      'highest_taste_index': '%',
-      'highest_balance': '%',
+      'highest_taste_quality_index': '%',
+      'highest_structure_index': '%',
       'highest_price': '€',
       'lowest_price': '€'
     };

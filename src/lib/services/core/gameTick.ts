@@ -1,6 +1,8 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
 import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
+import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
+import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { generateContracts } from '@/lib/services/sales/contractGenerationService';
 import { expireOldContracts } from '@/lib/services/sales/contractService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
@@ -364,7 +366,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
 
 /**
  * Apply feature effects directly to wine batches (safety net)
- * Updates taste index and balance based on present features
+ * Updates taste quality and structure index based on present features
  * Note: processWeeklyFeatureRisks now applies effects atomically when features change
  * This function acts as a safety net to catch any batches that weren't updated
  * Skips sold-out bottled wines (quantity === 0) as they should not continue developing
@@ -387,19 +389,22 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
   const updates = activeBatches
     .map(batch => applyFeatureEffectsToBatch(batch))
     .filter((updatedBatch, index) => {
-      // Only include batches that actually changed
       const originalBatch = activeBatches[index];
-      return updatedBatch.tasteIndex !== originalBatch.tasteIndex ||
-        updatedBatch.balance !== originalBatch.balance ||
-        JSON.stringify(updatedBatch.characteristics) !== JSON.stringify(originalBatch.characteristics);
+      // Characteristic tweaks flow through structure/taste; anchors have their own column — no separate key walk.
+      return updatedBatch.tasteQualityIndex !== originalBatch.tasteQualityIndex ||
+        updatedBatch.structureIndex !== originalBatch.structureIndex ||
+        WINE_ANCHOR_KEYS.some(
+          (k) => updatedBatch.wineAnchors[k] !== originalBatch.wineAnchors[k]
+        );
     })
     .map(updatedBatch => ({
       id: updatedBatch.id,
       updates: {
-        tasteIndex: updatedBatch.tasteIndex,
-        balance: updatedBatch.balance,
+        tasteQualityIndex: updatedBatch.tasteQualityIndex,
+        structureIndex: updatedBatch.structureIndex,
         characteristics: updatedBatch.characteristics,
-        breakdown: updatedBatch.breakdown
+        breakdown: updatedBatch.breakdown,
+        wineAnchors: updatedBatch.wineAnchors
       }
     }));
 
@@ -424,12 +429,21 @@ async function updateBottledWineAging(): Promise<void> {
   if (bottledWines.length === 0) return;
 
   // OPTIMIZATION: Collect all updates for bulk operation
-  const updates = bottledWines.map((batch: WineBatch) => ({
-    id: batch.id,
-    updates: {
-      agingProgress: (batch.agingProgress || 0) + 1
-    }
-  }));
+  const updates = bottledWines.map((batch: WineBatch) => {
+    const nextAging = (batch.agingProgress || 0) + 1;
+    const batchNext: WineBatch = { ...batch, agingProgress: nextAging };
+    const wineAnchors = applyFeatureLayerAnchors(
+      batchNext,
+      resolveWineAnchors(batch.wineAnchors)
+    );
+    return {
+      id: batch.id,
+      updates: {
+        agingProgress: nextAging,
+        wineAnchors
+      }
+    };
+  });
 
   // OPTIMIZATION: Single bulk update instead of N individual saves
   await bulkUpdateWineBatches(updates);
@@ -462,4 +476,6 @@ async function submitWeeklyHighscores(): Promise<void> {
     console.error('Failed to submit weekly highscores:', error);
   }
 }
+
+
 

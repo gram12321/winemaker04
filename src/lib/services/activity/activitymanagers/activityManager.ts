@@ -251,11 +251,11 @@ export async function createActivity(options: ActivityCreationOptions): Promise<
 }
 
 /**
- * Get all active activities
+ * Get all visible activities (active + paused) for the UI
  */
 export async function getAllActivities(): Promise<Activity[]> {
   const activities = await loadActivitiesFromDb();
-  return activities.filter(activity => activity.status === 'active');
+  return activities.filter(activity => activity.status === 'active' || activity.status === 'paused');
 }
 
 /**
@@ -264,6 +264,60 @@ export async function getAllActivities(): Promise<Activity[]> {
 export async function getActivityById(activityId: string): Promise<Activity | null> {
   const activities = await loadActivitiesFromDb();
   return activities.find(activity => activity.id === activityId) || null;
+}
+
+/**
+ * Pause an activity - staff will not contribute work until resumed
+ */
+export async function pauseActivity(activityId: string): Promise<boolean> {
+  try {
+    const activity = await getActivityById(activityId);
+    if (!activity) {
+      console.warn(`Activity ${activityId} not found`);
+      return false;
+    }
+    if (activity.status !== 'active') {
+      console.warn(`Activity ${activityId} is not active (status: ${activity.status})`);
+      return false;
+    }
+    const success = await updateActivityInDb(activityId, { status: 'paused' });
+    if (success) {
+      const currentActivities = await getAllActivities();
+      updateGameState({ activities: currentActivities });
+      triggerGameUpdateImmediate();
+    }
+    return success;
+  } catch (error) {
+    console.error('Error pausing activity:', error);
+    return false;
+  }
+}
+
+/**
+ * Resume a paused activity
+ */
+export async function resumeActivity(activityId: string): Promise<boolean> {
+  try {
+    const activity = await getActivityById(activityId);
+    if (!activity) {
+      console.warn(`Activity ${activityId} not found`);
+      return false;
+    }
+    if (activity.status !== 'paused') {
+      console.warn(`Activity ${activityId} is not paused (status: ${activity.status})`);
+      return false;
+    }
+    const success = await updateActivityInDb(activityId, { status: 'active' });
+    if (success) {
+      const currentActivities = await getAllActivities();
+      updateGameState({ activities: currentActivities });
+      triggerGameUpdateImmediate();
+    }
+    return success;
+  } catch (error) {
+    console.error('Error resuming activity:', error);
+    return false;
+  }
 }
 
 /**
@@ -285,8 +339,8 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
     const success = await updateActivityInDb(activityId, { status: 'cancelled' });
     if (success) {
       // Update local game state
-      const currentActivities = await loadActivitiesFromDb();
-      updateGameState({ activities: currentActivities.filter(a => a.status === 'active') });
+      const currentActivities = await getAllActivities();
+      updateGameState({ activities: currentActivities });
 
       // Trigger immediate UI update for critical activity cancellation
       triggerGameUpdateImmediate();
@@ -305,12 +359,14 @@ export async function cancelActivity(activityId: string): Promise<boolean> {
  */
 export async function progressActivities(): Promise<void> {
   try {
-    const activities = await getAllActivities();
+    const allActivities = await getAllActivities();
+    // Only active activities receive work each tick; paused activities are skipped
+    const activities = allActivities.filter(a => a.status === 'active');
     const gameState = getGameState();
     const allStaff = gameState.staff || [];
     const completedActivities: Activity[] = [];
 
-    // Build staff task count map to handle multi-tasking
+    // Build staff task count map from active activities only
     const staffTaskCounts = new Map<string, number>();
     for (const activity of activities) {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
@@ -319,7 +375,7 @@ export async function progressActivities(): Promise<void> {
       }
     }
 
-    // Process each activity
+    // Process each active activity
     for (const activity of activities) {
       const assignedStaffIds = activity.params.assignedStaffIds || [];
       const assignedStaff = allStaff.filter(s => assignedStaffIds.includes(s.id));
@@ -423,9 +479,9 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
     const allStaff = gameState.staff || [];
     const allActivities = await getAllActivities();
 
-    // Build staff task count map to handle multi-tasking
+    // Build staff task count map from active activities only (paused don't consume staff time)
     const staffTaskCounts = new Map<string, number>();
-    for (const act of allActivities) {
+    for (const act of allActivities.filter(a => a.status === 'active')) {
       const assignedStaffIds = act.params.assignedStaffIds || [];
       for (const staffId of assignedStaffIds) {
         staffTaskCounts.set(staffId, (staffTaskCounts.get(staffId) || 0) + 1);
@@ -466,8 +522,8 @@ export async function getActivityProgress(activityId: string): Promise<ActivityP
 export async function initializeActivitySystem(): Promise<void> {
   try {
     const activities = await loadActivitiesFromDb();
-    const activeActivities = activities.filter(a => a.status === 'active');
-    updateGameState({ activities: activeActivities });
+    const visibleActivities = activities.filter(a => a.status === 'active' || a.status === 'paused');
+    updateGameState({ activities: visibleActivities });
 
     // Activities loaded successfully
   } catch (error) {

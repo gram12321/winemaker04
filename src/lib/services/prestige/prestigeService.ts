@@ -11,6 +11,7 @@ import type { PrestigeEvent, Vineyard, WineBatch, WineOrder } from '../../types/
 import { calculateCompanyValue } from '../finance/financeService';
 import type { FeatureConfig } from '../../types/wineFeatures';
 import { calculateSalePrestigeWithAssets, calculateVineyardSalePrestige, calculateFeatureSalePrestigeWithReputation, calculateVineyardManifestationPrestige, calculateCompanyManifestationPrestige } from './prestigeCalculator';
+import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 
 // Internal calculation output for creating prestige events
 type VineyardPrestigeFactors = {
@@ -1109,11 +1110,12 @@ export async function addFeaturePrestigeEvent(
             )
             : levelConfig.baseAmount;
         } else if (eventType === 'manifestation') {
+          const tasteQualityIndex = getTasteQualityIndex(batch);
           if (isCompany) {
             return calculateCompanyManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.tasteIndex,
+              tasteQualityIndex,
               eventContext.currentCompanyPrestige || 1,
               levelConfig.scalingFactors,
               levelConfig.maxImpact
@@ -1122,7 +1124,7 @@ export async function addFeaturePrestigeEvent(
             return calculateVineyardManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.tasteIndex,
+              tasteQualityIndex,
               eventContext.vineyard?.vineyardPrestige || 1,
               levelConfig.scalingFactors,
               levelConfig.maxImpact
@@ -1187,7 +1189,7 @@ export async function addFeaturePrestigeEvent(
         wineName: `${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         batchSize: batch.quantity,
-        tasteIndex: batch.tasteIndex,
+        tasteQualityIndex: getTasteQualityIndex(batch),
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,
@@ -1230,4 +1232,5 @@ export async function addResearchPrestigeEvent(
 
   triggerGameUpdate();
 }
+
 

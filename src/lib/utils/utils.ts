@@ -1,4 +1,4 @@
-﻿import { clsx, type ClassValue } from "clsx"
+import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Customer, WineCharacteristics } from '../types/types';
 import { calculateRelationshipBreakdown, formatRelationshipBreakdown } from '../services/sales/relationshipService';
@@ -42,8 +42,8 @@ export function clamp01(value: number): number {
  * formatNumber(15, { smartMaxDecimals: true }) // "15" (0 decimals for large numbers)
  * 
  * // Currency formatting
- * formatNumber(1234.56, { currency: true }) // "â‚¬1,235"
- * formatNumber(1234567, { currency: true, compact: true }) // "â‚¬1.2M"
+ * formatNumber(1234.56, { currency: true }) // "€1,235"
+ * formatNumber(1234567, { currency: true, compact: true }) // "€1.2M"
  * 
  * // Compact notation
  * formatNumber(1234567, { compact: true }) // "1.2M"
@@ -55,7 +55,7 @@ export function formatNumber(value: number, options?: {
   smartDecimals?: boolean;
   smartMaxDecimals?: boolean; // when true, reduce decimals for larger numbers (0-1%: 2-3 decimals, 1-10%: 1 decimal, 10%+: 0 decimals)
   adaptiveNearOne?: boolean; // when true, increase decimals near 1.0 (e.g., 0.95-1.0)
-  currency?: boolean; // when true, formats as currency with â‚¬ symbol
+  currency?: boolean; // when true, formats as currency with € symbol
   compact?: boolean; // when true, uses compact notation (K, M, B, T)
   percent?: boolean; // when true, formats as a percentage
   percentIsDecimal?: boolean; // when percent is true: input is decimal (0-1) if true, else 0-100
@@ -136,7 +136,7 @@ export function formatNumber(value: number, options?: {
     }
   }
   
-  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 â†’ 0.9870)
+  // Dynamically increase precision when approaching 1.0 to better show differences (e.g., 0.987 → 0.9870)
   // This ALWAYS takes precedence over smart options when near 1.0
   if (adaptiveNearOne && value < 1 && value >= 0.95) {
     calculatedDecimals = Math.max(calculatedDecimals, 4);
@@ -194,9 +194,9 @@ export function formatNumber(value: number, options?: {
     
     // Handle values > 0 and < 1: show 2 decimals after first non-zero digit
     // BUT respect adaptiveNearOne first (takes precedence)
-    // Example: 0.999999 â†’ 0.99999 (adaptiveNearOne: 5 decimals)
-    // Example: 0.00044 â†’ 0.00044 (first non-zero at pos 4, show positions 4-5, need 5 total decimals)
-    // Example: 0.123 â†’ 0.12 (first non-zero at pos 1, show positions 1-2, need 2 total decimals)
+    // Example: 0.999999 → 0.99999 (adaptiveNearOne: 5 decimals)
+    // Example: 0.00044 → 0.00044 (first non-zero at pos 4, show positions 4-5, need 5 total decimals)
+    // Example: 0.123 → 0.12 (first non-zero at pos 1, show positions 1-2, need 2 total decimals)
     
     // Check adaptiveNearOne first (takes precedence over new logic)
     if (adaptiveNearOne && value >= 0.95) {
@@ -215,7 +215,7 @@ export function formatNumber(value: number, options?: {
     
     // Use logarithmic approach to find the order of magnitude
     // This handles floating point precision better than string conversion
-    // log10(0.00044) â‰ˆ -3.357, so first non-zero is at position ceil(3.357) = 4
+    // log10(0.00044) ≈ -3.357, so first non-zero is at position ceil(3.357) = 4
     const log10 = Math.log10(absValue);
     const firstNonZeroPosition = Math.ceil(-log10);
     
@@ -385,7 +385,7 @@ export function getQualityCategory(quality: number): string {
   if (quality < 0.3) return "House Pour";
   if (quality < 0.4) return "Everyday Sipper";
   if (quality < 0.5) return "Solid Bottle";
-  if (quality < 0.6) return "Well-Balanced";
+  if (quality < 0.6) return "Well-Rounded";
   if (quality < 0.7) return "Sommelier's Choice";
   if (quality < 0.8) return "Cellar Reserve";
   if (quality < 0.9) return "Connoisseur's Pick";
@@ -421,47 +421,47 @@ export function getQualityInfo(quality: number): { category: string; description
 }
 
 /**
- * Get wine balance category based on balance value (0-1)
- * Maps balance scores to humorous tier names
+ * Get wine structure category based on structure index (0-1)
+ * Maps structure index to humorous tier names
  */
-export function getWineBalanceCategory(balance: number): string {
-  if (balance < 0.1) return "Train Wreck";
-  if (balance < 0.2) return "Crashed";
-  if (balance < 0.3) return "Chaotic";
-  if (balance < 0.4) return "Confused Identity";
-  if (balance < 0.5) return "Finding Harmony";
-  if (balance < 0.6) return "Well-Composed";
-  if (balance < 0.7) return "Elegantly Balanced";
-  if (balance < 0.8) return "B-E-Autiful!";
-  if (balance < 0.9) return "Symphony in a Glass";
+export function getWineStructureCategory(structureIndex: number): string {
+  if (structureIndex < 0.1) return "Train Wreck";
+  if (structureIndex < 0.2) return "Crashed";
+  if (structureIndex < 0.3) return "Chaotic";
+  if (structureIndex < 0.4) return "Confused Identity";
+  if (structureIndex < 0.5) return "Finding Harmony";
+  if (structureIndex < 0.6) return "Well-Composed";
+  if (structureIndex < 0.7) return "Elegantly Structured";
+  if (structureIndex < 0.8) return "B-E-Autiful!";
+  if (structureIndex < 0.9) return "Symphony in a Glass";
   return "Perfection Achieved";
 }
 
 /**
- * Get wine balance description based on balance value (0-1)
- * Provides detailed description of balance tier
+ * Get wine structure description based on structure index (0-1)
+ * Provides detailed description of structure tier
  */
-export function getWineBalanceDescription(balance: number): string {
-  if (balance < 0.1) return "A catastrophic clash of flavors that should never have met";
-  if (balance < 0.2) return "Characteristics fighting each other for dominance";
-  if (balance < 0.3) return "Unbalanced with one or more elements overpowering the rest";
-  if (balance < 0.4) return "Lacking cohesion, though individual elements show promise";
-  if (balance < 0.5) return "Approaching balance but still noticeably rough around the edges";
-  if (balance < 0.6) return "Pleasant harmony emerging with good integration of characteristics";
-  if (balance < 0.7) return "Well-balanced with all elements working together nicely";
-  if (balance < 0.8) return "Beautifully integrated characteristics creating a refined experience";
-  if (balance < 0.9) return "Exceptional balance where every element enhances the whole";
-  return "A masterpiece of balance representing the pinnacle of winemaking harmony";
+export function getWineStructureDescription(structureIndex: number): string {
+  if (structureIndex < 0.1) return "A catastrophic clash of flavors that should never have met";
+  if (structureIndex < 0.2) return "Characteristics fighting each other for dominance";
+  if (structureIndex < 0.3) return "Poor structural harmony with one or more elements overpowering the rest";
+  if (structureIndex < 0.4) return "Lacking cohesion, though individual elements show promise";
+  if (structureIndex < 0.5) return "Approaching ideal structure but still noticeably rough around the edges";
+  if (structureIndex < 0.6) return "Pleasant harmony emerging with good integration of characteristics";
+  if (structureIndex < 0.7) return "Well-structured with all elements working together nicely";
+  if (structureIndex < 0.8) return "Beautifully integrated characteristics creating a refined experience";
+  if (structureIndex < 0.9) return "Exceptional structure where every element enhances the whole";
+  return "A masterpiece of structure representing the pinnacle of winemaking harmony";
 }
 
 const GRAPE_DIFFICULTY_LEVELS: Array<{ max: number; category: string; description: string }> = [
-  { max: 0.1, category: 'Carte Blanche', description: 'Practically tends itselfâ€”point it at a vineyard and relax.' },
+  { max: 0.1, category: 'Carte Blanche', description: 'Practically tends itself—point it at a vineyard and relax.' },
   { max: 0.2, category: 'Easy Rider', description: 'Low-maintenance and forgiving; almost any site will do the trick.' },
   { max: 0.3, category: 'Comfort Zone', description: 'Happy in most conditions, but appreciates a little attention.' },
   { max: 0.4, category: 'Needs Attention', description: 'Thrives when you nudge it toward its preferred conditions.' },
   { max: 0.5, category: 'Requires Finesse', description: 'Rewards careful site selection and well-timed intervention.' },
-  { max: 0.6, category: 'Temperamental', description: 'Picky about climate and pamperingâ€”expect some mood swings.' },
-  { max: 0.7, category: 'Prima Donna', description: 'Demands the best of everything, and lets you know when it isnâ€™t happy.' },
+  { max: 0.6, category: 'Temperamental', description: 'Picky about climate and pampering—expect some mood swings.' },
+  { max: 0.7, category: 'Prima Donna', description: 'Demands the best of everything, and lets you know when it isn’t happy.' },
   { max: 0.8, category: 'High-Wire Act', description: 'Success feels like a stunt; one misstep and quality nosedives.' },
   { max: 0.9, category: 'Freaking Impossible', description: 'For masochists only. Everything has to line up perfectly.' },
 ];
@@ -475,7 +475,7 @@ export function getGrapeDifficultyDescription(difficulty: number): string {
   const level = GRAPE_DIFFICULTY_LEVELS.find(entry => difficulty <= entry.max);
   return level
     ? level.description
-    : 'Only the bravest winemakers dare attempt thisâ€”prepare for constant fires to put out.';
+    : 'Only the bravest winemakers dare attempt this—prepare for constant fires to put out.';
 }
 
 // ========================================
@@ -812,7 +812,7 @@ export function formatSeasonChangeNotification(
   const sections: string[] = [];
   
   // Main season change header
-  sections.push(`ðŸŽ‰ ${seasonChangeMessage}`);
+  sections.push(`🎉 ${seasonChangeMessage}`);
   
   // Only add spacing if there are other sections
   const hasOtherSections = !!(bookkeepingMessage || economyPhaseMessage || wageMessage);
@@ -822,7 +822,7 @@ export function formatSeasonChangeNotification(
   
   // Bookkeeping section
   if (bookkeepingMessage) {
-    sections.push('ðŸ“‹ Bookkeeping:');
+    sections.push('📋 Bookkeeping:');
     sections.push(`   ${bookkeepingMessage}`);
     // Add spacing if there are more sections after this
     if (economyPhaseMessage || wageMessage) {
@@ -832,7 +832,7 @@ export function formatSeasonChangeNotification(
   
   // Economy phase section
   if (economyPhaseMessage) {
-    sections.push('ðŸ’° Economy:');
+    sections.push('💰 Economy:');
     sections.push(`   ${economyPhaseMessage}`);
     // Add spacing if there are more sections after this
     if (wageMessage) {
@@ -842,7 +842,7 @@ export function formatSeasonChangeNotification(
   
   // Wage payment section
   if (wageMessage) {
-    sections.push('ðŸ’¼ Staff Wages:');
+    sections.push('💼 Staff Wages:');
     sections.push(`   ${wageMessage}`);
   }
   
@@ -958,12 +958,12 @@ export function createAdjustedRangesRecord(): Record<keyof WineCharacteristics, 
  * Use getRangeColor(value, 0, 1, 'balanced', min, max) for:
  * - Static characteristic VALUES (e.g., "Body: 0.7")
  * - Current state display (bars, sliders, tooltips)
- * - Rating how good a value is relative to balanced range
+ * - Rating how good a value is relative to ideal range
  * 
  * Use getCharacteristicEffectColorClass(currentValue, modifier, balancedRange) for:
  * - EFFECTS/MODIFIERS (e.g., "+5% body", "-10% acidity")
  * - Changes/changes (weekly effects, feature impacts, processing options)
- * - Determining if a change moves towards balance (green) or away (red)
+ * - Determining if a change moves towards the ideal range (green) or away (red)
  * 
  * Examples:
  * - CharacteristicBar: Use 'balanced' strategy (displaying current value)
@@ -972,12 +972,12 @@ export function createAdjustedRangesRecord(): Record<keyof WineCharacteristics, 
  */
 
 /**
- * Determine if a characteristic effect modifier is moving towards balance
+ * Determine if a characteristic effect modifier is moving towards the ideal range
  * Returns information for color coding: isGood (true = green, false = red) and intensity rating
  * @param currentValue Current characteristic value (0-1)
  * @param modifier Effect modifier (can be positive or negative)
  * @param balancedRange Balanced range [min, max] for this characteristic
- * @returns Object with isGood (moving towards balance) and intensity (0-1, higher = stronger effect)
+ * @returns Object with isGood (moving towards ideal range) and intensity (0-1, higher = stronger effect)
  */
 export function getCharacteristicEffectColorInfo(
   currentValue: number,
@@ -992,8 +992,8 @@ export function getCharacteristicEffectColorInfo(
   const newValue = Math.max(0, Math.min(1, currentValue + modifier));
   const distanceAfter = Math.abs(newValue - midpoint);
   
-  // If distance decreases, we're moving towards balance (good = green)
-  // If distance increases, we're moving away from balance (bad = red)
+  // If distance decreases, we're moving towards the ideal range (good = green)
+  // If distance increases, we're moving away from the ideal range (bad = red)
   // Use small epsilon (1e-9) to handle floating point precision issues
   const epsilon = 1e-9;
   const isGood = distanceAfter < (distanceBefore - epsilon);
@@ -1001,17 +1001,17 @@ export function getCharacteristicEffectColorInfo(
   // Calculate intensity based on how much the distance changes
   // For bad effects (moving away): use absolute distance change as intensity
   // For good effects (moving towards): use relative improvement (distance change / distance before)
-  // Special case: if starting from perfect balance (distanceBefore = 0), any movement away should be high intensity
+  // Special case: if starting from perfect centering in range (distanceBefore = 0), any movement away should be high intensity
   const distanceChange = Math.abs(distanceBefore - distanceAfter);
   
   let intensity: number;
   if (isGood) {
-    // Moving towards balance: intensity based on relative improvement
+    // Moving towards ideal range: intensity based on relative improvement
     // If distanceBefore is 0, we can't divide, so use distanceChange directly
     if (distanceBefore === 0) {
       intensity = Math.min(1, distanceChange / 0.1); // Normalize assuming 0.1 is max typical modifier
     } else {
-      // Relative improvement: how much of the imbalance we're fixing
+      // Relative improvement: how much of the deviation we're fixing
       const relativeImprovement = distanceChange / distanceBefore;
       // Use absolute change for minimum intensity, relative improvement for scaling
       // This ensures that large absolute changes (like tannins) get proper intensity even if relative improvement is small
@@ -1021,13 +1021,13 @@ export function getCharacteristicEffectColorInfo(
       intensity = Math.max(absoluteIntensity, relativeIntensity, 0.6); // Minimum 0.6 for any good effect
     }
   } else {
-    // Moving away from balance: intensity based on absolute change
-    // If starting from perfect balance (distanceBefore = 0), use high intensity
+    // Moving away from ideal range: intensity based on absolute change
+    // If starting from perfect centering (distanceBefore = 0), use high intensity
     if (distanceBefore === 0) {
-      // Starting from perfect balance - any movement away should be strong red
-      intensity = Math.min(1, Math.max(0.8, distanceChange / 0.1)); // At least 0.8 intensity for moving away from perfect balance
+      // Starting from perfect centering - any movement away should be strong red
+      intensity = Math.min(1, Math.max(0.8, distanceChange / 0.1)); // At least 0.8 intensity for moving away from perfect centering
     } else {
-      // Already unbalanced - intensity based on how much worse we're getting
+      // Already off ideal - intensity based on how much worse we're getting
       intensity = Math.min(1, distanceChange / 0.1);
     }
   }
@@ -1037,7 +1037,7 @@ export function getCharacteristicEffectColorInfo(
 
 /**
  * Get color class for characteristic effect modifier
- * Uses balance-aware logic: green if moving towards balance, red if moving away
+ * Uses ideal-range-aware logic: green if moving towards the ideal range, red if moving away
  * Intensity increases with stronger effects
  * @param currentValue Current characteristic value (0-1)
  * @param modifier Effect modifier (can be positive or negative)

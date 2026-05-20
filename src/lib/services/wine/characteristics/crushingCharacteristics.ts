@@ -1,4 +1,5 @@
-import { WineCharacteristics } from '../../../types/types';
+import { WineCharacteristics, WineAnchorValues } from '../../../types/types';
+import { scaleCharacteristicEffectModifiersByAnchors } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 
 export interface CrushingInputs {
   baseCharacteristics: WineCharacteristics;
@@ -6,6 +7,8 @@ export interface CrushingInputs {
   destemming: boolean;
   coldSoak: boolean;
   pressingIntensity: number; // 0-1 scale, max depends on method
+  /** Pre-crush snapshot; scales process deltas (crush must not read characteristics for anchors). */
+  wineAnchors?: WineAnchorValues;
 }
 
 export interface CrushingOptions {
@@ -96,7 +99,7 @@ export function modifyCrushingCharacteristics(inputs: CrushingInputs): {
   yieldMultiplier: number;
   qualityPenalty: number;
 } {
-  const { baseCharacteristics, method, destemming, coldSoak, pressingIntensity } = inputs;
+  const { baseCharacteristics, method, destemming, coldSoak, pressingIntensity, wineAnchors } = inputs;
 
   // Collect all effects based on options
   const effects: CrushingEffect[] = [];
@@ -120,8 +123,12 @@ export function modifyCrushingCharacteristics(inputs: CrushingInputs): {
   const intensityEffects = getPressingIntensityEffects(pressingIntensity, method);
   effects.push(...intensityEffects);
 
+  const scaledEffects = wineAnchors
+    ? scaleCharacteristicEffectModifiersByAnchors(wineAnchors, effects)
+    : effects;
+
   // Apply all effects
-  const finalCharacteristics = applyEffects(baseCharacteristics, effects);
+  const finalCharacteristics = applyEffects(baseCharacteristics, scaledEffects);
 
   // Calculate yield and quality impacts
   const yieldMultiplier = calculateYieldMultiplier(pressingIntensity);
@@ -131,7 +138,7 @@ export function modifyCrushingCharacteristics(inputs: CrushingInputs): {
     characteristics: finalCharacteristics,
     breakdown: {
       base: baseCharacteristics,
-      effects,
+      effects: scaledEffects,
       final: finalCharacteristics
     },
     yieldMultiplier,

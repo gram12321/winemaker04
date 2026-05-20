@@ -3,7 +3,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants';
 import { WineCharacteristicsDisplay, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
-import { RANGE_ADJUSTMENTS } from '@/lib/balance';
+import { RANGE_ADJUSTMENTS } from '@/lib/wineStructure';
 import { calculateMidpointCharacteristics, createAdjustedRangesRecord, clamp01, RESET_BUTTON_CLASSES } from '@/lib/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 
@@ -58,8 +58,8 @@ export function DynamicRangeTab() {
     return adjusted;
   }, [sliderValues]);
 
-  // Calculate balance for demonstration (currently unused in this tab)
-  // const balanceResult = calculateWineBalance(sliderValues, baseRanges, RANGE_ADJUSTMENTS, RULES);
+  // Calculate structure index for demonstration (currently unused in this tab)
+  // const structureIndexResult = calculateStructureIndex(sliderValues, baseRanges, RANGE_ADJUSTMENTS, RULES);
 
   return (
     <div>
@@ -101,7 +101,7 @@ export function DynamicRangeTab() {
               showValues={true}
               title="Wine Characteristics"
               collapsible={false}
-              showBalanceScore={true}
+              showStructureIndex={true}
             />
           </div>
         </section>
@@ -165,9 +165,9 @@ export function DynamicRangeTab() {
         </section>
 
         <section>
-          <h3 className="text-lg font-medium">How this affects balance</h3>
+          <h3 className="text-lg font-medium">How this affects structure index</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Balance calculation uses shifted ranges for more realistic scoring.
+            Structure index scoring uses shifted ranges for more realistic results.
           </p>
         </section>
       </div>

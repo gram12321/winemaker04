@@ -1,9 +1,9 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { useLoadingState, useGameStateWithData, useWineBatchBalance, useFormattedBalance, useBalanceQuality } from '@/hooks';
+import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
 import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
-import { Button, CrushingOptionsModal, WineModal } from '../ui';
+import { Button, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
@@ -11,29 +11,32 @@ import { getQualityCategory, getColorClass, getCharacteristicDisplayName, format
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermentationManager';
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { CharacteristicIcon } from '@/lib/utils/icons';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
-const WineBatchBalanceDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const balanceResult = useWineBatchBalance(batch);
-  const formattedBalance = useFormattedBalance(balanceResult);
-  const balanceQuality = useBalanceQuality(balanceResult);
+const WineBatchStructureDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const structureResult = useWineBatchStructureIndex(batch);
+  const formattedStructureIndex = useFormattedStructureIndex(structureResult);
+  const structureQuality = useStructureIndexQuality(structureResult);
   
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Balance: <span className="font-medium">{formattedBalance}</span> ({balanceQuality})
+      Structure: <span className="font-medium">{formattedStructureIndex}</span> ({structureQuality})
     </div>
   );
 };
 
-// Component for taste index category display
-const TasteIndexDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const qualityCategory = getQualityCategory(batch.tasteIndex);
-  const colorClass = getColorClass(batch.tasteIndex);
-  const qualityPercentage = formatNumber(batch.tasteIndex * 100, { smartDecimals: true });
+// Component for taste quality display
+const TasteQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const tasteQualityIndex = getTasteQualityIndex(batch);
+  const qualityCategory = getQualityCategory(tasteQualityIndex);
+  const colorClass = getColorClass(tasteQualityIndex);
+  const qualityPercentage = formatNumber(tasteQualityIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Taste Index: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+      Taste Quality: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
     </div>
   );
 };
@@ -63,7 +66,7 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
   const temperature = batch.fermentationOptions.temperature;
   
   // Get combined effects for this fermentation setup
-  const effects = getCombinedFermentationEffects(method, temperature);
+  const effects = getCombinedFermentationEffects(method, temperature, resolveWineAnchors(batch.wineAnchors));
   
   if (effects.length === 0) return null;
   
@@ -80,7 +83,7 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
             </div>
           );
           
-          // Use balance-aware color coding for fermentation effects
+          // Use ideal-range-aware color coding for fermentation effects
           const currentValue = batch.characteristics[effect.characteristic] || 0;
           const balancedRange = BASE_BALANCED_RANGES[effect.characteristic];
           const balancedRangeCopy: [number, number] = [balancedRange[0], balancedRange[1]];
@@ -129,6 +132,7 @@ const Winery: React.FC = () => {
     crushing: null as WineBatch | null,
     fermentation: null as WineBatch | null,
     wine: null as WineBatch | null,
+    sellGrapes: null as WineBatch | null,
   });
 
   // Generic modal handlers
@@ -249,9 +253,14 @@ const Winery: React.FC = () => {
                       </Button>
 
                       {isActionAvailable(batch, 'crush') && (
-                        <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
-                          Crush Grapes
-                        </Button>
+                        <>
+                          <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
+                            Crush Grapes
+                          </Button>
+                          <Button onClick={() => openModal('sellGrapes', batch.id)} size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
+                            Sell Grapes
+                          </Button>
+                        </>
                       )}
                       
                       {isFermentationActionAvailable(batch, 'ferment') && (
@@ -276,8 +285,8 @@ const Winery: React.FC = () => {
                       <div className="text-xs text-gray-600">
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
-                      <WineBatchBalanceDisplay batch={batch} />
-                      <TasteIndexDisplay batch={batch} />
+                      <WineBatchStructureDisplay batch={batch} />
+                      <TasteQualityDisplay batch={batch} />
                       
                       <div className="text-xs font-medium text-gray-800 mt-3">
                         Current Activity: <span className="text-purple-600">
@@ -366,9 +375,17 @@ const Winery: React.FC = () => {
         wineBatch={modals.wine}
         wineName={modals.wine ? getWineBatchDisplayName(modals.wine) : 'Wine'}
       />
+
+      <SellGrapesModal
+        isOpen={!!modals.sellGrapes}
+        onClose={() => closeModal('sellGrapes')}
+        batch={modals.sellGrapes}
+      />
     </div>
   );
 };
 
 export default Winery;
+
+
 

@@ -3,7 +3,7 @@ import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { WineBatch } from '@/lib/types/types';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { loadWineOrders } from '@/lib/database/customers/salesDB';
-import { WineModal } from '../ui';
+import { WineModal, SellGrapesModal } from '../ui';
 import { NavigationProps } from '../../lib/types/UItypes';
 import WineCellarTab from './sales/WineCellarTab';
 import OrdersTab from './sales/OrdersTab';
@@ -24,6 +24,10 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
   // Wine modal state
   const [wineModalOpen, setWineModalOpen] = useState(false);
   const [selectedWineBatch, setSelectedWineBatch] = useState<WineBatch | null>(null);
+
+  // Sell grapes modal state
+  const [sellGrapesModalOpen, setSellGrapesModalOpen] = useState(false);
+  const [selectedGrapeBatch, setSelectedGrapeBatch] = useState<WineBatch | null>(null);
 
   // Use consolidated hooks for reactive data loading
   const allOrders = useGameStateWithData(
@@ -52,12 +56,27 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
     [allBatches, showSoldOut]
   );
 
+  // Memoize grape batches (ready to crush but could be sold instead)
+  const grapeBatches = React.useMemo(() =>
+    allBatches.filter(batch => batch.state === 'grapes' && batch.quantity > 0),
+    [allBatches]
+  );
+
   // Handle opening wine modal
   const handleWineDetailsClick = useCallback((batchId: string) => {
     const batch = allBatches.find(b => b.id === batchId);
     if (batch) {
       setSelectedWineBatch(batch);
       setWineModalOpen(true);
+    }
+  }, [allBatches]);
+
+  // Handle opening sell grapes modal
+  const handleSellGrapesClick = useCallback((batchId: string) => {
+    const batch = allBatches.find(b => b.id === batchId);
+    if (batch) {
+      setSelectedGrapeBatch(batch);
+      setSellGrapesModalOpen(true);
     }
   }, [allBatches]);
 
@@ -123,11 +142,13 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
 
       {/* Content based on active tab */}
       {activeTab === 'cellar' && (
-        <WineCellarTab
+      <WineCellarTab
           bottledWines={bottledWines}
+          grapeBatches={grapeBatches}
           showSoldOut={showSoldOut}
           setShowSoldOut={setShowSoldOut}
           onWineDetailsClick={handleWineDetailsClick}
+          onSellGrapesClick={handleSellGrapesClick}
         />
       )}
 
@@ -156,6 +177,12 @@ const Sales: React.FC<SalesProps> = ({ onNavigateToWinepedia }) => {
         onClose={handleWineModalClose}
         wineBatch={selectedWineBatch}
         wineName={selectedWineBatch ? getWineBatchDisplayName(selectedWineBatch) : 'Wine'}
+      />
+
+      <SellGrapesModal
+        isOpen={sellGrapesModalOpen}
+        onClose={() => { setSellGrapesModalOpen(false); setSelectedGrapeBatch(null); }}
+        batch={selectedGrapeBatch}
       />
     </div>
   );

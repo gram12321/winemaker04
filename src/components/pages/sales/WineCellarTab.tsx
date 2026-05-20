@@ -5,13 +5,13 @@ import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { SALES_CONSTANTS } from '@/lib/constants';
 import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, Button, UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../../ui';
-import { useWineBatchBalance, useFormattedBalance, useBalanceQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
+import { useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality, useWineCombinedScore, useWineFeatureDetails, useWinePriceCalculator } from '@/hooks';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
 import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
-import { calculateEstimatedPriceBreakdown, getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateEstimatedPriceBreakdown, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { Pencil, Save, RotateCcw } from 'lucide-react';
 
 const BatchBadge: React.FC<{ batch: WineBatch; className?: string }> = ({ batch, className = '' }) => {
@@ -30,25 +30,25 @@ const BatchBadge: React.FC<{ batch: WineBatch; className?: string }> = ({ batch,
 };
 
 
-// Component for combined balance and quality display
-const BalanceAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
- const balanceResult = useWineBatchBalance(batch);
- const formattedBalance = useFormattedBalance(balanceResult);
- const balanceQuality = useBalanceQuality(balanceResult);
- const balanceColorClass = getColorClass(batch.balance);
+// Component for combined structure index and taste display
+const StructureAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+ const structureResult = useWineBatchStructureIndex(batch);
+ const formattedStructureIndex = useFormattedStructureIndex(structureResult);
+ const structureQuality = useStructureIndexQuality(structureResult);
+ const structureColorClass = getColorClass(batch.structureIndex);
 
- const tasteIndex = getTasteIndex(batch);
- const qualityCategory = getQualityCategory(tasteIndex);
- const qualityColorClass = getColorClass(tasteIndex);
- const qualityPercentage = formatNumber(tasteIndex * 100, { smartDecimals: true });
+ const tasteQualityIndex = getTasteQualityIndex(batch);
+ const qualityCategory = getQualityCategory(tasteQualityIndex);
+ const qualityColorClass = getColorClass(tasteQualityIndex);
+ const qualityPercentage = formatNumber(tasteQualityIndex * 100, { smartDecimals: true });
 
  return (
  <div className="text-xs text-gray-600 space-y-1">
  <div>
- <span className="font-medium">Balance:</span> <span className={`font-medium ${balanceColorClass}`}>{formattedBalance}</span> ({balanceQuality})
+ <span className="font-medium">Structure:</span> <span className={`font-medium ${structureColorClass}`}>{formattedStructureIndex}</span> ({structureQuality})
  </div>
  <div>
- <span className="font-medium">Taste:</span> <span className={`font-medium ${qualityColorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+ <span className="font-medium">Taste Quality:</span> <span className={`font-medium ${qualityColorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
  </div>
  </div>
  );
@@ -61,32 +61,32 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 
  if (!wineScoreData || !featureDetails) return null;
 
- const { currentTasteIndex, tasteIndexPenalty, presentFeatures, hasTasteAffectingFeatures } = featureDetails;
- const baselineTasteIndex = wine.bornTasteIndex;
+ const { currentTasteQualityIndex, tasteQualityIndexPenalty, presentFeatures, hasQualityAffectingFeatures } = featureDetails;
+ const baselineTasteQualityIndex = wine.tasteQualityIndexHarvestSnapshot;
 
  return (
  <UnifiedTooltip
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Wine Score Calculation</div>
- <div>Base Taste Index: <span className="font-medium">{formatPercent(baselineTasteIndex, 1, true)}</span></div>
- {hasTasteAffectingFeatures && tasteIndexPenalty > 0.001 && (
+ <div>Stored Taste Quality Snapshot: <span className="font-medium">{formatPercent(baselineTasteQualityIndex, 1, true)}</span></div>
+ {hasQualityAffectingFeatures && tasteQualityIndexPenalty > 0.001 && (
  <>
  <div className="text-red-600">
- Feature Penalty: <span className="font-medium">-{formatPercent(tasteIndexPenalty, 1, true)}</span>
+ Feature Penalty: <span className="font-medium">-{formatPercent(tasteQualityIndexPenalty, 1, true)}</span>
  </div>
  <div className="ml-2 text-xs text-gray-600">
  {presentFeatures.map((f: any, idx: number) => (
  <div key={idx}> {f.feature.icon} {f.config.name}</div>
  ))}
  </div>
- <div>Current Taste Index: <span className="font-medium">{formatPercent(currentTasteIndex, 1, true)}</span></div>
+ <div>Current Taste Quality: <span className="font-medium">{formatPercent(currentTasteQualityIndex, 1, true)}</span></div>
  </>
  )}
- <div>Balance: <span className="font-medium">{formatPercent(wine.balance, 1, true)}</span></div>
+ <div>Structure: <span className="font-medium">{formatPercent(wine.structureIndex, 1, true)}</span></div>
  <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
  <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
- Formula: (Taste Index + Balance) / 2
+ Formula: (Taste Quality + Structure Index) / 2
  </div>
  </div>
  }
@@ -124,7 +124,9 @@ const EstimatedPriceDisplay: React.FC<{
  const hasCompanyPrestige = Math.abs(breakdown.companyPrestigeMultiplier - 1) > 0.0005;
  const hasVineyardPrestige = Math.abs(breakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
 
- const { presentFeatures, hasTasteAffectingFeatures, priceImpact } = featureDetails;
+ const { presentFeatures, hasPriceAffectingFeatures, priceImpact } = featureDetails;
+ const hasMaterialPriceDelta = priceImpact && Math.abs(priceImpact.priceDifference) > 0.01;
+ const isFeaturePremium = hasMaterialPriceDelta ? priceImpact!.priceDifference > 0 : false;
 
  return (
  <div className="space-y-1">
@@ -132,16 +134,16 @@ const EstimatedPriceDisplay: React.FC<{
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Estimated Price Calculation</div>
- <div>Taste Index: <span className="font-medium">{formatPercent(breakdown.tasteIndex, 1, true)}</span></div>
- <div>Balance: <span className="font-medium">{formatPercent(breakdown.balance, 1, true)}</span></div>
+ <div>Taste Quality: <span className="font-medium">{formatPercent(breakdown.tasteQualityIndex, 1, true)}</span></div>
+ <div>Structure: <span className="font-medium">{formatPercent(breakdown.structureIndex, 1, true)}</span></div>
  <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
- {hasTasteAffectingFeatures && priceImpact && priceImpact.priceDifference > 0.01 && (
+ {hasPriceAffectingFeatures && hasMaterialPriceDelta && (
  <>
- <div className="text-red-600 text-[10px]">
- Price reduced by {formatNumber(priceImpact.priceDifference, { currency: true, decimals: 2 })} due to:
+ <div className={`text-[10px] ${isFeaturePremium ? 'text-green-600' : 'text-red-600'}`}>
+ Price {isFeaturePremium ? 'increased' : 'reduced'} by {formatNumber(Math.abs(priceImpact!.priceDifference), { currency: true, decimals: 2 })} due to:
  </div>
  <div className="text-[10px] text-gray-600">
- Reduction: {formatPercent(priceImpact.priceDifference / Math.max(0.0001, priceImpact.priceWithoutFeatures), 1, true)}
+ Change: {formatPercent(Math.abs(priceImpact!.priceDifference) / Math.max(0.0001, priceImpact!.priceWithoutFeatures), 1, true)}
  </div>
  <div className="ml-2 text-[10px] text-gray-600">
  {presentFeatures.map((f: any, idx: number) => (
@@ -203,7 +205,8 @@ const AgingProgressBar: React.FC<{ wine: WineBatch }> = ({ wine }) => {
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Aging Progress</div>
- <div>Age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
+ <div>Bottle age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
+ <div className="text-[10px] text-gray-500">Time in bottle since bottling</div>
  <div>Status: <span className="font-medium">{peakStatusLabels[status.peakStatus]}</span></div>
  <div>Maturity: <span className="font-medium">{formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</span></div>
  <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
@@ -421,16 +424,20 @@ const WeeklyEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 
 interface WineCellarTabProps {
  bottledWines: WineBatch[];
+ grapeBatches?: WineBatch[];
  showSoldOut: boolean;
  setShowSoldOut: (show: boolean) => void;
  onWineDetailsClick: (batchId: string) => void;
+ onSellGrapesClick?: (batchId: string) => void;
 }
 
 const WineCellarTab: React.FC<WineCellarTabProps> = ({
  bottledWines,
+ grapeBatches = [],
  showSoldOut,
  setShowSoldOut,
- onWineDetailsClick
+ onWineDetailsClick,
+ onSellGrapesClick
 }) => {
  const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
 
@@ -511,12 +518,12 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  sortable: true,
  accessor: (wine) => wine.agingProgress || 0
  },
- { key: 'balance' as any, label: 'Balance & Quality', sortable: false },
+ { key: 'structureIndex' as any, label: 'Taste & Structure', sortable: false },
  {
  key: 'wineScore' as any,
  label: 'Score',
  sortable: true,
- accessor: (wine) => (wine.tasteIndex + wine.balance) / 2
+ accessor: (wine) => (getTasteQualityIndex(wine) + wine.structureIndex) / 2
  },
  { key: 'estimatedPrice' as any, label: 'Price', sortable: true },
  { key: 'quantity', label: 'Bottles', sortable: true },
@@ -680,6 +687,34 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
  return (
  <div className="space-y-3">
+ {/* Grape Inventory Section */}
+ {grapeBatches.length > 0 && (
+ <div className="bg-white rounded-lg shadow overflow-hidden">
+ <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200">
+ <h3 className="text-sm font-semibold text-amber-800">🍇 Grape Inventory — Ready to Sell or Crush</h3>
+ </div>
+ <div className="p-3 space-y-2">
+ {grapeBatches.map(batch => (
+ <div key={batch.id} className="flex justify-between items-center border rounded p-3 bg-amber-50/40 hover:bg-amber-50">
+ <div className="text-sm">
+ <span className="font-medium">{batch.grape}</span>
+ <span className="text-gray-500 ml-2 text-xs">{batch.quantity.toLocaleString()} kg · {batch.vineyardName} · Harvest {batch.harvestStartDate.year}</span>
+ </div>
+ {onSellGrapesClick && (
+ <Button
+ size="sm"
+ variant="outline"
+ className="text-amber-700 border-amber-500 hover:bg-amber-100"
+ onClick={() => onSellGrapesClick(batch.id)}
+ >
+ Sell Grapes
+ </Button>
+ )}
+ </div>
+ ))}
+ </div>
+ </div>
+ )}
  {/* Advanced Filters */}
  <div className="bg-white rounded-lg shadow p-3">
  <div className="flex justify-between items-center mb-3">
@@ -899,7 +934,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  >
  Aging Progress
  </TableHead>
- <TableHead>Balance & Quality</TableHead>
+ <TableHead>Taste & Structure</TableHead>
  <TableHead
  sortable
  onSort={() => handleCellarSort('wineScore' as any)}
@@ -943,7 +978,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  <AgingProgressBar wine={wine} />
  </TableCell>
  <TableCell className="text-gray-600">
- <BalanceAndQualityDisplay batch={wine} />
+ <StructureAndQualityDisplay batch={wine} />
  </TableCell>
  <TableCell className="text-gray-600">
  <WineScoreDisplay wine={wine} />
@@ -1205,6 +1240,9 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 };
 
 export default WineCellarTab;
+
+
+
 
 
 

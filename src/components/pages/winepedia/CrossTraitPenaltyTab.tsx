@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { BalanceScoreBreakdown, CharacteristicSliderGrid } from '@/components/ui';
+import { StructureIndexBreakdown, CharacteristicSliderGrid } from '@/components/ui';
 import { WineCharacteristics } from '@/lib/types/types';
-import { useWineBalance } from '@/hooks';
+import { useWineStructureIndex } from '@/hooks';
 import { WineCharacteristicsDisplay } from '@/components/ui';
 import { calculateMidpointCharacteristics, RESET_BUTTON_CLASSES } from '@/lib/utils';
 
@@ -12,7 +12,7 @@ export function CrossTraitPenaltyTab() {
     setCharacteristics(prev => ({ ...prev, [key]: value }));
   };
 
-  const balanceResult = useWineBalance(characteristics);
+  const structureIndexResult = useWineStructureIndex(characteristics);
 
   return (
     <div className="space-y-6">
@@ -45,25 +45,25 @@ export function CrossTraitPenaltyTab() {
       </section>
 
       <section>
-        <h3 className="text-lg font-medium">Live Balance Calculation</h3>
+        <h3 className="text-lg font-medium">Live Structure Index Calculation</h3>
         <div className="p-4 rounded-lg">
-          {balanceResult && (
+          {structureIndexResult && (
             <WineCharacteristicsDisplay
               characteristics={characteristics}
-              adjustedRanges={balanceResult.adjustedRanges}
+              adjustedRanges={structureIndexResult.adjustedRanges}
               showValues={true}
               title="Wine Characteristics"
               collapsible={false}
-              showBalanceScore={true}
+              showStructureIndex={true}
             />
           )}
         </div>
       </section>
 
       <section>
-        <h3 className="text-lg font-medium">Balance Score Breakdown</h3>
+        <h3 className="text-lg font-medium">Structure Index Breakdown</h3>
         <div className="p-4 bg-gray-50 rounded-lg">
-          <BalanceScoreBreakdown
+          <StructureIndexBreakdown
             characteristics={characteristics}
             showWineStyleRules={true}
           />

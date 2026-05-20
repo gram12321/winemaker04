@@ -606,7 +606,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                             <p className="font-medium mt-2 mb-1 text-green-300">Regional Price Range:</p>
                             <p className="text-xs text-gray-300">€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in {vineyard.region}</p>
                             <p className="font-medium mt-2 mb-1 text-purple-300">Global Normalization:</p>
-                            <p className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the quality index calculation.</p>
+                            <p className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the taste quality calculation.</p>
                           </div>
                         }
                         title="Land Value Calculation"

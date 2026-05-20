@@ -3,10 +3,11 @@ import { SALES_CONSTANTS } from '../../../constants/constants';
 import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../../utils/calculator';
 import { clamp01 } from '../../../utils/utils';
+import { calculateTasteQualityIndex } from '../taste/tasteQualityIndexService';
 
 export interface EstimatedPriceBreakdown {
-  tasteIndex: number;
-  balance: number;
+  tasteQualityIndex: number;
+  structureIndex: number;
   wineScore: number;
   baseRate: number;
   basePrice: number;
@@ -20,27 +21,20 @@ export interface EstimatedPriceBreakdown {
   finalPrice: number;
 }
 
-export function getTasteIndex(wineBatch: WineBatch): number {
-  return clamp01(wineBatch.tasteIndex);
+export function getTasteQualityIndex(wineBatch: WineBatch): number {
+  return calculateTasteQualityIndex(wineBatch).tasteQualityIndex;
 }
 
 function getLandValueModifier(wineBatch: WineBatch): number {
   return clamp01(wineBatch.landValueModifier);
 }
 
-/**
- * Convert 0-1 land-value modifier to a configurable price multiplier.
- */
 export function calculateLandValuePriceMultiplier(wineBatch: WineBatch): number {
   const landValueModifier = getLandValueModifier(wineBatch);
   return SALES_CONSTANTS.PRICE_MULTIPLIERS.LAND_VALUE_MIN_MULTIPLIER
     + ((SALES_CONSTANTS.PRICE_MULTIPLIERS.LAND_VALUE_MAX_MULTIPLIER - SALES_CONSTANTS.PRICE_MULTIPLIERS.LAND_VALUE_MIN_MULTIPLIER) * landValueModifier);
 }
 
-/**
- * Feature-driven intrinsic market multiplier for estimated price.
- * This is distinct from customer-specific bid multipliers used in order generation.
- */
 function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
   const configs = getAllFeatureConfigs();
   const presentFeatures = (wineBatch.features || []).filter((feature) => feature.isPresent);
@@ -56,8 +50,6 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
     const priceEffect = config.effects.price;
 
     if (priceEffect.type === 'customer_sensitivity') {
-      // Use conservative sensitivity (most quality-demanding customer segment)
-      // so severe faults like oxidation create a meaningful estimated-price impact.
       const sensitivityValues = Object.values(config.customerSensitivity);
       const marketSensitivity = sensitivityValues.length > 0 ? Math.min(...sensitivityValues) : 1;
       const adjusted = 1 + ((marketSensitivity - 1) * severityWeight);
@@ -84,9 +76,9 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
 }
 
 export function calculateWineScore(wineBatch: WineBatch): number {
-  const tasteIndex = getTasteIndex(wineBatch);
-  const balance = clamp01(wineBatch.balance);
-  return (tasteIndex + balance) / 2;
+  const tasteQualityIndex = getTasteQualityIndex(wineBatch);
+  const structureIndex = clamp01(wineBatch.structureIndex);
+  return (tasteQualityIndex + structureIndex) / 2;
 }
 
 function resolvePrestigeMultiplier(prestige?: number): number {
@@ -101,9 +93,9 @@ export function calculateEstimatedPriceBreakdown(
   companyPrestige?: number,
   vineyardPrestige?: number
 ): EstimatedPriceBreakdown {
-  const tasteIndex = getTasteIndex(wineBatch);
-  const balance = clamp01(wineBatch.balance);
-  const wineScore = (tasteIndex + balance) / 2;
+  const tasteQualityIndex = getTasteQualityIndex(wineBatch);
+  const structureIndex = clamp01(wineBatch.structureIndex);
+  const wineScore = (tasteQualityIndex + structureIndex) / 2;
   const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
   const basePrice = wineScore * baseRate;
   const wineScoreMultiplier = calculateAsymmetricalMultiplier(wineScore);
@@ -120,8 +112,8 @@ export function calculateEstimatedPriceBreakdown(
   finalPrice = Math.round(finalPrice * 100) / 100;
 
   return {
-    tasteIndex,
-    balance,
+    tasteQualityIndex,
+    structureIndex,
     wineScore,
     baseRate,
     basePrice,
@@ -136,10 +128,6 @@ export function calculateEstimatedPriceBreakdown(
   };
 }
 
-/**
- * Calculate the estimated price for a wine batch.
- * Formula: (WineScore x Base Rate) x ScoreCurveMultiplier x LandValueMultiplier x FeatureMultiplier x PrestigeMultipliers
- */
 export function calculateEstimatedPrice(
   wineBatch: WineBatch,
   vineyard?: Vineyard,
@@ -153,7 +141,3 @@ export function calculateEstimatedPrice(
     vineyardPrestige
   ).finalPrice;
 }
-
-// TODO: Future implementations for when the game expands
-// - getTasteIndexPotential(): Different grape varieties with specific ranges
-// - calculateVintageEffects(): Weather/year effects on taste index

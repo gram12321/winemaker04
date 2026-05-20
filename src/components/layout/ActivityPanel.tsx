@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/shadCN/button';
 import { ChevronLeft, Minimize2, Maximize2, X } from 'lucide-react';
 import { ActivityCard } from '@/components/ui/activities/ActivityCard';
 import { Activity } from '@/lib/types/types';
-import { getAllActivities, getActivityProgress, cancelActivity } from '@/lib/services/activity/activitymanagers/activityManager';
+import { getAllActivities, getActivityProgress, cancelActivity, pauseActivity, resumeActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { useGameStateWithData } from '@/hooks';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -76,6 +76,22 @@ export const ActivityPanel: React.FC = () => {
       // useGameStateWithData hook automatically refreshes activities
     } catch (error) {
       console.error('Error in handleCancelActivity:', error);
+    }
+  };
+
+  const handlePauseActivity = async (activityId: string) => {
+    try {
+      await pauseActivity(activityId);
+    } catch (error) {
+      console.error('Error in handlePauseActivity:', error);
+    }
+  };
+
+  const handleResumeActivity = async (activityId: string) => {
+    try {
+      await resumeActivity(activityId);
+    } catch (error) {
+      console.error('Error in handleResumeActivity:', error);
     }
   };
 
@@ -182,6 +198,8 @@ export const ActivityPanel: React.FC = () => {
                         progress={progress?.progress || 0}
                         timeRemaining={progress?.timeRemaining || 'Calculating...'}
                         onCancel={() => handleCancelActivity(activity.id)}
+                        onPause={() => handlePauseActivity(activity.id)}
+                        onResume={() => handleResumeActivity(activity.id)}
                         isMinimized={false}
                         onToggleMinimize={() => {}}
                       />
@@ -258,6 +276,8 @@ export const ActivityPanel: React.FC = () => {
                                 progress={progress?.progress || 0}
                                 timeRemaining={progress?.timeRemaining || 'Calculating...'}
                                 onCancel={() => handleCancelActivity(activity.id)}
+                                onPause={() => handlePauseActivity(activity.id)}
+                                onResume={() => handleResumeActivity(activity.id)}
                                 isMinimized={isMinimized}
                                 onToggleMinimize={() => handleToggleCardMinimize(activity.id)}
                               />
@@ -318,6 +338,8 @@ interface SortableActivityCardProps {
   progress: number;
   timeRemaining: string;
   onCancel?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
 }
@@ -331,6 +353,8 @@ const SortableActivityCard: React.FC<SortableActivityCardProps> = ({
   progress,
   timeRemaining,
   onCancel,
+  onPause,
+  onResume,
   isMinimized,
   onToggleMinimize
 }) => {
@@ -360,6 +384,8 @@ const SortableActivityCard: React.FC<SortableActivityCardProps> = ({
         progress={progress}
         timeRemaining={timeRemaining}
         onCancel={onCancel}
+        onPause={onPause}
+        onResume={onResume}
         isMinimized={isMinimized}
         onToggleMinimize={onToggleMinimize}
         dragAttributes={attributes}

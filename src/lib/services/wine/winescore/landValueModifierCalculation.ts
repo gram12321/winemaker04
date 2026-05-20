@@ -11,7 +11,7 @@ import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../uti
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
 import { getFeatureImpacts } from '../features/featureService';
 import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
-import { getTasteIndex } from './wineScoreCalculation';
+import { getTasteQualityIndex } from './wineScoreCalculation';
 
 export function getMaxLandValue(): number {
   let maxValue = 0;
@@ -191,9 +191,9 @@ export function getVineyardLandValueModifierFactors(vineyard: Vineyard): {
 
 // ===== QUALITY BREAKDOWN FOR UI =====
 
-export interface TasteIndexBreakdown {
-  bornTasteIndex: number; // Original quality at harvest
-  currentTasteIndex: number; // Current quality (with feature effects)
+export interface TasteQualityIndexBreakdown {
+  tasteQualityIndexHarvestSnapshot: number; // Original taste quality at harvest
+  currentTasteQualityIndex: number; // Current taste quality
   featureImpacts: Array<{
     featureId: string;
     featureName: string;
@@ -205,18 +205,18 @@ export interface TasteIndexBreakdown {
 }
 
 /**
- * Get detailed taste index breakdown for UI display
+ * Get detailed taste quality breakdown for UI display
  * Used by LandValueModifierFactorsBreakdown and WineModal components
  * 
  * @param batch - Wine batch to analyze
  * @returns Comprehensive quality breakdown with feature impacts
  */
-export function getTasteIndexBreakdown(batch: WineBatch): TasteIndexBreakdown {
-  const bornTasteIndex = batch.bornTasteIndex; // Baseline index at harvest
-  const currentTasteIndex = getTasteIndex(batch); // Current taste index (feature effects applied)
+export function getTasteQualityIndexBreakdown(batch: WineBatch): TasteQualityIndexBreakdown {
+  const tasteQualityIndexHarvestSnapshot = batch.tasteQualityIndexHarvestSnapshot; // Baseline index at harvest
+  const currentTasteQualityIndex = getTasteQualityIndex(batch); // Current taste quality
   const featureImpacts = getFeatureImpacts(batch);
   
-  const tasteIndexImpacts = featureImpacts.map((impact: any) => ({
+  const tasteQualityIndexImpacts = featureImpacts.map((impact: any) => ({
     featureId: impact.featureId,
     featureName: impact.featureName,
     icon: impact.icon,
@@ -224,15 +224,17 @@ export function getTasteIndexBreakdown(batch: WineBatch): TasteIndexBreakdown {
     impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
   }));
   
-  const totalFeatureImpact = currentTasteIndex - bornTasteIndex;
+  const totalFeatureImpact = currentTasteQualityIndex - tasteQualityIndexHarvestSnapshot;
   
   return {
-    bornTasteIndex,
-    currentTasteIndex,
-    featureImpacts: tasteIndexImpacts,
+    tasteQualityIndexHarvestSnapshot,
+    currentTasteQualityIndex,
+    featureImpacts: tasteQualityIndexImpacts,
     totalFeatureImpact
   };
 }
+
+
 
 
 

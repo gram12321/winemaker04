@@ -226,27 +226,27 @@ export const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-// Wine Taste Index Threshold (realistic for 99.999 max)
-export const WINE_GRAPE_QUALITY_ACHIEVEMENTS = createTieredAchievements(
-  'wine_taste_index',
-  'Taste Index Master',
-  'Produce a wine with taste index rating of {threshold}',
+// Wine Taste Quality Threshold (realistic for 99.999 max)
+export const WINE_TASTE_QUALITY_INDEX_ACHIEVEMENTS = createTieredAchievements(
+  'wine_taste_quality_index',
+  'Taste Quality Master',
+  'Produce a wine with taste quality rating of {threshold}',
   '⭐',
   'production',
-  'wine_taste_index_threshold',
-  [80, 85, 90, 95, 99], // Taste index rating: 80, 85, 90, 95, 99 (max ~99.999)
+  'wine_taste_quality_index_threshold',
+  [80, 85, 90, 95, 99], // Taste quality rating: 80, 85, 90, 95, 99 (max ~99.999)
   []
 );
 
-// Wine Balance Threshold (realistic for 99.999 max)
-export const WINE_BALANCE_ACHIEVEMENTS = createTieredAchievements(
-  'wine_balance',
-  'Balance Virtuoso',
-  'Produce a wine with balance rating of {threshold}',
+// Wine structure index threshold (realistic for 99.999 max)
+export const WINE_STRUCTURE_INDEX_ACHIEVEMENTS = createTieredAchievements(
+  'wine_structure_index',
+  'Structure Virtuoso',
+  'Produce a wine with structure index rating of {threshold}',
   '⚖️',
   'production',
-  'wine_balance_threshold',
-  [80, 85, 90, 95, 99], // Balance rating: 80, 85, 90, 95, 99 (max ~99.999)
+  'wine_structure_index_threshold',
+  [80, 85, 90, 95, 99], // Structure index rating: 80, 85, 90, 95, 99 (max ~99.999)
   []
 );
 
@@ -473,8 +473,8 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...WINE_VARIETY_ACHIEVEMENTS,
   ...BOTTLE_PRODUCTION_ACHIEVEMENTS,
   ...DIFFERENT_GRAPES_ACHIEVEMENTS,
-  ...WINE_GRAPE_QUALITY_ACHIEVEMENTS,
-  ...WINE_BALANCE_ACHIEVEMENTS,
+  ...WINE_TASTE_QUALITY_INDEX_ACHIEVEMENTS,
+  ...WINE_STRUCTURE_INDEX_ACHIEVEMENTS,
   ...WINE_SCORE_ACHIEVEMENTS,
   ...WINE_PRICE_ACHIEVEMENTS,
   
@@ -499,7 +499,4 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...VINEYARD_SALES_COUNT_ACHIEVEMENTS,
   ...VINEYARD_PRESTIGE_ACHIEVEMENTS,
 ];
-
-
-
 

@@ -12,8 +12,14 @@ import { getBottleAgingSeverity } from './agingService';
 import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
-import { calculateWineBalance, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../balance';
-import { getTasteIndex } from '../winescore/wineScoreCalculation';
+import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
+import { getTasteQualityIndex } from '../winescore/wineScoreCalculation';
+import { resolveWineAnchors } from '../anchors/wineAnchorService';
+import { applyFeatureLayerAnchors } from '../anchors/wineAnchorProcess';
+import {
+  getAnchorAdjustedStructureRanges,
+  scaleCharacteristicModifierByAnchors
+} from '../anchors/wineAnchorCharacteristicBridge';
 
 // ===== CORE INTERFACES =====
 
@@ -119,7 +125,8 @@ export function initializeBatchFeatures(): WineFeature[] {
 export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
   const configs = getAllFeatureConfigs();
   const features = batch.features || [];
-  
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
+
   const relevantFeatures = configs
     .map(config => {
       const feature = features.find(f => f.id === config.id);
@@ -207,8 +214,12 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
           const currentEffect = applyModifier(modifier, currentSeverityForEffects);
           // Calculate effect at next severity (after weekly growth)
           const nextEffect = applyModifier(modifier, nextSeverity);
-          // Weekly effect is the difference (change per week)
-          weeklyEffects[characteristic] = nextEffect - currentEffect;
+          const delta = nextEffect - currentEffect;
+          weeklyEffects[characteristic] = scaleCharacteristicModifierByAnchors(
+            anchorContext,
+            characteristic as keyof WineCharacteristics,
+            delta
+          );
         });
       }
       
@@ -255,7 +266,12 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
       const characteristicEffects: Record<string, number> = {};
       if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
         config.effects.characteristics.forEach(({ characteristic, modifier }) => {
-          characteristicEffects[characteristic] = applyModifier(modifier, displaySeverity);
+          const raw = applyModifier(modifier, displaySeverity);
+          characteristicEffects[characteristic] = scaleCharacteristicModifierByAnchors(
+            anchorContext,
+            characteristic as keyof WineCharacteristics,
+            raw
+          );
         });
       }
       
@@ -317,7 +333,8 @@ export function getFeatureDisplayData(batch: WineBatch): FeatureDisplayData {
 export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
   const configs = getAllFeatureConfigs();
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
-  
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
+
   return presentFeatures.map(feature => {
     const config = configs.find(c => c.id === feature.id);
     if (!config) return null;
@@ -327,7 +344,12 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
     const characteristicModifiers: Partial<Record<keyof WineCharacteristics, number>> = {};
     if (config.effects.characteristics) {
       for (const effect of config.effects.characteristics) {
-        characteristicModifiers[effect.characteristic] = applyModifier(effect.modifier, feature.severity);
+        const raw = applyModifier(effect.modifier, feature.severity);
+        characteristicModifiers[effect.characteristic] = scaleCharacteristicModifierByAnchors(
+          anchorContext,
+          effect.characteristic,
+          raw
+        );
       }
     }
     
@@ -346,7 +368,7 @@ export function getFeatureImpacts(batch: WineBatch): FeatureImpact[] {
 // ===== EFFECT CALCULATIONS =====
 
 /**
- * Apply feature effects directly to wine batch quality, characteristics, and balance
+ * Apply feature effects directly to wine batch quality, characteristics, and structure index
  * This modifies the batch in-place and should be called during game ticks
  */
 export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
@@ -373,27 +395,24 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   // Filter out feature effects from breakdown (we'll add fresh ones)
   const nonFeatureEffects = existingBreakdownEffects.filter(e => !featureNames.has(e.description));
   
-  const baselineTasteIndex = batch.bornTasteIndex;
-  let currentTasteIndex = baselineTasteIndex;
   let modifiedCharacteristics = { ...baseCharacteristics };
   const breakdownEffects = [...nonFeatureEffects];
-  
-  // Apply quality and characteristic effects from all present features
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
+
+  // Apply characteristic effects from all present features
   for (const feature of presentFeatures) {
     const config = configs.find(c => c.id === feature.id);
     if (!config) continue;
-    
-    // Apply quality effect
-    currentTasteIndex = applyQualityEffect(currentTasteIndex, batch, config, feature.severity);
-    
+
     // Apply characteristic effects
     if (config.effects.characteristics && Array.isArray(config.effects.characteristics)) {
       for (const effect of config.effects.characteristics) {
-        const modifier = applyModifier(effect.modifier, feature.severity);
-        
+        const raw = applyModifier(effect.modifier, feature.severity);
+        const modifier = scaleCharacteristicModifierByAnchors(anchorContext, effect.characteristic, raw);
+
         const currentValue = modifiedCharacteristics[effect.characteristic];
         modifiedCharacteristics[effect.characteristic] = Math.max(0, Math.min(1, currentValue + modifier));
-        
+
         // Add fresh feature effect to breakdown
         breakdownEffects.push({
           characteristic: effect.characteristic,
@@ -403,19 +422,33 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
       }
     }
   }
-  
-  // Recalculate balance with modified characteristics
-  const balanceResult = calculateWineBalance(modifiedCharacteristics, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES);
-  
-  return {
+
+  let wineAnchors = resolveWineAnchors(batch.wineAnchors);
+  wineAnchors = applyFeatureLayerAnchors(batch, wineAnchors);
+
+  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+  const structureIndexResult = calculateStructureIndex(
+    modifiedCharacteristics,
+    structureRanges,
+    RANGE_ADJUSTMENTS,
+    RULES
+  );
+
+  const updatedBatch = {
     ...batch,
-    tasteIndex: Math.max(0, Math.min(1, currentTasteIndex)),
-    bornTasteIndex: baselineTasteIndex,
     characteristics: modifiedCharacteristics,
-    balance: balanceResult.score,
+    structureIndex: structureIndexResult.score,
     breakdown: {
       effects: breakdownEffects
-    }
+    },
+    wineAnchors
+  };
+  const currentTasteQualityIndex = getTasteQualityIndex(updatedBatch);
+
+  return {
+    ...updatedBatch,
+    tasteQualityIndex: currentTasteQualityIndex,
+    tasteQualityIndexHarvestSnapshot: batch.tasteQualityIndexHarvestSnapshot ?? currentTasteQualityIndex
   };
 }
 
@@ -464,6 +497,7 @@ export function calculateFeaturePriceMultiplier(
 export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Partial<Record<keyof WineCharacteristics, number>> {
   const configs = getAllFeatureConfigs();
   const modifiers: Partial<Record<keyof WineCharacteristics, number>> = {};
+  const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
 
   const presentFeatures = (batch.features || []).filter(f => f.isPresent);
 
@@ -472,7 +506,8 @@ export function calculateFeatureCharacteristicModifiers(batch: WineBatch): Parti
     if (!config?.effects.characteristics) continue;
 
     for (const effect of config.effects.characteristics) {
-      const modifier = applyModifier(effect.modifier, feature.severity);
+      const raw = applyModifier(effect.modifier, feature.severity);
+      const modifier = scaleCharacteristicModifierByAnchors(anchorContext, effect.characteristic, raw);
       modifiers[effect.characteristic] = (modifiers[effect.characteristic] || 0) + modifier;
     }
   }
@@ -519,12 +554,12 @@ export function previewFeatureRisks(
     grape: context.grape,
     quantity: 0,
     state: 'grapes' as const,
-    bornLandValueModifier: 0,
-    bornBalance: 0,
+    landValueModifierHarvestSnapshot: 0,
+    structureIndexHarvestSnapshot: 0,
     landValueModifier: 0,
-    tasteIndex: 0,
-    bornTasteIndex: 0,
-    balance: 0,
+    tasteQualityIndex: 0.5,
+    tasteQualityIndexHarvestSnapshot: 0.5,
+    structureIndex: 0,
     characteristics: { acidity: 0, aroma: 0, body: 0, spice: 0, sweetness: 0, tannins: 0 },
     estimatedPrice: 0,
     grapeColor: 'red' as const,
@@ -532,7 +567,8 @@ export function previewFeatureRisks(
     fragile: 0,
     proneToOxidation: 0,
     harvestStartDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
-    harvestEndDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 }
+    harvestEndDate: previewHarvestDate || { week: 1, season: 'Spring' as const, year: 2024 },
+    wineAnchors: { ...resolveWineAnchors(undefined) }
   };
   
   const risks = previewEventRisksInternal(targetBatch, event, context);
@@ -771,7 +807,7 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
  * Also processes pendingFeatures on vineyards (features that develop before harvest)
  * 
  * CRITICAL: Applies feature effects atomically with feature state updates to prevent
- * UI from showing inconsistent state during game tick (features updated but tasteIndex stale)
+ * UI from showing inconsistent state during game tick (features updated but tasteQualityIndex stale)
  */
 export async function processWeeklyFeatureRisks(): Promise<void> {
   try {
@@ -795,7 +831,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
       
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
         // CRITICAL: Apply feature effects immediately to avoid UI showing inconsistent state
-        // This ensures tasteIndex, balance, and characteristics are updated atomically with features
+        // This ensures tasteQualityIndex, structure index, and characteristics are updated atomically with features
         const batchWithUpdatedFeatures = { ...batch, features: updatedFeatures };
         const batchWithEffects = applyFeatureEffectsToBatch(batchWithUpdatedFeatures);
         
@@ -803,10 +839,11 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
           id: batch.id,
           updates: {
             features: updatedFeatures,
-            tasteIndex: batchWithEffects.tasteIndex,
-            balance: batchWithEffects.balance,
+            tasteQualityIndex: batchWithEffects.tasteQualityIndex,
+            structureIndex: batchWithEffects.structureIndex,
             characteristics: batchWithEffects.characteristics,
-            breakdown: batchWithEffects.breakdown
+            breakdown: batchWithEffects.breakdown,
+            wineAnchors: batchWithEffects.wineAnchors
           }
         });
       }
@@ -1107,7 +1144,7 @@ export function getNextWineryAction(batch: WineBatch): 'crush' | 'ferment' | 'bo
 function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severity: number): number {
   const effect = config.effects.quality;
   if (!effect) return 0;
-  const tasteIndex = getTasteIndex(batch);
+  const tasteQualityIndex = getTasteQualityIndex(batch);
   
   switch (effect.type) {
     case 'linear':
@@ -1117,7 +1154,7 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
       return 0;
       
     case 'power':
-      const penaltyFactor = Math.pow(tasteIndex, effect.exponent!);
+      const penaltyFactor = Math.pow(tasteQualityIndex, effect.exponent!);
       const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
       return -scaledPenalty;
       
@@ -1129,7 +1166,7 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
       
     case 'custom':
       if (effect.calculate) {
-        return effect.calculate(tasteIndex, severity, batch.proneToOxidation);
+        return effect.calculate(tasteQualityIndex, severity, batch.proneToOxidation);
       }
       return 0;
       
@@ -1144,57 +1181,6 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
  */
 function applyModifier(modifier: number | ((severity: number) => number), severity: number): number {
   return typeof modifier === 'function' ? modifier(severity) : modifier * severity;
-}
-
-/**
- * Apply a single feature's quality effect
- */
-function applyQualityEffect(
-  tasteIndex: number,
-  batch: WineBatch,
-  config: FeatureConfig,
-  severity: number
-): number {
-  const effect = config.effects.quality;
-  if (!effect) return tasteIndex;
-  
-  switch (effect.type) {
-    case 'power': {
-      const penaltyFactor = Math.pow(tasteIndex, effect.exponent!);
-      const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
-      
-      let severityMultiplier = 1.0;
-      if (config.id === 'oxidation') {
-        severityMultiplier = 0.85 - (batch.proneToOxidation * 0.2);
-      }
-      
-      return tasteIndex * (1 - scaledPenalty) * severityMultiplier;
-    }
-      
-    case 'linear': {
-      const amount = typeof effect.amount === 'function' 
-        ? effect.amount(severity) 
-        : (effect.amount! * severity);
-      return tasteIndex + amount;
-    }
-      
-    case 'bonus': {
-      const bonus = typeof effect.amount === 'function' 
-        ? effect.amount(severity) 
-        : effect.amount!;
-      return tasteIndex + bonus;
-    }
-      
-    case 'custom': {
-      if (effect.calculate) {
-        return effect.calculate(tasteIndex, severity, batch.proneToOxidation);
-      }
-      return tasteIndex;
-    }
-      
-    default:
-      return tasteIndex;
-  }
 }
 
 function previewEventRisksInternal(
@@ -1974,3 +1960,4 @@ function generateOptionLabel(options: any, event: 'harvest' | 'crushing' | 'ferm
       return 'Default';
   }
 }
+

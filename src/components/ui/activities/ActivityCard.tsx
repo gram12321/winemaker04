@@ -3,6 +3,7 @@ import { Activity } from '@/lib/types/types';
 import { Button } from '@/components/ui/shadCN/button';
 import { Progress } from '@/components/ui/shadCN/progress';
 import { Badge } from '@/components/ui/shadCN/badge';
+import { Pause, Play } from 'lucide-react';
 import { StaffAssignmentModal } from '@/components/ui/modals/activitymodals/StaffAssignmentModal';
 import { formatNumber } from '@/lib/utils/utils';
 import { getSkillColor } from '@/lib/utils/colorMapping';
@@ -14,6 +15,8 @@ interface ActivityCardProps {
   progress: number; // 0-100
   timeRemaining: string;
   onCancel?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
   dragAttributes?: any; // @dnd-kit attributes
@@ -34,6 +37,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   progress,
   timeRemaining,
   onCancel,
+  onPause,
+  onResume,
   isMinimized = false,
   onToggleMinimize,
   dragAttributes,
@@ -42,10 +47,13 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   const [showStaffModal, setShowStaffModal] = useState(false);
   
   const categoryInfo = WORK_CATEGORY_INFO[activity.category];
+  const isPaused = activity.status === 'paused';
 
   // Resolve unified color from SKILL_COLORS via category → relevant skill mapping
   const relevantSkillForCategory = categoryInfo.skill;
   const categoryBorderHex = getSkillColor(relevantSkillForCategory);
+  // Gray border when paused
+  const borderColor = isPaused ? '#6b7280' : categoryBorderHex;
   
   // Get assigned staff count
   const assignedStaffIds = activity.params.assignedStaffIds || [];
@@ -58,8 +66,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
   return (
     <>
     <div 
-      className={`bg-gray-800 rounded-lg border-l-4 mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative`}
-      style={{ borderLeftColor: categoryBorderHex }}
+      className={`bg-gray-800 rounded-lg border-l-4 mb-3 shadow-md cursor-pointer hover:bg-gray-750 transition-colors relative ${isPaused ? 'opacity-75' : ''}`}
+      style={{ borderLeftColor: borderColor }}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -88,6 +96,40 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
           <circle cx="10" cy="10" r="1"/>
         </svg>
       </div>
+
+      {/* Pause button - shown when active and cancellable */}
+      {activity.isCancellable && !isPaused && onPause && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onPause();
+          }}
+          className="absolute top-2 right-9 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20 z-10 h-6 w-6 p-0"
+          title="Pause activity"
+        >
+          <Pause className="h-3 w-3" />
+        </Button>
+      )}
+
+      {/* Resume button - shown when paused */}
+      {isPaused && onResume && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onResume();
+          }}
+          className="absolute top-2 right-9 text-green-400 hover:text-green-300 hover:bg-green-900/20 z-10 h-6 w-6 p-0"
+          title="Resume activity"
+        >
+          <Play className="h-3 w-3" />
+        </Button>
+      )}
 
       {/* Cancel button - positioned absolutely in top-right corner */}
       {activity.isCancellable && onCancel && (
@@ -141,6 +183,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
               <Badge variant="secondary" className="text-xs">
                 {categoryInfo.displayName}
               </Badge>
+              {isPaused && (
+                <Badge variant="outline" className="text-xs text-yellow-400 border-yellow-600">
+                  PAUSED
+                </Badge>
+              )}
             </div>
 
             {/* Activity title */}
@@ -186,7 +233,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = memo(({
 
             {/* Time remaining */}
             <div className="flex justify-between items-center text-xs text-gray-500 mt-1">
-              <span>ETA: {timeRemaining}</span>
+              <span>ETA: {isPaused ? 'Paused' : timeRemaining}</span>
               <span>{formatNumber(activity.completedWork, { decimals: 0 })} / {formatNumber(activity.totalWork, { decimals: 0 })}</span>
             </div>
           </div>

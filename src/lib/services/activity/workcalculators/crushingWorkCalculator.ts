@@ -3,11 +3,16 @@ import { calculateTotalWork, WorkFactor } from './workCalculator';
 import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { WorkCategory } from '@/lib/services/activity';
 import { getCrushingMethodInfo, CrushingOptions, modifyCrushingCharacteristics } from '@/lib/services/wine/characteristics/crushingCharacteristics';
+import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
-import { getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { applyCrushingToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
+import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 
 /**
  * Calculate work required for crushing wine batches
@@ -148,15 +153,17 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       qualityPenalty
     } = modifyCrushingCharacteristics({
       baseCharacteristics: batch.characteristics,
-      ...crushingOptions as CrushingOptions
+      ...(crushingOptions as CrushingOptions),
+      wineAnchors: resolveWineAnchors(batch.wineAnchors)
     });
 
     // Apply yield multiplier to batch quantity
     const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
     
-    // Apply direct quality penalty (if any)
-    const currentTasteIndex = getTasteIndex(batch);
-    const finalTasteIndex = Math.max(0, Math.min(1, currentTasteIndex + qualityPenalty));
+    // Taste quality is computed from the current taste profile in this phase.
+    const currentTasteQualityIndex = getTasteQualityIndex(batch);
+    void qualityPenalty;
+    const finalTasteQualityIndex = currentTasteQualityIndex;
 
     // Note: Special features were removed for this iteration
 
@@ -173,7 +180,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       ...batch,
       characteristics: modifiedCharacteristics,
       breakdown: combinedBreakdown,
-      tasteIndex: finalTasteIndex
+      tasteQualityIndex: finalTasteQualityIndex
     };
     const batchWithEventFeatures = await processEventTrigger(
       updatedBatch,
@@ -181,15 +188,39 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       { options: crushingOptions, batch: updatedBatch }  // Pass context with options and batch for event triggers
     );
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste index
-    // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
-    await updateWineBatch(batchId, {
+    const opts = crushingOptions as CrushingOptions;
+    const wineAnchors = applyCrushingToWineAnchors(resolveWineAnchors(batchWithEventFeatures.wineAnchors), opts);
+
+    const charsAfterCrush = batchWithEventFeatures.characteristics || modifiedCharacteristics;
+    const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, wineAnchors);
+    const structureIndexResult = calculateStructureIndex(
+      charsAfterCrush,
+      structureRanges,
+      RANGE_ADJUSTMENTS,
+      RULES
+    );
+
+    const batchAfterCrush: WineBatch = {
+      ...batchWithEventFeatures,
       state: 'must_ready',
-      characteristics: batchWithEventFeatures.characteristics || modifiedCharacteristics,
+      characteristics: charsAfterCrush,
       breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      tasteIndex: batchWithEventFeatures.tasteIndex
+      structureIndex: structureIndexResult.score,
+      wineAnchors
+    };
+
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste quality
+    await updateWineBatch(batchId, {
+      state: batchAfterCrush.state,
+      characteristics: batchAfterCrush.characteristics,
+      breakdown: batchAfterCrush.breakdown,
+      features: batchAfterCrush.features,
+      quantity: batchAfterCrush.quantity,
+      tasteQualityIndex: getTasteQualityIndex(batchAfterCrush),
+      structureIndex: batchAfterCrush.structureIndex,
+      wineAnchors: batchAfterCrush.wineAnchors
     });
 
     // Deduct costs if any
@@ -205,3 +236,5 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     console.error('Error completing crushing activity:', error);
   }
 }
+
+
