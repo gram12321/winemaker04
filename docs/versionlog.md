@@ -4,6 +4,7 @@
 - **ALWAYS use MCP GitHub tools** (`mcp_github2_get_commit`, `mcp_github2_list_commits`) - NEVER use terminal git commands
 - **ALWAYS retrieve actual commit data** - Don't guess or assume what changed
 - **Verify existing entries** against actual commits before adding new ones
+- ** Do not assume any changes from commit messages alone** - Always check the actual file changes and stats. New line-by-line code for verification of changes.
 
 ## 📋 **Entry Requirements**
 1. **Use `mcp_github2_get_commit` with `include_diff: true`** to get exact file changes and stats
@@ -22,6 +23,209 @@
 - **Owner:** gram12321
 - **Repository:** winemaker04
 - **Full URL:** https://github.com/gram12321/winemaker04.git
+
+---
+## Version 0.205-0.205b - Taste Quality Index & Naming Cleanup (Combined)
+**Date:** 2026-05-20 | **Commits:** b7c0756 (0.205), 4d6d0fc (0.205a), 83302f7 (0.205b) | **Stats:** Combined 2,818 additions, 703 deletions
+
+### 🍷 **Taste Quality Index in Wine Score**
+- **NEW FILE:** `src/components/ui/components/WineTasteQualityBreakdown.tsx` (160 lines) - Taste quality breakdown display component
+- `src/components/pages/sales/ContractsTab.tsx` - Contract tab taste quality integration (16 additions, 12 deletions)
+- `src/lib/constants/contractConstants.ts` - Contract taste requirements (16 additions, 5 deletions)
+- `src/lib/database/activities/inventoryDB.ts` - Inventory DB taste quality persistence (9 additions, 9 deletions)
+- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal taste quality display (7 additions, 7 deletions)
+
+### 📚 **Documentation**
+- **NEW FILE:** `docs/superpowers/plans/2026-05-20-taste-quality-index.md` (78 lines) - Taste quality index plan
+- **NEW FILE:** `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` (92 lines) - Contract taste/site UI plan
+- **NEW FILE:** `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` (61 lines) - Taste quality index design spec
+- **NEW FILE:** `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` (359 lines) - Admin test lab design spec
+- **NEW FILE:** `CONTEXT.md` (159 lines) - Project context documentation
+- `docs/WineSystem_VariableRelationshipMap.md` - Major update to wine system relationship map (437 additions, 276 deletions net)
+
+### 🧪 **Tests & Naming Fixes**
+- **NEW FILE:** `tests/user/wineLogService.test.ts` - Wine log service tests
+- **NEW FILE:** `tests/wine/wineAnchorService.test.ts` - Anchor service tests
+- `tests/user/achievementScoreUtils.test.ts` - Achievement score test additions (28 additions)
+- Full rename pass: `grapeQuality` → `priceModifier` and `balance` → `structure` terminology propagated across hooks, services, DB, and UI components (34 files, 930 additions, 382 deletions)
+
+### 🗄️ **Database Schema**
+- `migrations/sync_vercel_schema.sql` - Schema updates for taste quality index
+
+---
+
+## Version 0.204-0.204a - Taste Profile Services & UI (Combined)
+**Date:** 2026-04-13 to 2026-05-20 | **Commits:** b5f99df (0.204), 42df385 (0.204a) | **Stats:** Combined 2,197 additions, 1,492 deletions
+
+### 🍷 **Taste Profile System**
+- **NEW FILE:** `src/components/ui/components/WineTasteProfilePanel.tsx` (199 lines) - Wine taste profile display panel
+- **NEW FILE:** `src/components/ui/components/WineTasteWheel.tsx` (111 lines) - SVG taste wheel visualization
+- **NEW FILE:** `src/lib/services/wine/taste/wineTasteProfileService.ts` (273 lines) - Taste profile calculation service
+- **NEW FILE:** `src/lib/services/wine/taste/tasteCrossDomain.ts` (19 lines) - Cross-domain taste utilities
+- **NEW FILE:** `src/lib/services/wine/taste/tasteNormalization.ts` (15 lines) - Taste value normalization
+- **NEW FILE:** `src/lib/constants/taste/flavorFamilyLabels.ts` (78 lines) - Flavor family label constants
+- **NEW FILE:** `src/lib/constants/taste/tasteCompatibilityMatrix.ts` (63 lines) - Taste compatibility matrix
+- **NEW FILE:** `docs/WineSystem_VariableRelationshipMap.md` (209 lines) - Wine system variable relationship map
+
+### 🎨 **UI Updates**
+- `src/components/ui/components/StructureIndexBreakdown.tsx` - Structure index breakdown updates (20 additions, 10 deletions)
+- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal taste profile integration (86 additions, 40 deletions)
+- `src/hooks/useWineStructureIndex.ts` - Structure index hook updates (7 additions, 1 deletion)
+
+### 🗄️ **Database Schema**
+- `migrations/sync_vercel_schema.sql` - Schema updates for taste profile fields (14 additions, 7 deletions)
+
+---
+
+## Version 0.203-0.203a - Wine Anchor System Phase 1 (Combined)
+**Date:** 2026-03-28 to 2026-03-30 | **Commits:** 212fe16 (0.203), 9c347f1 (0.203a) | **Stats:** Combined 1,023 additions, 142 deletions
+
+### ⚓ **Wine Anchor System**
+- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorService.ts` (455+11 lines) - Core wine anchor calculation service
+- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorProcess.ts` (156 lines) - Anchor processing pipeline
+- **NEW FILE:** `src/lib/services/wine/anchors/wineAnchorCharacteristicBridge.ts` (87+141 lines) - Bridge between anchors and wine characteristics
+- `src/lib/types/types.ts` - Wine anchor type definitions (65 additions)
+- `src/lib/services/wine/features/featureService.ts` - Anchor integration in feature service (37 additions, 17 deletions)
+- `src/lib/services/wine/winery/fermentationManager.ts` - Anchor application during fermentation
+- `src/lib/services/wine/winery/inventoryService.ts` - Anchor data persistence
+
+### 🍷 **Characteristics Integration**
+- `src/lib/services/wine/characteristics/crushingCharacteristics.ts` - Anchor effect on crushing characteristics (11 additions, 4 deletions)
+- `src/lib/services/wine/characteristics/fermentationCharacteristics.ts` - Anchor effect on fermentation characteristics (12 additions, 5 deletions)
+- `src/lib/services/wine/characteristics/harvestCharacteristics.ts` - Anchor effect on harvest characteristics (11 additions, 4 deletions)
+
+### 📚 **Documentation**
+- `docs/TasteSystem_WineFolly_Research.md` - Anchor system documentation updates
+
+---
+
+## Version 0.201-0.202a - Structure Rename & Bug Fixes (Combined)
+**Date:** 2026-03-28 | **Commits:** 764fef9 (0.201), 7d65b8f (0.202), d143cc7 (0.202a) | **Stats:** Combined 501 additions, 501 deletions
+
+### 🏷️ **Terminology Rename: Balance → Structure Index**
+- **RENAMED:** `src/hooks/useWineBalance.ts` → `src/hooks/useWineStructureIndex.ts` (45 lines new, 53 removed)
+- **RENAMED:** `src/components/ui/components/StructureIndexBreakdown.tsx` (from WineBalanceBreakdown)
+- **RENAMED:** `src/components/ui/modals/UImodals/StructureIndexBreakdownModal.tsx` (from WineBalanceBreakdownModal)
+- Full rename propagation across 30+ files: components, hooks, services, DB, constants, contract system
+
+### 🐛 **Bug Fixes**
+- `src/hooks/useWineFeatureDetails.ts` - Fixed wine feature price calculations (10 additions, 6 deletions)
+- `src/components/pages/sales/WineCellarTab.tsx` - Wine cellar display fixes (7 additions, 5 deletions)
+- `src/lib/utils/icons.tsx` - Icon path fixes and updates (30 additions, 17 deletions)
+
+---
+
+## Version 0.2003 - Grape Quality Renamed to Price Modifier
+**Date:** 2026-03-26 to 2026-03-28 | **Commits:** a046da4 (0.2003), 155e95d (0.2003a) | **Stats:** Combined 2,081 additions, 1,694 deletions
+
+### 🏷️ **Grape Quality → Price Modifier Rename**
+- `src/components/pages/sales/WineCellarTab.tsx` - Major WineCellar tab rework with new price modifier display (1,157 additions, 1,098 deletions)
+- **RENAMED:** `src/components/ui/components/landValueModifierBar.tsx` (from grapeQualityBar)
+- **RENAMED:** `src/components/ui/components/landValueModifierBreakdown.tsx` (from grapeQualityBreakdown)
+- **RENAMED:** `src/components/ui/modals/UImodals/landValueModifierBreakdownModal.tsx`
+- `src/components/pages/sales/OrdersTab.tsx` - Orders tab with price modifier data (57 additions, 15 deletions)
+- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal price modifier display (127 additions, 38 deletions)
+- `src/lib/constants/constants.ts` - Constant name updates (8 additions, 12 deletions)
+- `src/lib/constants/achievementConstants.ts` - Achievement constant updates (8 additions, 6 deletions)
+
+### 🗄️ **Database Schema**
+- `migrations/sync_vercel_schema.sql` - Minor schema updates
+
+### 📚 **Documentation**
+- `docs/TasteSystem_WineFolly_Research.md` - Research documentation updates
+
+---
+
+## Version 0.2001-0.2001a1 - Feature Seam Architecture Refactor (Combined)
+**Date:** 2026-03-06 to 2026-03-09 | **Commits:** a0dc562 (board/share seam), 3031a8f (0.2001), ecfb3be (0.2001a), 4cce0f7 (0.2001a1) | **Stats:** Combined 4,334 additions, 3,961 deletions
+
+### 🏗️ **Board/Share Feature Seam**
+- `src/lib/features/boardShare/` - Board/share gameplay modules isolated behind no-op feature seam
+- All board/share UI and services routed through feature seam contracts; noop implementation stubs added for builds without the feature
+
+### 🔬 **Research/Upgrade Feature Isolation**
+- **NEW FILE:** `src/lib/features/researchUpgrade/active.tsx` (241 lines) - Active research/upgrade feature implementation
+- **NEW FILE:** `src/lib/features/researchUpgrade/featureTypes.ts` (71 lines) - Research/upgrade feature type contracts
+- **NEW FILE:** `src/lib/features/researchUpgrade/index.ts` (12 lines) - Feature entry point
+- **NEW FILE:** `src/lib/features/researchUpgrade/noop.ts` (55 lines) - No-op stub implementation
+- **NEW FILE:** `src/lib/features/researchUpgrade/services/research/researchEnforcer.ts` (59 lines) - Research enforcer moved into feature
+- **REMOVED:** `src/lib/services/research/researchEnforcer.ts` (127 lines) - Consolidated into feature module
+
+### 💳 **Loan/Lender Feature Isolation**
+- **NEW FILE:** `src/lib/features/loanLender/active.tsx` (135 lines) - Active loan/lender feature implementation
+- **NEW FILE:** `src/lib/features/loanLender/featureTypes.ts` (55 lines) - Loan/lender feature type contracts
+- **NEW FILE:** `src/lib/features/loanLender/index.ts` (12 lines) - Feature entry point
+- **NEW FILE:** `src/lib/features/loanLender/noop.ts` (33 lines) - No-op stub implementation
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/creditRatingService.ts` (512 lines) - Credit rating service moved into feature
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/lenderService.ts` (212 lines) - Lender service moved into feature
+- **NEW FILE:** `src/lib/features/loanLender/services/finance/loanService.ts` (2,514 lines) - Loan service moved into feature
+- **NEW FILE:** `src/lib/features/loanLender/services/activity/activitymanagers/lenderSearchManager.ts` (222 lines)
+- **NEW FILE:** `src/lib/features/loanLender/services/activity/activitymanagers/takeLoanManager.ts` (78 lines)
+- **RENAMED:** Loan/lender UI components moved into `src/lib/features/loanLender/ui/`
+- **REMOVED:** Stub files from `src/lib/services/finance/` (creditRatingService, lenderService, loanService) after consolidation
+
+### 🔧 **Integration Updates**
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Updated to use feature seam for research/lender activities
+- `src/lib/services/core/startingConditionsService.ts` - Updated feature seam initialization
+- `src/lib/services/admin/adminService.ts` - Admin service cleanup (3 additions, 104 deletions)
+- `src/main.tsx` - Feature initialization in app bootstrap
+
+---
+
+## Version 0.2002-0.2002a - Bug Fixes (Combined)
+**Date:** 2026-03-24 | **Commits:** 23ab720 (0.2002), 62d9571 (0.2002a) | **Stats:** Combined 104 additions, 15 deletions
+
+### 🐛 **Bug Fixes**
+- `src/lib/services/vineyard/vineyardManager.ts` - Fixed starting condition vineyard yield calculations (21 additions)
+- `src/lib/services/core/startingConditionsService.ts` - Fixed starting vineyard initialization (3 additions, 1 deletion)
+- `tests/vineyard/yieldCalculator.test.ts` - Added yield calculator test coverage (16 additions, 1 deletion)
+- `src/components/ui/modals/UImodals/prestigeModal.tsx` - Fixed runtime error in prestige modal (26 additions, 6 deletions)
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Activity manager stability fix (25 additions, 3 deletions)
+- `src/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager.ts` - Research manager fix (12 additions, 4 deletions)
+
+---
+
+## Version 0.115-0.115c - Board Grace Period & Mechanics Fixes (Combined)
+**Date:** 2025-12-07 to 2026-02-05 | **Commits:** 57c55ce (0.115), 1575a15 (0.115a), f751b20 (0.115b), cf4b378 (0.115c) | **Stats:** Combined 301 additions, 207 deletions
+
+### 🏛️ **Board Grace Period**
+- `src/components/finance/BoardRoomPanel.tsx` - Grace period UI display and enforcement feedback (138 additions, 136 deletions)
+- `src/lib/services/board/boardSatisfactionService.ts` - Grace period logic implementation (46 additions, 32 deletions)
+
+### 🐛 **Bug Fixes**
+- `src/lib/services/board/boardEnforcer.ts` - Fixed board enforcer to limit rather than block vineyard operations (27 additions, 9 deletions)
+- `src/lib/services/core/startingConditionsService.ts` - Fixed starting vineyards not growing in first season (5 additions, 2 deletions)
+- `src/lib/services/vineyard/vineyardService.ts` - Vineyard service starting season fix (16 additions, 5 deletions)
+- `src/lib/services/wine/features/featureService.ts` - Wine feature service fixes (15 additions, 1 deletion)
+- `src/lib/services/core/gameTick.ts` - Time issue in grape quality calculation fix (13 additions, 11 deletions)
+- `src/lib/services/vineyard/vineyardManager.ts` - Severe imbalance in vineyard degradation fix (5 additions, 3 deletions)
+- `src/components/ui/modals/UImodals/wineModal.tsx` - Wine modal display fixes (20 additions, 3 deletions)
+- `tailwind.config.js` - Tailwind config updates (3 additions, 1 deletion)
+
+---
+
+## Version 0.113-0.114a - Board Room Integration & Constraint System (Combined)
+**Date:** 2025-11-30 to 2025-12-07 | **Commits:** 21f630c (0.113), cb34848 (0.114), 303f15e (0.114a) | **Stats:** Combined 3,532 additions, 915 deletions
+
+### 🏛️ **Board Room & Share Operations Integration**
+- `src/components/finance/BoardRoomPanel.tsx` - Major boardroom UI integration and refinements (594 additions, 325 deletions across commits)
+- `src/components/finance/ShareManagementPanel.tsx` - Share management panel with investor breakdown and board controls (330 additions, 166 deletions)
+- `src/lib/services/finance/shares/shareOperationsService.ts` - Major share operations expansion: IPO workflow, investor tiers, dilution (1,290 additions, 137 deletions)
+
+### 🔒 **Board Constraint System**
+- **NEW FILE:** `src/components/ui/constraints/ConstraintDisplay.tsx` (223 lines) - Reusable board constraint display component
+- **NEW FILE:** `src/lib/types/constraintTypes.ts` (64 lines) - Constraint type definitions
+- `src/lib/services/board/boardEnforcer.ts` - Full board enforcement rules for vineyard, research, land search (291 additions, 43 deletions)
+- `src/lib/constants/boardConstants.ts` - Comprehensive board constraint constants (242 additions, 6 deletions)
+- `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` - Constraint enforcement in land search (96 additions, 10 deletions)
+
+### 🗄️ **Database & Services**
+- `src/lib/database/core/companySharesDB.ts` - Share ownership queries (121 additions, 1 deletion)
+- `src/lib/services/finance/creditRatingService.ts` - Credit rating refactoring (14 additions, 86 deletions)
+- `src/lib/services/board/boardSatisfactionService.ts` - Board satisfaction service cleanup (18 additions, 59 deletions)
+- `src/lib/services/core/startingConditionsService.ts` - Starting conditions board integration (12 additions, 1 deletion)
+- `src/lib/services/vineyard/landSearchService.ts` - Land search constraint integration (15 additions, 4 deletions)
+- `migrations/sync_vercel_schema.sql` - Schema updates (12 additions)
 
 ---
 ## Version 0.112a-0.112d - Boardroom System Enhancements & Cleanup (Combined)
