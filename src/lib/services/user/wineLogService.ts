@@ -4,13 +4,13 @@ import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { highscoreService } from './highscoreService';
 import { getGameState, getCurrentCompany } from '../core/gameState';
 import { insertWineLogEntry, loadWineLogByVineyard, type WineLogData } from '@/lib/database';
-import { calculateWineScore, getTasteIndex } from '../wine/winescore/wineScoreCalculation';
+import { calculateWineScore, getQualityIndex } from '../wine/winescore/wineScoreCalculation';
 
-const getEntryTasteIndex = (entry: Pick<WineLogEntry, 'tasteIndex'>): number =>
-  entry.tasteIndex;
+const getEntryQualityIndex = (entry: Pick<WineLogEntry, 'qualityIndex'>): number =>
+  entry.qualityIndex;
 
-const getEntryWineScore = (entry: Pick<WineLogEntry, 'wineScore' | 'tasteIndex' | 'structureIndex'>): number =>
-  entry.wineScore ?? ((getEntryTasteIndex(entry) + entry.structureIndex) / 2);
+const getEntryWineScore = (entry: Pick<WineLogEntry, 'wineScore' | 'qualityIndex' | 'structureIndex'>): number =>
+  entry.wineScore ?? ((getEntryQualityIndex(entry) + entry.structureIndex) / 2);
 
 /**
  * Record a wine batch in the production log when it's bottled
@@ -29,10 +29,10 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
     // Use bottled snapshots for historical records (immutable values at bottling time)
     // This ensures WineLog reflects the wine's quality at the moment it was bottled,
     // not its current quality which may continue evolving in the cellar
-    const tasteIndex = wineBatch.bottledTasteIndex ?? getTasteIndex(wineBatch);
-    const landValueModifier = wineBatch.bottledLandValueModifier ?? wineBatch.landValueModifier;
-    const structureIndexSnapshot = wineBatch.bottledStructureIndex ?? wineBatch.structureIndex;
-    const wineScore = wineBatch.bottledWineScore ?? calculateWineScore({ ...wineBatch, tasteIndex, structureIndex: structureIndexSnapshot });
+    const qualityIndex = wineBatch.qualityIndexBottlingSnapshot ?? getQualityIndex(wineBatch);
+    const landValueModifier = wineBatch.landValueModifierBottlingSnapshot ?? wineBatch.landValueModifier;
+    const structureIndexSnapshot = wineBatch.structureIndexBottlingSnapshot ?? wineBatch.structureIndex;
+    const wineScore = wineBatch.wineScoreBottlingSnapshot ?? calculateWineScore({ ...wineBatch, qualityIndex, structureIndex: structureIndexSnapshot });
 
     const wineLogData: WineLogData = {
       id: uuidv4(),
@@ -42,7 +42,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       grape_variety: wineBatch.grape,
       vintage: wineBatch.harvestStartDate.year,
       quantity: wineBatch.quantity,
-      grape_quality: tasteIndex, // Stored in grape_quality column
+      quality_index: qualityIndex,
       land_value_modifier: landValueModifier,
       structure_index: structureIndexSnapshot,
       wine_score: wineScore, // Use bottled snapshot
@@ -77,7 +77,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
             vintage: wineBatch.harvestStartDate.year,
             grape: wineBatch.grape,
             quantity: wineBatch.quantity,
-            tasteIndex,
+            qualityIndex,
             structureIndex: wineBatch.structureIndex,
             wineScore: wineScore,
             price: wineBatch.estimatedPrice
@@ -163,12 +163,12 @@ export async function calculateVineyardStats(vineyardId: string): Promise<Vineya
   }
 
   const totalBottles = history.reduce((sum, entry) => sum + entry.quantity, 0);
-  const averageQuality = history.reduce((sum, entry) => sum + getEntryTasteIndex(entry), 0) / history.length;
+  const averageQuality = history.reduce((sum, entry) => sum + getEntryQualityIndex(entry), 0) / history.length;
   const averageStructureIndex = history.reduce((sum, entry) => sum + entry.structureIndex, 0) / history.length;
   const averagePrice = history.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / history.length;
   
   const bestVintage = history.reduce((best, entry) => 
-    !best || getEntryTasteIndex(entry) > best.quality ? { year: entry.vintage, quality: getEntryTasteIndex(entry) } : best
+    !best || getEntryQualityIndex(entry) > best.quality ? { year: entry.vintage, quality: getEntryQualityIndex(entry) } : best
   , null as { year: number; quality: number } | null);
 
   const mostRecentVintage = history[0]; // Already sorted by bottled date descending
@@ -248,7 +248,7 @@ export function calculateVineyardAnalytics(
   // Production metrics
   const totalBottles = vineyardEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   const totalRevenue = vineyardEntries.reduce((sum, entry) => sum + (entry.quantity * entry.estimatedPrice), 0);
-  const avgQuality = vineyardEntries.reduce((sum, entry) => sum + getEntryTasteIndex(entry), 0) / vineyardEntries.length;
+  const avgQuality = vineyardEntries.reduce((sum, entry) => sum + getEntryQualityIndex(entry), 0) / vineyardEntries.length;
   const avgWineScore = vineyardEntries.reduce((sum, entry) => sum + getEntryWineScore(entry), 0) / vineyardEntries.length;
   const avgPrice = vineyardEntries.reduce((sum, entry) => sum + entry.estimatedPrice, 0) / vineyardEntries.length;
   
@@ -360,7 +360,7 @@ export function calculateVineyardAnalytics(
   );
   
   const avgAgingQuality = agedWinesFromVineyard.length > 0
-    ? agedWinesFromVineyard.reduce((sum, b) => sum + getTasteIndex(b), 0) / agedWinesFromVineyard.length
+    ? agedWinesFromVineyard.reduce((sum, b) => sum + getQualityIndex(b), 0) / agedWinesFromVineyard.length
     : null;
   
   return {
@@ -387,3 +387,4 @@ export function calculateVineyardAnalytics(
     }
   };
 }
+

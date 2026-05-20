@@ -1113,7 +1113,7 @@ export async function addFeaturePrestigeEvent(
             return calculateCompanyManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.tasteIndex,
+              batch.qualityIndex,
               eventContext.currentCompanyPrestige || 1,
               levelConfig.scalingFactors,
               levelConfig.maxImpact
@@ -1122,7 +1122,7 @@ export async function addFeaturePrestigeEvent(
             return calculateVineyardManifestationPrestige(
               levelConfig.baseAmount,
               batch.quantity,
-              batch.tasteIndex,
+              batch.qualityIndex,
               eventContext.vineyard?.vineyardPrestige || 1,
               levelConfig.scalingFactors,
               levelConfig.maxImpact
@@ -1187,7 +1187,7 @@ export async function addFeaturePrestigeEvent(
         wineName: `${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         batchSize: batch.quantity,
-        tasteIndex: batch.tasteIndex,
+        qualityIndex: batch.qualityIndex,
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,
@@ -1230,4 +1230,5 @@ export async function addResearchPrestigeEvent(
 
   triggerGameUpdate();
 }
+
 

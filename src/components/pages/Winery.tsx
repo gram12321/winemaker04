@@ -26,15 +26,15 @@ const WineBatchStructureDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =>
   );
 };
 
-// Component for taste index category display
-const TasteIndexDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const qualityCategory = getQualityCategory(batch.tasteIndex);
-  const colorClass = getColorClass(batch.tasteIndex);
-  const qualityPercentage = formatNumber(batch.tasteIndex * 100, { smartDecimals: true });
+// Component for quality index category display
+const QualityIndexDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const qualityCategory = getQualityCategory(batch.qualityIndex);
+  const colorClass = getColorClass(batch.qualityIndex);
+  const qualityPercentage = formatNumber(batch.qualityIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Taste Index: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+      Quality Index: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
     </div>
   );
 };
@@ -278,7 +278,7 @@ const Winery: React.FC = () => {
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
                       <WineBatchStructureDisplay batch={batch} />
-                      <TasteIndexDisplay batch={batch} />
+                      <QualityIndexDisplay batch={batch} />
                       
                       <div className="text-xs font-medium text-gray-800 mt-3">
                         Current Activity: <span className="text-purple-600">
@@ -372,4 +372,6 @@ const Winery: React.FC = () => {
 };
 
 export default Winery;
+
+
 

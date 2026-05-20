@@ -92,7 +92,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
     const totalBottles = wineLog.reduce((sum, entry) => sum + entry.quantity, 0);
     const totalVintages = wineLog.length;
     const averageQuality = wineLog.length > 0 
-      ? wineLog.reduce((sum, entry) => sum + entry.tasteIndex, 0) / wineLog.length 
+      ? wineLog.reduce((sum, entry) => sum + entry.qualityIndex, 0) / wineLog.length 
       : 0;
     return { totalBottles, totalVintages, averageQuality };
   }, [wineLog]);
@@ -130,7 +130,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
           <div className="flex items-start gap-2">
             <div className="text-blue-600 text-sm">ℹ️</div>
             <div className="text-sm text-blue-800">
-              <strong>Note:</strong> This log shows taste index and characteristics <strong>at bottling time</strong>. 
+              <strong>Note:</strong> This log shows quality index and characteristics <strong>at bottling time</strong>. 
               For wines still in your cellar, features may continue evolving until the last bottle is sold. 
               Use "View Details" to see current wine state.
             </div>
@@ -178,7 +178,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
                 <div className={`text-2xl font-bold ${getColorClass(statistics.averageQuality)}`}>
                   {getQualityCategory(statistics.averageQuality)}
                 </div>
-                <div className="text-sm text-gray-500">Average Taste Index</div>
+                <div className="text-sm text-gray-500">Average Quality Index</div>
               </div>
             </div>
           </CardContent>
@@ -260,4 +260,6 @@ export function WineLog({ currentCompany }: WineLogProps) {
     </div>
   );
 }
+
+
 

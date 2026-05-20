@@ -22,6 +22,8 @@ import {
 } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
 
+const DEFAULT_QUALITY_INDEX = 0.5;
+
 /**
  * Inventory Service
  * Manages wine batch inventory lifecycle and business logic
@@ -59,7 +61,7 @@ async function findCompatibleWineBatch(
  * Combine two wine batches using weighted averaging for quality properties
  * @param existingBatch - The existing wine batch to combine with
  * @param newQuantity - Quantity of new grapes to add
- * @param newQuality - Quality of new grapes
+ * @param newLandValueModifier - Land-value modifier of new grapes
  * @param newCharacteristics - Characteristics of new grapes
  * @param newWineAnchors - Anchors for the incoming harvest portion
  * @returns Updated wine batch with combined properties
@@ -67,7 +69,7 @@ async function findCompatibleWineBatch(
 function combineWineBatches(
   existingBatch: WineBatch,
   newQuantity: number,
-  newQuality: number,
+  newLandValueModifier: number,
   newCharacteristics: WineCharacteristics,
   newWineAnchors: WineBatch['wineAnchors']
 ): WineBatch {
@@ -76,10 +78,9 @@ function combineWineBatches(
   const newWeight = newQuantity / totalQuantity;
   
   // Calculate weighted averages for index properties
-  const existingTasteIndex = existingBatch.tasteIndex;
   const existingLandValueModifier = existingBatch.landValueModifier;
-  const combinedTasteIndex = (existingTasteIndex * existingWeight) + (newQuality * newWeight);
-  const combinedLandValueModifier = (existingLandValueModifier * existingWeight) + (newQuality * newWeight);
+  const combinedQualityIndex = DEFAULT_QUALITY_INDEX;
+  const combinedLandValueModifier = (existingLandValueModifier * existingWeight) + (newLandValueModifier * newWeight);
   // Combine characteristics using weighted averages
   const combinedCharacteristics: WineCharacteristics = {
     acidity: (existingBatch.characteristics.acidity * existingWeight) + (newCharacteristics.acidity * newWeight),
@@ -134,11 +135,11 @@ function combineWineBatches(
   return {
     ...existingBatch,
     quantity: totalQuantity,
-    bornLandValueModifier: combinedLandValueModifier,
-    bornStructureIndex: structureIndexResult.score,
+    landValueModifierHarvestSnapshot: combinedLandValueModifier,
+    structureIndexHarvestSnapshot: structureIndexResult.score,
     landValueModifier: combinedLandValueModifier,
-    tasteIndex: combinedTasteIndex,
-    bornTasteIndex: combinedTasteIndex,
+    qualityIndex: combinedQualityIndex,
+    qualityIndexHarvestSnapshot: combinedQualityIndex,
     structureIndex: structureIndexResult.score,
     characteristics: combinedCharacteristics,
     breakdown: combinedBreakdown,
@@ -262,12 +263,12 @@ export async function createWineBatchFromHarvest(
       state: 'grapes',
       fermentationProgress: 0,
       // Set born values (immutable snapshots at harvest)
-      bornLandValueModifier: quality,
-      bornStructureIndex: structureIndexResult.score,
-      // Set current values (taste evolves with processing/features)
+      landValueModifierHarvestSnapshot: quality,
+      structureIndexHarvestSnapshot: structureIndexResult.score,
+      // Set current values
       landValueModifier: quality,
-      bornTasteIndex: quality,
-      tasteIndex: quality,
+      qualityIndexHarvestSnapshot: DEFAULT_QUALITY_INDEX,
+      qualityIndex: DEFAULT_QUALITY_INDEX,
       structureIndex: structureIndexResult.score,
       characteristics,
       breakdown, // Store breakdown data
@@ -364,5 +365,6 @@ function getHarvestEffectDescription(characteristic: string): string {
       return 'Harvest Effects';
   }
 }
+
 
 

@@ -8,7 +8,7 @@ import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
-import { getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { applyCrushingToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
@@ -160,9 +160,10 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     // Apply yield multiplier to batch quantity
     const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
     
-    // Apply direct quality penalty (if any)
-    const currentTasteIndex = getTasteIndex(batch);
-    const finalTasteIndex = Math.max(0, Math.min(1, currentTasteIndex + qualityPenalty));
+    // Quality index is fixed placeholder in this phase.
+    const currentQualityIndex = getQualityIndex(batch);
+    void qualityPenalty;
+    const finalQualityIndex = currentQualityIndex;
 
     // Note: Special features were removed for this iteration
 
@@ -179,7 +180,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       ...batch,
       characteristics: modifiedCharacteristics,
       breakdown: combinedBreakdown,
-      tasteIndex: finalTasteIndex
+      qualityIndex: finalQualityIndex
     };
     const batchWithEventFeatures = await processEventTrigger(
       updatedBatch,
@@ -199,7 +200,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       RULES
     );
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste index
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and quality index
     // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
     await updateWineBatch(batchId, {
       state: 'must_ready',
@@ -207,7 +208,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      tasteIndex: batchWithEventFeatures.tasteIndex,
+      qualityIndex: batchWithEventFeatures.qualityIndex,
       structureIndex: structureIndexResult.score,
       wineAnchors
     });
@@ -225,3 +226,5 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     console.error('Error completing crushing activity:', error);
   }
 }
+
+

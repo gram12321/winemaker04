@@ -12,7 +12,7 @@ import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES } from '../../../constants/grapeConstants';
-import { calculateWineScore, getTasteIndex } from '../winescore/wineScoreCalculation';
+import { calculateWineScore, getQualityIndex } from '../winescore/wineScoreCalculation';
 import { applyWeeklyFermentationContactToWineAnchors } from '../anchors/wineAnchorProcess';
 
 /**
@@ -75,9 +75,9 @@ export async function bottleWine(batchId: string): Promise<boolean> {
   const gameState = getGameState();
 
   // Calculate wine score at bottling for snapshot
-  const bottledWineScore = calculateWineScore(batch);
-  const bottledTasteIndex = getTasteIndex(batch);
-  const bottledLandValueModifier = batch.landValueModifier;
+  const wineScoreBottlingSnapshot = calculateWineScore(batch);
+  const qualityIndexBottlingSnapshot = getQualityIndex(batch);
+  const landValueModifierBottlingSnapshot = batch.landValueModifier;
 
   // Preserve all wine batch values and update necessary fields + create bottling snapshots
   const success = await updateInventoryBatch(batchId, {
@@ -89,10 +89,10 @@ export async function bottleWine(batchId: string): Promise<boolean> {
       year: gameState.currentYear || 2024
     },
     // Create immutable snapshots at bottling for historical records (WineLog)
-    bottledTasteIndex,
-    bottledLandValueModifier,
-    bottledStructureIndex: batch.structureIndex,
-    bottledWineScore: bottledWineScore
+    qualityIndexBottlingSnapshot,
+    landValueModifierBottlingSnapshot,
+    structureIndexBottlingSnapshot: batch.structureIndex,
+    wineScoreBottlingSnapshot: wineScoreBottlingSnapshot
   });
 
   // Record the bottled wine in the production log and trigger bottling events
@@ -111,11 +111,11 @@ export async function bottleWine(batchId: string): Promise<boolean> {
         // Update batch if features modified characteristics or breakdown
         if (batchWithEventFeatures.characteristics !== bottledBatch.characteristics ||
           batchWithEventFeatures.breakdown !== bottledBatch.breakdown ||
-          batchWithEventFeatures.tasteIndex !== bottledBatch.tasteIndex) {
+          batchWithEventFeatures.qualityIndex !== bottledBatch.qualityIndex) {
           await updateWineBatch(batchId, {
             characteristics: batchWithEventFeatures.characteristics,
             breakdown: batchWithEventFeatures.breakdown,
-            tasteIndex: batchWithEventFeatures.tasteIndex,
+            qualityIndex: 0.5,
             features: batchWithEventFeatures.features
           });
         }
@@ -199,7 +199,7 @@ export async function processWeeklyFermentation(): Promise<void> {
         RULES
       );
 
-      const currentTasteIndex = getTasteIndex(batch);
+      const currentQualityIndex = getQualityIndex(batch);
 
       // Combine existing breakdown with new fermentation breakdown
       const combinedBreakdown = {
@@ -214,7 +214,7 @@ export async function processWeeklyFermentation(): Promise<void> {
         id: batch.id,
         updates: {
           characteristics: newCharacteristics,
-          tasteIndex: currentTasteIndex,
+          qualityIndex: currentQualityIndex,
           structureIndex: structureIndexResult.score,
           breakdown: combinedBreakdown,
           wineAnchors
@@ -230,3 +230,4 @@ export async function processWeeklyFermentation(): Promise<void> {
     console.error('Error processing weekly fermentation:', error);
   }
 }
+

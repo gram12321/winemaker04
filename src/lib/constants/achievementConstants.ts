@@ -226,14 +226,14 @@ export const DIFFERENT_GRAPES_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
-// Wine Taste Index Threshold (realistic for 99.999 max)
-export const WINE_GRAPE_QUALITY_ACHIEVEMENTS = createTieredAchievements(
-  'wine_taste_index',
-  'Taste Index Master',
-  'Produce a wine with taste index rating of {threshold}',
+// Wine Quality Index Threshold (realistic for 99.999 max)
+export const WINE_QUALITY_INDEX_ACHIEVEMENTS = createTieredAchievements(
+  'wine_quality_index',
+  'Quality Index Master',
+  'Produce a wine with quality index rating of {threshold}',
   '⭐',
   'production',
-  'wine_taste_index_threshold',
+  'wine_quality_index_threshold',
   [80, 85, 90, 95, 99], // Taste index rating: 80, 85, 90, 95, 99 (max ~99.999)
   []
 );
@@ -473,7 +473,7 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...WINE_VARIETY_ACHIEVEMENTS,
   ...BOTTLE_PRODUCTION_ACHIEVEMENTS,
   ...DIFFERENT_GRAPES_ACHIEVEMENTS,
-  ...WINE_GRAPE_QUALITY_ACHIEVEMENTS,
+  ...WINE_QUALITY_INDEX_ACHIEVEMENTS,
   ...WINE_STRUCTURE_INDEX_ACHIEVEMENTS,
   ...WINE_SCORE_ACHIEVEMENTS,
   ...WINE_PRICE_ACHIEVEMENTS,
@@ -499,7 +499,4 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   ...VINEYARD_SALES_COUNT_ACHIEVEMENTS,
   ...VINEYARD_PRESTIGE_ACHIEVEMENTS,
 ];
-
-
-
 

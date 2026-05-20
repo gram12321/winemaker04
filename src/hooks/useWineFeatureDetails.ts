@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { getPresentFeaturesSorted, getAllVineyards } from '@/lib/services';
-import { calculateEstimatedPrice } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateEstimatedPrice, getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface FeatureDetails {
-  currentTasteIndex: number;
-  tasteIndexPenalty: number;
+  currentQualityIndex: number;
+  qualityIndexPenalty: number;
   presentFeatures: Array<{ feature: any; config: any }>;
-  hasTasteAffectingFeatures: boolean;
+  hasQualityAffectingFeatures: boolean;
   /** Present features that contribute to estimated price via `effects.price` (see `calculateFeatureMarketPriceMultiplier`). */
   hasPriceAffectingFeatures: boolean;
   priceImpact: {
@@ -33,11 +33,11 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
 
     const calculateFeatureDetails = async () => {
       try {
-        const currentTasteIndex = wineBatch.tasteIndex;
-        const baselineTasteIndex = wineBatch.bornTasteIndex;
-        const tasteIndexPenalty = baselineTasteIndex - currentTasteIndex;
+        const currentQualityIndex = getQualityIndex(wineBatch);
+        const baselineQualityIndex = 0.5;
+        const qualityIndexPenalty = baselineQualityIndex - currentQualityIndex;
         const presentFeatures = getPresentFeaturesSorted(wineBatch);
-        const hasTasteAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);
+        const hasQualityAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);
         const hasPriceAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.price !== undefined);
 
         // Calculate price impact using complete service layer functions (async)
@@ -72,10 +72,10 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
         }
 
         setFeatureDetails({
-          currentTasteIndex,
-          tasteIndexPenalty,
+          currentQualityIndex,
+          qualityIndexPenalty,
           presentFeatures,
-          hasTasteAffectingFeatures,
+          hasQualityAffectingFeatures,
           hasPriceAffectingFeatures,
           priceImpact
         });
@@ -90,3 +90,5 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
 
   return featureDetails;
 }
+
+

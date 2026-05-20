@@ -305,10 +305,12 @@ CREATE TABLE wine_batches (
     grape_variety text NOT NULL,
     quantity integer NOT NULL,
     fermentation_progress integer DEFAULT 0 CHECK (fermentation_progress >= 0 AND fermentation_progress <= 100),
-    grape_quality numeric DEFAULT 0.7 CHECK (grape_quality >= 0 AND grape_quality <= 1),
-    born_grape_quality numeric CHECK (born_grape_quality BETWEEN 0 AND 1),
-    balance numeric DEFAULT 0.6 CHECK (balance >= 0 AND balance <= 1),
-    born_balance numeric CHECK (born_balance BETWEEN 0 AND 1),
+    quality_index numeric DEFAULT 0.5 CHECK (quality_index >= 0 AND quality_index <= 1),
+    quality_index_harvest_snapshot numeric DEFAULT 0.5 CHECK (quality_index_harvest_snapshot >= 0 AND quality_index_harvest_snapshot <= 1),
+    land_value_modifier numeric DEFAULT 0 CHECK (land_value_modifier >= 0 AND land_value_modifier <= 1),
+    land_value_modifier_harvest_snapshot numeric DEFAULT 0 CHECK (land_value_modifier_harvest_snapshot >= 0 AND land_value_modifier_harvest_snapshot <= 1),
+    structure_index numeric DEFAULT 0 CHECK (structure_index >= 0 AND structure_index <= 1),
+    structure_index_harvest_snapshot numeric DEFAULT 0 CHECK (structure_index_harvest_snapshot >= 0 AND structure_index_harvest_snapshot <= 1),
     asking_price numeric,
     characteristics jsonb DEFAULT '{"body": 0.5, "aroma": 0.5, "spice": 0.5, "acidity": 0.5, "tannins": 0.5, "sweetness": 0.5}'::jsonb,
     breakdown jsonb DEFAULT '{}'::jsonb,
@@ -329,6 +331,11 @@ CREATE TABLE wine_batches (
     bottled_season text,
     bottled_year integer,
     features jsonb DEFAULT '[]'::jsonb,
+    wine_anchors jsonb DEFAULT '{}'::jsonb,
+    quality_index_bottling_snapshot numeric CHECK (quality_index_bottling_snapshot >= 0 AND quality_index_bottling_snapshot <= 1),
+    land_value_modifier_bottling_snapshot numeric CHECK (land_value_modifier_bottling_snapshot >= 0 AND land_value_modifier_bottling_snapshot <= 1),
+    structure_index_bottling_snapshot numeric CHECK (structure_index_bottling_snapshot >= 0 AND structure_index_bottling_snapshot <= 1),
+    wine_score_bottling_snapshot numeric CHECK (wine_score_bottling_snapshot >= 0 AND wine_score_bottling_snapshot <= 1),
     aging_progress integer DEFAULT 0,
     batch_number integer,
     batch_group_size integer,
@@ -337,7 +344,7 @@ CREATE TABLE wine_batches (
 );
 
 COMMENT ON COLUMN wine_batches.features IS 'JSONB array of wine features and faults (oxidation, green flavor, terroir, etc). Each feature has id, risk, isPresent, severity, name, type, and icon fields.';
-COMMENT ON COLUMN wine_batches.grape_quality IS 'Overall grape quality (0-1 scale)';
+COMMENT ON COLUMN wine_batches.quality_index IS 'Wine quality index placeholder (0-1 scale)';
 
 -- Wine orders table
 CREATE TABLE wine_orders (
@@ -547,9 +554,9 @@ CREATE TABLE wine_log (
     grape_variety text NOT NULL,
     vintage integer NOT NULL,
     quantity integer NOT NULL,
-    grape_quality numeric NOT NULL CHECK (grape_quality >= 0 AND grape_quality <= 1),
+    quality_index numeric NOT NULL CHECK (quality_index >= 0 AND quality_index <= 1),
     land_value_modifier numeric CHECK (land_value_modifier >= 0 AND land_value_modifier <= 1),
-    balance numeric NOT NULL CHECK (balance >= 0 AND balance <= 1),
+    structure_index numeric NOT NULL CHECK (structure_index >= 0 AND structure_index <= 1),
     wine_score numeric NOT NULL CHECK (wine_score >= 0 AND wine_score <= 1),
     characteristics jsonb DEFAULT '{"body": 0.5, "aroma": 0.5, "spice": 0.5, "acidity": 0.5, "tannins": 0.5, "sweetness": 0.5}'::jsonb,
     harvest_week integer NOT NULL,

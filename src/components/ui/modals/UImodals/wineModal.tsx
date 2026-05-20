@@ -15,7 +15,6 @@ import { LandValueModifierFactorsBreakdown } from '../../components/landValueMod
 import { StructureIndexBreakdown } from '../../components/StructureIndexBreakdown';
 import { FeatureDisplay } from '../../components/FeatureDisplay';
 import { WineCharacteristicsDisplay } from '../../components/characteristicBar';
-import { WineAnchorInfluenceCallout } from '../../components/WineAnchorInfluenceCallout';
 import { WineTasteProfilePanel } from '../../components/WineTasteProfilePanel';
 import { getWineAgeFromHarvest, getWineBatchDisplayName } from '@/lib/services';
 import { useWineBatchStructureIndex, useWinePriceCalculator } from '@/hooks';
@@ -29,7 +28,7 @@ interface WineModalProps extends DialogProps {
 /**
  * Unified Wine Modal
  * Comprehensive wine details in a tabbed interface
- * Replaces separate TasteIndexBreakdownModal, structure breakdown modal, and expand/collapse patterns
+ * Replaces separate QualityIndexBreakdownModal, structure breakdown modal, and expand/collapse patterns
  */
 export const WineModal: React.FC<WineModalProps> = ({ 
   isOpen, 
@@ -81,14 +80,14 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch || !estimatedPriceBreakdown) return null;
 
   const displayName = wineName || getWineBatchDisplayName(wineBatch);
-  const currentTasteIndex: number = wineBatch.tasteIndex;
+  const currentQualityIndex: number = estimatedPriceBreakdown.qualityIndex;
   const landValueModifier: number = wineBatch.landValueModifier;
-  const currentWineScore = (currentTasteIndex + currentStructureIndex) / 2;
+  const currentWineScore = estimatedPriceBreakdown.wineScore;
   const hasFeatureMultiplier = Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005;
   const hasCompanyPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.companyPrestigeMultiplier - 1) > 0.0005;
   const hasVineyardPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
-  const tasteCategory = getQualityCategory(currentTasteIndex);
-  const tasteColorClass = getColorClass(currentTasteIndex);
+  const qualityCategory = getQualityCategory(currentQualityIndex);
+  const qualityColorClass = getColorClass(currentQualityIndex);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
 
   return (
@@ -117,8 +116,8 @@ export const WineModal: React.FC<WineModalProps> = ({
               <Badge variant="outline" className="bg-white/90 text-gray-900">
                 {wineBatch.state.replace('_', ' ').toUpperCase()}
               </Badge>
-              <Badge variant="outline" className={`${tasteColorClass} bg-white/90`}>
-                {tasteCategory}
+              <Badge variant="outline" className={`${qualityColorClass} bg-white/90`}>
+                {qualityCategory}
               </Badge>
             </div>
           </div>
@@ -272,27 +271,27 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </div>
                       
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Taste Index:</span>
+                        <span className="text-muted-foreground">Quality Index:</span>
                         <UnifiedTooltip
                           content={
                             <div className={tooltipStyles.text}>
-                              <TooltipSection title="Taste Index Details">
+                              <TooltipSection title="Quality Index Details">
                                 <TooltipRow
-                                  label="Taste Index:"
-                                  value={formatNumber(currentTasteIndex, { decimals: 2, forceDecimals: true })}
-                                  valueRating={currentTasteIndex}
+                                  label="Quality Index:"
+                                  value={formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
+                                  valueRating={currentQualityIndex}
                                 />
                                 <TooltipRow
                                   label="Category:"
-                                  value={getQualityCategory(currentTasteIndex)}
+                                  value={getQualityCategory(currentQualityIndex)}
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600">
-                                  <div className="text-xs text-gray-300">{getQualityDescription(currentTasteIndex)}</div>
+                                  <div className="text-xs text-gray-300">{getQualityDescription(currentQualityIndex)}</div>
                                 </div>
                               </TooltipSection>
                             </div>
                           }
-                          title="Taste Index Details"
+                          title="Quality Index Details"
                           side="top"
                           sideOffset={8}
                           className="max-w-xs"
@@ -301,10 +300,10 @@ export const WineModal: React.FC<WineModalProps> = ({
                           triggerClassName="text-right cursor-help"
                         >
                           <div className="text-right cursor-help">
-                            <div className={`font-medium ${getColorClass(currentTasteIndex)}`}>
-                              {formatNumber(currentTasteIndex, { decimals: 2, forceDecimals: true })}
+                            <div className={`font-medium ${getColorClass(currentQualityIndex)}`}>
+                              {formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
                             </div>
-                            <div className="text-xs text-gray-500">{getQualityCategory(currentTasteIndex)}</div>
+                            <div className="text-xs text-gray-500">{getQualityCategory(currentQualityIndex)}</div>
                           </div>
                         </UnifiedTooltip>
                       </div>
@@ -487,7 +486,6 @@ export const WineModal: React.FC<WineModalProps> = ({
             {/* Structure tab */}
             <TabsContent value="structure" className="mt-4">
               <div className="space-y-4">
-                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="structure" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Computed flavor wheel and tasting notes are on the <span className="font-medium text-foreground">Taste</span>{' '}
                   tab; here you see structure channels and balance rules.
@@ -525,7 +523,6 @@ export const WineModal: React.FC<WineModalProps> = ({
             {/* Features Tab */}
             <TabsContent value="features" className="mt-4">
               <div className="space-y-4">
-                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="features" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   See how present features skew fault, lees, and aging flavors on the{' '}
                   <span className="font-medium text-foreground">Taste</span> tab wheel.
@@ -611,75 +608,16 @@ export const WineModal: React.FC<WineModalProps> = ({
               </div>
             </TabsContent>
 
-            {/* Taste tab — quality read and how profile connects; no duplicate characteristic grid */}
+            {/* Taste tab */}
             <TabsContent value="taste" className="mt-4">
               <div className="space-y-4">
-                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="taste" />
-
                 <WineTasteProfilePanel batch={wineBatch} />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-xs font-medium flex items-center gap-2">
-                        <Award className="h-4 w-4" /> Taste index
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Current</span>
-                        <div className="text-right">
-                          <div className={`text-2xl font-bold ${getColorClass(currentTasteIndex)}`}>
-                            {formatNumber(currentTasteIndex, { decimals: 2, forceDecimals: true })}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{getQualityCategory(currentTasteIndex)}</div>
-                        </div>
-                      </div>
-                      {typeof wineBatch.bornTasteIndex === 'number' &&
-                        Math.abs(wineBatch.bornTasteIndex - currentTasteIndex) > 0.004 && (
-                          <div className="flex justify-between text-xs border-t pt-2 text-muted-foreground">
-                            <span>At harvest snapshot</span>
-                            <span className="font-mono">
-                              {formatNumber(wineBatch.bornTasteIndex, { decimals: 2, forceDecimals: true })}
-                            </span>
-                          </div>
-                        )}
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Features, processing penalties, and land-value quality move this index. Your wine profile shapes how
-                        strongly those effects shift structure underneath—not the taste number itself.
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-xs font-medium flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4" /> Overall wine score
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="py-3 text-sm space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Taste + structure (÷2)</span>
-                        <div className="text-right">
-                          <div className={`text-2xl font-bold ${getColorClass(currentWineScore)}`}>
-                            {formatNumber(currentWineScore, { decimals: 2, forceDecimals: true })}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Structure uses the <span className="font-medium text-foreground">Structure</span> tab (channels +
-                        rules). Price also applies land value and feature multipliers on the Overview tab.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
               </div>
             </TabsContent>
 
             {/* Origins Tab */}
             <TabsContent value="origins" className="mt-4">
               <div className="space-y-4">
-                <WineAnchorInfluenceCallout wineBatch={wineBatch} context="origins" />
 
                 <Card>
                   <CardHeader className="py-3">
@@ -765,5 +703,4 @@ export const WineModal: React.FC<WineModalProps> = ({
 };
 
 export default WineModal;
-
 

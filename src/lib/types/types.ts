@@ -177,20 +177,10 @@ export type WineTasteDescriptorId = (typeof WINE_TASTE_DESCRIPTOR_IDS)[number];
 export type WineTasteDescriptorProfile = Record<WineTasteDescriptorId, number>;
 
 /** Aggregate taste readouts (computed, not persisted). */
-export interface WineTasteComputedMetrics {
-  intensity: number;
-  complexity: number;
-  harmony: number;
-  typicity: number;
-  layerBalance: number;
-  /** Doc-aligned composite from harmony, complexity, intensity, typicity (does not replace economy `batch.tasteIndex`). */
-  flavorQualityIndex: number;
-}
-
 export interface WineTasteProfileBundle {
   flavorFamilies: WineFlavorFamilyProfile;
   descriptors: WineTasteDescriptorProfile;
-  metrics: WineTasteComputedMetrics;
+  descriptorFamilies: Record<FlavorFamilyId, WineTasteDescriptorId[]>;
 }
 
 /**
@@ -199,60 +189,19 @@ export interface WineTasteProfileBundle {
  * feed back into anchor computation (see `computeHarvestWineAnchors`, `wineAnchorProcess`).
  */
 export interface WineAnchorValues {
-  // --- Juice & chemistry (must / wine body, not raw copies of a single characteristic) ---
-  /** Sweetness potential in the anchor space */
-  residualSugar: number;
-  /** Alcohol potential from ripeness, sun, body, region */
-  alcoholPotential: number;
-  /** Single acidity axis: tart/crisp (from grape acidity + site + ripeness — not duplicate pH + TA) */
-  juiceAcidity: number;
-  /** Tannin + color extract for reds; light structure for whites */
-  phenolicExtract: number;
-  /** Aromatic lift */
-  aromaticIntensity: number;
-  /** Body / glycerol / mouthfeel */
-  textureRichness: number;
-
-  // --- Process (winery steps) ---
-  leesContact: number;
-  /** Press / extraction at crush */
-  crushingExtraction: number;
-  /** Method + temperature as one profile (set at fermentation start) */
-  fermentationProfile: number;
-  /** Skin contact built up at crush, ferment start, and each fermenting week */
-  skinContactEvolution: number;
-
-  // --- Terroir (grape ↔ place fit) ---
-  regionalTypicity: number;
-  /** Suitability + mineral soil keywords blended in computation */
-  soilAffinity: number;
-  solarClimateFit: number;
-
-  // --- Vineyard (plot & microclimate) ---
-  /** Vine age curve + land/health (one intuitive “age of site” axis) */
-  vineAgeCharacter: number;
-  rowCompetition: number;
-  /** Understory / clearing / wild edge */
-  siteWildness: number;
-  siteAltitude: number;
-  /** Warm vs cool slope aspect */
-  aspectWarmth: number;
-  /** Wind, heat load, diurnal range — one field */
-  microclimateBlend: number;
-  vineyardHealth: number;
-  harvestTiming: number;
-
-  // --- Grape identity & cellar life ---
-  varietyCharacter: number;
-  colorIntensity: number;
-  /** Oxidative evolution: variety + health + faults + age */
-  oxidativeCharacter: number;
-  /** Oak + bottle evolution */
-  cellarEvolution: number;
-  /** How many features have “touched” the batch */
-  featureFootprint: number;
+  sugarPotential: number;
+  acidPotential: number;
+  phenolicPotential: number;
+  aromaticPotential: number;
+  bodyPotential: number;
+  extractionState: number;
+  fermentationState: number;
+  leesState: number;
+  oxidationPressure: number;
+  maturationState: number;
+  terroirExpression: number;
+  processFootprint: number;
 }
-
 export type WineAnchorId = keyof WineAnchorValues;
 
 // Wine batch state - unified system replacing separate stage/process
@@ -274,23 +223,23 @@ export interface WineBatch {
   state: WineBatchState;
   fermentationProgress?: number; // 0-100% for fermentation tracking
 
-  // Wine quality properties (0-1 scale)
-  // Lifecycle: born (harvest) -> current (evolving) -> bottled (snapshot)
-  bornLandValueModifier: number; // Static terroir/land index at harvest (immutable)
-  landValueModifier: number; // Current land-value modifier (static in normal flow)
-  bornTasteIndex: number; // Taste index at harvest (immutable baseline)
-  tasteIndex: number; // Current taste index (modified by features throughout lifecycle)
-  bornStructureIndex: number; // Original structure index at harvest (immutable)
-  structureIndex: number; // Current structure index (modified by features throughout lifecycle)
+  // Wine scoring properties (0-1 scale)
+  // Lifecycle: harvest snapshot -> current -> bottling snapshot
+  landValueModifierHarvestSnapshot: number; // Immutable site-value snapshot at harvest
+  structureIndexHarvestSnapshot: number; // Immutable structure snapshot at harvest
+  qualityIndexHarvestSnapshot: number; // Immutable quality snapshot at harvest
+  landValueModifier: number; // Current land-value modifier
+  structureIndex: number; // Current structure index
+  qualityIndex: number; // Current quality index (placeholder value for now)
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
 
   // Bottling snapshots (frozen values at bottling time for WineLog)
-  bottledTasteIndex?: number; // Taste index at bottling (snapshot for historical records)
-  bottledLandValueModifier?: number; // Land-value modifier at bottling (snapshot for historical records)
-  bottledStructureIndex?: number; // Structure index at bottling (snapshot for historical records)
-  bottledWineScore?: number; // Wine score at bottling (taste index + structure index) / 2
+  qualityIndexBottlingSnapshot?: number;
+  landValueModifierBottlingSnapshot?: number;
+  structureIndexBottlingSnapshot?: number;
+  wineScoreBottlingSnapshot?: number;
 
   // Breakdown data for UI tooltips (tracks all characteristic modifications)
   breakdown?: {
@@ -335,10 +284,10 @@ export interface WineLogEntry {
   grape: GrapeVariety;
   vintage: number; // Year the grapes were harvested
   quantity: number; // Bottles produced
-  tasteIndex: number; // Dynamic taste index (0-1)
+  qualityIndex: number; // Quality index snapshot (0-1)
   landValueModifier: number; // Static terroir/land index (0-1)
   structureIndex: number; // Structure index (0-1)
-  wineScore: number; // Overall wine score (taste index + structure index) / 2
+  wineScore: number; // Overall wine score
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle when bottled
   harvestDate: GameDate;
@@ -370,7 +319,7 @@ export interface Customer {
 
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
-  wineTradition: number; // Affects wine taste-index preferences and price premiums
+  wineTradition: number; // Affects wine quality-index preferences and price premiums
   marketShare: number; // Affects order size multipliers (0-1 scale)
 
   // Behavioral multipliers (calculated from characteristics)
@@ -945,7 +894,7 @@ export type AchievementConditionType =
   | 'total_vineyard_value'          // Check if combined vineyard value >= threshold
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
-  | 'wine_taste_index_threshold'        // Check if wine taste index >= threshold
+  | 'wine_quality_index_threshold'        // Check if wine quality index >= threshold
   | 'wine_structure_index_threshold' // Check if wine structure index >= threshold
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold
@@ -1120,5 +1069,4 @@ export interface GameState {
   loanPenaltyWork?: number; // NEW: Accumulated loan penalty work for bookkeeping
   pendingForcedLoanRestructure?: ForcedLoanRestructureOffer | null;
 }
-
 

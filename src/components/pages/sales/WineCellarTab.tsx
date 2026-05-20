@@ -11,7 +11,7 @@ import { saveWineBatch } from '@/lib/database/activities/inventoryDB';
 import { calculateAgingStatus, getFeatureDisplayData, calculateWeeklyRiskIncrease } from '@/lib/services';
 import { getCharacteristicEffectColorInfo } from '@/lib/utils/utils';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
-import { calculateEstimatedPriceBreakdown, getTasteIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateEstimatedPriceBreakdown, getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { Pencil, Save, RotateCcw } from 'lucide-react';
 
 const BatchBadge: React.FC<{ batch: WineBatch; className?: string }> = ({ batch, className = '' }) => {
@@ -37,10 +37,10 @@ const StructureAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
  const structureQuality = useStructureIndexQuality(structureResult);
  const structureColorClass = getColorClass(batch.structureIndex);
 
- const tasteIndex = getTasteIndex(batch);
- const qualityCategory = getQualityCategory(tasteIndex);
- const qualityColorClass = getColorClass(tasteIndex);
- const qualityPercentage = formatNumber(tasteIndex * 100, { smartDecimals: true });
+ const qualityIndex = getQualityIndex(batch);
+ const qualityCategory = getQualityCategory(qualityIndex);
+ const qualityColorClass = getColorClass(qualityIndex);
+ const qualityPercentage = formatNumber(qualityIndex * 100, { smartDecimals: true });
 
  return (
  <div className="text-xs text-gray-600 space-y-1">
@@ -48,7 +48,7 @@ const StructureAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
  <span className="font-medium">Structure:</span> <span className={`font-medium ${structureColorClass}`}>{formattedStructureIndex}</span> ({structureQuality})
  </div>
  <div>
- <span className="font-medium">Taste:</span> <span className={`font-medium ${qualityColorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+ <span className="font-medium">Quality:</span> <span className={`font-medium ${qualityColorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
  </div>
  </div>
  );
@@ -61,32 +61,32 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 
  if (!wineScoreData || !featureDetails) return null;
 
- const { currentTasteIndex, tasteIndexPenalty, presentFeatures, hasTasteAffectingFeatures } = featureDetails;
- const baselineTasteIndex = wine.bornTasteIndex;
+ const { currentQualityIndex, qualityIndexPenalty, presentFeatures, hasQualityAffectingFeatures } = featureDetails;
+ const baselineQualityIndex = wine.qualityIndexHarvestSnapshot;
 
  return (
  <UnifiedTooltip
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Wine Score Calculation</div>
- <div>Base Taste Index: <span className="font-medium">{formatPercent(baselineTasteIndex, 1, true)}</span></div>
- {hasTasteAffectingFeatures && tasteIndexPenalty > 0.001 && (
+ <div>Base Quality Index: <span className="font-medium">{formatPercent(baselineQualityIndex, 1, true)}</span></div>
+ {hasQualityAffectingFeatures && qualityIndexPenalty > 0.001 && (
  <>
  <div className="text-red-600">
- Feature Penalty: <span className="font-medium">-{formatPercent(tasteIndexPenalty, 1, true)}</span>
+ Feature Penalty: <span className="font-medium">-{formatPercent(qualityIndexPenalty, 1, true)}</span>
  </div>
  <div className="ml-2 text-xs text-gray-600">
  {presentFeatures.map((f: any, idx: number) => (
  <div key={idx}> {f.feature.icon} {f.config.name}</div>
  ))}
  </div>
- <div>Current Taste Index: <span className="font-medium">{formatPercent(currentTasteIndex, 1, true)}</span></div>
+ <div>Current Quality Index: <span className="font-medium">{formatPercent(currentQualityIndex, 1, true)}</span></div>
  </>
  )}
  <div>Structure: <span className="font-medium">{formatPercent(wine.structureIndex, 1, true)}</span></div>
  <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
  <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
- Formula: (Taste Index + Structure Index) / 2
+ Formula: (Quality Index + Structure Index) / 2
  </div>
  </div>
  }
@@ -134,7 +134,7 @@ const EstimatedPriceDisplay: React.FC<{
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Estimated Price Calculation</div>
- <div>Taste Index: <span className="font-medium">{formatPercent(breakdown.tasteIndex, 1, true)}</span></div>
+ <div>Quality Index: <span className="font-medium">{formatPercent(breakdown.qualityIndex, 1, true)}</span></div>
  <div>Structure: <span className="font-medium">{formatPercent(breakdown.structureIndex, 1, true)}</span></div>
  <div>Wine Score: <span className="font-medium">{wineScoreData.formattedScore}</span></div>
  {hasPriceAffectingFeatures && hasMaterialPriceDelta && (
@@ -518,7 +518,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  key: 'wineScore' as any,
  label: 'Score',
  sortable: true,
- accessor: (wine) => (wine.tasteIndex + wine.structureIndex) / 2
+ accessor: (wine) => (getQualityIndex(wine) + wine.structureIndex) / 2
  },
  { key: 'estimatedPrice' as any, label: 'Price', sortable: true },
  { key: 'quantity', label: 'Bottles', sortable: true },
@@ -1207,6 +1207,9 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 };
 
 export default WineCellarTab;
+
+
+
 
 
 

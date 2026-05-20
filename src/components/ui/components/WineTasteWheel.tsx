@@ -1,5 +1,11 @@
-import { FLAVOR_FAMILY_IDS, type WineFlavorFamilyProfile } from '@/lib/types/types';
-import { FLAVOR_FAMILY_WHEEL_LABELS } from '@/lib/constants/taste/flavorFamilyLabels';
+import {
+  FLAVOR_FAMILY_IDS,
+  type FlavorFamilyId,
+  type WineFlavorFamilyProfile,
+  type WineTasteDescriptorId,
+  type WineTasteDescriptorProfile
+} from '@/lib/types/types';
+import { FLAVOR_FAMILY_WHEEL_LABELS, TASTE_DESCRIPTOR_LABELS } from '@/lib/constants/taste/flavorFamilyLabels';
 import { cn } from '@/lib/utils/utils';
 
 const CX = 140;
@@ -12,9 +18,13 @@ const R_LABEL = 112;
  */
 export function WineTasteWheel({
   profile,
+  descriptorFamilies,
+  descriptors,
   className
 }: {
   profile: WineFlavorFamilyProfile;
+  descriptorFamilies?: Record<FlavorFamilyId, WineTasteDescriptorId[]>;
+  descriptors?: WineTasteDescriptorProfile;
   className?: string;
 }) {
   const n = FLAVOR_FAMILY_IDS.length;
@@ -28,7 +38,15 @@ export function WineTasteWheel({
       y2: CY + R_MAX * Math.sin(angle),
       lx: CX + R_LABEL * Math.cos(angle),
       ly: CY + R_LABEL * Math.sin(angle),
-      label: FLAVOR_FAMILY_WHEEL_LABELS[id]
+      label: FLAVOR_FAMILY_WHEEL_LABELS[id],
+      topDescriptor: (() => {
+        if (!descriptorFamilies || !descriptors) return '';
+        const familyDescriptors = descriptorFamilies[id] || [];
+        if (familyDescriptors.length === 0) return '';
+        const top = [...familyDescriptors]
+          .sort((a, b) => (descriptors[b] ?? 0) - (descriptors[a] ?? 0))[0];
+        return top ? TASTE_DESCRIPTOR_LABELS[top] : '';
+      })()
     };
   });
 
@@ -101,7 +119,12 @@ export function WineTasteWheel({
               dominantBaseline="middle"
               className="fill-muted-foreground text-[8.5px] font-medium"
             >
-              {s.label}
+              <tspan x={s.lx} dy="0">{s.label}</tspan>
+              {s.topDescriptor ? (
+                <tspan x={s.lx} dy="8" className="text-[7px] opacity-75">
+                  {s.topDescriptor}
+                </tspan>
+              ) : null}
             </text>
           );
         })}

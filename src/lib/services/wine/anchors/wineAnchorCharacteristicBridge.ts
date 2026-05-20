@@ -1,22 +1,15 @@
 /**
- * Links **wine anchors** to **structure channels** (`WineCharacteristics`):
- * - Scales harvest / crush / ferment / feature **deltas** (boosts use per-channel capacity; penalties use site “forgiveness”).
- * - Biases **structure index** base ranges so ideals shift slightly with wine potential (typicity/health widen tolerance).
+ * Links compact wine anchors to structure channels.
  */
 import { WineAnchorValues, WineCharacteristics } from '@/lib/types/types';
 import { clamp01 } from '@/lib/utils/utils';
 import { weightedMean } from '@/lib/services/wine/anchors/wineAnchorService';
 
-/** Max deviation from 1.0 for positive deltas when anchor capacity runs 0 → 1. */
 const ANCHOR_MODIFIER_STRENGTH = 0.52;
 const SCALE_MIN = 0.66;
 const SCALE_MAX = 1.34;
-
-/** Shifts ideal band midpoint as fraction of base width. */
 const RANGE_SHIFT_STRENGTH = 0.25;
-/** Widens/narrows all bands from typicity + health (forgiveness). */
 const RANGE_WIDTH_BLEND = 0.22;
-
 const PENALTY_SOFT_MIN = 0.76;
 const PENALTY_SOFT_MAX = 1.1;
 
@@ -24,9 +17,6 @@ function clampScale(n: number): number {
   return Math.max(SCALE_MIN, Math.min(SCALE_MAX, n));
 }
 
-/**
- * 0–1 “capacity” per structure channel from blended anchors (mid = neutral).
- */
 export function characteristicAnchorCapacity(
   anchors: WineAnchorValues,
   characteristic: keyof WineCharacteristics
@@ -36,48 +26,48 @@ export function characteristicAnchorCapacity(
     case 'acidity':
       return clamp01(
         weightedMean([
-          { value: a.juiceAcidity, weight: 0.55 },
-          { value: a.microclimateBlend, weight: 0.25 },
-          { value: 1 - a.harvestTiming, weight: 0.2 }
+          { value: a.acidPotential, weight: 0.62 },
+          { value: a.terroirExpression, weight: 0.28 },
+          { value: 1 - a.oxidationPressure, weight: 0.1 }
         ])
       );
     case 'aroma':
       return clamp01(
         weightedMean([
-          { value: a.aromaticIntensity, weight: 0.5 },
-          { value: a.varietyCharacter, weight: 0.35 },
-          { value: a.vineyardHealth, weight: 0.15 }
+          { value: a.aromaticPotential, weight: 0.52 },
+          { value: a.terroirExpression, weight: 0.28 },
+          { value: a.fermentationState, weight: 0.2 }
         ])
       );
     case 'body':
       return clamp01(
         weightedMean([
-          { value: a.textureRichness, weight: 0.4 },
-          { value: a.alcoholPotential, weight: 0.35 },
-          { value: a.residualSugar, weight: 0.25 }
+          { value: a.bodyPotential, weight: 0.5 },
+          { value: a.sugarPotential, weight: 0.24 },
+          { value: a.phenolicPotential, weight: 0.26 }
         ])
       );
     case 'sweetness':
       return clamp01(
         weightedMean([
-          { value: a.residualSugar, weight: 0.6 },
-          { value: a.harvestTiming, weight: 0.4 }
+          { value: a.sugarPotential, weight: 0.78 },
+          { value: a.maturationState, weight: 0.22 }
         ])
       );
     case 'tannins':
       return clamp01(
         weightedMean([
-          { value: a.phenolicExtract, weight: 0.45 },
-          { value: a.skinContactEvolution, weight: 0.35 },
-          { value: a.crushingExtraction, weight: 0.2 }
+          { value: a.phenolicPotential, weight: 0.58 },
+          { value: a.extractionState, weight: 0.28 },
+          { value: a.fermentationState, weight: 0.14 }
         ])
       );
     case 'spice':
       return clamp01(
         weightedMean([
-          { value: a.varietyCharacter, weight: 0.4 },
-          { value: a.fermentationProfile, weight: 0.35 },
-          { value: a.leesContact, weight: 0.25 }
+          { value: a.fermentationState, weight: 0.42 },
+          { value: a.maturationState, weight: 0.38 },
+          { value: a.processFootprint, weight: 0.2 }
         ])
       );
     default:
@@ -85,7 +75,6 @@ export function characteristicAnchorCapacity(
   }
 }
 
-/** Multiplier for **positive** characteristic deltas (mid anchor → 1.0). */
 export function anchorModifierScaleForCharacteristic(
   anchors: WineAnchorValues,
   characteristic: keyof WineCharacteristics
@@ -94,23 +83,17 @@ export function anchorModifierScaleForCharacteristic(
   return clampScale(1 + (capacity - 0.5) * ANCHOR_MODIFIER_STRENGTH);
 }
 
-/**
- * Softens **negative** deltas when site typicity/health/microclimate are strong (limits harsh penalties).
- */
 export function anchorPenaltyScale(anchors: WineAnchorValues): number {
   const site = clamp01(
     weightedMean([
-      { value: anchors.vineyardHealth, weight: 0.45 },
-      { value: anchors.regionalTypicity, weight: 0.35 },
-      { value: anchors.microclimateBlend, weight: 0.2 }
+      { value: anchors.terroirExpression, weight: 0.65 },
+      { value: 1 - anchors.oxidationPressure, weight: 0.2 },
+      { value: anchors.acidPotential, weight: 0.15 }
     ])
   );
   return PENALTY_SOFT_MIN + (PENALTY_SOFT_MAX - PENALTY_SOFT_MIN) * (1 - site);
 }
 
-/**
- * Apply anchor shaping to a single modifier (used by features and shared effect lists).
- */
 export function scaleCharacteristicModifierByAnchors(
   anchors: WineAnchorValues,
   characteristic: keyof WineCharacteristics,
@@ -131,18 +114,16 @@ const STRUCTURE_KEYS: (keyof WineCharacteristics)[] = [
   'tannins'
 ];
 
-/**
- * Anchor-biased ideal bands for structure scoring: midpoint follows channel capacity; width follows site forgiveness.
- */
 export function getAnchorAdjustedStructureRanges(
   baseRanges: Record<keyof WineCharacteristics, readonly [number, number]>,
   anchors: WineAnchorValues
 ): Record<keyof WineCharacteristics, [number, number]> {
   const forgiveness = clamp01(
     weightedMean([
-      { value: anchors.regionalTypicity, weight: 0.4 },
-      { value: anchors.vineyardHealth, weight: 0.35 },
-      { value: anchors.varietyCharacter, weight: 0.25 }
+      { value: anchors.terroirExpression, weight: 0.55 },
+      { value: anchors.aromaticPotential, weight: 0.2 },
+      { value: anchors.bodyPotential, weight: 0.15 },
+      { value: 1 - anchors.oxidationPressure, weight: 0.1 }
     ])
   );
   const widthFactor = 1 + (forgiveness - 0.5) * RANGE_WIDTH_BLEND;

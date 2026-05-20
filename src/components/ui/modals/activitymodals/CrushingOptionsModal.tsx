@@ -13,7 +13,7 @@ import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { getAllFeatureConfigs, getFeatureConfig } from '@/lib/constants/wineFeatures/commonFeaturesUtil';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
-import { calculateYieldMultiplier, calculatePressingQualityPenalty, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
+import { calculateYieldMultiplier, getPressingIntensityCharacteristicEffects } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 
 /**
  * Crushing Options Modal
@@ -375,20 +375,20 @@ MAX PRESSURE BY METHOD:
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-blue-700">Current Quality:</span>
-                  <span className={`font-mono ${getColorClass(batch?.tasteIndex || 0)}`}>
-                    {formatNumber((batch?.tasteIndex || 0) * 100, { smartDecimals: true })}%
+                  <span className={`font-mono ${getColorClass(0.5)}`}>
+                    {formatNumber(0.5 * 100, { smartDecimals: true })}%
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">Pressure Impact:</span>
-                  <span className={`font-mono ${calculatePressingQualityPenalty(options.pressingIntensity) < 0 ? 'text-red-600' : 'text-blue-900'}`}>
-                    {formatNumber(calculatePressingQualityPenalty(options.pressingIntensity) * 100, { smartDecimals: true })}%
+                  <span className="font-mono text-gray-500">
+                    Disabled
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-blue-300 pt-1">
                   <span className="text-blue-800 font-medium">After Crushing:</span>
-                  <span className={`font-mono font-medium ${getColorClass(Math.max(0, Math.min(1, (batch?.tasteIndex || 0) + calculatePressingQualityPenalty(options.pressingIntensity))))}`}>
-                    {formatNumber(Math.max(0, Math.min(1, (batch?.tasteIndex || 0) + calculatePressingQualityPenalty(options.pressingIntensity))) * 100, { smartDecimals: true })}%
+                  <span className={`font-mono font-medium ${getColorClass(0.5)}`}>
+                    {formatNumber(0.5 * 100, { smartDecimals: true })}%
                   </span>
                 </div>
               </div>
@@ -528,4 +528,5 @@ MAX PRESSURE BY METHOD:
 };
 
 export default CrushingOptionsModal;
+
 

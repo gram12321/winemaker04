@@ -18,7 +18,7 @@ export interface WineLogData {
   grape_variety: string;
   vintage: number;
   quantity: number;
-  grape_quality: number;
+  quality_index: number;
   land_value_modifier?: number;
   structure_index: number;
   wine_score: number;
@@ -49,9 +49,9 @@ function mapWineLogFromDB(row: any): WineLogEntry {
     grape: row.grape_variety as GrapeVariety,
     vintage: row.vintage,
     quantity: row.quantity,
-    tasteIndex: row.grape_quality,
+    qualityIndex: row.quality_index,
     landValueModifier: row.land_value_modifier ?? 0,
-    structureIndex: row.structure_index ?? row.balance,
+    structureIndex: row.structure_index ?? 0,
     wineScore: row.wine_score,
     characteristics: row.characteristics,
     estimatedPrice: row.estimated_price,
@@ -140,4 +140,5 @@ export const getWineProductionSummary = async (): Promise<{
     return { totalWinesProduced: 0, totalBottlesProduced: 0 };
   }
 };
+
 

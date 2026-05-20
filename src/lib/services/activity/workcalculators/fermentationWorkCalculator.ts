@@ -170,7 +170,7 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       features: batchWithEventFeatures.features,
       characteristics: batchWithEventFeatures.characteristics,
       breakdown: batchWithEventFeatures.breakdown,
-      tasteIndex: batchWithEventFeatures.tasteIndex,
+      qualityIndex: 0.5,
       structureIndex: structureIndexResult.score,
       wineAnchors
     });
@@ -188,3 +188,4 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
     console.error('Error completing fermentation setup activity:', error);
   }
 }
+

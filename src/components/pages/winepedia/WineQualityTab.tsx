@@ -48,7 +48,7 @@ export function WineQualityTab() {
 
       <SimpleCard
         title="Quality Factors"
-        description="What influences land value modifier and taste index in your winery"
+        description="What influences land value modifier and quality index in your winery"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -62,7 +62,7 @@ export function WineQualityTab() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-800 mb-3">Taste Index (Dynamic)</h4>
+              <h4 className="font-semibold text-gray-800 mb-3">Quality Index (Dynamic)</h4>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li>- Harvest-derived baseline characteristics</li>
                 <li>- Fermentation and cellar feature effects</li>
@@ -76,4 +76,5 @@ export function WineQualityTab() {
     </div>
   );
 }
+
 

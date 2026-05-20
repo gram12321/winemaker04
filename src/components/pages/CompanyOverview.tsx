@@ -33,7 +33,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
     highest_vintage_quantity: { position: 0, total: 0 },
     most_productive_vineyard: { position: 0, total: 0 },
     highest_wine_score: { position: 0, total: 0 },
-    highest_taste_index: { position: 0, total: 0 },
+    highest_quality_index: { position: 0, total: 0 },
     highest_structure_index: { position: 0, total: 0 },
     highest_price: { position: 0, total: 0 },
     lowest_price: { position: 0, total: 0 }
@@ -163,7 +163,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
 
   const getScoreColorClass = useCallback((scoreType: ScoreType, scoreValue: number): string => {
     // For wine quality metrics (0-1 range), use direct color mapping
-    if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index' || scoreType === 'highest_structure_index') {
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_quality_index' || scoreType === 'highest_structure_index') {
       return getColorClass(scoreValue);
     }
     // For other metrics, return neutral color (can be enhanced later with relative comparisons)
@@ -171,7 +171,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   }, []);
 
   const getScoreCategory = useCallback((scoreType: ScoreType, scoreValue: number): string | null => {
-    if (scoreType === 'highest_wine_score' || scoreType === 'highest_taste_index') {
+    if (scoreType === 'highest_wine_score' || scoreType === 'highest_quality_index') {
       return getQualityCategory(scoreValue);
     }
     if (scoreType === 'highest_structure_index') {
@@ -193,8 +193,8 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
         return 'Vineyard Production';
       case 'highest_wine_score':
         return 'Wine Score';
-      case 'highest_taste_index':
-        return 'Taste Index';
+      case 'highest_quality_index':
+        return 'Quality Index';
       case 'highest_structure_index':
         return 'Structure';
       case 'highest_price':
@@ -218,7 +218,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
         return '🍇';
       case 'highest_wine_score':
         return '🏆';
-      case 'highest_taste_index':
+      case 'highest_quality_index':
         return '⭐';
       case 'highest_structure_index':
         return '⚖️';
@@ -236,7 +236,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
   ), []);
 
   const secondTabGroup = useMemo(() => (
-    ['highest_wine_score', 'highest_taste_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as ScoreType[]
+    ['highest_wine_score', 'highest_quality_index', 'highest_structure_index', 'highest_price', 'lowest_price'] as ScoreType[]
   ), []);
 
   const allGroups = useMemo(() => ([...firstTabGroup, ...secondTabGroup]), [firstTabGroup, secondTabGroup]);

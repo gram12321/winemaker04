@@ -1,6 +1,5 @@
 import type {
   FlavorFamilyId,
-  WineTasteComputedMetrics,
   WineTasteDescriptorId
 } from '@/lib/types/types';
 
@@ -66,13 +65,4 @@ export const FLAVOR_FAMILY_WHEEL_LABELS: Record<FlavorFamilyId, string> = {
   oakAging: 'Oak',
   generalAging: 'Bottle',
   faults: 'Faults'
-};
-
-export const METRIC_LABELS: Record<keyof WineTasteComputedMetrics, string> = {
-  intensity: 'Flavor intensity',
-  complexity: 'Complexity',
-  harmony: 'Flavor harmony',
-  typicity: 'Typicity vs site',
-  layerBalance: 'Primary / sec. / tert. balance',
-  flavorQualityIndex: 'Flavor quality (model)'
 };

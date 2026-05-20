@@ -6,7 +6,7 @@ import { getFeatureImpacts } from '@/lib/services/wine/features/featureService';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { FactorCard } from '@/components/ui';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '@/components/ui/shadCN/tooltip';
-import { formatNumber, formatPercent, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
+import { formatNumber, ChevronDownIcon, ChevronRightIcon } from '@/lib/utils';
 import { getQualityCategory, getColorCategory, getColorClass } from '@/lib/utils/utils';
 import { getVineyardPrestigeBreakdown, getRegionalPriceRange } from '@/lib/services';
 import { getEventDisplayData, BoundedVineyardPrestigeFactor } from '@/lib/services';
@@ -70,7 +70,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
 
   // Get land-value modifier factors with error handling
   let factors: any, rawValues: any, landValueModifierScore: number, landValueCategory: string;
-  const baseQualityFromBatch = wineBatch?.bornTasteIndex;
+  const baseQualityFromBatch = wineBatch?.qualityIndexHarvestSnapshot;
   
   try {
     const landValueModifierData = getLandValueModifierFactors();
@@ -672,92 +672,36 @@ interface FeatureImpactsSectionProps {
   wineBatch: WineBatch;
   baseQuality?: number;
 }
-
 function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSectionProps) {
-  const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
-  const featureImpacts = getFeatureImpacts(wineBatch).filter(
-    (impact) => Math.abs(impact.qualityImpact) >= 0.001
-  );
-  
-  const currentTasteIndex = wineBatch.tasteIndex;
-  const totalFeatureImpact = featureImpacts.reduce((sum, impact) => sum + impact.qualityImpact, 0);
-  const derivedBaseline = clamp01(currentTasteIndex - totalFeatureImpact);
-  
-  const providedBaseline = baseQuality ?? wineBatch.bornTasteIndex ?? derivedBaseline;
-  const shouldFallbackToDerived = 
-    Math.abs(currentTasteIndex - providedBaseline) < 0.0005 &&
-    Math.abs(totalFeatureImpact) >= 0.0005;
-  
-  const baselineQuality = clamp01(shouldFallbackToDerived ? derivedBaseline : providedBaseline);
-  const qualityDifference = currentTasteIndex - baselineQuality;
-  
-  if (featureImpacts.length === 0) {
-    return (
-      <div className="p-3 bg-white rounded border border-gray-300">
-        <div className="text-sm">
-          <div className="flex justify-between mb-1">
-            <span className="font-medium">Feature Impacts:</span>
-            <span className="text-gray-500">None</span>
-          </div>
-          <div className="text-xs text-gray-500">No wine features currently affecting taste index</div>
-        </div>
-      </div>
-    );
-  }
-  
+  const featureImpacts = getFeatureImpacts(wineBatch).filter((impact) => Math.abs(impact.qualityImpact) >= 0.001);
+  void baseQuality;
+  const currentQualityIndex = 0.5;
   return (
-    <div className="p-3 bg-white rounded border border-purple-300">
+    <div className="p-3 bg-white rounded border border-gray-300">
       <div className="text-sm space-y-3">
         <div className="flex justify-between">
           <span className="font-medium">Feature Impacts:</span>
-          <span
-            className={`font-mono ${
-              qualityDifference !== 0
-                ? qualityDifference > 0
-                  ? 'text-green-600'
-                  : 'text-red-600'
-                : 'text-gray-500'
-            }`}
-          >
-            {qualityDifference !== 0
-              ? `${qualityDifference > 0 ? '+' : ''}${formatPercent(Math.abs(qualityDifference))}`
-              : 'No impact'}
-          </span>
+          <span className="text-gray-500">Disabled</span>
         </div>
-        
         <div className="flex justify-between text-lg font-bold">
-          <span>Final Taste Index:</span>
-          <span className={`font-mono ${getColorClass(currentTasteIndex)}`}>
-            {formatNumber(currentTasteIndex, { decimals: 2, forceDecimals: true })}
+          <span>Quality Index (placeholder):</span>
+          <span className="font-mono">
+            {formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
             <span className="text-sm font-normal ml-2">
-              ({getQualityCategory(currentTasteIndex)})
+              ({getQualityCategory(currentQualityIndex)})
             </span>
           </span>
         </div>
-        
-        <div className="space-y-2">
-          {featureImpacts.map((impact) => {
-            const isPositive = impact.qualityImpact >= 0;
-            const impactText = `${isPositive ? '+' : ''}${formatPercent(
-              Math.abs(impact.qualityImpact)
-            )}`;
-            const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
-            
-            return (
-              <div key={impact.featureId} className="flex justify-between text-xs">
-                <span className="flex items-center gap-1">
-                  <span>{impact.icon}</span>
-                  <span>{impact.featureName}:</span>
-                </span>
-                <span className={`${colorClass} font-mono`}>{impactText}</span>
-              </div>
-            );
-          })}
+        <div className="space-y-2 text-xs text-gray-500">
+          <div>Quality index is decoupled from taste and feature effects in this phase.</div>
+          <div>Current placeholder value is fixed at 0.50.</div>
+          {featureImpacts.length > 0 && (
+            <div className="text-[11px] text-gray-400">
+              {featureImpacts.length} feature(s) still affect structure, flavor families, and price.
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-
-

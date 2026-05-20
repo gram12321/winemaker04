@@ -366,7 +366,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
 
 /**
  * Apply feature effects directly to wine batches (safety net)
- * Updates taste index and structure index based on present features
+ * Updates quality index and structure index based on present features
  * Note: processWeeklyFeatureRisks now applies effects atomically when features change
  * This function acts as a safety net to catch any batches that weren't updated
  * Skips sold-out bottled wines (quantity === 0) as they should not continue developing
@@ -391,7 +391,7 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
     .filter((updatedBatch, index) => {
       const originalBatch = activeBatches[index];
       // Characteristic tweaks flow through structure/taste; anchors have their own column — no separate key walk.
-      return updatedBatch.tasteIndex !== originalBatch.tasteIndex ||
+      return updatedBatch.qualityIndex !== originalBatch.qualityIndex ||
         updatedBatch.structureIndex !== originalBatch.structureIndex ||
         WINE_ANCHOR_KEYS.some(
           (k) => updatedBatch.wineAnchors[k] !== originalBatch.wineAnchors[k]
@@ -400,7 +400,7 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
     .map(updatedBatch => ({
       id: updatedBatch.id,
       updates: {
-        tasteIndex: updatedBatch.tasteIndex,
+        qualityIndex: updatedBatch.qualityIndex,
         structureIndex: updatedBatch.structureIndex,
         characteristics: updatedBatch.characteristics,
         breakdown: updatedBatch.breakdown,
@@ -476,4 +476,6 @@ async function submitWeeklyHighscores(): Promise<void> {
     console.error('Failed to submit weekly highscores:', error);
   }
 }
+
+
 

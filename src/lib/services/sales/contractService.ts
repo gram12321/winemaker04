@@ -11,7 +11,6 @@ import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpd
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
-import { getTasteIndex } from '../wine/winescore/wineScoreCalculation';
 
 // ===== CONTRACT VALIDATION =====
 
@@ -49,8 +48,8 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
   
   switch (requirement.type) {
     case 'quality':
-      // "Quality" contract requirement now targets dynamic taste index (0-1 scale)
-      const quality = getTasteIndex(wine);
+      // Interim quality signal: use site-driven land value modifier until a richer quality model is introduced.
+      const quality = wine.landValueModifier;
       if (quality < requirement.value) {
         return {
           isValid: false,
@@ -543,3 +542,4 @@ function isDateAfter(date1: GameDate, date2: GameDate): boolean {
   
   return date1.week > date2.week;
 }
+
