@@ -3,7 +3,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
 import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
-import { Button, CrushingOptionsModal, WineModal } from '../ui';
+import { Button, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
@@ -132,6 +132,7 @@ const Winery: React.FC = () => {
     crushing: null as WineBatch | null,
     fermentation: null as WineBatch | null,
     wine: null as WineBatch | null,
+    sellGrapes: null as WineBatch | null,
   });
 
   // Generic modal handlers
@@ -252,9 +253,14 @@ const Winery: React.FC = () => {
                       </Button>
 
                       {isActionAvailable(batch, 'crush') && (
-                        <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
-                          Crush Grapes
-                        </Button>
+                        <>
+                          <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
+                            Crush Grapes
+                          </Button>
+                          <Button onClick={() => openModal('sellGrapes', batch.id)} size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
+                            Sell Grapes
+                          </Button>
+                        </>
                       )}
                       
                       {isFermentationActionAvailable(batch, 'ferment') && (
@@ -368,6 +374,12 @@ const Winery: React.FC = () => {
         onClose={() => closeModal('wine')}
         wineBatch={modals.wine}
         wineName={modals.wine ? getWineBatchDisplayName(modals.wine) : 'Wine'}
+      />
+
+      <SellGrapesModal
+        isOpen={!!modals.sellGrapes}
+        onClose={() => closeModal('sellGrapes')}
+        batch={modals.sellGrapes}
       />
     </div>
   );

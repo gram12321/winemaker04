@@ -712,7 +712,7 @@ export interface Activity {
   completedWork: number;
   targetId?: string; // vineyard ID, building ID, etc.
   params: Record<string, any>; // grape variety, density, etc.
-  status: 'active' | 'cancelled';
+  status: 'active' | 'paused' | 'cancelled';
   gameWeek: number;
   gameSeason: string;
   gameYear: number;

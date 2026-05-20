@@ -140,7 +140,10 @@ export const WineModal: React.FC<WineModalProps> = ({
               </div>
               <div className="text-white/80 text-xs flex items-center gap-2">
                 <Calendar className="h-3 w-3" />
-                {wineBatch.harvestStartDate.year} Vintage • {weeksSinceHarvest} weeks old
+                {wineBatch.harvestStartDate.year} Vintage • {weeksSinceHarvest} weeks since harvest
+                {wineBatch.state === 'bottled' && wineBatch.agingProgress != null && wineBatch.agingProgress > 0 && (
+                  <> • {wineBatch.agingProgress} weeks in bottle</>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -212,9 +215,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                         <span className="font-medium capitalize">{wineBatch.state.replace('_', ' ')}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Age:</span>
-                        <span className="font-medium">{weeksSinceHarvest} weeks</span>
+                        <span className="text-muted-foreground">Vintage age:</span>
+                        <span className="font-medium">{weeksSinceHarvest} weeks (since harvest)</span>
                       </div>
+                      {wineBatch.state === 'bottled' && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Bottle age:</span>
+                          <span className="font-medium">{wineBatch.agingProgress ?? 0} weeks (in bottle)</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -528,7 +537,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Age:</span>
+                      <span className="text-muted-foreground">Vintage age:</span>
                       <span className="font-medium">{weeksSinceHarvest} weeks</span>
                     </div>
                   </CardContent>

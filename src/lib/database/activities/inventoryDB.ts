@@ -299,3 +299,20 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
   }
 };
 
+export const deleteWineBatch = async (batchId: string): Promise<boolean> => {
+  try {
+    const companyId = getCurrentCompanyId();
+    const { error } = await supabase
+      .from(WINE_BATCHES_TABLE)
+      .delete()
+      .eq('id', batchId)
+      .eq('company_id', companyId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting wine batch:', error);
+    return false;
+  }
+};
+

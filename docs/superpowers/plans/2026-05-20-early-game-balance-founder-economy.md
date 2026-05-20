@@ -187,7 +187,46 @@ Germany could start with Johann as permanent + 2 seasonal harvest workers. This 
 
 ---
 
-## 5. Design Synthesis: Recommended Direction
+## 5. Architecture Decisions (Pre-Implementation Feedback)
+
+### The Existing Feature Pattern
+The `loanLender` feature establishes the injection model. Each optional/overlay feature follows:
+```
+src/lib/features/<featureName>/
+  featureTypes.ts   ← interface hooks
+  noop.ts           ← stub (feature disabled)
+  active.tsx        ← live implementation + UI wiring
+  index.ts          ← registry: configure*Feature() + get*Feature()
+```
+The base service calls `getFounderEconomyFeature().ticks.processFounderDistributions(companyId)` — one line added, nothing structurally changed.
+
+### Feature Bucketing
+| Feature | Where it lives | Pattern |
+|---------|---------------|---------|
+| **Sell Grapes** | `src/lib/features/sellGrapes/` OR `src/lib/services/sales/sellGrapesService.ts` | Full standalone feature — no StarterCondition prefix |
+| **Founder Profit-Share** | `src/lib/features/founderEconomy/` | StarterConditionXFeature — injects into `wageService` |
+| **Country Archetypes** | `src/lib/features/countryArchetype/` | StarterConditionXFeature — per-country modifier registry |
+| **Story Staff Reveals** | `src/lib/features/storyEvents/` | Event service; hooks into achievement/season-advance |
+| **Starting Advisor** | Extend company creation component | Use existing `WarningModal` (severity: 'warning', custom actions) |
+
+### Story Events Architecture
+- Winemaker04 has NO existing tutorial system (only `notificationService` + `WarningModal`)
+- Build a lean `storyEventService` with `StoryEvent { id, trigger, character, text, choices? }`
+- Triggers map to existing hooks: first_harvest → `harvestWorkCalculator`, year advance → season tick, achievement → `achievementService.unlockAchievement`
+- `StoryEventDialog.tsx` = enriched `WarningModal` with character name/portrait slot
+- Keep events isolated — Simulus01's chained tutorial limitation is a known hazard
+
+### What NOT to Do
+- Don't give all countries a loan — kills variety
+- Don't lower `BASE_WEEKLY_WAGE` globally without understanding late-game impact
+- Don't port full Simulus01 tutorial system — overkill; build lean event service
+
+### DB: Founder Equity
+Separate `founder_equity` table `(staff_id, company_id, share_percent, converted_at)` — cleaner than polluting staff table with a lifecycle concept.
+
+---
+
+## 6. Design Synthesis: Recommended Direction
 
 **Core principle:** Make each country's early economic model feel *thematically different*, not just numerically patched.
 
@@ -225,3 +264,66 @@ Germany could start with Johann as permanent + 2 seasonal harvest workers. This 
 | `src/lib/constants/staffConstants.ts` | `BASE_WEEKLY_WAGE`, `SKILL_WAGE_MULTIPLIER` |
 | `src/lib/services/core/startingConditionsService.ts` | Company creation flow — advisor UI data comes from here |
 | `src/lib/services/vineyard/vineyardManager.ts` | Yield formula — used by advisor forecast |
+
+---
+
+## 8. Buy Grapes from Market (Future Feature)
+
+**Concept:** Allow players to purchase grapes from the open market to supplement their own harvest — particularly useful in early game when their own vines aren't productive yet, or after a bad season.
+
+### Core Design
+
+- **Where:** New tab or section in the Sales page (or a dedicated Market page eventually)
+- **Mechanic:** A seasonal "market offer" appears each harvest season. Quantity and quality are randomized but scaled by company reputation/prestige
+- **Pricing:** Inverse of sell pricing — market asks a premium over raw grape value. Higher reputation = access to better quality (sellers want to work with respected producers)
+
+### Offer Structure
+
+Each offer has:
+- **Grape variety** (matching region/country preferences — you can't easily buy Riesling in Spain)
+- **Quantity** (kg) — scales with prestige: low prestige = small lots only (e.g. 50–300 kg); high prestige = up to full harvest volumes
+- **Quality** (wineScore) — scales with prestige: base offers are commodity quality; reputation unlocks access to premium lots
+- **Price per kg** — market rate (typically 20–50% above sell price for same quality)
+- **Offer expiry** — offers expire at season end (no stockpiling market offers)
+
+### Prestige Scaling
+
+| Prestige Level | Max Lot Size | Max Quality | Market Access |
+|---------------|-------------|-------------|---------------|
+| 0–100 (new)  | 100 kg | 30% | Commodity only |
+| 100–300 | 500 kg | 55% | Standard lots |
+| 300–600 | 2,000 kg | 75% | Premium lots |
+| 600+ | 5,000 kg | 90% | Grand cru lots (rare) |
+
+### Contract Commitments
+
+Advanced option: **"Forward Contract"** — commit to buying grapes at an agreed price for a future season.
+
+- Lock in price and variety *now*, grapes delivered at next harvest
+- Risk: you're obligated even if your cash situation changes
+- Reward: typically 10–20% cheaper than spot market, and *guaranteed quality tier*
+- Forward contracts persist in the DB as a new `grape_contracts` table with `committed_at`, `delivery_year`, `price_per_kg`, `quantity`, `variety`, `status: pending|delivered|defaulted`
+- Defaulting (no money to pay) = prestige hit + potential relationship damage with that supplier
+
+### Reputation Building with Suppliers
+
+Buying consistently from the same supplier builds a relationship (similar to cooperative membership):
+- Regular buyer discount: 5–15% off spot price after 3+ seasons
+- Priority access: locked-in quality tier (they reserve their best lots for you)
+- Potential: supplier offers you exclusive varieties not on the open market
+
+### Key Design Questions (to resolve before implementation)
+
+1. **Where does the market live in the UI?** Sales page (new "Grape Market" tab) vs dedicated Market page?
+2. **How often do offers refresh?** Every season? Every year? On player request?
+3. **Country restrictions?** Should you only be able to buy grapes from your own region, or import from others at a premium?
+4. **Integration with Sell Grapes?** Arbitrage should not be trivially easy — buying and immediately re-selling should not be profitable
+5. **Poor wine selling cheaper than good grapes:** This is intentional and good design — raw quality grapes can outvalue a poorly made wine. No need to "fix" this.
+
+### Suggested Implementation Path
+
+1. `src/lib/services/sales/grapeMarketService.ts` — offer generation + purchase logic
+2. `src/lib/database/sales/grapeMarketDB.ts` — market offers + forward contracts tables
+3. `src/components/pages/sales/GrapeMarketTab.tsx` — UI tab in Sales page
+4. Migration: `grape_market_offers`, `grape_forward_contracts` tables
+

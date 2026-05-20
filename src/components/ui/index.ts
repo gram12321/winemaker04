@@ -49,6 +49,7 @@ export { default as ActivityOptionsModal } from './activities/activityOptionsMod
 export { default as PlantingOptionsModal } from './modals/activitymodals/PlantingOptionsModal';
 export { default as HarvestOptionsModal } from './modals/activitymodals/HarvestOptionsModal';
 export { default as CrushingOptionsModal } from './modals/activitymodals/CrushingOptionsModal';
+export { default as SellGrapesModal } from './modals/activitymodals/SellGrapesModal';
 export { default as FermentationOptionsModal } from './modals/activitymodals/FermentationOptionsModal';
 export { default as ClearingOptionsModal } from './modals/activitymodals/ClearingOptionsModal';
 export { default as StaffModal } from './modals/UImodals/StaffModal';

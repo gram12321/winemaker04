@@ -205,7 +205,8 @@ const AgingProgressBar: React.FC<{ wine: WineBatch }> = ({ wine }) => {
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Aging Progress</div>
- <div>Age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
+ <div>Bottle age: <span className="font-medium">{formatNumber(status.ageInYears, { decimals: 2, adaptiveNearOne: true })} years ({status.ageInWeeks} weeks)</span></div>
+ <div className="text-[10px] text-gray-500">Time in bottle since bottling</div>
  <div>Status: <span className="font-medium">{peakStatusLabels[status.peakStatus]}</span></div>
  <div>Maturity: <span className="font-medium">{formatNumber(status.progressPercent, { decimals: 2, adaptiveNearOne: true, smartDecimals: true })}%</span></div>
  <div className="border-t pt-1 mt-2 text-[10px] text-gray-500">
@@ -423,16 +424,20 @@ const WeeklyEffectsDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 
 interface WineCellarTabProps {
  bottledWines: WineBatch[];
+ grapeBatches?: WineBatch[];
  showSoldOut: boolean;
  setShowSoldOut: (show: boolean) => void;
  onWineDetailsClick: (batchId: string) => void;
+ onSellGrapesClick?: (batchId: string) => void;
 }
 
 const WineCellarTab: React.FC<WineCellarTabProps> = ({
  bottledWines,
+ grapeBatches = [],
  showSoldOut,
  setShowSoldOut,
- onWineDetailsClick
+ onWineDetailsClick,
+ onSellGrapesClick
 }) => {
  const [editingPrices, setEditingPrices] = useState<{[key: string]: string}>({});
 
@@ -682,6 +687,34 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
 
  return (
  <div className="space-y-3">
+ {/* Grape Inventory Section */}
+ {grapeBatches.length > 0 && (
+ <div className="bg-white rounded-lg shadow overflow-hidden">
+ <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200">
+ <h3 className="text-sm font-semibold text-amber-800">🍇 Grape Inventory — Ready to Sell or Crush</h3>
+ </div>
+ <div className="p-3 space-y-2">
+ {grapeBatches.map(batch => (
+ <div key={batch.id} className="flex justify-between items-center border rounded p-3 bg-amber-50/40 hover:bg-amber-50">
+ <div className="text-sm">
+ <span className="font-medium">{batch.grape}</span>
+ <span className="text-gray-500 ml-2 text-xs">{batch.quantity.toLocaleString()} kg · {batch.vineyardName} · Harvest {batch.harvestStartDate.year}</span>
+ </div>
+ {onSellGrapesClick && (
+ <Button
+ size="sm"
+ variant="outline"
+ className="text-amber-700 border-amber-500 hover:bg-amber-100"
+ onClick={() => onSellGrapesClick(batch.id)}
+ >
+ Sell Grapes
+ </Button>
+ )}
+ </div>
+ ))}
+ </div>
+ </div>
+ )}
  {/* Advanced Filters */}
  <div className="bg-white rounded-lg shadow p-3">
  <div className="flex justify-between items-center mb-3">

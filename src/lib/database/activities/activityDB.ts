@@ -155,14 +155,14 @@ export async function removeActivityFromDb(activityId: string): Promise<boolean>
 export async function getActivitiesByTarget(targetId: string): Promise<Activity[]> {
   const activities = await loadActivitiesFromDb();
   return activities.filter(activity => 
-    activity.targetId === targetId && activity.status === 'active'
+    activity.targetId === targetId && (activity.status === 'active' || activity.status === 'paused')
   );
 }
 
 export async function getActivitiesByCategory(category: string): Promise<Activity[]> {
   const activities = await loadActivitiesFromDb();
   return activities.filter(activity => 
-    activity.category === category && activity.status === 'active'
+    activity.category === category && (activity.status === 'active' || activity.status === 'paused')
   );
 }
 
@@ -179,7 +179,7 @@ export async function hasActiveActivity(targetId: string, category?: string): Pr
       .select('id')
       .eq('company_id', companyId)
       .eq('target_id', targetId)
-      .eq('status', 'active');
+      .in('status', ['active', 'paused']);
 
     if (category) {
       query = query.eq('category', category);
