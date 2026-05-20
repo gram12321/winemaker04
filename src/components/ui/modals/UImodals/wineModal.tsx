@@ -80,22 +80,22 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch || !estimatedPriceBreakdown) return null;
 
   const displayName = wineName || getWineBatchDisplayName(wineBatch);
-  const currentQualityIndex: number = estimatedPriceBreakdown.tasteQualityIndex;
+  const currentTasteQualityIndex: number = estimatedPriceBreakdown.tasteQualityIndex;
   const landValueModifier: number = wineBatch.landValueModifier;
   const currentWineScore = estimatedPriceBreakdown.wineScore;
   const hasFeatureMultiplier = Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005;
   const hasCompanyPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.companyPrestigeMultiplier - 1) > 0.0005;
   const hasVineyardPrestigeMultiplier = Math.abs(estimatedPriceBreakdown.vineyardPrestigeMultiplier - 1) > 0.0005;
-  const qualityCategory = getQualityCategory(currentQualityIndex);
-  const qualityColorClass = getColorClass(currentQualityIndex);
+  const qualityCategory = getQualityCategory(currentTasteQualityIndex);
+  const qualityColorClass = getColorClass(currentTasteQualityIndex);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
-  const harvestWineScore = (wineBatch.qualityIndexHarvestSnapshot + wineBatch.structureIndexHarvestSnapshot) / 2;
+  const harvestWineScore = (wineBatch.tasteQualityIndexHarvestSnapshot + wineBatch.structureIndexHarvestSnapshot) / 2;
   const snapshotRows = [
     {
       label: 'Taste Quality',
-      harvest: wineBatch.qualityIndexHarvestSnapshot,
-      current: currentQualityIndex,
-      bottling: wineBatch.qualityIndexBottlingSnapshot
+      harvest: wineBatch.tasteQualityIndexHarvestSnapshot,
+      current: currentTasteQualityIndex,
+      bottling: wineBatch.tasteQualityIndexBottlingSnapshot
     },
     {
       label: 'Structure',
@@ -309,15 +309,15 @@ export const WineModal: React.FC<WineModalProps> = ({
                               <TooltipSection title="Taste Quality Details">
                                 <TooltipRow
                                   label="Taste Quality:"
-                                  value={formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
-                                  valueRating={currentQualityIndex}
+                                  value={formatNumber(currentTasteQualityIndex, { decimals: 2, forceDecimals: true })}
+                                  valueRating={currentTasteQualityIndex}
                                 />
                                 <TooltipRow
                                   label="Category:"
-                                  value={getQualityCategory(currentQualityIndex)}
+                                  value={getQualityCategory(currentTasteQualityIndex)}
                                 />
                                 <div className="mt-2 pt-2 border-t border-gray-600">
-                                  <div className="text-xs text-gray-300">{getQualityDescription(currentQualityIndex)}</div>
+                                  <div className="text-xs text-gray-300">{getQualityDescription(currentTasteQualityIndex)}</div>
                                 </div>
                               </TooltipSection>
                             </div>
@@ -331,10 +331,10 @@ export const WineModal: React.FC<WineModalProps> = ({
                           triggerClassName="text-right cursor-help"
                         >
                           <div className="text-right cursor-help">
-                            <div className={`font-medium ${getColorClass(currentQualityIndex)}`}>
-                              {formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
+                            <div className={`font-medium ${getColorClass(currentTasteQualityIndex)}`}>
+                              {formatNumber(currentTasteQualityIndex, { decimals: 2, forceDecimals: true })}
                             </div>
-                            <div className="text-xs text-gray-500">{getQualityCategory(currentQualityIndex)}</div>
+                            <div className="text-xs text-gray-500">{getQualityCategory(currentTasteQualityIndex)}</div>
                           </div>
                         </UnifiedTooltip>
                       </div>

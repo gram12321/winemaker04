@@ -116,7 +116,7 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
       return `${num} Hectares`;
 
     // Rating/score thresholds
-    case 'wine_quality_index_threshold':
+    case 'wine_taste_quality_index_threshold':
       return `${num} Taste Quality`;
     case 'wine_structure_index_threshold':
       return `${num} Structure`;
@@ -234,7 +234,7 @@ interface AchievementCheckContext {
     hectares: number;
   }>;
   wineLogEntries: Array<{
-    qualityIndex: number;
+    tasteQualityIndex: number;
     structureIndex: number;
     wineScore?: number;
     estimatedPrice: number;
@@ -363,7 +363,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     totalAchievementsCount,
     vineyards: vineyardData,
     wineLogEntries: allWineLogEntries.map(entry => ({
-      qualityIndex: entry.qualityIndex,
+      tasteQualityIndex: entry.tasteQualityIndex,
       structureIndex: entry.structureIndex,
       wineScore: entry.wineScore,
       estimatedPrice: entry.estimatedPrice,
@@ -609,9 +609,9 @@ function checkAchievementCondition(
         unit: 'varieties'
       };
       
-    case 'wine_quality_index_threshold':
+    case 'wine_taste_quality_index_threshold':
       // Check if produced a wine with taste quality >= threshold
-      const maxQuality = Math.max(...context.wineLogEntries.map(e => e.qualityIndex), 0);
+      const maxQuality = Math.max(...context.wineLogEntries.map(e => e.tasteQualityIndex), 0);
       return {
         isMet: maxQuality >= (condition.threshold || 0),
         progress: maxQuality,

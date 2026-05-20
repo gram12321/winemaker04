@@ -7,8 +7,6 @@ import { calculateTasteQualityIndex } from '../taste/tasteQualityIndexService';
 
 export interface EstimatedPriceBreakdown {
   tasteQualityIndex: number;
-  /** Compatibility alias while TypeScript model fields are migrated later. */
-  qualityIndex: number;
   structureIndex: number;
   wineScore: number;
   baseRate: number;
@@ -25,10 +23,6 @@ export interface EstimatedPriceBreakdown {
 
 export function getTasteQualityIndex(wineBatch: WineBatch): number {
   return calculateTasteQualityIndex(wineBatch).tasteQualityIndex;
-}
-
-export function getQualityIndex(wineBatch: WineBatch): number {
-  return getTasteQualityIndex(wineBatch);
 }
 
 function getLandValueModifier(wineBatch: WineBatch): number {
@@ -82,9 +76,9 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
 }
 
 export function calculateWineScore(wineBatch: WineBatch): number {
-  const qualityIndex = getTasteQualityIndex(wineBatch);
+  const tasteQualityIndex = getTasteQualityIndex(wineBatch);
   const structureIndex = clamp01(wineBatch.structureIndex);
-  return (qualityIndex + structureIndex) / 2;
+  return (tasteQualityIndex + structureIndex) / 2;
 }
 
 function resolvePrestigeMultiplier(prestige?: number): number {
@@ -100,7 +94,6 @@ export function calculateEstimatedPriceBreakdown(
   vineyardPrestige?: number
 ): EstimatedPriceBreakdown {
   const tasteQualityIndex = getTasteQualityIndex(wineBatch);
-  const qualityIndex = tasteQualityIndex;
   const structureIndex = clamp01(wineBatch.structureIndex);
   const wineScore = (tasteQualityIndex + structureIndex) / 2;
   const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
@@ -120,7 +113,6 @@ export function calculateEstimatedPriceBreakdown(
 
   return {
     tasteQualityIndex,
-    qualityIndex,
     structureIndex,
     wineScore,
     baseRate,

@@ -102,7 +102,7 @@ class HighscoreService {
       'highest_vintage_quantity',
       'most_productive_vineyard',
       'highest_wine_score',
-      'highest_quality_index',
+      'highest_taste_quality_index',
       'highest_structure_index',
       'highest_price',
       'lowest_price'
@@ -207,7 +207,7 @@ class HighscoreService {
       vintage: number;
       grape: string;
       quantity: number;
-      qualityIndex: number;
+      tasteQualityIndex: number;
       structureIndex: number;
       wineScore: number;
       price: number;
@@ -244,8 +244,8 @@ class HighscoreService {
         },
         {
           ...baseSubmission,
-          scoreType: 'highest_quality_index',
-          scoreValue: wineData.qualityIndex
+          scoreType: 'highest_taste_quality_index',
+          scoreValue: wineData.tasteQualityIndex
         },
         {
           ...baseSubmission,
@@ -341,7 +341,7 @@ class HighscoreService {
       'highest_vintage_quantity': 'Highest Single Vintage Quantity',
       'most_productive_vineyard': 'Most Productive Vineyard',
       'highest_wine_score': 'Highest Wine Score',
-      'highest_quality_index': 'Highest Taste Quality',
+      'highest_taste_quality_index': 'Highest Taste Quality',
       'highest_structure_index': 'Highest Structure Index',
       'highest_price': 'Highest Price',
       'lowest_price': 'Lowest Price'
@@ -359,7 +359,7 @@ class HighscoreService {
       'highest_vintage_quantity': 'bottles',
       'most_productive_vineyard': 'bottles',
       'highest_wine_score': '%',
-      'highest_quality_index': '%',
+      'highest_taste_quality_index': '%',
       'highest_structure_index': '%',
       'highest_price': '€',
       'lowest_price': '€'

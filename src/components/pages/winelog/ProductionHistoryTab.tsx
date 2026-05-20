@@ -21,7 +21,7 @@ interface ProductionHistoryTabProps {
 // Component for combined structure index and taste display (historical data)
 const StructureAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
   const structurePercentage = formatNumber(entry.structureIndex * 100, { smartDecimals: true });
-  const tastePercentage = formatNumber(entry.qualityIndex * 100, { smartDecimals: true });
+  const tastePercentage = formatNumber(entry.tasteQualityIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
@@ -37,14 +37,14 @@ const StructureAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }
 
 // Component for wine score display with tooltip (historical data)
 const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
-  const wineScore = entry.wineScore ?? ((entry.qualityIndex + entry.structureIndex) / 2);
+  const wineScore = entry.wineScore ?? ((entry.tasteQualityIndex + entry.structureIndex) / 2);
   
   return (
     <UnifiedTooltip
       content={
         <div className="space-y-1 text-xs">
           <div className="font-semibold">Wine Score Calculation</div>
-          <div>Taste Quality: <span className="font-medium">{formatPercent(entry.qualityIndex, 1, true)}</span></div>
+          <div>Taste Quality: <span className="font-medium">{formatPercent(entry.tasteQualityIndex, 1, true)}</span></div>
           <div>Structure: <span className="font-medium">{formatPercent(entry.structureIndex, 1, true)}</span></div>
           <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
         </div>

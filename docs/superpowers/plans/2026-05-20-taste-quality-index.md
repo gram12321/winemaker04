@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a computed 14-family `tasteQualityIndex` that replaces the fixed quality placeholder in WineScore.
+**Goal:** Build a computed 14-family `tasteQualityIndex` that replaces the fixed taste-quality placeholder in WineScore.
 
-**Architecture:** Add a pure taste-quality scoring service under `src/lib/services/wine/taste/`, then have wine score calculation consume it through `getTasteQualityIndex`. Persist database fields with `taste_quality_index` naming while keeping existing TypeScript compatibility fields in this slice.
+**Architecture:** Add a pure taste-quality scoring service under `src/lib/services/wine/taste/`, then have wine score calculation consume it through `getTasteQualityIndex`. Persist database fields with `taste_quality_index` naming.
 
 **Tech Stack:** TypeScript, Vitest, existing wine taste profile service, existing WineScore service.
 
@@ -18,10 +18,9 @@
   - Covers moving-target behavior and WineScore integration expectations.
 - Modify: `src/lib/services/wine/winescore/wineScoreCalculation.ts`
   - Exports `getTasteQualityIndex`.
-  - Keeps `getQualityIndex` as compatibility alias.
   - Uses computed taste quality for WineScore and price breakdown.
 - Modify: `src/lib/database/activities/inventoryDB.ts`
-  - Maps compatibility model fields to `taste_quality_index*` database columns.
+  - Maps model fields to `taste_quality_index*` database columns.
 - Modify: `src/lib/database/core/wineLogDB.ts` and `src/lib/services/user/wineLogService.ts`
   - Writes and reads `wine_log.taste_quality_index`.
 - Modify: `migrations/sync_vercel_schema.sql` and `migrations/vercel_migration_preserve_data_delta.sql`
@@ -53,14 +52,12 @@
 
 - [x] Update `wineScoreCalculation.ts`.
 - [x] Add `getTasteQualityIndex(batch)`.
-- [x] Keep `getQualityIndex(batch)` as a compatibility wrapper.
-- [x] Change price breakdown to expose `tasteQualityIndex` while retaining `qualityIndex` alias where existing callers still need it.
+- [x] Change price breakdown to expose `tasteQualityIndex`.
 - [x] Add/extend tests to prove WineScore changes when taste profile changes.
 
 ### Task 4: Rename User-Facing Labels
 
 - [x] Replace touched labels from "Quality Index" to "Taste Quality".
-- [x] Keep TypeScript compatibility field names where a wider model rename would create unrelated churn.
 - [x] Update design docs where they describe the current score path.
 
 ### Task 4a: Rename Database Columns

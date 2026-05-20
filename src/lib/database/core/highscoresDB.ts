@@ -13,7 +13,7 @@ export type ScoreType =
   | 'highest_vintage_quantity'
   | 'most_productive_vineyard'
   | 'highest_wine_score'
-  | 'highest_quality_index'
+  | 'highest_taste_quality_index'
   | 'highest_structure_index'
   | 'highest_price'
   | 'lowest_price';

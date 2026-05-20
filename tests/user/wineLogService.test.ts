@@ -48,11 +48,11 @@ function bottledWine(overrides: Partial<WineBatch> = {}): WineBatch {
     fermentationProgress: 100,
     landValueModifierHarvestSnapshot: 0.5,
     structureIndexHarvestSnapshot: 0.7,
-    qualityIndexHarvestSnapshot: 0.5,
+    tasteQualityIndexHarvestSnapshot: 0.5,
     landValueModifier: 0.58,
     structureIndex: 0.21,
-    qualityIndex: 0.51,
-    qualityIndexBottlingSnapshot: 0.66,
+    tasteQualityIndex: 0.51,
+    tasteQualityIndexBottlingSnapshot: 0.66,
     landValueModifierBottlingSnapshot: 0.59,
     structureIndexBottlingSnapshot: 0.84,
     wineScoreBottlingSnapshot: 0.75,
@@ -102,7 +102,7 @@ describe('recordBottledWine', () => {
       'Fall',
       2026,
       expect.objectContaining({
-        qualityIndex: 0.66,
+        tasteQualityIndex: 0.66,
         structureIndex: 0.84,
         wineScore: 0.75
       })

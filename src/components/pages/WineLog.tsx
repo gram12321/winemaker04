@@ -92,7 +92,7 @@ export function WineLog({ currentCompany }: WineLogProps) {
     const totalBottles = wineLog.reduce((sum, entry) => sum + entry.quantity, 0);
     const totalVintages = wineLog.length;
     const averageQuality = wineLog.length > 0 
-      ? wineLog.reduce((sum, entry) => sum + entry.qualityIndex, 0) / wineLog.length 
+      ? wineLog.reduce((sum, entry) => sum + entry.tasteQualityIndex, 0) / wineLog.length
       : 0;
     return { totalBottles, totalVintages, averageQuality };
   }, [wineLog]);

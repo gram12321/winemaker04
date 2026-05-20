@@ -1,222 +1,263 @@
-# Wine System Variable Relationship Map (Rewritten)
-Date: 2026-05-20  
-Status: Architecture mapping plus current implementation audit and fixes
+# Wine System Variable Relationship Map
+Date: 2026-05-20
+Status: Current variable relationship map
+
+Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](../CONTEXT.md). This document focuses on how the main wine-system variables depend on each other through the gameflow.
 
 ## 1) Purpose
-This document is the updated target map for the wine simulation architecture.
 
-Primary goals:
-- Make terminology clear and consistent.
-- Reduce persisted anchor complexity.
-- Keep taste as its own model (families + descriptors), with a computed taste-quality signal feeding wine score.
-- Remove legacy naming and fallback behavior.
-- Remap contract "quality" away from taste index.
+This map answers three questions:
 
-## 2) Updated Terminology
+- Which variables are produced at each stage of wine gameplay?
+- Which variables are snapshots, and which continue to change?
+- Which subsystems consume each variable later for UI, economy, contracts, highscores, and achievements?
 
-| Term | Meaning | Examples |
-|---|---|---|
-| Site Factors | Vineyard and region context that exists before player processing choices | `country`, `region`, `soil`, `altitude`, `aspect`, `landValue`, `density`, `overgrowth`, `vineAge`, `vineyardHealth`, `ripeness` |
-| Intrinsic Grape Traits | Grape-inherent properties with direct gameplay effects | `grapeColor`, `naturalYield`, `fragile`, `proneToOxidation`, base structure constants |
-| Anchors | Persisted hidden wine identity state; should be compact and multi-source | Proposed 12-key anchor model below |
-| Process Controls | Player actions in winery and vineyard operations | crush method/options, fermentation method/temperature, harvest timing choices |
-| Structure Layer | Player-facing structural channels and structure index | `acidity`, `aroma`, `body`, `spice`, `sweetness`, `tannins`, `structureIndex` |
-| Taste Layer | Flavor-family and descriptor model used for taste wheel/web and taste quality | 14 families, descriptors grouped under families |
-| Lifecycle Modifiers | Ongoing evolving systems after creation | feature severities, bottle aging, prestige effects |
-| Outcome Metrics | Economy and progression outputs | wine score, price, contracts, highscores, achievements |
-| Snapshot | Immutable historical capture at event boundaries | harvest snapshot, bottling snapshot, winelog snapshot |
+## 2) Reading Rules
 
-## 3) Correction: "Metadata" vs System Drivers
-`grapeColor`, `naturalYield`, `fragile`, `proneToOxidation` are not passive metadata.
+- Arrows mean data dependency, not call order.
+- Snapshot nodes are frozen values copied from current state at harvest, bottling, or winelog insertion.
+- `landValueModifier` and `tasteQualityIndex` are separate signals and should not be treated as aliases.
 
-They are first-class drivers:
-- `grapeColor`: impacts structure/taste pathways and family balance.
-- `naturalYield`: directly impacts harvest output and economy.
-- `fragile`: affects risk and process sensitivity.
-- `proneToOxidation`: directly feeds risk/features and lifecycle behavior.
+## 3) Top-Level Gameflow
 
-These belong in `Intrinsic Grape Traits` and should be treated as direct inputs in dependency maps.
-
-## 4) Proposed Anchor Reduction (26 -> 12 persisted keys)
-
-### 4.1 Persist only stateful, multi-source anchors
-Proposed persisted anchors:
-1. `sugarPotential`
-2. `acidPotential`
-3. `phenolicPotential`
-4. `aromaticPotential`
-5. `bodyPotential`
-6. `extractionState`
-7. `fermentationState`
-8. `leesState`
-9. `oxidationPressure`
-10. `maturationState`
-11. `terroirExpression`
-12. `processFootprint`
-
-### 4.2 Existing -> Target anchor consolidation
-| Current anchor key | Target |
-|---|---|
-| `residualSugar`, `harvestTiming` | `sugarPotential` |
-| `juiceAcidity` | `acidPotential` |
-| `phenolicExtract`, `colorIntensity`, part of `skinContactEvolution` | `phenolicPotential` |
-| `aromaticIntensity`, part of `varietyCharacter` | `aromaticPotential` |
-| `textureRichness`, `alcoholPotential` | `bodyPotential` |
-| `crushingExtraction` | `extractionState` |
-| `fermentationProfile` | `fermentationState` |
-| `leesContact` | `leesState` |
-| `oxidativeCharacter` | `oxidationPressure` |
-| `cellarEvolution` | `maturationState` |
-| `regionalTypicity`, `soilAffinity`, `solarClimateFit`, `microclimateBlend`, `siteAltitude`, `aspectWarmth`, `vineAgeCharacter`, `rowCompetition`, `siteWildness`, `vineyardHealth` | `terroirExpression` |
-| `featureFootprint` | `processFootprint` |
-
-### 4.3 Context values that should be computed, not persisted as anchors
-Examples:
-- `soilAffinity` (from site and suitability calculations)
-- `aspectWarmth`
-- `siteAltitude`
-- `rowCompetition`
-- `microclimateBlend`
-
-These should be regenerated from current state and used as inputs into compact anchors, not stored as separate long-lived anchor keys.
-
-## 5) Taste Model Shape
-
-### 5.1 Keep
-- 14 flavor families as core taste model.
-
-### 5.2 Change
-- Descriptors must be children of families (hierarchical model), not a parallel flat set.
-- Taste metrics (`intensity`, `complexity`, `harmony`, `typicity`, `layerBalance`, `flavorQualityIndex`) should not be core gameplay outputs.  
-  Use them only as optional debug/telemetry if retained.
-
-### 5.3 Descriptor-family grouping (target)
-| Family | Descriptors |
-|---|---|
-| `flower` | `floralLift`, `whiteFloral` |
-| `citrus` | `citrusZest`, `grapefruit`, `orangeZest` |
-| `treeFruit` | `orchardFruit`, `greenApple`, `yellowApple`, `pearNotes`, `whitePeach`, `stoneMelon` |
-| `tropicalFruit` | `tropicalNotes`, `tropicalIsland` |
-| `redFruit` | `redBerry` |
-| `blackFruit` | `darkFruit` |
-| `driedFruit` | `driedConcentrated`, `honeyed` |
-| `spiceFlavor` | `pepperBakingSpice` |
-| `vegetable` | `herbalGreen` |
-| `earth` | `earthMineral`, `graphiteMineral` |
-| `microbial` | `yeastLees` |
-| `oakAging` | `oakToastVanilla` |
-| `generalAging` | `bottleEvolved`, `leatheryTobacco` |
-| `faults` | `faultEdge` |
-
-## 6) New High-Level Dependency Map (Target)
 ```mermaid
 flowchart LR
-  SF["Site Factors"] --> A["Anchors (compact persisted state)"]
-  IGT["Intrinsic Grape Traits"] --> A
-
-  A <--> PC["Process Controls (player actions)"]
-
-  A --> S["Structure"]
-  PC --> S
-
-  A --> T["Taste (Families -> Descriptors)"]
-  PC --> T
-
-  A --> LM["Lifecycle Modifiers"]
-  PC --> LM
-
-  QI["Taste Quality\n(computed from taste families)"] --> OM["Outcome Metrics"]
-  S --> OM
-  LM --> OM
-
-  OMW["WineScore = f(Structure, Taste Quality, Lifecycle)"]:::emph
-  OM --> OMW
-
-  classDef emph fill:#eef,stroke:#66f,color:#111;
+  LS["Land search / vineyard setup"] --> VM["Vineyard management"]
+  VM --> H["Harvest"]
+  H --> WB["Wine batch"]
+  WB --> C["Crushing"]
+  C --> F["Fermentation"]
+  F --> B["Bottling"]
+  B --> CE["Cellar evolution"]
+  CE --> S["Sales and contracts"]
+  B --> WL["Wine log"]
+  WL --> PR["Highscores and achievements"]
+  S --> ECO["Money, prestige, customer relationships"]
+  PR --> ECO
 ```
 
-## 7) Scoring/Outcome Intent
-- The old fixed `qualityIndex = 0.5` placeholder has been replaced by computed taste quality.
-- Wine score inputs:
-  - `structureIndex`
-  - `tasteQualityIndex`, computed from the 14 taste families
-  - lifecycle effects as relevant modifiers
-- Descriptor-level taste remains display-only for now.
-- TypeScript compatibility fields may still be named `qualityIndex` while persistence maps them to `taste_quality_index`.
+## 4) Main Variable Groups
 
-## 8) Contract Quality Requirement Remap
+| Group | Produced from | Produces |
+|---|---|---|
+| Site Factors | Vineyard generation and vineyard state | Land value modifier, suitability, harvest anchors |
+| Intrinsic Grape Traits | Grape constants | Base characteristics, yield, risk sensitivity, anchor bias |
+| Anchors | Site factors, grape traits, process controls, features | Structure ranges, taste profile, lifecycle risk |
+| Structure Layer | Characteristics plus anchor-adjusted ideal ranges | `structureIndex` |
+| Taste Layer | Anchors, characteristics, grape color, features, aging | Taste families, descriptors, `tasteQualityIndex` |
+| Lifecycle Modifiers | Features, bottle aging, oxidation, prestige | Current taste, price, cellar value, risk |
+| Outcome Metrics | Structure, taste quality, land value, lifecycle modifiers | Wine score, price, contract validity, historical records |
 
-Current observed implementation:
-- Contract requirement type `tasteQuality` validates against computed `tasteQualityIndex`.
-- Contract requirement type `landValue` remains a separate site/static requirement.
+## 5) Relationship Invariants
 
-Target behavior:
-- Contract taste quality should use the current computed taste-quality signal, not the old fixed placeholder.
-- Site-static quality remains in the land-value/price path.
+- Site factors and grape traits create the wine's initial identity at harvest.
+- Process controls should modify identity through anchors, characteristics, features, or explicit snapshots, not through hidden unrelated side effects.
+- Structure and taste are different layers: structure scores physical balance; taste quality scores family balance.
+- Land value affects price and contracts as site/static quality; it is not taste quality.
+- Bottling snapshots are the historical source for wine log, highscores, and achievement score checks.
+- Current cellar values may continue to evolve after bottling; historical snapshots must not drift.
 
-## 9) Legacy Naming Removal Policy
+## 6) Subsystem Diagrams
 
-### 9.1 Rules
-- No fallback aliases for renamed fields in business logic.
-- No dual semantics in single columns.
-- Use explicit names for snapshots and current values.
+### 6.1 Site, Grape, and Harvest Identity
 
-### 9.2 Naming direction
-| Legacy | Target direction |
+```mermaid
+flowchart LR
+  SF["Site Factors\nsoil, altitude, aspect, density,\nhealth, ripeness, landValue"] --> LVM["landValueModifier"]
+  SF --> SUIT["Grape suitability"]
+  IGT["Intrinsic Grape Traits\ngrapeColor, naturalYield,\nfragile, proneToOxidation,\nbase characteristics"] --> HA["Harvest anchors"]
+  SUIT --> HA
+  LVM --> HA
+  HA --> WB["WineBatch.wineAnchors"]
+  LVM --> LVMH["landValueModifierHarvestSnapshot"]
+  WB --> SIH["structureIndexHarvestSnapshot"]
+  WB --> TQH["tasteQualityIndexHarvestSnapshot\n(taste quality harvest snapshot)"]
+```
+
+### 6.2 Process Controls and Winery Mutation
+
+```mermaid
+flowchart LR
+  WB["Wine batch"] --> PC["Process Controls\ncrushing options,\nfermentation method,\ntemperature"]
+  PC --> AD["Anchor deltas"]
+  PC --> CD["Characteristic deltas"]
+  PC --> FE["Feature risk / feature state"]
+  AD --> CA["Current anchors"]
+  CD --> CH["Current characteristics"]
+  FE --> CA
+  FE --> CH
+  CA --> TASTE["Taste profile"]
+  CA --> STRUCT["Anchor-adjusted structure ranges"]
+  CH --> STRUCT
+```
+
+### 6.3 Structure Subsystem
+
+```mermaid
+flowchart LR
+  A["Current anchors"] --> R["Anchor-adjusted ideal ranges"]
+  BC["Base balanced ranges"] --> R
+  CH["Characteristics\nacidity, aroma, body,\nspice, sweetness, tannins"] --> BAL["Balance scoring"]
+  R --> BAL
+  RULES["Structure penalties and synergies"] --> BAL
+  BAL --> SI["structureIndex"]
+  SI --> WS["wineScore"]
+  SI --> UI["Structure UI"]
+  SI --> CR["Structure contract requirement"]
+```
+
+### 6.4 Taste Subsystem
+
+```mermaid
+flowchart LR
+  A["Current anchors"] --> TF["Taste family profile"]
+  CH["Characteristics"] --> TF
+  GC["grapeColor"] --> TF
+  FE["Features and aging"] --> TF
+  TF --> DESC["Descriptors by family\ndisplay-only"]
+  TF --> TQB["Family ideal ranges,\nweights, compatibility"]
+  TQB --> TQI["tasteQualityIndex"]
+  TQI --> WS["wineScore"]
+  TQI --> UI["Taste wheel and quality UI"]
+  TQI --> CTR["Taste quality contract requirement"]
+```
+
+### 6.5 Score, Price, and Market Outcomes
+
+```mermaid
+flowchart LR
+  TQI["tasteQualityIndex"] --> WS["wineScore"]
+  SI["structureIndex"] --> WS
+  WS --> BASE["Base price = wineScore * base rate"]
+  WS --> CURVE["Score curve multiplier"]
+  LVM["landValueModifier"] --> LPM["Land value price multiplier"]
+  FE["Feature price effects"] --> FPM["Feature price multiplier"]
+  CP["Company prestige"] --> CPM["Company prestige multiplier"]
+  VP["Vineyard prestige"] --> VPM["Vineyard prestige multiplier"]
+  BASE --> EP["estimatedPrice"]
+  CURVE --> EP
+  LPM --> EP
+  FPM --> EP
+  CPM --> EP
+  VPM --> EP
+  EP --> SALES["Sales offers and cellar value"]
+```
+
+### 6.6 Snapshots, History, and Progression
+
+```mermaid
+flowchart LR
+  CUR["Current wine state"] --> BOTTLE["Bottling event"]
+  BOTTLE --> TQB["tasteQualityIndexBottlingSnapshot"]
+  BOTTLE --> SIB["structureIndexBottlingSnapshot"]
+  BOTTLE --> LVMB["landValueModifierBottlingSnapshot"]
+  BOTTLE --> WSB["wineScoreBottlingSnapshot"]
+  TQB --> WL["WineLogEntry"]
+  SIB --> WL
+  LVMB --> WL
+  WSB --> WL
+  WL --> HS["Highscores"]
+  WL --> ACH["Achievements"]
+  WL --> HIST["Historical vineyard analytics"]
+```
+
+## 7) Contract Relationships
+
+| Contract requirement | Source variable | Notes |
+|---|---|---|
+| `tasteQuality` | Current computed `tasteQualityIndex` | Validates taste balance, not land value. |
+| `structureIndex` | Current `structureIndex` | Validates structure balance. |
+| `landValue` | Source vineyard `landValue` | Validates site/static value as absolute value per hectare. |
+| `country`, `region` | Source vineyard location | Validates origin requirements. |
+| `grape`, `grapeColor` | Wine batch grape identity | Validates variety and color. |
+| `altitude`, `aspect` | Source vineyard site factors | Validates site parameters. |
+| `characteristicMin`, `characteristicMax`, `characteristicDeviation` | Current wine characteristics | Validates structural channel thresholds or distance. |
+
+## 8) Snapshot Relationship Rules
+
+| Event | Snapshot fields | Consumers |
+|---|---|---|
+| Harvest | `landValueModifierHarvestSnapshot`, `structureIndexHarvestSnapshot`, `tasteQualityIndexHarvestSnapshot` | UI comparison, batch history, debugging harvest decisions |
+| Bottling | `tasteQualityIndexBottlingSnapshot`, `landValueModifierBottlingSnapshot`, `structureIndexBottlingSnapshot`, `wineScoreBottlingSnapshot` | Wine log, highscores, achievements, historical analytics |
+| Wine log insertion | `WineLogEntry.tasteQualityIndex`, `WineLogEntry.landValueModifier`, `WineLogEntry.structureIndex`, `WineLogEntry.wineScore` | Vineyard stats, achievements, persistent production history |
+
+## 9) UI Relationship Surfaces
+
+| UI surface | Relationship shown |
 |---|---|
-| `grape_quality` | split to explicit fields, including `taste_quality_index` for taste balance and `land_value_modifier_*` for site/static quality |
-| `born_grape_quality` | explicit snapshot field (example `land_value_modifier_harvest_snapshot`) |
-| `quality_index` database column | `taste_quality_index` |
-| `quality_index_harvest_snapshot` database column | `taste_quality_index_harvest_snapshot` |
-| `quality_index_bottling_snapshot` database column | `taste_quality_index_bottling_snapshot` |
-| `balance` fallback | remove; use `structure_index` only |
-| `bornTasteIndex` | `tasteIndexHarvestSnapshot` (or remove if not required by new model) |
-| `bornStructureIndex` | `structureIndexHarvestSnapshot` |
-| `bornLandValueModifier` | `landValueModifierHarvestSnapshot` |
-| `bottledTasteIndex` | `tasteIndexBottlingSnapshot` |
-| `bottledStructureIndex` | `structureIndexBottlingSnapshot` |
-| `bottledWineScore` | `wineScoreBottlingSnapshot` |
+| Wine modal overview | Current score, current price, and harvest/current/bottling snapshot comparison. |
+| Structure tab | Current characteristics, anchor-adjusted ideal ranges, structure score, penalties, and synergies. |
+| Taste tab | Flavor families, descriptors, taste wheel, taste quality family weights and reasons. |
+| Land value tab | Vineyard factors behind the land value modifier. |
+| Origins tab | Characteristic changes grouped by source/effect. |
+| Wine log and vineyard analytics | Bottling snapshots and historical production records. |
 
-## 10) Snapshot Scope Clarification
-Agreed intent:
-- `born*` style values should represent immutable snapshots only.
-- Snapshots are primarily for historical integrity (wine log/highscore/achievement context) and should not drift due to lifecycle updates.
-- Runtime current values should remain separate from snapshot values.
+## 10) Current Implementation Checkpoints
 
-## 11) Relationship Matrix (Target)
-| Producer | Output | Main consumers |
-|---|---|---|
-| Site Factors + Intrinsic Grape Traits | compact anchors | process response tuning, structure, taste, lifecycle |
-| Process Controls | anchor deltas + structure/taste deltas | lifecycle and outcomes |
-| Anchors + Process Controls | structure channels | structure index |
-| Anchors + Process Controls | taste families/descriptors | taste UI/web |
-| Structure + taste quality + lifecycle | wine score and economic outcomes | pricing, contracts, highscores, achievements |
-| Snapshot capture points | immutable historical records | wine log, highscores, achievements |
+| Area | Current state |
+|---|---|
+| Compact anchors | Runtime uses 12-key `WineAnchorValues`; legacy 26-key JSON is parsed only as a migration bridge. |
+| Wine log snapshots | Wine log and wine highscores use bottling snapshots for taste quality, structure, land value, and wine score. |
+| Achievement wine score | `wine_score_threshold` achievements use finite persisted `WineLogEntry.wineScore`; missing or non-finite scores do not derive a fallback. |
+| Contract quality split | `tasteQuality` and `landValue` are separate requirements. |
+| Descriptor hierarchy | Descriptors are grouped under flavor families and remain display-only for now. |
 
-## 12) Migration Guidance (Planning Only)
-1. Lock terminology and target field names.
-2. Define compact 12-anchor schema and mapping from current 26.
-3. Move descriptor model to strict family-child hierarchy.
-4. Remap contract quality from `tasteIndex` to a meaningful current wine quality signal.
-5. Feed wine score from computed taste quality and structure index.
-6. Remove legacy/fallback naming and migrate storage fields to `taste_quality_index*`.
-7. Keep snapshots explicit and immutable.
+## 11) Main Game Variable Relationship Matrix
 
-## 13) Implementation Audit (2026-05-20)
+This table follows the practical gameflow from land purchase through sales and progression.
 
-| Area | Finding | Fix/status |
-|---|---|---|
-| Compact anchors | Runtime code uses the 12-key `WineAnchorValues` model, but persisted legacy 26-key `wine_anchors` JSON would previously parse as neutral. | Fixed: `parseWineAnchorsFromDb` maps old 26-key JSON, including `{ values: ... }`, into the compact anchors. |
-| Wine log snapshots | Wine log rows persisted bottling snapshots, but highscore submission still used mutable `wineBatch.structureIndex`. | Fixed: `recordBottledWine` now submits `structureIndexBottlingSnapshot` when available. |
-| Achievement wine score | `wine_score_threshold` achievements recomputed `(qualityIndex + structureIndex) / 2` instead of using the persisted winelog `wineScore`. | Fixed: achievement context includes `wineScore`; only finite persisted winelog scores count toward score achievements. |
-| Snapshot visibility | The main wine modal emphasized current scores and did not make harvest/current/bottling separation obvious. | Fixed: overview now includes a snapshots section for Taste Quality, Structure, Land Value, and Wine Score. |
-| Taste-quality explainability | Service results included family `weight` and `reasons`, but the UI hid them. | Fixed: taste-quality rows and weakest-family cards now show weights and reason summaries. |
-| Structure UI consistency | `WineModal` passed `wineAnchors` into `StructureIndexBreakdown`, but the standalone structure modal could not. | Fixed: `StructureIndexBreakdownModal` now accepts and forwards `wineAnchors`. |
-| Contract quality split | Contract checks now treat taste quality and land value separately. | Verified by existing contract tests. |
-| Descriptor hierarchy | Taste descriptors are grouped under flavor families for UI display; descriptor-level taste remains display-only for now. | Still aligned with target intent. |
-| Legacy naming | TypeScript still keeps compatibility fields such as `qualityIndex` while persistence maps to `taste_quality_index`. | Accepted interim state; business behavior uses explicit taste-quality semantics. |
+| Game phase | Player/state inputs | Main variables produced | Main downstream consumers | Player-visible effect |
+|---|---|---|---|---|
+| Land search and vineyard ownership | Country, region, soil, altitude, aspect, hectares, land value | Site Factors | Suitability, land value modifier, contracts | Land choice changes crop fit, site quality, and future market eligibility. |
+| Vineyard maintenance | Health, overgrowth, density, vine age, grape planted | Updated Site Factors and yield conditions | Harvest yield, anchors, land value modifier | Good maintenance improves harvest potential and reduces penalties. |
+| Grape identity | Grape constants and planted variety | Intrinsic Grape Traits | Anchors, base characteristics, taste color rules, yield, risk | Variety changes wine style, risks, and customer fit. |
+| Harvest | Ripeness, site factors, grape traits | Harvest anchors, harvest snapshots, initial wine batch | Winery processing, structure, taste, lifecycle | Harvest timing freezes the starting identity of the wine. |
+| Crushing | Crush method/options, batch state | Extraction anchor changes, characteristic deltas, feature risk | Structure ranges, taste profile, lifecycle | Processing choices push style and risk. |
+| Fermentation | Method, temperature, time/progress | Fermentation anchors, current characteristics, features | Taste profile, structure score, bottling readiness | Fermentation completes the main transformation from must to wine. |
+| Bottling | Current wine state | Bottling snapshots, `wineScoreBottlingSnapshot`, wine log row | Highscores, achievements, historical analytics | Bottling freezes the historical record while cellar values may continue evolving. |
+| Cellar evolution | Features, aging progress, oxidation, bottle aging | Current taste, current price, current score changes | Cellar UI, sales offers, current contract validation | Wine can become more or less valuable after bottling. |
+| Sales/contracts | Customer requirements, relationships, market context | Contract validity, orders, revenue | Money, customer relationships, prestige | The market evaluates wine variables against demand. |
+| Progression | Wine log, sales, scores, assets | Highscores, achievements, prestige events | Company value, reputation, future opportunities | Historical performance feeds long-term progression. |
 
-The intentionally broad shadcn/raw-style cleanup noted during UI review remains outside this wine-system behavior pass. Local UI changes in this pass use existing shadcn components and semantic utility classes where touched.
+## 12) Main Variable Flow Display
 
----
-This rewritten map is the agreed target architecture baseline for upcoming implementation tasks.
+```mermaid
+flowchart TD
+  SF["Site Factors"] --> HA["Harvest anchors"]
+  IGT["Intrinsic Grape Traits"] --> HA
+  PC["Process Controls"] --> CA["Current anchors"]
+  HA --> CA
+  PC --> CH["Current characteristics"]
+  CA --> CH
+
+  CA --> AR["Anchor-adjusted structure ranges"]
+  CH --> SI["structureIndex"]
+  AR --> SI
+
+  CA --> TF["Taste families"]
+  CH --> TF
+  TF --> TQI["tasteQualityIndex"]
+
+  SI --> WS["wineScore"]
+  TQI --> WS
+  LVM["landValueModifier"] --> PRICE["estimatedPrice"]
+  WS --> PRICE
+  FE["Feature and prestige multipliers"] --> PRICE
+
+  WS --> SNAP["Bottling snapshots"]
+  SI --> SNAP
+  TQI --> SNAP
+  LVM --> SNAP
+  SNAP --> WL["Wine log"]
+  WL --> ACH["Achievements"]
+  WL --> HS["Highscores"]
+  PRICE --> SALES["Sales/contracts"]
+  SALES --> ECO["Money, prestige, relationships"]
+  ACH --> ECO
+  HS --> ECO
+```
+
+## 13) Remaining Alignment Work
+
+- Keep the legacy anchor parser isolated as migration support; do not add new business logic that depends on legacy anchor names.
+- If descriptor-level taste becomes gameplay-relevant, update this map and `CONTEXT.md` before wiring descriptors into outcomes.

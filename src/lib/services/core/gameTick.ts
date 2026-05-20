@@ -391,7 +391,7 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
     .filter((updatedBatch, index) => {
       const originalBatch = activeBatches[index];
       // Characteristic tweaks flow through structure/taste; anchors have their own column — no separate key walk.
-      return updatedBatch.qualityIndex !== originalBatch.qualityIndex ||
+      return updatedBatch.tasteQualityIndex !== originalBatch.tasteQualityIndex ||
         updatedBatch.structureIndex !== originalBatch.structureIndex ||
         WINE_ANCHOR_KEYS.some(
           (k) => updatedBatch.wineAnchors[k] !== originalBatch.wineAnchors[k]
@@ -400,7 +400,7 @@ async function applyWeeklyFeatureEffects(): Promise<void> {
     .map(updatedBatch => ({
       id: updatedBatch.id,
       updates: {
-        qualityIndex: updatedBatch.qualityIndex,
+        tasteQualityIndex: updatedBatch.tasteQualityIndex,
         structureIndex: updatedBatch.structureIndex,
         characteristics: updatedBatch.characteristics,
         breakdown: updatedBatch.breakdown,

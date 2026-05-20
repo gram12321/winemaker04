@@ -13,7 +13,7 @@ import { getGameState } from '../../core/gameState';
 import { Season } from '../../../types/types';
 import { bulkUpdateVineyards } from '../../../database/activities/vineyardDB';
 import { calculateStructureIndex, BASE_BALANCED_RANGES, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
-import { getQualityIndex } from '../winescore/wineScoreCalculation';
+import { getTasteQualityIndex } from '../winescore/wineScoreCalculation';
 import { resolveWineAnchors } from '../anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '../anchors/wineAnchorProcess';
 import {
@@ -443,12 +443,12 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     },
     wineAnchors
   };
-  const currentQualityIndex = getQualityIndex(updatedBatch);
+  const currentTasteQualityIndex = getTasteQualityIndex(updatedBatch);
 
   return {
     ...updatedBatch,
-    qualityIndex: currentQualityIndex,
-    qualityIndexHarvestSnapshot: batch.qualityIndexHarvestSnapshot ?? currentQualityIndex
+    tasteQualityIndex: currentTasteQualityIndex,
+    tasteQualityIndexHarvestSnapshot: batch.tasteQualityIndexHarvestSnapshot ?? currentTasteQualityIndex
   };
 }
 
@@ -557,8 +557,8 @@ export function previewFeatureRisks(
     landValueModifierHarvestSnapshot: 0,
     structureIndexHarvestSnapshot: 0,
     landValueModifier: 0,
-    qualityIndex: 0.5,
-    qualityIndexHarvestSnapshot: 0.5,
+    tasteQualityIndex: 0.5,
+    tasteQualityIndexHarvestSnapshot: 0.5,
     structureIndex: 0,
     characteristics: { acidity: 0, aroma: 0, body: 0, spice: 0, sweetness: 0, tannins: 0 },
     estimatedPrice: 0,
@@ -807,7 +807,7 @@ export function getFeatureRisksForDisplay(context: FeatureRiskContext): FeatureR
  * Also processes pendingFeatures on vineyards (features that develop before harvest)
  * 
  * CRITICAL: Applies feature effects atomically with feature state updates to prevent
- * UI from showing inconsistent state during game tick (features updated but qualityIndex stale)
+ * UI from showing inconsistent state during game tick (features updated but tasteQualityIndex stale)
  */
 export async function processWeeklyFeatureRisks(): Promise<void> {
   try {
@@ -831,7 +831,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
       
       if (JSON.stringify(updatedFeatures) !== JSON.stringify(batch.features)) {
         // CRITICAL: Apply feature effects immediately to avoid UI showing inconsistent state
-        // This ensures qualityIndex, structure index, and characteristics are updated atomically with features
+        // This ensures tasteQualityIndex, structure index, and characteristics are updated atomically with features
         const batchWithUpdatedFeatures = { ...batch, features: updatedFeatures };
         const batchWithEffects = applyFeatureEffectsToBatch(batchWithUpdatedFeatures);
         
@@ -839,7 +839,7 @@ export async function processWeeklyFeatureRisks(): Promise<void> {
           id: batch.id,
           updates: {
             features: updatedFeatures,
-            qualityIndex: batchWithEffects.qualityIndex,
+            tasteQualityIndex: batchWithEffects.tasteQualityIndex,
             structureIndex: batchWithEffects.structureIndex,
             characteristics: batchWithEffects.characteristics,
             breakdown: batchWithEffects.breakdown,
@@ -1144,7 +1144,7 @@ export function getNextWineryAction(batch: WineBatch): 'crush' | 'ferment' | 'bo
 function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severity: number): number {
   const effect = config.effects.quality;
   if (!effect) return 0;
-  const qualityIndex = getQualityIndex(batch);
+  const tasteQualityIndex = getTasteQualityIndex(batch);
   
   switch (effect.type) {
     case 'linear':
@@ -1154,7 +1154,7 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
       return 0;
       
     case 'power':
-      const penaltyFactor = Math.pow(qualityIndex, effect.exponent!);
+      const penaltyFactor = Math.pow(tasteQualityIndex, effect.exponent!);
       const scaledPenalty = effect.basePenalty! * (1 + penaltyFactor);
       return -scaledPenalty;
       
@@ -1166,7 +1166,7 @@ function calculateQualityImpact(batch: WineBatch, config: FeatureConfig, severit
       
     case 'custom':
       if (effect.calculate) {
-        return effect.calculate(qualityIndex, severity, batch.proneToOxidation);
+        return effect.calculate(tasteQualityIndex, severity, batch.proneToOxidation);
       }
       return 0;
       

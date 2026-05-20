@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { WineBatch, Vineyard } from '@/lib/types/types';
 import { getPresentFeaturesSorted, getAllVineyards } from '@/lib/services';
-import { calculateEstimatedPrice, getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateEstimatedPrice, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface FeatureDetails {
-  currentQualityIndex: number;
-  qualityIndexPenalty: number;
+  currentTasteQualityIndex: number;
+  tasteQualityIndexPenalty: number;
   presentFeatures: Array<{ feature: any; config: any }>;
   hasQualityAffectingFeatures: boolean;
   /** Present features that contribute to estimated price via `effects.price` (see `calculateFeatureMarketPriceMultiplier`). */
@@ -33,9 +33,9 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
 
     const calculateFeatureDetails = async () => {
       try {
-        const currentQualityIndex = getQualityIndex(wineBatch);
-        const baselineQualityIndex = wineBatch.qualityIndexHarvestSnapshot ?? currentQualityIndex;
-        const qualityIndexPenalty = baselineQualityIndex - currentQualityIndex;
+        const currentTasteQualityIndex = getTasteQualityIndex(wineBatch);
+        const baselineTasteQualityIndex = wineBatch.tasteQualityIndexHarvestSnapshot ?? currentTasteQualityIndex;
+        const tasteQualityIndexPenalty = baselineTasteQualityIndex - currentTasteQualityIndex;
         const presentFeatures = getPresentFeaturesSorted(wineBatch);
         const hasQualityAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);
         const hasPriceAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.price !== undefined);
@@ -72,8 +72,8 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
         }
 
         setFeatureDetails({
-          currentQualityIndex,
-          qualityIndexPenalty,
+          currentTasteQualityIndex,
+          tasteQualityIndexPenalty,
           presentFeatures,
           hasQualityAffectingFeatures,
           hasPriceAffectingFeatures,

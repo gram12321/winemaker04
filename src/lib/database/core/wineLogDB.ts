@@ -49,7 +49,7 @@ function mapWineLogFromDB(row: any): WineLogEntry {
     grape: row.grape_variety as GrapeVariety,
     vintage: row.vintage,
     quantity: row.quantity,
-    qualityIndex: row.taste_quality_index,
+    tasteQualityIndex: row.taste_quality_index,
     landValueModifier: row.land_value_modifier ?? 0,
     structureIndex: row.structure_index ?? 0,
     wineScore: row.wine_score,

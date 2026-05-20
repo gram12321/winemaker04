@@ -22,7 +22,7 @@ import {
 } from '../anchors/wineAnchorService';
 import { getAnchorAdjustedStructureRanges } from '../anchors/wineAnchorCharacteristicBridge';
 
-const DEFAULT_QUALITY_INDEX = 0.5;
+const DEFAULT_TASTE_QUALITY_INDEX = 0.5;
 
 /**
  * Inventory Service
@@ -79,7 +79,7 @@ function combineWineBatches(
   
   // Calculate weighted averages for index properties
   const existingLandValueModifier = existingBatch.landValueModifier;
-  const combinedQualityIndex = DEFAULT_QUALITY_INDEX;
+  const combinedTasteQualityIndex = DEFAULT_TASTE_QUALITY_INDEX;
   const combinedLandValueModifier = (existingLandValueModifier * existingWeight) + (newLandValueModifier * newWeight);
   // Combine characteristics using weighted averages
   const combinedCharacteristics: WineCharacteristics = {
@@ -137,8 +137,8 @@ function combineWineBatches(
     landValueModifierHarvestSnapshot: combinedLandValueModifier,
     structureIndexHarvestSnapshot: structureIndexResult.score,
     landValueModifier: combinedLandValueModifier,
-    qualityIndex: combinedQualityIndex,
-    qualityIndexHarvestSnapshot: combinedQualityIndex,
+    tasteQualityIndex: combinedTasteQualityIndex,
+    tasteQualityIndexHarvestSnapshot: combinedTasteQualityIndex,
     structureIndex: structureIndexResult.score,
     characteristics: combinedCharacteristics,
     breakdown: combinedBreakdown,
@@ -148,8 +148,8 @@ function combineWineBatches(
   const tasteQualityIndex = getTasteQualityIndex(combinedBatch);
   return {
     ...combinedBatch,
-    qualityIndex: tasteQualityIndex,
-    qualityIndexHarvestSnapshot: tasteQualityIndex
+    tasteQualityIndex: tasteQualityIndex,
+    tasteQualityIndexHarvestSnapshot: tasteQualityIndex
   };
 }
 
@@ -272,8 +272,8 @@ export async function createWineBatchFromHarvest(
       structureIndexHarvestSnapshot: structureIndexResult.score,
       // Set current values
       landValueModifier: quality,
-      qualityIndexHarvestSnapshot: DEFAULT_QUALITY_INDEX,
-      qualityIndex: DEFAULT_QUALITY_INDEX,
+      tasteQualityIndexHarvestSnapshot: DEFAULT_TASTE_QUALITY_INDEX,
+      tasteQualityIndex: DEFAULT_TASTE_QUALITY_INDEX,
       structureIndex: structureIndexResult.score,
       characteristics,
       breakdown, // Store breakdown data
@@ -293,8 +293,8 @@ export async function createWineBatchFromHarvest(
     const tasteQualityIndex = getTasteQualityIndex(batchWithEventFeatures);
     const finalizedBatch = {
       ...batchWithEventFeatures,
-      qualityIndex: tasteQualityIndex,
-      qualityIndexHarvestSnapshot: tasteQualityIndex
+      tasteQualityIndex: tasteQualityIndex,
+      tasteQualityIndexHarvestSnapshot: tasteQualityIndex
     };
 
     // Calculate estimated price using the pricing service with prestige multipliers

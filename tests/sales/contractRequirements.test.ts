@@ -45,10 +45,10 @@ function wineBatch(overrides: Partial<WineBatch> = {}): WineBatch {
     fermentationProgress: 100,
     landValueModifierHarvestSnapshot: 1,
     structureIndexHarvestSnapshot: 0.75,
-    qualityIndexHarvestSnapshot: 0.5,
+    tasteQualityIndexHarvestSnapshot: 0.5,
     landValueModifier: 1,
     structureIndex: 0.75,
-    qualityIndex: 0.5,
+    tasteQualityIndex: 0.5,
     characteristics: {
       acidity: 0.5,
       aroma: 0.5,

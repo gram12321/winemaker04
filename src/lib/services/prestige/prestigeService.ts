@@ -1189,7 +1189,7 @@ export async function addFeaturePrestigeEvent(
         wineName: `${batch.grape}`,
         vintage: batch.harvestStartDate.year,
         batchSize: batch.quantity,
-        qualityIndex: getTasteQualityIndex(batch),
+        tasteQualityIndex: getTasteQualityIndex(batch),
         vineyardPrestige: eventContext.vineyard?.vineyardPrestige,
         calculatedAmount: amount,
         customerName: eventContext.customerName,

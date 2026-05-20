@@ -37,10 +37,10 @@ const StructureAndQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
  const structureQuality = useStructureIndexQuality(structureResult);
  const structureColorClass = getColorClass(batch.structureIndex);
 
- const qualityIndex = getTasteQualityIndex(batch);
- const qualityCategory = getQualityCategory(qualityIndex);
- const qualityColorClass = getColorClass(qualityIndex);
- const qualityPercentage = formatNumber(qualityIndex * 100, { smartDecimals: true });
+ const tasteQualityIndex = getTasteQualityIndex(batch);
+ const qualityCategory = getQualityCategory(tasteQualityIndex);
+ const qualityColorClass = getColorClass(tasteQualityIndex);
+ const qualityPercentage = formatNumber(tasteQualityIndex * 100, { smartDecimals: true });
 
  return (
  <div className="text-xs text-gray-600 space-y-1">
@@ -61,26 +61,26 @@ const WineScoreDisplay: React.FC<{ wine: WineBatch }> = ({ wine }) => {
 
  if (!wineScoreData || !featureDetails) return null;
 
- const { currentQualityIndex, qualityIndexPenalty, presentFeatures, hasQualityAffectingFeatures } = featureDetails;
- const baselineQualityIndex = wine.qualityIndexHarvestSnapshot;
+ const { currentTasteQualityIndex, tasteQualityIndexPenalty, presentFeatures, hasQualityAffectingFeatures } = featureDetails;
+ const baselineTasteQualityIndex = wine.tasteQualityIndexHarvestSnapshot;
 
  return (
  <UnifiedTooltip
  content={
  <div className="space-y-1 text-xs">
  <div className="font-semibold">Wine Score Calculation</div>
- <div>Stored Taste Quality Snapshot: <span className="font-medium">{formatPercent(baselineQualityIndex, 1, true)}</span></div>
- {hasQualityAffectingFeatures && qualityIndexPenalty > 0.001 && (
+ <div>Stored Taste Quality Snapshot: <span className="font-medium">{formatPercent(baselineTasteQualityIndex, 1, true)}</span></div>
+ {hasQualityAffectingFeatures && tasteQualityIndexPenalty > 0.001 && (
  <>
  <div className="text-red-600">
- Feature Penalty: <span className="font-medium">-{formatPercent(qualityIndexPenalty, 1, true)}</span>
+ Feature Penalty: <span className="font-medium">-{formatPercent(tasteQualityIndexPenalty, 1, true)}</span>
  </div>
  <div className="ml-2 text-xs text-gray-600">
  {presentFeatures.map((f: any, idx: number) => (
  <div key={idx}> {f.feature.icon} {f.config.name}</div>
  ))}
  </div>
- <div>Current Taste Quality: <span className="font-medium">{formatPercent(currentQualityIndex, 1, true)}</span></div>
+ <div>Current Taste Quality: <span className="font-medium">{formatPercent(currentTasteQualityIndex, 1, true)}</span></div>
  </>
  )}
  <div>Structure: <span className="font-medium">{formatPercent(wine.structureIndex, 1, true)}</span></div>

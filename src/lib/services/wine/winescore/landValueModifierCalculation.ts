@@ -11,7 +11,7 @@ import { calculateAsymmetricalScaler01, squashNormalizeTail } from '../../../uti
 import { BoundedVineyardPrestigeFactor } from '../../prestige/prestigeService';
 import { getFeatureImpacts } from '../features/featureService';
 import { combineOvergrowthYears } from '../../activity/workcalculators/overgrowthUtils';
-import { getQualityIndex } from './wineScoreCalculation';
+import { getTasteQualityIndex } from './wineScoreCalculation';
 
 export function getMaxLandValue(): number {
   let maxValue = 0;
@@ -191,9 +191,9 @@ export function getVineyardLandValueModifierFactors(vineyard: Vineyard): {
 
 // ===== QUALITY BREAKDOWN FOR UI =====
 
-export interface QualityIndexBreakdown {
-  qualityIndexHarvestSnapshot: number; // Original taste quality at harvest
-  currentQualityIndex: number; // Current taste quality
+export interface TasteQualityIndexBreakdown {
+  tasteQualityIndexHarvestSnapshot: number; // Original taste quality at harvest
+  currentTasteQualityIndex: number; // Current taste quality
   featureImpacts: Array<{
     featureId: string;
     featureName: string;
@@ -211,12 +211,12 @@ export interface QualityIndexBreakdown {
  * @param batch - Wine batch to analyze
  * @returns Comprehensive quality breakdown with feature impacts
  */
-export function getQualityIndexBreakdown(batch: WineBatch): QualityIndexBreakdown {
-  const qualityIndexHarvestSnapshot = batch.qualityIndexHarvestSnapshot; // Baseline index at harvest
-  const currentQualityIndex = getQualityIndex(batch); // Current taste quality
+export function getTasteQualityIndexBreakdown(batch: WineBatch): TasteQualityIndexBreakdown {
+  const tasteQualityIndexHarvestSnapshot = batch.tasteQualityIndexHarvestSnapshot; // Baseline index at harvest
+  const currentTasteQualityIndex = getTasteQualityIndex(batch); // Current taste quality
   const featureImpacts = getFeatureImpacts(batch);
   
-  const qualityIndexImpacts = featureImpacts.map((impact: any) => ({
+  const tasteQualityIndexImpacts = featureImpacts.map((impact: any) => ({
     featureId: impact.featureId,
     featureName: impact.featureName,
     icon: impact.icon,
@@ -224,12 +224,12 @@ export function getQualityIndexBreakdown(batch: WineBatch): QualityIndexBreakdow
     impactType: impact.qualityImpact >= 0 ? 'bonus' as const : 'penalty' as const
   }));
   
-  const totalFeatureImpact = currentQualityIndex - qualityIndexHarvestSnapshot;
+  const totalFeatureImpact = currentTasteQualityIndex - tasteQualityIndexHarvestSnapshot;
   
   return {
-    qualityIndexHarvestSnapshot,
-    currentQualityIndex,
-    featureImpacts: qualityIndexImpacts,
+    tasteQualityIndexHarvestSnapshot,
+    currentTasteQualityIndex,
+    featureImpacts: tasteQualityIndexImpacts,
     totalFeatureImpact
   };
 }

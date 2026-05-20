@@ -4,14 +4,14 @@ Date: 2026-05-20
 
 ## Goal
 
-Replace the fixed `QualityIndex = 0.5` placeholder with a computed `tasteQualityIndex` that scores how coherent the current 14-family taste profile is for the wine. The index should feed WineScore directly, alongside `structureIndex`.
+Replace the fixed `tasteQualityIndex = 0.5` placeholder with a computed `tasteQualityIndex` that scores how coherent the current 14-family taste profile is for the wine. The index should feed WineScore directly, alongside `structureIndex`.
 
 ## Naming
 
 - `tasteProfile`: the current 14 taste-family values produced by `computeWineTasteProfile`.
 - `tasteQualityIndex`: the 0-1 score for how well that profile fits the wine.
 - UI label: `Taste Quality`.
-- Persisted database columns use `taste_quality_index` naming in this slice. TypeScript compatibility fields may still map to those columns until the wider model rename is completed.
+- Persisted database columns use `taste_quality_index` naming.
 
 ## Model
 
@@ -42,7 +42,7 @@ In scope:
 
 - pure scoring service for 14 taste families,
 - unit tests for balanced and incoherent profiles,
-- `getTasteQualityIndex(batch)` and compatibility `getQualityIndex(batch)` wrapper,
+- `getTasteQualityIndex(batch)`,
 - WineScore and estimated price use computed taste quality,
 - database columns renamed to `taste_quality_index`, `taste_quality_index_harvest_snapshot`, and `taste_quality_index_bottling_snapshot`,
 - visible labels in touched wine score/quality UI move from "Quality Index" to "Taste Quality",

@@ -15,7 +15,7 @@ import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wi
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
-import { getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 /**
  * Calculate work required for fermentation setup
@@ -182,7 +182,7 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       features: batchAfterFermentationSetup.features,
       characteristics: batchAfterFermentationSetup.characteristics,
       breakdown: batchAfterFermentationSetup.breakdown,
-      qualityIndex: getQualityIndex(batchAfterFermentationSetup),
+      tasteQualityIndex: getTasteQualityIndex(batchAfterFermentationSetup),
       structureIndex: batchAfterFermentationSetup.structureIndex,
       wineAnchors: batchAfterFermentationSetup.wineAnchors
     });

@@ -8,7 +8,7 @@ import { updateWineBatch } from '@/lib/database/activities/inventoryDB';
 import { loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { addTransaction } from '@/lib/services';
 import { processEventTrigger } from '@/lib/services/wine/features/featureService';
-import { getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 import { applyCrushingToWineAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
 import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
@@ -161,9 +161,9 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
     
     // Taste quality is computed from the current taste profile in this phase.
-    const currentQualityIndex = getQualityIndex(batch);
+    const currentTasteQualityIndex = getTasteQualityIndex(batch);
     void qualityPenalty;
-    const finalQualityIndex = currentQualityIndex;
+    const finalTasteQualityIndex = currentTasteQualityIndex;
 
     // Note: Special features were removed for this iteration
 
@@ -180,7 +180,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       ...batch,
       characteristics: modifiedCharacteristics,
       breakdown: combinedBreakdown,
-      qualityIndex: finalQualityIndex
+      tasteQualityIndex: finalTasteQualityIndex
     };
     const batchWithEventFeatures = await processEventTrigger(
       updatedBatch,
@@ -218,7 +218,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       breakdown: batchAfterCrush.breakdown,
       features: batchAfterCrush.features,
       quantity: batchAfterCrush.quantity,
-      qualityIndex: getQualityIndex(batchAfterCrush),
+      tasteQualityIndex: getTasteQualityIndex(batchAfterCrush),
       structureIndex: batchAfterCrush.structureIndex,
       wineAnchors: batchAfterCrush.wineAnchors
     });

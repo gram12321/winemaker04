@@ -71,7 +71,7 @@ export const LandValueModifierFactorsBreakdown: React.FC<LandValueModifierFactor
 
   // Get land-value modifier factors with error handling
   let factors: any, rawValues: any, landValueModifierScore: number, landValueCategory: string;
-  const baseQualityFromBatch = wineBatch?.qualityIndexHarvestSnapshot;
+  const baseQualityFromBatch = wineBatch?.tasteQualityIndexHarvestSnapshot;
   
   try {
     const landValueModifierData = getLandValueModifierFactors();
@@ -676,7 +676,7 @@ interface FeatureImpactsSectionProps {
 function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSectionProps) {
   const featureImpacts = getFeatureImpacts(wineBatch).filter((impact) => Math.abs(impact.qualityImpact) >= 0.001);
   void baseQuality;
-  const currentQualityIndex = getTasteQualityIndex(wineBatch);
+  const currentTasteQualityIndex = getTasteQualityIndex(wineBatch);
   return (
     <div className="p-3 bg-white rounded border border-gray-300">
       <div className="text-sm space-y-3">
@@ -687,9 +687,9 @@ function FeatureImpactsSection({ wineBatch, baseQuality }: FeatureImpactsSection
         <div className="flex justify-between text-lg font-bold">
           <span>Taste Quality:</span>
           <span className="font-mono">
-            {formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
+            {formatNumber(currentTasteQualityIndex, { decimals: 2, forceDecimals: true })}
             <span className="text-sm font-normal ml-2">
-              ({getQualityCategory(currentQualityIndex)})
+              ({getQualityCategory(currentTasteQualityIndex)})
             </span>
           </span>
         </div>
