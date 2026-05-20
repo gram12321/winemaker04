@@ -20,32 +20,45 @@ function FamilyRangeRow({
   current,
   ideal,
   acceptedRange,
-  score
+  score,
+  weight,
+  reasons
 }: {
   familyId: FlavorFamilyId;
   current: number;
   ideal: number;
   acceptedRange: [number, number];
   score: number;
+  weight: number;
+  reasons: string[];
 }) {
   const [min, max] = acceptedRange;
   const currentLeft = `${current * 100}%`;
   const idealLeft = `${ideal * 100}%`;
   const rangeLeft = `${min * 100}%`;
   const rangeWidth = `${Math.max(0, (max - min) * 100)}%`;
+  const reasonSummary = reasons.join(' | ');
 
   return (
-    <div className="grid grid-cols-[8.5rem_1fr_3.5rem] items-center gap-3 text-[11px]">
+    <div className="grid grid-cols-[10rem_1fr_3.5rem] items-start gap-3 text-[11px]">
       <div className="min-w-0">
         <div className="truncate font-medium text-foreground" title={FLAVOR_FAMILY_LABELS[familyId]}>
           {FLAVOR_FAMILY_LABELS[familyId]}
         </div>
         <div className="font-mono text-muted-foreground">
           {formatNumber(current, { decimals: 2, forceDecimals: true })}
+          <span className="ml-1">
+            w {formatNumber(weight, { decimals: 2, forceDecimals: true })}
+          </span>
         </div>
+        {reasonSummary && (
+          <div className="truncate text-[10px] text-muted-foreground" title={reasonSummary}>
+            {reasonSummary}
+          </div>
+        )}
       </div>
 
-      <div className="relative h-5">
+      <div className="relative h-5 mt-1.5">
         <div className="absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-muted" />
         <div
           className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-emerald-500/55"
@@ -101,7 +114,7 @@ export function WineTasteQualityBreakdown({
             <div className={cn('text-2xl font-bold', getColorClass(result.tasteQualityIndex))}>
               {formatNumber(result.tasteQualityIndex, { decimals: 2, forceDecimals: true })}
             </div>
-            <div className="text-sm text-gray-600">{getQualityCategory(result.tasteQualityIndex)}</div>
+            <div className="text-sm text-muted-foreground">{getQualityCategory(result.tasteQualityIndex)}</div>
           </div>
         </div>
 
@@ -116,12 +129,14 @@ export function WineTasteQualityBreakdown({
                 ideal={family.ideal}
                 acceptedRange={family.acceptedRange}
                 score={family.score}
+                weight={family.weight}
+                reasons={family.reasons}
               />
             );
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <div className="h-2 w-3 rounded bg-emerald-500/60" />
             <span>Accepted Range</span>
@@ -149,6 +164,10 @@ export function WineTasteQualityBreakdown({
                 </div>
                 <div className="mt-1 text-muted-foreground">
                   Current {pct(breakdown.current)} / range {pct(breakdown.acceptedRange[0])}-{pct(breakdown.acceptedRange[1])}
+                </div>
+                <div className="mt-1 truncate text-muted-foreground" title={breakdown.reasons.join(' | ')}>
+                  Weight {formatNumber(breakdown.weight, { decimals: 2, forceDecimals: true })}
+                  {breakdown.reasons[0] ? ` - ${breakdown.reasons[0]}` : ''}
                 </div>
               </div>
             ))}

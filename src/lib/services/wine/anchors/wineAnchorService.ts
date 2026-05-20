@@ -74,6 +74,7 @@ export const WINE_ANCHOR_KEYS = [
 
 const ANCHOR_KEYS = WINE_ANCHOR_KEYS;
 const MID = 0.5;
+type DbAnchorRecord = Record<string, unknown>;
 
 export const NEUTRAL_WINE_ANCHORS: WineAnchorValues = {
   sugarPotential: MID,
@@ -92,6 +93,73 @@ export const NEUTRAL_WINE_ANCHORS: WineAnchorValues = {
 
 export function resolveWineAnchors(anchors: WineAnchorValues | undefined | null): WineAnchorValues {
   return anchors ?? NEUTRAL_WINE_ANCHORS;
+}
+
+function readDbAnchorNumber(source: DbAnchorRecord, key: string): number | undefined {
+  const value = source[key];
+  return typeof value === 'number' && Number.isFinite(value) ? clamp01(value) : undefined;
+}
+
+function readLegacyWeightedMean(
+  source: DbAnchorRecord,
+  pairs: ReadonlyArray<{ key: string; weight: number; map?: (value: number) => number }>
+): number | undefined {
+  const values = pairs.flatMap(({ key, weight, map }) => {
+    const value = readDbAnchorNumber(source, key);
+    return value === undefined ? [] : [{ value: map ? map(value) : value, weight }];
+  });
+
+  return values.length > 0 ? clamp01(weightedMean(values)) : undefined;
+}
+
+function applyLegacyAnchorMapping(out: WineAnchorValues, source: DbAnchorRecord): void {
+  const setIfMissing = (
+    target: keyof WineAnchorValues,
+    pairs: ReadonlyArray<{ key: string; weight: number; map?: (value: number) => number }>
+  ) => {
+    if (readDbAnchorNumber(source, target) !== undefined) return;
+    const value = readLegacyWeightedMean(source, pairs);
+    if (value !== undefined) {
+      out[target] = value;
+    }
+  };
+
+  setIfMissing('sugarPotential', [
+    { key: 'residualSugar', weight: 0.65 },
+    { key: 'harvestTiming', weight: 0.35 }
+  ]);
+  setIfMissing('acidPotential', [{ key: 'juiceAcidity', weight: 1 }]);
+  setIfMissing('phenolicPotential', [
+    { key: 'phenolicExtract', weight: 0.45 },
+    { key: 'colorIntensity', weight: 0.25 },
+    { key: 'skinContactEvolution', weight: 0.3 }
+  ]);
+  setIfMissing('aromaticPotential', [
+    { key: 'aromaticIntensity', weight: 0.7 },
+    { key: 'varietyCharacter', weight: 0.3 }
+  ]);
+  setIfMissing('bodyPotential', [
+    { key: 'textureRichness', weight: 0.55 },
+    { key: 'alcoholPotential', weight: 0.45 }
+  ]);
+  setIfMissing('extractionState', [{ key: 'crushingExtraction', weight: 1 }]);
+  setIfMissing('fermentationState', [{ key: 'fermentationProfile', weight: 1 }]);
+  setIfMissing('leesState', [{ key: 'leesContact', weight: 1 }]);
+  setIfMissing('oxidationPressure', [{ key: 'oxidativeCharacter', weight: 1 }]);
+  setIfMissing('maturationState', [{ key: 'cellarEvolution', weight: 1 }]);
+  setIfMissing('terroirExpression', [
+    { key: 'regionalTypicity', weight: 0.2 },
+    { key: 'soilAffinity', weight: 0.16 },
+    { key: 'solarClimateFit', weight: 0.12 },
+    { key: 'microclimateBlend', weight: 0.12 },
+    { key: 'siteAltitude', weight: 0.08 },
+    { key: 'aspectWarmth', weight: 0.08 },
+    { key: 'vineAgeCharacter', weight: 0.08 },
+    { key: 'rowCompetition', weight: 0.06 },
+    { key: 'siteWildness', weight: 0.04, map: (value) => 1 - value },
+    { key: 'vineyardHealth', weight: 0.06 }
+  ]);
+  setIfMissing('processFootprint', [{ key: 'featureFootprint', weight: 1 }]);
 }
 
 export function computeHarvestWineAnchors(
@@ -252,18 +320,20 @@ export function parseWineAnchorsFromDb(raw: unknown): WineAnchorValues {
     return out;
   }
 
-  const o = raw as Record<string, unknown>;
+  const o = raw as DbAnchorRecord;
   const partial =
     o.values && typeof o.values === 'object' && o.values !== null
-      ? (o.values as Partial<Record<string, number>>)
-      : (o as Partial<Record<string, number>>);
+      ? (o.values as DbAnchorRecord)
+      : o;
 
   for (const k of ANCHOR_KEYS) {
-    const v = partial[k];
-    if (typeof v === 'number' && !Number.isNaN(v)) {
-      out[k] = clamp01(v);
+    const v = readDbAnchorNumber(partial, k);
+    if (v !== undefined) {
+      out[k] = v;
     }
   }
+
+  applyLegacyAnchorMapping(out, partial);
 
   return out;
 }

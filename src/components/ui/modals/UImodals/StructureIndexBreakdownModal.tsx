@@ -1,5 +1,5 @@
 import React from 'react';
-import { WineCharacteristics } from '@/lib/types/types';
+import { WineAnchorValues, WineCharacteristics } from '@/lib/types/types';
 import { StructureIndexBreakdown } from '../../components/StructureIndexBreakdown';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../shadCN/dialog';
 import { Button } from '../../shadCN/button';
@@ -11,6 +11,7 @@ import { DialogProps } from '@/lib/types/UItypes';
 
 interface StructureIndexBreakdownModalProps extends DialogProps {
   characteristics: WineCharacteristics;
+  wineAnchors?: WineAnchorValues | null;
   wineName?: string;
 }
 
@@ -18,6 +19,7 @@ export const StructureIndexBreakdownModal: React.FC<StructureIndexBreakdownModal
   isOpen,
   onClose,
   characteristics,
+  wineAnchors = null,
   wineName = "Wine"
 }) => {
   return (
@@ -35,6 +37,7 @@ export const StructureIndexBreakdownModal: React.FC<StructureIndexBreakdownModal
         <div className="mt-4">
           <StructureIndexBreakdown 
             characteristics={characteristics} 
+            wineAnchors={wineAnchors}
             showWineStyleRules={true}
           />
         </div>

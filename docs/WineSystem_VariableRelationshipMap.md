@@ -1,6 +1,6 @@
 # Wine System Variable Relationship Map (Rewritten)
 Date: 2026-05-20  
-Status: Architecture mapping plus current taste-quality implementation notes
+Status: Architecture mapping plus current implementation audit and fixes
 
 ## 1) Purpose
 This document is the updated target map for the wine simulation architecture.
@@ -147,11 +147,12 @@ flowchart LR
 ## 8) Contract Quality Requirement Remap
 
 Current observed implementation:
-- Contract requirement type `quality` uses `tasteIndex`.
+- Contract requirement type `tasteQuality` validates against computed `tasteQualityIndex`.
+- Contract requirement type `landValue` remains a separate site/static requirement.
 
 Target behavior:
-- Contract quality should use a meaningful current quality signal, not the old fixed placeholder.
-- In this slice, the wine-side quality signal is `tasteQualityIndex`; site-static quality remains in the land-value/price path.
+- Contract taste quality should use the current computed taste-quality signal, not the old fixed placeholder.
+- Site-static quality remains in the land-value/price path.
 
 ## 9) Legacy Naming Removal Policy
 
@@ -200,6 +201,22 @@ Agreed intent:
 5. Feed wine score from computed taste quality and structure index.
 6. Remove legacy/fallback naming and migrate storage fields to `taste_quality_index*`.
 7. Keep snapshots explicit and immutable.
+
+## 13) Implementation Audit (2026-05-20)
+
+| Area | Finding | Fix/status |
+|---|---|---|
+| Compact anchors | Runtime code uses the 12-key `WineAnchorValues` model, but persisted legacy 26-key `wine_anchors` JSON would previously parse as neutral. | Fixed: `parseWineAnchorsFromDb` maps old 26-key JSON, including `{ values: ... }`, into the compact anchors. |
+| Wine log snapshots | Wine log rows persisted bottling snapshots, but highscore submission still used mutable `wineBatch.structureIndex`. | Fixed: `recordBottledWine` now submits `structureIndexBottlingSnapshot` when available. |
+| Achievement wine score | `wine_score_threshold` achievements recomputed `(qualityIndex + structureIndex) / 2` instead of using the persisted winelog `wineScore`. | Fixed: achievement context includes `wineScore`; only finite persisted winelog scores count toward score achievements. |
+| Snapshot visibility | The main wine modal emphasized current scores and did not make harvest/current/bottling separation obvious. | Fixed: overview now includes a snapshots section for Taste Quality, Structure, Land Value, and Wine Score. |
+| Taste-quality explainability | Service results included family `weight` and `reasons`, but the UI hid them. | Fixed: taste-quality rows and weakest-family cards now show weights and reason summaries. |
+| Structure UI consistency | `WineModal` passed `wineAnchors` into `StructureIndexBreakdown`, but the standalone structure modal could not. | Fixed: `StructureIndexBreakdownModal` now accepts and forwards `wineAnchors`. |
+| Contract quality split | Contract checks now treat taste quality and land value separately. | Verified by existing contract tests. |
+| Descriptor hierarchy | Taste descriptors are grouped under flavor families for UI display; descriptor-level taste remains display-only for now. | Still aligned with target intent. |
+| Legacy naming | TypeScript still keeps compatibility fields such as `qualityIndex` while persistence maps to `taste_quality_index`. | Accepted interim state; business behavior uses explicit taste-quality semantics. |
+
+The intentionally broad shadcn/raw-style cleanup noted during UI review remains outside this wine-system behavior pass. Local UI changes in this pass use existing shadcn components and semantic utility classes where touched.
 
 ---
 This rewritten map is the agreed target architecture baseline for upcoming implementation tasks.

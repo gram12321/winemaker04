@@ -12,6 +12,7 @@ import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatNumber as formatNumberUtil, getBadgeColorClasses } from '../../utils/utils';
+import { resolveWineLogAchievementScore } from './achievementScoreUtils';
 
 const EXCLUDED_REVENUE_DESCRIPTIONS = new Set(['Starting Capital', 'Starting Capital Adjustment']);
 
@@ -235,6 +236,7 @@ interface AchievementCheckContext {
   wineLogEntries: Array<{
     qualityIndex: number;
     structureIndex: number;
+    wineScore?: number;
     estimatedPrice: number;
     vintage: number;
   }>;
@@ -363,6 +365,7 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     wineLogEntries: allWineLogEntries.map(entry => ({
       qualityIndex: entry.qualityIndex,
       structureIndex: entry.structureIndex,
+      wineScore: entry.wineScore,
       estimatedPrice: entry.estimatedPrice,
       vintage: entry.vintage
     }))
@@ -628,7 +631,7 @@ function checkAchievementCondition(
       
     case 'wine_score_threshold':
       // Check if produced a wine with wine score >= threshold
-      const maxWineScore = Math.max(...context.wineLogEntries.map(e => (e.qualityIndex + e.structureIndex) / 2), 0);
+      const maxWineScore = Math.max(...context.wineLogEntries.map(resolveWineLogAchievementScore), 0);
       return {
         isMet: maxWineScore >= (condition.threshold || 0),
         progress: maxWineScore,

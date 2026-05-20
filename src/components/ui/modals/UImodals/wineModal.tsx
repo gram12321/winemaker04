@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../shadCN/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shadCN/card';
 import { Badge } from '../../shadCN/badge';
 import { TooltipSection, TooltipRow, tooltipStyles, UnifiedTooltip } from '../../shadCN/tooltip';
-import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar } from 'lucide-react';
+import { Wine, Calendar, MapPin, Award, AlertTriangle, TrendingUp, BarChart3, Radar, History } from 'lucide-react';
 import { DialogProps } from '@/lib/types/UItypes';
 import { formatNumber, getFlagIcon } from '@/lib/utils';
 import { getCharacteristicIconSrc } from '@/lib/utils/icons';
@@ -89,6 +89,37 @@ export const WineModal: React.FC<WineModalProps> = ({
   const qualityCategory = getQualityCategory(currentQualityIndex);
   const qualityColorClass = getColorClass(currentQualityIndex);
   const characteristicOrder: Array<keyof WineBatch['characteristics']> = ['acidity','aroma','body','spice','sweetness','tannins'] as any;
+  const harvestWineScore = (wineBatch.qualityIndexHarvestSnapshot + wineBatch.structureIndexHarvestSnapshot) / 2;
+  const snapshotRows = [
+    {
+      label: 'Taste Quality',
+      harvest: wineBatch.qualityIndexHarvestSnapshot,
+      current: currentQualityIndex,
+      bottling: wineBatch.qualityIndexBottlingSnapshot
+    },
+    {
+      label: 'Structure',
+      harvest: wineBatch.structureIndexHarvestSnapshot,
+      current: currentStructureIndex,
+      bottling: wineBatch.structureIndexBottlingSnapshot
+    },
+    {
+      label: 'Land Value',
+      harvest: wineBatch.landValueModifierHarvestSnapshot,
+      current: landValueModifier,
+      bottling: wineBatch.landValueModifierBottlingSnapshot
+    },
+    {
+      label: 'Wine Score',
+      harvest: harvestWineScore,
+      current: currentWineScore,
+      bottling: wineBatch.wineScoreBottlingSnapshot
+    }
+  ];
+  const formatSnapshotValue = (value?: number | null): string =>
+    typeof value === 'number' && Number.isFinite(value)
+      ? formatNumber(value, { decimals: 2, forceDecimals: true })
+      : 'n/a';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -349,6 +380,43 @@ export const WineModal: React.FC<WineModalProps> = ({
                     </CardContent>
                   </Card>
                 </div>
+
+                <Card>
+                  <CardHeader className="py-3">
+                    <CardTitle className="text-xs font-medium flex items-center gap-2">
+                      <History className="h-4 w-4" /> Snapshots
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-3 text-sm">
+                    <div className="overflow-x-auto scrollbar-styled">
+                      <div className="grid min-w-[34rem] grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(5rem,6rem))] gap-2 text-[11px]">
+                        <div className="font-medium text-muted-foreground">Metric</div>
+                        <div className="text-right font-medium text-muted-foreground">Harvest</div>
+                        <div className="text-right font-medium text-muted-foreground">Current</div>
+                        <div className="text-right font-medium text-muted-foreground">Bottling</div>
+                        {snapshotRows.map((row) => (
+                          <React.Fragment key={row.label}>
+                            <div className="rounded bg-muted/40 px-2 py-1 font-medium text-foreground">
+                              {row.label}
+                            </div>
+                            <div className="rounded bg-muted/40 px-2 py-1 text-right font-mono tabular-nums">
+                              {formatSnapshotValue(row.harvest)}
+                            </div>
+                            <div className="rounded bg-muted/40 px-2 py-1 text-right font-mono tabular-nums">
+                              {formatSnapshotValue(row.current)}
+                            </div>
+                            <div className="rounded bg-muted/40 px-2 py-1 text-right font-mono tabular-nums">
+                              {formatSnapshotValue(row.bottling)}
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                      Harvest and bottling values are frozen snapshots; current values update with cellar evolution.
+                    </p>
+                  </CardContent>
+                </Card>
 
                 <Card>
                   <CardHeader className="py-3">

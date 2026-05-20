@@ -78,7 +78,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
             grape: wineBatch.grape,
             quantity: wineBatch.quantity,
             qualityIndex,
-            structureIndex: wineBatch.structureIndex,
+            structureIndex: structureIndexSnapshot,
             wineScore: wineScore,
             price: wineBatch.estimatedPrice
           }
