@@ -18,7 +18,7 @@ export interface WineLogData {
   grape_variety: string;
   vintage: number;
   quantity: number;
-  quality_index: number;
+  taste_quality_index: number;
   land_value_modifier?: number;
   structure_index: number;
   wine_score: number;
@@ -49,7 +49,7 @@ function mapWineLogFromDB(row: any): WineLogEntry {
     grape: row.grape_variety as GrapeVariety,
     vintage: row.vintage,
     quantity: row.quantity,
-    qualityIndex: row.quality_index,
+    qualityIndex: row.taste_quality_index,
     landValueModifier: row.land_value_modifier ?? 0,
     structureIndex: row.structure_index ?? 0,
     wineScore: row.wine_score,

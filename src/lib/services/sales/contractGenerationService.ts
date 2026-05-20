@@ -15,6 +15,8 @@ import {
   CONTRACT_MIN_QUANTITIES,
   AVAILABLE_GRAPES,
   AVAILABLE_GRAPE_COLORS,
+  AVAILABLE_SITE_COUNTRIES,
+  AVAILABLE_SITE_REGIONS,
   CONTRACT_PRICING,
   MULTI_YEAR_CONFIG,
   COMPLEXITY_THRESHOLDS,
@@ -45,8 +47,8 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
   let difficulty: RequirementDifficulty = 'easy';
   
   switch (requirement.type) {
-    case 'quality':
-      // Quality thresholds: <50% easy, 50-70% medium, 70-85% hard, >85% expert
+    case 'tasteQuality':
+      // Taste quality thresholds: <50% easy, 50-70% medium, 70-85% hard, >85% expert
       if (requirement.value < 0.5) {
         difficulty = 'easy';
         score = requirement.value * 0.4; // 0-0.2
@@ -131,6 +133,18 @@ function calculateRequirementDifficulty(requirement: ContractRequirement): {
       // Grape color requirement is easy (red/white split)
       difficulty = 'easy';
       score = 0.2;
+      break;
+
+    case 'country':
+      // Country requirements are broad site parameters.
+      difficulty = 'easy';
+      score = 0.18;
+      break;
+
+    case 'region':
+      // Region requirements are narrower than country, but still easier than exact vintage.
+      difficulty = 'medium';
+      score = 0.32;
       break;
       
     case 'altitude':
@@ -736,7 +750,7 @@ async function generateRequirements(customer: Customer): Promise<ContractRequire
   
   // Ensure at least one requirement
   if (requirements.length === 0) {
-    requirements.push(generateQualityRequirement(customer, 0.3)); // Easy fallback
+    requirements.push(generateTasteQualityRequirement(customer, 0.3)); // Easy fallback
   }
   
   return requirements;
@@ -754,8 +768,8 @@ function generateRequirementWithDifficulty(
   const actualDifficulty = Math.max(0, Math.min(1, targetDifficulty + (Math.random() * variance * 2 - variance)));
   
   switch (type) {
-    case 'quality':
-      return generateQualityRequirement(customer, actualDifficulty);
+    case 'tasteQuality':
+      return generateTasteQualityRequirement(customer, actualDifficulty);
     case 'minimumVintage':
       return generateMinimumVintageRequirement(customer, actualDifficulty);
     case 'specificVintage':
@@ -768,6 +782,10 @@ function generateRequirementWithDifficulty(
       return generateGrapeRequirement(customer);
     case 'grapeColor':
       return generateGrapeColorRequirement(customer);
+    case 'country':
+      return generateCountryRequirement(customer);
+    case 'region':
+      return generateRegionRequirement(customer);
     case 'altitude':
       return generateAltitudeRequirement(customer, actualDifficulty);
     case 'aspect':
@@ -779,20 +797,20 @@ function generateRequirementWithDifficulty(
     case 'characteristicDeviation':
       return generatecharacteristicDeviationRequirement(customer, actualDifficulty);
     default:
-      return generateQualityRequirement(customer, actualDifficulty);
+      return generateTasteQualityRequirement(customer, actualDifficulty);
   }
 }
 
 /**
- * Generate quality requirement with target difficulty
+ * Generate taste quality requirement with target difficulty
  * difficulty: 0-1 scale (0=easy, 1=expert)
  */
-function generateQualityRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  // Map difficulty to quality thresholds
-  // 0.0-0.2 = 30-50% quality (easy)
-  // 0.2-0.4 = 50-70% quality (medium)
-  // 0.4-0.7 = 70-85% quality (hard)
-  // 0.7-1.0 = 85-95% quality (expert)
+function generateTasteQualityRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
+  // Map difficulty to taste quality thresholds
+  // 0.0-0.2 = 30-50% taste quality (easy)
+  // 0.2-0.4 = 50-70% taste quality (medium)
+  // 0.4-0.7 = 70-85% taste quality (hard)
+  // 0.7-1.0 = 85-95% taste quality (expert)
   
   let minQuality = 0.3;
   if (targetDifficulty < 0.2) {
@@ -810,7 +828,7 @@ function generateQualityRequirement(_customer: Customer, targetDifficulty: numbe
   minQuality = Math.max(0.2, Math.min(0.95, minQuality + variance));
   
   return {
-    type: 'quality',
+    type: 'tasteQuality',
     value: Math.round(minQuality * 100) / 100
   };
 }
@@ -931,6 +949,37 @@ function generateGrapeColorRequirement(_customer: Customer): ContractRequirement
     value: 1, // Binary: must match
     params: {
       targetGrapeColor
+    }
+  };
+}
+
+/**
+ * Generate country site-parameter requirement.
+ */
+function generateCountryRequirement(_customer: Customer): ContractRequirement {
+  const targetCountry = AVAILABLE_SITE_COUNTRIES[Math.floor(Math.random() * AVAILABLE_SITE_COUNTRIES.length)];
+
+  return {
+    type: 'country',
+    value: 1,
+    params: {
+      targetCountry
+    }
+  };
+}
+
+/**
+ * Generate region site-parameter requirement.
+ */
+function generateRegionRequirement(_customer: Customer): ContractRequirement {
+  const target = AVAILABLE_SITE_REGIONS[Math.floor(Math.random() * AVAILABLE_SITE_REGIONS.length)];
+
+  return {
+    type: 'region',
+    value: 1,
+    params: {
+      targetCountry: target.country,
+      targetRegion: target.region
     }
   };
 }

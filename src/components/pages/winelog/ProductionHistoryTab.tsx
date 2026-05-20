@@ -29,7 +29,7 @@ const StructureAndQualityDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }
         <span className="font-medium">Structure:</span> <span className="font-medium">{structurePercentage}%</span>
       </div>
       <div>
-        <span className="font-medium">Quality:</span> <span className="font-medium">{tastePercentage}%</span>
+        <span className="font-medium">Taste Quality:</span> <span className="font-medium">{tastePercentage}%</span>
       </div>
     </div>
   );
@@ -44,7 +44,7 @@ const WineScoreDisplay: React.FC<{ entry: WineLogEntry }> = ({ entry }) => {
       content={
         <div className="space-y-1 text-xs">
           <div className="font-semibold">Wine Score Calculation</div>
-          <div>Quality Index: <span className="font-medium">{formatPercent(entry.qualityIndex, 1, true)}</span></div>
+          <div>Taste Quality: <span className="font-medium">{formatPercent(entry.qualityIndex, 1, true)}</span></div>
           <div>Structure: <span className="font-medium">{formatPercent(entry.structureIndex, 1, true)}</span></div>
           <div className="border-t pt-1 mt-1">Wine Score: <span className="font-medium">{formatPercent(wineScore, 1, true)}</span></div>
         </div>

@@ -15,6 +15,7 @@ import { Progress } from '../shadCN/progress';
 import { Radio } from 'lucide-react';
 import { cn } from '@/lib/utils/utils';
 import { WineTasteWheel } from './WineTasteWheel';
+import { WineTasteQualityBreakdown } from './WineTasteQualityBreakdown';
 
 function TasteBarRow({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
@@ -55,6 +56,8 @@ export function WineTasteProfilePanel({ batch, className }: { batch: WineBatch; 
           />
         </CardContent>
       </Card>
+
+      <WineTasteQualityBreakdown batch={batch} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
@@ -101,7 +104,7 @@ export function WineTasteProfilePanel({ batch, className }: { batch: WineBatch; 
       </div>
 
       <p className="text-[10px] text-muted-foreground leading-relaxed px-0.5">
-        Taste values are computed live when this panel opens. They are independent from wine score for now.
+        Taste values are computed live when this panel opens. The 14 family values feed Taste Quality; descriptors remain display-only for now.
       </p>
     </div>
   );

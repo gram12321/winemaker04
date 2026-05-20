@@ -80,9 +80,9 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         fermentation_options: batch.fermentationOptions, 
         land_value_modifier_harvest_snapshot: batch.landValueModifierHarvestSnapshot,
         structure_index_harvest_snapshot: batch.structureIndexHarvestSnapshot,
-        quality_index_harvest_snapshot: batch.qualityIndexHarvestSnapshot,
+        taste_quality_index_harvest_snapshot: batch.qualityIndexHarvestSnapshot,
         land_value_modifier: batch.landValueModifier,
-        quality_index: batch.qualityIndex,
+        taste_quality_index: batch.qualityIndex,
         structure_index: batch.structureIndex,
         characteristics: batch.characteristics, 
         breakdown: batch.breakdown, 
@@ -105,7 +105,7 @@ export const saveWineBatch = async (batch: WineBatch): Promise<void> => {
         bottled_week: batch.bottledDate ? Math.round(batch.bottledDate.week) : null,
         bottled_season: batch.bottledDate?.season,
         bottled_year: batch.bottledDate ? Math.round(batch.bottledDate.year) : null,
-        quality_index_bottling_snapshot: batch.qualityIndexBottlingSnapshot ?? null,
+        taste_quality_index_bottling_snapshot: batch.qualityIndexBottlingSnapshot ?? null,
         land_value_modifier_bottling_snapshot: batch.landValueModifierBottlingSnapshot ?? null,
         structure_index_bottling_snapshot: batch.structureIndexBottlingSnapshot ?? null,
         wine_score_bottling_snapshot: batch.wineScoreBottlingSnapshot ?? null,
@@ -135,9 +135,9 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
       const landValueModifierHarvestSnapshot = row.land_value_modifier_harvest_snapshot ?? 0;
       const structureIndex = row.structure_index ?? 0;
       const structureIndexHarvestSnapshot = row.structure_index_harvest_snapshot ?? structureIndex;
-      const qualityIndex = row.quality_index ?? 0.5;
+      const qualityIndex = row.taste_quality_index ?? 0.5;
       const landValueModifier = row.land_value_modifier ?? landValueModifierHarvestSnapshot;
-      const qualityIndexHarvestSnapshot = row.quality_index_harvest_snapshot ?? qualityIndex;
+      const qualityIndexHarvestSnapshot = row.taste_quality_index_harvest_snapshot ?? qualityIndex;
       
       return {
         id: row.id,
@@ -174,7 +174,7 @@ export const loadWineBatches = async (): Promise<WineBatch[]> => {
         harvestStartDate: buildGameDate(row.harvest_start_week, row.harvest_start_season, row.harvest_start_year)!,
         harvestEndDate: buildGameDate(row.harvest_end_week, row.harvest_end_season, row.harvest_end_year)!,
         bottledDate: buildGameDate(row.bottled_week, row.bottled_season, row.bottled_year),
-        qualityIndexBottlingSnapshot: row.quality_index_bottling_snapshot ?? undefined,
+        qualityIndexBottlingSnapshot: row.taste_quality_index_bottling_snapshot ?? undefined,
         landValueModifierBottlingSnapshot: row.land_value_modifier_bottling_snapshot ?? undefined,
         structureIndexBottlingSnapshot: row.structure_index_bottling_snapshot ?? undefined,
         wineScoreBottlingSnapshot: row.wine_score_bottling_snapshot ?? undefined,
@@ -253,9 +253,9 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           fermentation_options: updatedBatch.fermentationOptions,
           land_value_modifier_harvest_snapshot: updatedBatch.landValueModifierHarvestSnapshot,
           structure_index_harvest_snapshot: updatedBatch.structureIndexHarvestSnapshot,
-          quality_index_harvest_snapshot: updatedBatch.qualityIndexHarvestSnapshot,
+          taste_quality_index_harvest_snapshot: updatedBatch.qualityIndexHarvestSnapshot,
           land_value_modifier: updatedBatch.landValueModifier,
-          quality_index: updatedBatch.qualityIndex,
+          taste_quality_index: updatedBatch.qualityIndex,
           structure_index: updatedBatch.structureIndex,
           characteristics: updatedBatch.characteristics,
           breakdown: updatedBatch.breakdown,
@@ -278,7 +278,7 @@ export const bulkUpdateWineBatches = async (updates: Array<{ id: string; updates
           bottled_week: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.week) : null,
           bottled_season: updatedBatch.bottledDate?.season,
           bottled_year: updatedBatch.bottledDate ? Math.round(updatedBatch.bottledDate.year) : null,
-          quality_index_bottling_snapshot: updatedBatch.qualityIndexBottlingSnapshot ?? null,
+          taste_quality_index_bottling_snapshot: updatedBatch.qualityIndexBottlingSnapshot ?? null,
           land_value_modifier_bottling_snapshot: updatedBatch.landValueModifierBottlingSnapshot ?? null,
           structure_index_bottling_snapshot: updatedBatch.structureIndexBottlingSnapshot ?? null,
           wine_score_bottling_snapshot: updatedBatch.wineScoreBottlingSnapshot ?? null,

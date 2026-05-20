@@ -597,7 +597,7 @@ export function MathematicalModelsTab() {
             <div>
               <h4 className="font-semibold mb-2">Usage in Game:</h4>
               <div className="space-y-1 text-sm">
-                <div>• <strong>Land Value Normalization</strong> - Quality index land factor</div>
+                <div>• <strong>Land Value Normalization</strong> - Taste quality land factor</div>
                 <div>• <strong>Formula:</strong> normalized = calculateAsymmetricalScaler01(landValue / maxGlobalValue)</div>
               </div>
               <div className="mt-3">

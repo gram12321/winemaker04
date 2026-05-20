@@ -28,7 +28,7 @@ interface WineModalProps extends DialogProps {
 /**
  * Unified Wine Modal
  * Comprehensive wine details in a tabbed interface
- * Replaces separate QualityIndexBreakdownModal, structure breakdown modal, and expand/collapse patterns
+ * Replaces separate taste quality, structure breakdown modal, and expand/collapse patterns
  */
 export const WineModal: React.FC<WineModalProps> = ({ 
   isOpen, 
@@ -80,7 +80,7 @@ export const WineModal: React.FC<WineModalProps> = ({
   if (!wineBatch || !estimatedPriceBreakdown) return null;
 
   const displayName = wineName || getWineBatchDisplayName(wineBatch);
-  const currentQualityIndex: number = estimatedPriceBreakdown.qualityIndex;
+  const currentQualityIndex: number = estimatedPriceBreakdown.tasteQualityIndex;
   const landValueModifier: number = wineBatch.landValueModifier;
   const currentWineScore = estimatedPriceBreakdown.wineScore;
   const hasFeatureMultiplier = Math.abs(estimatedPriceBreakdown.featurePriceMultiplier - 1) > 0.0005;
@@ -127,7 +127,7 @@ export const WineModal: React.FC<WineModalProps> = ({
           <DialogHeader>
             <DialogTitle className="text-base">Wine Details</DialogTitle>
             <DialogDescription className="text-xs">
-              Taste, land value, structure, features, and origins—including how your wine profile shapes modifiers and scores.
+              Taste quality, land value, structure, features, and origins—including how your wine profile shapes modifiers and scores.
             </DialogDescription>
           </DialogHeader>
 
@@ -271,13 +271,13 @@ export const WineModal: React.FC<WineModalProps> = ({
                       </div>
                       
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Quality Index:</span>
+                        <span className="text-muted-foreground">Taste Quality:</span>
                         <UnifiedTooltip
                           content={
                             <div className={tooltipStyles.text}>
-                              <TooltipSection title="Quality Index Details">
+                              <TooltipSection title="Taste Quality Details">
                                 <TooltipRow
-                                  label="Quality Index:"
+                                  label="Taste Quality:"
                                   value={formatNumber(currentQualityIndex, { decimals: 2, forceDecimals: true })}
                                   valueRating={currentQualityIndex}
                                 />
@@ -291,7 +291,7 @@ export const WineModal: React.FC<WineModalProps> = ({
                               </TooltipSection>
                             </div>
                           }
-                          title="Quality Index Details"
+                          title="Taste Quality Details"
                           side="top"
                           sideOffset={8}
                           className="max-w-xs"

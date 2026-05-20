@@ -366,7 +366,7 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
 
 /**
  * Apply feature effects directly to wine batches (safety net)
- * Updates quality index and structure index based on present features
+ * Updates taste quality and structure index based on present features
  * Note: processWeeklyFeatureRisks now applies effects atomically when features change
  * This function acts as a safety net to catch any batches that weren't updated
  * Skips sold-out bottled wines (quantity === 0) as they should not continue developing

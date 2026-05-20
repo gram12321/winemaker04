@@ -11,6 +11,7 @@ import { triggerGameUpdate, triggerTopicUpdate } from '../../../hooks/useGameUpd
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
+import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
 
 // ===== CONTRACT VALIDATION =====
 
@@ -47,13 +48,12 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
   const currentYear = gameState.currentYear || 2024;
   
   switch (requirement.type) {
-    case 'quality':
-      // Interim quality signal: use site-driven land value modifier until a richer quality model is introduced.
-      const quality = wine.landValueModifier;
-      if (quality < requirement.value) {
+    case 'tasteQuality':
+      const tasteQuality = getTasteQualityIndex(wine);
+      if (tasteQuality < requirement.value) {
         return {
           isValid: false,
-          reason: `Quality ${(quality * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
+          reason: `Taste Quality ${(tasteQuality * 100).toFixed(0)}% < required ${(requirement.value * 100).toFixed(0)}%`
         };
       }
       return { isValid: true, reason: '' };
@@ -126,6 +126,46 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
         return {
           isValid: false,
           reason: `Color ${wine.grapeColor} != required ${requirement.params.targetGrapeColor}`
+        };
+      }
+      return { isValid: true, reason: '' };
+
+    case 'country':
+      if (!wine.vineyardId) {
+        return { isValid: false, reason: 'Wine has no vineyard data' };
+      }
+      const vineyardsForCountry = await loadVineyards();
+      const vineyardForCountry = vineyardsForCountry.find((v: Vineyard) => v.id === wine.vineyardId);
+      if (!vineyardForCountry) {
+        return { isValid: false, reason: 'Vineyard not found' };
+      }
+      if (requirement.params?.targetCountry && vineyardForCountry.country !== requirement.params.targetCountry) {
+        return {
+          isValid: false,
+          reason: `Country ${vineyardForCountry.country} != required ${requirement.params.targetCountry}`
+        };
+      }
+      return { isValid: true, reason: '' };
+
+    case 'region':
+      if (!wine.vineyardId) {
+        return { isValid: false, reason: 'Wine has no vineyard data' };
+      }
+      const vineyardsForRegion = await loadVineyards();
+      const vineyardForRegion = vineyardsForRegion.find((v: Vineyard) => v.id === wine.vineyardId);
+      if (!vineyardForRegion) {
+        return { isValid: false, reason: 'Vineyard not found' };
+      }
+      if (requirement.params?.targetCountry && vineyardForRegion.country !== requirement.params.targetCountry) {
+        return {
+          isValid: false,
+          reason: `Country ${vineyardForRegion.country} != required ${requirement.params.targetCountry}`
+        };
+      }
+      if (requirement.params?.targetRegion && vineyardForRegion.region !== requirement.params.targetRegion) {
+        return {
+          isValid: false,
+          reason: `Region ${vineyardForRegion.region} != required ${requirement.params.targetRegion}`
         };
       }
       return { isValid: true, reason: '' };
@@ -217,7 +257,7 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
       return { isValid: true, reason: '' };
       
     default:
-      return { isValid: true, reason: '' };
+      return { isValid: false, reason: `Unknown contract requirement: ${requirement.type}` };
   }
 }
 

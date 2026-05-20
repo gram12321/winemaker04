@@ -192,8 +192,8 @@ export function getVineyardLandValueModifierFactors(vineyard: Vineyard): {
 // ===== QUALITY BREAKDOWN FOR UI =====
 
 export interface QualityIndexBreakdown {
-  qualityIndexHarvestSnapshot: number; // Original quality at harvest
-  currentQualityIndex: number; // Current quality (with feature effects)
+  qualityIndexHarvestSnapshot: number; // Original taste quality at harvest
+  currentQualityIndex: number; // Current taste quality
   featureImpacts: Array<{
     featureId: string;
     featureName: string;
@@ -205,7 +205,7 @@ export interface QualityIndexBreakdown {
 }
 
 /**
- * Get detailed quality index breakdown for UI display
+ * Get detailed taste quality breakdown for UI display
  * Used by LandValueModifierFactorsBreakdown and WineModal components
  * 
  * @param batch - Wine batch to analyze
@@ -213,7 +213,7 @@ export interface QualityIndexBreakdown {
  */
 export function getQualityIndexBreakdown(batch: WineBatch): QualityIndexBreakdown {
   const qualityIndexHarvestSnapshot = batch.qualityIndexHarvestSnapshot; // Baseline index at harvest
-  const currentQualityIndex = getQualityIndex(batch); // Current quality index (feature effects applied)
+  const currentQualityIndex = getQualityIndex(batch); // Current taste quality
   const featureImpacts = getFeatureImpacts(batch);
   
   const qualityIndexImpacts = featureImpacts.map((impact: any) => ({

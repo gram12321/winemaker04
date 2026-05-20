@@ -42,7 +42,7 @@ export async function recordBottledWine(wineBatch: WineBatch): Promise<void> {
       grape_variety: wineBatch.grape,
       vintage: wineBatch.harvestStartDate.year,
       quantity: wineBatch.quantity,
-      quality_index: qualityIndex,
+      taste_quality_index: qualityIndex,
       land_value_modifier: landValueModifier,
       structure_index: structureIndexSnapshot,
       wine_score: wineScore, // Use bottled snapshot

@@ -341,7 +341,7 @@ class HighscoreService {
       'highest_vintage_quantity': 'Highest Single Vintage Quantity',
       'most_productive_vineyard': 'Most Productive Vineyard',
       'highest_wine_score': 'Highest Wine Score',
-      'highest_quality_index': 'Highest Quality Index',
+      'highest_quality_index': 'Highest Taste Quality',
       'highest_structure_index': 'Highest Structure Index',
       'highest_price': 'Highest Price',
       'lowest_price': 'Lowest Price'

@@ -34,7 +34,7 @@ export function useWineFeatureDetails(wineBatch: WineBatch | null): FeatureDetai
     const calculateFeatureDetails = async () => {
       try {
         const currentQualityIndex = getQualityIndex(wineBatch);
-        const baselineQualityIndex = 0.5;
+        const baselineQualityIndex = wineBatch.qualityIndexHarvestSnapshot ?? currentQualityIndex;
         const qualityIndexPenalty = baselineQualityIndex - currentQualityIndex;
         const presentFeatures = getPresentFeaturesSorted(wineBatch);
         const hasQualityAffectingFeatures = presentFeatures.some((f: any) => f.config.effects.quality !== undefined);

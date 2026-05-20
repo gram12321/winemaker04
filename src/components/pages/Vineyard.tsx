@@ -69,7 +69,7 @@ const buildTooltipContent = (type: string, data: any) => {
         <div className={tooltipStyles.text}>
           <TooltipSection>
             <p className={tooltipStyles.title}>Ripeness: {formatNumber(value * 100, { smartDecimals: true })}%</p>
-            <p className={tooltipStyles.muted}>Ripeness affects quality index baseline and harvest yield. Higher ripeness produces better grapes.</p>
+            <p className={tooltipStyles.muted}>Ripeness affects taste quality baseline and harvest yield. Higher ripeness produces better grapes.</p>
           </TooltipSection>
           <TooltipSection title="Quality Impact">
             <TooltipRow label="Current Level:" value={value < 0.3 ? 'Very Low' : value < 0.7 ? 'Moderate' : 'Good'} valueRating={value} />

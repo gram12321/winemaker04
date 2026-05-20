@@ -160,7 +160,7 @@ export async function completeCrushing(activity: Activity): Promise<void> {
     // Apply yield multiplier to batch quantity
     const finalQuantity = Math.round(batch.quantity * yieldMultiplier);
     
-    // Quality index is fixed placeholder in this phase.
+    // Taste quality is computed from the current taste profile in this phase.
     const currentQualityIndex = getQualityIndex(batch);
     void qualityPenalty;
     const finalQualityIndex = currentQualityIndex;
@@ -200,17 +200,27 @@ export async function completeCrushing(activity: Activity): Promise<void> {
       RULES
     );
 
-    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and quality index
-    // Use characteristics and breakdown from batchWithEventFeatures if they were modified by feature effects
-    await updateWineBatch(batchId, {
+    const batchAfterCrush: WineBatch = {
+      ...batchWithEventFeatures,
       state: 'must_ready',
       characteristics: charsAfterCrush,
       breakdown: batchWithEventFeatures.breakdown || combinedBreakdown,
       features: batchWithEventFeatures.features,
       quantity: finalQuantity,
-      qualityIndex: batchWithEventFeatures.qualityIndex,
       structureIndex: structureIndexResult.score,
       wineAnchors
+    };
+
+    // Update the batch: change state to 'must_ready' and apply new characteristics, breakdown, features, quantity, and taste quality
+    await updateWineBatch(batchId, {
+      state: batchAfterCrush.state,
+      characteristics: batchAfterCrush.characteristics,
+      breakdown: batchAfterCrush.breakdown,
+      features: batchAfterCrush.features,
+      quantity: batchAfterCrush.quantity,
+      qualityIndex: getQualityIndex(batchAfterCrush),
+      structureIndex: batchAfterCrush.structureIndex,
+      wineAnchors: batchAfterCrush.wineAnchors
     });
 
     // Deduct costs if any

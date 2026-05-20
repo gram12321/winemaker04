@@ -116,7 +116,7 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
 
     // Rating/score thresholds
     case 'wine_quality_index_threshold':
-      return `${num} Quality Index`;
+      return `${num} Taste Quality`;
     case 'wine_structure_index_threshold':
       return `${num} Structure`;
     case 'wine_score_threshold':
@@ -607,7 +607,7 @@ function checkAchievementCondition(
       };
       
     case 'wine_quality_index_threshold':
-      // Check if produced a wine with quality index >= threshold
+      // Check if produced a wine with taste quality >= threshold
       const maxQuality = Math.max(...context.wineLogEntries.map(e => e.qualityIndex), 0);
       return {
         isMet: maxQuality >= (condition.threshold || 0),

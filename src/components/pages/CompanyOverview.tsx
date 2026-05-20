@@ -194,7 +194,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ onNavigate }) => {
       case 'highest_wine_score':
         return 'Wine Score';
       case 'highest_quality_index':
-        return 'Quality Index';
+        return 'Taste Quality';
       case 'highest_structure_index':
         return 'Structure';
       case 'highest_price':

@@ -15,6 +15,7 @@ import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wi
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
+import { getQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 /**
  * Calculate work required for fermentation setup
@@ -162,17 +163,28 @@ export async function completeFermentationSetup(activity: Activity): Promise<voi
       RULES
     );
 
-    // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
-    // Also update characteristics and breakdown if they were modified by feature effects
-    await updateWineBatch(batchId, {
+    const batchAfterFermentationSetup: WineBatch = {
+      ...batchWithEventFeatures,
       state: 'must_fermenting',
       fermentationOptions: opts,
       features: batchWithEventFeatures.features,
       characteristics: batchWithEventFeatures.characteristics,
       breakdown: batchWithEventFeatures.breakdown,
-      qualityIndex: 0.5,
       structureIndex: structureIndexResult.score,
       wineAnchors
+    };
+
+    // Update the batch: change state to 'must_fermenting', store fermentation options, and update features
+    // Also update characteristics and breakdown if they were modified by feature effects
+    await updateWineBatch(batchId, {
+      state: batchAfterFermentationSetup.state,
+      fermentationOptions: batchAfterFermentationSetup.fermentationOptions,
+      features: batchAfterFermentationSetup.features,
+      characteristics: batchAfterFermentationSetup.characteristics,
+      breakdown: batchAfterFermentationSetup.breakdown,
+      qualityIndex: getQualityIndex(batchAfterFermentationSetup),
+      structureIndex: batchAfterFermentationSetup.structureIndex,
+      wineAnchors: batchAfterFermentationSetup.wineAnchors
     });
 
     // Deduct costs if any

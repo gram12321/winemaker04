@@ -227,10 +227,10 @@ export interface WineBatch {
   // Lifecycle: harvest snapshot -> current -> bottling snapshot
   landValueModifierHarvestSnapshot: number; // Immutable site-value snapshot at harvest
   structureIndexHarvestSnapshot: number; // Immutable structure snapshot at harvest
-  qualityIndexHarvestSnapshot: number; // Immutable quality snapshot at harvest
+  qualityIndexHarvestSnapshot: number; // Compatibility storage: immutable taste quality snapshot at harvest
   landValueModifier: number; // Current land-value modifier
   structureIndex: number; // Current structure index
-  qualityIndex: number; // Current quality index (placeholder value for now)
+  qualityIndex: number; // Compatibility storage for current taste quality index
   characteristics: WineCharacteristics; // Individual wine characteristics
   estimatedPrice: number; // Estimated price per bottle in euros (calculated)
   askingPrice?: number; // User-set asking price per bottle in euros (defaults to estimatedPrice)
@@ -284,7 +284,7 @@ export interface WineLogEntry {
   grape: GrapeVariety;
   vintage: number; // Year the grapes were harvested
   quantity: number; // Bottles produced
-  qualityIndex: number; // Quality index snapshot (0-1)
+  qualityIndex: number; // Taste quality snapshot (0-1)
   landValueModifier: number; // Static terroir/land index (0-1)
   structureIndex: number; // Structure index (0-1)
   wineScore: number; // Overall wine score
@@ -319,7 +319,7 @@ export interface Customer {
 
   // Regional characteristics (0-1 scale)
   purchasingPower: number; // Affects price tolerance and order amounts
-  wineTradition: number; // Affects wine quality-index preferences and price premiums
+  wineTradition: number; // Affects wine taste-quality preferences and price premiums
   marketShare: number; // Affects order size multipliers (0-1 scale)
 
   // Behavioral multipliers (calculated from characteristics)
@@ -329,6 +329,9 @@ export interface Customer {
   relationship?: number; // 0-100 scale for relationship strength
   activeCustomer?: boolean; // True if customer has placed orders (actively interacting with company)
   difficultyPreference?: DifficultyPreference; // Difficulty affinity used when valuing wines
+  // TODO: If customer taste preferences are added, model them as one unified market-preference
+  // layer covering both structure and taste. Do not add taste-only preferences before structure
+  // has the same concept.
 }
 
 // Wine order interface for sales operations
@@ -395,16 +398,18 @@ export interface WineOrder {
 // ===== CONTRACT TYPES =====
 
 // Requirement types for contracts
-export type ContractRequirementType = 'quality' | 'minimumVintage' | 'specificVintage' | 'structureIndex' | 'landValue' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicDeviation';
+export type ContractRequirementType = 'tasteQuality' | 'minimumVintage' | 'specificVintage' | 'structureIndex' | 'landValue' | 'country' | 'region' | 'grape' | 'grapeColor' | 'altitude' | 'aspect' | 'characteristicMin' | 'characteristicMax' | 'characteristicDeviation';
 
 // Individual contract requirement
 export interface ContractRequirement {
   type: ContractRequirementType;
-  value: number; // For quality/structure index/altitude: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
+  value: number; // For taste quality/structure index/altitude/aspect: 0-1 threshold, for landValue: absolute €/ha, for minimumVintage: minimum age in years, for specificVintage: target year, for characteristics: 0-1 threshold or maxTotalDistance
   params?: {
     minAge?: number; // For minimumVintage requirements
     maxAge?: number; // For minimumVintage requirements (optional)
     targetYear?: number; // For specificVintage requirements
+    targetCountry?: string; // For country/region site parameter requirements
+    targetRegion?: string; // For region site parameter requirements
     targetGrape?: GrapeVariety; // For grape requirements
     targetGrapeColor?: 'red' | 'white'; // For grapeColor requirements
     targetCharacteristic?: keyof WineCharacteristics; // For characteristic requirements (acidity, aroma, body, spice, sweetness, tannins)
@@ -894,7 +899,7 @@ export type AchievementConditionType =
   | 'total_vineyard_value'          // Check if combined vineyard value >= threshold
   | 'achievement_completion'        // Check if X% of achievements completed
   | 'different_grapes'              // Check if produced X different grape varieties
-  | 'wine_quality_index_threshold'        // Check if wine quality index >= threshold
+  | 'wine_quality_index_threshold'        // Check if wine taste quality >= threshold
   | 'wine_structure_index_threshold' // Check if wine structure index >= threshold
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold

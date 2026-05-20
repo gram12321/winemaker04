@@ -1,4 +1,5 @@
 import { CustomerType, ContractRequirementType } from '../types/types';
+import { COUNTRY_REGION_MAP } from './vineyardConstants';
 
 // ===== CONTRACT GENERATION CONFIG =====
 
@@ -68,7 +69,7 @@ export interface WeightedRequirementType {
  */
 export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequirementType[]> = {
   'Restaurant': [
-    { type: 'quality', weight: 1 },
+    { type: 'tasteQuality', weight: 1 },
     { type: 'structureIndex', weight: 1 },
     { type: 'minimumVintage', weight: 1 },
     { type: 'grapeColor', weight: 1 },
@@ -77,11 +78,13 @@ export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequ
     { type: 'characteristicDeviation', weight: 0.3 }
   ],
   'Wine Shop': [
-    { type: 'quality', weight: 1 },
+    { type: 'tasteQuality', weight: 1 },
     { type: 'minimumVintage', weight: 1 },
     { type: 'specificVintage', weight: 1 },
     { type: 'grape', weight: 1 },
     { type: 'grapeColor', weight: 1 },
+    { type: 'country', weight: 0.6 },
+    { type: 'region', weight: 0.8 },
     { type: 'altitude', weight: 1 },
     { type: 'aspect', weight: 1 },
     { type: 'characteristicMin', weight: 0.3 },
@@ -89,11 +92,13 @@ export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequ
     { type: 'characteristicDeviation', weight: 0.3 }
   ],
   'Private Collector': [
-    { type: 'quality', weight: 1 },
+    { type: 'tasteQuality', weight: 1 },
     { type: 'minimumVintage', weight: 1 },
     { type: 'specificVintage', weight: 1 },
     { type: 'structureIndex', weight: 1 },
     { type: 'landValue', weight: 1 },
+    { type: 'country', weight: 0.5 },
+    { type: 'region', weight: 1 },
     { type: 'grape', weight: 1 },
     { type: 'altitude', weight: 1 },
     { type: 'aspect', weight: 1 },
@@ -102,7 +107,7 @@ export const CUSTOMER_REQUIREMENT_PREFERENCES: Record<CustomerType, WeightedRequ
     { type: 'characteristicDeviation', weight: 0.3 }
   ],
   'Chain Store': [
-    { type: 'quality', weight: 1 },
+    { type: 'tasteQuality', weight: 1 },
     { type: 'grape', weight: 1 },
     { type: 'grapeColor', weight: 1 },
     { type: 'minimumVintage', weight: 1 }
@@ -165,6 +170,12 @@ export const AVAILABLE_GRAPES = [
  */
 export const AVAILABLE_GRAPE_COLORS: ('red' | 'white')[] = ['red', 'white'];
 
+export const AVAILABLE_SITE_COUNTRIES = Object.keys(COUNTRY_REGION_MAP);
+
+export const AVAILABLE_SITE_REGIONS = Object.entries(COUNTRY_REGION_MAP).flatMap(
+  ([country, regions]) => regions.map((region) => ({ country, region }))
+);
+
 /**
  * Available wine characteristics for characteristic requirements
  */
@@ -196,7 +207,7 @@ export const CONTRACT_PRICING = {
  * Difficulty tier thresholds for requirements
  */
 export const DIFFICULTY_THRESHOLDS = {
-  quality: {
+  tasteQuality: {
     easy: { max: 0.5, scoreRange: [0, 0.2] },
     medium: { max: 0.7, scoreRange: [0.2, 0.4] },
     hard: { max: 0.85, scoreRange: [0.4, 0.7] },

@@ -106,7 +106,7 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
       case 'highest_wine_score':
         return 'Wine Score';
       case 'highest_quality_index':
-        return 'Quality Index';
+        return 'Taste Quality';
       case 'highest_structure_index':
         return 'Structure';
       case 'highest_price':
@@ -499,9 +499,9 @@ export function Highscores({ currentCompanyId, onBack }: HighscoresProps) {
 
                <TabsContent value="highest_quality_index" className="space-y-4">
                  <div className="text-center mb-4">
-                   <h3 className="text-lg font-semibold">Highest Quality Index</h3>
+                   <h3 className="text-lg font-semibold">Highest Taste Quality</h3>
                    <p className="text-sm text-muted-foreground">
-                     Best quality index achieved
+                     Best taste quality achieved
                    </p>
                  </div>
                  {renderHighscoreTable('highest_quality_index')}

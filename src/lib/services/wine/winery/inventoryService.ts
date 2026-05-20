@@ -4,7 +4,7 @@ import { WineBatch, GrapeVariety, WineCharacteristics, GameDate } from '../../..
 import { saveWineBatch, loadWineBatches, updateWineBatch } from '../../../database/activities/inventoryDB';
 import { loadVineyards } from '../../../database/activities/vineyardDB';
 import { triggerGameUpdate } from '../../../../hooks/useGameUpdates';
-import { calculateEstimatedPrice } from '../winescore/wineScoreCalculation';
+import { calculateEstimatedPrice, getTasteQualityIndex } from '../winescore/wineScoreCalculation';
 import { calculateCurrentPrestige } from '../../prestige/prestigeService';
 import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '../../../wineStructure';
 import { BASE_BALANCED_RANGES, GRAPE_CONST } from '../../../constants/grapeConstants';
@@ -131,8 +131,7 @@ function combineWineBatches(
     RULES
   );
 
-  // Return updated batch with combined properties
-  return {
+  const combinedBatch: WineBatch = {
     ...existingBatch,
     quantity: totalQuantity,
     landValueModifierHarvestSnapshot: combinedLandValueModifier,
@@ -145,6 +144,12 @@ function combineWineBatches(
     breakdown: combinedBreakdown,
     wineAnchors: mergedAnchors
     // Note: finalPrice will be recalculated after combination
+  };
+  const tasteQualityIndex = getTasteQualityIndex(combinedBatch);
+  return {
+    ...combinedBatch,
+    qualityIndex: tasteQualityIndex,
+    qualityIndexHarvestSnapshot: tasteQualityIndex
   };
 }
 
@@ -283,22 +288,27 @@ export async function createWineBatchFromHarvest(
       wineAnchors
     };
 
-    // Calculate estimated price using the pricing service with prestige multipliers
-    const prestigeData = await calculateCurrentPrestige();
-    const estimatedPrice = calculateEstimatedPrice(
-      wineBatch, 
-      vineyard, 
-      prestigeData.companyPrestige, 
-      vineyard.vineyardPrestige
-    );
-    wineBatch.estimatedPrice = estimatedPrice;
-
     // Process harvest event triggers (e.g., green flavor from underripe grapes)
     const batchWithEventFeatures = await processEventTrigger(wineBatch, 'harvest', vineyard);
+    const tasteQualityIndex = getTasteQualityIndex(batchWithEventFeatures);
+    const finalizedBatch = {
+      ...batchWithEventFeatures,
+      qualityIndex: tasteQualityIndex,
+      qualityIndexHarvestSnapshot: tasteQualityIndex
+    };
 
-    await saveWineBatch(batchWithEventFeatures);
+    // Calculate estimated price using the pricing service with prestige multipliers
+    const prestigeData = await calculateCurrentPrestige();
+    finalizedBatch.estimatedPrice = calculateEstimatedPrice(
+      finalizedBatch,
+      vineyard,
+      prestigeData.companyPrestige,
+      vineyard.vineyardPrestige
+    );
+
+    await saveWineBatch(finalizedBatch);
     triggerGameUpdate();
-    return batchWithEventFeatures;
+    return finalizedBatch;
   }
 }
 

@@ -130,34 +130,38 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
   // Format requirement for display
   const formatRequirement = (req: any): string => {
     switch (req.type) {
-      case 'quality':
-        return `Quality ≥ ${(req.value * 100).toFixed(0)}%`;
+      case 'tasteQuality':
+        return `Taste Quality >= ${(req.value * 100).toFixed(0)}%`;
       case 'minimumVintage':
-        return `Age ≥ ${req.params?.minAge || 0} years`;
+        return `Age >= ${req.params?.minAge || 0} years`;
       case 'specificVintage':
         return `Vintage: ${req.params?.targetYear || req.value}`;
       case 'structureIndex':
-        return `Structure ≥ ${(req.value * 100).toFixed(0)}%`;
+        return `Structure >= ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
-        return `Land Value ≥ €${(req.value / 1000).toFixed(0)}k/ha`;
+        return `Land Value >= EUR ${(req.value / 1000).toFixed(0)}k/ha`;
+      case 'country':
+        return `Country: ${req.params?.targetCountry || 'Any'}`;
+      case 'region':
+        return `Region: ${req.params?.targetRegion || 'Any'}`;
       case 'grape':
-        return `Grape: ${req.params?.grape || 'Any'}`;
+        return `Grape: ${req.params?.targetGrape || 'Any'}`;
       case 'grapeColor':
         const color = req.params?.targetGrapeColor || 'any';
         return `Color: ${color.charAt(0).toUpperCase() + color.slice(1)}`;
       case 'altitude':
-        return `Altitude ≥ ${(req.value * 100).toFixed(0)}% (regional)`;
+        return `Altitude >= ${(req.value * 100).toFixed(0)}% (regional)`;
       case 'aspect':
-        return `Aspect ≥ ${(req.value * 100).toFixed(0)}% (sun exposure)`;
+        return `Aspect >= ${(req.value * 100).toFixed(0)}% (sun exposure)`;
       case 'characteristicMin':
         const minChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${minChar.charAt(0).toUpperCase() + minChar.slice(1)} ≥ ${(req.value * 100).toFixed(0)}%`;
+        return `${minChar.charAt(0).toUpperCase() + minChar.slice(1)} >= ${(req.value * 100).toFixed(0)}%`;
       case 'characteristicMax':
         const maxChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${maxChar.charAt(0).toUpperCase() + maxChar.slice(1)} ≤ ${(req.value * 100).toFixed(0)}%`;
+        return `${maxChar.charAt(0).toUpperCase() + maxChar.slice(1)} <= ${(req.value * 100).toFixed(0)}%`;
       case 'characteristicDeviation':
         const balChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} deviation ≤ ${(req.value * 100).toFixed(0)}%`;
+        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} deviation <= ${(req.value * 100).toFixed(0)}%`;
       default:
         return 'Unknown';
     }
@@ -334,7 +338,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
           <div>
             <p className="font-semibold text-blue-900 mb-1">About Contracts</p>
             <p className="text-blue-800">
-              Contracts are special orders from customers with specific requirements (quality, vintage, structure index, etc.). 
+              Contracts are special orders from customers with specific requirements (taste quality, vintage, structure, site parameters, etc.). 
               They typically offer higher prices than regular orders but require wines that meet all specified criteria.
             </p>
           </div>

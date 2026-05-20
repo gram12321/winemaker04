@@ -3,10 +3,11 @@ import { SALES_CONSTANTS } from '../../../constants/constants';
 import { getAllFeatureConfigs } from '../../../constants/wineFeatures/commonFeaturesUtil';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../../utils/calculator';
 import { clamp01 } from '../../../utils/utils';
-
-const QUALITY_INDEX_PLACEHOLDER = 0.5;
+import { calculateTasteQualityIndex } from '../taste/tasteQualityIndexService';
 
 export interface EstimatedPriceBreakdown {
+  tasteQualityIndex: number;
+  /** Compatibility alias while TypeScript model fields are migrated later. */
   qualityIndex: number;
   structureIndex: number;
   wineScore: number;
@@ -22,9 +23,12 @@ export interface EstimatedPriceBreakdown {
   finalPrice: number;
 }
 
+export function getTasteQualityIndex(wineBatch: WineBatch): number {
+  return calculateTasteQualityIndex(wineBatch).tasteQualityIndex;
+}
+
 export function getQualityIndex(wineBatch: WineBatch): number {
-  void wineBatch;
-  return QUALITY_INDEX_PLACEHOLDER;
+  return getTasteQualityIndex(wineBatch);
 }
 
 function getLandValueModifier(wineBatch: WineBatch): number {
@@ -78,7 +82,7 @@ function calculateFeatureMarketPriceMultiplier(wineBatch: WineBatch): number {
 }
 
 export function calculateWineScore(wineBatch: WineBatch): number {
-  const qualityIndex = getQualityIndex(wineBatch);
+  const qualityIndex = getTasteQualityIndex(wineBatch);
   const structureIndex = clamp01(wineBatch.structureIndex);
   return (qualityIndex + structureIndex) / 2;
 }
@@ -95,9 +99,10 @@ export function calculateEstimatedPriceBreakdown(
   companyPrestige?: number,
   vineyardPrestige?: number
 ): EstimatedPriceBreakdown {
-  const qualityIndex = getQualityIndex(wineBatch);
+  const tasteQualityIndex = getTasteQualityIndex(wineBatch);
+  const qualityIndex = tasteQualityIndex;
   const structureIndex = clamp01(wineBatch.structureIndex);
-  const wineScore = (qualityIndex + structureIndex) / 2;
+  const wineScore = (tasteQualityIndex + structureIndex) / 2;
   const baseRate = SALES_CONSTANTS.BASE_RATE_PER_BOTTLE;
   const basePrice = wineScore * baseRate;
   const wineScoreMultiplier = calculateAsymmetricalMultiplier(wineScore);
@@ -114,6 +119,7 @@ export function calculateEstimatedPriceBreakdown(
   finalPrice = Math.round(finalPrice * 100) / 100;
 
   return {
+    tasteQualityIndex,
     qualityIndex,
     structureIndex,
     wineScore,

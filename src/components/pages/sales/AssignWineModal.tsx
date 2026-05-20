@@ -6,6 +6,7 @@ import { formatCompletedWineName } from '@/lib/services/wine/winery/inventorySer
 import { useWinePriceCalculator } from '@/hooks';
 import { X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LoadingProps } from '@/lib/types/UItypes';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 interface AssignWineModalProps extends LoadingProps {
   isOpen: boolean;
@@ -107,34 +108,38 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
   // Format requirement for display
   const formatRequirement = (req: any): string => {
     switch (req.type) {
-      case 'quality':
-        return `Quality ≥ ${(req.value * 100).toFixed(0)}%`;
+      case 'tasteQuality':
+        return `Taste Quality >= ${(req.value * 100).toFixed(0)}%`;
       case 'minimumVintage':
-        return `Age ≥ ${req.params?.minAge || 0} years`;
+        return `Age >= ${req.params?.minAge || 0} years`;
       case 'specificVintage':
         return `Vintage: ${req.params?.targetYear || req.value}`;
       case 'structureIndex':
-        return `Structure ≥ ${(req.value * 100).toFixed(0)}%`;
+        return `Structure >= ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
-        return `Land Value ≥ €${(req.value / 1000).toFixed(0)}k/ha`;
+        return `Land Value >= EUR ${(req.value / 1000).toFixed(0)}k/ha`;
+      case 'country':
+        return `Country: ${req.params?.targetCountry || 'Any'}`;
+      case 'region':
+        return `Region: ${req.params?.targetRegion || 'Any'}`;
       case 'grape':
-        return `Grape: ${req.params?.grape || 'Any'}`;
+        return `Grape: ${req.params?.targetGrape || 'Any'}`;
       case 'grapeColor':
         const color = req.params?.targetGrapeColor || 'any';
         return `Color: ${color.charAt(0).toUpperCase() + color.slice(1)}`;
       case 'altitude':
-        return `Altitude ≥ ${(req.value * 100).toFixed(0)}% (regional)`;
+        return `Altitude >= ${(req.value * 100).toFixed(0)}% (regional)`;
       case 'aspect':
-        return `Aspect ≥ ${(req.value * 100).toFixed(0)}% (sun exposure)`;
+        return `Aspect >= ${(req.value * 100).toFixed(0)}% (sun exposure)`;
       case 'characteristicMin':
         const minChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${minChar.charAt(0).toUpperCase() + minChar.slice(1)} ≥ ${(req.value * 100).toFixed(0)}%`;
+        return `${minChar.charAt(0).toUpperCase() + minChar.slice(1)} >= ${(req.value * 100).toFixed(0)}%`;
       case 'characteristicMax':
         const maxChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${maxChar.charAt(0).toUpperCase() + maxChar.slice(1)} ≤ ${(req.value * 100).toFixed(0)}%`;
+        return `${maxChar.charAt(0).toUpperCase() + maxChar.slice(1)} <= ${(req.value * 100).toFixed(0)}%`;
       case 'characteristicDeviation':
         const balChar = req.params?.targetCharacteristic || 'characteristic';
-        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} deviation ≤ ${(req.value * 100).toFixed(0)}%`;
+        return `${balChar.charAt(0).toUpperCase() + balChar.slice(1)} deviation <= ${(req.value * 100).toFixed(0)}%`;
       default:
         return 'Unknown';
     }
@@ -222,7 +227,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                 <AlertCircle className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
                 <p className="text-sm text-gray-700 font-semibold">No wines meet the contract requirements</p>
                 <p className="text-xs text-gray-600 mt-1">
-                  You may need to produce wine with higher quality, better structure, or from different vineyards.
+                  You may need to produce wine with higher taste quality, better structure, or matching site parameters.
                 </p>
               </div>
             ) : (
@@ -234,6 +239,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                   // Get asking price using helper function (follows OrdersTab pattern)
                   const wineAskingPrice = getAskingPriceForWine(wine);
                   const premiumPercent = ((contract.offeredPrice - wineAskingPrice) / wineAskingPrice) * 100;
+                  const tasteQualityIndex = getTasteQualityIndex(wine);
                   
                   return (
                     <div
@@ -251,7 +257,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                             <span>Available: {formatNumber(wine.quantity)} bottles</span>
-                            <span>Quality: {(wine.qualityIndex * 100).toFixed(0)}%</span>
+                            <span>Taste Quality: {(tasteQualityIndex * 100).toFixed(0)}%</span>
                             <span>Structure: {(wine.structureIndex * 100).toFixed(0)}%</span>
                           </div>
                           <div className="flex items-center gap-3 mt-1">

@@ -185,7 +185,7 @@ export const OXIDATION_FEATURE: FeatureConfig = {
       ? 'Significant oxidation - clearly affected'
       : 'Severe oxidation - wine may be undrinkable';
     
-    return `Oxidation: ${severityPercentFormatted}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercentFormatted}% = ${description}\n\nOxidation reduces quality index and can make it unsellable.`;
+    return `Oxidation: ${severityPercentFormatted}% developed\n\nThis shows how oxidized the wine has become:\n• ${severityPercentFormatted}% = ${description}\n\nOxidation reduces taste quality and can make it unsellable.`;
   }
 };
 

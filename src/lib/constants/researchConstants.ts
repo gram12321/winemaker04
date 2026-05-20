@@ -190,7 +190,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             complexity: 5,
             benefits: [
                   'Improved vineyard quality assessment',
-                  '+10% quality index in suitable soils',
+                  '+10% taste quality in suitable soils',
                   'Better land purchase decisions'
             ],
             category: 'technology',

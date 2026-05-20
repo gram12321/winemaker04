@@ -395,8 +395,6 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
   // Filter out feature effects from breakdown (we'll add fresh ones)
   const nonFeatureEffects = existingBreakdownEffects.filter(e => !featureNames.has(e.description));
   
-  const baselineQualityIndex = 0.5;
-  const currentQualityIndex = baselineQualityIndex;
   let modifiedCharacteristics = { ...baseCharacteristics };
   const breakdownEffects = [...nonFeatureEffects];
   const anchorContext = applyFeatureLayerAnchors(batch, resolveWineAnchors(batch.wineAnchors));
@@ -436,16 +434,21 @@ export function applyFeatureEffectsToBatch(batch: WineBatch): WineBatch {
     RULES
   );
 
-  return {
+  const updatedBatch = {
     ...batch,
-    qualityIndex: Math.max(0, Math.min(1, currentQualityIndex)),
-    qualityIndexHarvestSnapshot: baselineQualityIndex,
     characteristics: modifiedCharacteristics,
     structureIndex: structureIndexResult.score,
     breakdown: {
       effects: breakdownEffects
     },
     wineAnchors
+  };
+  const currentQualityIndex = getQualityIndex(updatedBatch);
+
+  return {
+    ...updatedBatch,
+    qualityIndex: currentQualityIndex,
+    qualityIndexHarvestSnapshot: batch.qualityIndexHarvestSnapshot ?? currentQualityIndex
   };
 }
 

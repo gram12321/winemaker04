@@ -112,10 +112,11 @@ export async function bottleWine(batchId: string): Promise<boolean> {
         if (batchWithEventFeatures.characteristics !== bottledBatch.characteristics ||
           batchWithEventFeatures.breakdown !== bottledBatch.breakdown ||
           batchWithEventFeatures.qualityIndex !== bottledBatch.qualityIndex) {
+          const updatedTasteQuality = getQualityIndex(batchWithEventFeatures);
           await updateWineBatch(batchId, {
             characteristics: batchWithEventFeatures.characteristics,
             breakdown: batchWithEventFeatures.breakdown,
-            qualityIndex: 0.5,
+            qualityIndex: updatedTasteQuality,
             features: batchWithEventFeatures.features
           });
         }
@@ -199,7 +200,12 @@ export async function processWeeklyFermentation(): Promise<void> {
         RULES
       );
 
-      const currentQualityIndex = getQualityIndex(batch);
+      const currentQualityIndex = getQualityIndex({
+        ...batch,
+        characteristics: newCharacteristics,
+        structureIndex: structureIndexResult.score,
+        wineAnchors
+      });
 
       // Combine existing breakdown with new fermentation breakdown
       const combinedBreakdown = {

@@ -1,6 +1,6 @@
 # Wine System Variable Relationship Map (Rewritten)
-Date: 2026-04-13  
-Status: Architecture mapping only (no code changes)
+Date: 2026-05-20  
+Status: Architecture mapping plus current taste-quality implementation notes
 
 ## 1) Purpose
 This document is the updated target map for the wine simulation architecture.
@@ -8,7 +8,7 @@ This document is the updated target map for the wine simulation architecture.
 Primary goals:
 - Make terminology clear and consistent.
 - Reduce persisted anchor complexity.
-- Keep taste as its own model (families + descriptors), independent from wine score for now.
+- Keep taste as its own model (families + descriptors), with a computed taste-quality signal feeding wine score.
 - Remove legacy naming and fallback behavior.
 - Remap contract "quality" away from taste index.
 
@@ -21,7 +21,7 @@ Primary goals:
 | Anchors | Persisted hidden wine identity state; should be compact and multi-source | Proposed 12-key anchor model below |
 | Process Controls | Player actions in winery and vineyard operations | crush method/options, fermentation method/temperature, harvest timing choices |
 | Structure Layer | Player-facing structural channels and structure index | `acidity`, `aroma`, `body`, `spice`, `sweetness`, `tannins`, `structureIndex` |
-| Taste Layer | Flavor-family and descriptor model used for taste wheel/web | 14 families, descriptors grouped under families |
+| Taste Layer | Flavor-family and descriptor model used for taste wheel/web and taste quality | 14 families, descriptors grouped under families |
 | Lifecycle Modifiers | Ongoing evolving systems after creation | feature severities, bottle aging, prestige effects |
 | Outcome Metrics | Economy and progression outputs | wine score, price, contracts, highscores, achievements |
 | Snapshot | Immutable historical capture at event boundaries | harvest snapshot, bottling snapshot, winelog snapshot |
@@ -125,40 +125,33 @@ flowchart LR
   A --> LM["Lifecycle Modifiers"]
   PC --> LM
 
-  QI["Quality Index\n(placeholder=0.5 now,\nproxy can be LandValueModifier)"] --> OM["Outcome Metrics"]
+  QI["Taste Quality\n(computed from taste families)"] --> OM["Outcome Metrics"]
   S --> OM
   LM --> OM
 
-  OMW["WineScore (target) = f(Structure, QualityIndex, Lifecycle)"]:::emph
+  OMW["WineScore = f(Structure, Taste Quality, Lifecycle)"]:::emph
   OM --> OMW
 
   classDef emph fill:#eef,stroke:#66f,color:#111;
 ```
 
-## 7) Scoring/Outcome Intent (Target)
-- Taste should not directly feed wine score in this phase.
-- Wine score target inputs:
+## 7) Scoring/Outcome Intent
+- The old fixed `qualityIndex = 0.5` placeholder has been replaced by computed taste quality.
+- Wine score inputs:
   - `structureIndex`
-  - `qualityIndex` (placeholder `0.5` now, remapped later)
+  - `tasteQualityIndex`, computed from the 14 taste families
   - lifecycle effects as relevant modifiers
-- Taste remains independent and available for:
-  - taste wheel/web
-  - future flavor-driven gameplay systems
+- Descriptor-level taste remains display-only for now.
+- TypeScript compatibility fields may still be named `qualityIndex` while persistence maps them to `taste_quality_index`.
 
 ## 8) Contract Quality Requirement Remap
 
 Current observed implementation:
 - Contract requirement type `quality` uses `tasteIndex`.
 
-Target behavior options (agreed):
-1. `qualityIndex` placeholder route: always `0.5` for now.
-2. `landValueModifier` route: contracts reflect site quality signal.
-
-Recommendation:
-- Use `landValueModifier` as interim contract quality signal now (meaningful gameplay), then switch to real `qualityIndex` later when implemented.
-
-Suggested target contract signal:
-- `contractQualitySignal = qualityIndex ?? landValueModifier`
+Target behavior:
+- Contract quality should use a meaningful current quality signal, not the old fixed placeholder.
+- In this slice, the wine-side quality signal is `tasteQualityIndex`; site-static quality remains in the land-value/price path.
 
 ## 9) Legacy Naming Removal Policy
 
@@ -170,8 +163,11 @@ Suggested target contract signal:
 ### 9.2 Naming direction
 | Legacy | Target direction |
 |---|---|
-| `grape_quality` | split to explicit field (`taste_index_current` or `quality_index_current` depending on domain) |
+| `grape_quality` | split to explicit fields, including `taste_quality_index` for taste balance and `land_value_modifier_*` for site/static quality |
 | `born_grape_quality` | explicit snapshot field (example `land_value_modifier_harvest_snapshot`) |
+| `quality_index` database column | `taste_quality_index` |
+| `quality_index_harvest_snapshot` database column | `taste_quality_index_harvest_snapshot` |
+| `quality_index_bottling_snapshot` database column | `taste_quality_index_bottling_snapshot` |
 | `balance` fallback | remove; use `structure_index` only |
 | `bornTasteIndex` | `tasteIndexHarvestSnapshot` (or remove if not required by new model) |
 | `bornStructureIndex` | `structureIndexHarvestSnapshot` |
@@ -193,16 +189,16 @@ Agreed intent:
 | Process Controls | anchor deltas + structure/taste deltas | lifecycle and outcomes |
 | Anchors + Process Controls | structure channels | structure index |
 | Anchors + Process Controls | taste families/descriptors | taste UI/web |
-| Structure + quality signal + lifecycle | wine score and economic outcomes | pricing, contracts, highscores, achievements |
+| Structure + taste quality + lifecycle | wine score and economic outcomes | pricing, contracts, highscores, achievements |
 | Snapshot capture points | immutable historical records | wine log, highscores, achievements |
 
 ## 12) Migration Guidance (Planning Only)
 1. Lock terminology and target field names.
 2. Define compact 12-anchor schema and mapping from current 26.
 3. Move descriptor model to strict family-child hierarchy.
-4. Remap contract quality from `tasteIndex` to interim signal (`landValueModifier` preferred).
-5. Decouple wine score from taste, introduce quality placeholder path.
-6. Remove legacy/fallback naming and migrate storage fields.
+4. Remap contract quality from `tasteIndex` to a meaningful current wine quality signal.
+5. Feed wine score from computed taste quality and structure index.
+6. Remove legacy/fallback naming and migrate storage fields to `taste_quality_index*`.
 7. Keep snapshots explicit and immutable.
 
 ---

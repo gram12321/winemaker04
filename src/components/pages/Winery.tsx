@@ -13,6 +13,7 @@ import { isFermentationActionAvailable } from '@/lib/services/wine/winery/fermen
 import { getCombinedFermentationEffects } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
 import { resolveWineAnchors } from '@/lib/services/wine/anchors/wineAnchorService';
 import { CharacteristicIcon } from '@/lib/utils/icons';
+import { getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
 
 const WineBatchStructureDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
   const structureResult = useWineBatchStructureIndex(batch);
@@ -26,15 +27,16 @@ const WineBatchStructureDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =>
   );
 };
 
-// Component for quality index category display
-const QualityIndexDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
-  const qualityCategory = getQualityCategory(batch.qualityIndex);
-  const colorClass = getColorClass(batch.qualityIndex);
-  const qualityPercentage = formatNumber(batch.qualityIndex * 100, { smartDecimals: true });
+// Component for taste quality display
+const TasteQualityDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) => {
+  const tasteQualityIndex = getTasteQualityIndex(batch);
+  const qualityCategory = getQualityCategory(tasteQualityIndex);
+  const colorClass = getColorClass(tasteQualityIndex);
+  const qualityPercentage = formatNumber(tasteQualityIndex * 100, { smartDecimals: true });
 
   return (
     <div className="text-xs text-gray-600 mt-1">
-      Quality Index: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
+      Taste Quality: <span className={`font-medium ${colorClass}`}>{qualityPercentage}%</span> ({qualityCategory})
     </div>
   );
 };
@@ -278,7 +280,7 @@ const Winery: React.FC = () => {
                         {batch.quantity} {batch.state === 'bottled' ? 'bottles' : 'kg'} • Harvest {batch.harvestStartDate.year}
                       </div>
                       <WineBatchStructureDisplay batch={batch} />
-                      <QualityIndexDisplay batch={batch} />
+                      <TasteQualityDisplay batch={batch} />
                       
                       <div className="text-xs font-medium text-gray-800 mt-3">
                         Current Activity: <span className="text-purple-600">

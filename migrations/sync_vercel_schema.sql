@@ -305,8 +305,8 @@ CREATE TABLE wine_batches (
     grape_variety text NOT NULL,
     quantity integer NOT NULL,
     fermentation_progress integer DEFAULT 0 CHECK (fermentation_progress >= 0 AND fermentation_progress <= 100),
-    quality_index numeric DEFAULT 0.5 CHECK (quality_index >= 0 AND quality_index <= 1),
-    quality_index_harvest_snapshot numeric DEFAULT 0.5 CHECK (quality_index_harvest_snapshot >= 0 AND quality_index_harvest_snapshot <= 1),
+    taste_quality_index numeric DEFAULT 0.5 CHECK (taste_quality_index >= 0 AND taste_quality_index <= 1),
+    taste_quality_index_harvest_snapshot numeric DEFAULT 0.5 CHECK (taste_quality_index_harvest_snapshot >= 0 AND taste_quality_index_harvest_snapshot <= 1),
     land_value_modifier numeric DEFAULT 0 CHECK (land_value_modifier >= 0 AND land_value_modifier <= 1),
     land_value_modifier_harvest_snapshot numeric DEFAULT 0 CHECK (land_value_modifier_harvest_snapshot >= 0 AND land_value_modifier_harvest_snapshot <= 1),
     structure_index numeric DEFAULT 0 CHECK (structure_index >= 0 AND structure_index <= 1),
@@ -332,7 +332,7 @@ CREATE TABLE wine_batches (
     bottled_year integer,
     features jsonb DEFAULT '[]'::jsonb,
     wine_anchors jsonb DEFAULT '{}'::jsonb,
-    quality_index_bottling_snapshot numeric CHECK (quality_index_bottling_snapshot >= 0 AND quality_index_bottling_snapshot <= 1),
+    taste_quality_index_bottling_snapshot numeric CHECK (taste_quality_index_bottling_snapshot >= 0 AND taste_quality_index_bottling_snapshot <= 1),
     land_value_modifier_bottling_snapshot numeric CHECK (land_value_modifier_bottling_snapshot >= 0 AND land_value_modifier_bottling_snapshot <= 1),
     structure_index_bottling_snapshot numeric CHECK (structure_index_bottling_snapshot >= 0 AND structure_index_bottling_snapshot <= 1),
     wine_score_bottling_snapshot numeric CHECK (wine_score_bottling_snapshot >= 0 AND wine_score_bottling_snapshot <= 1),
@@ -344,7 +344,7 @@ CREATE TABLE wine_batches (
 );
 
 COMMENT ON COLUMN wine_batches.features IS 'JSONB array of wine features and faults (oxidation, green flavor, terroir, etc). Each feature has id, risk, isPresent, severity, name, type, and icon fields.';
-COMMENT ON COLUMN wine_batches.quality_index IS 'Wine quality index placeholder (0-1 scale)';
+COMMENT ON COLUMN wine_batches.taste_quality_index IS 'Computed wine taste quality index (0-1 scale)';
 
 -- Wine orders table
 CREATE TABLE wine_orders (
@@ -554,7 +554,7 @@ CREATE TABLE wine_log (
     grape_variety text NOT NULL,
     vintage integer NOT NULL,
     quantity integer NOT NULL,
-    quality_index numeric NOT NULL CHECK (quality_index >= 0 AND quality_index <= 1),
+    taste_quality_index numeric NOT NULL CHECK (taste_quality_index >= 0 AND taste_quality_index <= 1),
     land_value_modifier numeric CHECK (land_value_modifier >= 0 AND land_value_modifier <= 1),
     structure_index numeric NOT NULL CHECK (structure_index >= 0 AND structure_index <= 1),
     wine_score numeric NOT NULL CHECK (wine_score >= 0 AND wine_score <= 1),
