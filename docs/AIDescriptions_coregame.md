@@ -2,7 +2,7 @@
 
 ## 🎯 Current Implementation Status
 
-This document describes what has been **actually implemented** in the Winery Management Game as of version 0.0351.
+This document describes what has been **actually implemented** in the Winery Management Game as of 2026-05-21.
 
 ## 🏗️ Core Game Architecture
 
@@ -46,6 +46,8 @@ This document describes what has been **actually implemented** in the Winery Man
 - **WineBatch Interface**: Complete wine batch tracking with characteristics and wine features
 - **Wine Features Framework**: Config-driven wine features (oxidation, terroir, stuck fermentation, bottle aging, late harvest)
 - **Winery Service**: Production operations with feature risk tracking
+- **Structure and Taste**: `structureIndex` scores the six structural channels; `tasteQualityIndex` scores the 14 flavor-family taste profile.
+- **Wine Score**: Current implementation uses `(tasteQualityIndex + structureIndex) / 2`.
 - **Dual Tracking System**:
   - **Stage**: `'grapes' | 'must' | 'wine' | 'bottled'` (material state)
   - **Process**: `'none' | 'fermentation' | 'aging' | 'bottled'` (current activity)
@@ -65,7 +67,7 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Sales Service**: `src/lib/services/sales/salesService.ts` - Complete sales system
 - **Customer System**: `src/lib/services/sales/createCustomer.ts` - Regional customer generation
 - **Order Generation**: `src/lib/services/sales/generateOrder.ts` - Sophisticated order creation
-- **Pricing Service**: `src/lib/services/sales/pricingService.ts` - Multi-factor pricing
+- **Pricing Logic**: `src/lib/services/wine/winescore/wineScoreCalculation.ts` and sales services provide multi-factor pricing
 - **WineOrder Interface**: `src/lib/types/types.ts` - Order management with customer data
 - **Customer Interface**: `src/lib/types/types.ts` - Regional customer characteristics
 - **Properties**: `id`, `orderedAt`, `customerType`, `wineBatchId`, `wineName`, `requestedQuantity`, `offeredPrice`, `totalValue`, `status`, `customerId`, `customerName`, `customerCountry`, `customerRelationship`
@@ -76,21 +78,23 @@ This document describes what has been **actually implemented** in the Winery Man
   - `fulfillWineOrder()`: Execute sales with partial fulfillment support
   - `rejectWineOrder()`: Decline orders with relationship tracking
   - `generateCustomer()`: Prestige-based customer acquisition
-  - `calculateWineValueIndex()`: Vineyard value + prestige pricing
-  - `calculateWineQualityIndex()`: Quality + balance pricing
+  - `calculateEstimatedPriceBreakdown()`: WineScore, land value, feature, and prestige pricing breakdown
 - **UI**: `src/components/pages/Sales.tsx` - Complete sales interface with customer information
 
 **What's NOT Implemented**:
 - ❌ **Market Mechanics**: No demand/pricing variation over time
-- ❌ **Contract System**: No long-term contracts
 - ❌ **Market Saturation**: No diminishing returns based on inventory
+
+**What's Implemented For Contracts**:
+- ✅ **Contract System**: Multi-year contracts with taste, structure, site, grape, vintage, and characteristic requirements
+- ✅ **Taste/Site Split**: `tasteQuality` validates computed taste quality; `landValue`, `country`, `region`, `altitude`, and `aspect` validate site requirements.
 
 ### 5. Finance System ✅ **IMPLEMENTED**
 **What's Implemented**:
 - **Finance Service**: `src/lib/services/user/financeService.ts` - Complete transaction management
 - **Financial UI**: `src/components/finance/` - Income statements, balance sheets, cash flow
 - **Transaction System**: All money flows tracked with audit trail
-- **Asset Valuation**: Sophisticated calculation of vineyard (land value), wine (stage×quality×price), and grape values
+- **Asset Valuation**: Calculation of vineyard value, wine inventory value from estimated price, and grape values
 - **Integration**: Sales and admin tools use transaction system
 - **Financial Components**:
   - `IncomeBalanceView.tsx` - Income statements and balance sheets
@@ -129,7 +133,8 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Finance System**: Transaction tracking, financial reporting, asset valuation with comprehensive UI
 - **Player Interface**: Complete navigation, notifications, admin tools, company management, achievement system
 - **Staff System**: Staff management with teams, search, recruitment, and wage calculation
-- **Wine Characteristics**: 6-characteristic system with balance calculation, cross-trait penalties, synergy rules
+- **Wine Characteristics**: 6-characteristic system with structure index calculation, cross-trait penalties, synergy rules
+- **Taste System**: 14 flavor families, descriptor display values, family-level Taste Quality score, and Taste UI breakdown
 - **Wine Features**: Config-driven wine features (oxidation, terroir, stuck fermentation, bottle aging, late harvest)
 - **Activity System**: Planting, harvesting, clearing, and other activities with work calculation and progress tracking
 - **Prestige System**: Company and vineyard prestige with event tracking and relationship management
@@ -139,9 +144,9 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Seasonal Effects**: No automatic seasonal changes
 - **Storage Management**: Detailed vessel tracking
 - **Market Mechanics**: Dynamic pricing/demand
-- **Contract System**: Long-term sales contracts
 - **Advanced Farming Methods**: Organic/biodynamic farming
 - **Market Saturation**: Diminishing returns based on inventory
+- **Customer Taste Preferences**: Deferred until they can cover both structure and taste
 
 ## 🔧 **Technical Architecture**
 

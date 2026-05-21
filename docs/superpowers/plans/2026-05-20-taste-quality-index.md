@@ -1,5 +1,7 @@
 # Taste Quality Index Implementation Plan
 
+Status: Complete. Rechecked against implementation on 2026-05-21.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a computed 14-family `tasteQualityIndex` that replaces the fixed taste-quality placeholder in WineScore.
@@ -73,3 +75,14 @@
 - [x] Run `npm test -- tests/wine/tasteQualityIndexService.test.ts`.
 - [x] Run `npm run build`.
 - [x] Check `git diff --stat` and summarize changed files.
+
+## Current Acceptance
+
+The current implementation is accepted for now:
+
+- `tasteQualityIndex` is the canonical runtime and TypeScript name.
+- No runtime `qualityIndex`/`getQualityIndex` compatibility alias remains.
+- The score is family-level only; descriptors remain display-only.
+- WineScore, estimated price, contracts, highscores, achievements, and wine log snapshots all use the explicit taste-quality naming path.
+
+Future work should tune family targets/weights from playtesting before adding descriptor-level scoring.

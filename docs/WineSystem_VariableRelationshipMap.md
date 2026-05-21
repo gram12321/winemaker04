@@ -197,10 +197,13 @@ flowchart LR
 | Area | Current state |
 |---|---|
 | Compact anchors | Runtime uses 12-key `WineAnchorValues`; legacy 26-key JSON is parsed only as a migration bridge. |
+| Taste profile | Runtime computes 14 flavor families and descriptor values from anchors, characteristics, grape identity, features, and aging. |
+| Taste quality | `tasteQualityIndex` is implemented as a family-level quality score with red/white base targets, grape nudges, dependency rules, family weights, and UI breakdown reasons. |
 | Wine log snapshots | Wine log and wine highscores use bottling snapshots for taste quality, structure, land value, and wine score. |
 | Achievement wine score | `wine_score_threshold` achievements use finite persisted `WineLogEntry.wineScore`; missing or non-finite scores do not derive a fallback. |
 | Contract quality split | `tasteQuality` and `landValue` are separate requirements. |
 | Descriptor hierarchy | Descriptors are grouped under flavor families and remain display-only for now. |
+| Current conclusion | The family-level taste system is sufficient for now; descriptor scoring and unified customer taste preferences remain deferred. |
 
 ## 11) Main Game Variable Relationship Matrix
 

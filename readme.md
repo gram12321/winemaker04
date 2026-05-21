@@ -51,7 +51,7 @@ return (
 **CRITICAL RULES FOR AI AGENTS:**
 - **NEVER make any effort for backwards compability, database save, data migration or anything like that. We are in dev phase. Database will simply be deleted if any compability issue arrice**:
 - **ALWAYS use barrel exports**: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`
-- **ALWAYS use custom hooks**: `useLoadingState()`, `useGameStateWithData()`, `useGameState()`, `useGameUpdates()`, `usePrestigeUpdates()`, `useWineBalance()`, `useWineBatchBalance()`, `useFormattedBalance()`, `useBalanceQuality()`, `useTableSortWithAccessors()`
+- **ALWAYS use custom hooks**: `useLoadingState()`, `useGameStateWithData()`, `useGameState()`, `useGameUpdates()`, `usePrestigeAndVineyardValueUpdates()`, `useTableSortWithAccessors()`
 - **ALWAYS use shared interfaces**: `PageProps`, `NavigationProps`, `CompanyProps`, `DialogProps`, `FormProps`, `TableProps`, `LoadingProps`, `CardProps`, `BaseComponentProps` from `@/components/UItypes`
 - **ALWAYS use service exports**: Game state (`getGameState`, `updateGameState`, `getCurrentCompany`, `getCurrentPrestige`), Finance (`addTransaction`, `loadTransactions`, `calculateFinancialData`), Sales (`fulfillWineOrder`, `rejectWineOrder`, `generateSophisticatedWineOrders`), Vineyard (`createVineyard`, `plantVineyard`, `getAllVineyards`, `purchaseVineyard`), Winery (`crushGrapes`, `startFermentation`, `stopFermentation`, `bottleWine`, `progressFermentation`)
 - **ALWAYS use utility exports**: Formatting (`formatNumber`, `formatCurrency`, `formatDate`, `formatGameDate`, `formatPercent`), Calculations (`calculateSkewedMultiplier`, `calculateAsymmetricalMultiplier`, `calculateBaseWinePrice`), Company utils (`getCurrentCompanyId`, `getCompanyQuery`), Wine utilities (`getGrapeQualityCategory`, `getColorClass`, `getBadgeColorClasses`)
@@ -83,7 +83,8 @@ return (
   - `grapeConstants.ts` - Grape metadata and base wine characteristics
   - `namesConstants.ts` - Country-specific name databases for vineyards and customers
   - `activityConstants.ts` - Activity system constants and work calculations
-  - `balanceAdjustments.ts` - Wine balance system configuration (dynamic adjustments, synergy rules)
+  - `src/lib/wineStructure/` - Structure index configuration and calculations
+  - `src/lib/constants/taste/` - Taste family labels and compatibility data
 
 **MCP Integration:**
 - Supabase MCP configured in `.cursor/mcp.json`
@@ -158,19 +159,21 @@ return (
 - **Database Integration**: Full CRUD operations with reactive UI updates
 
 **Implemented (Advanced System):**
-- Wine characteristics (acidity, aroma, body, spice, sweetness, tannins) with per-characteristic balanced ranges
-- Sophisticated balance calculation with cross-trait penalties and synergy rules
+- Wine characteristics (acidity, aroma, body, spice, sweetness, tannins) with per-characteristic structure ranges
+- Sophisticated structure index calculation with cross-trait penalties and synergy rules
+- Wine Folly-inspired taste profile with 14 flavor families and descriptor values
+- Computed `tasteQualityIndex` from family targets, grape nudges, dependency rules, and family weights
+- WineScore composed from `(tasteQualityIndex + structureIndex) / 2`
 - Harvest characteristics system with vineyard condition modifiers (ripeness, quality, altitude, suitability)
 - Dynamic range adjustments and penalty multipliers with interactive UI visualization
 - Grape-specific base characteristics with harvest-specific modifications
 - Crushing activity system with method-specific characteristic modifications (Hand Press, Mechanical Press, Pneumatic Press)
-- Quality breakdown modals with detailed factor analysis and asymmetric function displays
-- Combined wine score system (quality + balance) integrated into pricing and wine evaluation
-- **Note**: Special features like "Green Flavors" were removed for this iteration as they were not fully implemented in v1
+- Structure, taste profile, and Taste Quality UI breakdowns
+- Combined wine score system integrated into pricing, contracts, highscores, achievements, and wine evaluation
 
 **Future Advanced Features:**
-- Extended quality tracking through all production stages (aging, bottling effects)
-- Fermentation method influence on characteristics
+- Descriptor-level taste typicity scoring
+- Unified customer market preferences across both structure and taste
 - Wine archetypes for style matching
 
 ### 2. Vineyard Management ✅ **IMPLEMENTED**
@@ -211,15 +214,14 @@ return (
 ### 4. Sales System ✅ **IMPLEMENTED**
 - **Customer System**: Regional customers (5 countries) with country-specific characteristics
 - **Order Generation**: Prestige-based acquisition with sophisticated rejection logic
-- **Multi-Factor Pricing**: Wine value index + quality index with realistic scaling
+- **Multi-Factor Pricing**: WineScore, score curve, land value price multiplier, feature price multiplier, company prestige, and vineyard prestige
 - **Order Management**: Partial fulfillment support with relationship tracking
 - **Customer Types**: Restaurant, Wine Shop, Private Collector, Chain Store
-- **Advanced Features**: Customer browsing, diminishing returns, calculation data persistence
+- **Advanced Features**: Customer browsing, contracts, taste/site requirements, diminishing returns, calculation data persistence
 **Future Advanced Features (NOT YET IMPLEMENTED):**
-- Contract system for stable income
 - Market saturation mechanics
 - Advanced importer management
-- Customer preferences and archetypes
+- Unified structure+taste customer preferences and archetypes
 - Price negotiation mechanics
 - Advanced relationship events and customer loyalty programs
 
@@ -258,7 +260,7 @@ return (
 - **Login System**: Company selection, creation, user profile management
 - **Company Management**: Multi-company support with switching and portfolio stats
 - **Player Menu**: Dropdown navigation, notification center, admin dashboard
-- **Winepedia System**: Interactive wine knowledge base with grape varieties, balance system visualization
+- **Winepedia System**: Interactive wine knowledge base with grape varieties, structure/taste system visualization
 - **Page Routing**: Company Overview, Vineyard, Winery, Sales, Finance navigation
 - **Achievement System**: Progress tracking with filtering and categorization
 - **Highscores**: Global leaderboard system with company value rankings
@@ -273,7 +275,7 @@ return (
 - Authentication with company management and highscores
 - Centralized game state with reactive updates and game tick system
 - Advanced vineyard management with land buying, vine yield, and activity system
-- Sophisticated wine production with characteristics and balance system
+- Sophisticated wine production with characteristics, structure index, taste profile, and Taste Quality systems
 - Advanced sales system with regional customers and multi-factor pricing
 - Finance system with transaction tracking, loan system, and economy phases
 - **Public company & share system** with incremental share price adjustments, share issuance/buyback, dividend management, and market cap-based expectations
@@ -288,7 +290,6 @@ return (
 
 ❌ **NOT IMPLEMENTED:**
 
-- Contract system for stable income
 - Storage vessel tracking (fermentation tanks, aging tanks)
 - Seasonal effects on vineyards/wine
 - Advanced farming methods (organic/biodynamic)

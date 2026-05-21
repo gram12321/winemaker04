@@ -124,12 +124,13 @@ winemaker04/
 │   │       │   ├── activityOptionsModal.tsx (298 lines) # Activity options modal
 │   │       │   └── workCalculationTable.tsx (58 lines) # Work calculation table
 │   │       ├── components/ (2,500+ lines total) # Generic components
-│   │       │   ├── BalanceScoreBreakdown.tsx (735 lines) # Balance score breakdown
+│   │       │   ├── StructureIndexBreakdown.tsx # Structure index breakdown
 │   │       │   ├── characteristicBar.tsx (270 lines) # Characteristic bar
 │   │       │   ├── CharacteristicSlider.tsx (76 lines) # Characteristic slider
 │   │       │   ├── FeatureDisplay.tsx (608 lines) # Unified wine feature display
-│   │       │   ├── grapeQualityBar.tsx (305 lines) # Grape quality bar
-│   │       │   ├── grapeQualityBreakdown.tsx (504 lines) # Grape quality breakdown
+│   │       │   ├── WineTasteProfilePanel.tsx # Taste profile panel
+│   │       │   ├── WineTasteQualityBreakdown.tsx # Taste Quality breakdown
+│   │       │   ├── WineTasteWheel.tsx # Taste wheel visualization
 │   │       │   └── StaffSkillBar.tsx (89 lines) # Staff skill bar
 │   │       ├── modals/ (6,602 lines total)    # Modal dialogs
 │   │       │   ├── UImodals/ (1,500+ lines total) # UI modals
@@ -154,9 +155,7 @@ winemaker04/
 │   │       │   │   ├── StaffAssignmentModal.tsx (313 lines) # Staff assignment
 │   │       │   │   ├── StaffSearchOptionsModal.tsx (269 lines) # Staff search options
 │   │       │   │   └── StaffSearchResultsModal.tsx (261 lines) # Staff search results
-│   │       │   └── winebreakdownmodals/ (96 lines total) # Wine analysis modals
-│   │       │       ├── BalanceBreakdownModal.tsx (49 lines) # Balance breakdown
-│   │       │       └── QualityBreakdownModal.tsx (47 lines) # Quality breakdown
+│   │       │   └── Wine analysis breakdowns now live under components/ and UImodals/
 │   │       ├── shadCN/ (2,442 lines total)    # ShadCN UI components
 │   │       │   ├── accordion.tsx (49 lines)   # Accordion component
 │   │       │   ├── avatar.tsx (43 lines)      # Avatar component
@@ -200,24 +199,24 @@ winemaker04/
 │   │   ├── useGameState.ts (74 lines)         # Game state management
 │   │   ├── useGameUpdates.ts (39 lines)       # Game updates hook
 │   │   ├── useLoadingState.ts (30 lines)      # Loading state management
-│   │   ├── usePrestigeUpdates.ts (104 lines)  # Prestige updates hook
+│   │   ├── usePrestigeAndVineyardValueUpdates.ts # Prestige and vineyard value updates
 │   │   ├── useTableSort.ts (166 lines)        # Table sorting functionality
-│   │   ├── useWineBalance.ts (49 lines)       # Wine balance calculations
-│   │   ├── useWineCombinedScore.ts (64 lines) # Combined wine scoring
+│   │   ├── useWineStructureIndex.ts           # Wine structure calculations
+│   │   ├── useWineCombinedScore.ts            # Combined wine scoring
 │   │   └── useWineFeatureDetails.ts (79 lines) # Wine feature details
 │   │
 │   └── lib/ (28,000+ lines total)             # Core library code
-│       ├── balance/ (690 lines total)         # Wine balance system
-│       │   ├── calculations/ (318 lines total) # Balance calculations
-│       │   │   ├── balanceCalculator.ts (122 lines) # Balance calculator
-│       │   │   ├── rangeCalculator.ts (61 lines) # Range calculator
-│       │   │   └── ruleCalculator.ts (135 lines) # Rule calculator
-│       │   ├── config/ (439 lines total)      # Balance configuration
-│       │   │   ├── rangeAdjustments.ts (174 lines) # Range adjustments
-│       │   │   └── rules.ts (265 lines)       # Balance rules
-│       │   ├── types/ (68 lines total)        # Balance types
-│       │   │   ├── balanceCalculationsTypes.ts (29 lines) # Calculation types
-│       │   │   └── balanceRulesTypes.ts (39 lines) # Rule types
+│       ├── wineStructure/                     # Wine structure index system
+│       │   ├── calculations/                  # Structure calculations
+│       │   │   ├── structureIndexCalculator.ts # Structure index calculator
+│       │   │   ├── rangeCalculator.ts         # Range calculator
+│       │   │   └── ruleCalculator.ts          # Rule calculator
+│       │   ├── config/                        # Structure configuration
+│       │   │   ├── rangeAdjustments.ts        # Range adjustments
+│       │   │   └── rules.ts                   # Structure rules
+│       │   ├── types/                         # Structure index types
+│       │   │   ├── structureCalculationsTypes.ts # Calculation types
+│       │   │   └── structureRulesTypes.ts # Rule types
 │       │   └── index.ts (8 lines)             # Barrel exports
 │       │
 │       ├── constants/ (2,000+ lines total)     # Game constants and configuration
@@ -366,9 +365,12 @@ winemaker04/
 │       │   │   │   ├── fermentationManager.ts (180 lines) # Fermentation management
 │       │   │   │   ├── inventoryService.ts (236 lines) # Inventory service
 │       │   │   │   └── wineryService.ts (48 lines) # Main winery service
-│       │   │   ├── winescore/ (155 lines total) # Wine scoring
-│       │   │   │   ├── wineQualityCalculationService.ts (129 lines) # Quality calculation
-│       │   │   │   └── wineScoreCalculation.ts (26 lines) # Score calculation
+│       │   │   ├── winescore/                 # Wine scoring and pricing
+│       │   │   │   ├── landValueModifierCalculation.ts # Land value modifier and related breakdowns
+│       │   │   │   └── wineScoreCalculation.ts # WineScore, Taste Quality, and estimated-price calculation
+│       │   │   ├── taste/                     # Taste profile and Taste Quality services
+│       │   │   │   ├── wineTasteProfileService.ts # Flavor-family and descriptor profile generation
+│       │   │   │   └── tasteQualityIndexService.ts # Family-level Taste Quality score
 │       │   │   └── index.ts (116 lines)       # Wine services exports
 │       │   └── index.ts (116 lines)           # Services barrel exports
 │       │
@@ -403,5 +405,7 @@ winemaker04/
 
 ---
 
-**Last Updated**: 2025-11-29  
+**Taste/Structure Status:** Current wine scoring uses `structureIndex`, `tasteQualityIndex`, and `wineScore = (tasteQualityIndex + structureIndex) / 2`. Taste profiles use 14 flavor families with descriptor display values; descriptor scoring and unified customer taste preferences are future work.
+
+**Last Updated**: 2026-05-21
 

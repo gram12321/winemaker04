@@ -1,6 +1,7 @@
 # Taste Quality Index Design
 
 Date: 2026-05-20
+Status: Implemented and accepted for now as the current family-level taste quality model.
 
 ## Goal
 
@@ -59,3 +60,15 @@ Future TODO: customer taste preferences should be designed as one unified market
 ## Risks
 
 The first rule table will need tuning after playtesting. The service should therefore be data-driven and tested around relative behavior rather than exact final economy balance.
+
+## Implementation Conclusion
+
+As of 2026-05-21, the implementation matches this design closely enough for current gameplay:
+
+- `tasteQualityIndex` is computed from the 14 family profile, not from a fixed placeholder.
+- WineScore uses `(tasteQualityIndex + structureIndex) / 2`.
+- Estimated price consumes that WineScore.
+- Contracts use `tasteQuality` for taste quality and keep site requirements (`landValue`, `country`, `region`, `altitude`, `aspect`) separate.
+- The Taste UI shows both the taste wheel and a structure-like Taste Quality breakdown.
+
+The model should now be tuned through playtesting rather than redesigned. Descriptor scoring and customer taste preferences remain out of scope until they can be designed as layers on top of this family-level score.

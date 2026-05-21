@@ -1,5 +1,7 @@
 # Contract Taste/Site Requirements And Taste UI Implementation Plan
 
+Status: Complete. Rechecked against implementation on 2026-05-21.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace contract `quality` requirements with explicit `tasteQuality`, keep site/land parameters separate, and add a structure-like Taste Quality breakdown to the wine Taste tab.
@@ -90,3 +92,12 @@
 - [x] Run `npm test`.
 - [x] Run `npm run build`.
 - [x] Check `git diff --stat`.
+
+## Current Acceptance
+
+The contract split is accepted for now:
+
+- `tasteQuality` validates against computed `getTasteQualityIndex(wine)`.
+- `landValue`, `country`, `region`, `altitude`, and `aspect` remain site requirements.
+- Taste Quality UI explains family-level scoring without replacing the taste wheel.
+- Customer taste preferences are still intentionally deferred; they should be unified across structure and taste instead of added as a taste-only preference model.

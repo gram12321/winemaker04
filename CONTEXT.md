@@ -109,7 +109,9 @@ The taste layer has 14 flavor families. Descriptors are children of families and
 | `generalAging` | `bottleEvolved`, `leatheryTobacco` |
 | `faults` | `faultEdge` |
 
-`tasteQualityIndex` is computed from the flavor-family profile, family ideal ranges, family weights, and compatibility rules. It is not the same thing as `landValueModifier`.
+`tasteQualityIndex` is computed from the flavor-family profile, family ideal ranges, family weights, and dependency/compatibility rules. It is not the same thing as `landValueModifier`.
+
+Current acceptance: the family-level Taste Quality model is good enough for now. Descriptors remain display-only; descriptor scoring and customer taste preferences are future layers.
 
 ## Outcome Variables and Parameters
 
@@ -157,3 +159,4 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 - Business logic should not use fallback aliases for renamed fields.
 - Database persistence should prefer explicit names such as `taste_quality_index`, `structure_index`, and `wine_score`.
 - Snapshot fields must be explicit about event timing: harvest, current, or bottling.
+- Do not add taste-only customer preferences before structure has the same market-preference layer; future preferences should cover both structure and taste.
