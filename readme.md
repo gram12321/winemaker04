@@ -1,295 +1,75 @@
-# Winery Management Game – AI Development Guide
+# Winery Management Game
 
-**AI Agent Context**: Turn-based winery simulation with formula-based economics, no multiplayer.
+Turn-based single-player winery simulation built with React, TypeScript, Vite, Tailwind, ShadCN UI, and Supabase.
 
-## 🔧 Core Architecture
-- **Framework**: React + TypeScript + Supabase
-- **Styling**: Tailwind CSS + ShadCN UI (no custom CSS)
-- **Data Flow**: Services → Database → Global Updates → Reactive UI
+The game models vineyard ownership, grape growing, winemaking, contracts, customer sales, finance, prestige, achievements, and company progression. Core simulation logic lives in services; React components should stay focused on presentation and interaction.
 
-### 📱 Dual UI System (Mobile/Desktop)
-The application implements a **Dual UI System** that provides optimized experiences for both mobile and desktop devices:
+## Quick Start
 
-**Mobile Detection:**
-- `useIsMobile()` hook detects screen width < 768px
-- Automatic UI switching based on breakpoint
-- Responsive design patterns throughout the application
-
-**Mobile-First Components:**
-- **Sidebar**: Desktop fixed sidebar → Mobile offcanvas Sheet component
-- **Activity Panel**: Desktop fixed panel → Mobile sliding panel with floating trigger button
-- **Data Tables**: Desktop tables → Mobile card-based layouts (Sales, Highscores, WineLog)
-- **Navigation**: Touch-friendly mobile navigation with proper gesture support
-
-**Implementation Pattern:**
-```typescript
-// Example dual UI pattern
-const isMobile = useIsMobile();
-
-return (
-  <>
-    {/* Desktop version */}
-    <div className="hidden lg:block">
-      <DesktopComponent />
-    </div>
-    
-    {/* Mobile version */}
-    <div className="lg:hidden">
-      <MobileComponent />
-    </div>
-  </>
-);
+```bash
+npm install
+npm run dev
 ```
 
-**Key Mobile Components:**
-- `src/hooks/use-mobile.tsx` - Mobile detection hook
-- `src/components/ui/shadCN/sidebar.tsx` - Responsive sidebar with Sheet integration
-- `src/components/layout/ActivityPanel.tsx` - Dual activity panel system
+Useful checks:
 
-### 🧠 Development Patterns
+```bash
+npm test
+npm run build
+```
 
-**CRITICAL RULES FOR AI AGENTS:**
-- **NEVER make any effort for backwards compability, database save, data migration or anything like that. We are in dev phase. Database will simply be deleted if any compability issue arrice**:
-- **ALWAYS use barrel exports**: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`
-- **ALWAYS use custom hooks**: `useLoadingState()`, `useGameStateWithData()`, `useGameState()`, `useGameUpdates()`, `usePrestigeAndVineyardValueUpdates()`, `useTableSortWithAccessors()`
-- **ALWAYS use shared interfaces**: `PageProps`, `NavigationProps`, `CompanyProps`, `DialogProps`, `FormProps`, `TableProps`, `LoadingProps`, `CardProps`, `BaseComponentProps` from `@/components/UItypes`
-- **ALWAYS use service exports**: Game state (`getGameState`, `updateGameState`, `getCurrentCompany`, `getCurrentPrestige`), Finance (`addTransaction`, `loadTransactions`, `calculateFinancialData`), Sales (`fulfillWineOrder`, `rejectWineOrder`, `generateSophisticatedWineOrders`), Vineyard (`createVineyard`, `plantVineyard`, `getAllVineyards`, `purchaseVineyard`), Winery (`crushGrapes`, `startFermentation`, `stopFermentation`, `bottleWine`, `progressFermentation`)
-- **ALWAYS use utility exports**: Formatting (`formatNumber`, `formatCurrency`, `formatDate`, `formatGameDate`, `formatPercent`), Calculations (`calculateSkewedMultiplier`, `calculateAsymmetricalMultiplier`, `calculateBaseWinePrice`), Company utils (`getCurrentCompanyId`, `getCompanyQuery`), Wine utilities (`getGrapeQualityCategory`, `getColorClass`, `getBadgeColorClasses`)
-- **Business logic in services**: Never put calculations in components
-- **Reactive updates**: Services trigger global updates, components auto-refresh
+## Codebase Map
 
-### 🪜 Starting Conditions & Financial Options
-- **Target Net Starting Assets**: Roughly €100,000 calculated as `starting cash + starting vineyard value − starting loan principal`
-- **Staff Adjustment**: ±€10,000 for each starting staff member relative to a two-person baseline
-- **Financial Options**:
-  - **Player Cash Contribution**: Required investment from player's personal balance (separate from company money)
-  - **Family Contribution**: Initial vineyard value (contributed as equity, not cash)
-  - **Outside Investment**: Optional investment from external investors (0 to €1,000,000)
-  - **Starting Loans**: Country-specific loan options with varying terms
-- **Share Structure**: Initial share allocation based on total contributions (player cash + family + outside investment)
-- **Example**: A setup with three starting staff should land near €110,000, while a solo founder should be closer to €90,000
+| Area | Path | Notes |
+|---|---|---|
+| App shell and routing | `src/App.tsx`, `src/main.tsx` | React entry point and page selection. |
+| Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, staff, Winepedia, highscores. |
+| Shared UI | `src/components/ui/` | ShadCN wrappers, modals, reusable game UI. |
+| Hooks | `src/hooks/` | Game state, loading, sorting, mobile detection, reactive updates. |
+| Services | `src/lib/services/` | Domain logic for core game, vineyard, wine, sales, finance, activities, prestige. |
+| Database | `src/lib/database/` | Supabase access grouped by domain. |
+| Types | `src/lib/types/` | Shared TypeScript domain and UI interfaces. |
+| Constants | `src/lib/constants/` | Grapes, vineyards, economy, staff, wine features, taste labels. |
+| Wine structure | `src/lib/wineStructure/` | Structure index calculations, ranges, rules, and types. |
+| Tests | `tests/` | Vitest coverage for services and gameplay calculations. |
+| Migrations | `migrations/` | SQL used for database updates. |
 
-### 💰 Company/Player Separation
-- **Player Balance**: Players maintain a separate cash balance (`users.cash_balance`) independent of company finances
-- **Multi-Company Support**: Players can create multiple companies, each with separate finances
-- **Investment Flow**: Player balance is deducted when creating/investing in companies
-- **Dividend Payments**: Player receives dividends to their personal balance when companies pay dividends
-- **Use Cases**: Allows players to manage a portfolio of companies, transfer funds between investments, and maintain personal capital separate from business operations
+## Architecture Rules
 
-**Constants Directory (`@/lib/constants`):** Centralized configuration and data via barrel exports:
-- Import from `@/lib/constants` (barrel). It re-exports:
-  - `constants.ts` - Game initialization, sales constants, grape quality, customer regional data
-  - `vineyardConstants.ts` - Country-region mapping, soil types, altitude ranges, market data
-  - `grapeConstants.ts` - Grape metadata and base wine characteristics
-  - `namesConstants.ts` - Country-specific name databases for vineyards and customers
-  - `activityConstants.ts` - Activity system constants and work calculations
-  - `src/lib/wineStructure/` - Structure index configuration and calculations
-  - `src/lib/constants/taste/` - Taste family labels and compatibility data
+- Put business logic in `src/lib/services/`, not React components.
+- Prefer existing barrel exports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
+- Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
+- Keep wine terminology aligned with `CONTEXT.md`: Structure, Taste Quality, WineScore, and compact wine anchors.
+- The project is in active development. Do not add backwards-compatibility branches or data migrations unless explicitly requested.
 
-**MCP Integration:**
-- Supabase MCP configured in `.cursor/mcp.json`
-- Both anon and service role keys available
-- PAT required for database management
+## Documentation Entry Points
 
-### 🗄️ **Dual Database Setup**
+| Need | Start here |
+|---|---|
+| Stable domain vocabulary | `CONTEXT.md` |
+| Current implemented game systems | `docs/AIDescriptions_coregame.md` |
+| File structure and ownership map | `docs/PROJECT_INFO.md` |
+| Wine variable flow and diagrams | `docs/WineSystem_VariableRelationshipMap.md` |
+| Taste research and future ideas | `docs/TasteSystem_WineFolly_Research.md` |
+| Taste Quality design spec | `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` |
+| Taste Quality implementation plan | `docs/superpowers/plans/2026-05-20-taste-quality-index.md` |
+| Contract taste/site UI plan | `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` |
+| Development prompt guidance | `docs/AIpromt_newpromt.md` |
+| Documentation maintenance guidance | `docs/AIpromt_docs.md` |
+| Cleanup/refactor guidance | `docs/AIpromt_codecleaning.md` |
+| Version history | `docs/versionlog.md` |
 
-**Development Database (Local):**
-- Supabase project: `uuribntaigecwtkdxeyw`
-- Environment: `.env.local` (gitignored)
-- Management: MCP tools (`mcp_supabase-dev_*`) for agentic operations
-- Usage: `localhost:3000` with frequent resets
+## Database Notes
 
-**Vercel Database (Staging):**
-- Supabase project: `uuzoeoukixvunbnkrowi`
-- Environment: Vercel Dashboard → Environment Variables
-- Management: Manual SQL migrations via `migrations/` (data-preserving or full reset)
-- Usage: `winemaker-omega.vercel.app` (stable for testing)
+The app uses Supabase. Local environment variables live in `.env.local`, which is gitignored.
 
-**Migration Process:**
-1. Update dev database via MCP tools
-2. Choose migration type:
-   - **Data-preserving**: `migrations/vercel_migration_preserve_data.sql` (recommended for regular updates)
-   - **Full reset**: `migrations/sync_vercel_schema.sql` (major breaking changes only)
-3. Run chosen migration in Vercel Supabase SQL Editor
-4. Verify Vercel deployment works
+Apply database changes to the development database first, then update the appropriate SQL file under `migrations/` for staging or deployment workflows.
 
-### 🔐 Row Level Security & Access Controls
-- All company-scoped tables now enforce RLS. Access requires either the company owner (`companies.user_id`) or a membership row in `user_settings` for the target `company_id`.
-- Helper functions (`public.is_service_role`, `public.is_company_member`, `public.is_company_member_text`) centralize membership checks and must remain in sync across dev/Vercel databases.
-- Maintenance helpers (`update_updated_at_column`, `clear_table`, `admin_clear_all_tables`) run with an explicit `public, pg_temp` search path to avoid hijacking.
-- Migrations must be applied to both databases (MCP dev first, then Vercel SQL files) whenever RLS policies or helper functions change.
+## Current System Status
 
-**Legacy Reference Documentation:**
-- `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
-- `@docs/old_iterations/v3/` - Previous React/TypeScript iteration with different architecture
-- Use for reference when implementing new features or understanding legacy systems
+This README is intentionally a short entry point. Detailed implementation status belongs in:
 
-**Local Storage Policy:**
-- Only `lastCompanyId` is persisted for autologin. No full company object is stored. All live data (prestige, money, etc.) is fetched from DB/services and updated via hooks.
-
-### 🏗️ Database Schema
-**Core Tables:**
-- `companies` - Company data, financial state, prestige, game progression
-- `users` - User accounts and authentication
-- `vineyards` - Vineyard management (vine age, soil, altitude, aspect, prestige)
-- `wine_batches` - Wine production pipeline (grapes → must → wine → bottled)
-- `wine_orders` - Customer orders with relationship tracking and pricing
-- `wine_log` - Wine production history and completed wines
-- `customers` - Global customer database with regional characteristics
-- `company_customers` - Company-customer relationship tracking
-- `prestige_events` - Comprehensive prestige tracking with decay
-- `relationship_boosts` - Customer relationship events and boosts
-- `transactions` - Financial history with categorization
-- `activities` - Activity system (planting, harvesting, etc.)
-- `notifications` - System notifications and alerts
-- `highscores` - Leaderboard and achievement tracking
-- `achievements` - Achievement system
-- `user_settings` - User preferences and configuration
-
-**Data Flow**: Services → Database → Global Updates → Reactive UI
-
-## Core Game Systems & Features
-
-### 1. Wine Production System ✅ **IMPLEMENTED**
-- **Wine Batch Pipeline**: grapes → must → wine → bottled
-- **Process Tracking**: none → fermentation → aging → bottled
-- **Winery Actions**: Crushing, Start/Stop Fermentation, Progress Tracking, Bottling
-- **Fermentation Progress**: 0-100% with manual progress control
-- **Completed Wine Format**: "Grape Variety, Vineyard Name, Vintage" with bottle count
-- **Database Integration**: Full CRUD operations with reactive UI updates
-
-**Implemented (Advanced System):**
-- Wine characteristics (acidity, aroma, body, spice, sweetness, tannins) with per-characteristic structure ranges
-- Sophisticated structure index calculation with cross-trait penalties and synergy rules
-- Wine Folly-inspired taste profile with 14 flavor families and descriptor values
-- Computed `tasteQualityIndex` from family targets, grape nudges, dependency rules, and family weights
-- WineScore composed from `(tasteQualityIndex + structureIndex) / 2`
-- Harvest characteristics system with vineyard condition modifiers (ripeness, quality, altitude, suitability)
-- Dynamic range adjustments and penalty multipliers with interactive UI visualization
-- Grape-specific base characteristics with harvest-specific modifications
-- Crushing activity system with method-specific characteristic modifications (Hand Press, Mechanical Press, Pneumatic Press)
-- Structure, taste profile, and Taste Quality UI breakdowns
-- Combined wine score system integrated into pricing, contracts, highscores, achievements, and wine evaluation
-
-**Future Advanced Features:**
-- Descriptor-level taste typicity scoring
-- Unified customer market preferences across both structure and taste
-- Wine archetypes for style matching
-
-### 2. Vineyard Management ✅ **IMPLEMENTED**
-- **Vineyard Creation**: Create vineyards with name, country, region, hectares
-- **Planting System**: Plant grape varieties (Chardonnay, Pinot Noir, Cabernet Sauvignon, Merlot)
-- **Status Management**: Barren → Planted → Growing → Harvested → Dormant cycle
-- **Harvest System**: Collect grapes and automatically create wine batches
-- **Environmental Factors**: Soil composition, altitude, aspect, and land value tracking
-- **Vine Aging**: Annual vine aging system for realistic vineyard progression
-- **Vineyard Prestige**: Sophisticated prestige calculation based on environmental factors
-- **Database Integration**: Full CRUD operations with reactive UI updates
-
-**Advanced Features:**
-- Land buying system with realistic property generation and affordability checking
-- Vine yield system with age-based progression (0.02→1.00→decline)
-- Ripeness progression by season with aspect and seasonal randomness modifiers
-- Activity system with work calculation for planting and harvesting
-
-**Future Advanced Features (NOT YET IMPLEMENTED):**
-- Dynamic health system (0-1 scale)
-- Field clearing and preparation
-
-### 3. Staff System ✅ **IMPLEMENTED**
-- **Staff Management**: Hire and fire staff with nationality, skill levels, and specializations
-- **Skill System**: 5 core skills (Field, Winery, Administration, Sales, Maintenance)
-- **Work Calculation**: Dynamic work progression based on assigned staff skills
-- **Staff Assignment**: Assign staff to activities via ActivityCard modal
-- **Wage System**: Automatic wage calculation based on skills and specializations
-- **Database Integration**: Full CRUD operations with Supabase
-- **Starting Staff**: New companies begin with 2 random staff members
-**Future Advanced Features (NOT YET IMPLEMENTED):**
-- Team management and team assignment
-- Staff search and recruitment system
-- Advanced hiring mechanics
-- Staff specialization bonuses
- - Staff training/development
-
-### 4. Sales System ✅ **IMPLEMENTED**
-- **Customer System**: Regional customers (5 countries) with country-specific characteristics
-- **Order Generation**: Prestige-based acquisition with sophisticated rejection logic
-- **Multi-Factor Pricing**: WineScore, score curve, land value price multiplier, feature price multiplier, company prestige, and vineyard prestige
-- **Order Management**: Partial fulfillment support with relationship tracking
-- **Customer Types**: Restaurant, Wine Shop, Private Collector, Chain Store
-- **Advanced Features**: Customer browsing, contracts, taste/site requirements, diminishing returns, calculation data persistence
-**Future Advanced Features (NOT YET IMPLEMENTED):**
-- Market saturation mechanics
-- Advanced importer management
-- Unified structure+taste customer preferences and archetypes
-- Price negotiation mechanics
-- Advanced relationship events and customer loyalty programs
-
-
-### 5. Customer Relationship System ✅ **IMPLEMENTED**
-- 300+ global customers with regional traits
-- Relationships calculated from prestige, market share, and sales boosts
-- Only active (ordering) customers are tracked
-- Sales boost relationships, which decay over time
-- Stored values for display, live calculations for logic
-- UI: Tooltip breakdowns and Winepedia integration
-
-### 5. Finance System ✅ **IMPLEMENTED**
-- **Transaction Management**: Complete financial system with Supabase integration
-- **Financial Reporting**: Income statements, balance sheets, cash flow statements
-- **Asset Valuation**: Automatic calculation of vineyard, wine inventory, grape values
-- **Loan System**: Economy phases, diversified lender pool (guaranteed type distribution), credit rating, loan applications with activity integration
-- **Integration**: All money flows through transaction system
-
-#### 5.1. Public Company & Share System ✅ **IMPLEMENTED**
-- **Share Management**: Issue shares, buy back stock, manage ownership percentages
-- **Share Price System**: Incremental adjustment system that updates weekly based on performance metrics
-  - Initial price: Book Value per Share (Total Assets - Total Liabilities) / Total Shares
-  - Weekly adjustments based on 8 metrics (EPS, revenue/share, dividend/share, revenue growth, profit margin, credit rating, fixed asset ratio, prestige)
-  - Anchor constraint: Book value acts as anchor, constraining price movements naturally
-  - Market cap modifier: Larger companies (higher market cap) face additional expected improvement requirements
-- **Dividend System**: Fixed per-share dividend payments with prestige impact for changes
-- **Share Structure Adjustments**: Immediate price impact for share issuance (dilution) and buyback (concentration)
-- **Historical Tracking**: Weekly snapshots of all metrics for 48-week rolling comparisons
-- **Terminology**:
-  - **Company Value** = Total Assets - Total Liabilities (used for prestige, highscores, achievements)
-  - **Market Cap** = Share Price × Total Shares (used in share price contexts only)
-  - **Book Value Per Share** = (Total Assets - Total Liabilities) / Total Shares (anchor for share price)
-
-### 6. Player Interface ✅ **IMPLEMENTED**
-- **Login System**: Company selection, creation, user profile management
-- **Company Management**: Multi-company support with switching and portfolio stats
-- **Player Menu**: Dropdown navigation, notification center, admin dashboard
-- **Winepedia System**: Interactive wine knowledge base with grape varieties, structure/taste system visualization
-- **Page Routing**: Company Overview, Vineyard, Winery, Sales, Finance navigation
-- **Achievement System**: Progress tracking with filtering and categorization
-- **Highscores**: Global leaderboard system with company value rankings
-
----
-
-## 📋 **Implementation Status**
-
-✅ **COMPLETED SYSTEMS:**
-- Multi-company database with prestige system and relationship management
-- React + TypeScript + Tailwind + ShadCN with barrel exports
-- Authentication with company management and highscores
-- Centralized game state with reactive updates and game tick system
-- Advanced vineyard management with land buying, vine yield, and activity system
-- Sophisticated wine production with characteristics, structure index, taste profile, and Taste Quality systems
-- Advanced sales system with regional customers and multi-factor pricing
-- Finance system with transaction tracking, loan system, and economy phases
-- **Public company & share system** with incremental share price adjustments, share issuance/buyback, dividend management, and market cap-based expectations
-- Wine features framework with unified service architecture
-- Complete player interface with Winepedia, achievements, and admin tools
-- Staff management system with skill-based work calculation
-- **Activity-based workflows** for land buying, staff search, and loan applications
-- **Dual database architecture** with development and staging environments
-- **MCP integration** for agentic database management
-- **Company/Player separation** with independent player balance system for multi-company portfolio management
-- **Starting conditions system** with financial options (player cash, family contribution, outside investment, loans)
-
-❌ **NOT IMPLEMENTED:**
-
-- Storage vessel tracking (fermentation tanks, aging tanks)
-- Seasonal effects on vineyards/wine
-- Advanced farming methods (organic/biodynamic)
+- `docs/AIDescriptions_coregame.md`
+- `docs/PROJECT_INFO.md`
+- `CONTEXT.md`
+- `docs/WineSystem_VariableRelationshipMap.md`

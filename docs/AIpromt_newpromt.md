@@ -1,4 +1,22 @@
+
+# AI Prompt: Starting A New Development Session
 We have a comprehensive winery management game built with React/Vite/TypeScript + ShadCN, connected to Supabase. As described in the @readme.md, we have successfully enabled MCP tools for git and supabase.
+
+Use this as the short context handoff when opening a new AI coding session for this repo.
+
+## Project Summary
+
+We are building a single-player, turn-based winery management game with React, TypeScript, Vite, Tailwind, ShadCN UI, and Supabase.
+
+The player manages vineyards, harvests grapes, produces wine, sells bottles and contracts, manages staff and finance, builds prestige, and competes through achievements/highscores.
+
+## First Files To Read
+
+1. `readme.md` - codebase entry point and doc map.
+2. `CONTEXT.md` - stable terminology and variable definitions.
+3. `docs/AIDescriptions_coregame.md` - current implementation status.
+4. `docs/PROJECT_INFO.md` - file structure and ownership map.
+5. `docs/WineSystem_VariableRelationshipMap.md` - wine variable flow and diagrams.
 
 ## ✅ **COMPLETED SYSTEMS** 
 
@@ -85,6 +103,11 @@ We have a comprehensive winery management game built with React/Vite/TypeScript 
 - **Wine Features**: `src/lib/constants/wineFeatures/` - Wine feature configurations
 - **Achievement Constants**: `src/lib/constants/achievementConstants.ts` - Achievement definitions
 
-### **Legacy Reference Documentation**
-- **v1 Implementation**: `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
-- **v3 Implementation**: `@docs/old_iterations/v3/` - Previous React/TypeScript iteration with different architecture
+## Development Rules
+
+- Keep business logic in services under `src/lib/services/`.
+- Keep React components focused on UI state, display, and user interaction.
+- Prefer existing barrel exports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
+- Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
+- Follow current terminology: `structureIndex`, `tasteQualityIndex`, `wineScore`, compact `WineAnchorValues`.
+- Do not add backwards-compatibility branches, stale aliases, or old data-shape support unless the user explicitly asks for them.

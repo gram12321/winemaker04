@@ -1,30 +1,38 @@
-## 📚 **Documentation Management**
+# AI Prompt: Documentation Maintenance
 
-### **Core Documentation Files**
-- `@docs/versionlog.md` - Complete version history with commit tracking
-- `@docs/coregame.md` - Comprehensive game system documentation (consolidated)
-- `@readme.md` - Project overview and setup instructions
-- `@.cursor/rules/ai-agent.rule.mdc/airulesVS.instructions.md` and `@.cursor/rules/airules.mdc` - AI agent rules (should be identical)
+Use this when updating project documentation after implementation work.
 
-### **Legacy Reference Documentation**
-- `@docs/old_iterations/v1/` - Original JavaScript implementation with complex balance system
-- `@docs/old_iterations/v3/` - Previous React/TypeScript iteration with different architecture
-- **Purpose**: Reference for implementing new features, understanding legacy systems, comparing approaches
+## Documentation Roles
 
-### **Documentation Principles**
-- **Rules vs README**: Keep rules clean of additional info, just AI rules. Avoid duplication between rules and README
-- **Consolidation**: Major systems documented in `coregame.md` (wine characteristics, sales system, etc.)
-- **Version Tracking**: Each Git commit gets a versionlog entry with technical details
+| File | Role |
+|---|---|
+| `readme.md` | Short codebase introduction, setup commands, and doc map. |
+| `CONTEXT.md` | Stable domain vocabulary, parameters, constants, and naming policy. |
+| `docs/AIDescriptions_coregame.md` | Current implemented game systems and known not-yet-implemented systems. |
+| `docs/PROJECT_INFO.md` | File structure, ownership map, and major module locations. |
+| `docs/WineSystem_VariableRelationshipMap.md` | Variable relationships, diagrams, and game-flow dependencies. |
+| `docs/TasteSystem_WineFolly_Research.md` | Taste research, implemented taste model, and future taste-system ideas. |
+| `docs/superpowers/specs/` | Design specs and decisions for larger work. |
+| `docs/superpowers/plans/` | Implementation plans and acceptance notes. |
+| `docs/versionlog.md` | Version history. |
 
-### **AI Versionlog Update Guidelines**
-- **Version Numbers**: Follow Git commit names (e.g., commit `9db1324f69a9358fab5fd59128806e4299cf5e1f` = version `0.0023a`)
-- **Use MCP Tools**: Use Git MCP tools to check commits and create entries
-- **Entry Format**: 3-5 lines per version depending on extent of updates
-- **Focus Areas**: Changed files, added/removed functions/functionality
-- **Exclude**: Bug fixes and unused code that was removed
+## Update Rules
 
-### **Current Documentation Status**
-- **✅ Updated**: `coregame.md` - Comprehensive system documentation (v0.0091b)
-- **✅ Updated**: `versionlog.md` - Complete version history through v0.0091b
-- **✅ Consolidated**: Wine characteristics and sales system documentation
-- **🔄 Ongoing**: Regular updates with each development cycle 
+- Keep README concise. Move system status, roadmap detail, and implementation history to dedicated docs.
+- Update `CONTEXT.md` when terminology, constants, parameters, variables, or naming policy changes.
+- Update `PROJECT_INFO.md` when files move, modules are renamed, or major ownership boundaries change.
+- Update `AIDescriptions_coregame.md` when implementation status changes.
+- Update `WineSystem_VariableRelationshipMap.md` when variable dependencies or game-flow relationships change.
+- Update research docs without deleting useful future ideas; mark them as implemented, superseded, or deferred.
+- Remove stale names instead of documenting compatibility branches that no longer exist.
+
+## Verification
+
+Before finishing a documentation pass:
+
+```bash
+git diff --check
+rg -n "oldName|legacyAlias|removedTerm" docs readme.md CONTEXT.md src tests
+```
+
+Use project-specific stale-name searches for the feature being changed.

@@ -196,7 +196,7 @@ flowchart LR
 
 | Area | Current state |
 |---|---|
-| Compact anchors | Runtime uses 12-key `WineAnchorValues`; legacy 26-key JSON is parsed only as a migration bridge. |
+| Compact anchors | Runtime uses 12-key `WineAnchorValues`; database parsing accepts only the current compact keys. |
 | Taste profile | Runtime computes 14 flavor families and descriptor values from anchors, characteristics, grape identity, features, and aging. |
 | Taste quality | `tasteQualityIndex` is implemented as a family-level quality score with red/white base targets, grape nudges, dependency rules, family weights, and UI breakdown reasons. |
 | Wine log snapshots | Wine log and wine highscores use bottling snapshots for taste quality, structure, land value, and wine score. |
@@ -262,5 +262,5 @@ flowchart TD
 
 ## 13) Remaining Alignment Work
 
-- Keep the legacy anchor parser isolated as migration support; do not add new business logic that depends on legacy anchor names.
+- Keep anchor parsing strict: unknown anchor keys should be ignored, and new business logic should target only the compact anchor model.
 - If descriptor-level taste becomes gameplay-relevant, update this map and `CONTEXT.md` before wiring descriptors into outcomes.

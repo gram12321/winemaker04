@@ -158,11 +158,53 @@ Implementation:
 
 | Area | File | Role |
 |---|---|---|
-| Harvest + shared math | `src/lib/services/wine/anchors/wineAnchorService.ts` | `computeHarvestWineAnchors`, `WINE_ANCHOR_KEYS`, defaults, legacy parser |
+| Harvest + shared math | `src/lib/services/wine/anchors/wineAnchorService.ts` | `computeHarvestWineAnchors`, `WINE_ANCHOR_KEYS`, neutral defaults, current-shape database parser |
 | Crush/ferment/features | `src/lib/services/wine/anchors/wineAnchorProcess.ts` | Applies process and feature deltas to anchors |
 | Characteristic bridge | `src/lib/services/wine/anchors/wineAnchorCharacteristicBridge.ts` | Connects anchors to characteristic update paths |
 
-Legacy 26-anchor JSON is still accepted by `parseWineAnchorsFromDb` and mapped into the compact model. That parser is migration support only; new gameplay logic should target the 12-key model.
+`parseWineAnchorsFromDb` only reads the current compact anchor keys. Unknown old field names are ignored; there is no compatibility mapping for removed anchor shapes.
+
+### Implemented Keys Grouped
+
+The current 12 anchors preserve the design intent of the older research model, but at a gameplay-appropriate level of detail.
+
+**Juice and chemistry**
+
+- `sugarPotential`
+- `acidPotential`
+- `phenolicPotential`
+- `bodyPotential`
+
+**Aroma and site identity**
+
+- `aromaticPotential`
+- `terroirExpression`
+
+**Winery process state**
+
+- `extractionState`
+- `fermentationState`
+- `leesState`
+- `processFootprint`
+
+**Aging, risk, and evolution**
+
+- `oxidationPressure`
+- `maturationState`
+
+### Research To Current Mapping
+
+This was consolidation, not omission of design intent:
+
+| Research intent | Current implementation | Future expansion path |
+|---|---|---|
+| Juice sugar, alcohol potential, and harvest maturity | `sugarPotential` plus structure `sweetness` and body effects | Add explicit alcohol estimate only if alcohol becomes a user-facing variable. |
+| Acidity and freshness | `acidPotential`, structure `acidity`, citrus/tree-fruit flavor nudges | Add pH/TA style sub-model only if vineyard chemistry becomes gameplay. |
+| Phenolics, skin extraction, color | `phenolicPotential` and `extractionState` | Add color or bitterness if red-wine identity needs finer scoring. |
+| Aromatic intensity and variety character | `aromaticPotential`, grape nudges, flavor-family base profiles | Add grape-specific descriptor typicity targets. |
+| Soil, altitude, aspect, vine age, health | `terroirExpression` and site-driven harvest anchors | Add terroir descriptor weights by region/soil when regional identity matters more. |
+| Fermentation, lees, oak, bottle evolution | `fermentationState`, `leesState`, `maturationState`, `processFootprint` | Add process-source registry if deterministic recomputation needs full provenance. |
+| Oxidation/fault pressure | `oxidationPressure` and `faults` family | Add fault-specific descriptors and customer tolerance by market segment. |
 
 ## Current Taste Quality Scoring
 
@@ -214,6 +256,96 @@ Implemented:
 8. Compose final `wineScore` from `structureIndex` and `tasteQualityIndex`.
 9. Use score and price outputs for UI, contracts, highscores, achievements, finance, and sales.
 
+## Pipeline After Current Phase
+
+The current family-level model is the accepted first implementation. The next pipeline should extend it without replacing it:
+
+1. Keep compact anchors as the persistent hidden identity.
+2. Derive the 14 flavor-family profile from anchors, grape identity, structure channels, features, process state, and aging.
+3. Derive descriptors below each family using a small floor so every wine has every descriptor without flattening the profile.
+4. Compute family-level Taste Quality exactly as today.
+5. Add optional descriptor typicity scoring inside the family layer.
+6. Add a harmony score from the compatibility matrix and family intensities.
+7. Add a complexity score from how many non-fault families/descriptors are meaningfully present.
+8. Add an intensity score from weighted family strength, with faults treated as a penalty.
+9. Combine these into `tasteQualityIndex` only after UI and contract expectations are updated.
+
+## Game-Concept Connections
+
+The taste system can become a broader game design layer without changing current terminology:
+
+| Game concept | Current connection | Future idea |
+|---|---|---|
+| Vineyard place | Site factors shape anchors and terroir expression | Regional descriptor targets and regional typicity bonuses. |
+| Player process choices | Crushing, fermentation, features, and aging shift anchors and taste families | Process-origin badges in the Taste UI. |
+| Wine style | Red/white targets and grape nudges drive current ranges | Named style/archetype targets for contracts and customers. |
+| Customer demand | Contracts can require `tasteQuality` | Unified customer preference model across structure, taste, price, region, and style. |
+| Risk/reward | Faults and feature effects influence profile and price | Segment-specific tolerance for rusticity, oak, oxidation, or green notes. |
+
+## Synergy and Clash Architecture
+
+The current implementation already has family dependency rules and `tasteCompatibilityMatrix.ts`. A future engine can replace or deepen those rules by making harmony a first-class sub-score.
+
+### Proposed Engine
+
+1. Normalize each family value to a stable 0-1 profile.
+2. Evaluate pairwise compatibility with a matrix of synergy/clash coefficients.
+3. Weight each pair by the product of the two family intensities.
+4. Convert the weighted average into a 0-1 harmony score.
+5. Penalize faults separately so faults do not become "interesting complexity" by accident.
+6. Feed harmony into `tasteQualityIndex` after validating that it improves player legibility.
+
+### Example Harmony Formula
+
+```ts
+const pairWeight = familyA.value * familyB.value;
+const harmonyRaw =
+  sum(compatibility[familyA.id][familyB.id] * pairWeight) /
+  sum(pairWeight);
+
+const harmony = clamp01(0.5 + 0.5 * harmonyRaw);
+```
+
+This matches the intent of the current compatibility matrix. It should remain family-level until descriptor targets are mature.
+
+## Descriptor Normalization
+
+Keep a small descriptor floor so every wine has every descriptor without flattening profiles:
+
+```ts
+const MIN_TASTE_FLOOR = 0.005;
+
+raw[descriptorId] =
+  base[descriptorId] +
+  terroirDelta[descriptorId] +
+  processDelta[descriptorId] +
+  agingDelta[descriptorId] +
+  featureDelta[descriptorId] +
+  interactionDelta[descriptorId];
+
+descriptor[descriptorId] = clamp01(
+  MIN_TASTE_FLOOR + (1 - MIN_TASTE_FLOOR) * sigmoid(raw[descriptorId])
+);
+```
+
+Current status: `MIN_TASTE_FLOOR` exists in `tasteNormalization.ts`, and descriptors are generated for display. The missing piece is a descriptor-source table with explicit deltas and typicity targets.
+
+## Future Taste Quality Formula
+
+The current score uses family target fit. A future formula could blend family fit with harmony, complexity, intensity, and typicity:
+
+```ts
+tasteQualityIndex = clamp01(
+  0.45 * familyTargetFit +
+  0.25 * harmony +
+  0.15 * complexity +
+  0.10 * intensity +
+  0.05 * descriptorTypicity
+);
+```
+
+This replaces the older draft's `tasteIndex` label with the canonical `tasteQualityIndex` name. The weights are a proposal, not implemented behavior.
+
 ## What Is Deferred
 
 The following remain future work:
@@ -230,7 +362,7 @@ The following remain future work:
 Current files:
 
 - `src/lib/types/types.ts` - `WineAnchorValues`, flavor family ids, descriptor ids, profile types.
-- `src/lib/services/wine/anchors/wineAnchorService.ts` - anchor initialization, defaults, legacy mapping.
+- `src/lib/services/wine/anchors/wineAnchorService.ts` - anchor initialization, defaults, current database parsing.
 - `src/lib/services/wine/anchors/wineAnchorProcess.ts` - anchor process updates.
 - `src/lib/services/wine/taste/wineTasteProfileService.ts` - family and descriptor profile generation.
 - `src/lib/services/wine/taste/tasteQualityIndexService.ts` - family-level taste quality scoring.

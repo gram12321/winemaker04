@@ -17,13 +17,13 @@ winemaker04/
 │   └── .gitignore                  # Git ignore rules
 │
 ├── 📄 Documentation
-│   ├── readme.md                   # Main project documentation
+│   ├── readme.md                   # Codebase introduction and documentation map
 │   ├── PROJECT_INFO.md             # This file
 │   └── docs/                       # Documentation directory
 │       ├── AIDescriptions_coregame.md      # AI development guide
-│       ├── AIpromt_codecleaning.md        # Code cleaning prompts
-│       ├── AIpromt_docs.md               # Documentation prompts
-│       ├── AIpromt_newpromt.md           # New prompt guidelines
+│       ├── AIpromt_codecleaning.md        # Code cleanup/refactor prompt guide
+│       ├── AIpromt_docs.md               # Documentation maintenance prompt guide
+│       ├── AIpromt_newpromt.md           # New session prompt guide
 │       ├── versionlog.md                 # Active version history (477 lines)
 │       ├── versionlog_legacy.md          # Archived entries ≤ v0.06 (1,196 lines)
 │       ├── Agents_feedback/testscripts   # Vitest prompts & runbooks

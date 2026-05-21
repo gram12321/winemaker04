@@ -63,7 +63,7 @@ Current persisted anchor model:
 | `terroirExpression` | Site expression from suitability, soil, altitude, vine age, row competition, and health. |
 | `processFootprint` | Accumulated feature/process footprint. |
 
-Legacy 26-anchor JSON may still be parsed by migration code, but gameplay logic should use the compact 12-anchor model.
+Database parsing only accepts the current compact anchor keys. Unknown anchor keys are ignored.
 
 ## Structure Variables
 
