@@ -2,8 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Aspect, GrapeVariety, Season, Vineyard, WineBatch, WineLogEntry } from '@/lib/types/types';
 import { WorkCategory } from '@/lib/types/types';
 import { companyService } from '@/lib/services/user/companyService';
-import { setActiveCompany } from '@/lib/services/core/gameState';
-import { adminSetGameDate } from '@/lib/services/admin/adminService';
+import { getCurrentCompany, setActiveCompany } from '@/lib/services/core/gameState';
+import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { saveVineyard } from '@/lib/database/activities/vineyardDB';
 import { createWineBatchFromHarvest, getAllWineBatches, updateInventoryBatch } from '@/lib/services/wine/winery/inventoryService';
 import { startCrushingActivity } from '@/lib/services/wine/winery/crushingManager';
@@ -84,6 +84,7 @@ async function completeActivityForBatch(batchId: string, category: WorkCategory)
   }
 }
 
+// Creates an isolated test company; used only by the company.create-isolated scenario.
 export async function createTestLabCompany(
   runId: string,
   params: Record<string, string | number | boolean>
@@ -106,14 +107,25 @@ export async function createHarvestReadyVineyard(
   runId: string,
   params: Record<string, string | number | boolean>
 ): Promise<TestLabVineyardResult> {
-  const company = await createTestLabCompany(runId, params);
-  const week = numberParam(params, 'week', 2);
-  const season = stringParam(params, 'season', 'Fall') as Season;
-  const year = numberParam(params, 'year', 2024);
+  // Use the currently active company — the test lab never creates a new company for vineyard scenarios.
+  const company = getCurrentCompany();
+  if (!company) {
+    throw new Error('No active company. Log in and select a company before using the test lab.');
+  }
 
-  await adminSetGameDate({ week, season, year });
+  // If vineyardId is set to an existing vineyard, use it directly.
+  const vineyardId = stringParam(params, 'vineyardId', 'new');
+  if (vineyardId !== 'new') {
+    const vineyards = await loadVineyards();
+    const existing = vineyards.find(v => v.id === vineyardId);
+    if (!existing) {
+      throw new Error(`Vineyard ${vineyardId} not found in current company.`);
+    }
+    return { company, vineyard: existing };
+  }
 
-  const vineyardName = withTestLabPrefix(runId, stringParam(params, 'vineyardName', 'Harvest Ready Test Vineyard'));
+  // Create a fresh test vineyard tagged with the run id for later cleanup.
+  const vineyardName = withTestLabPrefix(runId, 'Test Vineyard');
   const hectares = numberParam(params, 'hectares', 1);
   const landValue = numberParam(params, 'landValue', 250000);
   const vineyard: Vineyard = {
@@ -158,9 +170,12 @@ export async function createGrapeBatch(
     season: stringParam(params, 'season', 'Fall') as Season,
     year: numberParam(params, 'year', 2024)
   };
+  // Tag the batch's vineyard name with the run id so cleanup can find it even when
+  // the vineyard itself belongs to the user's real company and has no prefix.
+  const batchVineyardName = withTestLabPrefix(runId, result.vineyard.name);
   const batch = await createWineBatchFromHarvest(
     result.vineyard.id,
-    result.vineyard.name,
+    batchVineyardName,
     result.vineyard.grape || 'Pinot Noir',
     numberParam(params, 'quantityKg', 1200),
     harvestDate,

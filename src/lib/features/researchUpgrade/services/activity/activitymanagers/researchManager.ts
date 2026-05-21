@@ -1,14 +1,15 @@
 import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
-import { getGameState } from '@/lib/services/core/gameState';
+import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService, addTransaction } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateResearchWork, calculateResearchCost } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
-import { getResearchProject } from '@/lib/constants/researchConstants';
+import { getResearchProject, RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { addResearchPrestigeEvent } from '@/lib/services/prestige/prestigeService';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getResearchUpgradeFeature } from '../../..';
+import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 
 /**
  * Start a research activity
@@ -25,6 +26,40 @@ export async function startResearch(projectId: string): Promise<string | null> {
             const gameState = getGameState();
             const researchCost = calculateResearchCost(projectId);
             const { totalWork } = calculateResearchWork(projectId);
+
+            // Check prestige requirement
+            if (project.requiredPrestige !== undefined) {
+                  const prestige = await getCurrentPrestige();
+                  if (prestige < project.requiredPrestige) {
+                        await notificationService.addMessage(
+                              `Insufficient prestige for "${project.title}". Requires ${project.requiredPrestige} prestige (you have ${Math.floor(prestige)}).`,
+                              'researchManager.startResearch',
+                              'Prestige Requirement Not Met',
+                              NotificationCategory.FINANCE_AND_STAFF
+                        );
+                        return null;
+                  }
+            }
+
+            // Check prerequisites
+            if (project.prerequisites && project.prerequisites.length > 0) {
+                  const companyId = getCurrentCompanyId();
+                  if (companyId) {
+                        const unlockedIds = new Set(await getUnlockedResearchIds(companyId));
+                        const missingTitles = project.prerequisites
+                              .filter(id => !unlockedIds.has(id))
+                              .map(id => RESEARCH_PROJECTS.find(p => p.id === id)?.title ?? id);
+                        if (missingTitles.length > 0) {
+                              await notificationService.addMessage(
+                                    `Cannot start "${project.title}". Complete first: ${missingTitles.join(', ')}.`,
+                                    'researchManager.startResearch',
+                                    'Prerequisites Not Met',
+                                    NotificationCategory.FINANCE_AND_STAFF
+                              );
+                              return null;
+                        }
+                  }
+            }
 
             // Check if we have enough money
             const currentMoney = gameState.money || 0;
@@ -165,9 +200,6 @@ export async function completeResearch(activity: Activity): Promise<void> {
                                     break;
                               case 'staff_limit':
                                     unlockMessages.push(`Staff limit: ${unlock.value} staff members`);
-                                    break;
-                              case 'building_type':
-                                    unlockMessages.push(`${displayName} building type`);
                                     break;
                               case 'wine_feature':
                                     unlockMessages.push(`${displayName} wine feature`);

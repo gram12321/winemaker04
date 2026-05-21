@@ -4,6 +4,7 @@ import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrig
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import TestLabPage from './admin/TestLabPage';
+import { ResearchPanel } from '@/components/finance/ResearchPanel';
 import {
   adminSetGoldToCompany, adminSetPlayerBalance, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch, adminSetStaffXP
 } from '@/lib/services';
@@ -31,6 +32,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
   const weekOptions = Array.from({ length: WEEKS_PER_SEASON }, (_, index) => index + 1);
   const allStaff = useGameStateWithData(() => getAllStaff(), []);
+  const [showAllResearch, setShowAllResearch] = useState(false);
 
   // Cheat functions (for development/testing)
   const handleSetGold = () => withLoading(async () => {
@@ -495,7 +497,33 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
               <p className="text-xs text-gray-500 mt-2">
                 Removes all research unlocks from the active company
               </p>
+
+              <Button
+                variant="outline"
+                onClick={() => setShowAllResearch(v => !v)}
+                className="w-full mt-4"
+              >
+                {showAllResearch ? '🔓 Hide Research Panel' : '🔓 Show All Research (Bypass Gates)'}
+              </Button>
+              <p className="text-xs text-gray-500 mt-2">
+                Shows research panel with all projects visible, ignoring prestige/prerequisite locks
+              </p>
             </SimpleCard>
+
+            {/* Inline research panel with gates bypassed */}
+            {showAllResearch && (
+              <div className="md:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Research Projects (Admin View)</CardTitle>
+                    <CardDescription>Gates bypassed — all projects visible and startable regardless of prestige or prerequisites</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResearchPanel bypassGates={true} />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             <SimpleCard
               title="Staff XP Management"

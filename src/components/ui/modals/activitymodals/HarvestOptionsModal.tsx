@@ -98,7 +98,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
 
   // Organized warning message for consolidated display
   const organizedWarnings = useMemo(() => {
-    if (!vineyard) return null;
+    if (!isOpen || !vineyard || !vineyard.grape) return null;
 
     const ripenessPercent = (vineyard.ripeness || 0) * 100;
     const riskMessages: string[] = [];
@@ -123,7 +123,7 @@ export const HarvestOptionsModal: React.FC<HarvestOptionsModalProps> = ({
     }
 
     return riskMessages.length > 0 ? riskMessages : null;
-  }, [vineyard]);
+  }, [isOpen, vineyard]);
 
   // Early returns
   if (!vineyard) return null;

@@ -2,12 +2,15 @@
 // Simple form to manually hire a staff member
 
 import React, { useState, useEffect } from 'react';
-import { createStaff, addStaff, getRandomFirstName, getRandomLastName, getRandomNationality, generateRandomSkills, calculateWage } from '@/lib/services';
+import { createStaff, addStaff, getAllStaff, getRandomFirstName, getRandomLastName, getRandomNationality, generateRandomSkills, calculateWage } from '@/lib/services';
 import { Nationality, StaffSkills } from '@/lib/types/types';
 import { formatNumber, getColorClass } from '@/lib/utils';
 import { getWageColorClass } from '@/lib/services';
 import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+
+const BASE_STAFF_LIMIT = 4;
 
 interface HireStaffModalProps {
   isOpen: boolean;
@@ -28,6 +31,9 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
   const [skillLevel, setSkillLevel] = useState(0.3);
   const [previewSkills, setPreviewSkills] = useState<StaffSkills | null>(null);
   const [previewWage, setPreviewWage] = useState(0);
+  const [staffLimit, setStaffLimit] = useState(BASE_STAFF_LIMIT);
+  const [currentStaffCount, setCurrentStaffCount] = useState(0);
+  const [isLoadingLimit, setIsLoadingLimit] = useState(false);
 
   // Generate preview when skill level changes
   useEffect(() => {
@@ -36,6 +42,42 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
     setPreviewSkills(skills);
     setPreviewWage(wage);
   }, [skillLevel]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const loadStaffLimit = async () => {
+      setIsLoadingLimit(true);
+      try {
+        const [staff, unlockedLimits] = await Promise.all([
+          getAllStaff(),
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('staff_limit')
+        ]);
+
+        if (!isMounted) return;
+
+        const parsedLimits = unlockedLimits
+          .map(value => Number(value))
+          .filter(value => Number.isFinite(value) && value > 0);
+
+        const unlockedLimit = parsedLimits.length > 0 ? Math.max(...parsedLimits) : BASE_STAFF_LIMIT;
+        setCurrentStaffCount(staff.length);
+        setStaffLimit(Math.max(BASE_STAFF_LIMIT, unlockedLimit));
+      } catch (error) {
+        console.error('Failed to load staff limit:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingLimit(false);
+        }
+      }
+    };
+
+    loadStaffLimit();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -52,6 +94,13 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
   const handleHire = async () => {
     if (!firstName.trim() || !lastName.trim()) {
       alert('Please enter both first and last name');
+      return;
+    }
+
+    const latestStaff = await getAllStaff();
+    if (latestStaff.length >= staffLimit) {
+      alert(`Staff limit reached (${staffLimit}). Complete staff-capacity research before hiring more employees.`);
+      setCurrentStaffCount(latestStaff.length);
       return;
     }
 
@@ -75,6 +124,7 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
   };
 
   const skillInfo = getSkillLevelInfo(skillLevel);
+  const isAtStaffLimit = currentStaffCount >= staffLimit;
 
   // Render skill preview bars
   const renderSkillPreview = () => {
@@ -235,6 +285,21 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
                 Wage is calculated based on average skill level. Paid seasonally (12 weeks).
               </p>
             </div>
+
+            {/* Staff Capacity */}
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="font-semibold text-white mb-2">Staff Capacity</h3>
+              <p className="text-sm text-gray-300">
+                {isLoadingLimit
+                  ? 'Loading limit...'
+                  : `${currentStaffCount} / ${staffLimit} staff employed`}
+              </p>
+              {isAtStaffLimit && !isLoadingLimit && (
+                <p className="text-xs text-amber-300 mt-2">
+                  Staff cap reached. Research staff-limit upgrades to hire more employees.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -250,9 +315,11 @@ export const HireStaffModal: React.FC<HireStaffModalProps> = ({
           <Button
             onClick={handleHire}
             className="bg-green-600 hover:bg-green-700 text-white"
-            disabled={!firstName.trim() || !lastName.trim()}
+            disabled={!firstName.trim() || !lastName.trim() || isAtStaffLimit || isLoadingLimit}
           >
-            Hire {firstName.trim() ? firstName : 'Staff'} ({formatNumber(previewWage, { currency: true })}/wk)
+            {isAtStaffLimit
+              ? `Staff Limit Reached (${staffLimit})`
+              : `Hire ${firstName.trim() ? firstName : 'Staff'} (${formatNumber(previewWage, { currency: true })}/wk)`}
           </Button>
         </div>
       </div>

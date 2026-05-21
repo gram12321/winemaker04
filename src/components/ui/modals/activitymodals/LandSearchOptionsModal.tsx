@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork } from '@/lib/services';
+import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork, getAllVineyards } from '@/lib/services';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
 import { Button } from '@/components/ui';
@@ -7,6 +7,9 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
 import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+
+const BASE_VINEYARD_SIZE_LIMIT_HA = 1;
 
 // Two-thumb slider built on Radix Slider primitives
 const DualSlider: React.FC<{
@@ -77,9 +80,53 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
   });
 
   const [redistributedProbabilities, setRedistributedProbabilities] = useState<Array<{region: string, probability: number}>>([]);
+  const [currentTotalHectares, setCurrentTotalHectares] = useState(0);
+  const [vineyardSizeLimit, setVineyardSizeLimit] = useState(BASE_VINEYARD_SIZE_LIMIT_HA);
+  const [isLoadingVineyardLimit, setIsLoadingVineyardLimit] = useState(false);
 
   // Get company prestige for calculations
   const gameState = getGameState();
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const loadVineyardLimit = async () => {
+      setIsLoadingVineyardLimit(true);
+      try {
+        const [vineyards, unlockedLimits] = await Promise.all([
+          getAllVineyards(),
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size')
+        ]);
+
+        if (!isMounted) return;
+
+        const totalHectares = vineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0);
+        const parsedLimits = unlockedLimits
+          .map(value => Number(value))
+          .filter(value => Number.isFinite(value) && value > 0);
+        const unlockedLimit = parsedLimits.length > 0 ? Math.max(...parsedLimits) : BASE_VINEYARD_SIZE_LIMIT_HA;
+
+        setCurrentTotalHectares(totalHectares);
+        setVineyardSizeLimit(Math.max(BASE_VINEYARD_SIZE_LIMIT_HA, unlockedLimit));
+      } catch (error) {
+        console.error('Failed to load vineyard size limit:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingVineyardLimit(false);
+        }
+      }
+    };
+
+    loadVineyardLimit();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  const remainingHectares = Math.max(0, vineyardSizeLimit - currentTotalHectares);
+  const isAtVineyardSizeLimit = remainingHectares <= 0;
+  const minSearchExceedsRemaining = !isAtVineyardSizeLimit && options.hectareRange[0] > remainingHectares;
 
   // Calculate preview stats whenever options change
   useEffect(() => {
@@ -120,8 +167,26 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
   // Handle submit
   const handleSubmit = async () => {
+    if (isAtVineyardSizeLimit) {
+      alert(`Vineyard size cap reached (${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha). Complete vineyard-capacity research before searching for more land.`);
+      return;
+    }
+
+    if (minSearchExceedsRemaining) {
+      alert(`Your minimum search size (${formatNumber(options.hectareRange[0], { smartMaxDecimals: true })} ha) exceeds your remaining capacity (${formatNumber(remainingHectares, { smartMaxDecimals: true })} ha). Lower the minimum hectare range.`);
+      return;
+    }
+
+    const limitedOptions: LandSearchOptions = {
+      ...options,
+      hectareRange: [
+        Math.min(options.hectareRange[0], remainingHectares),
+        Math.min(options.hectareRange[1], remainingHectares)
+      ]
+    };
+
     const { startLandSearch } = await import('@/lib/services');
-    const activityId = await startLandSearch(options);
+    const activityId = await startLandSearch(limitedOptions);
     if (activityId) {
       onClose();
       if (onSearchStarted) {
@@ -602,6 +667,20 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 <h3 className="text-lg font-medium text-white mb-4">Search Estimates</h3>
                 <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                   <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Vineyard Capacity:</span>
+                    <span className="text-white font-medium">
+                      {isLoadingVineyardLimit
+                        ? 'Loading...'
+                        : `${formatNumber(currentTotalHectares, { smartMaxDecimals: true })} / ${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Remaining Capacity:</span>
+                    <span className={`font-medium ${remainingHectares > 0 ? 'text-green-300' : 'text-amber-300'}`}>
+                      {formatNumber(remainingHectares, { smartMaxDecimals: true })} ha
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-300">Search Cost:</span>
                     <span className="text-white font-medium">{formatNumber(previewStats.totalCost, { currency: true })}</span>
                   </div>
@@ -681,8 +760,11 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
           <Button
             onClick={handleSubmit}
             className="bg-green-600 hover:bg-green-700 text-white"
+            disabled={isLoadingVineyardLimit || isAtVineyardSizeLimit || minSearchExceedsRemaining}
           >
-            Start Search ({formatNumber(previewStats.totalCost, { currency: true })})
+            {isAtVineyardSizeLimit
+              ? `Vineyard Limit Reached (${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha)`
+              : `Start Search (${formatNumber(previewStats.totalCost, { currency: true })})`}
           </Button>
         </div>
       </div>

@@ -207,9 +207,16 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
 
     let fixtureResult: TestLabVineyardResult | TestLabBatchResult | null = null;
     switch (scenario.id) {
-      case 'vineyard.harvest-ready':
+      case 'vineyard.harvest-ready': {
+        const { adminSetGameDate } = await import('@/lib/services/admin/adminService');
+        await adminSetGameDate({
+          week: Number(params.week),
+          season: params.season as string,
+          year: Number(params.year)
+        });
         fixtureResult = await createHarvestReadyVineyard(runId, params);
         break;
+      }
       case 'winery.grapes-batch':
         fixtureResult = await createGrapeBatch(runId, params);
         break;
@@ -242,7 +249,7 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
     const maybeBatch = 'batch' in fixtureResult ? fixtureResult.batch : undefined;
     const maybeWineLog = 'wineLogEntry' in fixtureResult ? fixtureResult.wineLogEntry : undefined;
     const assertions = [
-      { name: 'Company created', passed: Boolean(fixtureResult.company.id), details: fixtureResult.company.id },
+      { name: 'Company active', passed: Boolean(fixtureResult.company.id), details: fixtureResult.company.id },
       { name: 'Vineyard created', passed: Boolean(fixtureResult.vineyard.id), details: fixtureResult.vineyard.id },
       ...(maybeBatch ? [{ name: `Batch is ${maybeBatch.state}`, passed: Boolean(maybeBatch.id), details: maybeBatch.id }] : []),
       ...(scenario.id === 'winery.bottled-wine'

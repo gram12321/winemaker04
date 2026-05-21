@@ -15,9 +15,17 @@ import { getAllActivities } from '@/lib/services/activity/activitymanagers/activ
 import { useGameUpdates } from '@/hooks/useGameUpdates';
 import { calculateResearchWork, calculateResearchCost } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
+import { getCurrentPrestige } from '@/lib/services/core/gameState';
 
-export function ResearchPanel() {
+interface ResearchPanelProps {
+      bypassGates?: boolean;
+}
+
+export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
       const [activeResearch, setActiveResearch] = useState<Set<string>>(new Set());
+      const [completedResearch, setCompletedResearch] = useState<Set<string>>(new Set());
+      const [currentPrestige, setCurrentPrestige] = useState<number>(0);
 
       // Subscribe to game updates to refresh when activities change
       useGameUpdates();
@@ -28,29 +36,32 @@ export function ResearchPanel() {
       }, []);
 
       const loadResearchStatus = async () => {
-            const activities = await getAllActivities();
+            const [activities, completedIds, prestige] = await Promise.all([
+                  getAllActivities(),
+                  getUnlockedResearchIds(),
+                  getCurrentPrestige()
+            ]);
+
             const researchActivities = activities.filter(
                   activity => activity.category === WorkCategory.ADMINISTRATION_AND_RESEARCH
             );
 
             const active = new Set<string>();
-
             researchActivities.forEach(activity => {
                   const researchId = activity.params?.researchId;
                   if (researchId && activity.status === 'active') {
-                        active.add(researchId);
+                        active.add(researchId as string);
                   }
-                  // Note: We'd need to track completed research separately in a real implementation
-                  // For now, we'll just track active ones
             });
 
             setActiveResearch(active);
-            // TODO: Load completed research from company data or separate tracking
+            setCompletedResearch(new Set(completedIds));
+            setCurrentPrestige(prestige);
       };
 
       const handleStartResearch = async (project: ResearchProject) => {
-            // Check if already active
-            if (activeResearch.has(project.id)) {
+            // Check if already active or completed
+            if (activeResearch.has(project.id) || completedResearch.has(project.id)) {
                   return;
             }
 
@@ -60,15 +71,37 @@ export function ResearchPanel() {
             await loadResearchStatus();
       };
 
-      const getResearchStatus = (projectId: string): 'available' | 'in-progress' | 'completed' => {
-            // TODO: Check completedResearch when implemented
-            if (activeResearch.has(projectId)) return 'in-progress';
+      type ResearchStatus = 'available' | 'in-progress' | 'completed' | 'locked';
+
+      const getResearchStatus = (project: ResearchProject): ResearchStatus => {
+            if (completedResearch.has(project.id)) return 'completed';
+            if (activeResearch.has(project.id)) return 'in-progress';
+            if (!bypassGates) {
+                  if (project.requiredPrestige !== undefined && currentPrestige < project.requiredPrestige) return 'locked';
+                  if (project.prerequisites?.some(id => !completedResearch.has(id))) return 'locked';
+            }
             return 'available';
       };
 
+      const getLockReason = (project: ResearchProject): string => {
+            if (project.requiredPrestige !== undefined && currentPrestige < project.requiredPrestige) {
+                  return `Requires ${project.requiredPrestige} prestige (you have ${Math.floor(currentPrestige)})`;
+            }
+            if (project.prerequisites?.length) {
+                  const missing = project.prerequisites
+                        .filter(id => !completedResearch.has(id))
+                        .map(id => RESEARCH_PROJECTS.find(p => p.id === id)?.title ?? id);
+                  if (missing.length > 0) {
+                        return `Complete first: ${missing.join(', ')}`;
+                  }
+            }
+            return '';
+      };
+
       const renderResearchCard = (project: ResearchProject) => {
-            const status = getResearchStatus(project.id);
-            const isDisabled = status === 'in-progress' || status === 'completed';
+            const status = getResearchStatus(project);
+            const isDisabled = status === 'in-progress' || status === 'completed' || status === 'locked';
+            const lockReason = status === 'locked' ? getLockReason(project) : '';
 
             // Calculate work and cost dynamically
             const { totalWork } = calculateResearchWork(project.id);
@@ -77,11 +110,14 @@ export function ResearchPanel() {
             return (
                   <Card
                         key={project.id}
-                        className={`transition-all ${status === 'in-progress'
-                                    ? 'opacity-60 bg-gray-50 border-gray-300'
-                                    : status === 'completed'
-                                          ? 'bg-green-50 border-green-300'
-                                          : 'hover:shadow-lg'
+                        className={`transition-all ${
+                                    status === 'in-progress'
+                                          ? 'opacity-60 bg-gray-50 border-gray-300'
+                                          : status === 'completed'
+                                                ? 'bg-green-50 border-green-300'
+                                                : status === 'locked'
+                                                      ? 'opacity-60 bg-gray-50 border-gray-200'
+                                                      : 'hover:shadow-lg'
                               }`}
                   >
                         <CardHeader>
@@ -109,6 +145,9 @@ export function ResearchPanel() {
                                                       )}
                                                       {status === 'in-progress' && (
                                                             <span className="text-gray-500 text-sm font-normal">(In Progress)</span>
+                                                      )}
+                                                      {status === 'locked' && (
+                                                            <span className="text-amber-600 text-sm font-normal">🔒 Locked</span>
                                                       )}
                                                 </CardTitle>
                                                 <CardDescription className="mt-1">
@@ -139,6 +178,13 @@ export function ResearchPanel() {
                                     </div>
                               </div>
 
+                              {/* Lock reason */}
+                              {status === 'locked' && lockReason && (
+                                    <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                                          🔒 {lockReason}
+                                    </div>
+                              )}
+
                               {/* Benefits */}
                               <div>
                                     <div className="text-sm font-semibold text-gray-700 mb-2">Benefits:</div>
@@ -157,18 +203,23 @@ export function ResearchPanel() {
                               <Button
                                     onClick={() => handleStartResearch(project)}
                                     disabled={isDisabled}
-                                    className={`w-full ${status === 'completed'
-                                                ? 'bg-green-600 hover:bg-green-700'
-                                                : status === 'in-progress'
-                                                      ? 'bg-gray-400 cursor-not-allowed'
-                                                      : ''
+                                    className={`w-full ${
+                                                status === 'completed'
+                                                      ? 'bg-green-600 hover:bg-green-700'
+                                                      : status === 'in-progress'
+                                                            ? 'bg-gray-400 cursor-not-allowed'
+                                                            : status === 'locked'
+                                                                  ? 'bg-gray-300 cursor-not-allowed'
+                                                                  : ''
                                           }`}
                               >
                                     {status === 'completed'
                                           ? 'Completed ✓'
                                           : status === 'in-progress'
                                                 ? 'Research In Progress...'
-                                                : 'Start Research'
+                                                : status === 'locked'
+                                                      ? '🔒 Locked'
+                                                      : 'Start Research'
                                     }
                               </Button>
                         </CardFooter>

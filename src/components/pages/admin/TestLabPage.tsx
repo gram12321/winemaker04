@@ -29,9 +29,12 @@ import {
 } from '@/components/ui';
 import { useLoadingState } from '@/hooks';
 import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
-import { getTestLabScenarios } from '@/lib/services/admin/testLab/testLabScenarios';
+import { getTestLabScenarios, VINEYARD_CONFIG_PARAM_KEYS } from '@/lib/services/admin/testLab/testLabScenarios';
 import { runTestLabScenario } from '@/lib/services/admin/testLab/testLabRunner';
 import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '@/lib/services/admin/testLab/types';
+import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
+import { loadVineyards } from '@/lib/database/activities/vineyardDB';
+import type { Vineyard } from '@/lib/types/types';
 
 interface RecentRun {
   runId: string;
@@ -75,6 +78,24 @@ const buildInitialParams = (scenario: TestLabScenarioDefinition): Record<string,
   ...scenario.defaultParams
 });
 
+const getRegionOptionsForCountry = (country: string): string[] => {
+  const knownRegions = COUNTRY_REGION_MAP[country as keyof typeof COUNTRY_REGION_MAP];
+  return knownRegions ? [...knownRegions] : [];
+};
+
+const getAltitudeRangeForRegion = (country: string, region: string): [number, number] => {
+  const countryRanges = REGION_ALTITUDE_RANGES[country as keyof typeof REGION_ALTITUDE_RANGES];
+  if (!countryRanges) return [0, 1200];
+  const range = (countryRanges as Record<string, readonly [number, number]>)[region];
+  return range ? [range[0], range[1]] : [0, 1200];
+};
+
+const clampAltitudeToRegion = (altitude: number, country: string, region: string): number => {
+  const [min, max] = getAltitudeRangeForRegion(country, region);
+  if (altitude >= min && altitude <= max) return altitude;
+  return Math.round((min + max) / 2 / 10) * 10;
+};
+
 export default function TestLabPage() {
   const scenarios = useMemo(() => getTestLabScenarios(), []);
   const groupedScenarios = useMemo(() => {
@@ -90,11 +111,13 @@ export default function TestLabPage() {
   );
   const [result, setResult] = useState<TestLabScenarioResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
+  const [existingVineyards, setExistingVineyards] = useState<Vineyard[]>([]);
   const { isLoading, withLoading } = useLoadingState();
   const devAvailable = isDevAdminSurfaceAvailable();
 
   useEffect(() => {
     setRecentRuns(readRecentRuns());
+    loadVineyards().then(setExistingVineyards).catch(() => {});
   }, []);
 
   const selectScenario = (scenario: TestLabScenarioDefinition) => {
@@ -151,6 +174,13 @@ export default function TestLabPage() {
   });
 
   const renderParamControl = (field: TestLabParamField) => {
+    // Hide vineyard config fields when an existing vineyard is selected.
+    const scenarioHasVineyardPicker = selectedScenario?.params.some(p => p.key === 'vineyardId');
+    const selectedVineyardId = String(params.vineyardId ?? 'new');
+    if (scenarioHasVineyardPicker && VINEYARD_CONFIG_PARAM_KEYS.has(field.key) && selectedVineyardId !== 'new') {
+      return null;
+    }
+
     const value = params[field.key] ?? field.defaultValue;
 
     if (field.type === 'boolean') {
@@ -167,18 +197,63 @@ export default function TestLabPage() {
     }
 
     if (field.type === 'select') {
+      const isCountryField = field.key === 'country';
+      const isRegionField = field.key === 'region';
+      const isVineyardPickerField = field.key === 'vineyardId';
+
+      const rawOptions = field.options || [];
+      const selectedCountry = String(params.country ?? '');
+      const allowedRegions = isRegionField ? getRegionOptionsForCountry(selectedCountry) : [];
+
+      // vineyardId: prepend static 'new' option with all current company vineyards from DB.
+      const vineyardPickerOptions = isVineyardPickerField
+        ? [
+            { label: 'Create test vineyard', value: 'new' },
+            ...existingVineyards.map(v => ({ label: v.name, value: v.id }))
+          ]
+        : null;
+
+      const selectOptions = vineyardPickerOptions
+        ?? (isRegionField ? rawOptions.filter(option => allowedRegions.includes(String(option.value))) : rawOptions);
+
       return (
         <div key={field.key} className="space-y-1.5">
           <Label htmlFor={`test-lab-${field.key}`} className="text-xs">{field.label}</Label>
           <Select
             value={String(value)}
-            onValueChange={(nextValue) => setParams(current => ({ ...current, [field.key]: nextValue }))}
+            onValueChange={(nextValue) => {
+              setParams(current => {
+                if (!isCountryField && !isRegionField) {
+                  return { ...current, [field.key]: nextValue };
+                }
+
+                if (isRegionField) {
+                  const country = String(current.country ?? '');
+                  const newAlt = clampAltitudeToRegion(Number(current.altitude ?? 0), country, nextValue);
+                  return { ...current, region: nextValue, altitude: newAlt };
+                }
+
+                // Country change: auto-correct region and altitude
+                const nextRegions = getRegionOptionsForCountry(nextValue);
+                const currentRegion = String(current.region ?? '');
+                const fallbackRegion = nextRegions[0] ?? '';
+                const resolvedRegion = nextRegions.includes(currentRegion) ? currentRegion : fallbackRegion;
+                const newAlt = clampAltitudeToRegion(Number(current.altitude ?? 0), nextValue, resolvedRegion);
+
+                return {
+                  ...current,
+                  country: nextValue,
+                  region: resolvedRegion,
+                  altitude: newAlt
+                };
+              });
+            }}
           >
             <SelectTrigger id={`test-lab-${field.key}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(field.options || []).map(option => (
+              {selectOptions.map(option => (
                 <SelectItem key={String(option.value)} value={String(option.value)}>
                   {option.label}
                 </SelectItem>
@@ -189,6 +264,13 @@ export default function TestLabPage() {
       );
     }
 
+    const resolvedMin = field.key === 'altitude'
+      ? getAltitudeRangeForRegion(String(params.country ?? ''), String(params.region ?? ''))[0]
+      : field.min;
+    const resolvedMax = field.key === 'altitude'
+      ? getAltitudeRangeForRegion(String(params.country ?? ''), String(params.region ?? ''))[1]
+      : field.max;
+
     return (
       <div key={field.key} className="space-y-1.5">
         <Label htmlFor={`test-lab-${field.key}`} className="text-xs">{field.label}</Label>
@@ -196,8 +278,8 @@ export default function TestLabPage() {
           id={`test-lab-${field.key}`}
           type={field.type === 'number' ? 'number' : 'text'}
           value={String(value)}
-          min={field.min}
-          max={field.max}
+          min={resolvedMin}
+          max={resolvedMax}
           step={field.step}
           onChange={(event) => {
             const nextValue = field.type === 'number'

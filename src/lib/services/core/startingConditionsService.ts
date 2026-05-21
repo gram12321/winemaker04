@@ -404,6 +404,36 @@ export async function applyStartingConditions(
       }
     }
 
+    // 9. Pre-unlock regional starting research (bypasses prestige gates)
+    if (condition.startingResearch && condition.startingResearch.length > 0) {
+      try {
+        const gameState = getGameState();
+        const gameDate: GameDate = {
+          week: gameState.week ?? GAME_INITIALIZATION.STARTING_WEEK,
+          season: (gameState.season ?? GAME_INITIALIZATION.STARTING_SEASON) as any,
+          year: gameState.currentYear ?? GAME_INITIALIZATION.STARTING_YEAR
+        };
+        const absoluteWeeks = calculateAbsoluteWeeks(
+          gameDate.week,
+          gameDate.season,
+          gameDate.year
+        );
+
+        for (const researchId of condition.startingResearch) {
+          await getResearchUpgradeFeature().setup.grantResearchUnlock({
+            researchId,
+            companyId,
+            gameDate,
+            absoluteWeeks,
+            metadata: { origin: 'starting_conditions', country: condition.id }
+          });
+        }
+      } catch (researchUnlockError) {
+        console.error('Error unlocking starting research:', researchUnlockError);
+        // Don't fail the entire process if research unlock fails
+      }
+    }
+
     const mentorMessage = buildMentorWelcomeMessage(condition, vineyardPreview);
     const mentorImageSrc = getStoryImageSrc(condition.mentorImage, { fallback: false }) ?? undefined;
     return {

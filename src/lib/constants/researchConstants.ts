@@ -8,16 +8,17 @@ import { calculateGrapeDifficulty } from '../services/wine/features/grapeDifficu
 import { getGrapeIconSrc } from '../utils/icons';
 
 /**
- * Types of unlocks that research can provide
+ * Types of unlocks that research can provide.
+ * Only types with active enforcement paths are listed here.
+ * Removed: building_type (no game system to enforce it yet).
  */
 export type UnlockType = 
-      | 'grape'                    // Unlocks a grape variety for planting
-      | 'vineyard_size'            // Increases maximum vineyard size (hectares)
-      | 'fermentation_technology'   // Unlocks a fermentation technology/method
-      | 'staff_limit'              // Increases maximum staff count
-      | 'building_type'            // Unlocks a building type
-      | 'wine_feature'             // Unlocks a wine feature capability
-      | 'contract_type';           // Unlocks a contract type
+      | 'grape'                    // Unlocks a grape variety for planting (enforced in PlantingOptionsModal)
+      | 'vineyard_size'            // Unlocks higher total vineyard hectares cap (enforced in LandSearchOptionsModal)
+      | 'fermentation_technology'   // Unlocks a fermentation technology/method (enforce in FermentationOptionsModal)
+      | 'staff_limit'              // Unlocks higher staff headcount cap (enforced in HireStaffModal)
+      | 'wine_feature'             // Unlocks a wine feature capability (enforce in wine feature activation)
+      | 'contract_type';           // Unlocks a contract type (enforce in contract generation)
 
 /**
  * Generic unlock definition for research projects
@@ -43,6 +44,8 @@ export interface ResearchProject {
       unlocks?: ResearchUnlock[]; // Generic unlocks system - can unlock grapes, technologies, limits, etc.
       initialWork?: number; // Extra initial work (work units) added to base RESEARCH_INITIAL_WORK from activityConstants
       baseWorkAmount?: number; // Base work amount (work units) for this research project, scales with complexity
+      requiredPrestige?: number; // Minimum prestige score required to start this research
+      prerequisites?: string[]; // Project IDs that must be completed before this research is available
 }
 
 // ===== RESEARCH CALCULATION CONSTANTS =====
@@ -109,6 +112,12 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
   // Formula: baseWorkAmount = 50 * complexity
   // This gives: complexity 2 = 100, complexity 5 = 250, complexity 10 = 500 work units
   const baseWorkAmount = 50 * complexity;
+
+  // Prestige gate based on complexity: rare/difficult grapes require an established winery
+  // complexity 2-4: always available (0), 5-7: established winery (10), 8-10: known winery (25)
+  let requiredPrestige: number | undefined;
+  if (complexity >= 8) requiredPrestige = 25;
+  else if (complexity >= 5) requiredPrestige = 10;
   
   return {
     id: projectId,
@@ -118,13 +127,14 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
     benefits: [
       `Unlock ${grape} grape variety for planting`,
       `Learn optimal growing conditions for ${grape}`,
-      `+${prestigeReward} Prestige points`
+      `+${prestigeReward.toFixed(1)} Prestige points`
     ],
     category: 'agriculture',
     icon: iconPath, // Use image path instead of emoji
     prestigeReward,
     unlocks: [{ type: 'grape', value: grape }],
-    baseWorkAmount
+    baseWorkAmount,
+    ...(requiredPrestige !== undefined ? { requiredPrestige } : {})
   };
 }
 
@@ -157,57 +167,64 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             description: 'Apply for a basic research grant to fund vineyard improvements',
             complexity: 3,
             benefits: [
-                  'Receive €1,000 grant funding',
+                  'Receive €15,000 grant funding',
                   '+5 Prestige points',
-                  'Unlock advanced grant applications'
+                  'Establishes track record for advanced grant applications'
             ],
             category: 'projects',
             icon: '💰',
-            rewardAmount: 1000,
+            rewardAmount: 15000,
             prestigeReward: 5
       },
       {
             id: 'project_grant_advanced',
             title: 'Advanced Research Grant',
-            description: 'Secure funding for advanced viticulture research',
+            description: 'Secure funding for advanced viticulture research — requires an established track record',
             complexity: 7,
             benefits: [
-                  'Receive €5,000 grant funding',
+                  'Receive €40,000 grant funding',
                   '+15 Prestige points',
-                  'Unlock premium research opportunities'
+                  'Opens premium research funding opportunities'
             ],
             category: 'projects',
             icon: '🏆',
-            rewardAmount: 5000,
-            prestigeReward: 15
+            rewardAmount: 40000,
+            prestigeReward: 15,
+            requiredPrestige: 10,
+            prerequisites: ['project_grant_basic']
       },
       
       // ===== TECHNOLOGY =====
       {
             id: 'tech_soil_analysis',
             title: 'Soil Analysis Technology',
-            description: 'Research advanced soil analysis techniques',
+            description: 'Research advanced soil analysis techniques to better understand your terroir',
             complexity: 5,
             benefits: [
                   'Improved vineyard quality assessment',
-                  '+10% taste quality in suitable soils',
-                  'Better land purchase decisions'
+                  'Better land purchase decisions',
+                  '+8 Prestige points'
             ],
             category: 'technology',
-            icon: '🔬'
+            icon: '🔬',
+            prestigeReward: 8,
+            requiredPrestige: 15
       },
       {
             id: 'tech_fermentation',
-            title: 'Fermentation Optimization',
-            description: 'Study advanced fermentation control methods',
+            title: 'Fermentation Technology Basics',
+            description: 'Foundational study of controlled fermentation methods — prerequisite for advanced techniques',
             complexity: 6,
             benefits: [
-                  '+5% wine structure index improvement',
-                  'Reduced fermentation time by 10%',
-                  'Better wine characteristics control'
+                  'Foundation for advanced fermentation research',
+                  'Better understanding of fermentation variables',
+                  '+10 Prestige points'
             ],
             category: 'technology',
-            icon: '🧪'
+            icon: '🧪',
+            prestigeReward: 10,
+            requiredPrestige: 15,
+            prerequisites: ['admin_basic']
       },
       
       // ===== AGRICULTURE (Grape Research) =====
@@ -218,45 +235,56 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       {
             id: 'eff_operational',
             title: 'Operational Efficiency',
-            description: 'Research methods to improve overall operational efficiency',
+            description: 'Research methods to improve overall operational efficiency across the winery',
             complexity: 6,
             benefits: [
-                  '+15% work completion speed',
-                  'Reduced labor costs by 10%',
-                  'Improved staff productivity'
+                  'Operational improvements across winery activities',
+                  'Raises total vineyard capacity to 2 hectares',
+                  'Better resource planning',
+                  '+8 Prestige points'
             ],
             category: 'efficiency',
-            icon: '⚡'
+            icon: '⚡',
+            prestigeReward: 8,
+            requiredPrestige: 20,
+            prerequisites: ['admin_basic'],
+            unlocks: [{ type: 'vineyard_size', value: 2, displayName: '2 ha vineyard cap' }]
       },
       
       // ===== MARKETING =====
       {
             id: 'mkt_research',
             title: 'Marketing Research',
-            description: 'Study market trends and customer preferences',
+            description: 'Study market trends, regional customer preferences, and pricing strategies',
             complexity: 4,
             benefits: [
-                  '+20% customer relationship growth',
-                  'Better price estimation',
-                  'Increased sales opportunities'
+                  'Better understanding of customer preferences',
+                  'Improved price estimation',
+                  '+5 Prestige points'
             ],
             category: 'marketing',
-            icon: '📊'
+            icon: '📊',
+            prestigeReward: 5,
+            requiredPrestige: 10
       },
       
       // ===== STAFF =====
       {
             id: 'staff_training',
             title: 'Staff Training Programs',
-            description: 'Develop comprehensive training programs for staff development',
+            description: 'Develop structured training programs for winery and vineyard staff',
             complexity: 5,
             benefits: [
-                  '+10% staff skill improvement rate',
-                  'Reduced hiring costs',
-                  'Better staff retention'
+                  'Raises staff capacity to 8 employees',
+                  'Structured staff development framework',
+                  'Improved staff retention',
+                  '+5 Prestige points'
             ],
             category: 'staff',
-            icon: '👥'
+            icon: '👥',
+            prestigeReward: 5,
+            requiredPrestige: 10,
+            unlocks: [{ type: 'staff_limit', value: 8, displayName: '8 staff cap' }]
       }
 ];
 

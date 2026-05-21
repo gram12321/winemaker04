@@ -102,10 +102,9 @@ export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
 
       const typeLabels: Record<UnlockType, string> = {
         grape: 'grape variety',
-        vineyard_size: 'vineyard size',
+        vineyard_size: 'vineyard size limit',
         fermentation_technology: 'fermentation technology',
         staff_limit: 'staff limit',
-        building_type: 'building type',
         wine_feature: 'wine feature',
         contract_type: 'contract type'
       };

@@ -1,4 +1,11 @@
 import type { TestLabParamField, TestLabScenarioDefinition } from './types';
+import { COUNTRY_REGION_MAP } from '@/lib/constants/vineyardConstants';
+
+// Exported so TestLabPage can conditionally hide these when an existing vineyard is selected.
+export const VINEYARD_CONFIG_PARAM_KEYS = new Set([
+  'country', 'region', 'grape', 'hectares', 'density', 'vineAge',
+  'vineyardHealth', 'ripeness', 'landValue', 'altitude', 'aspect', 'soil'
+]);
 
 const grapeOptions = [
   'Barbera',
@@ -10,25 +17,13 @@ const grapeOptions = [
   'Sangiovese'
 ].map(value => ({ label: value, value }));
 
-const countryOptions = ['France', 'Germany', 'Italy', 'Spain', 'United States']
+const countryOptions = Object.keys(COUNTRY_REGION_MAP)
   .map(value => ({ label: value, value }));
 
-const regionOptions = [
-  'Bordeaux',
-  'Bourgogne',
-  'Champagne',
-  'Rhone Valley',
-  'Jura',
-  'Mosel',
-  'Pfalz',
-  'Tuscany',
-  'Piedmont',
-  'Rioja',
-  'Ribera del Duero',
-  'Napa Valley',
-  'Sonoma County',
-  'Willamette Valley'
-].map(value => ({ label: value, value }));
+// All regions across all countries; the UI dropdowns filter by selected country at render time.
+const regionOptions = Object.values(COUNTRY_REGION_MAP)
+  .flatMap(regions => [...regions])
+  .map(value => ({ label: value, value }));
 
 const aspectOptions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest']
   .map(value => ({ label: value, value }));
@@ -42,9 +37,8 @@ const fermentationMethodOptions = ['Basic', 'Temperature Controlled', 'Extended 
 const fermentationTemperatureOptions = ['Ambient', 'Cool', 'Warm']
   .map(value => ({ label: value, value }));
 
-const baseVineyardParams: TestLabParamField[] = [
-  { key: 'companyName', label: 'Company name', type: 'string', defaultValue: 'Admin Test Lab Company' },
-  { key: 'vineyardName', label: 'Vineyard name', type: 'string', defaultValue: 'Harvest Ready Test Vineyard' },
+// Vineyard configuration params used when creating a new test vineyard.
+const vineyardConfigParams: TestLabParamField[] = [
   { key: 'country', label: 'Country', type: 'select', defaultValue: 'France', options: countryOptions },
   { key: 'region', label: 'Region', type: 'select', defaultValue: 'Bourgogne', options: regionOptions },
   { key: 'grape', label: 'Grape', type: 'select', defaultValue: 'Pinot Noir', options: grapeOptions },
@@ -56,21 +50,67 @@ const baseVineyardParams: TestLabParamField[] = [
   { key: 'landValue', label: 'Land value per ha', type: 'number', defaultValue: 250000, min: 1000, max: 10000000, step: 1000 },
   { key: 'altitude', label: 'Altitude', type: 'number', defaultValue: 320, min: 0, max: 1200, step: 10 },
   { key: 'aspect', label: 'Aspect', type: 'select', defaultValue: 'Southeast', options: aspectOptions },
-  { key: 'soil', label: 'Soil', type: 'string', defaultValue: 'Clay,Limestone' },
-  { key: 'week', label: 'Week', type: 'number', defaultValue: 2, min: 1, max: 12, step: 1 },
-  { key: 'season', label: 'Season', type: 'select', defaultValue: 'Fall', options: ['Spring', 'Summer', 'Fall', 'Winter'].map(value => ({ label: value, value })) },
-  { key: 'year', label: 'Year', type: 'number', defaultValue: 2024, min: 2024, max: 2100, step: 1 }
+  { key: 'soil', label: 'Soil', type: 'string', defaultValue: 'Clay,Limestone' }
 ];
 
-const wineryParams: TestLabParamField[] = [
-  ...baseVineyardParams,
-  { key: 'quantityKg', label: 'Grape quantity kg', type: 'number', defaultValue: 1200, min: 1, max: 100000, step: 50 },
+// Used for vineyard.harvest-ready — sets the actual game clock.
+const gameDateParams: TestLabParamField[] = [
+  { key: 'week', label: 'Game week', type: 'number', defaultValue: 2, min: 1, max: 12, step: 1 },
+  { key: 'season', label: 'Game season', type: 'select', defaultValue: 'Fall', options: ['Spring', 'Summer', 'Fall', 'Winter'].map(value => ({ label: value, value })) },
+  { key: 'year', label: 'Game year', type: 'number', defaultValue: 2024, min: 2024, max: 2100, step: 1 }
+];
+
+// Used for winery batch scenarios — stored as the harvest date on the batch, game clock is not changed.
+const harvestDateParams: TestLabParamField[] = [
+  { key: 'week', label: 'Harvest week', type: 'number', defaultValue: 2, min: 1, max: 12, step: 1 },
+  { key: 'season', label: 'Harvest season', type: 'select', defaultValue: 'Fall', options: ['Spring', 'Summer', 'Fall', 'Winter'].map(value => ({ label: value, value })) },
+  { key: 'year', label: 'Harvest year', type: 'number', defaultValue: 2024, min: 2024, max: 2100, step: 1 }
+];
+
+// harvest-ready scenario always creates a new vineyard; no picker needed.
+const baseVineyardParams: TestLabParamField[] = [
+  ...vineyardConfigParams,
+  ...gameDateParams
+];
+
+// Winery scenarios let you pick an existing vineyard or create a new test one.
+// The UI hides vineyardConfigParams when an existing vineyard is selected.
+// Options are extended at runtime in TestLabPage with the current company's vineyards.
+const vineyardPickerParam: TestLabParamField = {
+  key: 'vineyardId',
+  label: 'Vineyard',
+  type: 'select',
+  defaultValue: 'new',
+  options: [{ label: 'Create test vineyard', value: 'new' }]
+};
+
+// Only params relevant to creating a grapes-stage batch (harvest quantity).
+const grapesStageParams: TestLabParamField[] = [
+  vineyardPickerParam,
+  ...vineyardConfigParams,
+  ...harvestDateParams,
+  { key: 'quantityKg', label: 'Grape quantity kg', type: 'number', defaultValue: 1200, min: 1, max: 100000, step: 50 }
+];
+
+// Crushing params only shown when crushing is actually performed.
+const crushingStageParams: TestLabParamField[] = [
+  ...grapesStageParams,
   { key: 'crushingMethod', label: 'Crushing method', type: 'select', defaultValue: 'Mechanical Press', options: crushingMethodOptions },
   { key: 'destemming', label: 'Destemming', type: 'boolean', defaultValue: true },
   { key: 'coldSoak', label: 'Cold soak', type: 'boolean', defaultValue: false },
-  { key: 'pressingIntensity', label: 'Pressing intensity', type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.05 },
+  { key: 'pressingIntensity', label: 'Pressing intensity', type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.05 }
+];
+
+// Fermentation setup params added when fermentation is started.
+const fermentingStageParams: TestLabParamField[] = [
+  ...crushingStageParams,
   { key: 'fermentationMethod', label: 'Fermentation method', type: 'select', defaultValue: 'Basic', options: fermentationMethodOptions },
-  { key: 'fermentationTemperature', label: 'Fermentation temperature', type: 'select', defaultValue: 'Ambient', options: fermentationTemperatureOptions },
+  { key: 'fermentationTemperature', label: 'Fermentation temperature', type: 'select', defaultValue: 'Ambient', options: fermentationTemperatureOptions }
+];
+
+// Bottling adds weeks-aged and optional asking price on top of the full fermentation set.
+const bottledStageParams: TestLabParamField[] = [
+  ...fermentingStageParams,
   { key: 'fermentationWeeks', label: 'Fermentation weeks', type: 'number', defaultValue: 4, min: 0, max: 52, step: 1 },
   { key: 'askingPrice', label: 'Asking price', type: 'number', defaultValue: 0, min: 0, max: 99999999, step: 1 }
 ];
@@ -116,8 +156,8 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     group: 'Winery Flow',
     description: 'Creates a harvest-ready vineyard and uses harvest services to create a grapes-stage wine batch.',
     mutatesData: true,
-    params: wineryParams,
-    defaultParams: makeDefaults(wineryParams)
+    params: grapesStageParams,
+    defaultParams: makeDefaults(grapesStageParams)
   },
   {
     id: 'winery.must-ready-batch',
@@ -125,8 +165,8 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     group: 'Winery Flow',
     description: 'Creates grapes, starts crushing with selected parameters, and completes the activity immediately.',
     mutatesData: true,
-    params: wineryParams,
-    defaultParams: makeDefaults(wineryParams)
+    params: crushingStageParams,
+    defaultParams: makeDefaults(crushingStageParams)
   },
   {
     id: 'winery.fermenting-batch',
@@ -134,8 +174,8 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     group: 'Winery Flow',
     description: 'Creates must, starts fermentation setup, and completes the setup activity immediately.',
     mutatesData: true,
-    params: wineryParams,
-    defaultParams: makeDefaults(wineryParams)
+    params: fermentingStageParams,
+    defaultParams: makeDefaults(fermentingStageParams)
   },
   {
     id: 'winery.bottled-wine',
@@ -143,8 +183,8 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     group: 'Winery Flow',
     description: 'Creates fermenting wine, applies selected fermentation weeks, bottles it, and records wine log output.',
     mutatesData: true,
-    params: wineryParams,
-    defaultParams: makeDefaults(wineryParams)
+    params: bottledStageParams,
+    defaultParams: makeDefaults(bottledStageParams)
   },
   {
     id: 'cleanup.by-run-id',
