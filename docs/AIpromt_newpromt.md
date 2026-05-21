@@ -1,113 +1,73 @@
-
 # AI Prompt: Starting A New Development Session
-We have a comprehensive winery management game built with React/Vite/TypeScript + ShadCN, connected to Supabase. As described in the @readme.md, we have successfully enabled MCP tools for git and supabase.
 
-Use this as the short context handoff when opening a new AI coding session for this repo.
+We have a comprehensive winery management game built with React/Vite/TypeScript + ShadCN, connected to Supabase. Use this as the short context handoff when opening a new AI coding session for this repo.
 
 ## Project Summary
 
-We are building a single-player, turn-based winery management game with React, TypeScript, Vite, Tailwind, ShadCN UI, and Supabase.
+This is a single-player, turn-based winery management game. The player manages vineyards, harvests grapes, produces wine, sells bottles and contracts, manages staff and finance, builds prestige, and competes through achievements/highscores.
 
-The player manages vineyards, harvests grapes, produces wine, sells bottles and contracts, manages staff and finance, builds prestige, and competes through achievements/highscores.
+Core simulation logic should live in services; React components should stay focused on presentation and interaction.
 
 ## First Files To Read
 
-1. `readme.md` - codebase entry point and doc map.
-2. `CONTEXT.md` - stable terminology and variable definitions.
-3. `docs/AIDescriptions_coregame.md` - current implementation status.
-4. `docs/PROJECT_INFO.md` - file structure and ownership map.
-5. `docs/WineSystem_VariableRelationshipMap.md` - wine variable flow and diagrams.
+1. `readme.md` - codebase entry point and documentation map.
+2. `CONTEXT.md` - stable domain language, variables, constants, and naming policy.
+3. `docs/AIDescriptions_coregame.md` - current implemented systems.
+4. `docs/PROJECT_INFO.md` - file structure and major module locations.
+5. `docs/WineSystem_VariableRelationshipMap.md` - wine variable relationships and game-flow diagrams.
 
-## ✅ **COMPLETED SYSTEMS** 
+For taste, structure, or contracts work, also read:
 
-### **Core Game Architecture**
-- **Game State Management**: `src/lib/services/core/gameState.ts` - Multi-company support with data isolation
-- **Time Progression**: Week-based system with game tick automation (order generation, activity progression, vine aging)
-- **Database Integration**: `src/lib/database/` - Supabase with company-scoped data persistence
-- **Real-time Updates**: `src/hooks/useGameUpdates.ts` - Supabase subscriptions
-- **Notification System**: `src/lib/services/core/notificationService.ts` - Centralized notification management
+- `docs/TasteSystem_WineFolly_Research.md`
+- `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md`
+- `docs/superpowers/plans/2026-05-20-taste-quality-index.md`
+- `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md`
 
-### **Vineyard System**
-- **Land Buying**: `src/lib/services/vineyard/landSearchService.ts` - Sophisticated land search and acquisition
-- **Vineyard Management**: `src/lib/services/vineyard/vineyardService.ts` - CRUD operations with health system
-- **Health System**: `src/lib/services/vineyard/clearingService.ts` - Vineyard health tracking and clearing activities
-- **Overgrowth System**: Task-specific overgrowth tracking (vegetation, debris, uproot, replant)
-- **Vine Yield System**: Age-based progression (0.02→1.00→decline) with yearly updates
-- **Ripeness System**: Seasonal progression with aspect/randomness modifiers
-- **Harvest System**: `src/lib/services/wine/characteristics/harvestCharacteristics.ts` - Vineyard condition modifiers
+## Current System Snapshot
 
-### **Wine Production System**
-- **Wine Characteristics**: 6-characteristic system (acidity, aroma, body, spice, sweetness, tannins)
-- **Balance Calculation**: `src/lib/balance/` - Sophisticated cross-trait penalties and synergy rules
-- **Wine Features Framework**: `src/lib/constants/wineFeatures/` - Config-driven features (oxidation, terroir, stuck fermentation, bottle aging, late harvest)
-- **Wine Production**: Complete grapes → must → wine → bottled pipeline
-- **Winepedia Integration**: `DynamicRangeTab` and `CrossTraitPenaltyTab` for system visualization
+- **Core architecture:** React/Vite/TypeScript frontend, Supabase persistence, company-scoped data, week-based game tick, global update hooks.
+- **Vineyard:** land buying, planting, clearing/health, overgrowth, ripeness, vine yield, harvest creation.
+- **Wine production:** grapes -> must -> wine -> bottled pipeline, compact wine anchors, six structure channels, `structureIndex`, 14-family taste profile, `tasteQualityIndex`, and combined `wineScore`.
+- **Sales:** regional customers, order generation, multi-factor pricing, contracts with taste/structure/site/grape/vintage/characteristic requirements.
+- **Finance:** transactions, financial reports, loans, shares/dividends, asset valuation.
+- **Staff/activity:** staff management, teams, recruitment, wages, assignment, work calculators, activity progression.
+- **Player interface:** company switching, profile, Winepedia, achievements, highscores, settings, notifications, admin tools.
+- **Prestige:** company and vineyard prestige events, decay, customer relationship effects.
 
-### **Staff System**
-- **Staff Management**: `src/lib/services/user/staffService.ts` - Staff CRUD operations
-- **Team Management**: `src/lib/services/user/teamService.ts` - Team creation and management
-- **Staff Search**: `src/lib/services/activity/activitymanagers/staffSearchManager.ts` - Staff recruitment system
-- **Wage System**: `src/lib/services/user/wageService.ts` - Wage calculation and payment
-- **Staff Assignment**: `src/components/ui/modals/activitymodals/StaffAssignmentModal.tsx` - Activity assignment
+Keep detailed status updates in `docs/AIDescriptions_coregame.md` and file/module updates in `docs/PROJECT_INFO.md`; do not expand this prompt into a second README.
 
-### **Activity System**
-- **Activity Management**: `src/lib/services/activity/activitymanagers/activityManager.ts` - Main activity coordinator
-- **Work Calculators**: `src/lib/services/activity/workcalculators/` - Activity-specific work calculations
-- **Activity Types**: Planting, harvesting, clearing, crushing, fermentation, staff search, land search
-- **Work Calculation**: Staff-based work progression with multi-tasking penalties and specialization bonuses
+## Key File Locations
 
-### **Advanced Sales System**
-- **Customer System**: `src/lib/services/sales/createCustomer.ts` - Regional customers with country-specific characteristics
-- **Order Generation**: `src/lib/services/sales/generateOrder.ts` - Sophisticated order creation with rejection logic
-- **Pricing System**: `src/lib/services/sales/pricingService.ts` - Multi-factor pricing with wine value + quality indices
-- **Regional System**: 5 countries with purchasing power, wine tradition, market share characteristics
-
-### **Finance System**
-- **Transaction System**: `src/lib/services/user/financeService.ts` - Complete transaction tracking with audit trail
-- **Financial UI**: `src/components/finance/` - Income statements, balance sheets, cash flow analysis
-- **Asset Valuation**: Sophisticated calculation of vineyard, wine, and grape values
-
-### **Player Interface**
-- **Company System**: Multi-company support with login, profile, highscores, achievements
-- **Navigation**: Complete player menu with admin dashboard, settings, winepedia, staff management
-- **Achievement System**: `src/lib/services/user/achievementService.ts` - Dynamic tier-based achievements
-- **Staff Interface**: `src/components/pages/Staff.tsx` - Staff management with teams and recruitment
-
-### **Prestige System**
-- **Company Prestige**: Event tracking with decay rates and relationship management
-- **Vineyard Prestige**: Vineyard-specific prestige events and calculations
-- **Customer Relationships**: Prestige-based relationships with logarithmic scaling
-
-## 🔧 **Key File Locations for AI Agents**
-
-### **Core Types & Interfaces**
-- **Game Types**: `src/lib/types/types.ts` - Core game interfaces and types
-- **UI Types**: `src/lib/types/UItypes.ts` - Component prop interfaces
-- **Wine Features**: `src/lib/types/wineFeatures.ts` - Wine feature type definitions
-
-### **Service Layer Architecture**
-- **Core Services**: `src/lib/services/core/` - Game state, notifications, game tick
-- **User Services**: `src/lib/services/user/` - Staff, teams, finance, achievements
-- **Vineyard Services**: `src/lib/services/vineyard/` - Vineyard management, land search, clearing
-- **Wine Services**: `src/lib/services/wine/` - Wine production, characteristics, features
-- **Sales Services**: `src/lib/services/sales/` - Customer management, order generation, pricing
-- **Activity Services**: `src/lib/services/activity/` - Activity management and work calculations
-
-### **Database Layer**
-- **Core Database**: `src/lib/database/core/` - Companies, users, game state, notifications
-- **Activity Database**: `src/lib/database/activities/` - Activities, inventory, vineyard operations
-- **Customer Database**: `src/lib/database/customers/` - Customers, orders, prestige events
-
-### **Constants & Configuration**
-- **Game Constants**: `src/lib/constants/` - Activity constants, staff constants, vineyard constants
-- **Wine Features**: `src/lib/constants/wineFeatures/` - Wine feature configurations
-- **Achievement Constants**: `src/lib/constants/achievementConstants.ts` - Achievement definitions
+| Area | Path |
+|---|---|
+| Core types | `src/lib/types/types.ts` |
+| UI types | `src/components/UItypes.ts` |
+| Core services | `src/lib/services/core/` |
+| Vineyard services | `src/lib/services/vineyard/` |
+| Wine services | `src/lib/services/wine/` |
+| Structure index | `src/lib/wineStructure/` |
+| Sales services | `src/lib/services/sales/` |
+| Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
+| Activity services | `src/lib/services/activity/` |
+| Database layer | `src/lib/database/` |
+| Game constants | `src/lib/constants/` |
+| Wine feature constants | `src/lib/constants/wineFeatures/` |
+| Taste constants | `src/lib/constants/taste/` |
 
 ## Development Rules
 
-- Keep business logic in services under `src/lib/services/`.
+- Keep business logic in `src/lib/services/`.
+- Keep Supabase reads/writes in `src/lib/database/`.
 - Keep React components focused on UI state, display, and user interaction.
 - Prefer existing barrel exports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
 - Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
 - Follow current terminology: `structureIndex`, `tasteQualityIndex`, `wineScore`, compact `WineAnchorValues`.
-- Do not add backwards-compatibility branches, stale aliases, or old data-shape support unless the user explicitly asks for them.
+- Database parsing only accepts current compact wine anchor keys; do not add old data-shape support unless explicitly requested.
+
+## Useful Commands
+
+```bash
+npm test
+npm run build
+git diff --check
+```
