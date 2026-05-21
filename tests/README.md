@@ -1,96 +1,60 @@
 # Automated Test Suites
 
-This folder hosts all executable test suites for Winemaker04. Tests focus on validating simulation logic, game mechanics, and core calculations.
+This folder hosts the executable Vitest suites for Winemaker04. Tests validate simulation logic, service contracts, game mechanics, and selected development tooling.
 
 ## Structure
 
-- `activity/` – Work unit calculations, staffing, scheduling
-- `vineyard/` – Yield calculations, health degradation, grape suitability
-- `wine/` – Fermentation effects, characteristics calculations
-- `finance/` – (Future) Pricing, economy formulas
-- `helpers/` – (Future) Shared factories and fixtures
+- `activity/` - Work unit calculations, staffing, scheduling, and activity helpers.
+- `admin/` - Admin Test Lab parser/run-id helpers and development tooling regressions.
+- `finance/` - Wage, loan, and finance formula tests.
+- `sales/` - Contract and customer/order rule tests.
+- `user/` - Company creation, starting conditions, staff/research workflows, wine log, achievements.
+- `vineyard/` - Yield calculations, vineyard creation, grape suitability.
+- `wine/` - Fermentation, anchors, taste quality, and wine characteristic tests.
 
-Add new domain folders as coverage grows.
+Vitest discovers files matching `tests/**/*.test.ts`. Prefer the live CLI summary over hand-maintained test counts in this README.
 
 ## Running Tests
 
 ```bash
-npm test          # Single run (CI-style)
-npm run test:watch # Watch mode (auto-rerun on changes)
+npm test
+npm run test:watch
 ```
 
-Vitest is configured in `vite.config.ts` and automatically discovers files matching `tests/**/*.test.ts`.
+Targeted runs are useful while developing:
+
+```bash
+npm test -- tests/admin/testRunnerParser.test.ts
+npm test -- tests/wine/tasteQualityIndexService.test.ts
+```
+
+The Admin Test Lab runs the same suite through the development-only `/api/test-run` endpoint using Vitest's JSON reporter. The CLI remains the source of truth.
 
 ## Conventions
 
-- **One `.test.ts` file per domain/module**
-- **Use project aliases**: Import via `@/lib/...` to stay resilient to path changes
-- **Scenario-driven tests**: Use `describe` blocks that explain *why* a rule exists
-- **Deterministic tests**: Mock data locally, never call Supabase directly
-- **Clear test names**: Future AI agents should understand the contract from test names
+- Keep test files scenario-driven and name assertions after the rule being protected.
+- Use project aliases such as `@/lib/...` for app imports.
+- Keep pure unit tests deterministic.
+- Database-backed workflow tests must create isolated data and clean up after themselves.
+- Admin Test Lab fixture helpers must tag created data with durable `testlab_...` run ids.
+- Do not write new tests that depend on React component state as the only cleanup record.
 
----
+## Integration Tests
 
-## Testing Strategy Roadmap
+Some `tests/user/` workflows exercise Supabase-backed services. They require the normal local Supabase environment variables and should be treated as integration tests even though they run under the same Vitest command.
 
-### ✅ Phase 0 – Foundations (COMPLETE)
+When adding a new mutating integration test:
 
-- [x] Install Vitest and add `npm test` / `npm run test:watch`
-- [x] Enable TypeScript support for `tests/` folder
-- [x] Add initial test suite: `tests/activity/workCalculator.test.ts`
-- [x] Document testing workflow
+- create unique names or ids;
+- clean up records in dependency order;
+- avoid sharing state with a developer's active company;
+- document any required environment variables in the test file.
 
-### 🔄 Phase 1 – Core Mechanics (IN PROGRESS)
+## Admin Test Lab Expectations
 
-Target modules:
-- [x] `@/lib/services/activity/workcalculators/*` (work calculations) - ✅ 5 tests
-- [x] `@/lib/services/vineyard/vineyardManager.ts` (yield calculations) - ✅ 11 tests
-- [x] `@/lib/services/vineyard/vineyardValueCalc.ts` (grape suitability) - ✅ 12 tests
-- [x] `@/lib/services/wine/characteristics/fermentationCharacteristics.ts` (fermentation effects) - ✅ 14 tests
-- [x] `@/lib/services/finance/wageService.ts` (wage calculations) - ✅ 8 tests
-- [x] `@/lib/services` loan exports (loan calculations) - ✅ 15 tests
+The Admin Test Lab complements this folder; it does not replace it.
 
-**Total Phase 1 Progress: 65 tests across 6 test files**
-
-**Approach for each module:**
-1. Identify pure calculation helpers (no Supabase/database calls)
-2. Write scenario-based tests (normal cases, edge cases, boundary conditions)
-3. Capture intent in test names so future AI understands the contract
-
-### 📋 Phase 2 – Integrated Flows (FUTURE)
-
-Goal: Ensure multi-step processes stay stable when business rules change.
-
-Candidate flows:
-- Vineyard lifecycle → Harvest → Crushing → Fermentation
-- Sales pipeline: `saveWineOrder` → `fulfillWineOrder` → prestige events
-- Finance ledger balancing
-
-**Approach:**
-- Use mocked services or fixture builders to keep tests deterministic
-- Prefer domain-specific helper factories in `tests/helpers/`
-
----
-
-## Tooling Expectations
-
-**For AI Agents:**
-- Always run `npm test` before surfacing changes involving game rules
-- Keep test files ASCII-only and import via `@/...` aliases
-- Never call Supabase directly from tests; rely on service-level mocks/fakes
-- Update this README when adding new test domains
-
-**For Developers:**
-- Write tests for gameplay-critical formulas to prevent regressions
-- Use descriptive test names that explain the business rule being validated
-- Mock external dependencies (database, API calls) at the service level
-
----
-
-## Success Criteria
-
-- ✅ Every gameplay-critical formula has at least one unit test guarding regressions
-- ✅ A failing Vitest run immediately points to the domain that broke
-- ✅ Test documentation remains synced with actual test suites
-
-When a phase completes, update `docs/versionlog.md` to record the testing milestone.
+- Regression scenarios call `npm test -- --reporter=json` through Vite middleware.
+- Gameflow scenarios can create companies, vineyards, activities, and wine batches for manual inspection.
+- Mutating scenarios must return a run id and cleanup report.
+- Cleanup must work after a page reload by finding durable tags in persisted records.

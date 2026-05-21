@@ -1,56 +1,31 @@
-# Test Viewer - React Component
+# Legacy Test Viewer
 
-A React-based test viewer integrated into the Admin Dashboard. Displays test data using actual game components (like Vineyard cards and modals) to visualize test scenarios.
+`test-viewer/` contains the old Admin Dashboard test viewer and standalone HTML viewer files. The active implementation is now the Admin Test Lab mounted in:
 
-## Usage
+- `src/components/pages/admin/TestLabPage.tsx`
+- `src/lib/services/admin/testLab/`
+- `server/test-api.ts`
 
-### Access via Admin Dashboard
+## Current Admin Test Lab Path
 
-1. Log into the game
-2. Navigate to **Admin Dashboard** (from company overview)
-3. Click the **Tests** tab
+1. Run the app in development on `localhost` or another loopback host.
+2. Select a company.
+3. Open the user menu.
+4. Choose `Admin Dashboard`.
+5. Open the `Tests` tab.
 
-### Features
+The Admin Dashboard link and `/api/test-run` endpoint are hidden or rejected outside development loopback hosts.
 
-- **Real Component Rendering**: Test vineyards are displayed using the same React components as the actual game (Vineyard cards, modals)
-- **Interactive**: Click on any test vineyard to see detailed information in the Vineyard Modal
-- **Compact Display**: Less meta text, more focus on actual test data
-- **Run Tests Button**: Click "Run Tests" to see instructions for running tests in terminal
+## What Replaced The Old Viewer
 
-## What You Can See
+- The old hard-coded scenario descriptions are replaced by `testLabScenarios.ts`.
+- The old terminal-output parser is replaced by a Vitest JSON reporter parser.
+- Test vineyard generation is replaced by tagged scenario runs with durable `testlab_...` ids.
+- Cleanup is handled by run id instead of React-only state.
 
-### Test Vineyards
+## Legacy Files
 
-The viewer displays test vineyards extracted from test files:
+- `TestViewer.tsx` and `TestViewerPage.tsx` are retained for reference during migration.
+- `index.html` and `viewer.js` are standalone legacy files and are not the active Admin Dashboard path.
 
-- **Base Test Vineyard**: Standard well-maintained vineyard (1 ha, 80% ripeness, 100% health)
-- **Optimal 5-hectare Vineyard**: Large-scale vineyard in perfect condition
-- **Damaged Vineyard**: Neglected vineyard showing reduced yields (50% health)
-- **Unripe Vineyard**: Early harvest scenario (40% ripeness)
-- **Young Vineyard**: Newly planted vineyard with young vines (50% vine yield)
-
-Each vineyard card shows:
-- Size, density, health, ripeness, vine yield
-- Expected yield calculation
-- Location and grape variety
-
-Click any vineyard to see full details in the Vineyard Modal (same as in-game).
-
-## Running Tests
-
-The viewer includes a "Run Tests" button. Currently it shows instructions to run tests in terminal:
-
-```bash
-npm test          # Single run
-npm run test:watch # Watch mode
-```
-
-Future enhancement: API endpoint to run tests programmatically and display results in the viewer.
-
-## Files
-
-- `TestViewer.tsx` - Main React component for test viewer
-- `TestViewerPage.tsx` - Page wrapper (if needed as standalone page)
-- `index.html` / `viewer.js` - Legacy standalone HTML viewer (kept for reference)
-
-
+Do not add new scenario metadata to this folder. Add new Test Lab scenarios under `src/lib/services/admin/testLab/`.

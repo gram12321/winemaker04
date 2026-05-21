@@ -1,0 +1,168 @@
+import type { TestLabParamField, TestLabScenarioDefinition } from './types';
+
+const grapeOptions = [
+  'Barbera',
+  'Chardonnay',
+  'Pinot Noir',
+  'Primitivo',
+  'Sauvignon Blanc',
+  'Tempranillo',
+  'Sangiovese'
+].map(value => ({ label: value, value }));
+
+const countryOptions = ['France', 'Germany', 'Italy', 'Spain', 'United States']
+  .map(value => ({ label: value, value }));
+
+const regionOptions = [
+  'Bordeaux',
+  'Bourgogne',
+  'Champagne',
+  'Rhone Valley',
+  'Jura',
+  'Mosel',
+  'Pfalz',
+  'Tuscany',
+  'Piedmont',
+  'Rioja',
+  'Ribera del Duero',
+  'Napa Valley',
+  'Sonoma County',
+  'Willamette Valley'
+].map(value => ({ label: value, value }));
+
+const aspectOptions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest']
+  .map(value => ({ label: value, value }));
+
+const crushingMethodOptions = ['Hand Press', 'Mechanical Press', 'Pneumatic Press']
+  .map(value => ({ label: value, value }));
+
+const fermentationMethodOptions = ['Basic', 'Temperature Controlled', 'Extended Maceration']
+  .map(value => ({ label: value, value }));
+
+const fermentationTemperatureOptions = ['Ambient', 'Cool', 'Warm']
+  .map(value => ({ label: value, value }));
+
+const baseVineyardParams: TestLabParamField[] = [
+  { key: 'companyName', label: 'Company name', type: 'string', defaultValue: 'Admin Test Lab Company' },
+  { key: 'vineyardName', label: 'Vineyard name', type: 'string', defaultValue: 'Harvest Ready Test Vineyard' },
+  { key: 'country', label: 'Country', type: 'select', defaultValue: 'France', options: countryOptions },
+  { key: 'region', label: 'Region', type: 'select', defaultValue: 'Bourgogne', options: regionOptions },
+  { key: 'grape', label: 'Grape', type: 'select', defaultValue: 'Pinot Noir', options: grapeOptions },
+  { key: 'hectares', label: 'Hectares', type: 'number', defaultValue: 1, min: 0.05, max: 50, step: 0.05 },
+  { key: 'density', label: 'Density', type: 'number', defaultValue: 5000, min: 1000, max: 12000, step: 100 },
+  { key: 'vineAge', label: 'Vine age', type: 'number', defaultValue: 12, min: 1, max: 80, step: 1 },
+  { key: 'vineyardHealth', label: 'Health', type: 'number', defaultValue: 0.9, min: 0, max: 1, step: 0.05 },
+  { key: 'ripeness', label: 'Ripeness', type: 'number', defaultValue: 0.92, min: 0, max: 1, step: 0.01 },
+  { key: 'landValue', label: 'Land value per ha', type: 'number', defaultValue: 250000, min: 1000, max: 10000000, step: 1000 },
+  { key: 'altitude', label: 'Altitude', type: 'number', defaultValue: 320, min: 0, max: 1200, step: 10 },
+  { key: 'aspect', label: 'Aspect', type: 'select', defaultValue: 'Southeast', options: aspectOptions },
+  { key: 'soil', label: 'Soil', type: 'string', defaultValue: 'Clay,Limestone' },
+  { key: 'week', label: 'Week', type: 'number', defaultValue: 2, min: 1, max: 12, step: 1 },
+  { key: 'season', label: 'Season', type: 'select', defaultValue: 'Fall', options: ['Spring', 'Summer', 'Fall', 'Winter'].map(value => ({ label: value, value })) },
+  { key: 'year', label: 'Year', type: 'number', defaultValue: 2024, min: 2024, max: 2100, step: 1 }
+];
+
+const wineryParams: TestLabParamField[] = [
+  ...baseVineyardParams,
+  { key: 'quantityKg', label: 'Grape quantity kg', type: 'number', defaultValue: 1200, min: 1, max: 100000, step: 50 },
+  { key: 'crushingMethod', label: 'Crushing method', type: 'select', defaultValue: 'Mechanical Press', options: crushingMethodOptions },
+  { key: 'destemming', label: 'Destemming', type: 'boolean', defaultValue: true },
+  { key: 'coldSoak', label: 'Cold soak', type: 'boolean', defaultValue: false },
+  { key: 'pressingIntensity', label: 'Pressing intensity', type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.05 },
+  { key: 'fermentationMethod', label: 'Fermentation method', type: 'select', defaultValue: 'Basic', options: fermentationMethodOptions },
+  { key: 'fermentationTemperature', label: 'Fermentation temperature', type: 'select', defaultValue: 'Ambient', options: fermentationTemperatureOptions },
+  { key: 'fermentationWeeks', label: 'Fermentation weeks', type: 'number', defaultValue: 4, min: 0, max: 52, step: 1 },
+  { key: 'askingPrice', label: 'Asking price', type: 'number', defaultValue: 0, min: 0, max: 99999999, step: 1 }
+];
+
+const makeDefaults = (params: TestLabParamField[]): Record<string, string | number | boolean> =>
+  Object.fromEntries(params.map(field => [field.key, field.defaultValue]));
+
+export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
+  {
+    id: 'regression.full-suite',
+    title: 'Run Full Regression Suite',
+    group: 'Regression Tests',
+    description: 'Runs the current Vitest suite through the structured dev endpoint.',
+    mutatesData: false,
+    params: [
+      { key: 'target', label: 'Target test file', type: 'string', defaultValue: '' }
+    ],
+    defaultParams: { target: '' }
+  },
+  {
+    id: 'company.create-isolated',
+    title: 'Create Isolated Test Company',
+    group: 'Company Setup',
+    description: 'Creates and activates a dedicated company tagged with a durable Test Lab run id.',
+    mutatesData: true,
+    params: [
+      { key: 'companyName', label: 'Company name', type: 'string', defaultValue: 'Admin Test Lab Company' }
+    ],
+    defaultParams: { companyName: 'Admin Test Lab Company' }
+  },
+  {
+    id: 'vineyard.harvest-ready',
+    title: 'Create Harvest-Ready Vineyard',
+    group: 'Vineyard Lifecycle',
+    description: 'Creates a planted Autumn vineyard with selectable site, grape, health, and ripeness values.',
+    mutatesData: true,
+    params: baseVineyardParams,
+    defaultParams: makeDefaults(baseVineyardParams)
+  },
+  {
+    id: 'winery.grapes-batch',
+    title: 'Create Grapes-Stage Batch',
+    group: 'Winery Flow',
+    description: 'Creates a harvest-ready vineyard and uses harvest services to create a grapes-stage wine batch.',
+    mutatesData: true,
+    params: wineryParams,
+    defaultParams: makeDefaults(wineryParams)
+  },
+  {
+    id: 'winery.must-ready-batch',
+    title: 'Create Must-Ready Batch',
+    group: 'Winery Flow',
+    description: 'Creates grapes, starts crushing with selected parameters, and completes the activity immediately.',
+    mutatesData: true,
+    params: wineryParams,
+    defaultParams: makeDefaults(wineryParams)
+  },
+  {
+    id: 'winery.fermenting-batch',
+    title: 'Create Fermenting Batch',
+    group: 'Winery Flow',
+    description: 'Creates must, starts fermentation setup, and completes the setup activity immediately.',
+    mutatesData: true,
+    params: wineryParams,
+    defaultParams: makeDefaults(wineryParams)
+  },
+  {
+    id: 'winery.bottled-wine',
+    title: 'Create Bottled Wine',
+    group: 'Winery Flow',
+    description: 'Creates fermenting wine, applies selected fermentation weeks, bottles it, and records wine log output.',
+    mutatesData: true,
+    params: wineryParams,
+    defaultParams: makeDefaults(wineryParams)
+  },
+  {
+    id: 'cleanup.by-run-id',
+    title: 'Cleanup Test Run',
+    group: 'Company Setup',
+    description: 'Deletes Test Lab records associated with a durable run id.',
+    mutatesData: true,
+    params: [
+      { key: 'runId', label: 'Run id', type: 'string', defaultValue: '' }
+    ],
+    defaultParams: { runId: '' }
+  }
+];
+
+export function getTestLabScenarios(): TestLabScenarioDefinition[] {
+  return TEST_LAB_SCENARIOS;
+}
+
+export function getTestLabScenario(id: string): TestLabScenarioDefinition | undefined {
+  return TEST_LAB_SCENARIOS.find(scenario => scenario.id === id);
+}

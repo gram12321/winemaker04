@@ -3,7 +3,7 @@ import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui';
 import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
-import TestViewer from '../../../test-viewer/TestViewer';
+import TestLabPage from './admin/TestLabPage';
 import {
   adminSetGoldToCompany, adminSetPlayerBalance, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch, adminSetStaffXP
 } from '@/lib/services';
@@ -620,7 +620,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
         {/* Test Viewer */}
         <TabsContent value="tests">
-          <TestViewer />
+          <TestLabPage />
         </TabsContent>
       </Tabs>
     </div>

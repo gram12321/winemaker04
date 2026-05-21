@@ -12,6 +12,7 @@ import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import versionLogRaw from '../../../docs/versionlog.md?raw';
+import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
 
 
 interface HeaderProps extends NavigationProps, CompanyProps {
@@ -46,6 +47,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   
   // Get current company once instead of multiple calls
   const currentCompany = getCurrentCompany();
+  const showAdminDashboard = isDevAdminSurfaceAvailable();
 
   // Use consolidated hook for reactive prestige loading
   const currentPrestige = useGameStateWithData(getCurrentPrestige, 1);
@@ -298,9 +300,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 <DropdownMenuItem onClick={() => handleNavigation('settings')}>
                   Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNavigation('admin')}>
-                  Admin Dashboard
-                </DropdownMenuItem>
+                {showAdminDashboard && (
+                  <DropdownMenuItem onClick={() => handleNavigation('admin')}>
+                    Admin Dashboard
+                  </DropdownMenuItem>
+                )}
                 {onBackToLogin && (
                   <>
                     <DropdownMenuSeparator />
@@ -430,7 +434,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               {[
                 { id: 'profile', label: 'Profile' },
                 { id: 'settings', label: 'Settings' },
-                { id: 'admin', label: 'Admin Dashboard' },
+                ...(showAdminDashboard ? [{ id: 'admin', label: 'Admin Dashboard' }] : []),
                 { id: 'highscores', label: 'Highscores' },
                 { id: 'achievements', label: 'Achievements' },
                 { id: 'wine-log', label: 'Wine Production Log' },

@@ -25,6 +25,7 @@ import { initializeCustomers, initializeActivitySystem, preloadAllCustomerRelati
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 import { Analytics } from '@vercel/analytics/react';
+import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login');
@@ -160,6 +161,9 @@ function App() {
           />
         );
       case 'admin':
+        if (!isDevAdminSurfaceAvailable()) {
+          return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
+        }
         return (
           <AdminDashboard 
             onBack={() => setCurrentPage('company-overview')}

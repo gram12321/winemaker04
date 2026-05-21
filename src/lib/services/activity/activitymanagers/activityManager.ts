@@ -321,6 +321,49 @@ export async function resumeActivity(activityId: string): Promise<boolean> {
 }
 
 /**
+ * Complete an activity immediately using the same completion handlers as weekly progress.
+ * This is intended for development/test tooling where waiting for ticks would hide bugs.
+ */
+export async function completeActivityNow(activityId: string): Promise<{ success: boolean; error?: string; activity?: Activity }> {
+  try {
+    const activity = await getActivityById(activityId);
+    if (!activity) {
+      return { success: false, error: `Activity ${activityId} not found` };
+    }
+
+    if (activity.status === 'cancelled') {
+      return { success: false, error: `Activity ${activityId} is cancelled`, activity };
+    }
+
+    const completedActivity: Activity = {
+      ...activity,
+      completedWork: activity.totalWork
+    };
+
+    await updateActivityInDb(activity.id, { completedWork: activity.totalWork });
+
+    const handler = completionHandlers[completedActivity.category];
+    if (handler) {
+      await handler(completedActivity);
+    }
+
+    await removeActivityFromDb(completedActivity.id);
+
+    const currentActivities = await getAllActivities();
+    updateGameState({ activities: currentActivities });
+    triggerGameUpdateImmediate();
+
+    return { success: true, activity: completedActivity };
+  } catch (error) {
+    console.error(`Error force-completing activity ${activityId}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to complete activity'
+    };
+  }
+}
+
+/**
  * Cancel an activity
  */
 export async function cancelActivity(activityId: string): Promise<boolean> {
