@@ -4,7 +4,7 @@ import { REGION_GRAPE_SUITABILITY } from '@/lib/constants/grapeConstants';
 import { calculateLandValue } from './vineyardValueCalc';
 import { generateVineyardName } from './vineyardService';
 import { v4 as uuidv4 } from 'uuid';
-import { probabilityMassInRange, getRandomHectares, NormalizeScrewed1000To01WithTail, calculateInvertedSkewedMultiplier } from '@/lib/utils/calculator';
+import { getAsymmetricHectareMassRemoved, getRandomHectares, NormalizeScrewed1000To01WithTail, calculateInvertedSkewedMultiplier } from '@/lib/utils/calculator';
 
 /**
  * Interface for vineyard purchase options (before actual purchase)
@@ -97,14 +97,12 @@ export function calculateLandSearchCost(options: LandSearchOptions, _companyPres
   }
   
   
-  // Hectare range constraint - use distribution mass removed as intensity
+  // Hectare range constraint - asymmetric to reduce punishment for tiny-cap searches
   {
     const [minHa, maxHa] = options.hectareRange;
-    const massKept = probabilityMassInRange(minHa, maxHa); // 0-1
-    const massRemoved = 1 - massKept; // 0-1, higher when excluding common small sizes
+    const massRemoved = getAsymmetricHectareMassRemoved(minHa, maxHa);
     if (massRemoved > 0) {
       const hectareModifier = 1.8; // Strong base since this filter is impactful
-      // Nonlinear penalty to emphasize removing common small sizes
       const hectareIntensity = 1 + Math.pow(massRemoved, 0.75) * 2.5; // 1.0-3.5
       activeConstraints.push(hectareModifier * hectareIntensity);
     }

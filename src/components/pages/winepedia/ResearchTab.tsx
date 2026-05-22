@@ -23,7 +23,11 @@ function unlockTypeLabel(type: UnlockType): string {
     case 'staff_limit':
       return 'staff limit';
     case 'vineyard_size':
-      return 'vineyard size';
+      return 'max size per vineyard';
+    case 'total_vineyard_hectares':
+      return 'max total vineyard area';
+    case 'vineyard_count':
+      return 'max vineyard count';
     case 'contract_type':
       return 'contract type';
     case 'wine_feature':
@@ -68,6 +72,8 @@ export function ResearchTab() {
     const unlockTypeCounts = new Map<string, number>();
     const staffLimits: number[] = [];
     const vineyardLimits: number[] = [];
+    const totalVineyardLimits: number[] = [];
+    const vineyardCountLimits: number[] = [];
 
     for (const project of RESEARCH_PROJECTS) {
       for (const unlock of project.unlocks || []) {
@@ -79,6 +85,12 @@ export function ResearchTab() {
         }
         if (unlock.type === 'vineyard_size' && typeof unlock.value === 'number') {
           vineyardLimits.push(unlock.value);
+        }
+        if (unlock.type === 'total_vineyard_hectares' && typeof unlock.value === 'number') {
+          totalVineyardLimits.push(unlock.value);
+        }
+        if (unlock.type === 'vineyard_count' && typeof unlock.value === 'number') {
+          vineyardCountLimits.push(unlock.value);
         }
       }
     }
@@ -107,6 +119,8 @@ export function ResearchTab() {
       gatedProjects,
       staffLimits: Array.from(new Set(staffLimits)).sort((a, b) => a - b),
       vineyardLimits: Array.from(new Set(vineyardLimits)).sort((a, b) => a - b),
+      totalVineyardLimits: Array.from(new Set(totalVineyardLimits)).sort((a, b) => a - b),
+      vineyardCountLimits: Array.from(new Set(vineyardCountLimits)).sort((a, b) => a - b),
       contractTypeProjects
     };
   }, []);

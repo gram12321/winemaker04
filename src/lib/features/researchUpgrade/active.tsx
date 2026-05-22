@@ -102,7 +102,9 @@ export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
 
       const typeLabels: Record<UnlockType, string> = {
         grape: 'grape variety',
-        vineyard_size: 'vineyard size limit',
+        vineyard_size: 'max size per vineyard',
+        total_vineyard_hectares: 'max total vineyard area',
+        vineyard_count: 'max vineyard count',
         fermentation_technology: 'fermentation technology',
         staff_limit: 'staff limit',
         wine_feature: 'wine feature',

@@ -223,6 +223,48 @@ function getDemandVolatilityMultipliers(
   };
 }
 
+function getDemandFactorComponents(
+  companyId: string,
+  buyerId: string,
+  currentYear: number,
+  currentSeason: Season,
+  economyPhase: EconomyPhase
+): {
+  seasonPriceMultiplier: number;
+  seasonLimitMultiplier: number;
+  economyPriceMultiplier: number;
+  economyLimitMultiplier: number;
+  yearCyclePriceMultiplier: number;
+  yearCycleLimitMultiplier: number;
+  volatilityPriceMultiplier: number;
+  volatilityLimitMultiplier: number;
+} {
+  const seasonPriceMultiplier = getSeasonPriceMultiplier(currentSeason);
+  const seasonLimitMultiplier = getSeasonLimitMultiplier(currentSeason);
+  const economyPriceMultiplier = getEconomyPriceMultiplier(economyPhase);
+  const economyLimitMultiplier = getEconomyLimitMultiplier(economyPhase);
+  const yearCyclePriceMultiplier = getYearCycleMultiplier(currentYear, BUYER_YEAR_PRICE_CYCLE);
+  const yearCycleLimitMultiplier = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
+  const demandVolatility = getDemandVolatilityMultipliers(
+    companyId,
+    buyerId,
+    currentYear,
+    currentSeason,
+    economyPhase
+  );
+
+  return {
+    seasonPriceMultiplier,
+    seasonLimitMultiplier,
+    economyPriceMultiplier,
+    economyLimitMultiplier,
+    yearCyclePriceMultiplier,
+    yearCycleLimitMultiplier,
+    volatilityPriceMultiplier: Number((demandVolatility.price / Math.max(0.01, yearCyclePriceMultiplier)).toFixed(3)),
+    volatilityLimitMultiplier: Number((demandVolatility.limit / Math.max(0.01, yearCycleLimitMultiplier)).toFixed(3)),
+  };
+}
+
 async function getSeasonalBuyerCountFromResearch(): Promise<number> {
   const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_slots');
   const additional = unlocked.reduce((sum, value) => {
@@ -452,7 +494,7 @@ function rowToBuyer(
   originTag: BuyerOriginTag,
   originReason: string
 ): GrapeBuyer {
-  const demandVolatility = getDemandVolatilityMultipliers(
+  const demandComponents = getDemandFactorComponents(
     companyId,
     row.buyer_id,
     currentYear,
@@ -463,13 +505,15 @@ function rowToBuyer(
   const relationshipLimitBonus = getBuyerRelationshipYearlyLimitBonus(loyaltyLevel);
   const scaledBaseLimit = computeScaledSeasonLimit(row.base_season_limit_kg, companyValue);
   const priceDemandMultiplier = computeCompanyValuePriceMultiplier(companyValue)
-    * getSeasonPriceMultiplier(currentSeason)
-    * getEconomyPriceMultiplier(economyPhase)
-    * demandVolatility.price
+    * demandComponents.seasonPriceMultiplier
+    * demandComponents.economyPriceMultiplier
+    * demandComponents.yearCyclePriceMultiplier
+    * demandComponents.volatilityPriceMultiplier
     * (1 + multiplierResearchBonus);
-  const limitDemandMultiplier = getSeasonLimitMultiplier(currentSeason)
-    * getEconomyLimitMultiplier(economyPhase)
-    * demandVolatility.limit
+  const limitDemandMultiplier = demandComponents.seasonLimitMultiplier
+    * demandComponents.economyLimitMultiplier
+    * demandComponents.yearCycleLimitMultiplier
+    * demandComponents.volatilityLimitMultiplier
     * limitResearchMultiplier;
   const effectiveSeasonLimitKg = Math.max(
     200,
@@ -499,6 +543,7 @@ function rowToBuyer(
     originTag,
     originReason,
     dealStyle: 'spot',
+    demandFactors: demandComponents,
   };
 }
 
@@ -643,7 +688,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     getBuyerLimitMultiplierFromResearch(),
     getBuyerMultiplierBonusFromResearch(),
   ]);
-  const demandVolatility = getDemandVolatilityMultipliers(
+  const demandComponents = getDemandFactorComponents(
     companyId,
     BULK_BUYER_ID,
     currentYear,
@@ -654,9 +699,10 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     200,
     Math.round(
       computeScaledSeasonLimit(row.base_season_limit_kg, companyValue)
-      * getSeasonLimitMultiplier(currentSeason)
-      * getEconomyLimitMultiplier(economyPhase)
-      * demandVolatility.limit
+      * demandComponents.seasonLimitMultiplier
+      * demandComponents.economyLimitMultiplier
+      * demandComponents.yearCycleLimitMultiplier
+      * demandComponents.volatilityLimitMultiplier
       * limitResearchMultiplier
     )
   );
@@ -664,9 +710,10 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
   const priceMultiplier = Number((
     row.base_multiplier
     * computeCompanyValuePriceMultiplier(companyValue)
-    * getSeasonPriceMultiplier(currentSeason)
-    * getEconomyPriceMultiplier(economyPhase)
-    * demandVolatility.price
+    * demandComponents.seasonPriceMultiplier
+    * demandComponents.economyPriceMultiplier
+    * demandComponents.yearCyclePriceMultiplier
+    * demandComponents.volatilityPriceMultiplier
     * (1 + multiplierResearchBonus)
   ).toFixed(2));
 
@@ -692,6 +739,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     originTag: 'Country special',
     originReason: 'Always available bulk channel for immediate liquidity.',
     dealStyle: 'spot',
+    demandFactors: demandComponents,
   };
 }
 

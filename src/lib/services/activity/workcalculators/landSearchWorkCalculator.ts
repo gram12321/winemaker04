@@ -4,7 +4,7 @@ import { TASK_RATES, INITIAL_WORK } from '@/lib/constants/activityConstants';
 import { LandSearchOptions } from '@/lib/services';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 import { REGION_GRAPE_SUITABILITY } from '@/lib/constants/grapeConstants';
-import { probabilityMassInRange } from '@/lib/utils/calculator';
+import { getAsymmetricHectareMassRemoved } from '@/lib/utils/calculator';
 
 /**
  * Calculate work required for land search activity
@@ -65,11 +65,10 @@ export function calculateLandSearchWork(options: LandSearchOptions, _companyPres
     activeConstraints.push(regionModifier * regionIntensity);
   }
   
-  // Hectare range constraint - use distribution mass removed as intensity (same approach as cost)
+  // Hectare range constraint - asymmetric to reduce punishment for tiny-cap searches
   {
     const [minHa, maxHa] = options.hectareRange;
-    const massKept = probabilityMassInRange(minHa, maxHa); // 0-1
-    const massRemoved = 1 - massKept; // 0-1
+    const massRemoved = getAsymmetricHectareMassRemoved(minHa, maxHa);
     if (massRemoved > 0) {
       const hectareModifier = 1.3; // milder than cost
       const hectareIntensity = 1 + Math.pow(massRemoved, 0.8) * 2.0; // 1.0-3.0
