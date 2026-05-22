@@ -59,6 +59,13 @@ flowchart LR
 - Current cellar values may continue to evolve after bottling; historical snapshots must not drift.
 - Research unlocks and permanent effects are progression modifiers that may alter upstream vineyard/process inputs (for example health decay), but should not bypass structure and taste computation layers.
 
+### 5.1 Progression Overlay Invariants
+
+- Research progression gates control option availability and scaling boundaries, not score formula shortcuts.
+- Unlock-based gates currently affect grape planting, fermentation method availability, staff cap, vineyard size cap, and contract channel eligibility.
+- Permanent research effects are aggregated from completed research and applied through explicit domain services.
+- Current permanent-effect slice modifies vineyard health decay; additional effect kinds should follow the same explicit, auditable service pattern.
+
 ## 6) Subsystem Diagrams
 
 ### 6.1 Site, Grape, and Harvest Identity
@@ -265,5 +272,6 @@ flowchart TD
 ## 13) Remaining Alignment Work
 
 - Keep research permanent effects routed through explicit domain services (for example vineyard manager) so modifier origins remain auditable.
+- Keep research benefit copy aligned with implementation so descriptive text does not imply mechanics that are not yet wired.
 - Keep anchor parsing strict: unknown anchor keys should be ignored, and new business logic should target only the compact anchor model.
 - If descriptor-level taste becomes gameplay-relevant, update this map and `CONTEXT.md` before wiring descriptors into outcomes.

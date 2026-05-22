@@ -47,7 +47,7 @@ npm run build
 | Need | Start here |
 |---|---|
 | Stable domain vocabulary | `CONTEXT.md` |
-| Current implemented game systems | `docs/AIDescriptions_coregame.md` |
+| Current implemented game systems | `docs/AIdocs/AIDescriptions_coregame.md` |
 | File structure and ownership map | `docs/PROJECT_INFO.md` |
 | Wine variable flow and diagrams | `docs/WineSystem_VariableRelationshipMap.md` |
 | Taste research and future ideas | `docs/TasteSystem_WineFolly_Research.md` |
@@ -59,6 +59,14 @@ npm run build
 | Documentation maintenance guidance | `docs/AIpromt_docs.md` |
 | Cleanup/refactor guidance | `docs/AIpromt_codecleaning.md` |
 | Version history | `docs/versionlog.md` |
+
+## Research Status Snapshot
+
+- Core gates are implemented: completed-state tracking, prestige/prerequisite eligibility, and service-side validation.
+- Unlock enforcement is active for grapes, fermentation methods, staff cap, vineyard size cap, and contract sales channels.
+- Starting conditions now include regional `startingResearch` pre-unlocks applied during setup.
+- Permanent effects are active via runtime aggregation (current shipped slice: vineyard health decay multiplier).
+- Some project benefit text is still aspirational and does not yet map to a dedicated gameplay mechanic.
 
 ## Database Notes
 

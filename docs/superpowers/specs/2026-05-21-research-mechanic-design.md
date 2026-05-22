@@ -1,6 +1,6 @@
 # Research Mechanic Design
 **Date:** 2026-05-21  
-**Status:** In Progress — immediate changes applied, further work planned
+**Status:** Living spec with implementation status through 2026-05-22
 
 ---
 
@@ -22,22 +22,22 @@ The research system had a well-built infrastructure skeleton (DB persistence, fe
 
 ## 3. Changes Applied This Session (Already Implemented)
 
-### 3.1 UnlockType — Collapsed to Active Systems
+### 3.1 UnlockType — Current Runtime State
 
-**Removed** unused unlock types that have no game enforcement path yet:
-- `vineyard_size` — no max-hectares cap exists in any system
-- `staff_limit` — no hire cap exists in any system
-- `building_type` — buildings are not a game system yet
+Unlock types with active runtime meaning now include:
 
-**Kept** unlock types that either work or have a clear near-term enforcement path:
-
-| Type | Status |
+| Type | Current state |
 |---|---|
-| `grape` | ✅ Enforced in PlantingOptionsModal |
-| `fermentation_technology` | Defined, maps to real fermentation methods — enforcement is next step |
-| `wine_feature` | Defined, wine feature system exists — enforcement is next step |
-| `contract_type` | Legacy alias for sales_channel |
-| `sales_channel` | Defined, sales system exists — enforcement is active |
+| `grape` | ✅ Enforced in planting and displayed in Winepedia locks. |
+| `fermentation_technology` | ✅ Enforced in fermentation method selection (advanced methods locked until unlocked). |
+| `vineyard_size` | ✅ Enforced in land-search / vineyard expansion cap flow. |
+| `staff_limit` | ✅ Enforced in staff hiring cap flow. |
+| `sales_channel` | ✅ Enforced in contract generation eligibility. |
+| `contract_type` | Legacy alias kept for compatibility with `sales_channel` mapping in contract generation. |
+| `wine_feature` | Defined but still mostly future-facing for direct gameplay gating. |
+| `grape_buyer_slots` | ✅ Enforced in grape buyer market generation capacity. |
+| `grape_buyer_limit_multiplier` | ✅ Enforced in seasonal grape buyer hard-limit scaling. |
+| `grape_buyer_multiplier_bonus` | ✅ Enforced in grape buyer multiplier bonus pipeline. |
 
 ### 3.2 ResearchProject Interface — New Fields
 
@@ -91,7 +91,11 @@ The current non-grape projects are generic business-school text with no connecti
 
 ### 4.1 Fermentation Methods Track
 
-These should gate the existing fermentation options in `FermentationOptionsModal`. Currently all three methods are freely available — gating the advanced ones adds real progression.
+The baseline implementation now gates advanced options in `FermentationOptionsModal`.
+
+- Basic remains always available.
+- Temperature Controlled and Extended Maceration are now unlock-gated.
+- Additional methods listed below remain design targets and are not implemented yet.
 
 | Project ID | Title | Effect | Prestige Req | Prerequisite |
 |---|---|---|---|---|
@@ -159,19 +163,19 @@ Physical tools that create visible work-speed or quality multipliers.
 
 ### 5.2 Starting Conditions as Regional Head-Starts
 
-*Planned — not yet implemented.*
+Implemented.
 
-Each starting country should pre-unlock research appropriate to its wine tradition:
+Each starting country now pre-unlocks research through `startingResearch` in `StartingCondition`, applied in `applyStartingConditions` after starting grape unlock:
 
 | Country | Pre-unlocked Research |
 |---|---|
-| France (Burgundy) | MLF research (standard for Pinot Noir/Chardonnay), Canopy Management |
-| Italy (Tuscany) | Extended Maceration (essential for Sangiovese), Cover Cropping |
-| Germany (Mosel) | Precision Viticulture (Riesling timing precision critical) |
-| Spain (Ribera del Duero) | Oak Barrel Program (Tempranillo oak aging tradition) |
-| USA (Napa) | Wine Club Program (direct-to-consumer strong in Napa), Temperature-Controlled Fermentation |
+| France | `admin_basic`, `tech_fermentation` |
+| Italy | `admin_basic`, `mkt_research` |
+| Germany | `admin_basic`, `tech_soil_analysis` |
+| Spain | `admin_basic`, `mkt_research` |
+| United States | `admin_basic`, `project_grant_basic` |
 
-**Implementation path:** Add `startingResearch?: string[]` to `StartingCondition` interface. In `startingConditionsService.ts`, after `grantStartingGrapeUnlock`, iterate `startingResearch` and call `grantResearchUnlock` for each.
+This intentionally bypasses normal prestige/prerequisite progression for the regional head-start slice.
 
 ### 5.3 Achievement-Triggered Research Visibility
 
@@ -205,11 +209,16 @@ For each unlock type, where the game must check `isUnlocked()`:
 | Type | Enforcement location |
 |---|---|
 | `grape` | `PlantingOptionsModal` ✅ done |
-| `fermentation_technology` | `FermentationOptionsModal` — gray-out locked methods |
-| `wine_feature` | Wine feature activation in winery — gate advanced features |
-| `contract_type` / `sales_channel` | Contract generation — filter locked contract types |
-| `equipment` | Activity creation for activities requiring specific equipment |
-| `vineyard_technique` | Vineyard action modals — gate advanced options |
+| `fermentation_technology` | `FermentationOptionsModal` ✅ locked methods and research hints |
+| `staff_limit` | `HireStaffModal` ✅ headcount cap from unlocked staff-limit values |
+| `vineyard_size` | `LandSearchOptionsModal` and `LandSearchResultsModal` ✅ max-hectare cap from unlocked values |
+| `contract_type` / `sales_channel` | `contractGenerationService` ✅ eligible customer type filtering |
+| `grape_buyer_slots` | Grape buyer generation pipeline ✅ seasonal option-count increases |
+| `grape_buyer_limit_multiplier` | Grape buyer generation pipeline ✅ seasonal hard-limit multiplier |
+| `grape_buyer_multiplier_bonus` | Grape buyer generation pipeline ✅ final multiplier bonus |
+| `wine_feature` | Planned for deeper feature-activation gating |
+| `equipment` | Planned (system not yet implemented) |
+| `vineyard_technique` | Planned (dedicated track not yet implemented) |
 
 ---
 
@@ -280,17 +289,16 @@ Current rewards (2–15 prestige) need calibration against the prestige economy.
 - Research complexity is now consistently generic across categories for work, cost, and prestige.
 - Non-grape categories now use explicit `workProfile` pacing controls.
 - Staff and vineyard progression ladders were expanded and enforced:
-	- Staff cap ladder: `2 -> 5 -> 8 -> 12`
-	- Vineyard cap ladder: `0.1 -> 0.25 -> 0.5 -> 1 -> 2 -> 4 -> 8`
+	- Staff cap ladder now extends into late game (through 100).
+	- Vineyard cap ladder now extends into late game (through 2000).
 - Fermentation technology gating is enforced in fermentation option selection.
 - Sales channel gating is enforced in contract generation eligibility.
+- Starting-condition regional research head-starts are implemented via `startingResearch`.
 - Permanent non-unlock technology effects are now implemented via runtime aggregation of completed research unlocks.
 	- First minimum slice: vineyard health decay reduction through a typed permanent effect.
 
 ### 10.2 Historical Notes Corrected
 
-- Section 3.1 should be treated as historical context, not current truth.
-	- `vineyard_size` and `staff_limit` are active unlock types again and currently enforced.
 - The old "permanent non-unlock technology effects" TODO is no longer accurate.
 	- Permanent effects are now applied at runtime by domain services.
 
@@ -303,12 +311,18 @@ The items below are intentionally kept visible for future work and should not be
 | Vineyard techniques track (`agri_canopy_management`, etc.) | Not implemented as dedicated projects | Ready for implementation using the new `permanentEffects` + explicit service hook pattern. |
 | Equipment track (`equipment` unlock type) | Not implemented | Keep for later; only implement once equipment exists as a real gameplay system. |
 | Sales channel track (`sales_channel` unlock type) | Implemented | Use as the first-class unlock type for contract generation; keep `contract_type` as a legacy alias only. |
-| Starting-condition research head-starts | Not implemented | Good later slice after country-start balancing pass. |
+| Starting-condition research head-starts | Implemented | Continue balancing country presets after playtest telemetry. |
 | Achievement-triggered research visibility | Not implemented | Good later slice after baseline research discoverability UX is validated. |
 | Site-conditional research visibility | Not implemented | Defer until core gating and balance stabilize across more playthroughs. |
 | Active bonuses panel | Implemented | Now visible on the Research page as a runtime permanent-bonuses summary. |
 
-## 12. Suggested Next Slices
+## 12. Known Documentation/Design Debt
+
+- A subset of project `benefits` strings still describe intended outcomes without a direct mechanical implementation.
+- Until those mechanics are wired, treat unlock payloads and permanent effects as the authoritative gameplay-impact source.
+- Future pass should align each benefit line to one of: implemented unlock, implemented permanent effect, or clearly tagged future design intent.
+
+## 13. Suggested Next Slices
 
 1. Add broader permanent-effect categories beyond vineyard health decay.
 2. Implement one vineyard-technique project from section 4.2 via the permanent-effects framework.

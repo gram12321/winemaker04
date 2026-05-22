@@ -1,6 +1,21 @@
 # Winemaker 0.4 - Project Information
 ## 📁 Project File Structure
 
+## Research System Key Files (2026-05-22)
+
+| Area | Path | Notes |
+|---|---|---|
+| Research catalog and gates | `src/lib/constants/researchConstants.ts` | Project definitions, unlock payloads, prerequisites, prestige/company/achievement/buyer gates, generic work profiles, permanent effects. |
+| Research work and cost calculator | `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` | Shared complexity-based work and cost calculation across categories. |
+| Research UI panel | `src/components/finance/ResearchPanel.tsx` | Loads active/completed state, applies gate visibility, and supports admin bypass mode. |
+| Research page bonuses panel | `src/components/pages/Research.tsx` | Displays active permanent research effects. |
+| Permanent effects aggregation | `src/lib/services/research/researchPermanentEffectsService.ts` | Aggregates completed research effects into runtime modifiers. |
+| Starting condition head-starts | `src/lib/constants/startingConditions.ts` | Country-specific `startingResearch` definitions. |
+| Starting condition application | `src/lib/services/core/startingConditionsService.ts` | Applies `startingResearch` unlocks during setup. |
+| Fermentation unlock enforcement | `src/components/ui/modals/activitymodals/FermentationOptionsModal.tsx` | Locks advanced methods until research unlock. |
+| Staff/vineyard cap enforcement | `src/components/ui/modals/activitymodals/HireStaffModal.tsx`, `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` | Applies unlocked cap limits. |
+| Contract channel enforcement | `src/lib/services/sales/contractGenerationService.ts` | Filters eligible customer contract types by research unlocks. |
+
 ```
 winemaker04/
 ├── 📄 Configuration Files
@@ -20,7 +35,7 @@ winemaker04/
 │   ├── readme.md                   # Codebase introduction and documentation map
 │   ├── PROJECT_INFO.md             # This file
 │   └── docs/                       # Documentation directory
-│       ├── AIDescriptions_coregame.md      # AI development guide
+│       ├── AIdocs/AIDescriptions_coregame.md # AI development guide
 │       ├── AIpromt_codecleaning.md        # Code cleanup/refactor prompt guide
 │       ├── AIpromt_docs.md               # Documentation maintenance prompt guide
 │       ├── AIpromt_newpromt.md           # New session prompt guide

@@ -141,6 +141,25 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | `ContractRequirement.type` | Customer requirement category, such as `tasteQuality`, `structureIndex`, `landValue`, `country`, `region`, `grape`, `grapeColor`, `altitude`, `aspect`, `characteristicMin`, `characteristicMax`, or `characteristicDeviation`. |
 | `ContractRequirement.value` | Requirement threshold or target. Its unit depends on requirement type: 0-1 score, absolute land value, vintage year/age, or characteristic threshold. |
 
+## Research Progression Variables
+
+| Variable or concept | Description |
+|---|---|
+| `ResearchProject.complexity` | Shared 1-10 complexity axis for research pacing and prestige reward scaling across categories. |
+| `ResearchProject.workProfile` | Generic work-scaling controls (`scopeWorkAmount`, `scopeWorkAmountPerComplexity`, linear/exponential curve, category modifier, extra initial work). |
+| `ResearchProject.requiredPrestige` | Minimum prestige needed to start a project. Enforced in UI and service workflow. |
+| `ResearchProject.prerequisites` | Research IDs that must be completed first. Enforced in UI and service workflow. |
+| `ResearchProject.requiredCompanyValue` | Minimum company value gate for advanced progression projects. |
+| `ResearchProject.requiredBuyerLoyaltyLevel` | Minimum best buyer relationship tier for grape-buyer progression projects. |
+| `ResearchProject.requiredAchievementIds` | Achievement unlock gates used for late progression projects. |
+| `ResearchProject.unlocks` | Unlock payloads applied on completion (`grape`, `fermentation_technology`, `staff_limit`, `vineyard_size`, `sales_channel`, and grape-buyer progression unlock types). |
+| `ResearchProject.permanentEffects` | Always-on modifiers from completed research (current shipped effect kind: `vineyard_health_decay_multiplier`). |
+| `startingResearch` | Starting-condition field for country-specific pre-unlocked research IDs applied during company setup. |
+
+Current implemented enforcement includes grape planting, fermentation method availability, staff cap, vineyard size cap, and contract customer-channel access. Research progression modifiers are designed to alter upstream systems and access rules, not to bypass structure/taste score computation.
+
+Known limitation: some project `benefits` strings are still design-facing flavor text and are not yet backed by dedicated mechanics. Treat `unlocks` and `permanentEffects` as the authoritative implementation source for current gameplay impact.
+
 ## Snapshot Variables
 
 | Snapshot | Description |
