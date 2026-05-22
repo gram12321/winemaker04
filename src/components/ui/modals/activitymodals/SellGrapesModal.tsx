@@ -328,7 +328,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
   return (
     <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
+      <DialogContent className="w-[96vw] max-w-7xl max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
         </DialogHeader>
@@ -556,71 +556,69 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           <div className="space-y-3">
             <BuyerLoyaltyPanel buyer={selectedBuyer} loyalty={buyerLoyalty} companyValue={companyValue} />
 
-        {/* Pricing Breakdown */}
-        {pricing && (
-          <div className="bg-gray-800 rounded p-3 space-y-1 text-sm">
-            <p className="text-gray-400 font-medium uppercase tracking-wide text-xs mb-2">Price Breakdown</p>
-            <div className="flex justify-between text-gray-300">
-              <span>Base price</span>
-              <span>{formatNumber(3, { currency: true, decimals: 2 })}/kg</span>
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Quality ({qualityPercent}%)</span>
-              <span>×{pricing.qualityMultiplier.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Prestige bonus</span>
-              <span>×{pricing.prestigeBonus.toFixed(2)}</span>
-            </div>
-            <div className="text-[11px] text-gray-400">
-              Prestige bonus reflects your winery reputation and company standing. Higher prestige increases buyer confidence and sale price.
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Buyer multiplier</span>
-              <span>×{pricing.buyerMultiplier.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Relationship bonus</span>
-              <span>×{(pricing.relationshipMultiplier ?? 1).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Favorite grape bonus</span>
-              <span>+{(pricing.favoriteGrapeBonusMultiplier ?? 0).toFixed(2)}×</span>
-            </div>
-            {pricing.appliedFloor && pricing.effectiveFloorPrice > 0 && (
-              <div className="text-xs text-green-400 pt-1">
-                ✓ Cooperative floor applied ({formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg)
-              </div>
-            )}
-            <div className="flex justify-between font-medium text-white border-t border-gray-600 pt-2 mt-1">
-              <span>Price per kg</span>
-              <span>{formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}</span>
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Sale quantity</span>
-              <span>{pricing.quantityKg.toLocaleString()} kg</span>
-            </div>
-            <div className="flex justify-between font-bold text-amber-400 text-base">
-              <span>Total Revenue</span>
-              <span>{formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 })}</span>
-            </div>
-            {loyaltyPreview && (
-              <div className="mt-2 border-t border-gray-700 pt-2 text-xs text-cyan-300">
-                Loyalty preview: +{loyaltyPreview.appliedPoints.toLocaleString()} points this sale
-                {loyaltyPreview.cappedPoints > 0 ? ` (${loyaltyPreview.rawPoints.toLocaleString()} raw, ${loyaltyPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}
+            {pricing && (
+              <div className="bg-gray-800 rounded p-3 space-y-1 text-sm">
+                <p className="text-gray-400 font-medium uppercase tracking-wide text-xs mb-2">Price Breakdown</p>
+                <div className="flex justify-between text-gray-300">
+                  <span>Base price</span>
+                  <span>{formatNumber(3, { currency: true, decimals: 2 })}/kg</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Quality ({qualityPercent}%)</span>
+                  <span>×{pricing.qualityMultiplier.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Prestige bonus</span>
+                  <span>×{pricing.prestigeBonus.toFixed(2)}</span>
+                </div>
+                <div className="text-[11px] text-gray-400">
+                  Prestige bonus reflects your winery reputation and company standing. Higher prestige increases buyer confidence and sale price.
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Buyer multiplier</span>
+                  <span>×{pricing.buyerMultiplier.toFixed(1)}</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Relationship bonus</span>
+                  <span>×{(pricing.relationshipMultiplier ?? 1).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Favorite grape bonus</span>
+                  <span>+{(pricing.favoriteGrapeBonusMultiplier ?? 0).toFixed(2)}×</span>
+                </div>
+                {pricing.appliedFloor && pricing.effectiveFloorPrice > 0 && (
+                  <div className="text-xs text-green-400 pt-1">
+                    ✓ Cooperative floor applied ({formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg)
+                  </div>
+                )}
+                <div className="flex justify-between font-medium text-white border-t border-gray-600 pt-2 mt-1">
+                  <span>Price per kg</span>
+                  <span>{formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Sale quantity</span>
+                  <span>{pricing.quantityKg.toLocaleString()} kg</span>
+                </div>
+                <div className="flex justify-between font-bold text-amber-400 text-base">
+                  <span>Total Revenue</span>
+                  <span>{formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 })}</span>
+                </div>
+                {loyaltyPreview && (
+                  <div className="mt-2 border-t border-gray-700 pt-2 text-xs text-cyan-300">
+                    Loyalty preview: +{loyaltyPreview.appliedPoints.toLocaleString()} points this sale
+                    {loyaltyPreview.cappedPoints > 0 ? ` (${loyaltyPreview.rawPoints.toLocaleString()} raw, ${loyaltyPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {exceedsBuyerCap && selectedBuyer?.remainingSeasonLimitKg !== undefined && (
           <div className="rounded border border-red-800 bg-red-950/30 p-2 text-xs text-red-300">
             Selected amount ({selectedQuantityKg.toLocaleString()} kg) exceeds this buyer's remaining seasonal capacity ({selectedBuyer.remainingSeasonLimitKg.toLocaleString()} kg).
           </div>
         )}
-
-          </div>
-        </div>
 
         <DialogFooter className="gap-2">
           <Button
