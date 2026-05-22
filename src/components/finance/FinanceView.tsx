@@ -21,7 +21,6 @@ import { useGameState, useGameStateWithData } from '@/hooks';
 import { loadTransactions } from '@/lib/services';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
-import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 export default function FinanceView() {
   const [activeTab, setActiveTab] = useState('income');
@@ -30,10 +29,9 @@ export default function FinanceView() {
   const transactions = useGameStateWithData(loadTransactions, []);
   const loanLenderTabs = useMemo(() => getLoanLenderFeature().ui.getFinanceTabs(), []);
   const boardShareTabs = useMemo(() => getBoardShareFeature().ui.getFinanceTabs(), []);
-  const researchUpgradeTabs = useMemo(() => getResearchUpgradeFeature().ui.getFinanceTabs(), []);
   const featureTabs = useMemo(
-    () => [...loanLenderTabs, ...boardShareTabs, ...researchUpgradeTabs],
-    [loanLenderTabs, boardShareTabs, researchUpgradeTabs]
+    () => [...loanLenderTabs, ...boardShareTabs],
+    [loanLenderTabs, boardShareTabs]
   );
 
   const currentYear = gameState.currentYear ?? new Date().getFullYear();

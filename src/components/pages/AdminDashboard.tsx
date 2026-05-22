@@ -203,10 +203,9 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
 
       <Tabs defaultValue="database" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="cheats">Cheats</TabsTrigger>
-          <TabsTrigger value="tools">Tools</TabsTrigger>
           <TabsTrigger value="tests">Tests</TabsTrigger>
         </TabsList>
 
@@ -604,51 +603,45 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
             </SimpleCard>
           </div>
         </TabsContent>
-
-
-        {/* Development Tools */}
-        <TabsContent value="tools">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <SimpleCard
-              title="Order Testing"
-              description="Generate test orders for development and testing"
-            >
-              <Button
-                onClick={handleGenerateTestOrder}
-                disabled={isLoading}
-                className="w-full"
-              >
-                🛒 Generate Test Order
-              </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                Bypasses prestige checks to force order generation
-              </p>
-            </SimpleCard>
-
-            <SimpleCard
-              title="Contract Testing"
-              description="Generate test contracts for development and testing"
-            >
-              <Button
-                onClick={handleGenerateTestContract}
-                disabled={isLoading}
-                className="w-full"
-              >
-                📋 Generate Test Contract
-              </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                Bypasses relationship/prestige checks to force contract generation
-              </p>
-            </SimpleCard>
-
-
-          </div>
-
-        </TabsContent>
-
         {/* Test Viewer */}
         <TabsContent value="tests">
-          <TestLabPage />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SimpleCard
+                title="Order Testing"
+                description="Generate test orders for development and testing"
+              >
+                <Button
+                  onClick={handleGenerateTestOrder}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  🛒 Generate Test Order
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Bypasses prestige checks to force order generation
+                </p>
+              </SimpleCard>
+
+              <SimpleCard
+                title="Contract Testing"
+                description="Generate test contracts for development and testing"
+              >
+                <Button
+                  onClick={handleGenerateTestContract}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  📋 Generate Test Contract
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Bypasses relationship/prestige checks to force contract generation
+                </p>
+              </SimpleCard>
+            </div>
+
+            <TestLabPage />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
