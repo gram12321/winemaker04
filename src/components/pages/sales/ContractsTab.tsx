@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { WineContract } from '@/lib/types/types';
 import { rejectContract } from '@/lib/services/sales/contractService';
 import { getContractGenerationChance } from '@/lib/services/sales/contractGenerationService';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { RESEARCH_PROJECTS } from '@/lib/constants/researchConstants';
 import { formatNumber, formatGameDateFromObject, formatPercent } from '@/lib/utils/utils';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell, UnifiedTooltip } from '../../ui';
 import { getFlagIcon } from '@/lib/utils';
@@ -13,6 +15,31 @@ import { useTableSortWithAccessors, SortableColumn } from '@/hooks';
 interface ContractsTabProps extends LoadingProps {
   contracts: WineContract[];
   withLoading: (fn: () => Promise<void>) => Promise<void>;
+}
+
+const CUSTOMER_CONTRACT_TYPES = ['Wine Shop', 'Restaurant', 'Private Collector', 'Chain Store'] as const;
+
+type ContractTypeAccessRow = {
+  customerType: typeof CUSTOMER_CONTRACT_TYPES[number];
+  unlocked: boolean;
+  requiredResearchTitle?: string;
+  requirementLabel: string;
+};
+
+function normalizeUnlockValue(value: string | number): string {
+  return String(value).trim().toLowerCase().replace(/_/g, ' ');
+}
+
+function getRequiredResearchTitleForCustomerType(customerType: string): string | undefined {
+  const normalizedTarget = normalizeUnlockValue(customerType);
+  const project = RESEARCH_PROJECTS.find((candidate) =>
+    (candidate.unlocks || []).some((unlock) => {
+      if (unlock.type !== 'contract_type') return false;
+      return normalizeUnlockValue(unlock.value) === normalizedTarget;
+    })
+  );
+
+  return project?.title;
 }
 
 const ContractsTab: React.FC<ContractsTabProps> = ({
@@ -38,6 +65,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
     blockReason?: string;
     customerTypeBreakdown: Record<string, { eligible: number; total: number; avgChance: number }>;
   } | null>(null);
+  const [contractTypeAccess, setContractTypeAccess] = useState<ContractTypeAccessRow[]>([]);
 
   // Filter contracts by status
   const filteredContracts = useMemo(() => {
@@ -98,9 +126,40 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
     }
   };
 
+  const loadContractTypeAccess = async () => {
+    try {
+      const unlocksService = getResearchUpgradeFeature().unlocks;
+      const legacyUnlocks = await unlocksService.getUnlockedItems('contract_type');
+
+      const unlockedSet = new Set<string>([
+        ...legacyUnlocks.map(normalizeUnlockValue),
+        normalizeUnlockValue('Wine Shop') // baseline access
+      ]);
+
+      const rows: ContractTypeAccessRow[] = CUSTOMER_CONTRACT_TYPES.map((customerType) => {
+        const normalized = normalizeUnlockValue(customerType);
+        const unlocked = unlockedSet.has(normalized);
+        const requiredResearchTitle = unlocked ? undefined : getRequiredResearchTitleForCustomerType(customerType);
+
+        return {
+          customerType,
+          unlocked,
+          requiredResearchTitle,
+          requirementLabel: unlocked ? 'Available' : (requiredResearchTitle ? `Requires: ${requiredResearchTitle}` : 'Requires research unlock')
+        };
+      });
+
+      setContractTypeAccess(rows);
+    } catch (error) {
+      console.error('Error loading contract type access:', error);
+      setContractTypeAccess([]);
+    }
+  };
+
   // Load on mount and when contracts change
   useEffect(() => {
     loadContractChance();
+    loadContractTypeAccess();
   }, [contracts.length]);
 
   // Handle assigning wine to contract
@@ -308,6 +367,39 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
             </UnifiedTooltip>
           </div>
         </div>
+      </div>
+
+      {/* Contract Type Access Surface */}
+      <div className="bg-white rounded-lg shadow p-3">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <h3 className="text-sm font-semibold">Contract Type Access</h3>
+            <p className="text-gray-500 text-xs">Visible progression state for contract type unlocks.</p>
+          </div>
+          {contractChanceInfo?.isBlocked && contractChanceInfo.blockReason && (
+            <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+              {contractChanceInfo.blockReason}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {contractTypeAccess.map((row) => (
+            <div key={row.customerType} className={`rounded border px-3 py-2 ${row.unlocked ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-gray-800">{row.customerType}</span>
+                <span className={`px-1.5 py-0.5 rounded ${row.unlocked ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                  {row.unlocked ? 'Unlocked' : 'Locked'}
+                </span>
+              </div>
+              <div className="mt-1 text-xs text-gray-700">{row.requirementLabel}</div>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-2 text-[11px] text-gray-500">
+          Wine Shop contracts are baseline available. Other contract types unlock through research progression.
+        </p>
       </div>
 
       {/* Contract Management */}

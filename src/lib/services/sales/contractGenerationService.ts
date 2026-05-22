@@ -595,7 +595,7 @@ export async function getContractGenerationChance(): Promise<{
       blockReason = `Max pending contracts (${CONTRACT_CONFIG.maxPendingContracts}) reached`;
     } else if (eligibleWithChances.length === 0) {
       isBlocked = true;
-      blockReason = 'No eligible customers (check relationship, prestige, or contract-type research unlocks)';
+      blockReason = 'No customers are currently eligible this tick (check relationship and prestige requirements; Wine Shop remains baseline unlocked)';
     }
     
     return {
