@@ -3,6 +3,7 @@ import { createActivity } from '@/lib/services/activity/activitymanagers/activit
 import { notificationService } from '@/lib/services/core/notificationService';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
 import { applyForLoan } from '@/lib/features/loanLender/services/finance/loanService';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Start a take loan activity

@@ -13,7 +13,7 @@ import { getGameState } from '../core/gameState';
 import { getPendingOrders } from './salesService';
 import { createRelationshipBoost } from './relationshipService';
 import { updateWineOrderStatus } from '../../database/customers/salesDB';
-import { calculateAbsoluteWeeks } from '../../utils/utils';
+import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
 
 
 /**

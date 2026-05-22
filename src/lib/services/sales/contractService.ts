@@ -12,6 +12,7 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { getTasteQualityIndex } from '../wine/winescore/wineScoreCalculation';
+import { formatNumber } from '../../utils/utils';
 
 // ===== CONTRACT VALIDATION =====
 

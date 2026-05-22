@@ -12,6 +12,7 @@ import { getCooperativeMembership, recordCooperativeSale, getCooperativeFloorPri
 import { recordBuyerSale } from '@/lib/services';
 import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';
 import { GrapeVariety } from '../../types/types';
+import { formatNumber } from '../../utils/utils';
 
 // ===== CONSTANTS =====
 

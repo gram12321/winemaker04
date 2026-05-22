@@ -4,6 +4,7 @@ import { createActivity } from './activityManager';
 import { notificationService, addTransaction, calculateLandSearchCost, generateVineyardSearchResults, LandSearchOptions } from '@/lib/services';
 import { TRANSACTION_CATEGORIES } from '@/lib/constants/financeConstants';
 import { calculateLandSearchWork } from '../workcalculators/landSearchWorkCalculator';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Start a land search activity

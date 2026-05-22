@@ -11,6 +11,7 @@ import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getResearchUpgradeFeature } from '../../..';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 import { getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/services';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Start a research activity

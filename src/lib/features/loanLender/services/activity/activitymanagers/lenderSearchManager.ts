@@ -12,6 +12,7 @@ import { calculateLenderAvailability } from '@/lib/features/loanLender/services/
 import { calculateEffectiveInterestRate, calculateOriginationFee, getCurrentCreditRating, getScaledLoanAmountLimit } from '@/lib/features/loanLender/services/finance/loanService';
 import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { calculateTotalAssets } from '@/lib/services/finance/financeService';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Start a lender search activity

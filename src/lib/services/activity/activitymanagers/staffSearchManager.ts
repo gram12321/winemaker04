@@ -13,6 +13,7 @@ import {
   calculateHiringWorkForCandidate, calculateSearchPreview
 } from '../workcalculators/staffSearchWorkCalculator';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { formatNumber } from '@/lib/utils/utils';
 
 /**
  * Generate random staff candidates based on search parameters

@@ -97,7 +97,8 @@ export function getAchievementLevelInfo(level: AchievementLevel): {
  *  - "100 Bottles", "€50,000", "25 Varieties", "10 Years", "95 Score"
  */
 export function getConditionSuffix(conditionType: string, threshold: number): string {
-  const num = formatNumberUtil(threshold);
+  const numericThreshold = Number(threshold);
+  const num = Number.isFinite(numericThreshold) ? formatNumberUtil(numericThreshold) : String(threshold);
 
   switch (conditionType) {
     // Currency based thresholds
@@ -112,7 +113,9 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
     case 'assets_by_year':
     case 'average_hectare_value':
     case 'wine_price_threshold':
-      return formatNumberUtil(num, { currency: true, decimals: 0 });
+      return Number.isFinite(numericThreshold)
+        ? formatNumberUtil(numericThreshold, { currency: true, decimals: 0 })
+        : String(threshold);
 
     // Percentage thresholds
     case 'achievement_completion':

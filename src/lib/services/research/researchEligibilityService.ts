@@ -3,6 +3,7 @@ import { getAllAchievementUnlocks } from '@/lib/database/core/achievementsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { getMaxBuyerLoyaltyLevel, type BuyerLoyaltyLevel } from '@/lib/services';
+import { formatNumber } from '@/lib/utils/utils';
 
 export interface ResearchEligibilityContext {
   currentPrestige: number;
