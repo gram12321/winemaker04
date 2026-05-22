@@ -67,6 +67,35 @@ const BUYER_ECONOMY_VOLATILITY_AMPLITUDE: Record<EconomyPhase, { price: number; 
 const BUYER_YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
 const BUYER_YEAR_LIMIT_CYCLE = [0.94, 1.0, 1.08, 1.03] as const;
 
+const BUYER_SEASON_VOLATILITY_PRESSURE: Record<Season, number> = {
+  Spring: 0.97,
+  Summer: 1.06,
+  Fall: 1.12,
+  Winter: 1.15,
+};
+
+const BUYER_ECONOMY_VOLATILITY_PRESSURE: Record<EconomyPhase, number> = {
+  Crash: 1.26,
+  Recession: 1.14,
+  Stable: 1.0,
+  Expansion: 1.08,
+  Boom: 1.16,
+};
+
+const PRICE_SEASON_THEME: Record<Season, string> = {
+  Spring: 'Spring planting optimism supports premium contracts.',
+  Summer: 'Summer heat stress softens average grape spot prices.',
+  Fall: 'Harvest oversupply pressure weighs on spot grape prices.',
+  Winter: 'Harsh winter logistics raise replacement-value pricing.',
+};
+
+const LIMIT_SEASON_THEME: Record<Season, string> = {
+  Spring: 'Fresh campaign budgets keep intake channels open.',
+  Summer: 'Heat-related handling constraints reduce intake appetite.',
+  Fall: 'Cellar congestion during harvest tightens intake limits.',
+  Winter: 'Off-season replenishment programs increase buyer intake plans.',
+};
+
 export type CountryKey = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
 type BuyerOriginTag = 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
 
@@ -201,35 +230,68 @@ function getYearCycleMultiplier(year: number, cycle: readonly number[]): number 
 
 function getDemandVolatilityMultipliers(
   companyId: string,
-  buyerId: string,
   currentYear: number,
   currentSeason: Season,
   economyPhase: EconomyPhase
-): { price: number; limit: number } {
+): {
+  price: number;
+  limit: number;
+  seasonPressure: number;
+  economyPressure: number;
+  sentimentPriceMultiplier: number;
+  sentimentLimitMultiplier: number;
+  priceReason: string;
+  limitReason: string;
+} {
   const amplitude = BUYER_ECONOMY_VOLATILITY_AMPLITUDE[economyPhase];
   const yearPriceCycle = getYearCycleMultiplier(currentYear, BUYER_YEAR_PRICE_CYCLE);
   const yearLimitCycle = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
+  const seasonPressure = BUYER_SEASON_VOLATILITY_PRESSURE[currentSeason];
+  const economyPressure = BUYER_ECONOMY_VOLATILITY_PRESSURE[economyPhase];
 
-  // Deterministic per company/buyer/year/season so values remain stable inside the same season.
-  const volatilitySeedBase = `${companyId}:${buyerId}:${currentYear}:${currentSeason}:${economyPhase}`;
+  // Deterministic per company/year/season so volatility stays stable for all buyers within the season.
+  const volatilitySeedBase = `${companyId}:${currentYear}:${currentSeason}:${economyPhase}`;
   const priceNoise = seededCenteredUnit(`${volatilitySeedBase}:price`);
   const limitNoise = seededCenteredUnit(`${volatilitySeedBase}:limit`);
-  const priceVolatility = 1 + priceNoise * amplitude.price;
-  const limitVolatility = 1 + limitNoise * amplitude.limit;
+  const sentimentPriceMultiplier = 1 + priceNoise * amplitude.price;
+  const sentimentLimitMultiplier = 1 + limitNoise * amplitude.limit;
+  const priceVolatility = seasonPressure * economyPressure * sentimentPriceMultiplier;
+  const limitVolatility = seasonPressure * economyPressure * sentimentLimitMultiplier;
+  const priceShock = priceNoise >= 0
+    ? 'Buyer sentiment shock favors higher bids this season.'
+    : 'Buyer sentiment shock favors lower bid discipline this season.';
+  const limitShock = limitNoise >= 0
+    ? 'Operational confidence expands planned intake this season.'
+    : 'Operational caution trims planned intake this season.';
+  const priceCycleTheme = yearPriceCycle >= 1
+    ? 'Supply cycle is in a tighter phase, supporting bid strength.'
+    : 'Supply cycle is in a looser phase, easing bid pressure.';
+  const limitCycleTheme = yearLimitCycle >= 1
+    ? 'Cycle timing points to stronger replenishment demand.'
+    : 'Cycle timing points to softer replenishment demand.';
+  const priceReason = `${PRICE_SEASON_THEME[currentSeason]} ${priceCycleTheme} ${priceShock}`;
+  const limitReason = `${LIMIT_SEASON_THEME[currentSeason]} ${limitCycleTheme} ${limitShock}`;
 
   return {
     price: clamp(yearPriceCycle * priceVolatility, 0.7, 1.35),
     limit: clamp(yearLimitCycle * limitVolatility, 0.65, 1.45),
+    seasonPressure,
+    economyPressure,
+    sentimentPriceMultiplier,
+    sentimentLimitMultiplier,
+    priceReason,
+    limitReason,
   };
 }
 
 function getDemandFactorComponents(
   companyId: string,
-  buyerId: string,
   currentYear: number,
   currentSeason: Season,
   economyPhase: EconomyPhase
 ): {
+  volatilitySeason: Season;
+  volatilityEconomyPhase: EconomyPhase;
   seasonPriceMultiplier: number;
   seasonLimitMultiplier: number;
   economyPriceMultiplier: number;
@@ -238,6 +300,12 @@ function getDemandFactorComponents(
   yearCycleLimitMultiplier: number;
   volatilityPriceMultiplier: number;
   volatilityLimitMultiplier: number;
+  volatilitySeasonPressureMultiplier: number;
+  volatilityEconomyPressureMultiplier: number;
+  volatilitySentimentPriceMultiplier: number;
+  volatilitySentimentLimitMultiplier: number;
+  volatilityPriceReason: string;
+  volatilityLimitReason: string;
 } {
   const seasonPriceMultiplier = getSeasonPriceMultiplier(currentSeason);
   const seasonLimitMultiplier = getSeasonLimitMultiplier(currentSeason);
@@ -247,13 +315,14 @@ function getDemandFactorComponents(
   const yearCycleLimitMultiplier = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
   const demandVolatility = getDemandVolatilityMultipliers(
     companyId,
-    buyerId,
     currentYear,
     currentSeason,
     economyPhase
   );
 
   return {
+    volatilitySeason: currentSeason,
+    volatilityEconomyPhase: economyPhase,
     seasonPriceMultiplier,
     seasonLimitMultiplier,
     economyPriceMultiplier,
@@ -262,6 +331,12 @@ function getDemandFactorComponents(
     yearCycleLimitMultiplier,
     volatilityPriceMultiplier: Number((demandVolatility.price / Math.max(0.01, yearCyclePriceMultiplier)).toFixed(3)),
     volatilityLimitMultiplier: Number((demandVolatility.limit / Math.max(0.01, yearCycleLimitMultiplier)).toFixed(3)),
+    volatilitySeasonPressureMultiplier: Number(demandVolatility.seasonPressure.toFixed(3)),
+    volatilityEconomyPressureMultiplier: Number(demandVolatility.economyPressure.toFixed(3)),
+    volatilitySentimentPriceMultiplier: Number(demandVolatility.sentimentPriceMultiplier.toFixed(3)),
+    volatilitySentimentLimitMultiplier: Number(demandVolatility.sentimentLimitMultiplier.toFixed(3)),
+    volatilityPriceReason: demandVolatility.priceReason,
+    volatilityLimitReason: demandVolatility.limitReason,
   };
 }
 
@@ -496,7 +571,6 @@ function rowToBuyer(
 ): GrapeBuyer {
   const demandComponents = getDemandFactorComponents(
     companyId,
-    row.buyer_id,
     currentYear,
     currentSeason,
     economyPhase
@@ -690,7 +764,6 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
   ]);
   const demandComponents = getDemandFactorComponents(
     companyId,
-    BULK_BUYER_ID,
     currentYear,
     currentSeason,
     economyPhase

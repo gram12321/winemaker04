@@ -47,6 +47,28 @@ function isSeasonalGeneratedDescription(description?: string): boolean {
   if (!description) return false;
   return /active for/i.test(description);
 }
+
+function getSeasonVolatilityIcon(season?: string): string {
+  if (season === 'Winter') return '❄';
+  if (season === 'Fall') return '🍂';
+  if (season === 'Summer') return '☀';
+  return '🌱';
+}
+
+function getEconomyVolatilityIcon(phase?: string): string {
+  if (phase === 'Crash') return '📉';
+  if (phase === 'Recession') return '⚠';
+  if (phase === 'Expansion') return '📈';
+  if (phase === 'Boom') return '🚀';
+  return '⚖';
+}
+
+function formatVolatilityDelta(multiplier: number): string {
+  const deltaPercent = (multiplier - 1) * 100;
+  const rounded = Math.round(deltaPercent * 10) / 10;
+  const display = rounded.toFixed(1).replace(/\.0$/, '');
+  return `${rounded >= 0 ? '+' : ''}${display}%`;
+}
 interface SellGrapesModalProps extends DialogProps {
   batch: WineBatch | null;
 }
@@ -325,6 +347,12 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
   const qualityPercent = pricing ? Math.round(pricing.wineScore * 100) : 0;
   const qualityColor = qualityPercent >= 70 ? 'text-green-400' : qualityPercent >= 40 ? 'text-yellow-400' : 'text-red-400';
+  const volatilitySeason = selectedBuyer?.demandFactors?.volatilitySeason;
+  const seasonIcon = getSeasonVolatilityIcon(volatilitySeason);
+  const volatilityEconomyPhase = selectedBuyer?.demandFactors?.volatilityEconomyPhase;
+  const economyIcon = getEconomyVolatilityIcon(volatilityEconomyPhase);
+  const volatilityPrice = selectedBuyer?.demandFactors?.volatilityPriceMultiplier ?? 1;
+  const volatilityLimit = selectedBuyer?.demandFactors?.volatilityLimitMultiplier ?? 1;
 
   return (
     <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
@@ -332,6 +360,38 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
         </DialogHeader>
+
+        {selectedBuyer?.demandFactors && (
+          <div className="mb-3 rounded border border-cyan-800/70 bg-cyan-950/20 p-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-cyan-200 font-medium">Market volatility outlook</span>
+              <span className="inline-flex items-center gap-1 rounded border border-sky-700/70 bg-sky-900/30 px-2 py-1 text-sky-200">
+                <span>{seasonIcon}</span>
+                <span>{volatilitySeason ?? 'Season'}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded border border-indigo-700/70 bg-indigo-900/30 px-2 py-1 text-indigo-200">
+                <span>{economyIcon}</span>
+                <span>{volatilityEconomyPhase ?? 'Economy'}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
+                <span>💶</span>
+                <span>Price {formatVolatilityDelta(volatilityPrice)}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
+                <span>📦</span>
+                <span>Demand {formatVolatilityDelta(volatilityLimit)}</span>
+              </span>
+            </div>
+            <div className="mt-2 space-y-1 text-[11px] text-gray-300">
+              {selectedBuyer.demandFactors.volatilityPriceReason && (
+                <div><span className="text-cyan-200">Price outlook:</span> {selectedBuyer.demandFactors.volatilityPriceReason}</div>
+              )}
+              {selectedBuyer.demandFactors.volatilityLimitReason && (
+                <div><span className="text-amber-200">Demand outlook:</span> {selectedBuyer.demandFactors.volatilityLimitReason}</div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.16fr)_minmax(0,0.92fr)] gap-4 items-start">
           <div className="space-y-3">
@@ -430,22 +490,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                 const hasRelationship = (buyerLoyaltyById[buyer.id]?.loyaltyScore ?? 0) > 0;
                 const loyaltyForBuyer = buyerLoyaltyById[buyer.id] ?? null;
                 const buyerYearlyCap = getBuyerYearlyLoyaltyCap(Math.max(1, loyaltyForBuyer?.consecutiveYears ?? 1), companyValue);
-                const finalPriceDemand = buyer.demandFactors
-                  ? (
-                      buyer.demandFactors.seasonPriceMultiplier
-                      * buyer.demandFactors.economyPriceMultiplier
-                      * buyer.demandFactors.yearCyclePriceMultiplier
-                      * buyer.demandFactors.volatilityPriceMultiplier
-                    )
-                  : 1;
-                const finalLimitDemand = buyer.demandFactors
-                  ? (
-                      buyer.demandFactors.seasonLimitMultiplier
-                      * buyer.demandFactors.economyLimitMultiplier
-                      * buyer.demandFactors.yearCycleLimitMultiplier
-                      * buyer.demandFactors.volatilityLimitMultiplier
-                    )
-                  : 1;
                 const showInlineDescription = Boolean(buyer.description) && !isSeasonalGeneratedDescription(buyer.description);
                 const topBadgeLabel = hasRelationship
                   ? (buyer.originTag === 'Relationship carry-over' ? 'RELATIONSHIP CARRY-OVER • EXISTING' : 'EXISTING RELATIONSHIP')
@@ -522,24 +566,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                           Caps: seasonal {buyer.effectiveSeasonLimitKg !== undefined ? `${buyer.effectiveSeasonLimitKg.toLocaleString()} kg` : 'no hard cap'} • remaining {buyer.remainingSeasonLimitKg !== undefined ? `${buyer.remainingSeasonLimitKg.toLocaleString()} kg` : 'unlimited'} • relationship {Math.max(0, loyaltyForBuyer?.yearLoyaltyPoints ?? 0).toLocaleString()}/{buyerYearlyCap.toLocaleString()}
                         </div>
                       </div>
-                      {buyer.demandFactors && (
-                        <div className="mt-2 border-t border-gray-700 pt-2 text-[11px] text-gray-300">
-                          <UnifiedTooltip
-                            title="Demand Multiplier Breakdown"
-                            content={
-                              <div className="space-y-1">
-                                <div>Price axis: season ×{buyer.demandFactors.seasonPriceMultiplier.toFixed(2)}, economy ×{buyer.demandFactors.economyPriceMultiplier.toFixed(2)}, year-cycle ×{buyer.demandFactors.yearCyclePriceMultiplier.toFixed(2)}, volatility ×{buyer.demandFactors.volatilityPriceMultiplier.toFixed(2)}</div>
-                                <div>Limit axis: season ×{buyer.demandFactors.seasonLimitMultiplier.toFixed(2)}, economy ×{buyer.demandFactors.economyLimitMultiplier.toFixed(2)}, year-cycle ×{buyer.demandFactors.yearCycleLimitMultiplier.toFixed(2)}, volatility ×{buyer.demandFactors.volatilityLimitMultiplier.toFixed(2)}</div>
-                              </div>
-                            }
-                            side="top"
-                          >
-                            <span className="cursor-help text-cyan-300">
-                              Final demand multiplier: price ×{finalPriceDemand.toFixed(2)} | limit ×{finalLimitDemand.toFixed(2)}
-                            </span>
-                          </UnifiedTooltip>
-                        </div>
-                      )}
                     </button>
                     {buyer.id === 'winzergenossenschaft' && (
                       <CooperativeMembershipPanel
@@ -578,6 +604,12 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                   <span>Buyer multiplier</span>
                   <span>×{pricing.buyerMultiplier.toFixed(1)}</span>
                 </div>
+                {selectedBuyer?.demandFactors && (
+                  <div className="flex justify-between text-gray-300">
+                    <span>Volatility modifier</span>
+                    <span>×{volatilityPrice.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-gray-300">
                   <span>Relationship bonus</span>
                   <span>×{(pricing.relationshipMultiplier ?? 1).toFixed(2)}</span>
