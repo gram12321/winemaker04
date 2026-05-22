@@ -1,6 +1,6 @@
 # Automated Test Suites
 
-This folder hosts the executable Vitest suites for Winemaker04. Tests validate simulation logic, service contracts, game mechanics, and selected development tooling.
+This folder hosts the executable automated Vitest suites for Winemaker04. Tests validate simulation logic, service contracts, game mechanics, and selected development tooling.
 
 ## Structure
 
@@ -28,7 +28,7 @@ npm test -- tests/admin/testRunnerParser.test.ts
 npm test -- tests/wine/tasteQualityIndexService.test.ts
 ```
 
-The Admin Test Lab runs the same suite through the development-only `/api/test-run` endpoint using Vitest's JSON reporter. The CLI remains the source of truth.
+The Admin UI also exposes these same automated tests through the development-only `/api/test-run` endpoint using Vitest's JSON reporter. The CLI remains the source of truth.
 
 ## Conventions
 
@@ -50,11 +50,11 @@ When adding a new mutating integration test:
 - avoid sharing state with a developer's active company;
 - document any required environment variables in the test file.
 
-## Admin Test Lab Expectations
+## Admin UI Test Systems
 
-The Admin Test Lab complements this folder; it does not replace it.
+The Admin Dashboard surfaces two related but different systems:
 
-- Regression scenarios call `npm test -- --reporter=json` through Vite middleware.
-- Gameflow scenarios can create companies, vineyards, activities, and wine batches for manual inspection.
+- Automated Tests: shared with this folder, run through Vite middleware via `npm test -- --reporter=json`.
+- Gameflow Lab: separate interactive tooling that can create companies, vineyards, activities, and wine batches for manual inspection.
 - Mutating scenarios must return a run id and cleanup report.
 - Cleanup must work after a page reload by finding durable tags in persisted records.

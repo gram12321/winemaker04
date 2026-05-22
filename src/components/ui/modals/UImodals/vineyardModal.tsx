@@ -604,7 +604,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                             <p className="font-medium mt-2 mb-1 text-green-300">Regional Scaling:</p>
                             <p className="text-xs text-gray-300">Perfect factors (altitudeAspectRate=1) reach the region's maximum price</p>
                             <p className="font-medium mt-2 mb-1 text-green-300">Regional Price Range:</p>
-                            <p className="text-xs text-gray-300">€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare in {vineyard.region}</p>
+                            <p className="text-xs text-gray-300">{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true, decimals: 0, forceDecimals: false })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true, decimals: 0, forceDecimals: false })} per hectare in {vineyard.region}</p>
                             <p className="font-medium mt-2 mb-1 text-purple-300">Global Normalization:</p>
                             <p className="text-xs text-gray-300">Final value is normalized using asymmetrical scaling for the taste quality calculation.</p>
                           </div>
@@ -633,7 +633,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                           triggerClassName="font-mono text-gray-700 cursor-help"
                         >
                           <div className="font-mono text-gray-700 cursor-help">
-                            €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} + {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })} × (€{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })}) = €{formatNumber(vineyard.landValue || 0, { decimals: 0, forceDecimals: false })}
+                            {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true, decimals: 0, forceDecimals: false })} + {formatNumber((factors.altitudeRating + factors.aspectRating) / 2, { decimals: 2, forceDecimals: true })} × ({formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true, decimals: 0, forceDecimals: false })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true, decimals: 0, forceDecimals: false })}) = {formatNumber(vineyard.landValue || 0, { currency: true, decimals: 0, forceDecimals: false })}
                           </div>
                         </UnifiedTooltip>
                       </div>
@@ -643,7 +643,7 @@ const VineyardModal: React.FC<VineyardModalProps> = ({ isOpen, onClose, vineyard
                       <div className="space-y-1">
                         <div className="font-medium text-gray-700 mb-1">Regional Price Range ({vineyard.region}):</div>
                         <div className="font-mono text-gray-600">
-                          €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { decimals: 0, forceDecimals: false })} - €{formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { decimals: 0, forceDecimals: false })} per hectare
+                          {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[0], { currency: true, decimals: 0, forceDecimals: false })} - {formatNumber(getRegionalPriceRange(vineyard.country, vineyard.region)[1], { currency: true, decimals: 0, forceDecimals: false })} per hectare
                         </div>
                       </div>
                       <div className="space-y-1">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Slider } from '@/components/ui';
@@ -27,6 +27,7 @@ import { getGameState } from '@/lib/services/core/gameState';
 import { companyService } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
+import { formatNumber } from '@/lib/utils/utils';
 
 interface SellGrapesModalProps extends DialogProps {
   batch: WineBatch | null;
@@ -88,7 +89,7 @@ const CooperativeMembershipPanel: React.FC<{
       {/* Floor price highlight */}
       {level > 0 && (
         <div className="text-green-300">
-          Floor price: <strong>€{config.floorPricePerKg.toFixed(2)}/kg</strong>
+          Floor price: <strong>{formatNumber(config.floorPricePerKg, { currency: true, decimals: 2 })}/kg</strong>
           {level === 0 && <span className="text-gray-500"> (first sale unlocks floor)</span>}
         </div>
       )}
@@ -105,7 +106,7 @@ const CooperativeMembershipPanel: React.FC<{
         <div className="border-t border-green-900/40 pt-2 text-amber-300">
           {yearsToNext === 0
             ? `Ready to advance to ${nextLevel.name}!`
-            : `${yearsToNext} more consecutive ${yearsToNext === 1 ? 'year' : 'years'} → ${nextLevel.name} (€${nextLevel.floorPricePerKg.toFixed(2)}/kg floor)`
+            : `${yearsToNext} more consecutive ${yearsToNext === 1 ? 'year' : 'years'} → ${nextLevel.name} (${formatNumber(nextLevel.floorPricePerKg, { currency: true, decimals: 2 })}/kg floor)`
           }
         </div>
       )}
@@ -446,7 +447,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             <p className="text-gray-400 font-medium uppercase tracking-wide text-xs mb-2">Price Breakdown</p>
             <div className="flex justify-between text-gray-300">
               <span>Base price</span>
-              <span>€3.00/kg</span>
+              <span>{formatNumber(3, { currency: true, decimals: 2 })}/kg</span>
             </div>
             <div className="flex justify-between text-gray-300">
               <span>Quality ({qualityPercent}%)</span>
@@ -473,12 +474,12 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             </div>
             {pricing.appliedFloor && pricing.effectiveFloorPrice > 0 && (
               <div className="text-xs text-green-400 pt-1">
-                ✓ Cooperative floor applied (€{pricing.effectiveFloorPrice.toFixed(2)}/kg)
+                ✓ Cooperative floor applied ({formatNumber(pricing.effectiveFloorPrice, { currency: true, decimals: 2 })}/kg)
               </div>
             )}
             <div className="flex justify-between font-medium text-white border-t border-gray-600 pt-2 mt-1">
               <span>Price per kg</span>
-              <span>€{pricing.finalPricePerKg.toFixed(2)}</span>
+              <span>{formatNumber(pricing.finalPricePerKg, { currency: true, decimals: 2 })}</span>
             </div>
             <div className="flex justify-between text-gray-300">
               <span>Sale quantity</span>
@@ -486,7 +487,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             </div>
             <div className="flex justify-between font-bold text-amber-400 text-base">
               <span>Total Revenue</span>
-              <span>€{pricing.totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+              <span>{formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 })}</span>
             </div>
             {loyaltyPreview && (
               <div className="mt-2 border-t border-gray-700 pt-2 text-xs text-cyan-300">
@@ -517,7 +518,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             disabled={isSelling || !selectedBuyer || !pricing || exceedsBuyerCap || selectedQuantityKg <= 0}
             className="bg-amber-600 hover:bg-amber-500 text-white"
           >
-            {isSelling ? 'Selling…' : `Sell for €${pricing?.totalRevenue.toLocaleString('de-DE', { maximumFractionDigits: 0 }) ?? '—'}`}
+            {isSelling ? 'Selling…' : `Sell for ${pricing ? formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 }) : '—'}`}
           </Button>
         </DialogFooter>
       </DialogContent>

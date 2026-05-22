@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+﻿import { v4 as uuidv4 } from 'uuid';
 import { Activity, WorkCategory, NotificationCategory, LenderSearchOptions, LoanOffer } from '@/lib/types/types';
 import { getGameState, updateGameState } from '@/lib/services/core/gameState';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
@@ -26,7 +26,7 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
     const currentMoney = gameState.money || 0;
     if (searchCost > 0 && currentMoney < searchCost) {
       await notificationService.addMessage(
-        `Insufficient funds for lender search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
+        `Insufficient funds for lender search. Need ${formatNumber(searchCost, { currency: true, decimals: 2 })}, have ${formatNumber(currentMoney, { currency: true, decimals: 2 })}`,
         'lenderSearchManager.startLenderSearch',
         'Insufficient Funds',
         NotificationCategory.FINANCE_AND_STAFF
@@ -51,7 +51,7 @@ export async function startLenderSearch(options: LenderSearchOptions): Promise<s
       category: WorkCategory.LENDER_SEARCH,
       title,
       totalWork,
-      activityDetails: searchCost > 0 ? `Cost: €${searchCost.toFixed(2)}` : 'Cost: €0 (QuickLoan fast-track)',
+      activityDetails: searchCost > 0 ? `Cost: ${formatNumber(searchCost, { currency: true, decimals: 2 })}` : `Cost: ${formatNumber(0, { currency: true, decimals: 0 })} (QuickLoan fast-track)`,
       params: {
         searchOptions: options,
         searchCost
@@ -219,4 +219,3 @@ export function clearPendingLenderSearchResults(): void {
     pendingLenderSearchResults: undefined
   });
 }
-

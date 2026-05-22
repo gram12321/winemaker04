@@ -630,7 +630,7 @@ const WineCellarTab: React.FC<WineCellarTabProps> = ({
  }
 
  if (newPrice < 0.01) {
- alert('Price must be at least €0.01');
+ alert(`Price must be at least ${formatNumber(0.01, { currency: true, decimals: 2 })}`);
  return;
  }
 

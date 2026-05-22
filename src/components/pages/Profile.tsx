@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLoadingState } from '@/hooks';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter, Badge, Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedTooltip } from '../ui';
 import { User, Building2, Edit, Trash2, RefreshCw, BarChart3 } from 'lucide-react';
@@ -576,7 +576,7 @@ export function Profile({ currentCompany, onCompanySelected, onBackToLogin }: Pr
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Money</span>
-                            <div className="font-medium">€{formatNumber(company.money, { decimals: 0, forceDecimals: true })}</div>
+                            <div className="font-medium">{formatNumber(company.money, { currency: true, decimals: 0 })}</div>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Prestige</span>

@@ -112,7 +112,7 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
     case 'assets_by_year':
     case 'average_hectare_value':
     case 'wine_price_threshold':
-      return `€${num}`;
+      return formatNumberUtil(num, { currency: true, decimals: 0 });
 
     // Percentage thresholds
     case 'achievement_completion':

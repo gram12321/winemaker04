@@ -1,4 +1,4 @@
-import { getGameState } from '../core/gameState';
+﻿import { getGameState } from '../core/gameState';
 import { loadVineyards, saveVineyard } from '../../database/activities/vineyardDB';
 import { calculateGrapeSuitabilityContribution } from '../vineyard/vineyardValueCalc';
 import { vineyardAgePrestigeModifier, calculateAsymmetricalMultiplier, squashNormalizeTail, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -860,9 +860,9 @@ export function getEventDisplayData(event: PrestigeEvent): {
 
     if (event.type === 'company_finance' && metadata.companyNetWorth !== undefined) {
       return {
-        title: `Company Value: €${metadata.companyNetWorth.toLocaleString()}`,
+        title: `Company Value: ${formatNumber(Number(metadata.companyNetWorth ?? 0), { currency: true, decimals: 0 })}`,
         titleBase: 'Company Value',
-        amountText: `€${metadata.companyNetWorth.toLocaleString()}`,
+        amountText: `${formatNumber(Number(metadata.companyNetWorth ?? 0), { currency: true, decimals: 0 })}`,
         calculationData: {
           type: 'company_value',
           companyValue: metadata.companyNetWorth,
@@ -884,7 +884,7 @@ export function getEventDisplayData(event: PrestigeEvent): {
         title: `Cellar Collection: ${vintageCount} aged vintage${vintageCount !== 1 ? 's' : ''} (${totalBottles} bottles)`,
         titleBase: 'Cellar Collection',
         amountText: `${vintageCount} vintage${vintageCount !== 1 ? 's' : ''}, avg ${averageAge.toFixed(1)} years`,
-        displayInfo: `Total: ${totalBottles} bottles • Value: €${totalValue.toLocaleString()} • Avg Age: ${averageAge.toFixed(1)} years • Oldest: ${oldestAge.toFixed(1)} years`,
+        displayInfo: `Total: ${totalBottles} bottles • Value: ${formatNumber(Number(totalValue), { currency: true, decimals: 0 })} • Avg Age: ${averageAge.toFixed(1)} years • Oldest: ${oldestAge.toFixed(1)} years`,
       };
     }
 
@@ -1232,5 +1232,3 @@ export async function addResearchPrestigeEvent(
 
   triggerGameUpdate();
 }
-
-

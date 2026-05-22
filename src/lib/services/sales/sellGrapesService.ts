@@ -1,4 +1,4 @@
-import { WineBatch } from '../../types/types';
+﻿import { WineBatch } from '../../types/types';
 import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -215,7 +215,7 @@ export async function sellGrapes(
 
   // Notify player
   await notificationService.addMessage(
-    `Sold ${quantityKg} kg of ${batch.grape} to ${buyer.name} for €${pricing.totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+    `Sold ${quantityKg} kg of ${batch.grape} to ${buyer.name} for ${formatNumber(pricing.totalRevenue, { currency: true, decimals: 0 })}`,
     'sellGrapesService.sellGrapes',
     'Grape Sale',
     NotificationCategory.WINEMAKING_PROCESS

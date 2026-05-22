@@ -1,4 +1,4 @@
-import { Activity, WorkCategory, NotificationCategory, LoanOffer } from '@/lib/types/types';
+﻿import { Activity, WorkCategory, NotificationCategory, LoanOffer } from '@/lib/types/types';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService } from '@/lib/services/core/notificationService';
 import { calculateTakeLoanWork } from '@/lib/services/activity/workcalculators/takeLoanWorkCalculator';
@@ -22,7 +22,7 @@ export async function startTakeLoan(offer: LoanOffer, isAdjusted: boolean = fals
       category: WorkCategory.TAKE_LOAN,
       title,
       totalWork,
-      activityDetails: `Amount: €${offer.principalAmount.toFixed(2)}, ${Math.round(offer.durationSeasons / 4)} years${isAdjusted ? ' (adjusted)' : ''}`,
+      activityDetails: `Amount: ${formatNumber(offer.principalAmount, { currency: true, decimals: 2 })}, ${Math.round(offer.durationSeasons / 4)} years${isAdjusted ? ' (adjusted)' : ''}`,
       params: {
         offer,
         isAdjusted
@@ -60,7 +60,7 @@ export async function completeTakeLoan(activity: Activity): Promise<void> {
     );
 
     await notificationService.addMessage(
-      `Loan from ${offer.lender.name} successfully processed! €${offer.principalAmount.toFixed(2)} added to your account.`,
+      `Loan from ${offer.lender.name} successfully processed! ${formatNumber(offer.principalAmount, { currency: true, decimals: 2 })} added to your account.`,
       'takeLoanManager.completeTakeLoan',
       'Loan Processed',
       NotificationCategory.FINANCE_AND_STAFF
@@ -75,4 +75,3 @@ export async function completeTakeLoan(activity: Activity): Promise<void> {
     );
   }
 }
-

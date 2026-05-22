@@ -31,8 +31,8 @@ npm run build
 | Types | `src/lib/types/` | Shared TypeScript domain and UI interfaces. |
 | Constants | `src/lib/constants/` | Grapes, vineyards, economy, staff, wine features, taste labels. |
 | Wine structure | `src/lib/wineStructure/` | Structure index calculations, ranges, rules, and types. |
-| Tests | `tests/` | Vitest coverage for services and gameplay calculations. |
-| Admin Test Lab | `src/components/pages/admin/TestLabPage.tsx`, `src/lib/services/admin/testLab/`, `server/` | Dev-only gameflow setup UI, fixture orchestration, cleanup, and structured Vitest runner endpoint. |
+| Automated Tests | `tests/` | Vitest coverage for services and gameplay calculations. |
+| Admin Test Systems | `src/components/pages/AdminDashboard.tsx`, `src/components/pages/admin/TestLabPage.tsx`, `src/lib/services/admin/testLab/`, `server/` | Dev-only UI that separates the shared automated suite from the separate interactive Gameflow Lab. |
 | Migrations | `migrations/` | SQL used for database updates. |
 
 ## Architecture Rules
@@ -77,12 +77,13 @@ The app uses Supabase. Local environment variables live in `.env.local`, which i
 
 Apply database changes to the development database first, then update the appropriate SQL file under `migrations/` for staging or deployment workflows.
 
-## Admin Test Lab
+## Admin Test Systems
 
-The active test UI now lives in the Admin Dashboard `Tests` tab and is development-only.
+The active test UI now lives in the Admin Dashboard `Test Systems` tab and is development-only.
 
 - The Admin Dashboard menu entry is shown only on `localhost`, `127.0.0.1`, or `::1` while running in Vite development mode.
-- The Test Lab can run the current Vitest suite through `/api/test-run` and can create tagged gameflow fixtures for manual inspection.
+- Automated Tests run the same Vitest suite as the `tests/` folder through `/api/test-run`.
+- Gameflow Lab creates tagged gameflow fixtures for manual inspection and cleanup.
 - Fixture cleanup is based on durable `testlab_...` run ids so cleanup still works after reloads.
 - `test-viewer/` is legacy reference material, not the primary testing surface.
 

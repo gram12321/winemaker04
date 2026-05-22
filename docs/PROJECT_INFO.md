@@ -16,17 +16,18 @@
 | Staff/vineyard cap enforcement | `src/components/ui/modals/activitymodals/HireStaffModal.tsx`, `src/components/ui/modals/activitymodals/LandSearchOptionsModal.tsx` | Applies unlocked cap limits. |
 | Contract channel enforcement | `src/lib/services/sales/contractGenerationService.ts` | Filters eligible customer contract types by research unlocks. |
 
-## Admin Test Lab Key Files (2026-05-22)
+## Admin Test Systems Key Files (2026-05-22)
 
 | Area | Path | Notes |
 |---|---|---|
-| Admin Test Lab UI | `src/components/pages/admin/TestLabPage.tsx` | Active Admin Dashboard `Tests` tab with scenario picker, parameter form, recent runs, and result views. |
+| Admin Dashboard test surface | `src/components/pages/AdminDashboard.tsx` | Development-only `Test Systems` tab that exposes both the shared automated suite and the separate Gameflow Lab shortcuts. |
+| Admin Test Lab UI | `src/components/pages/admin/TestLabPage.tsx` | Active Admin Dashboard surface with separate `Automated Tests` and `Gameflow Lab` sections, recent runs, and result views. |
 | Scenario registry | `src/lib/services/admin/testLab/testLabScenarios.ts` | Typed scenario definitions and parameter metadata. |
-| Scenario runner | `src/lib/services/admin/testLab/testLabRunner.ts` | Normalizes params, runs regression or fixture scenarios, and shapes result payloads. |
+| Scenario runner | `src/lib/services/admin/testLab/testLabRunner.ts` | Normalizes params, runs the shared automated suite or separate fixture scenarios, and shapes result payloads. |
 | Fixture orchestration | `src/lib/services/admin/testLab/testLabFixtureService.ts` | Creates tagged companies, vineyards, batches, and bottling states without waiting for normal gameflow timing. |
 | Cleanup | `src/lib/services/admin/testLab/testLabCleanupService.ts` | Deletes tagged records by durable `testlab_...` run id. |
 | Browser gate | `src/lib/services/admin/testLab/devAdminGate.ts` | Hides Admin/Test Lab UI outside dev loopback hosts. |
-| Vite middleware | `server/test-api.ts`, `server/test-runner.ts`, `server/test-runner-parser.ts`, `server/devAdminGate.ts` | Structured Vitest runner and loopback-only endpoint protection. |
+| Automated test bridge | `server/test-api.ts`, `server/test-runner.ts`, `server/test-runner-parser.ts`, `server/devAdminGate.ts` | Structured Vitest runner and loopback-only endpoint protection for the automated suite shared with `tests/`. |
 
 ```
 winemaker04/
@@ -417,7 +418,7 @@ winemaker04/
 │           ├── toast.ts (171 lines)           # Toast notification utilities
 │           └── utils.ts (519 lines)           # General utilities
 │
-├── tests/                          # Vitest suites plus Admin Test Lab parser/run-id coverage
+├── tests/                          # Source-of-truth automated Vitest suites plus Admin Test Lab parser/run-id coverage
 ├── test-viewer/                    # Legacy standalone test viewer reference files
 ├── server/                         # Dev-only Vite middleware, loopback gate, and Vitest runner helpers
 └── node_modules/                   # Dependencies (not tracked in git)

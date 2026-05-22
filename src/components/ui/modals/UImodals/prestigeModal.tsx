@@ -180,12 +180,12 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
             <div className="space-y-2">
               <TooltipRow
                 label="Company Value:"
-                value={`€${formatNumber(calculationData.companyValue, { smartDecimals: true })}`}
+                value={formatNumber(calculationData.companyValue, { currency: true, smartDecimals: true })}
                 valueRating={getRatingForRange(calculationData.companyValue / 1000000, 0, 1000, 'exponential')}
               />
               <TooltipRow
                 label="Company Scaling Value:"
-                value={`€${formatNumber(calculationData.maxLandValue, { smartDecimals: true })}`}
+                value={formatNumber(calculationData.maxLandValue, { currency: true, smartDecimals: true })}
               />
               <TooltipRow
                 label="Company Prestige Base:"
@@ -209,7 +209,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
               />
               <TooltipRow
                 label="Land Value:"
-                value={`€${formatNumber(calculationData.landValuePerHa, { smartDecimals: true })}/ha`}
+                value={`${formatNumber(calculationData.landValuePerHa, { currency: true, smartDecimals: true })}/ha`}
                 valueRating={getRatingForRange(calculationData.landValuePerHa, 0, 1000000, 'exponential')}
               />
               <TooltipRow
@@ -625,7 +625,7 @@ const PrestigeModal: React.FC<PrestigeModalProps> = ({
                                 />
                                 {saleValue > 0 && (
                                   <div className="ml-4 text-xs text-gray-400">
-                                    Sale: €{formatNumber(saleValue, { smartDecimals: true })} ({saleVolume} bottles)
+                                    Sale: {formatNumber(saleValue, { currency: true, smartDecimals: true })} ({saleVolume} bottles)
                                   </div>
                                 )}
                               </div>

@@ -302,7 +302,7 @@ export function IncomeBalanceView({ period, filters }: IncomeBalanceViewProps) {
                 )}
               </>
             ) : (
-              <DataRow label="No Active Loans" value="€0" valueClass="text-gray-500" />
+              <DataRow label="No Active Loans" value={formatNumber(0, { currency: true, decimals: 0 })} valueClass="text-gray-500" />
             )}
           </FinancialSection>
 

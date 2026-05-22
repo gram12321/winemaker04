@@ -1,4 +1,4 @@
-// Wage Service
+﻿// Wage Service
 // Centralized wage calculation, normalization, and color coding utilities
 
 import { Staff, StaffSkills } from '@/lib/types/types';
@@ -149,7 +149,7 @@ export function calculateTotalYearlyWages(staff: { wage: number }[]): number {
  */
 export function formatWageWithColor(wage: number, period: string = '', wagePeriod: 'weekly' | 'seasonal' | 'annual' = 'weekly'): { text: string; colorClass: string } {
   return {
-    text: `€${wage.toLocaleString()}${period}`,
+    text: `${formatNumber(wage, { currency: true, decimals: 0 })}${period}`,
     colorClass: getWageColorClass(wage, wagePeriod)
   };
 }
@@ -222,7 +222,7 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
     const season = gameState.season || 'Spring';
 
     if (currentMoney < totalWages) {
-      const insufficientFundsMessage = `Insufficient funds for staff wages! Need €${totalWages.toFixed(2)}, have €${currentMoney.toFixed(2)}`;
+      const insufficientFundsMessage = `Insufficient funds for staff wages! Need ${formatNumber(totalWages, { currency: true, decimals: 2 })}, have ${formatNumber(currentMoney, { currency: true, decimals: 2 })}`;
 
       if (!skipNotification) {
         await notificationService.addMessage(
@@ -244,7 +244,7 @@ export async function processSeasonalWages(staff: Staff[], skipNotification: boo
     );
 
     // Prepare notification about wage payment
-    const message = `Paid €${formatNumber(totalWages)} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`;
+    const message = `Paid ${formatNumber(totalWages, { currency: true, decimals: 0 })} in ${season} wages to ${staff.length} staff member${staff.length > 1 ? 's' : ''}`;
 
     if (skipNotification) {
       return message;

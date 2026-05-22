@@ -19,6 +19,7 @@ import {
   FAVORITE_GRAPE_SECONDARY_BONUS,
   GRAPE_SALE_PRESTIGE_MAX_BONUS,
 } from '@/lib/services/sales/sellGrapesService';
+import { formatNumber } from '@/lib/utils/utils';
 
 const COMPANY_VALUE_SAMPLES = [100000, 1000000, 10000000];
 const STREAK_SAMPLES = [1, 2, 3, 4, 5];
@@ -77,7 +78,7 @@ export function GrapeBuyersTab() {
               <tr className="border-b">
                 <th className="py-1 pr-2">Consecutive Years</th>
                 {COMPANY_VALUE_SAMPLES.map((value) => (
-                  <th key={value} className="py-1 pr-2">Company Value €{value.toLocaleString()}</th>
+                  <th key={value} className="py-1 pr-2">Company Value {formatNumber(value, { currency: true, decimals: 0 })}</th>
                 ))}
               </tr>
             </thead>

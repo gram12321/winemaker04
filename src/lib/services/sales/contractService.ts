@@ -1,4 +1,4 @@
-// Contract fulfillment service - handles contract fulfillment, rejection, and expiration
+﻿// Contract fulfillment service - handles contract fulfillment, rejection, and expiration
 import { WineContract, WineBatch, ContractRequirement, GameDate, Vineyard } from '../../types/types';
 import { getContractById, updateContractStatus, getPendingContracts, updateContractProgress } from '../../database/sales/contractDB';
 import { getWineBatchById, saveWineBatch } from '../../database/activities/inventoryDB';
@@ -107,7 +107,7 @@ async function validateRequirement(wine: WineBatch, requirement: ContractRequire
       if (vineyardForLandValue.landValue < requirement.value) {
         return {
           isValid: false,
-          reason: `Land Value €${vineyardForLandValue.landValue.toLocaleString()}/ha < required €${requirement.value.toLocaleString()}/ha`
+          reason: `Land Value ${formatNumber(vineyardForLandValue.landValue, { currency: true, decimals: 0 })}/ha < required ${formatNumber(requirement.value, { currency: true, decimals: 0 })}/ha`
         };
       }
       return { isValid: true, reason: '' };
@@ -424,7 +424,7 @@ export async function fulfillContract(
       });
       
       await notificationService.addMessage(
-        `Contract fulfilled for ${contract.customerName}: €${revenue.toFixed(2)}`,
+        `Contract fulfilled for ${contract.customerName}: ${formatNumber(revenue, { currency: true, decimals: 2 })}`,
         'contractService.fulfillContract',
         'Contract Fulfilled',
         NotificationCategory.SALES_ORDERS
@@ -582,4 +582,3 @@ function isDateAfter(date1: GameDate, date2: GameDate): boolean {
   
   return date1.week > date2.week;
 }
-

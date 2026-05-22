@@ -1,4 +1,4 @@
-// Sales order orchestration service - coordinates sophisticated customer acquisition and multiple order generation
+﻿// Sales order orchestration service - coordinates sophisticated customer acquisition and multiple order generation
 import { WineOrder, Vineyard, NotificationCategory, EconomyPhase } from '../../types/types';
 import { generateCustomer } from './generateCustomer';
 import { generateOrder } from './generateOrder';
@@ -133,7 +133,7 @@ export async function generateSophisticatedWineOrders(): Promise<{
         );
       } else {
         await notificationService.addMessage(
-          `${customer.name} from ${customer.country} placed ${orders.length} orders worth €${totalValue.toFixed(2)}`,
+          `${customer.name} from ${customer.country} placed ${orders.length} orders worth ${formatNumber(totalValue, { currency: true, decimals: 2 })}`,
           'salesOrderService.generateOrdersForCustomer',
           'New Orders',
           NotificationCategory.SALES_ORDERS
@@ -217,4 +217,3 @@ export async function expireOldOrders(): Promise<number> {
     return 0;
   }
 }
-

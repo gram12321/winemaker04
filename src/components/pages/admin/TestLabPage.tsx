@@ -98,16 +98,27 @@ const clampAltitudeToRegion = (altitude: number, country: string, region: string
 
 export default function TestLabPage() {
   const scenarios = useMemo(() => getTestLabScenarios(), []);
+  const regressionScenario = useMemo(
+    () => scenarios.find(scenario => scenario.id === 'regression.full-suite') || null,
+    [scenarios]
+  );
+  const labScenarios = useMemo(
+    () => scenarios.filter(scenario => scenario.id !== 'regression.full-suite'),
+    [scenarios]
+  );
   const groupedScenarios = useMemo(() => {
-    return scenarios.reduce<Record<string, TestLabScenarioDefinition[]>>((groups, scenario) => {
+    return labScenarios.reduce<Record<string, TestLabScenarioDefinition[]>>((groups, scenario) => {
       groups[scenario.group] = [...(groups[scenario.group] || []), scenario];
       return groups;
     }, {});
-  }, [scenarios]);
-  const [selectedScenarioId, setSelectedScenarioId] = useState(scenarios[0]?.id || '');
-  const selectedScenario = scenarios.find(scenario => scenario.id === selectedScenarioId) || scenarios[0];
+  }, [labScenarios]);
+  const [selectedScenarioId, setSelectedScenarioId] = useState(labScenarios[0]?.id || '');
+  const selectedScenario = labScenarios.find(scenario => scenario.id === selectedScenarioId) || labScenarios[0];
   const [params, setParams] = useState<Record<string, string | number | boolean>>(
     selectedScenario ? buildInitialParams(selectedScenario) : {}
+  );
+  const [automatedTarget, setAutomatedTarget] = useState(
+    regressionScenario?.defaultParams.target ? String(regressionScenario.defaultParams.target) : ''
   );
   const [result, setResult] = useState<TestLabScenarioResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
@@ -153,11 +164,13 @@ export default function TestLabPage() {
     rememberRun(scenarioResult);
   });
 
-  const runFullRegression = () => withLoading(async () => {
+  const runAutomatedSuite = (mode: TestLabRunMode = 'run') => withLoading(async () => {
+    if (!regressionScenario) return;
+
     const scenarioResult = await runTestLabScenario({
       scenarioId: 'regression.full-suite',
-      mode: 'run',
-      params: { target: '' }
+      mode,
+      params: { target: automatedTarget }
     });
     setResult(scenarioResult);
     rememberRun(scenarioResult);
@@ -315,21 +328,71 @@ export default function TestLabPage() {
           <ShieldCheck className="mt-0.5 h-4 w-4 text-green-700" />
           <div>
             <p className="text-sm font-semibold text-green-900">Development localhost mode</p>
-            <p className="text-xs text-green-800">Scenario writes are tagged with durable run ids and can be cleaned up after reload.</p>
+            <p className="text-xs text-green-800">Automated Tests reuse the same Vitest suite as `tests/`. Gameflow Lab scenarios create tagged fixture data for manual inspection and cleanup.</p>
           </div>
         </div>
-        <Button onClick={runFullRegression} disabled={isLoading} size="sm" className="gap-2">
-          <TestTube2 className="h-4 w-4" />
-          Run Regression Suite
-        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Automated Tests</CardTitle>
+            <CardDescription>
+              Shared with the `tests/` folder. This runs the same Vitest suite through `/api/test-run`.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Gameflow Lab</CardTitle>
+            <CardDescription>
+              Separate interactive tooling for creating companies, vineyards, activities, and wine states without waiting for natural ticks.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
 
       <Tabs defaultValue="scenarios" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
+          <TabsTrigger value="automated">Automated Tests</TabsTrigger>
+          <TabsTrigger value="scenarios">Gameflow Lab</TabsTrigger>
           <TabsTrigger value="recent">Recent Runs</TabsTrigger>
           <TabsTrigger value="result">Result</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="automated">
+          <Card>
+            <CardHeader>
+              <CardTitle>Automated Test Suite</CardTitle>
+              <CardDescription>
+                Runs the same Vitest files discovered under `tests/**/*.test.ts`. The CLI remains the source of truth; this page is a development UI wrapper around that suite.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+                <div className="space-y-1.5">
+                  <Label htmlFor="test-lab-automated-target" className="text-xs">Target test file</Label>
+                  <Input
+                    id="test-lab-automated-target"
+                    value={automatedTarget}
+                    onChange={(event) => setAutomatedTarget(event.target.value)}
+                    placeholder="tests/admin/testRunnerParser.test.ts"
+                  />
+                </div>
+                <Button onClick={() => runAutomatedSuite('run')} disabled={isLoading} className="gap-2">
+                  <TestTube2 className="h-4 w-4" />
+                  Run Suite
+                </Button>
+                <Button onClick={() => runAutomatedSuite('dryRun')} disabled={isLoading} variant="outline">
+                  Dry Run
+                </Button>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                Use this when you want the current automated suite totals inside the Admin UI. Use Gameflow Lab when you need to create a specific in-game state and inspect the result manually.
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="scenarios" className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
           <div className="space-y-3">

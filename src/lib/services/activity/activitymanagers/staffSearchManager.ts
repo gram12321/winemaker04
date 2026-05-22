@@ -1,4 +1,4 @@
-import { Staff, Activity, WorkCategory } from '@/lib/types/types';
+﻿import { Staff, Activity, WorkCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../../core/gameState';
 import { createActivity } from './activityManager';
 import { addStaff, createStaff, getRandomFirstName, getRandomLastName, getRandomNationality } from '../../user/staffService';
@@ -56,7 +56,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
     const currentMoney = gameState.money || 0;
     if (currentMoney < searchCost) {
       await notificationService.addMessage(
-        `Insufficient funds for staff search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
+        `Insufficient funds for staff search. Need ${formatNumber(searchCost, { currency: true, decimals: 2 })}, have ${formatNumber(currentMoney, { currency: true, decimals: 2 })}`,
         'staffSearchManager.startStaffSearch',
         'Insufficient Funds',
         NotificationCategory.FINANCE_AND_STAFF
@@ -78,7 +78,7 @@ export async function startStaffSearch(options: StaffSearchOptions): Promise<str
       category: WorkCategory.STAFF_SEARCH,
       title: 'Search Staff',
       totalWork,
-      activityDetails: `Cost: €${searchCost.toFixed(2)}`,
+      activityDetails: `Cost: ${formatNumber(searchCost, { currency: true, decimals: 2 })}`,
       params: {
         searchOptions: options,
         searchCost,
@@ -145,7 +145,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
     const currentMoney = gameState.money || 0;
     if (currentMoney < candidate.wage) {
       await notificationService.addMessage(
-        `Insufficient funds to hire ${candidate.name}. Need €${candidate.wage.toFixed(2)} for first month's wage.`,
+        `Insufficient funds to hire ${candidate.name}. Need ${formatNumber(candidate.wage, { currency: true, decimals: 2 })} for first month's wage.`,
         'staffSearchManager.startHiringProcess',
         'Insufficient Funds',
         NotificationCategory.FINANCE_AND_STAFF
@@ -175,7 +175,7 @@ export async function startHiringProcess(candidate: Staff): Promise<string | nul
       category: WorkCategory.STAFF_HIRING,
       title: `Hiring: ${candidate.name}`,
       totalWork: hiringWork,
-      activityDetails: `First month's wage: €${candidate.wage.toFixed(2)}`,
+      activityDetails: `First month's wage: ${formatNumber(candidate.wage, { currency: true, decimals: 2 })}`,
       params: {
         candidateData: candidate,
         hiringCost: candidate.wage
@@ -227,7 +227,7 @@ export async function completeHiringProcess(activity: Activity): Promise<void> {
       : '';
 
     await notificationService.addMessage(
-      `${candidateData.name} has joined your winery${specText}! Monthly wage: €${candidateData.wage.toFixed(2)}`,
+      `${candidateData.name} has joined your winery${specText}! Monthly wage: ${formatNumber(candidateData.wage, { currency: true, decimals: 2 })}`,
       'staffSearchManager.completeHiringProcess',
       'Staff Hired',
       NotificationCategory.STAFF_MANAGEMENT

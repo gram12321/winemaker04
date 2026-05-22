@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { RESEARCH_PROJECTS, RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER, RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER, type UnlockType } from '@/lib/constants/researchConstants';
 import { calculateResearchCost, calculateResearchWork } from '@/lib/services/activity/workcalculators/researchWorkCalculator';
+import { formatNumber } from '@/lib/utils/utils';
 
 interface CostWorkRow {
   id: string;
@@ -194,9 +195,9 @@ export function ResearchTab() {
             <tbody>
               <tr className="border-b"><td className="py-1 pr-2">Total projects</td><td className="py-1 pr-2">{data.rows.length}</td></tr>
               <tr className="border-b"><td className="py-1 pr-2">Projects with gates (prestige or prerequisites)</td><td className="py-1 pr-2">{data.gatedProjects}</td></tr>
-              <tr className="border-b"><td className="py-1 pr-2">Average cost</td><td className="py-1 pr-2">€{Math.round(data.avgCost).toLocaleString()}</td></tr>
+              <tr className="border-b"><td className="py-1 pr-2">Average cost</td><td className="py-1 pr-2">{formatNumber(Math.round(data.avgCost), { currency: true, decimals: 0 })}</td></tr>
               <tr className="border-b"><td className="py-1 pr-2">Average total work</td><td className="py-1 pr-2">{Math.round(data.avgWork).toLocaleString()} units</td></tr>
-              <tr className="border-b"><td className="py-1 pr-2">Cost range</td><td className="py-1 pr-2">€{data.minCost.toLocaleString()} - €{data.maxCost.toLocaleString()}</td></tr>
+              <tr className="border-b"><td className="py-1 pr-2">Cost range</td><td className="py-1 pr-2">{formatNumber(data.minCost, { currency: true, decimals: 0 })} - {formatNumber(data.maxCost, { currency: true, decimals: 0 })}</td></tr>
               <tr className="border-b"><td className="py-1 pr-2">Work range</td><td className="py-1 pr-2">{data.minWork.toLocaleString()} - {data.maxWork.toLocaleString()} units</td></tr>
             </tbody>
           </table>
@@ -275,7 +276,7 @@ export function ResearchTab() {
                   <tr key={project.id} className="border-b">
                     <td className="py-1 pr-2">{project.title}</td>
                     <td className="py-1 pr-2">{row.complexity}</td>
-                    <td className="py-1 pr-2">€{row.cost.toLocaleString()}</td>
+                    <td className="py-1 pr-2">{formatNumber(row.cost, { currency: true, decimals: 0 })}</td>
                     <td className="py-1 pr-2">{row.work.toLocaleString()}</td>
                   </tr>
                 );
@@ -388,7 +389,7 @@ export function ResearchTab() {
                   <td className="py-1 pr-2">{row.title}</td>
                   <td className="py-1 pr-2">{row.category}</td>
                   <td className="py-1 pr-2">{row.complexity}</td>
-                  <td className="py-1 pr-2">€{row.cost.toLocaleString()}</td>
+                  <td className="py-1 pr-2">{formatNumber(row.cost, { currency: true, decimals: 0 })}</td>
                   <td className="py-1 pr-2">{row.work.toLocaleString()}</td>
                   <td className="py-1 pr-2">{row.hasPrestigeGate || row.hasPrerequisites ? 'Yes' : 'No'}</td>
                 </tr>
@@ -409,10 +410,10 @@ export function ResearchTab() {
                 <tr className="border-b"><td className="py-1 pr-2">Project ID</td><td className="py-1 pr-2">{selectedProject.id}</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Category</td><td className="py-1 pr-2">{selectedRow.category}</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Complexity</td><td className="py-1 pr-2">{selectedRow.complexity}</td></tr>
-                <tr className="border-b"><td className="py-1 pr-2">Cost</td><td className="py-1 pr-2">€{selectedRow.cost.toLocaleString()}</td></tr>
+                <tr className="border-b"><td className="py-1 pr-2">Cost</td><td className="py-1 pr-2">{formatNumber(selectedRow.cost, { currency: true, decimals: 0 })}</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Total Work</td><td className="py-1 pr-2">{selectedRow.work.toLocaleString()} units</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Prestige reward</td><td className="py-1 pr-2">{selectedProject.prestigeReward ?? 0}</td></tr>
-                <tr className="border-b"><td className="py-1 pr-2">Reward amount</td><td className="py-1 pr-2">{typeof selectedProject.rewardAmount === 'number' ? `€${selectedProject.rewardAmount.toLocaleString()}` : 'none'}</td></tr>
+                <tr className="border-b"><td className="py-1 pr-2">Reward amount</td><td className="py-1 pr-2">{typeof selectedProject.rewardAmount === 'number' ? formatNumber(selectedProject.rewardAmount, { currency: true, decimals: 0 }) : 'none'}</td></tr>
               </tbody>
             </table>
           </div>
@@ -427,7 +428,7 @@ export function ResearchTab() {
               </thead>
               <tbody>
                 <tr className="border-b"><td className="py-1 pr-2">Required prestige</td><td className="py-1 pr-2">{selectedProject.requiredPrestige ?? 'none'}</td></tr>
-                <tr className="border-b"><td className="py-1 pr-2">Required company value</td><td className="py-1 pr-2">{typeof selectedProject.requiredCompanyValue === 'number' ? `€${selectedProject.requiredCompanyValue.toLocaleString()}` : 'none'}</td></tr>
+                <tr className="border-b"><td className="py-1 pr-2">Required company value</td><td className="py-1 pr-2">{typeof selectedProject.requiredCompanyValue === 'number' ? formatNumber(selectedProject.requiredCompanyValue, { currency: true, decimals: 0 }) : 'none'}</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Required buyer loyalty level</td><td className="py-1 pr-2">{selectedProject.requiredBuyerLoyaltyLevel ?? 'none'}</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Prerequisites</td><td className="py-1 pr-2">{selectedProject.prerequisites?.length ? selectedProject.prerequisites.join(', ') : 'none'}</td></tr>
                 <tr className="border-b"><td className="py-1 pr-2">Required achievements</td><td className="py-1 pr-2">{selectedProject.requiredAchievementIds?.length ? selectedProject.requiredAchievementIds.join(', ') : 'none'}</td></tr>

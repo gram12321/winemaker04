@@ -1,4 +1,4 @@
-import { type ResearchProject } from '@/lib/constants/researchConstants';
+﻿import { type ResearchProject } from '@/lib/constants/researchConstants';
 import { getAllAchievementUnlocks } from '@/lib/database/core/achievementsDB';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
@@ -50,7 +50,7 @@ export function getResearchRequirementReasons(project: ResearchProject, context:
   }
 
   if (project.requiredCompanyValue !== undefined && context.companyValue < project.requiredCompanyValue) {
-    reasons.push(`Requires company value €${Math.floor(project.requiredCompanyValue).toLocaleString()} (you have €${Math.floor(context.companyValue).toLocaleString()})`);
+    reasons.push(`Requires company value ${formatNumber(Math.floor(project.requiredCompanyValue), { currency: true, decimals: 0 })} (you have ${formatNumber(Math.floor(context.companyValue), { currency: true, decimals: 0 })})`);
   }
 
   if (project.requiredBuyerLoyaltyLevel !== undefined && context.maxBuyerLoyaltyLevel < project.requiredBuyerLoyaltyLevel) {

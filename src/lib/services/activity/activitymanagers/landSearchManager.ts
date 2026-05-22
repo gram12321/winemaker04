@@ -1,4 +1,4 @@
-import { Activity, WorkCategory, NotificationCategory } from '@/lib/types/types';
+﻿import { Activity, WorkCategory, NotificationCategory } from '@/lib/types/types';
 import { getGameState, updateGameState } from '../../core/gameState';
 import { createActivity } from './activityManager';
 import { notificationService, addTransaction, calculateLandSearchCost, generateVineyardSearchResults, LandSearchOptions } from '@/lib/services';
@@ -18,7 +18,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
     const currentMoney = gameState.money || 0;
     if (currentMoney < searchCost) {
       await notificationService.addMessage(
-        `Insufficient funds for land search. Need €${searchCost.toFixed(2)}, have €${currentMoney.toFixed(2)}`,
+        `Insufficient funds for land search. Need ${formatNumber(searchCost, { currency: true, decimals: 2 })}, have ${formatNumber(currentMoney, { currency: true, decimals: 2 })}`,
         'landSearchManager.startLandSearch',
         'Insufficient Funds',
         NotificationCategory.FINANCE_AND_STAFF
@@ -41,7 +41,7 @@ export async function startLandSearch(options: LandSearchOptions): Promise<strin
       category: WorkCategory.LAND_SEARCH,
       title,
       totalWork,
-      activityDetails: `Cost: €${searchCost.toFixed(2)}`,
+      activityDetails: `Cost: ${formatNumber(searchCost, { currency: true, decimals: 2 })}`,
       params: {
         searchOptions: options,
         searchCost,

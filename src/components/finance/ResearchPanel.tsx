@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
       Card,
       CardHeader,
@@ -18,6 +18,7 @@ import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 import { getCurrentPrestige } from '@/lib/services/core/gameState';
 import { type ResearchEligibilityContext, getResearchRequirementReasons, isResearchProjectEligible, loadResearchEligibilityContext } from '@/lib/services';
+import { formatNumber } from '@/lib/utils/utils';
 
 interface ResearchPanelProps {
       bypassGates?: boolean;
@@ -201,7 +202,7 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
                                     </div>
                                     <div>
                                           <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Total Cost</div>
-                                          <div className="text-lg font-bold text-gray-800">€{totalCost.toLocaleString()}</div>
+                                          <div className="text-lg font-bold text-gray-800">{formatNumber(totalCost, { currency: true, decimals: 0 })}</div>
                                           <div className="text-xs text-gray-500">investment</div>
                                     </div>
                                     <div>

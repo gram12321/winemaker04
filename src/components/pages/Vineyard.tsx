@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLoadingState, useGameStateWithData } from '@/hooks';
 import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
@@ -722,10 +722,10 @@ const Vineyard: React.FC = () => {
                                   <div className={tooltipStyles.text}>
                                     <TooltipSection>
                                       <p className={tooltipStyles.title}>Vineyard Value</p>
-                                      <p className={tooltipStyles.muted}>Stored total: €{formatNumber(vineyard.vineyardTotalValue || 0, { decimals: 0 })}</p>
+                                      <p className={tooltipStyles.muted}>Stored total: {formatNumber(vineyard.vineyardTotalValue || 0, { currency: true, decimals: 0 })}</p>
                                     </TooltipSection>
                                     <TooltipSection>
-                                      <TooltipRow label="Base (per ha)" value={`€${formatNumber(b.basePerHa, { decimals: 0 })}`} monospaced={true} />
+                                      <TooltipRow label="Base (per ha)" value={`${formatNumber(b.basePerHa, { currency: true, decimals: 0 })}`} monospaced={true} />
                                       <TooltipRow label="Planted" value={`+${formatNumber(b.plantedBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
                                       {b.grapeSuitabilityComponents && (
                                         <>
@@ -749,8 +749,8 @@ const Vineyard: React.FC = () => {
                                       <TooltipRow label="Vine age×prestige" value={`+${formatNumber(b.ageBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
                                       <TooltipRow label="Prestige" value={`+${formatNumber(b.prestigeBonusPct * 100, { smartDecimals: true })}%`} monospaced={true} />
                                       <TooltipRow label="Total multiplier" value={`×${formatNumber(b.totalMultiplier, { decimals: 3, forceDecimals: true })}`} monospaced={true} />
-                                      <TooltipRow label="Adjusted (per ha)" value={`€${formatNumber(b.adjustedPerHa, { decimals: 0 })}`} monospaced={true} />
-                                      <TooltipRow label="Projected Total" value={`€${formatNumber(b.adjustedTotal, { decimals: 0 })}`} monospaced={true} />
+                                      <TooltipRow label="Adjusted (per ha)" value={`${formatNumber(b.adjustedPerHa, { currency: true, decimals: 0 })}`} monospaced={true} />
+                                      <TooltipRow label="Projected Total" value={`${formatNumber(b.adjustedTotal, { currency: true, decimals: 0 })}`} monospaced={true} />
                                     </TooltipSection>
                                   </div>
                                 }
@@ -1359,4 +1359,3 @@ const Vineyard: React.FC = () => {
 };
 
 export default Vineyard;
-

@@ -1,4 +1,4 @@
-import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
+﻿import { Activity, WorkCategory, NotificationCategory, GameDate } from '@/lib/types/types';
 import { getGameState, getCurrentPrestige } from '@/lib/services/core/gameState';
 import { createActivity } from '@/lib/services/activity/activitymanagers/activityManager';
 import { notificationService, addTransaction } from '@/lib/services';
@@ -57,7 +57,7 @@ export async function startResearch(projectId: string): Promise<string | null> {
             const currentMoney = gameState.money || 0;
             if (currentMoney < researchCost) {
                   await notificationService.addMessage(
-                        `Insufficient funds for research. Need €${researchCost.toLocaleString()}, have €${currentMoney.toLocaleString()}`,
+                        `Insufficient funds for research. Need ${formatNumber(researchCost, { currency: true, decimals: 0 })}, have ${formatNumber(currentMoney, { currency: true, decimals: 0 })}`,
                         'researchManager.startResearch',
                         'Insufficient Funds',
                         NotificationCategory.FINANCE_AND_STAFF
@@ -78,7 +78,7 @@ export async function startResearch(projectId: string): Promise<string | null> {
                   category: WorkCategory.ADMINISTRATION_AND_RESEARCH,
                   title: project.title,
                   totalWork,
-                  activityDetails: `Cost: €${researchCost.toLocaleString()}`,
+                  activityDetails: `Cost: ${formatNumber(researchCost, { currency: true, decimals: 0 })}`,
                   params: {
                         type: 'research',
                         researchId: projectId,
@@ -137,7 +137,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
             // Build completion message
             const rewards: string[] = [];
             if (project.rewardAmount && project.rewardAmount > 0) {
-                  rewards.push(`€${project.rewardAmount.toLocaleString()} grant funding`);
+                  rewards.push(`${formatNumber(project.rewardAmount, { currency: true, decimals: 0 })} grant funding`);
             }
             if (project.prestigeReward && project.prestigeReward > 0) {
                   rewards.push(`+${project.prestigeReward} prestige`);

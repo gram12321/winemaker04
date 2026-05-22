@@ -206,7 +206,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="cheats">Cheats</TabsTrigger>
-          <TabsTrigger value="tests">Tests</TabsTrigger>
+          <TabsTrigger value="tests">Test Systems</TabsTrigger>
         </TabsList>
 
         {/* Database Management */}
@@ -603,13 +603,13 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
             </SimpleCard>
           </div>
         </TabsContent>
-        {/* Test Viewer */}
+        {/* Test Systems */}
         <TabsContent value="tests">
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SimpleCard
-                title="Order Testing"
-                description="Generate test orders for development and testing"
+                title="Gameflow Shortcuts"
+                description="Create targeted sales artifacts without waiting for normal progression"
               >
                 <Button
                   onClick={handleGenerateTestOrder}
@@ -624,8 +624,8 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
               </SimpleCard>
 
               <SimpleCard
-                title="Contract Testing"
-                description="Generate test contracts for development and testing"
+                title="Contract Shortcuts"
+                description="Force a contract artifact for manual gameplay inspection"
               >
                 <Button
                   onClick={handleGenerateTestContract}
