@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { IncomingMessage } from 'http';
 
 export function isLoopbackHostname(hostname: string | undefined | null): boolean {

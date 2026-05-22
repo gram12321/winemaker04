@@ -6,11 +6,13 @@ This folder hosts the executable automated Vitest suites for Winemaker04. Tests 
 
 - `activity/` - Work unit calculations, staffing, scheduling, and activity helpers.
 - `admin/` - Admin Test Lab parser/run-id helpers and development tooling regressions.
-- `finance/` - Wage, loan, and finance formula tests.
-- `sales/` - Contract and customer/order rule tests.
-- `user/` - Company creation, starting conditions, staff/research workflows, wine log, achievements.
-- `vineyard/` - Yield calculations, vineyard creation, grape suitability.
-- `wine/` - Fermentation, anchors, taste quality, and wine characteristic tests.
+- `finance/` - Economy, wage, loan formula, and loan lifecycle tests.
+- `prestige/` - Shared prestige scaling and cap tests.
+- `research/` - Research eligibility and permanent-effect tests.
+- `sales/` - Contract, customer/order, and grape buyer market tests.
+- `user/` - Company creation, starting conditions, staff/team, wine log, achievements.
+- `vineyard/` - Yield calculations, lifecycle progression, vineyard creation, grape suitability.
+- `wine/` - Fermentation, anchors, aging, pricing, taste quality, and wine characteristic tests.
 
 Vitest discovers files matching `tests/**/*.test.ts`. Prefer the live CLI summary over hand-maintained test counts in this README.
 
