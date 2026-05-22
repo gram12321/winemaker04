@@ -327,3 +327,25 @@ Buying consistently from the same supplier builds a relationship (similar to coo
 3. `src/components/pages/sales/GrapeMarketTab.tsx` — UI tab in Sales page
 4. Migration: `grape_market_offers`, `grape_forward_contracts` tables
 
+
+
+## Work on Bulk grape sales, status as of 22-05-2026 10:55 
+
+What is left for later implementation
+
+Forward contracts / future delivery commitments (yes, added as high-priority future)
+Commit this-year terms for next harvest delivery.
+Include penalties/default handling and relationship impact.
+Reserved lots / reserved demand with true market competition
+Let buyers reserve capacity for trusted suppliers before season opens.
+Move from “static cap” to market-wide demand allocation.
+Seasonal demand and volatility model
+Buyer appetite changes by season/year/economy phase.
+Distinguish hard cap, soft demand, and overflow pricing.
+Multi-buyer strategic choices
+More buyer archetypes per country with different risk/reward curves.
+Not just multiplier/cap differences, but contract style and reliability profiles.
+AI/UX enhancements in modal
+Show why a buyer is in this season (relationship carry-over vs newly generated).
+Show projected loyalty gain for current sale before confirming.
+Late game reserach for opening up buyers from other countries. 

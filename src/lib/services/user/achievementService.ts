@@ -15,6 +15,32 @@ import { formatNumber as formatNumberUtil, getBadgeColorClasses } from '../../ut
 import { resolveWineLogAchievementScore } from './achievementScoreUtils';
 
 const EXCLUDED_REVENUE_DESCRIPTIONS = new Set(['Starting Capital', 'Starting Capital Adjustment']);
+const BULK_GRAPE_SALE_MARKER = 'Grape Sale:';
+const BULK_GRAPE_BUYER_MARKER = '→ Bulk Grape Merchant';
+
+function parseBulkGrapeSaleKg(description: string): number {
+  if (!description.includes(BULK_GRAPE_SALE_MARKER) || !description.includes(BULK_GRAPE_BUYER_MARKER)) {
+    return 0;
+  }
+
+  const match = description.match(/Grape Sale:\s*([\d,]+)\s*kg/i);
+  if (!match) return 0;
+
+  const parsed = Number(match[1].replace(/,/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseBulkGrapeSaleMultiplier(description: string): number {
+  if (!description.includes(BULK_GRAPE_SALE_MARKER) || !description.includes(BULK_GRAPE_BUYER_MARKER)) {
+    return 0;
+  }
+
+  const match = description.match(/\(([\d.]+)x\s+multiplier\)/i);
+  if (!match) return 0;
+
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 function calculateAdjustedYearlyRevenue(
   baseIncome: number,
@@ -103,8 +129,13 @@ export function getConditionSuffix(conditionType: string, threshold: number): st
     case 'single_contract_bottles':
     case 'vineyard_bottles_produced':
       return `${num} Bottles`;
+    case 'bulk_grape_kg_sold':
+      return `${num} kg`;
+    case 'bulk_grape_multiplier_threshold':
+      return `${threshold.toFixed(2)}x`;
     case 'sales_count':
     case 'vineyard_sales_count':
+    case 'bulk_grape_sales_count':
       return `${num} Sales`;
     case 'production_count':
     case 'different_grapes':
@@ -220,6 +251,9 @@ interface AchievementCheckContext {
   yearlyRevenue: number;
   completedAchievementsCount: number;
   totalAchievementsCount: number;
+  bulkGrapeSalesCount: number;
+  bulkGrapeKgSold: number;
+  bulkGrapeBestMultiplier: number;
   vineyards: Array<{
     id: string;
     name: string;
@@ -272,6 +306,13 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
   const totalSalesValue = salesSummary.totalSalesValue;
   const totalWinesProduced = productionSummary.totalWinesProduced;
   const totalBottlesProduced = productionSummary.totalBottlesProduced;
+  const bulkGrapeSales = transactions.filter(tx => tx.amount > 0 && tx.description?.includes(BULK_GRAPE_BUYER_MARKER));
+  const bulkGrapeSalesCount = bulkGrapeSales.length;
+  const bulkGrapeKgSold = bulkGrapeSales.reduce((sum, tx) => sum + parseBulkGrapeSaleKg(tx.description || ''), 0);
+  const bulkGrapeBestMultiplier = bulkGrapeSales.reduce(
+    (max, tx) => Math.max(max, parseBulkGrapeSaleMultiplier(tx.description || '')),
+    0
+  );
   
   // Load wine log entries for quality/structure index/price tracking
   const allWineLogEntries = [];
@@ -361,6 +402,9 @@ async function buildAchievementContext(companyId: string): Promise<AchievementCh
     yearlyRevenue: calculateAdjustedYearlyRevenue(financialData.income, transactions, gameState.currentYear),
     completedAchievementsCount,
     totalAchievementsCount,
+    bulkGrapeSalesCount,
+    bulkGrapeKgSold,
+    bulkGrapeBestMultiplier,
     vineyards: vineyardData,
     wineLogEntries: allWineLogEntries.map(entry => ({
       tasteQualityIndex: entry.tasteQualityIndex,
@@ -657,6 +701,30 @@ function checkAchievementCondition(
         progress: 0,
         target: condition.threshold,
         unit: '%'
+      };
+
+    case 'bulk_grape_sales_count':
+      return {
+        isMet: context.bulkGrapeSalesCount >= (condition.threshold || 0),
+        progress: context.bulkGrapeSalesCount,
+        target: condition.threshold,
+        unit: 'sales'
+      };
+
+    case 'bulk_grape_kg_sold':
+      return {
+        isMet: context.bulkGrapeKgSold >= (condition.threshold || 0),
+        progress: context.bulkGrapeKgSold,
+        target: condition.threshold,
+        unit: 'kg'
+      };
+
+    case 'bulk_grape_multiplier_threshold':
+      return {
+        isMet: context.bulkGrapeBestMultiplier >= (condition.threshold || 0),
+        progress: context.bulkGrapeBestMultiplier,
+        target: condition.threshold,
+        unit: 'x'
       };
       
     case 'prestige_by_year':

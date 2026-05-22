@@ -3,17 +3,22 @@ import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { addTransaction } from '../finance/financeService';
-import { getWineBatchById, deleteWineBatch } from '../../database/activities/inventoryDB';
+import { getWineBatchById, deleteWineBatch, updateWineBatch } from '../../database/activities/inventoryDB';
 import { triggerTopicUpdate } from '../../../hooks/useGameUpdates';
 import { notificationService } from '../core/notificationService';
 import { TRANSACTION_CATEGORIES } from '../../constants/financeConstants';
 import { getGameState } from '../core/gameState';
 import { getCooperativeMembership, recordCooperativeSale, getCooperativeFloorPrice } from './cooperativeService';
+import { recordBuyerSale } from '@/lib/services';
+import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';
+import { GrapeVariety } from '../../types/types';
 
 // ===== CONSTANTS =====
 
 export const BASE_GRAPE_PRICE_PER_KG = 3.0;
 export const GRAPE_SALE_PRESTIGE_MAX_BONUS = 0.3; // max +30% from prestige (vs wine's +250%)
+export const FAVORITE_GRAPE_PRIMARY_BONUS = 0.18;
+export const FAVORITE_GRAPE_SECONDARY_BONUS = 0.1;
 
 // ===== TYPES =====
 
@@ -25,6 +30,15 @@ export interface GrapeBuyer {
   floorPricePerKg: number;
   exclusiveCountry?: string;
   specialMechanic?: string;
+  multiplierRangeMin?: number;
+  multiplierRangeMax?: number;
+  baseSeasonLimitKg?: number;
+  effectiveSeasonLimitKg?: number;
+  soldThisSeasonKg?: number;
+  remainingSeasonLimitKg?: number;
+  relationshipMultiplier?: number;
+  favoriteGrapes?: GrapeVariety[];
+  buyerCategory?: 'bulk' | 'seasonal' | 'cooperative';
 }
 
 export interface GrapeSalePricing {
@@ -32,6 +46,8 @@ export interface GrapeSalePricing {
   qualityMultiplier: number;
   prestigeBonus: number;
   buyerMultiplier: number;
+  relationshipMultiplier: number;
+  favoriteGrapeBonusMultiplier: number;
   rawPricePerKg: number;
   effectiveFloorPrice: number; // the actual floor used (membership-aware for coop)
   appliedFloor: boolean;
@@ -40,55 +56,29 @@ export interface GrapeSalePricing {
   quantityKg: number;
 }
 
+function getFavoriteGrapeBonusMultiplier(buyer: GrapeBuyer, batch: WineBatch): number {
+  const favorites = buyer.favoriteGrapes || [];
+  if (favorites.length === 0) return 0;
+  if (favorites[0] === batch.grape) return FAVORITE_GRAPE_PRIMARY_BONUS;
+  if (favorites[1] === batch.grape) return FAVORITE_GRAPE_SECONDARY_BONUS;
+  return 0;
+}
+
 // ===== BUYER REGISTRY =====
 
-const ALL_BUYERS: GrapeBuyer[] = [
-  {
-    id: 'bulk_buyer',
-    name: 'Bulk Wine Merchant',
-    description: 'A generic merchant buying grapes for blended bulk production. Available everywhere, no minimums.',
-    priceMultiplier: 1.0,
-    floorPricePerKg: 0,
-  },
-  {
-    id: 'negociant',
-    name: 'Négociant',
-    description: 'A French wine merchant who buys grapes from small producers to blend and bottle under their own label. Pays a premium for quality.',
-    priceMultiplier: 1.2,
-    floorPricePerKg: 0,
-    exclusiveCountry: 'France',
-  },
-  {
-    id: 'cantina_sociale',
-    name: 'Cantina Sociale',
-    description: 'Italian cooperative winery that produces wines for the local and regional market. Members benefit from collective bargaining.',
-    priceMultiplier: 1.2,
-    floorPricePerKg: 0,
-    exclusiveCountry: 'Italy',
-  },
-  {
-    id: 'bodega_cooperativa',
-    name: 'Bodega Cooperativa',
-    description: 'Spanish wine cooperative that processes grapes from small local growers. Reliable buyer with fair prices.',
-    priceMultiplier: 1.15,
-    floorPricePerKg: 0,
-    exclusiveCountry: 'Spain',
-  },
-  {
-    id: 'winzergenossenschaft',
-    name: 'Winzergenossenschaft',
-    description: 'German wine cooperative with guaranteed floor prices. Build your membership over years to unlock better floor prices and shared equipment benefits.',
-    priceMultiplier: 1.5,
-    floorPricePerKg: 0.80, // Level 1 base — overridden by membership level at runtime
-    exclusiveCountry: 'Germany',
-    specialMechanic: 'Cooperative Member: Sell grapes every year to build your membership standing and unlock better floor prices and vineyard support.',
-  },
-];
+const BULK_FALLBACK_BUYER: GrapeBuyer = {
+  id: 'bulk_buyer',
+  name: 'Bulk Grape Merchant',
+  description: 'A generic merchant buying grapes for blended bulk production. Available everywhere, no minimums.',
+  priceMultiplier: 1.0,
+  floorPricePerKg: 0,
+  buyerCategory: 'bulk',
+};
 
-export function getAvailableBuyers(startingCountry?: string): GrapeBuyer[] {
-  return ALL_BUYERS.filter(
-    buyer => !buyer.exclusiveCountry || buyer.exclusiveCountry === startingCountry
-  );
+export async function getAvailableBuyers(startingCountry?: string): Promise<GrapeBuyer[]> {
+  const seasonalBuyers = await getSeasonalBuyers(startingCountry);
+  const bulkBuyer = await getBulkBuyer(startingCountry) || BULK_FALLBACK_BUYER;
+  return [bulkBuyer, ...seasonalBuyers];
 }
 
 // ===== PRICING =====
@@ -97,7 +87,8 @@ export function calculateGrapeSalePrice(
   batch: WineBatch,
   buyer: GrapeBuyer,
   companyPrestige: number,
-  floorPriceOverride?: number // pass membership floor for cooperative
+  floorPriceOverride?: number, // pass membership floor for cooperative
+  quantityKgOverride?: number
 ): GrapeSalePricing {
   const wineScore = calculateWineScore(batch);
   const qualityMultiplier = wineScore * calculateAsymmetricalMultiplier(wineScore);
@@ -105,17 +96,23 @@ export function calculateGrapeSalePrice(
   const normalizedPrestige = NormalizeScrewed1000To01WithTail(companyPrestige);
   const prestigeBonus = 1 + normalizedPrestige * GRAPE_SALE_PRESTIGE_MAX_BONUS;
 
-  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * buyer.priceMultiplier;
+  const relationshipMultiplier = buyer.relationshipMultiplier ?? 1;
+  const favoriteGrapeBonusMultiplier = getFavoriteGrapeBonusMultiplier(buyer, batch);
+  const effectiveBuyerMultiplier = buyer.priceMultiplier * (1 + favoriteGrapeBonusMultiplier);
+
+  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * effectiveBuyerMultiplier * relationshipMultiplier;
   const effectiveFloorPrice = floorPriceOverride !== undefined ? floorPriceOverride : buyer.floorPricePerKg;
   const appliedFloor = rawPricePerKg < effectiveFloorPrice;
   const finalPricePerKg = Math.max(rawPricePerKg, effectiveFloorPrice);
-  const quantityKg = batch.quantity;
+  const quantityKg = Math.max(1, Math.min(batch.quantity, Math.round(quantityKgOverride ?? batch.quantity)));
 
   return {
     wineScore,
     qualityMultiplier,
     prestigeBonus,
-    buyerMultiplier: buyer.priceMultiplier,
+    buyerMultiplier: effectiveBuyerMultiplier,
+    relationshipMultiplier,
+    favoriteGrapeBonusMultiplier,
     rawPricePerKg,
     effectiveFloorPrice,
     appliedFloor,
@@ -129,35 +126,61 @@ export function calculateGrapeSalePrice(
 
 export async function sellGrapes(
   batchId: string,
-  buyer: GrapeBuyer
+  buyer: GrapeBuyer,
+  quantityKgOverride?: number
 ): Promise<{ success: boolean; revenue: number; error?: string }> {
   const batch = await getWineBatchById(batchId);
   if (!batch) return { success: false, revenue: 0, error: 'Batch not found' };
   if (batch.state !== 'grapes') return { success: false, revenue: 0, error: 'Batch is not in grape state' };
   if (batch.quantity <= 0) return { success: false, revenue: 0, error: 'No grapes to sell' };
+  const quantityKg = Math.max(1, Math.min(batch.quantity, Math.round(quantityKgOverride ?? batch.quantity)));
 
   const gameState = getGameState();
   const prestige = gameState.prestige ?? 0;
   const currentYear = gameState.currentYear ?? 1;
+
+  // Enforce buyer-specific seasonal hard cap before pricing.
+  if (buyer.effectiveSeasonLimitKg !== undefined) {
+    const soldThisSeason = buyer.soldThisSeasonKg ?? 0;
+    const remainingCap = Math.max(0, buyer.effectiveSeasonLimitKg - soldThisSeason);
+    if (remainingCap <= 0) {
+      return {
+        success: false,
+        revenue: 0,
+        error: `${buyer.name} has reached their seasonal capacity. Try another buyer or wait for next season.`
+      };
+    }
+    if (quantityKg > remainingCap) {
+      return {
+        success: false,
+        revenue: 0,
+        error: `Requested quantity exceeds ${buyer.name}'s remaining seasonal limit (${remainingCap.toLocaleString()} kg).`
+      };
+    }
+  }
 
   // For the cooperative, resolve the current membership floor price before pricing
   let floorPriceOverride: number | undefined;
   if (buyer.id === 'winzergenossenschaft') {
     const membership = await getCooperativeMembership();
     const currentLevel = membership?.level ?? 0;
-    floorPriceOverride = getCooperativeFloorPrice(currentLevel as 0 | 1 | 2 | 3);
+    const loyaltyFloor = buyer.floorPricePerKg ?? 0;
+    floorPriceOverride = Math.max(getCooperativeFloorPrice(currentLevel as 0 | 1 | 2 | 3), loyaltyFloor);
   }
 
-  const pricing = calculateGrapeSalePrice(batch, buyer, prestige, floorPriceOverride);
+  const pricing = calculateGrapeSalePrice(batch, buyer, prestige, floorPriceOverride, quantityKg);
 
-  // Remove grapes from inventory
-  const deleted = await deleteWineBatch(batchId);
-  if (!deleted) return { success: false, revenue: 0, error: 'Failed to remove grapes from inventory' };
+  // Remove sold grapes from inventory, preserving the remainder when partially sold.
+  const remainingQuantity = batch.quantity - quantityKg;
+  const inventoryUpdated = remainingQuantity > 0
+    ? await updateWineBatch(batchId, { quantity: remainingQuantity })
+    : await deleteWineBatch(batchId);
+  if (!inventoryUpdated) return { success: false, revenue: 0, error: 'Failed to update grape inventory' };
 
   // Record the transaction
   await addTransaction(
     pricing.totalRevenue,
-    `Grape Sale: ${batch.quantity} kg ${batch.grape} → ${buyer.name}`,
+    `Grape Sale: ${quantityKg} kg ${batch.grape} → ${buyer.name} (${pricing.buyerMultiplier.toFixed(2)}x multiplier, ${pricing.relationshipMultiplier.toFixed(2)}x relationship)`,
     TRANSACTION_CATEGORIES.GRAPE_SALES,
     false
   );
@@ -165,15 +188,28 @@ export async function sellGrapes(
   // Update cooperative membership (after money is recorded, fire-and-forget on error)
   if (buyer.id === 'winzergenossenschaft') {
     try {
-      await recordCooperativeSale(batch.quantity, currentYear);
+      await recordCooperativeSale(quantityKg, currentYear);
     } catch (err) {
       console.error('Failed to record cooperative membership sale:', err);
     }
   }
 
+  try {
+    await recordMarketBuyerSale(buyer.id, quantityKg, currentYear, gameState.season ?? 'Spring');
+  } catch (err) {
+    console.error('Failed to record market buyer seasonal sale:', err);
+  }
+
+  // Update per-buyer loyalty for all grape buyers.
+  try {
+    await recordBuyerSale(buyer.id, quantityKg, currentYear);
+  } catch (err) {
+    console.error('Failed to record buyer loyalty sale:', err);
+  }
+
   // Notify player
   await notificationService.addMessage(
-    `Sold ${batch.quantity} kg of ${batch.grape} to ${buyer.name} for €${pricing.totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+    `Sold ${quantityKg} kg of ${batch.grape} to ${buyer.name} for €${pricing.totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
     'sellGrapesService.sellGrapes',
     'Grape Sale',
     NotificationCategory.WINEMAKING_PROCESS

@@ -36,7 +36,8 @@ The research system had a well-built infrastructure skeleton (DB persistence, fe
 | `grape` | ✅ Enforced in PlantingOptionsModal |
 | `fermentation_technology` | Defined, maps to real fermentation methods — enforcement is next step |
 | `wine_feature` | Defined, wine feature system exists — enforcement is next step |
-| `contract_type` | Defined, sales system exists — enforcement is next step |
+| `contract_type` | Legacy alias for sales_channel |
+| `sales_channel` | Defined, sales system exists — enforcement is active |
 
 ### 3.2 ResearchProject Interface — New Fields
 
@@ -124,7 +125,7 @@ Physical tools that create visible work-speed or quality multipliers.
 | `equip_wine_lab` | Wine Analysis Lab | Reveals exact `structureIndex` and `tasteQualityIndex` before bottling | UI/information |
 | `equip_oak_barrels` | Oak Barrel Program | Unlocks barrel aging option; adds `maturationState` modifier | Aging system |
 
-### 4.4 Sales Channel Track (New Unlock Type: `sales_channel`)
+### 4.4 Sales Channel Track (Implemented)
 
 | Project ID | Title | Effect (proposed) | Connects to |
 |---|---|---|---|
@@ -132,6 +133,8 @@ Physical tools that create visible work-speed or quality multipliers.
 | `sales_wine_club` | Wine Club Program | Unlocks direct-to-consumer subscription orders | Sales/order generation |
 | `sales_fine_wine_cert` | Fine Wine Certification | Unlocks Private Collector premium contract tiers | Contract system |
 | `sales_restaurant_program` | Restaurant Partnership | Better relationship growth rate with Restaurant customers | Customer system |
+
+**Status:** Implemented through `sales_channel` unlocks and contract generation filtering.
 
 ---
 
@@ -218,13 +221,13 @@ For each unlock type, where the game must check `isUnlocked()`:
 - Locked cards: amber warning, specific lock reason (prestige or prerequisite)
 - Prestige loaded async, displayed per card
 
-### 7.2 Active Bonuses Panel (Planned)
+### 7.2 Active Bonuses Panel (Implemented)
 
 A dedicated read-only panel or section showing all **active research effects** currently affecting the player's winery:  
 > "Temperature-Controlled Fermentation unlocked — reduces oxidation pressure by 30%"  
 > "Canopy Management unlocked — overgrowth accumulates 15% slower"
 
-Without this, players complete research and feel nothing. The bonus panel makes the portfolio visible.
+This panel now exists on the Research page and shows permanent bonuses derived from completed research.
 
 ### 7.3 Research Tree Visualization (Future)
 
@@ -267,3 +270,46 @@ Current rewards (2–15 prestige) need calibration against the prestige economy.
 4. **Multi-vineyard research:** When a player has multiple sites in different countries, do country-specific research unlocks apply globally or per-site?
 
 5. **Staff skill requirements:** Should some research require a staff member with a minimum skill level? This would connect the research and staff systems more tightly.
+
+---
+
+## 10. Status Update (2026-05-22)
+
+### 10.1 Implemented Since This Spec
+
+- Research complexity is now consistently generic across categories for work, cost, and prestige.
+- Non-grape categories now use explicit `workProfile` pacing controls.
+- Staff and vineyard progression ladders were expanded and enforced:
+	- Staff cap ladder: `2 -> 5 -> 8 -> 12`
+	- Vineyard cap ladder: `0.1 -> 0.25 -> 0.5 -> 1 -> 2 -> 4 -> 8`
+- Fermentation technology gating is enforced in fermentation option selection.
+- Sales channel gating is enforced in contract generation eligibility.
+- Permanent non-unlock technology effects are now implemented via runtime aggregation of completed research unlocks.
+	- First minimum slice: vineyard health decay reduction through a typed permanent effect.
+
+### 10.2 Historical Notes Corrected
+
+- Section 3.1 should be treated as historical context, not current truth.
+	- `vineyard_size` and `staff_limit` are active unlock types again and currently enforced.
+- The old "permanent non-unlock technology effects" TODO is no longer accurate.
+	- Permanent effects are now applied at runtime by domain services.
+
+## 11. Not Implemented Yet (Kept Intentionally)
+
+The items below are intentionally kept visible for future work and should not be treated as removed. Implemented rows are retained here as status markers so the original design conversation stays auditable.
+
+| Item | Current State | Recommendation |
+|---|---|---|
+| Vineyard techniques track (`agri_canopy_management`, etc.) | Not implemented as dedicated projects | Ready for implementation using the new `permanentEffects` + explicit service hook pattern. |
+| Equipment track (`equipment` unlock type) | Not implemented | Keep for later; only implement once equipment exists as a real gameplay system. |
+| Sales channel track (`sales_channel` unlock type) | Implemented | Use as the first-class unlock type for contract generation; keep `contract_type` as a legacy alias only. |
+| Starting-condition research head-starts | Not implemented | Good later slice after country-start balancing pass. |
+| Achievement-triggered research visibility | Not implemented | Good later slice after baseline research discoverability UX is validated. |
+| Site-conditional research visibility | Not implemented | Defer until core gating and balance stabilize across more playthroughs. |
+| Active bonuses panel | Implemented | Now visible on the Research page as a runtime permanent-bonuses summary. |
+
+## 12. Suggested Next Slices
+
+1. Add broader permanent-effect categories beyond vineyard health decay.
+2. Implement one vineyard-technique project from section 4.2 via the permanent-effects framework.
+3. Rebalance prestige thresholds and costs after telemetry/playtest feedback from the new ladders and gates.

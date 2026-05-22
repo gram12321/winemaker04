@@ -93,7 +93,8 @@ export const NAVIGATION_EMOJIS = {
   vineyard: '🍇',
   winery: '🏭',
   sales: '🍷',
-  finance: '💰'
+  finance: '💰',
+  research: '🔬'
 } as const;
 
 export const STATUS_EMOJIS = {

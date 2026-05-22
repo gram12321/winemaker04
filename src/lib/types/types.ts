@@ -904,6 +904,9 @@ export type AchievementConditionType =
   | 'wine_score_threshold'          // Check if wine score >= threshold
   | 'wine_price_threshold'          // Check if wine estimated price >= threshold
   | 'sales_price_percentage'        // Check if sales price is X% over/under estimated
+  | 'bulk_grape_sales_count'        // Check if total bulk grape sale transactions >= threshold
+  | 'bulk_grape_kg_sold'            // Check if total kg sold to bulk grape merchant >= threshold
+  | 'bulk_grape_multiplier_threshold' // Check if best bulk grape sale multiplier >= threshold
   | 'prestige_by_year'              // Check if prestige >= threshold by specific year
   | 'revenue_by_year'               // Check if revenue >= threshold in single year
   | 'assets_by_year'                // Check if assets >= threshold by specific year

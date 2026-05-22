@@ -23,7 +23,7 @@ npm run build
 | Area | Path | Notes |
 |---|---|---|
 | App shell and routing | `src/App.tsx`, `src/main.tsx` | React entry point and page selection. |
-| Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, staff, Winepedia, highscores. |
+| Pages | `src/components/pages/` | Company overview, vineyard, winery, sales, finance, research, staff, Winepedia, highscores. |
 | Shared UI | `src/components/ui/` | ShadCN wrappers, modals, reusable game UI. |
 | Hooks | `src/hooks/` | Game state, loading, sorting, mobile detection, reactive updates. |
 | Services | `src/lib/services/` | Domain logic for core game, vineyard, wine, sales, finance, activities, prestige. |
@@ -54,6 +54,7 @@ npm run build
 | Taste Quality design spec | `docs/superpowers/specs/2026-05-20-taste-quality-index-design.md` |
 | Taste Quality implementation plan | `docs/superpowers/plans/2026-05-20-taste-quality-index.md` |
 | Contract taste/site UI plan | `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` |
+| Research mechanic design and rollout status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
 | Development prompt guidance | `docs/AIpromt_newpromt.md` |
 | Documentation maintenance guidance | `docs/AIpromt_docs.md` |
 | Cleanup/refactor guidance | `docs/AIpromt_codecleaning.md` |

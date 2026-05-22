@@ -54,8 +54,10 @@ flowchart LR
 - Process controls should modify identity through anchors, characteristics, features, or explicit snapshots, not through hidden unrelated side effects.
 - Structure and taste are different layers: structure scores physical balance; taste quality scores family balance.
 - Land value affects price and contracts as site/static quality; it is not taste quality.
+- Sales-channel research affects customer/contract access and pricing opportunities; it is not a structure or taste variable.
 - Bottling snapshots are the historical source for wine log, highscores, and achievement score checks.
 - Current cellar values may continue to evolve after bottling; historical snapshots must not drift.
+- Research unlocks and permanent effects are progression modifiers that may alter upstream vineyard/process inputs (for example health decay), but should not bypass structure and taste computation layers.
 
 ## 6) Subsystem Diagrams
 
@@ -262,5 +264,6 @@ flowchart TD
 
 ## 13) Remaining Alignment Work
 
+- Keep research permanent effects routed through explicit domain services (for example vineyard manager) so modifier origins remain auditable.
 - Keep anchor parsing strict: unknown anchor keys should be ignored, and new business logic should target only the compact anchor model.
 - If descriptor-level taste becomes gameplay-relevant, update this map and `CONTEXT.md` before wiring descriptors into outcomes.

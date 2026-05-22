@@ -145,6 +145,39 @@ export const SALES_COUNT_ACHIEVEMENTS = createTieredAchievements(
   []
 );
 
+export const BULK_GRAPE_SALES_ACHIEVEMENTS = createTieredAchievements(
+  'bulk_grape_sales',
+  'Bulk Channel Operator',
+  'Complete {threshold} bulk grape sales',
+  '🚛',
+  'sales',
+  'bulk_grape_sales_count',
+  [3, 15, 60, 240, 960],
+  []
+);
+
+export const BULK_GRAPE_KG_ACHIEVEMENTS = createTieredAchievements(
+  'bulk_grape_kg_sold',
+  'Harvest Outlet Specialist',
+  'Sell {threshold} kg grapes through bulk channel',
+  '🧺',
+  'sales',
+  'bulk_grape_kg_sold',
+  [2000, 10000, 50000, 250000, 1000000],
+  []
+);
+
+export const BULK_GRAPE_MULTIPLIER_ACHIEVEMENTS = createTieredAchievements(
+  'bulk_grape_multiplier',
+  'High Multiplier Bulk Deal',
+  'Complete a bulk grape sale at {threshold}x multiplier or higher',
+  '🎯',
+  'sales',
+  'bulk_grape_multiplier_threshold',
+  [1.02, 1.04, 1.06, 1.08, 1.1],
+  []
+);
+
 // ===== PRESTIGE ACHIEVEMENTS =====
 
 export const PRESTIGE_ACHIEVEMENTS = createTieredAchievements(
@@ -480,6 +513,9 @@ export const ALL_ACHIEVEMENTS: AchievementConfig[] = [
   
   // ===== SALES ACHIEVEMENTS =====
   ...SALES_COUNT_ACHIEVEMENTS,
+  ...BULK_GRAPE_SALES_ACHIEVEMENTS,
+  ...BULK_GRAPE_KG_ACHIEVEMENTS,
+  ...BULK_GRAPE_MULTIPLIER_ACHIEVEMENTS,
   ...SALES_PRICE_OVER_ACHIEVEMENTS,
   ...SALES_PRICE_UNDER_ACHIEVEMENTS,
   

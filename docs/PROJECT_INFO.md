@@ -90,6 +90,7 @@ winemaker04/
 │   │   │   ├── Highscores.tsx (450 lines)     # Leaderboard
 │   │   │   ├── Login.tsx (396 lines)          # Authentication
 │   │   │   ├── Profile.tsx (528 lines)        # User profile
+│   │   │   ├── Research.tsx                    # Dedicated research page with active bonuses panel
 │   │   │   ├── Sales.tsx (119 lines)          # Sales page
 │   │   │   ├── Settings.tsx (327 lines)       # User settings
 │   │   │   ├── Staff.tsx (843 lines)          # Staff management

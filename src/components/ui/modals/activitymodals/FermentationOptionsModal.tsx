@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { WineBatch, NotificationCategory } from '@/lib/types/types';
 import { WorkFactor, WorkCategory } from '@/lib/services/activity';
@@ -12,6 +12,7 @@ import { getCharacteristicIconSrc } from '@/lib/utils/icons';
 import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
 import { DialogProps } from '@/lib/types/UItypes';
 import { previewFeatureRisks, calculateCumulativeRisk, getPresentFeaturesInfo, getAtRiskFeaturesInfo } from '@/lib/services/';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
 /**
  * Fermentation Options Modal
@@ -27,11 +28,18 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
   batch, 
   onClose
 }) => {
+  const METHOD_UNLOCK_PROJECT_HINTS: Partial<Record<FermentationOptions['method'], string>> = {
+    'Temperature Controlled': 'Research: Fermentation Technology Basics',
+    'Extended Maceration': 'Research: Extended Maceration Protocols'
+  };
+
   // State initialization
   const [options, setOptions] = useState<FermentationOptions>({
     method: 'Basic',
     temperature: 'Ambient'
   });
+  const [unlockedFermentationMethods, setUnlockedFermentationMethods] = useState<Set<string>>(new Set(['Basic']));
+  const [isLoadingFermentationUnlocks, setIsLoadingFermentationUnlocks] = useState(false);
 
   // Helper data and functions
   const methodInfo = getFermentationMethodInfo();
@@ -123,6 +131,44 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
     };
   }, [batch, options]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+
+    const loadUnlocks = async () => {
+      setIsLoadingFermentationUnlocks(true);
+      try {
+        const unlocked = await getResearchUpgradeFeature().unlocks.getUnlockedItems('fermentation_technology');
+        if (!isMounted) return;
+
+        const unlockedSet = new Set<string>(['Basic', ...unlocked.map(value => String(value))]);
+        setUnlockedFermentationMethods(unlockedSet);
+      } catch (error) {
+        console.error('Failed to load fermentation unlocks:', error);
+        if (isMounted) {
+          setUnlockedFermentationMethods(new Set(['Basic']));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingFermentationUnlocks(false);
+        }
+      }
+    };
+
+    loadUnlocks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!unlockedFermentationMethods.has(options.method)) {
+      setOptions(prev => ({ ...prev, method: 'Basic' }));
+    }
+  }, [options.method, unlockedFermentationMethods]);
+
   // Field definitions
   const fields: ActivityOptionField[] = [
     {
@@ -132,8 +178,13 @@ export const FermentationOptionsModal: React.FC<FermentationOptionsModalProps> =
       defaultValue: options.method,
       options: Object.entries(methodInfo).map(([method, info]) => ({
         value: method,
-        label: method,
-        description: `${info.description} - ${info.effects} (${info.costPenalty > 0 ? `+${formatNumber(info.costPenalty, { currency: true })}` : 'No cost'}) | ${info.weeklyEffects}`
+        label: unlockedFermentationMethods.has(method)
+          ? method
+          : `${method} (Locked)`,
+        description: unlockedFermentationMethods.has(method)
+          ? `${info.description} - ${info.effects} (${info.costPenalty > 0 ? `+${formatNumber(info.costPenalty, { currency: true })}` : 'No cost'}) | ${info.weeklyEffects}`
+          : `${info.description} | ${METHOD_UNLOCK_PROJECT_HINTS[method as FermentationOptions['method']] || 'Research required'}`,
+        disabled: !unlockedFermentationMethods.has(method)
       })),
       required: true,
       tooltip: `Choose fermentation method. Each method affects setup work, cost, and weekly characteristic development.
@@ -200,8 +251,15 @@ Note: These effects apply each week while fermentation is active.`
   const canSubmit = (currentOptions: Record<string, any>) => {
     if (!batch) return false;
     const validation = validateFermentationBatch(batch);
+    const selectedMethod = String(currentOptions.method || 'Basic');
     
-    return validation.valid && currentOptions.method && currentOptions.temperature;
+    return (
+      validation.valid
+      && !isLoadingFermentationUnlocks
+      && !!currentOptions.method
+      && !!currentOptions.temperature
+      && unlockedFermentationMethods.has(selectedMethod)
+    );
   };
 
   // Early returns
@@ -265,6 +323,18 @@ Note: These effects apply each week while fermentation is active.`
           Fermentation Process
         </button>
       </UnifiedTooltip>
+
+      {isLoadingFermentationUnlocks && (
+        <div className="text-xs text-gray-600 bg-gray-100 border border-gray-300 rounded p-2">
+          Loading fermentation research unlocks...
+        </div>
+      )}
+
+      {!isLoadingFermentationUnlocks && (
+        <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+          Locked methods require research. Temperature Controlled and Extended Maceration unlock via fermentation research projects.
+        </div>
+      )}
       
       {/* Combined Effects Display */}
       <div className="bg-green-50 border border-green-200 rounded p-3">

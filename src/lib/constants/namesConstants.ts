@@ -287,3 +287,56 @@ export const LENDER_NAMES = {
     'Momentum Microloans'
   ]
 } as const;
+
+export const GRAPE_MERCHANT_SUFFIXES = {
+  France: [
+    'Negoce',
+    'Vin & Raisin',
+    'Maison des Raisins',
+    'Courtiers du Raisin',
+    'Marché des Grappes',
+    'Négociants du Terroir',
+    'Raisin Premier',
+    'Comptoir Viticole'
+  ],
+  Germany: [
+    'Traubenhandel',
+    'Kelterei Handel',
+    'Weintrauben Markt',
+    'Rheinhandel',
+    'Rebenbörse',
+    'Trauben Kontor',
+    'Weinberg Direkt',
+    'Hoftrauben Handelshaus'
+  ],
+  Italy: [
+    'Mercato Uva',
+    'Commercio Vite',
+    'Cantina Uve',
+    'Casa delle Uve',
+    'Borsa dell Uva',
+    'Uve del Podere',
+    'Rete Viticola',
+    'Consorzio Uvaggio'
+  ],
+  Spain: [
+    'Comercio de Uva',
+    'Bodega de Uvas',
+    'Mercado de Vina',
+    'Uva Selecta',
+    'Casa de la Uva',
+    'Mercado del Racimo',
+    'Uvas del Valle',
+    'Casa Viticola'
+  ],
+  'United States': [
+    'Grape Trading Co.',
+    'Valley Grape Supply',
+    'Harvest Grape Brokers',
+    'Premium Grape Exchange',
+    'American Grape Network',
+    'Coastal Grape Partners',
+    'Vineyard Supply House',
+    'Grape Route Logistics'
+  ]
+} as const;

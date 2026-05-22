@@ -8,7 +8,7 @@ import { getGameState } from '@/lib/services';
 import { WarningModal } from '@/components/ui';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
-const BASE_VINEYARD_SIZE_LIMIT_HA = 1;
+const BASE_VINEYARD_SIZE_LIMIT_HA = 0.1;
 
 interface LandSearchResultsModalProps {
   isOpen: boolean;

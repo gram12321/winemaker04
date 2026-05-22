@@ -23,6 +23,40 @@ import {
   CUSTOMER_MAX_WINE_AGE,
   AVAILABLE_CHARACTERISTICS
 } from '../../constants/contractConstants';
+import { researchEnforcer } from '../../features/researchUpgrade/services/research/researchEnforcer';
+
+const CONTRACT_TYPE_UNLOCK_VALUE_TO_CUSTOMER_TYPE: Record<string, CustomerType> = {
+  restaurant: 'Restaurant',
+  'private collector': 'Private Collector',
+  private_collector: 'Private Collector',
+  'chain store': 'Chain Store',
+  chain_store: 'Chain Store',
+  wineshop: 'Wine Shop',
+  'wine shop': 'Wine Shop',
+  wine_shop: 'Wine Shop'
+};
+
+async function getUnlockedContractCustomerTypes(): Promise<Set<CustomerType>> {
+  // Wine Shop contracts remain baseline-accessible for early game.
+  const unlockedCustomerTypes = new Set<CustomerType>(['Wine Shop']);
+
+  const unlockedValueGroups = await Promise.all([
+    researchEnforcer.getUnlockedItems('sales_channel'),
+    researchEnforcer.getUnlockedItems('contract_type')
+  ]);
+
+  for (const unlockedValues of unlockedValueGroups) {
+    for (const unlockedValue of unlockedValues) {
+      const normalized = String(unlockedValue).trim().toLowerCase();
+      const mapped = CONTRACT_TYPE_UNLOCK_VALUE_TO_CUSTOMER_TYPE[normalized];
+      if (mapped) {
+        unlockedCustomerTypes.add(mapped);
+      }
+    }
+  }
+
+  return unlockedCustomerTypes;
+}
 
 // ===== REQUIREMENT DIFFICULTY SYSTEM =====
 
@@ -311,11 +345,13 @@ async function getEligibleCustomersWithChances(prestige: number): Promise<Array<
   customer: Customer;
   chance: number;
 }>> {
+  const unlockedContractCustomerTypes = await getUnlockedContractCustomerTypes();
   const allCustomers = await getAllCustomers();
   const eligible: Array<{ customer: Customer; chance: number }> = [];
   
   for (const customer of allCustomers) {
     if (!customer.activeCustomer) continue;
+    if (!unlockedContractCustomerTypes.has(customer.customerType)) continue;
     
     const result = calculateCustomerContractChance(customer, prestige);
     if (result.isEligible && result.contractChance > 0) {
@@ -516,6 +552,7 @@ export async function getContractGenerationChance(): Promise<{
     const pendingContracts = await getPendingContracts();
     const allCustomers = await getAllCustomers();
     const prestige = await getCurrentPrestige();
+    const unlockedContractCustomerTypes = await getUnlockedContractCustomerTypes();
     
     const eligibleWithChances = await getEligibleCustomersWithChances(prestige);
     
@@ -534,6 +571,7 @@ export async function getContractGenerationChance(): Promise<{
     
     for (const customer of allCustomers) {
       if (!customer.activeCustomer) continue;
+      if (!unlockedContractCustomerTypes.has(customer.customerType)) continue;
       customerTypeBreakdown[customer.customerType].total++;
     }
     
@@ -558,7 +596,7 @@ export async function getContractGenerationChance(): Promise<{
       blockReason = `Max pending contracts (${CONTRACT_CONFIG.maxPendingContracts}) reached`;
     } else if (eligibleWithChances.length === 0) {
       isBlocked = true;
-      blockReason = 'No eligible customers (check relationship/prestige requirements)';
+      blockReason = 'No eligible customers (check relationship, prestige, or contract-type research unlocks)';
     }
     
     return {

@@ -10,7 +10,7 @@ import { NATIONALITIES, getSkillLevelInfo } from '@/lib/constants/staffConstants
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider } from '@/components/ui';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
-const BASE_STAFF_LIMIT = 4;
+const BASE_STAFF_LIMIT = 2;
 
 interface HireStaffModalProps {
   isOpen: boolean;

@@ -9,6 +9,8 @@ import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { getGameState, updateGameState } from '../core/gameState';
 import { createWineBatchFromHarvest } from '../wine/winery/inventoryService';
+import { getResearchPermanentEffects } from '../research/researchPermanentEffectsService';
+import { getCurrentCompanyId } from '../../utils/companyUtils';
  
  
 /**
@@ -461,6 +463,8 @@ export async function updateVineyardAges(): Promise<void> {
 export async function updateVineyardHealthDegradation(season: string, _week: number): Promise<void> {
   try {
     const vineyards = await loadVineyards();
+    const companyId = getCurrentCompanyId();
+    const permanentEffects = await getResearchPermanentEffects(companyId || undefined);
     const healthDegradations: Array<{ vineyard: string; oldHealth: number; newHealth: number; degradation: number }> = [];
     const vineyardsToUpdate: Vineyard[] = [];
     
@@ -492,6 +496,9 @@ export async function updateVineyardHealthDegradation(season: string, _week: num
       // Apply small random variation (±20%)
       const variation = (Math.random() - 0.5) * 0.4; // -20% to +20%
       weeklyDegradation *= (1 + variation);
+
+      // Apply research-based permanent effects (minimum slice: vineyard health decay reductions).
+      weeklyDegradation *= permanentEffects.vineyardHealthDecayMultiplier;
       
       // Calculate new health
       const oldHealth = vineyard.vineyardHealth;

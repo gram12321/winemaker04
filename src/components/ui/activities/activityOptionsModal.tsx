@@ -13,7 +13,7 @@ export interface ActivityOptionField {
   min?: number;
   max?: number;
   step?: number;
-  options?: { value: string | number; label: string; description?: string }[];
+  options?: { value: string | number; label: string; description?: string; disabled?: boolean }[];
   checkboxOptions?: { value: string; label: string; description?: string }[];
   tooltip?: string;
   required?: boolean;
@@ -180,7 +180,7 @@ export const ActivityOptionsModal: React.FC<ActivityOptionsModalProps> = ({
                     required={field.required}
                   >
                     {field.options.map(option => (
-                      <option key={option.value.toString()} value={option.value}>
+                      <option key={option.value.toString()} value={option.value} disabled={option.disabled}>
                         {option.label}
                       </option>
                     ))}

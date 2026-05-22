@@ -5,6 +5,7 @@ import Vineyard from './components/pages/Vineyard';
 import Winery from './components/pages/Winery';
 import Sales from './components/pages/Sales';
 import Finance from './components/pages/Finance';
+import { ResearchPage } from './components/pages/Research';
 import { StaffPage } from './components/pages/Staff';
 import { Profile } from './components/pages/Profile';
 import { Settings } from './components/pages/Settings';
@@ -142,6 +143,8 @@ function App() {
         return <Sales onNavigateToWinepedia={() => setCurrentPage('winepedia-customers')} />;
       case 'finance':
         return <Finance />;
+      case 'research':
+        return <ResearchPage />;
       case 'staff':
         return <StaffPage title="Staff Management" />;
       case 'profile':

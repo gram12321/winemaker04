@@ -10,3 +10,4 @@ export { YieldProjectionTab } from './YieldProjectionTab';
 export { DynamicRangeTab } from './DynamicRangeTab';
 export { CrossTraitPenaltyTab } from './CrossTraitPenaltyTab';
 export { EconomyTab } from './EconomyTab';
+export { GrapeBuyersTab } from './GrapeBuyersTab';

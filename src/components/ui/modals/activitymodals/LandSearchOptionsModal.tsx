@@ -9,7 +9,7 @@ import { getGameState } from '@/lib/services';
 import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 
-const BASE_VINEYARD_SIZE_LIMIT_HA = 1;
+const BASE_VINEYARD_SIZE_LIMIT_HA = 0.1;
 
 // Two-thumb slider built on Radix Slider primitives
 const DualSlider: React.FC<{

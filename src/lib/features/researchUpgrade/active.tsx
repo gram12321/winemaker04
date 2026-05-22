@@ -106,7 +106,11 @@ export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
         fermentation_technology: 'fermentation technology',
         staff_limit: 'staff limit',
         wine_feature: 'wine feature',
-        contract_type: 'contract type'
+        contract_type: 'sales channel',
+        sales_channel: 'sales channel',
+        grape_buyer_slots: 'grape buyer slot',
+        grape_buyer_limit_multiplier: 'grape buyer seasonal limit upgrade',
+        grape_buyer_multiplier_bonus: 'grape buyer multiplier upgrade'
       };
 
       return `${displayName} ${typeLabels[type] || 'item'} is locked. Complete the required research to unlock it.`;

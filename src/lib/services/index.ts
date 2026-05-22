@@ -53,6 +53,7 @@ export * from './sales/salesOrderService';
 export * from './sales/createCustomer';
 export * from './sales/generateCustomer';
 export * from './sales/generateOrder';
+export * from './sales/grapeBuyerLoyaltyService';
 export * from './sales/relationshipService';
 export * from './sales/contractGenerationService';
 export * from './sales/contractService';
@@ -63,6 +64,8 @@ export * from './prestige/prestigeService';
 
 // Research services
 export * from '@/lib/features/researchUpgrade/services/research/researchEnforcer';
+export * from './research/researchEligibilityService';
+export * from './research/researchPermanentEffectsService';
 
 // Activity system
 export * from './activity';

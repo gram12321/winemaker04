@@ -75,13 +75,15 @@ const baseVineyardParams: TestLabParamField[] = [
 
 // Winery scenarios let you pick an existing vineyard or create a new test one.
 // The UI hides vineyardConfigParams when an existing vineyard is selected.
-// Options are extended at runtime in TestLabPage with the current company's vineyards.
+// Options are built entirely at runtime in TestLabPage (from loadVineyards + 'new').
+// The static options list is intentionally empty so the param validator accepts any
+// vineyard UUID without knowing them ahead of time.
 const vineyardPickerParam: TestLabParamField = {
   key: 'vineyardId',
   label: 'Vineyard',
   type: 'select',
   defaultValue: 'new',
-  options: [{ label: 'Create test vineyard', value: 'new' }]
+  options: []
 };
 
 // Only params relevant to creating a grapes-stage batch (harvest quantity).

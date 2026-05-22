@@ -109,7 +109,7 @@ This document describes what has been **actually implemented** in the Winery Man
 
 ### 6. Player Interface ✅ **IMPLEMENTED**
 **What's Implemented**:
-- **Navigation**: `src/components/layout/Header.tsx` - Time display, advance button, player menu, prestige display
+- **Navigation**: `src/components/layout/Header.tsx` - Time display, advance button, player menu, prestige display, and top-level gameplay tabs including Research
 - **Player Menu**: Dropdown with Profile, Settings, Admin Dashboard, Achievements, Winepedia, Logout
 - **Notification System**: `src/lib/services/core/notificationService.ts` - Centralized notification system with database persistence
 - **Admin Dashboard**: `src/components/pages/AdminDashboard.tsx` - Data management tools, prestige management
@@ -122,6 +122,25 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Login System**: `src/components/pages/Login.tsx` - Company creation, selection, and highscores
 - **Staff System**: `src/components/pages/Staff.tsx` - Staff management with teams, search, and recruitment
 - **Winepedia Tabs**: `DynamicRangeTab`, `CrossTraitPenaltyTab`, `YieldProjectionTab` - Interactive system visualization
+
+### 7. Research System ✅ **IMPLEMENTED (Core + UI)**
+**What's Implemented**:
+- **Research Catalog + Progression**: Project definitions with complexity, prerequisites, prestige requirements, and category-specific pacing profiles in `src/lib/constants/researchConstants.ts`
+- **Activity Integration**: Research projects start as activities with shared work calculation and upfront cost in `src/lib/services/activity/workcalculators/researchWorkCalculator.ts`
+- **Eligibility Enforcement**: Start flow checks requirements (prestige, prerequisites, company value, buyer loyalty, achievements) via `src/lib/services/research/researchEligibilityService.ts`
+- **Unlock Persistence**: Completed research is persisted company-scoped through `src/lib/database/core/researchUnlocksDB.ts`
+- **UI**: Dedicated research page (`src/components/pages/Research.tsx`) and panel (`src/components/finance/ResearchPanel.tsx`) with completed, in-progress, locked, and available states
+- **Active Bonuses UI**: Research page now surfaces permanent bonuses from completed research in a visible summary panel
+- **Implemented Gates**:
+  - `grape` unlocks in planting
+  - `fermentation_technology` unlocks in fermentation options modal
+  - `sales_channel` unlocks in contract generation
+  - `staff_limit` and `vineyard_size` tier caps in hiring and land search
+- **Permanent Effect Minimum Slice**: Runtime permanent-effect aggregation for completed research, applied to vineyard health degradation (`vineyard_health_decay_multiplier`)
+
+**What's NOT Implemented Yet**:
+- ❌ **Equipment Unlock Track**: No standalone equipment gameplay system exists yet
+- ❌ **Vineyard Technique Track**: Still planned as dedicated projects with explicit domain hooks
 
 ## 🎯 **Implementation Status Summary**
 

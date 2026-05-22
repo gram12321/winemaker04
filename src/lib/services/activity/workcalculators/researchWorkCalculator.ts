@@ -4,10 +4,20 @@ import { WorkCategory } from '@/lib/types/types';
 import {
       getResearchProject,
       RESEARCH_BASE_MONEY_COST,
-      RESEARCH_COMPLEXITY_WORK_MULTIPLIER,
-      RESEARCH_COMPLEXITY_COST_MULTIPLIER,
+      RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER,
+      RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER,
       ResearchProject
 } from '@/lib/constants/researchConstants';
+
+const RESEARCH_CATEGORY_WORK_MODIFIERS: Record<ResearchProject['category'], number> = {
+      administration: -0.15,
+      projects: -0.1,
+      technology: 0.15,
+      agriculture: 0.05,
+      efficiency: 0.1,
+      marketing: -0.05,
+      staff: 0.05
+};
 
 /**
  * Calculate work required for research activity
@@ -26,51 +36,35 @@ export function calculateResearchWork(projectId: string): {
       // Get base work rate and initial work from activity constants
       const baseRate = TASK_RATES[WorkCategory.ADMINISTRATION_AND_RESEARCH]; // 25 work units/week
       const baseInitialWork = INITIAL_WORK[WorkCategory.ADMINISTRATION_AND_RESEARCH];
+
+      const workProfile = project.workProfile;
       
       // Add project-specific extra initial work if provided
-      const initialWork = baseInitialWork + (project.initialWork || 0);
+      const initialWork = baseInitialWork + (project.initialWork || 0) + (workProfile?.extraInitialWork || 0);
 
-      // Get base work amount (defaults to 0 if not specified)
-      // This is used as the "amount" parameter for calculateTotalWork
-      const baseWorkAmount = project.baseWorkAmount || 0;
+      // Generic scope amount: either a fixed scope, a complexity-scaled scope, or legacy baseWorkAmount.
+      const scopeWorkAmount = (workProfile?.scopeWorkAmount || project.baseWorkAmount || 0)
+            + ((workProfile?.scopeWorkAmountPerComplexity || 0) * project.complexity);
 
-      // Complexity modifier: each complexity point adds work
-      // Complexity 1-10, multiplier 0.15 = 0% to 135% additional work
-      const complexityModifier = (project.complexity - 1) * RESEARCH_COMPLEXITY_WORK_MULTIPLIER;
+      // Complexity curve operates on the normalized research complexity axis (1-10).
+      // For grape projects, grape difficulty is mapped to this axis in research constants.
+      // Default to the current linear behavior unless a project overrides it.
+      const complexityModifier = workProfile?.complexityCurve
+            ? (workProfile.complexityCurve.kind === 'linear'
+                  ? (project.complexity - 1) * workProfile.complexityCurve.multiplier
+                  : Math.pow(workProfile.complexityCurve.base, project.complexity - 1) - 1)
+            : (project.complexity - 1) * RESEARCH_PROJECT_COMPLEXITY_WORK_MULTIPLIER;
 
-      // Category-based modifier
-      let categoryModifier = 0;
-      switch (project.category) {
-            case 'administration':
-                  categoryModifier = -0.15; // 15% less work (paperwork focused)
-                  break;
-            case 'projects':
-                  categoryModifier = -0.1; // 10% less work (grant applications)
-                  break;
-            case 'technology':
-                  categoryModifier = 0.15; // 15% more work (experimental)
-                  break;
-            case 'agriculture':
-                  categoryModifier = 0.05; // 5% more work (field research)
-                  break;
-            case 'efficiency':
-                  categoryModifier = 0.1; // 10% more work (implementation planning)
-                  break;
-            case 'marketing':
-                  categoryModifier = -0.05; // 5% less work (market research)
-                  break;
-            case 'staff':
-                  categoryModifier = 0.05; // 5% more work (HR research)
-                  break;
-      }
+      // Category-based modifier: default category behavior unless the project overrides it.
+      const categoryModifier = workProfile?.categoryModifier ?? RESEARCH_CATEGORY_WORK_MODIFIERS[project.category];
 
       const workModifiers = [complexityModifier, categoryModifier];
 
       // Calculate total work using standard work calculator
-      // baseWorkAmount is the amount (work units), rate is 25 work units/week
-      // This means: workWeeks = baseWorkAmount / 25, then workUnits = workWeeks * 25 = baseWorkAmount
+      // scopeWorkAmount is the amount (work units), rate is 25 work units/week
+      // This means: workWeeks = scopeWorkAmount / 25, then workUnits = workWeeks * 25 = scopeWorkAmount
       // So the rate-based calculation effectively just adds baseWorkAmount work units
-      const totalWork = calculateTotalWork(baseWorkAmount, {
+      const totalWork = calculateTotalWork(scopeWorkAmount, {
             rate: baseRate,
             initialWork,
             workModifiers
@@ -94,14 +88,25 @@ export function calculateResearchWork(projectId: string): {
             });
       }
 
-      // Add base work amount factor if project has it
-      if (baseWorkAmount > 0) {
+      // Add scope factor if project has it
+      if (scopeWorkAmount > 0) {
             factors.push({
-                  label: 'Base Work Amount',
-                  value: baseWorkAmount,
+                  label: 'Scope Work Amount',
+                  value: scopeWorkAmount,
                   unit: 'work units',
                   modifier: 0, // This is additive, not a multiplier
                   modifierLabel: 'research project scope'
+            });
+      }
+
+      // Add complexity scaling profile factor when present
+      if (workProfile?.scopeWorkAmountPerComplexity && workProfile.scopeWorkAmountPerComplexity > 0) {
+            factors.push({
+                  label: 'Scope per Complexity',
+                  value: workProfile.scopeWorkAmountPerComplexity,
+                  unit: 'work units / complexity',
+                  modifier: 0,
+                  modifierLabel: 'project complexity scaling'
             });
       }
 
@@ -109,7 +114,9 @@ export function calculateResearchWork(projectId: string): {
       if (complexityModifier > 0) {
             factors.push({
                   label: 'Research Complexity',
-                  value: `Level ${project.complexity}/10`,
+                  value: workProfile?.complexityCurve
+                        ? `Level ${project.complexity}/10 (${workProfile.complexityCurve.kind})`
+                        : `Level ${project.complexity}/10`,
                   modifier: complexityModifier,
                   modifierLabel: 'complexity difficulty'
             });
@@ -145,7 +152,7 @@ export function calculateResearchCost(projectId: string): number {
 
       // Complexity multiplier: each complexity point adds cost
       // Complexity 1-10, multiplier 0.20 = 0% to 180% additional cost
-      const complexityMultiplier = 1 + ((project.complexity - 1) * RESEARCH_COMPLEXITY_COST_MULTIPLIER);
+      const complexityMultiplier = 1 + ((project.complexity - 1) * RESEARCH_PROJECT_COMPLEXITY_COST_MULTIPLIER);
 
       // Calculate final cost
       const totalCost = Math.round(baseCost * complexityMultiplier);

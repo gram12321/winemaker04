@@ -10,6 +10,7 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateAbsoluteWeeks } from '@/lib/utils';
 import { getResearchUpgradeFeature } from '../../..';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
+import { getResearchRequirementReasons, loadResearchEligibilityContext } from '@/lib/services';
 
 /**
  * Start a research activity
@@ -27,38 +28,29 @@ export async function startResearch(projectId: string): Promise<string | null> {
             const researchCost = calculateResearchCost(projectId);
             const { totalWork } = calculateResearchWork(projectId);
 
-            // Check prestige requirement
-            if (project.requiredPrestige !== undefined) {
-                  const prestige = await getCurrentPrestige();
-                  if (prestige < project.requiredPrestige) {
-                        await notificationService.addMessage(
-                              `Insufficient prestige for "${project.title}". Requires ${project.requiredPrestige} prestige (you have ${Math.floor(prestige)}).`,
-                              'researchManager.startResearch',
-                              'Prestige Requirement Not Met',
-                              NotificationCategory.FINANCE_AND_STAFF
-                        );
-                        return null;
-                  }
-            }
+            const prestige = await getCurrentPrestige();
+            const companyId = getCurrentCompanyId();
+            const unlockedIds = new Set(await getUnlockedResearchIds(companyId || undefined));
+            const eligibilityContext = await loadResearchEligibilityContext(prestige, unlockedIds, companyId || undefined);
+            const rawLockReasons = getResearchRequirementReasons(project, eligibilityContext);
 
-            // Check prerequisites
-            if (project.prerequisites && project.prerequisites.length > 0) {
-                  const companyId = getCurrentCompanyId();
-                  if (companyId) {
-                        const unlockedIds = new Set(await getUnlockedResearchIds(companyId));
-                        const missingTitles = project.prerequisites
-                              .filter(id => !unlockedIds.has(id))
-                              .map(id => RESEARCH_PROJECTS.find(p => p.id === id)?.title ?? id);
-                        if (missingTitles.length > 0) {
-                              await notificationService.addMessage(
-                                    `Cannot start "${project.title}". Complete first: ${missingTitles.join(', ')}.`,
-                                    'researchManager.startResearch',
-                                    'Prerequisites Not Met',
-                                    NotificationCategory.FINANCE_AND_STAFF
-                              );
-                              return null;
+            if (rawLockReasons.length > 0) {
+                  const lockReasons = rawLockReasons.map(reason => {
+                        if (reason.startsWith('Complete prerequisite research: ')) {
+                              const rawIds = reason.replace('Complete prerequisite research: ', '').split(', ').filter(Boolean);
+                              const missingTitles = rawIds.map(id => RESEARCH_PROJECTS.find(p => p.id === id)?.title ?? id);
+                              return `Complete first: ${missingTitles.join(', ')}`;
                         }
-                  }
+                        return reason;
+                  });
+
+                  await notificationService.addMessage(
+                        `Cannot start "${project.title}". ${lockReasons.join(' | ')}.`,
+                        'researchManager.startResearch',
+                        'Research Requirements Not Met',
+                        NotificationCategory.FINANCE_AND_STAFF
+                  );
+                  return null;
             }
 
             // Check if we have enough money
@@ -153,7 +145,8 @@ export async function completeResearch(activity: Activity): Promise<void> {
 
             const rewardText = rewards.length > 0 ? ` Received: ${rewards.join(', ')}.` : '';
 
-            // Always record completed research in database (for tracking and preventing duplicates)
+            // researchManager is the write path for completed research.
+            // The shared eligibility helper only decides whether a project can start.
             const gameState = getGameState();
             const companyId = getCurrentCompanyId();
             
@@ -205,7 +198,17 @@ export async function completeResearch(activity: Activity): Promise<void> {
                                     unlockMessages.push(`${displayName} wine feature`);
                                     break;
                               case 'contract_type':
-                                    unlockMessages.push(`${displayName} contract type`);
+                              case 'sales_channel':
+                                    unlockMessages.push(`${displayName} sales channel`);
+                                    break;
+                              case 'grape_buyer_slots':
+                                    unlockMessages.push(`${displayName} seasonal grape buyer capacity`);
+                                    break;
+                              case 'grape_buyer_limit_multiplier':
+                                    unlockMessages.push(`${displayName} grape buyer hard limit upgrade`);
+                                    break;
+                              case 'grape_buyer_multiplier_bonus':
+                                    unlockMessages.push(`${displayName} grape buyer multiplier upgrade`);
                                     break;
                               default:
                                     unlockMessages.push(`${displayName}`);
@@ -224,8 +227,8 @@ export async function completeResearch(activity: Activity): Promise<void> {
                   NotificationCategory.ADMINISTRATION_AND_RESEARCH
             );
 
-            // TODO: Apply permanent benefits for technology/upgrade research
-            // This would require a separate system to track unlocked technologies
+            // Permanent effects are applied at runtime by domain services that read
+            // completed research unlocks (minimum slice implemented for vineyard health decay).
       } catch (error) {
             console.error('Error completing research:', error);
             await notificationService.addMessage(

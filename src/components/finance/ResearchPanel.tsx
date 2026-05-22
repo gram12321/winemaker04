@@ -17,6 +17,7 @@ import { calculateResearchWork, calculateResearchCost } from '@/lib/services/act
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
 import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 import { getCurrentPrestige } from '@/lib/services/core/gameState';
+import { type ResearchEligibilityContext, getResearchRequirementReasons, isResearchProjectEligible, loadResearchEligibilityContext } from '@/lib/services';
 
 interface ResearchPanelProps {
       bypassGates?: boolean;
@@ -26,14 +27,30 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
       const [activeResearch, setActiveResearch] = useState<Set<string>>(new Set());
       const [completedResearch, setCompletedResearch] = useState<Set<string>>(new Set());
       const [currentPrestige, setCurrentPrestige] = useState<number>(0);
+      const [eligibilityContext, setEligibilityContext] = useState<ResearchEligibilityContext | null>(null);
 
       // Subscribe to game updates to refresh when activities change
-      useGameUpdates();
+      const { subscribe } = useGameUpdates();
 
       // Load active and completed research
       useEffect(() => {
-            loadResearchStatus();
-      }, []);
+            let isMounted = true;
+
+            const load = async () => {
+                  if (!isMounted) return;
+                  await loadResearchStatus();
+            };
+
+            load();
+            const unsubscribe = subscribe(() => {
+                  load();
+            });
+
+            return () => {
+                  isMounted = false;
+                  unsubscribe();
+            };
+      }, [subscribe]);
 
       const loadResearchStatus = async () => {
             const [activities, completedIds, prestige] = await Promise.all([
@@ -55,8 +72,12 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
             });
 
             setActiveResearch(active);
-            setCompletedResearch(new Set(completedIds));
+            const completedSet = new Set(completedIds);
+            setCompletedResearch(completedSet);
             setCurrentPrestige(prestige);
+
+            const context = await loadResearchEligibilityContext(prestige, completedSet);
+            setEligibilityContext(context);
       };
 
       const handleStartResearch = async (project: ResearchProject) => {
@@ -77,25 +98,37 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
             if (completedResearch.has(project.id)) return 'completed';
             if (activeResearch.has(project.id)) return 'in-progress';
             if (!bypassGates) {
-                  if (project.requiredPrestige !== undefined && currentPrestige < project.requiredPrestige) return 'locked';
-                  if (project.prerequisites?.some(id => !completedResearch.has(id))) return 'locked';
+                  const context = eligibilityContext || {
+                        currentPrestige,
+                        completedResearch,
+                        companyValue: Number.MAX_SAFE_INTEGER,
+                        maxBuyerLoyaltyLevel: 3 as const,
+                        unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map(id => id)),
+                  };
+                  if (!isResearchProjectEligible(project, context)) return 'locked';
             }
             return 'available';
       };
 
       const getLockReason = (project: ResearchProject): string => {
-            if (project.requiredPrestige !== undefined && currentPrestige < project.requiredPrestige) {
-                  return `Requires ${project.requiredPrestige} prestige (you have ${Math.floor(currentPrestige)})`;
-            }
-            if (project.prerequisites?.length) {
-                  const missing = project.prerequisites
-                        .filter(id => !completedResearch.has(id))
-                        .map(id => RESEARCH_PROJECTS.find(p => p.id === id)?.title ?? id);
-                  if (missing.length > 0) {
-                        return `Complete first: ${missing.join(', ')}`;
+            const context = eligibilityContext || {
+                  currentPrestige,
+                  completedResearch,
+                  companyValue: Number.MAX_SAFE_INTEGER,
+                  maxBuyerLoyaltyLevel: 3 as const,
+                  unlockedAchievementIds: new Set((project.requiredAchievementIds || []).map(id => id)),
+            };
+
+            const reasons = getResearchRequirementReasons(project, context).map(reason => {
+                  if (reason.startsWith('Complete prerequisite research: ')) {
+                        const rawIds = reason.replace('Complete prerequisite research: ', '').split(', ').filter(Boolean);
+                        const missingTitles = rawIds.map(id => RESEARCH_PROJECTS.find(p => p.id === id)?.title ?? id);
+                        return `Complete first: ${missingTitles.join(', ')}`;
                   }
-            }
-            return '';
+                  return reason;
+            });
+
+            return reasons.join(' | ');
       };
 
       const renderResearchCard = (project: ResearchProject) => {
