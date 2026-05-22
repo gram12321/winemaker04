@@ -122,6 +122,178 @@ async function runRegressionScenario(
   };
 }
 
+async function runSalesOrdersScenario(
+  runId: string,
+  scenarioId: string,
+  warnings: string[]
+): Promise<TestLabScenarioResult> {
+  const { adminGenerateTestOrders } = await import('@/lib/services/admin/adminService');
+  const data = await adminGenerateTestOrders();
+  const createdOrders = data.totalOrdersCreated || 0;
+  const status: TestLabScenarioStatus = createdOrders > 0 ? 'passed' : 'blocked';
+
+  return {
+    runId,
+    scenarioId,
+    status,
+    summary: createdOrders > 0
+      ? `Generated ${createdOrders} test order(s) for the active company`
+      : 'No test orders generated. Create bottled wine with available quantity first.',
+    assertions: [
+      { name: 'Order generator completed', passed: true },
+      { name: 'Orders created', passed: createdOrders > 0, details: String(createdOrders) }
+    ],
+    createdEntities: [],
+    warnings,
+    data
+  };
+}
+
+async function runSalesContractScenario(
+  runId: string,
+  scenarioId: string,
+  warnings: string[]
+): Promise<TestLabScenarioResult> {
+  const { adminGenerateTestContract } = await import('@/lib/services/admin/adminService');
+  const data = await adminGenerateTestContract();
+
+  return {
+    runId,
+    scenarioId,
+    status: data.success ? 'passed' : 'blocked',
+    summary: data.message,
+    assertions: [{ name: 'Contract generated', passed: data.success }],
+    createdEntities: [],
+    warnings,
+    data
+  };
+}
+
+async function runFinanceScenario(
+  runId: string,
+  scenarioId: string,
+  params: Record<string, string | number | boolean>,
+  warnings: string[]
+): Promise<TestLabScenarioResult> {
+  const amount = Number(params.amount ?? 0);
+  const {
+    adminAddPrestigeToCompany,
+    adminSetGoldToCompany,
+    adminSetPlayerBalance
+  } = await import('@/lib/services/admin/adminService');
+
+  if (scenarioId === 'finance.set-company-money') {
+    await adminSetGoldToCompany(amount);
+    return {
+      runId,
+      scenarioId,
+      status: 'passed',
+      summary: `Company money set to ${amount}`,
+      assertions: [{ name: 'Company money updated', passed: true, details: String(amount) }],
+      createdEntities: [],
+      warnings,
+      data: { amount }
+    };
+  }
+
+  if (scenarioId === 'finance.set-player-balance') {
+    const data = await adminSetPlayerBalance(amount);
+    return {
+      runId,
+      scenarioId,
+      status: data.success ? 'passed' : 'blocked',
+      summary: data.message || data.error || 'Player balance update completed',
+      assertions: [{ name: 'Player balance updated', passed: data.success, details: String(amount) }],
+      createdEntities: [],
+      warnings,
+      data
+    };
+  }
+
+  await adminAddPrestigeToCompany(amount);
+  return {
+    runId,
+    scenarioId,
+    status: 'passed',
+    summary: `Added ${amount} prestige to the active company`,
+    assertions: [{ name: 'Prestige event added', passed: true, details: String(amount) }],
+    createdEntities: [],
+    warnings,
+    data: { amount }
+  };
+}
+
+async function runResearchScenario(
+  runId: string,
+  scenarioId: string,
+  warnings: string[]
+): Promise<TestLabScenarioResult> {
+  const { adminGrantAllResearch, adminRemoveAllResearch } = await import('@/lib/services/admin/adminService');
+
+  if (scenarioId === 'research.grant-all') {
+    const data = await adminGrantAllResearch();
+    return {
+      runId,
+      scenarioId,
+      status: data.success ? 'passed' : 'failed',
+      summary: `Research granted: ${data.unlocked} unlocked, ${data.alreadyUnlocked} already unlocked`,
+      assertions: [{ name: 'Research grant completed', passed: data.success }],
+      createdEntities: [],
+      warnings,
+      data
+    };
+  }
+
+  const data = await adminRemoveAllResearch();
+  return {
+    runId,
+    scenarioId,
+    status: data.success ? 'passed' : 'failed',
+    summary: `Research removed: ${data.removed} unlocks removed`,
+    assertions: [{ name: 'Research removal completed', passed: data.success }],
+    createdEntities: [],
+    warnings,
+    data
+  };
+}
+
+async function runStaffXpScenario(
+  runId: string,
+  scenarioId: string,
+  params: Record<string, string | number | boolean>,
+  warnings: string[]
+): Promise<TestLabScenarioResult> {
+  const staffId = String(params.staffId || '').trim();
+  const xpCategory = String(params.xpCategory || '').trim();
+  const xpAmount = Number(params.xpAmount ?? 0);
+
+  if (!staffId || staffId === 'none') {
+    return {
+      runId,
+      scenarioId,
+      status: 'blocked',
+      summary: 'Staff XP scenario requires a staff member',
+      assertions: [{ name: 'Staff member selected', passed: false }],
+      createdEntities: [],
+      warnings
+    };
+  }
+
+  const { adminSetStaffXP } = await import('@/lib/services/admin/adminService');
+  const data = await adminSetStaffXP(staffId, xpCategory, xpAmount);
+
+  return {
+    runId,
+    scenarioId,
+    status: data.success ? 'passed' : 'blocked',
+    summary: data.message || data.error || 'Staff XP update completed',
+    assertions: [{ name: 'Staff XP updated', passed: data.success, details: xpCategory }],
+    createdEntities: data.success ? [{ type: 'staff', id: staffId, label: xpCategory }] : [],
+    warnings,
+    data
+  };
+}
+
 export async function runTestLabScenario(request: TestLabRunRequest): Promise<TestLabScenarioResult> {
   const scenario = getTestLabScenario(request.scenarioId);
   const runId = request.scenarioId === 'cleanup.by-run-id'
@@ -161,6 +333,30 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
 
     if (scenario.id === 'regression.full-suite') {
       return await runRegressionScenario(runId, scenario.id, params, warnings);
+    }
+
+    if (scenario.id === 'sales.generate-orders') {
+      return await runSalesOrdersScenario(runId, scenario.id, warnings);
+    }
+
+    if (scenario.id === 'sales.generate-contract') {
+      return await runSalesContractScenario(runId, scenario.id, warnings);
+    }
+
+    if (
+      scenario.id === 'finance.set-company-money' ||
+      scenario.id === 'finance.set-player-balance' ||
+      scenario.id === 'finance.add-prestige'
+    ) {
+      return await runFinanceScenario(runId, scenario.id, params, warnings);
+    }
+
+    if (scenario.id === 'research.grant-all' || scenario.id === 'research.remove-all') {
+      return await runResearchScenario(runId, scenario.id, warnings);
+    }
+
+    if (scenario.id === 'staff.set-xp') {
+      return await runStaffXpScenario(runId, scenario.id, params, warnings);
     }
 
     if (scenario.id === 'cleanup.by-run-id') {
@@ -208,6 +404,28 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
 
     let fixtureResult: TestLabVineyardResult | TestLabBatchResult | null = null;
     switch (scenario.id) {
+      case 'company.set-game-date': {
+        const { adminSetGameDate } = await import('@/lib/services/admin/adminService');
+        await adminSetGameDate({
+          week: Number(params.week),
+          season: params.season as Season,
+          year: Number(params.year)
+        });
+        return {
+          runId,
+          scenarioId: scenario.id,
+          status: 'passed',
+          summary: `Game date set to ${params.season} week ${params.week}, ${params.year}`,
+          assertions: [{ name: 'Game date updated', passed: true }],
+          createdEntities: [],
+          warnings,
+          data: {
+            week: params.week,
+            season: params.season,
+            year: params.year
+          }
+        };
+      }
       case 'vineyard.harvest-ready': {
         const { adminSetGameDate } = await import('@/lib/services/admin/adminService');
         await adminSetGameDate({

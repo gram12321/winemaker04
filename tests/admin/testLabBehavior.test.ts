@@ -20,7 +20,16 @@ const runnerMocks = vi.hoisted(() => ({
   createGrapeBatch: vi.fn(),
   createMustReadyBatch: vi.fn(),
   createFermentingBatch: vi.fn(),
-  createBottledWine: vi.fn()
+  createBottledWine: vi.fn(),
+  adminGenerateTestOrders: vi.fn(async () => ({ totalOrdersCreated: 2, customersGenerated: 0 })),
+  adminGenerateTestContract: vi.fn(async () => ({ success: true, message: 'Contract generated' })),
+  adminSetGoldToCompany: vi.fn(async () => undefined),
+  adminSetPlayerBalance: vi.fn(async () => ({ success: true, message: 'Player balance set' })),
+  adminAddPrestigeToCompany: vi.fn(async () => undefined),
+  adminSetGameDate: vi.fn(async () => undefined),
+  adminGrantAllResearch: vi.fn(async () => ({ success: true, unlocked: 3, alreadyUnlocked: 1 })),
+  adminRemoveAllResearch: vi.fn(async () => ({ success: true, removed: 4 })),
+  adminSetStaffXP: vi.fn(async () => ({ success: true, message: 'Set staff XP' }))
 }));
 
 vi.mock('@/lib/services/admin/testLab/runId', () => ({
@@ -40,6 +49,18 @@ vi.mock('@/lib/services/admin/testLab/testLabFixtureService', () => ({
   createMustReadyBatch: runnerMocks.createMustReadyBatch,
   createFermentingBatch: runnerMocks.createFermentingBatch,
   createBottledWine: runnerMocks.createBottledWine
+}));
+
+vi.mock('@/lib/services/admin/adminService', () => ({
+  adminGenerateTestOrders: runnerMocks.adminGenerateTestOrders,
+  adminGenerateTestContract: runnerMocks.adminGenerateTestContract,
+  adminSetGoldToCompany: runnerMocks.adminSetGoldToCompany,
+  adminSetPlayerBalance: runnerMocks.adminSetPlayerBalance,
+  adminAddPrestigeToCompany: runnerMocks.adminAddPrestigeToCompany,
+  adminSetGameDate: runnerMocks.adminSetGameDate,
+  adminGrantAllResearch: runnerMocks.adminGrantAllResearch,
+  adminRemoveAllResearch: runnerMocks.adminRemoveAllResearch,
+  adminSetStaffXP: runnerMocks.adminSetStaffXP
 }));
 
 describe('Admin Test Lab behavior', () => {
@@ -134,6 +155,108 @@ describe('Admin Test Lab behavior', () => {
       mutatesData: true
     }));
     expect(getTestLabScenario('missing.scenario')).toBeUndefined();
+  });
+
+  it('registers active-company scenario families beyond vineyard and winery setup', () => {
+    expect(getTestLabScenario('sales.generate-orders')).toEqual(expect.objectContaining({
+      group: 'Sales Flow',
+      mutatesData: true
+    }));
+    expect(getTestLabScenario('sales.generate-contract')).toEqual(expect.objectContaining({
+      group: 'Sales Flow',
+      mutatesData: true
+    }));
+    expect(getTestLabScenario('finance.set-company-money')).toEqual(expect.objectContaining({
+      group: 'Finance Flow',
+      mutatesData: true
+    }));
+    expect(getTestLabScenario('research.grant-all')).toEqual(expect.objectContaining({
+      group: 'Research and Staff',
+      mutatesData: true
+    }));
+    expect(getTestLabScenario('staff.set-xp')).toEqual(expect.objectContaining({
+      group: 'Research and Staff',
+      mutatesData: true
+    }));
+  });
+
+  it('runs sales shortcut scenarios through the active company admin services', async () => {
+    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+
+    const orderResult = await runTestLabScenario({
+      scenarioId: 'sales.generate-orders',
+      mode: 'run',
+      params: {}
+    });
+    const contractResult = await runTestLabScenario({
+      scenarioId: 'sales.generate-contract',
+      mode: 'run',
+      params: {}
+    });
+
+    expect(orderResult).toMatchObject({
+      status: 'passed',
+      summary: 'Generated 2 test order(s) for the active company'
+    });
+    expect(contractResult).toMatchObject({
+      status: 'passed',
+      summary: 'Contract generated'
+    });
+    expect(runnerMocks.adminGenerateTestOrders).toHaveBeenCalledOnce();
+    expect(runnerMocks.adminGenerateTestContract).toHaveBeenCalledOnce();
+  });
+
+  it('runs finance and research scenarios through active-company admin services', async () => {
+    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+
+    await runTestLabScenario({
+      scenarioId: 'finance.set-company-money',
+      mode: 'run',
+      params: { amount: '25000' }
+    });
+    await runTestLabScenario({
+      scenarioId: 'finance.add-prestige',
+      mode: 'run',
+      params: { amount: '125' }
+    });
+    const grantResult = await runTestLabScenario({
+      scenarioId: 'research.grant-all',
+      mode: 'run',
+      params: {}
+    });
+
+    expect(runnerMocks.adminSetGoldToCompany).toHaveBeenCalledWith(25000);
+    expect(runnerMocks.adminAddPrestigeToCompany).toHaveBeenCalledWith(125);
+    expect(grantResult.summary).toBe('Research granted: 3 unlocked, 1 already unlocked');
+    expect(runnerMocks.adminGrantAllResearch).toHaveBeenCalledOnce();
+  });
+
+  it('blocks staff XP scenarios without a selected staff member', async () => {
+    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+
+    const result = await runTestLabScenario({
+      scenarioId: 'staff.set-xp',
+      mode: 'run',
+      params: { staffId: '', xpCategory: 'skill:field', xpAmount: 500 }
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.summary).toBe('Staff XP scenario requires a staff member');
+    expect(runnerMocks.adminSetStaffXP).not.toHaveBeenCalled();
+  });
+
+  it('sets staff XP through the active company admin service', async () => {
+    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+
+    const result = await runTestLabScenario({
+      scenarioId: 'staff.set-xp',
+      mode: 'run',
+      params: { staffId: 'staff_1', xpCategory: 'skill:winery', xpAmount: '750' }
+    });
+
+    expect(result.status).toBe('passed');
+    expect(result.summary).toBe('Set staff XP');
+    expect(runnerMocks.adminSetStaffXP).toHaveBeenCalledWith('staff_1', 'skill:winery', 750);
   });
 });
 

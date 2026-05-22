@@ -34,7 +34,8 @@ import { runTestLabScenario } from '@/lib/services/admin/testLab/testLabRunner';
 import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '@/lib/services/admin/testLab/types';
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
-import type { Vineyard } from '@/lib/types/types';
+import { getAllStaff } from '@/lib/services/user/staffService';
+import type { Staff, Vineyard } from '@/lib/types/types';
 
 interface RecentRun {
   runId: string;
@@ -123,12 +124,14 @@ export default function TestLabPage() {
   const [result, setResult] = useState<TestLabScenarioResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
   const [existingVineyards, setExistingVineyards] = useState<Vineyard[]>([]);
+  const [existingStaff, setExistingStaff] = useState<Staff[]>([]);
   const { isLoading, withLoading } = useLoadingState();
   const devAvailable = isDevAdminSurfaceAvailable();
 
   useEffect(() => {
     setRecentRuns(readRecentRuns());
     loadVineyards().then(setExistingVineyards).catch(() => {});
+    getAllStaff().then(setExistingStaff).catch(() => {});
   }, []);
 
   const selectScenario = (scenario: TestLabScenarioDefinition) => {
@@ -213,6 +216,7 @@ export default function TestLabPage() {
       const isCountryField = field.key === 'country';
       const isRegionField = field.key === 'region';
       const isVineyardPickerField = field.key === 'vineyardId';
+      const isStaffPickerField = field.key === 'staffId';
 
       const rawOptions = field.options || [];
       const selectedCountry = String(params.country ?? '');
@@ -225,8 +229,15 @@ export default function TestLabPage() {
             ...existingVineyards.map(v => ({ label: v.name, value: v.id }))
           ]
         : null;
+      const staffPickerOptions = isStaffPickerField
+        ? [
+            { label: 'Select staff member', value: 'none' },
+            ...existingStaff.map(staff => ({ label: staff.name, value: staff.id }))
+          ]
+        : null;
 
       const selectOptions = vineyardPickerOptions
+        ?? staffPickerOptions
         ?? (isRegionField ? rawOptions.filter(option => allowedRegions.includes(String(option.value))) : rawOptions);
 
       return (
@@ -328,7 +339,7 @@ export default function TestLabPage() {
           <ShieldCheck className="mt-0.5 h-4 w-4 text-green-700" />
           <div>
             <p className="text-sm font-semibold text-green-900">Development localhost mode</p>
-            <p className="text-xs text-green-800">Automated Tests reuse the same Vitest suite as `tests/`. Gameflow Lab scenarios create tagged fixture data for manual inspection and cleanup.</p>
+            <p className="text-xs text-green-800">Automated Tests reuse the same Vitest suite as `tests/`. Gameflow Lab scenarios run against the active company and tag fixture data where cleanup is available.</p>
           </div>
         </div>
       </div>
@@ -346,7 +357,7 @@ export default function TestLabPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Gameflow Lab</CardTitle>
             <CardDescription>
-              Separate interactive tooling for creating companies, vineyards, activities, and wine states without waiting for natural ticks.
+              Active-company tooling for creating or mutating game states without waiting for natural ticks.
             </CardDescription>
           </CardHeader>
         </Card>

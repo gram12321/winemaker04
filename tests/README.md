@@ -38,7 +38,7 @@ The Admin UI also exposes these same automated tests through the development-onl
 - Use project aliases such as `@/lib/...` for app imports.
 - Keep pure unit tests deterministic.
 - Database-backed workflow tests must create isolated data and clean up after themselves.
-- Admin Test Lab fixture helpers must tag created data with durable `testlab_...` run ids.
+- Admin Test Lab fixture helpers run against the active company by design and must tag created fixture data with durable `testlab_...` run ids where records can be tagged.
 - Do not write new tests that depend on React component state as the only cleanup record.
 
 ## Integration Tests
@@ -57,6 +57,6 @@ When adding a new mutating integration test:
 The Admin Dashboard surfaces two related but different systems:
 
 - Automated Tests: shared with this folder, run through Vite middleware via `npm test -- --reporter=json`.
-- Gameflow Lab: separate interactive tooling that can create companies, vineyards, activities, and wine batches for manual inspection.
+- Gameflow Lab: separate interactive tooling that can create or mutate active-company companies, vineyards, activities, wine batches, sales artifacts, finance state, research unlocks, and staff XP for manual inspection.
 - Mutating scenarios must return a run id and cleanup report.
-- Cleanup must work after a page reload by finding durable tags in persisted records.
+- Cleanup must work after a page reload by finding durable tags in persisted fixture records. Broad active-company admin shortcuts such as money, prestige, research, and staff XP are intentionally inspectable mutations, not fully reversible fixture records.

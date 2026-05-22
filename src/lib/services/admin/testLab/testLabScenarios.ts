@@ -37,6 +37,21 @@ const fermentationMethodOptions = ['Basic', 'Temperature Controlled', 'Extended 
 const fermentationTemperatureOptions = ['Ambient', 'Cool', 'Warm']
   .map(value => ({ label: value, value }));
 
+const staffXpCategoryOptions = [
+  { label: 'Skill: Field', value: 'skill:field' },
+  { label: 'Skill: Winery', value: 'skill:winery' },
+  { label: 'Skill: Finance & Staff', value: 'skill:financeAndStaff' },
+  { label: 'Skill: Sales', value: 'skill:sales' },
+  { label: 'Skill: Admin & Research', value: 'skill:administrationAndResearch' },
+  { label: 'Grape: Chardonnay', value: 'grape:Chardonnay' },
+  { label: 'Grape: Pinot Noir', value: 'grape:Pinot Noir' },
+  { label: 'Grape: Sauvignon Blanc', value: 'grape:Sauvignon Blanc' },
+  { label: 'Grape: Sangiovese', value: 'grape:Sangiovese' },
+  { label: 'Grape: Tempranillo', value: 'grape:Tempranillo' },
+  { label: 'Grape: Barbera', value: 'grape:Barbera' },
+  { label: 'Grape: Primitivo', value: 'grape:Primitivo' }
+];
+
 // Vineyard configuration params used when creating a new test vineyard.
 const vineyardConfigParams: TestLabParamField[] = [
   { key: 'country', label: 'Country', type: 'select', defaultValue: 'France', options: countryOptions },
@@ -117,6 +132,20 @@ const bottledStageParams: TestLabParamField[] = [
   { key: 'askingPrice', label: 'Asking price', type: 'number', defaultValue: 0, min: 0, max: 99999999, step: 1 }
 ];
 
+const moneyParams: TestLabParamField[] = [
+  { key: 'amount', label: 'Amount', type: 'number', defaultValue: 10000, min: 0, max: 999999999, step: 100 }
+];
+
+const prestigeParams: TestLabParamField[] = [
+  { key: 'amount', label: 'Prestige', type: 'number', defaultValue: 100, min: 0, max: 1000000, step: 10 }
+];
+
+const staffXpParams: TestLabParamField[] = [
+  { key: 'staffId', label: 'Staff member', type: 'select', defaultValue: 'none', options: [] },
+  { key: 'xpCategory', label: 'XP category', type: 'select', defaultValue: 'skill:field', options: staffXpCategoryOptions },
+  { key: 'xpAmount', label: 'XP amount', type: 'number', defaultValue: 1000, min: 0, max: 1000000, step: 100 }
+];
+
 const makeDefaults = (params: TestLabParamField[]): Record<string, string | number | boolean> =>
   Object.fromEntries(params.map(field => [field.key, field.defaultValue]));
 
@@ -142,6 +171,42 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
       { key: 'companyName', label: 'Company name', type: 'string', defaultValue: 'Admin Test Lab Company' }
     ],
     defaultParams: { companyName: 'Admin Test Lab Company' }
+  },
+  {
+    id: 'finance.set-company-money',
+    title: 'Set Company Money',
+    group: 'Finance Flow',
+    description: 'Sets the active company money through the normal admin transaction path.',
+    mutatesData: true,
+    params: moneyParams,
+    defaultParams: makeDefaults(moneyParams)
+  },
+  {
+    id: 'finance.set-player-balance',
+    title: 'Set Player Balance',
+    group: 'Finance Flow',
+    description: 'Sets the player cash balance associated with the active company user.',
+    mutatesData: true,
+    params: moneyParams,
+    defaultParams: makeDefaults(moneyParams)
+  },
+  {
+    id: 'finance.add-prestige',
+    title: 'Add Company Prestige',
+    group: 'Finance Flow',
+    description: 'Adds a non-decaying admin prestige event to the active company.',
+    mutatesData: true,
+    params: prestigeParams,
+    defaultParams: makeDefaults(prestigeParams)
+  },
+  {
+    id: 'company.set-game-date',
+    title: 'Set Game Date',
+    group: 'Company Setup',
+    description: 'Sets the active company game date without advancing weekly systems.',
+    mutatesData: true,
+    params: gameDateParams,
+    defaultParams: makeDefaults(gameDateParams)
   },
   {
     id: 'vineyard.harvest-ready',
@@ -187,6 +252,51 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     mutatesData: true,
     params: bottledStageParams,
     defaultParams: makeDefaults(bottledStageParams)
+  },
+  {
+    id: 'sales.generate-orders',
+    title: 'Generate Test Orders',
+    group: 'Sales Flow',
+    description: 'Uses the real order generation logic against active company bottled wines, bypassing normal waiting.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'sales.generate-contract',
+    title: 'Generate Test Contract',
+    group: 'Sales Flow',
+    description: 'Uses the real contract generation logic for the active company while bypassing normal chance gates.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'research.grant-all',
+    title: 'Grant All Research',
+    group: 'Research and Staff',
+    description: 'Unlocks all research projects for the active company.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'research.remove-all',
+    title: 'Remove All Research',
+    group: 'Research and Staff',
+    description: 'Removes all research unlocks from the active company.',
+    mutatesData: true,
+    params: [],
+    defaultParams: {}
+  },
+  {
+    id: 'staff.set-xp',
+    title: 'Set Staff XP',
+    group: 'Research and Staff',
+    description: 'Sets one staff member XP in a selected skill or grape category for the active company.',
+    mutatesData: true,
+    params: staffXpParams,
+    defaultParams: makeDefaults(staffXpParams)
   },
   {
     id: 'cleanup.by-run-id',

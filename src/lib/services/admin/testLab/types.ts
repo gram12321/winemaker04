@@ -21,6 +21,7 @@ export type TestLabEntityType =
   | 'wineLog'
   | 'order'
   | 'contract'
+  | 'staff'
   | 'testRun';
 
 export interface TestLabParamOption {
