@@ -364,8 +364,9 @@ Buying consistently from the same supplier builds a relationship (similar to coo
   - Commit this-year terms for next harvest delivery.
   - Include penalties/default handling and relationship impact.
 - Seasonal demand model
-  - Status: mostly implemented through season/year/economy scaling in buyer price and seasonal limits.
-  - Clarification: "volatility model" means optional random demand shocks (good/bad harvest years, logistics disruptions). This is optional and not required for the next implementation slice.
+  - Status: implemented through season + year + economy scaling in buyer price and seasonal limits.
+  - Volatility model: implemented as deterministic per-buyer seasonal/year demand noise (stable inside a season, refreshed across seasons/years, stronger swing during crash/boom phases).
+  - Remaining optional layer (not required): handcrafted global event shocks (for example explicit drought/logistics event cards shown to player).
 - AI/UX enhancements in modal
   - Show why a buyer is in this season (relationship carry-over vs newly generated).
   - Show projected loyalty gain for current sale before confirming.
