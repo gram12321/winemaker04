@@ -20,7 +20,7 @@
 
 | Area | Path | Notes |
 |---|---|---|
-| Admin Dashboard test surface | `src/components/pages/AdminDashboard.tsx` | Development-only `Test Systems` tab that exposes both the shared automated suite and the separate Gameflow Lab shortcuts. |
+| Admin Dashboard test surface | `src/components/pages/AdminDashboard.tsx` | Development-only `Test Systems` tab that exposes both the shared automated suite and active-company Gameflow Lab shortcuts. |
 | Admin Test Lab UI | `src/components/pages/admin/TestLabPage.tsx` | Active Admin Dashboard surface with separate `Automated Tests` and `Gameflow Lab` sections, recent runs, and result views. |
 | Scenario registry | `src/lib/services/admin/testLab/testLabScenarios.ts` | Typed scenario definitions and parameter metadata. |
 | Scenario runner | `src/lib/services/admin/testLab/testLabRunner.ts` | Normalizes params, runs the shared automated suite or separate fixture scenarios, and shapes result payloads. |

@@ -83,7 +83,7 @@ The active test UI now lives in the Admin Dashboard `Test Systems` tab and is de
 
 - The Admin Dashboard menu entry is shown only on `localhost`, `127.0.0.1`, or `::1` while running in Vite development mode.
 - Automated Tests run the same Vitest suite as the `tests/` folder through `/api/test-run`.
-- Gameflow Lab creates tagged gameflow fixtures for manual inspection and cleanup.
+- Gameflow Lab runs against the active company by design, creating tagged gameflow fixtures where possible and exposing active-company admin shortcuts for manual inspection.
 - Fixture cleanup is based on durable `testlab_...` run ids so cleanup still works after reloads.
 - `test-viewer/` is legacy reference material, not the primary testing surface.
 
