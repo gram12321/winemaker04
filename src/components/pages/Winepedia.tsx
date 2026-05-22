@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PageProps } from '@/lib/types/UItypes';
-import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab, GrapeBuyersTab } from '@/components/pages/winepedia/index';
+import { GrapeVarietiesTab, WineQualityTab, CustomerTypesTab, CountriesTab, WineRegionsTab, WinemakingTab, MathematicalModelsTab, CustomersTab, YieldProjectionTab, DynamicRangeTab, CrossTraitPenaltyTab, EconomyTab, GrapeBuyersTab, ResearchTab } from '@/components/pages/winepedia/index';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
 
@@ -24,6 +24,7 @@ export default function Winepedia({ view }: WinepediaProps) {
     { id: 'winemaking', label: 'Winemaking', component: WinemakingTab },
     { id: 'mathematicalModels', label: 'Mathematical Models', component: MathematicalModelsTab },
     { id: 'yieldProjection', label: 'Yield Projection', component: YieldProjectionTab },
+    { id: 'research', label: 'Research', component: ResearchTab },
     { id: 'customers', label: 'Customers', component: CustomersTab },
     { id: 'grapeBuyers', label: 'Grape Buyers', component: GrapeBuyersTab },
     ...loanLenderTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component })),

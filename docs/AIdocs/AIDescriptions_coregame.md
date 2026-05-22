@@ -134,7 +134,7 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Implemented Gates**:
   - `grape` unlocks in planting
   - `fermentation_technology` unlocks in fermentation options modal
-  - `sales_channel` unlocks in contract generation
+  - `contract_type` unlocks in contract generation
   - `staff_limit` and `vineyard_size` tier caps in hiring and land search
 - **Permanent Effect Minimum Slice**: Runtime permanent-effect aggregation for completed research, applied to vineyard health degradation (`vineyard_health_decay_multiplier`)
 

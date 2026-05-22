@@ -19,8 +19,7 @@ export type UnlockType =
       | 'fermentation_technology'   // Unlocks a fermentation technology/method (enforce in FermentationOptionsModal)
       | 'staff_limit'              // Unlocks higher staff headcount cap (enforced in HireStaffModal)
       | 'wine_feature'             // Unlocks a wine feature capability (enforce in wine feature activation)
-      | 'contract_type'            // Legacy alias for sales_channel; kept for backward compatibility
-      | 'sales_channel'            // Unlocks a sales channel / customer contract type (enforce in contract generation)
+      | 'contract_type'            // Unlocks customer contract types (enforced in contract generation)
       | 'grape_buyer_slots'        // Adds seasonal grape buyer slots in market generation
       | 'grape_buyer_limit_multiplier' // Multiplies seasonal hard limits for grape buyers
       | 'grape_buyer_multiplier_bonus'; // Adds flat grape buyer price multiplier bonus
@@ -706,7 +705,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             prestigeReward: calculateResearchPrestigeFromComplexity(5),
             requiredPrestige: 14,
             prerequisites: ['mkt_research'],
-            unlocks: [{ type: 'sales_channel', value: 'Restaurant', displayName: 'Restaurant contracts' }],
+            unlocks: [{ type: 'contract_type', value: 'Restaurant', displayName: 'Restaurant contracts' }],
             workProfile: {
                   scopeWorkAmount: 105,
                   complexityCurve: { kind: 'linear', multiplier: 0.16 },
@@ -729,7 +728,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             requiredPrestige: 28,
             requiredCompanyValue: 1100000,
             prerequisites: ['mkt_restaurant_program'],
-            unlocks: [{ type: 'sales_channel', value: 'Private Collector', displayName: 'Private Collector contracts' }],
+            unlocks: [{ type: 'contract_type', value: 'Private Collector', displayName: 'Private Collector contracts' }],
             workProfile: {
                   scopeWorkAmount: 165,
                   complexityCurve: { kind: 'exponential', base: 1.08 },
@@ -752,7 +751,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             requiredPrestige: 36,
             requiredCompanyValue: 2000000,
             prerequisites: ['mkt_collector_relations'],
-            unlocks: [{ type: 'sales_channel', value: 'Chain Store', displayName: 'Chain Store contracts' }],
+            unlocks: [{ type: 'contract_type', value: 'Chain Store', displayName: 'Chain Store contracts' }],
             workProfile: {
                   scopeWorkAmount: 210,
                   complexityCurve: { kind: 'exponential', base: 1.09 },

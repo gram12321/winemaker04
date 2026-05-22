@@ -106,8 +106,7 @@ export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
         fermentation_technology: 'fermentation technology',
         staff_limit: 'staff limit',
         wine_feature: 'wine feature',
-        contract_type: 'sales channel',
-        sales_channel: 'sales channel',
+        contract_type: 'contract type',
         grape_buyer_slots: 'grape buyer slot',
         grape_buyer_limit_multiplier: 'grape buyer seasonal limit upgrade',
         grape_buyer_multiplier_bonus: 'grape buyer multiplier upgrade'

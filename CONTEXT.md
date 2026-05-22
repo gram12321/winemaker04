@@ -152,7 +152,7 @@ Estimated price is driven by wine score, score curve multiplier, land value pric
 | `ResearchProject.requiredCompanyValue` | Minimum company value gate for advanced progression projects. |
 | `ResearchProject.requiredBuyerLoyaltyLevel` | Minimum best buyer relationship tier for grape-buyer progression projects. |
 | `ResearchProject.requiredAchievementIds` | Achievement unlock gates used for late progression projects. |
-| `ResearchProject.unlocks` | Unlock payloads applied on completion (`grape`, `fermentation_technology`, `staff_limit`, `vineyard_size`, `sales_channel`, and grape-buyer progression unlock types). |
+| `ResearchProject.unlocks` | Unlock payloads applied on completion (`grape`, `fermentation_technology`, `staff_limit`, `vineyard_size`, `contract_type`, and grape-buyer progression unlock types). |
 | `ResearchProject.permanentEffects` | Always-on modifiers from completed research (current shipped effect kind: `vineyard_health_decay_multiplier`). |
 | `startingResearch` | Starting-condition field for country-specific pre-unlocked research IDs applied during company setup. |
 

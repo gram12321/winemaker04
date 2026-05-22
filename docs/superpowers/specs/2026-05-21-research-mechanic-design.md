@@ -32,8 +32,7 @@ Unlock types with active runtime meaning now include:
 | `fermentation_technology` | ✅ Enforced in fermentation method selection (advanced methods locked until unlocked). |
 | `vineyard_size` | ✅ Enforced in land-search / vineyard expansion cap flow. |
 | `staff_limit` | ✅ Enforced in staff hiring cap flow. |
-| `sales_channel` | ✅ Enforced in contract generation eligibility. |
-| `contract_type` | Legacy alias kept for compatibility with `sales_channel` mapping in contract generation. |
+| `contract_type` | ✅ Enforced in contract generation eligibility. |
 | `wine_feature` | Defined but still mostly future-facing for direct gameplay gating. |
 | `grape_buyer_slots` | ✅ Enforced in grape buyer market generation capacity. |
 | `grape_buyer_limit_multiplier` | ✅ Enforced in seasonal grape buyer hard-limit scaling. |
@@ -138,7 +137,7 @@ Physical tools that create visible work-speed or quality multipliers.
 | `sales_fine_wine_cert` | Fine Wine Certification | Unlocks Private Collector premium contract tiers | Contract system |
 | `sales_restaurant_program` | Restaurant Partnership | Better relationship growth rate with Restaurant customers | Customer system |
 
-**Status:** Implemented through `sales_channel` unlocks and contract generation filtering.
+**Status:** Implemented through `contract_type` unlocks and contract generation filtering.
 
 ---
 
@@ -212,7 +211,7 @@ For each unlock type, where the game must check `isUnlocked()`:
 | `fermentation_technology` | `FermentationOptionsModal` ✅ locked methods and research hints |
 | `staff_limit` | `HireStaffModal` ✅ headcount cap from unlocked staff-limit values |
 | `vineyard_size` | `LandSearchOptionsModal` and `LandSearchResultsModal` ✅ max-hectare cap from unlocked values |
-| `contract_type` / `sales_channel` | `contractGenerationService` ✅ eligible customer type filtering |
+| `contract_type` | `contractGenerationService` ✅ eligible customer type filtering |
 | `grape_buyer_slots` | Grape buyer generation pipeline ✅ seasonal option-count increases |
 | `grape_buyer_limit_multiplier` | Grape buyer generation pipeline ✅ seasonal hard-limit multiplier |
 | `grape_buyer_multiplier_bonus` | Grape buyer generation pipeline ✅ final multiplier bonus |
@@ -310,7 +309,7 @@ The items below are intentionally kept visible for future work and should not be
 |---|---|---|
 | Vineyard techniques track (`agri_canopy_management`, etc.) | Not implemented as dedicated projects | Ready for implementation using the new `permanentEffects` + explicit service hook pattern. |
 | Equipment track (`equipment` unlock type) | Not implemented | Keep for later; only implement once equipment exists as a real gameplay system. |
-| Sales channel track (`sales_channel` unlock type) | Implemented | Use as the first-class unlock type for contract generation; keep `contract_type` as a legacy alias only. |
+| Contract type track (`contract_type` unlock type) | Implemented | Uses contract-type unlocks directly in contract generation. |
 | Starting-condition research head-starts | Implemented | Continue balancing country presets after playtest telemetry. |
 | Achievement-triggered research visibility | Not implemented | Good later slice after baseline research discoverability UX is validated. |
 | Site-conditional research visibility | Not implemented | Defer until core gating and balance stabilize across more playthroughs. |

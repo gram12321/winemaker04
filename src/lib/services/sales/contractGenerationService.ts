@@ -41,7 +41,6 @@ async function getUnlockedContractCustomerTypes(): Promise<Set<CustomerType>> {
   const unlockedCustomerTypes = new Set<CustomerType>(['Wine Shop']);
 
   const unlockedValueGroups = await Promise.all([
-    researchEnforcer.getUnlockedItems('sales_channel'),
     researchEnforcer.getUnlockedItems('contract_type')
   ]);
 

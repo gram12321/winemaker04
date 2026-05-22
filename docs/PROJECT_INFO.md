@@ -129,6 +129,7 @@ winemaker04/
 │   │   │       ├── GrapeVarietiesTab.tsx (42 lines) # Grape varieties
 │   │   │       ├── index.ts (11 lines)        # Barrel exports
 │   │   │       ├── MathematicalModelsTab.tsx (621 lines) # Mathematical models
+│   │   │       ├── ResearchTab.tsx               # Research mechanics and progression numbers
 │   │   │       ├── WinemakingTab.tsx (15 lines) # Winemaking information
 │   │   │       ├── WineQualityTab.tsx (77 lines) # Wine quality
 │   │   │       ├── WineRegionsTab.tsx (15 lines) # Wine regions

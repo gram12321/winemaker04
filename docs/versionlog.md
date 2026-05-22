@@ -25,6 +25,140 @@
 - **Full URL:** https://github.com/gram12321/winemaker04.git
 
 ---
+## Version 0.24-0.24a - Research Expansion, Bulk Grape Sales & Docs (Combined)
+**Date:** 2026-05-21 to 2026-05-22 | **Commits:** ca1d46b (0.24), 0d106ff (0.24), b9d2e27 (0.24a) | **Stats:** Combined 4,351 additions, 466 deletions
+
+### 🔬 **Research System Expansion**
+- **NEW FILE:** `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` (269 lines) - Research mechanic design spec
+- `src/lib/constants/researchConstants.ts` - Major research constants expansion (931 additions, 87 deletions across commits)
+- `src/components/finance/ResearchPanel.tsx` - Research panel enhancements (126 additions, 42 deletions)
+- `src/lib/features/researchUpgrade/services/activity/activitymanagers/researchManager.ts` - Research manager updates (75 additions, 40 deletions)
+- `src/lib/services/activity/workcalculators/researchWorkCalculator.ts` - Research work calculator tuning (53 additions, 46 deletions)
+
+### 🍇 **Bulk Grape Sales & Market Layer**
+- **NEW FILE:** `src/components/pages/Research.tsx` (77 lines) - Research page
+- **NEW FILE:** `src/components/pages/winepedia/GrapeBuyersTab.tsx` (173 lines) - Grape buyers tab UI
+- **NEW FILE:** `src/lib/database/sales/grapeBuyerLoyaltyDB.ts` (48 lines) - Grape buyer loyalty persistence
+- **NEW FILE:** `src/lib/database/sales/grapeBuyerMarketDB.ts` (82 lines) - Grape buyer market persistence
+- `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` - Major bulk grape sales modal expansion (283 additions, 60 deletions)
+
+### 📚 **Documentation & Context**
+- `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` - Follow-up docs refinement (48 additions, 34 deletions)
+- `CONTEXT.md` - Updated repository context notes (19 additions)
+- `docs/PROJECT_INFO.md` - Project info updates (17 additions, 1 deletion)
+- `readme.md` - README updates for new systems (11 additions, 2 deletions)
+
+---
+
+## Version 0.23 - Test Lab & Test Infrastructure Update
+**Date:** 2026-05-21 | **Commit:** 9f2ad27 | **Stats:** 1,984 additions, 264 deletions
+
+### 🧪 **Admin Test Lab Framework**
+- **NEW FILE:** `src/components/pages/admin/TestLabPage.tsx` (443 lines) - Admin test lab UI page
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabRunner.ts` (286 lines) - Test lab execution service
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabFixtureService.ts` (245 lines) - Test fixture orchestration
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabScenarios.ts` (168 lines) - Scenario definitions
+- **NEW FILE:** `src/lib/services/admin/testLab/testLabCleanupService.ts` (137 lines) - Cleanup service
+- **NEW FILE:** `src/lib/services/admin/testLab/types.ts` (107 lines) - Test lab type contracts
+
+### 🛠️ **Server/Test Runner Additions**
+- **NEW FILE:** `server/test-runner-parser.ts` (212 lines) - Test output parser
+- **NEW FILE:** `server/test-runner.ts` (51 lines) - Test runner entry
+- **NEW FILE:** `server/devAdminGate.ts` (30 lines) - Dev admin access gate
+- `server/test-api.ts` - Test API refactor (42 additions, 138 deletions)
+
+### ✅ **Tests & Docs**
+- **NEW FILE:** `tests/admin/testRunnerParser.test.ts` (82 lines)
+- **NEW FILE:** `tests/admin/testLabRunId.test.ts` (18 lines)
+- `tests/README.md` and `test-viewer/README.md` - Test documentation refresh
+
+---
+
+## Version 0.22-0.22d - Documentation Cleanup, Reorganization & Winemaker Skill (Combined)
+**Date:** 2026-05-21 | **Commits:** 1f39710 (0.22), b0d08c4 (0.22a), 6c9026f (0.22b), b72e3e3 (0.22c), 31c91d6 (0.22d) | **Stats:** Combined 1,558 additions, 845 deletions
+
+### 📚 **Documentation Cleanup Pass**
+- `docs/TasteSystem_WineFolly_Research.md` - Major cleanup/rewrite (315 additions, 254 deletions across 0.22/0.22a)
+- `docs/PROJECT_INFO.md` - Project doc updates (32 additions, 28 deletions)
+- `readme.md` - Large documentation cleanup (84 additions, 303 deletions)
+- **NEW FILE:** `docs/superpowers/plans/2026-05-21-admin-test-lab.md` (230 lines)
+
+### 🗂️ **Docs Reorganization (0.22c)**
+- **RENAMED:** `docs/AIDescriptions_coregame.md` → `docs/AIdocs/AIDescriptions_coregame.md`
+- **RENAMED:** `docs/AIpromt_codecleaning.md` → `docs/AIdocs/AIpromt_codecleaning.md`
+- **RENAMED:** `docs/AIpromt_docs.md` → `docs/AIdocs/AIpromt_docs.md`
+- **RENAMED:** `docs/AIpromt_newpromt.md` → `docs/AIdocs/AIpromt_newpromt.md`
+- **RENAMED:** `docs/PublicCompanyImplementation.md` → `docs/superpowers/plans/PublicCompanyImplementation.md`
+- **RENAMED:** `docs/PublicCompanyPlan.md` → `docs/superpowers/plans/PublicCompanyPlan.md`
+- **RENAMED:** `docs/TasteSystem_WineFolly_Research.md` → `docs/superpowers/plans/TasteSystem_WineFolly_Research.md`
+
+### 🧠 **Winemaker Skill Package**
+- **NEW FILE:** `.github/skills/winemaker-game/SKILL.md` (146 lines)
+- **NEW FILE:** `skills/winemaker-game/SKILL.md` (146 lines)
+- **NEW FILE:** `docs/AIdocs/copilot-instructions.md` (165 lines)
+- **NEW FILE:** `docs/AIdocs/WinemakerGameSkill_DRAFT.md` (146 lines)
+- **NEW FILE:** `docs/AIdocs/airules.mdc` (61 lines)
+
+---
+
+## Version Main-Merge-2026-05-20 - Merge taste into main
+**Date:** 2026-05-20 | **Commit:** d0e3a95 | **Stats:** 29,988 additions, 2,485 deletions
+
+### 🔀 **Branch Integration Milestone**
+- Merged the full `taste` branch history into `main`, including taste system work, skills library, and design docs.
+- **NEW FILE:** `CONTEXT.md` (159 lines)
+- **NEW FILE:** `docs/WineSystem_VariableRelationshipMap.md` (263 lines at merge point)
+- **NEW FILE:** `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` (359 lines)
+- `migrations/sync_vercel_schema.sql` - Removed during merge resolution (1,320 deletions)
+
+### 📦 **Bulk Import Included In Merge**
+- Imported large `skills/` tree and associated prompt/tooling files from `taste`.
+- Integrated taste-related docs and planning files under `docs/superpowers/`.
+
+---
+
+## Version 0.21-0.211 - Early Game Balance Plan & Sell Grapes Feature (Combined)
+**Date:** 2026-05-20 | **Commits:** f2289b5 (0.21), ce034d4 (0.211) | **Stats:** Combined 1,436 additions, 1,359 deletions
+
+### 📈 **Design & Balance Planning**
+- **NEW FILE:** `docs/superpowers/plans/2026-05-20-early-game-balance-founder-economy.md` (227 lines) - Early-game balance design plan
+- `migrations/sync_vercel_schema.sql` - Removed in this phase (1,327 deletions)
+
+### 🍇 **Sell Grapes Feature**
+- **NEW FILE:** `src/components/ui/modals/activitymodals/SellGrapesModal.tsx` (268 lines) - Sell grapes modal
+- **NEW FILE:** `src/lib/services/sales/cooperativeService.ts` (190 lines) - Cooperative pricing/service logic
+- **NEW FILE:** `src/lib/services/sales/sellGrapesService.ts` (185 lines) - Sell grapes domain service
+- `src/lib/services/activity/activitymanagers/activityManager.ts` - Sell grapes activity integration (67 additions, 11 deletions)
+- `src/components/layout/ActivityPanel.tsx` and `src/components/ui/activities/ActivityCard.tsx` - Activity UI wiring
+
+---
+
+## Version 0.X - Skills Library Import
+**Date:** 2026-05-20 | **Commit:** f220568 | **Stats:** 23,620 additions, 0 deletions
+
+### 🧠 **Mass Skill Pack Integration**
+- Added a full `skills/` library with agent workflows, prompts, and helpers (100+ new files; all additions)
+- **NEW FILE:** `skills/react-best-practices/AGENTS.md` (3,373 lines) - Large React/Next optimization ruleset and guidance corpus
+- **NEW FILE:** `skills/brainstorming/scripts/server.cjs` (354 lines) - Local brainstorming support server script
+- **NEW FILE:** `skills/brainstorming/scripts/frame-template.html` (214 lines) - Visual brainstorming frame template
+- **NEW FILE:** `skills/frontend-app-builder/SKILL.md` (185 lines) - Frontend builder workflow instructions
+- **NEW FILE:** `skills/dispatching-parallel-agents/SKILL.md` (182 lines) - Parallel subagent execution guidance
+- **NEW FILE:** `skills/find-skills/SKILL.md` (142 lines) - Skill discovery workflow
+- **NEW FILE:** `skills/javascript-typescript/SKILL.md` (142 lines) - JavaScript/TypeScript coding conventions skill
+
+### 🎮 **Game/Productivity Skill Additions**
+- **NEW FILE:** `skills/game-ui-frontend/SKILL.md` (112 lines) - Browser game UI/HUD design guidance
+- **NEW FILE:** `skills/game-studio/SKILL.md` (94 lines) - Early game architecture planning guidance
+- **NEW FILE:** `skills/game-playtest/SKILL.md` (76 lines) - Browser playtest and QA routines
+- **NEW FILE:** `skills/prototype/UI.md` (112 lines) - UI prototyping strategy
+- **NEW FILE:** `skills/prototype/LOGIC.md` (79 lines) - Logic prototyping strategy
+
+### ⚙️ **Agent Metadata & Wiring**
+- Added multiple `agents/openai.yaml` files across skill folders for model routing metadata
+- Added helper templates and docs for diagnose, grill-with-docs, handoff, and architecture-improvement workflows
+
+---
+
 ## Version 0.205-0.205b - Taste Quality Index & Naming Cleanup (Combined)
 **Date:** 2026-05-20 | **Commits:** b7c0756 (0.205), 4d6d0fc (0.205a), 83302f7 (0.205b) | **Stats:** Combined 2,818 additions, 703 deletions
 

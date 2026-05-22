@@ -198,8 +198,7 @@ export async function completeResearch(activity: Activity): Promise<void> {
                                     unlockMessages.push(`${displayName} wine feature`);
                                     break;
                               case 'contract_type':
-                              case 'sales_channel':
-                                    unlockMessages.push(`${displayName} sales channel`);
+                                    unlockMessages.push(`${displayName} contract type`);
                                     break;
                               case 'grape_buyer_slots':
                                     unlockMessages.push(`${displayName} seasonal grape buyer capacity`);
