@@ -1,4 +1,5 @@
 import { WineCharacteristics } from '@/lib/types/types';
+import { clamp01 } from '@/lib/utils';
 import { RangeAdjustmentConfig, Direction } from '../types/structureRulesTypes';
 
 /**
@@ -21,8 +22,6 @@ export function applyDynamicRangeAdjustments(
     sweetness: [...baseRanges.sweetness] as [number, number],
     tannins: [...baseRanges.tannins] as [number, number]
   };
-
-  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
   for (const [source, value] of Object.entries(characteristics)) {
     const sourceKey = source as keyof WineCharacteristics;

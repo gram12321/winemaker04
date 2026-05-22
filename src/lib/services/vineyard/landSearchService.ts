@@ -5,6 +5,7 @@ import { calculateLandValue } from './vineyardValueCalc';
 import { generateVineyardName } from './vineyardService';
 import { v4 as uuidv4 } from 'uuid';
 import { getAsymmetricHectareMassRemoved, getRandomHectares, NormalizeScrewed1000To01WithTail, calculateInvertedSkewedMultiplier } from '@/lib/utils/calculator';
+import { getRandomFromArray, randomInt } from '@/lib/utils';
 
 /**
  * Interface for vineyard purchase options (before actual purchase)
@@ -471,10 +472,10 @@ function generateMatchingVineyard(
   // Select aspect from preferences or pick randomly
   let aspect: Aspect;
   if (options.aspectPreferences && options.aspectPreferences.length > 0) {
-    aspect = options.aspectPreferences[Math.floor(Math.random() * options.aspectPreferences.length)];
+    aspect = getRandomFromArray(options.aspectPreferences);
   } else {
     const aspectsPool: Aspect[] = ['North','Northeast','East','Southeast','South','Southwest','West','Northwest'];
-    aspect = aspectsPool[Math.floor(Math.random() * aspectsPool.length)];
+    aspect = getRandomFromArray(aspectsPool);
   }
   
   // Select soil types from intersection of region availability and user filter
@@ -488,11 +489,11 @@ function generateMatchingVineyard(
       : availableSoils;
     
     if (allowed.length > 0) {
-      const numberOfSoils = Math.floor(Math.random() * 3) + 1; // 1-3 soil types (same as getRandomSoils)
+      const numberOfSoils = randomInt(1, 3); // 1-3 soil types (same as getRandomSoils)
       const selectedSoils = new Set<string>();
       
       while (selectedSoils.size < numberOfSoils && selectedSoils.size < allowed.length) {
-        selectedSoils.add(allowed[Math.floor(Math.random() * allowed.length)]);
+        selectedSoils.add(getRandomFromArray(allowed));
       }
       
       soil = Array.from(selectedSoils);

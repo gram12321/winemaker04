@@ -4,7 +4,7 @@ import type { Lender, LenderType } from '@/lib/types/types';
 import { LENDER_PARAMS, LENDER_GENERATION, LENDER_TYPE_DISTRIBUTION } from '@/lib/constants/loanConstants';
 import { LENDER_NAMES } from '@/lib/constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '@/lib/utils/calculator';
-import { randomInRange } from '@/lib/utils/utils';
+import { getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
 import { saveLenders, loadLenders, checkLendersExist } from '@/lib/database/core/lendersDB';
 
 /**
@@ -13,23 +13,18 @@ import { saveLenders, loadLenders, checkLendersExist } from '@/lib/database/core
 function generateLenderName(lenderType: LenderType): string {
   switch (lenderType) {
     case 'Bank':
-      const bankNames = LENDER_NAMES.banks;
-      return bankNames[Math.floor(Math.random() * bankNames.length)];
+      return getRandomFromArray(LENDER_NAMES.banks);
 
     case 'Investment Fund':
-      const fundNames = LENDER_NAMES.investmentFunds;
-      return fundNames[Math.floor(Math.random() * fundNames.length)];
+      return getRandomFromArray(LENDER_NAMES.investmentFunds);
 
     case 'Private Lender':
-      const prefixes = LENDER_NAMES.privateLenderPrefixes;
-      const suffixes = LENDER_NAMES.privateLenderSuffixes;
-      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-      const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+      const prefix = getRandomFromArray(LENDER_NAMES.privateLenderPrefixes);
+      const suffix = getRandomFromArray(LENDER_NAMES.privateLenderSuffixes);
       return `${prefix} ${suffix}`;
 
     case 'QuickLoan':
-      const quickProviders = LENDER_NAMES.quickLoanProviders;
-      return quickProviders[Math.floor(Math.random() * quickProviders.length)];
+      return getRandomFromArray(LENDER_NAMES.quickLoanProviders);
 
     default:
       return 'Unknown Lender';
@@ -88,8 +83,7 @@ function createLender(lenderType: LenderType): Lender {
  * Ensures at least 3 lenders of each type
  */
 export async function generateLenders(): Promise<Lender[]> {
-  const lenderCount = LENDER_GENERATION.MIN_LENDERS +
-    Math.floor(Math.random() * (LENDER_GENERATION.MAX_LENDERS - LENDER_GENERATION.MIN_LENDERS + 1));
+  const lenderCount = randomInt(LENDER_GENERATION.MIN_LENDERS, LENDER_GENERATION.MAX_LENDERS);
 
   const lenders: Lender[] = [];
   const lenderTypes = Object.keys(LENDER_TYPE_DISTRIBUTION) as LenderType[];

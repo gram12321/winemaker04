@@ -6,7 +6,7 @@ import { NAMES } from '../../constants/namesConstants';
 import { calculateSkewedMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 import { saveCustomers, loadCustomers, updateCustomerRelationships, checkCustomersExist, loadActiveCustomers } from '../../database/customers/customerDB';
 import { calculateRelationshipBreakdown } from './relationshipService';
-import { loadFormattedRelationshipBreakdown } from '../../utils/utils';
+import { getRandomFromArray, loadFormattedRelationshipBreakdown } from '../../utils/utils';
 
 // ===== CUSTOMER RELATIONSHIP MANAGEMENT =====
 
@@ -56,12 +56,12 @@ function generateCustomerName(country: CustomerCountry, customerType: CustomerTy
   // Select random gender and corresponding name
   const useFemaleName = Math.random() < 0.5;
   const firstNames = useFemaleName ? nameData.firstNames.female : nameData.firstNames.male;
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-  const lastName = nameData.lastNames[Math.floor(Math.random() * nameData.lastNames.length)];
+  const firstName = getRandomFromArray(firstNames);
+  const lastName = getRandomFromArray(nameData.lastNames);
   
   // Generate business name based on order type
   const suffixes = nameData.businessSuffixes[customerType];
-  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+  const suffix = getRandomFromArray(suffixes);
   
   switch (customerType) {
     case 'Private Collector':

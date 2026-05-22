@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../../database/core/supabase';
 import { addTransaction, getCurrentPrestige, clearPrestigeCache, getGameState, highscoreService, initializeCustomers, updateGameState } from '../index';
 import { insertPrestigeEvent } from '../../database';
-import { calculateAbsoluteWeeks, formatNumber } from '@/lib/utils';
+import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray } from '@/lib/utils';
 import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
 import type { Season } from '@/lib/types/types';
 import { setPlayerBalance } from '../user/userBalanceService';
@@ -296,7 +296,7 @@ export async function adminGenerateTestOrders(): Promise<{ totalOrdersCreated: n
   }
 
   // Select random customer
-  const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
+  const customer = getRandomFromArray(allCustomers);
   const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
 
   // Load all available wines and vineyards (like real order generation)
@@ -391,7 +391,7 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
   }
 
   // Select a random customer
-  const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
+  const customer = getRandomFromArray(allCustomers);
 
   // Use the real contract generation logic (same quantity/pricing as normal contracts)
   // This shares the exact same calculateContractPricing function as normal gameplay

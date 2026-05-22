@@ -5,6 +5,7 @@ import { saveWineContract, getPendingContracts } from '../../database/sales/cont
 import { getGameState, getCurrentPrestige } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
 import { calculateAsymmetricalScaler01, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
+import { getRandomFromArray, randomInt } from '../../utils/utils';
 import { calculateExpiration } from './expirationService';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -963,7 +964,7 @@ function generateStructureIndexRequirement(_customer: Customer, targetDifficulty
  */
 function generateGrapeRequirement(_customer: Customer): ContractRequirement {
   // Pick a random grape from available types (imported from constants)
-  const targetGrape = AVAILABLE_GRAPES[Math.floor(Math.random() * AVAILABLE_GRAPES.length)];
+  const targetGrape = getRandomFromArray(AVAILABLE_GRAPES);
   
   return {
     type: 'grape',
@@ -979,7 +980,7 @@ function generateGrapeRequirement(_customer: Customer): ContractRequirement {
  */
 function generateGrapeColorRequirement(_customer: Customer): ContractRequirement {
   // Pick a random color from available types (imported from constants)
-  const targetGrapeColor = AVAILABLE_GRAPE_COLORS[Math.floor(Math.random() * AVAILABLE_GRAPE_COLORS.length)] as 'red' | 'white';
+  const targetGrapeColor = getRandomFromArray(AVAILABLE_GRAPE_COLORS) as 'red' | 'white';
   
   return {
     type: 'grapeColor',
@@ -994,7 +995,7 @@ function generateGrapeColorRequirement(_customer: Customer): ContractRequirement
  * Generate country site-parameter requirement.
  */
 function generateCountryRequirement(_customer: Customer): ContractRequirement {
-  const targetCountry = AVAILABLE_SITE_COUNTRIES[Math.floor(Math.random() * AVAILABLE_SITE_COUNTRIES.length)];
+  const targetCountry = getRandomFromArray(AVAILABLE_SITE_COUNTRIES);
 
   return {
     type: 'country',
@@ -1009,7 +1010,7 @@ function generateCountryRequirement(_customer: Customer): ContractRequirement {
  * Generate region site-parameter requirement.
  */
 function generateRegionRequirement(_customer: Customer): ContractRequirement {
-  const target = AVAILABLE_SITE_REGIONS[Math.floor(Math.random() * AVAILABLE_SITE_REGIONS.length)];
+  const target = getRandomFromArray(AVAILABLE_SITE_REGIONS);
 
   return {
     type: 'region',
@@ -1121,7 +1122,7 @@ function generateAspectRequirement(_customer: Customer, targetDifficulty: number
  * Requires wine to have at least X amount of a specific characteristic
  */
 function generateCharacteristicMinRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
+  const characteristic = getRandomFromArray(AVAILABLE_CHARACTERISTICS);
   
   // Map difficulty to minimum thresholds (inverse of max - higher minimum = harder)
   // 0.0-0.2 = 0.6-0.7 (easy - low floor)
@@ -1157,7 +1158,7 @@ function generateCharacteristicMinRequirement(_customer: Customer, targetDifficu
  * Requires wine to have at most X amount of a specific characteristic
  */
 function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
+  const characteristic = getRandomFromArray(AVAILABLE_CHARACTERISTICS);
   
   // Map difficulty to maximum thresholds (lower max = harder)
   // 0.0-0.2 = 0.3-0.4 (easy - high ceiling)
@@ -1193,7 +1194,7 @@ function generateCharacteristicMaxRequirement(_customer: Customer, targetDifficu
  * Requires the wine's characteristic to be within a certain distance from ideal for that characteristic
  */
 function generatecharacteristicDeviationRequirement(_customer: Customer, targetDifficulty: number = 0.3): ContractRequirement {
-  const characteristic = AVAILABLE_CHARACTERISTICS[Math.floor(Math.random() * AVAILABLE_CHARACTERISTICS.length)];
+  const characteristic = getRandomFromArray(AVAILABLE_CHARACTERISTICS);
   
   // Map difficulty to maxTotalDistance thresholds (lower = harder, tighter deviation bound)
   // 0.0-0.2 = 0.25-0.15 (easy - loose)
@@ -1275,8 +1276,8 @@ async function calculateContractPricing(customer: Customer, requirements: Contra
  * Generate multi-year contract terms
  */
 function generateMultiYearTerms() {
-  const durationYears = Math.floor(Math.random() * (MULTI_YEAR_CONFIG.maxYears - MULTI_YEAR_CONFIG.minYears + 1)) + MULTI_YEAR_CONFIG.minYears;
-  const deliveriesPerYear = Math.floor(Math.random() * (MULTI_YEAR_CONFIG.maxDeliveriesPerYear - MULTI_YEAR_CONFIG.minDeliveriesPerYear + 1)) + MULTI_YEAR_CONFIG.minDeliveriesPerYear;
+  const durationYears = randomInt(MULTI_YEAR_CONFIG.minYears, MULTI_YEAR_CONFIG.maxYears);
+  const deliveriesPerYear = randomInt(MULTI_YEAR_CONFIG.minDeliveriesPerYear, MULTI_YEAR_CONFIG.maxDeliveriesPerYear);
   
   return {
     durationYears,

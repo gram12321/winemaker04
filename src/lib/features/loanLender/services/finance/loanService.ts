@@ -12,7 +12,7 @@ import { triggerGameUpdate } from '@/hooks/useGameUpdates';
 import { calculateCreditRating } from '@/lib/features/loanLender/services/finance/creditRatingService';
 import { calculateLenderAvailability } from '@/lib/features/loanLender/services/finance/lenderService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
-import { calculateAbsoluteWeeks, formatNumber, formatPercent } from '@/lib/utils/utils';
+import { calculateAbsoluteWeeks, formatNumber, formatPercent, getRandomFromArray } from '@/lib/utils';
 import { loadVineyards, deleteVineyards } from '@/lib/database/activities/vineyardDB';
 import { loadWineBatches, bulkUpdateWineBatches } from '@/lib/database/activities/inventoryDB';
 import { ECONOMY_INTEREST_MULTIPLIERS } from '@/lib/constants/economyConstants';
@@ -414,7 +414,7 @@ export async function enforceEmergencyQuickLoanIfNeeded(): Promise<void> {
     return;
   }
 
-  const selectedLender = quickLenders[Math.floor(Math.random() * quickLenders.length)];
+  const selectedLender = getRandomFromArray(quickLenders);
   const creditRating = await getCurrentCreditRating();
   const prestige = gameState.prestige || 0;
 
@@ -610,8 +610,6 @@ async function selectRestructureLender(
     return { lender: null, isEmergencyOverride: false };
   }
 
-  const pickRandom = <T>(list: T[]): T => list[Math.floor(Math.random() * list.length)];
-
   const withinRange = candidatePool.filter(
     lender => amount >= lender.minLoanAmount && amount <= lender.maxLoanAmount
   );
@@ -619,12 +617,12 @@ async function selectRestructureLender(
   if (withinRange.length > 0) {
     const bankMatches = withinRange.filter(l => l.type === 'Bank');
     if (bankMatches.length > 0) {
-      return { lender: pickRandom(bankMatches), isEmergencyOverride: false };
+      return { lender: getRandomFromArray(bankMatches), isEmergencyOverride: false };
     }
-    return { lender: pickRandom(withinRange), isEmergencyOverride: false };
+    return { lender: getRandomFromArray(withinRange), isEmergencyOverride: false };
   }
 
-  return { lender: pickRandom(candidatePool), isEmergencyOverride: true };
+  return { lender: getRandomFromArray(candidatePool), isEmergencyOverride: true };
 }
 
 function simulateCellarLiquidationStep(

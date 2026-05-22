@@ -8,7 +8,7 @@ import { formatCompletedWineName } from '../wine/winery/inventoryService';
 import { SALES_CONSTANTS } from '../../constants/constants';
 import { ECONOMY_SALES_MULTIPLIERS } from '../../constants/economyConstants';
 import { calculateOrderAmount, calculateSkewedMultiplier } from '../../utils/calculator';
-import { calculateAbsoluteWeeks } from '../../utils/utils';
+import { calculateAbsoluteWeeks, clamp, randomInt } from '../../utils/utils';
 import { notificationService } from '../core/notificationService';
 import { NotificationCategory } from '../../types/types';
 import { calculateCustomerRelationship } from './createCustomer';
@@ -20,8 +20,6 @@ import { calculateExpiration } from './expirationService';
 
 // Use customer type configurations from constants
 const CUSTOMER_TYPE_CONFIG = SALES_CONSTANTS.CUSTOMER_TYPES;
-
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 interface DifficultyImpact {
   grapeDifficulty: number | null;
@@ -242,7 +240,7 @@ export async function generateOrder(
   // Generate baseline quantity from order type range, then scale by price sensitivity and customer characteristics
   // The range acts as a baseline market appetite; calculateOrderAmount and customer quantityMultiplier scale this.
   const [minQty, maxQty] = config.quantityRange;
-  const baseQuantity = Math.floor(Math.random() * (maxQty - minQty + 1)) + minQty;
+  const baseQuantity = randomInt(minQty, maxQty);
 
   // Scale baseline by price sensitivity and regional factors (removed customer quantity multiplier)
   // Convert market share from decimal (0.01) to percentage multiplier (1.01) for quantity calculation

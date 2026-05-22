@@ -12,6 +12,7 @@ import { calculateWage } from '../finance/wageService';
 import { notificationService } from '@/lib/services';
 import { NotificationCategory } from '@/lib/types/types';
 import { normalizeXP } from '@/lib/utils/calculator';
+import { getRandomFromArray } from '@/lib/utils';
 
 /**
  * Calculate effective skill level combining base skill and experience.
@@ -76,7 +77,7 @@ export function getRandomFirstName(nationality: Nationality): string {
     ? getMaleNamesForNationality(nationality)
     : getFemaleNamesForNationality(nationality);
 
-  return nameList[Math.floor(Math.random() * nameList.length)];
+  return getRandomFromArray(nameList);
 }
 
 /**
@@ -84,14 +85,14 @@ export function getRandomFirstName(nationality: Nationality): string {
  */
 export function getRandomLastName(nationality: Nationality): string {
   const lastNames = getLastNamesForNationality(nationality);
-  return lastNames[Math.floor(Math.random() * lastNames.length)];
+  return getRandomFromArray(lastNames);
 }
 
 /**
  * Generate a random nationality
  */
 export function getRandomNationality(): Nationality {
-  return NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)];
+  return getRandomFromArray(NATIONALITIES);
 }
 
 /**

@@ -10,7 +10,7 @@ import {
   type GrapeSuitabilityMetrics
 } from './vineyardValueCalc';
 import { getRandomHectares } from '../../utils/calculator';
-import { getRandomFromArray } from '../../utils';
+import { getRandomFromArray, randomInt } from '../../utils';
 import { formatNumber } from '../../utils/utils';
 import { COUNTRY_REGION_MAP, REGION_SOIL_TYPES, REGION_ALTITUDE_RANGES, DEFAULT_VINEYARD_HEALTH, NAMES, DEFAULT_VINE_DENSITY, GRAPE_CONST } from '../../constants';
 import { addTransaction, getGameState } from '../index';
@@ -28,7 +28,7 @@ import { buildVineyardCapacityState, getCapacityConstraintReason } from './viney
 // Helper functions for random vineyard generation
 function getRandomFromObject<T>(obj: Record<string, T>): string {
   const keys = Object.keys(obj);
-  return keys[Math.floor(Math.random() * keys.length)];
+  return getRandomFromArray(keys);
 }
 
 /**
@@ -102,7 +102,7 @@ export function getRandomAltitude(country: string, region: string): number {
   const altitudeRange: [number, number] = countryData ? (countryData[region as keyof typeof countryData] as [number, number] || [0, 100]) : [0, 100];
   const [min, max] = altitudeRange;
 
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomInt(min, max);
 }
 
 // Generate a vineyard name based on country and aspect
@@ -119,8 +119,7 @@ export function generateVineyardName(country: string, aspect: Aspect): string {
   const names = isFemaleAspect ? nameData.firstNames.female : nameData.firstNames.male;
 
   // Select a random name
-  const randomIndex = Math.floor(Math.random() * names.length);
-  const selectedName = names[randomIndex];
+  const selectedName = getRandomFromArray(names);
 
   // Construct the name like "[Random Name]'s [Aspect] Vineyard"
   return `${selectedName}'s ${aspect} Vineyard`;

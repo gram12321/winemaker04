@@ -2,13 +2,14 @@ import { NAMES, GRAPE_MERCHANT_SUFFIXES } from '../../constants/namesConstants';
 import { calculateCompanyValue } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { GRAPE_VARIETIES, type GrapeVariety, type EconomyPhase, type Season } from '../../types/types';
+import { GRAPE_VARIETIES, type GrapeVariety, type EconomyPhase, type Nationality, type Season } from '../../types/types';
 import {
   getBuyerLoyalty,
   getBuyerRelationshipPriceMultiplier,
   getBuyerRelationshipYearlyLimitBonus,
   type BuyerLoyaltyLevel,
 } from '@/lib/services';
+import { clamp, getRandomFromArray, randomInRange, randomInt } from '@/lib/utils';
 import type { GrapeBuyer } from './sellGrapesService';
 import { researchEnforcer } from '../../features/researchUpgrade/services/research/researchEnforcer';
 import {
@@ -96,8 +97,10 @@ const LIMIT_SEASON_THEME: Record<Season, string> = {
   Winter: 'Off-season replenishment programs increase buyer intake plans.',
 };
 
-export type CountryKey = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
+export type CountryKey = Nationality;
 type BuyerOriginTag = 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
+
+const COUNTRY_KEYS: readonly CountryKey[] = ['France', 'Germany', 'Italy', 'Spain', 'United States'];
 
 interface BuyerMarketRow {
   buyer_id: string;
@@ -116,10 +119,6 @@ interface BuyerMarketRow {
   last_active_season: string | null;
 }
 
-function toLegacyYearlyLimit(baseSeasonLimitKg: number): number {
-  return Math.max(500, Math.round(baseSeasonLimitKg * 4));
-}
-
 export const COUNTRY_MULTIPLIER_RANGE: Record<CountryKey, { min: number; max: number; baseLimitMin: number; baseLimitMax: number; title: string }> = {
   France: { min: 1.08, max: 2.0, baseLimitMin: 500, baseLimitMax: 2200, title: 'Negoce Buyer' },
   Germany: { min: 1.1, max: 2.0, baseLimitMin: 600, baseLimitMax: 2400, title: 'Regional Traubenhandler' },
@@ -128,23 +127,19 @@ export const COUNTRY_MULTIPLIER_RANGE: Record<CountryKey, { min: number; max: nu
   'United States': { min: 1.07, max: 2.0, baseLimitMin: 600, baseLimitMax: 2500, title: 'Valley Fruit Broker' },
 };
 
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(randomBetween(min, max + 1));
+function isCountryKey(country?: string): country is CountryKey {
+  return !!country && COUNTRY_KEYS.includes(country as CountryKey);
 }
 
 function toCountryKey(country?: string): CountryKey {
-  if (country === 'France' || country === 'Germany' || country === 'Italy' || country === 'Spain' || country === 'United States') {
+  if (isCountryKey(country)) {
     return country;
   }
   return 'France';
 }
 
 function parseCountryKey(country?: string): CountryKey | null {
-  if (country === 'France' || country === 'Germany' || country === 'Italy' || country === 'Spain' || country === 'United States') {
+  if (isCountryKey(country)) {
     return country;
   }
   return null;
@@ -160,20 +155,20 @@ function generateBuyerName(country: CountryKey): string {
   const male = pool.firstNames.male;
   const female = pool.firstNames.female;
   const firstName = Math.random() < 0.5
-    ? male[Math.floor(Math.random() * male.length)]
-    : female[Math.floor(Math.random() * female.length)];
-  const lastName = pool.lastNames[Math.floor(Math.random() * pool.lastNames.length)];
+    ? getRandomFromArray(male)
+    : getRandomFromArray(female);
+  const lastName = getRandomFromArray(pool.lastNames);
   const suffixes = GRAPE_MERCHANT_SUFFIXES[country];
-  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+  const suffix = getRandomFromArray(suffixes);
   return `${firstName} ${lastName} ${suffix}`;
 }
 
 function pickFavoriteGrapes(): [GrapeVariety, GrapeVariety | null] {
-  const first = GRAPE_VARIETIES[Math.floor(Math.random() * GRAPE_VARIETIES.length)];
+  const first = getRandomFromArray(GRAPE_VARIETIES);
   const includeSecond = Math.random() < 0.5;
   if (!includeSecond) return [first, null];
   const remaining = GRAPE_VARIETIES.filter(g => g !== first);
-  const second = remaining[Math.floor(Math.random() * remaining.length)] || null;
+  const second = remaining.length > 0 ? getRandomFromArray(remaining) : null;
   return [first, second as GrapeVariety | null];
 }
 
@@ -203,10 +198,6 @@ function getEconomyPriceMultiplier(phase: EconomyPhase): number {
 
 function getEconomyLimitMultiplier(phase: EconomyPhase): number {
   return BUYER_ECONOMY_LIMIT_MULTIPLIERS[phase];
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function hashString(input: string): number {
@@ -388,7 +379,7 @@ function chooseMarketBuyerCountry(homeCountry: CountryKey, eligibleCountries: Co
   const foreignPool = pool.filter(country => country !== homeCountry);
 
   if (foreignPool.length > 0 && Math.random() < 0.35) {
-    return foreignPool[Math.floor(Math.random() * foreignPool.length)] || homeCountry;
+    return getRandomFromArray(foreignPool);
   }
 
   return homeCountry;
@@ -404,8 +395,9 @@ async function createMarketBuyer(
   const buyerId = generateBuyerId(country, currentYear, currentSeason);
   const multiplierMin = Number(config.min.toFixed(2));
   const multiplierMax = Number(config.max.toFixed(2));
-  const baseMultiplier = Number(randomBetween(multiplierMin, multiplierMax).toFixed(2));
+  const baseMultiplier = Number(randomInRange(multiplierMin, multiplierMax).toFixed(2));
   const baseSeasonLimitKg = randomInt(config.baseLimitMin, config.baseLimitMax);
+  const baseYearlyLimitKg = Math.max(500, Math.round(baseSeasonLimitKg * 4));
   const [favorite1, favorite2] = pickFavoriteGrapes();
 
   const insertData = {
@@ -419,7 +411,7 @@ async function createMarketBuyer(
     multiplier_min: multiplierMin,
     multiplier_max: multiplierMax,
     base_season_limit_kg: baseSeasonLimitKg,
-    base_yearly_limit_kg: toLegacyYearlyLimit(baseSeasonLimitKg),
+    base_yearly_limit_kg: baseYearlyLimitKg,
     sold_this_season_kg: 0,
     favorite_grape_1: favorite1,
     favorite_grape_2: favorite2,
@@ -444,6 +436,8 @@ async function ensureGermanyCoop(
   currentSeason: string
 ): Promise<BuyerMarketRow | null> {
   const coopId = 'winzergenossenschaft';
+  const baseSeasonLimitKg = 3400;
+  const baseYearlyLimitKg = Math.max(500, Math.round(baseSeasonLimitKg * 4));
 
   const { data: existing } = await getBuyerRow(companyId, coopId);
 
@@ -468,8 +462,8 @@ async function ensureGermanyCoop(
       base_multiplier: 1.65,
       multiplier_min: 1.35,
       multiplier_max: 2.2,
-      base_season_limit_kg: 3400,
-      base_yearly_limit_kg: toLegacyYearlyLimit(3400),
+      base_season_limit_kg: baseSeasonLimitKg,
+      base_yearly_limit_kg: baseYearlyLimitKg,
       sold_this_season_kg: 0,
       favorite_grape_1: 'Chardonnay',
       favorite_grape_2: 'Sauvignon Blanc',
@@ -493,6 +487,7 @@ async function ensureBulkBuyer(
   currentSeason: string
 ): Promise<BuyerMarketRow | null> {
   const { data: existing } = await getBuyerRow(companyId, BULK_BUYER_ID);
+  const baseYearlyLimitKg = Math.max(500, Math.round(BULK_BASE_SEASON_LIMIT_KG * 4));
 
   if (existing) {
     const changedSeason = existing.last_active_year !== currentYear || existing.last_active_season !== currentSeason;
@@ -523,7 +518,7 @@ async function ensureBulkBuyer(
       multiplier_min: 1.0,
       multiplier_max: 1.0,
       base_season_limit_kg: BULK_BASE_SEASON_LIMIT_KG,
-      base_yearly_limit_kg: toLegacyYearlyLimit(BULK_BASE_SEASON_LIMIT_KG),
+      base_yearly_limit_kg: baseYearlyLimitKg,
       sold_this_season_kg: 0,
       favorite_grape_1: null,
       favorite_grape_2: null,

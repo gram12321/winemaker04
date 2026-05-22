@@ -17,8 +17,16 @@ export function randomInRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
+export function randomInt(min: number, max: number): number {
+  return Math.floor(randomInRange(min, max + 1));
+}
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 export function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
+  return clamp(value, 0, 1);
 }
 
 // ========================================

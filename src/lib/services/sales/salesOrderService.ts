@@ -13,7 +13,7 @@ import { getGameState } from '../core/gameState';
 import { getPendingOrders } from './salesService';
 import { createRelationshipBoost } from './relationshipService';
 import { updateWineOrderStatus } from '../../database/customers/salesDB';
-import { calculateAbsoluteWeeks, formatNumber } from '../../utils/utils';
+import { calculateAbsoluteWeeks, formatNumber, getRandomFromArray } from '../../utils/utils';
 
 
 /**
@@ -63,7 +63,7 @@ export async function generateSophisticatedWineOrders(): Promise<{
   }
   
   // Randomly select a customer
-  const customer = allCustomers[Math.floor(Math.random() * allCustomers.length)];
+  const customer = getRandomFromArray(allCustomers);
   const customerTypeConfig = SALES_CONSTANTS.CUSTOMER_TYPES[customer.customerType];
   
     // Customer is browsing wine selection (no logging needed)
