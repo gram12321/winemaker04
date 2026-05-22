@@ -209,6 +209,9 @@ export async function completeResearch(activity: Activity): Promise<void> {
                               case 'grape_buyer_multiplier_bonus':
                                     unlockMessages.push(`${displayName} grape buyer multiplier upgrade`);
                                     break;
+                              case 'grape_buyer_country_access':
+                                    unlockMessages.push(`${displayName} grape buyer market access`);
+                                    break;
                               default:
                                     unlockMessages.push(`${displayName}`);
                         }

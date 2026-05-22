@@ -22,7 +22,8 @@ export type UnlockType =
       | 'contract_type'            // Unlocks customer contract types (enforced in contract generation)
       | 'grape_buyer_slots'        // Adds seasonal grape buyer slots in market generation
       | 'grape_buyer_limit_multiplier' // Multiplies seasonal hard limits for grape buyers
-      | 'grape_buyer_multiplier_bonus'; // Adds flat grape buyer price multiplier bonus
+      | 'grape_buyer_multiplier_bonus' // Adds flat grape buyer price multiplier bonus
+      | 'grape_buyer_country_access'; // Unlocks additional country pools for seasonal grape buyers
 
 /**
  * Generic unlock definition for research projects
@@ -795,6 +796,90 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
             requiredAchievementIds: ['bulk_grape_kg_sold_tier_2'],
             prerequisites: ['mkt_vintner_network'],
             unlocks: [{ type: 'grape_buyer_slots', value: 1, displayName: '+1 seasonal buyer slot' }]
+      },
+      {
+            id: 'mkt_cross_border_buyer_network',
+            title: 'Cross-Border Buyer Network',
+            description: 'Establish neighboring-country merchant channels to source seasonal buyer demand beyond your home market.',
+            complexity: 8,
+            benefits: [
+                  'Unlocks Italy grape buyer access',
+                  'Unlocks Spain grape buyer access',
+                  `+${calculateResearchPrestigeFromComplexity(8)} Prestige points`
+            ],
+            category: 'marketing',
+            icon: '🧭',
+            prestigeReward: calculateResearchPrestigeFromComplexity(8),
+            requiredPrestige: 34,
+            requiredCompanyValue: 1200000,
+            requiredBuyerLoyaltyLevel: 2,
+            prerequisites: ['mkt_export_alliances'],
+            unlocks: [
+                  { type: 'grape_buyer_country_access', value: 'Italy', displayName: 'Italy buyer access' },
+                  { type: 'grape_buyer_country_access', value: 'Spain', displayName: 'Spain buyer access' }
+            ],
+            workProfile: {
+                  scopeWorkAmount: 210,
+                  complexityCurve: { kind: 'exponential', base: 1.08 },
+                  categoryModifier: 0.12,
+                  extraInitialWork: 52
+            }
+      },
+      {
+            id: 'mkt_transatlantic_buyer_desk',
+            title: 'Transatlantic Buyer Desk',
+            description: 'Build compliance and logistics capability to access United States seasonal grape buyers.',
+            complexity: 9,
+            benefits: [
+                  'Unlocks United States grape buyer access',
+                  `+${calculateResearchPrestigeFromComplexity(9)} Prestige points`
+            ],
+            category: 'marketing',
+            icon: '🗽',
+            prestigeReward: calculateResearchPrestigeFromComplexity(9),
+            requiredPrestige: 44,
+            requiredCompanyValue: 2600000,
+            requiredBuyerLoyaltyLevel: 3,
+            requiredAchievementIds: ['bulk_grape_sales_tier_2'],
+            prerequisites: ['mkt_cross_border_buyer_network'],
+            unlocks: [
+                  { type: 'grape_buyer_country_access', value: 'United States', displayName: 'United States buyer access' }
+            ],
+            workProfile: {
+                  scopeWorkAmount: 250,
+                  complexityCurve: { kind: 'exponential', base: 1.09 },
+                  categoryModifier: 0.16,
+                  extraInitialWork: 68
+            }
+      },
+      {
+            id: 'mkt_old_world_exchange',
+            title: 'Old World Exchange Program',
+            description: 'Secure prestige-focused exchange agreements to unlock France and Germany premium buyer channels.',
+            complexity: 10,
+            benefits: [
+                  'Unlocks France grape buyer access',
+                  'Unlocks Germany grape buyer access',
+                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
+            ],
+            category: 'marketing',
+            icon: '🏛️',
+            prestigeReward: calculateResearchPrestigeFromComplexity(10),
+            requiredPrestige: 58,
+            requiredCompanyValue: 4500000,
+            requiredBuyerLoyaltyLevel: 4,
+            requiredAchievementIds: ['bulk_grape_sales_tier_3'],
+            prerequisites: ['mkt_transatlantic_buyer_desk'],
+            unlocks: [
+                  { type: 'grape_buyer_country_access', value: 'France', displayName: 'France buyer access' },
+                  { type: 'grape_buyer_country_access', value: 'Germany', displayName: 'Germany buyer access' }
+            ],
+            workProfile: {
+                  scopeWorkAmount: 320,
+                  complexityCurve: { kind: 'exponential', base: 1.1 },
+                  categoryModifier: 0.2,
+                  extraInitialWork: 84
+            }
       },
       {
             id: 'eff_bulk_chain_optimization',

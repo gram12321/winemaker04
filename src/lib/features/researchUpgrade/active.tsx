@@ -109,7 +109,8 @@ export const activeResearchUpgradeFeature: ResearchUpgradeFeature = {
         contract_type: 'contract type',
         grape_buyer_slots: 'grape buyer slot',
         grape_buyer_limit_multiplier: 'grape buyer seasonal limit upgrade',
-        grape_buyer_multiplier_bonus: 'grape buyer multiplier upgrade'
+        grape_buyer_multiplier_bonus: 'grape buyer multiplier upgrade',
+        grape_buyer_country_access: 'grape buyer country access'
       };
 
       return `${displayName} ${typeLabels[type] || 'item'} is locked. Complete the required research to unlock it.`;

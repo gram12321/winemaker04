@@ -254,6 +254,21 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     };
   }, [selectedBuyer, selectedQuantityKg, buyerLoyalty, companyValue]);
 
+  const loyaltyPreview = useMemo(() => {
+    if (!selectedBuyer || selectedQuantityKg <= 0) return null;
+    const consecutiveYears = Math.max(1, buyerLoyalty?.consecutiveYears ?? 1);
+    const yearPoints = Math.max(0, buyerLoyalty?.yearLoyaltyPoints ?? 0);
+    const preview = estimateBuyerLoyaltyPointGain(selectedQuantityKg, consecutiveYears, yearPoints, companyValue);
+
+    return {
+      rawPoints: preview.rawPoints,
+      appliedPoints: preview.appliedPoints,
+      cappedPoints: Math.max(0, preview.rawPoints - preview.appliedPoints),
+      yearPoints,
+      yearlyCap: preview.yearlyCap,
+    };
+  }, [selectedBuyer, selectedQuantityKg, buyerLoyalty, companyValue]);
+
   const pricing: GrapeSalePricing | null = useMemo(() => {
     if (!batch || !selectedBuyer) return null;
     const prestige = getGameState().prestige ?? 0;
@@ -290,7 +305,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
   return (
     <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-900 border border-gray-700 text-white">
+      <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
         </DialogHeader>
@@ -347,7 +362,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
           <div className="space-y-2">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Select Buyer</p>
-            <div className="max-h-[46vh] overflow-y-auto pr-1 space-y-2">
+            <div className="pr-1 space-y-2">
               {buyers.map(buyer => {
                 const hasRelationship = (buyerLoyaltyById[buyer.id]?.loyaltyScore ?? 0) > 0;
                 return (
@@ -392,6 +407,16 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                       )}
                       {hasRelationship && (
                         <div className="mt-2 text-[11px] text-cyan-300">Existing relationship</div>
+                      )}
+                      {buyer.originTag && (
+                        <div className="mt-2 inline-flex rounded border border-gray-600 bg-gray-900/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
+                          {buyer.originTag}
+                        </div>
+                      )}
+                      {buyer.originReason && (
+                        <div className="mt-1 text-[11px] text-gray-400">
+                          {buyer.originReason}
+                        </div>
                       )}
                     </button>
                     {buyer.id === 'winzergenossenschaft' && (
@@ -463,6 +488,18 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
               <span>Total Revenue</span>
               <span>€{pricing.totalRevenue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
             </div>
+            {loyaltyPreview && (
+              <div className="mt-2 border-t border-gray-700 pt-2 text-xs text-cyan-300">
+                Loyalty preview: +{loyaltyPreview.appliedPoints.toLocaleString()} points this sale
+                {loyaltyPreview.cappedPoints > 0 ? ` (${loyaltyPreview.rawPoints.toLocaleString()} raw, ${loyaltyPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}
+              </div>
+            )}
+          </div>
+        )}
+
+        {selectedBuyer && loyaltyPreview && (
+          <div className="rounded border border-cyan-900/70 bg-cyan-950/20 px-3 py-2 text-xs text-cyan-200">
+            Sale preview with {selectedBuyer.name}: +{loyaltyPreview.appliedPoints.toLocaleString()} loyalty points, then {selectedBuyer.remainingSeasonLimitKg !== undefined ? `${Math.max(0, selectedBuyer.remainingSeasonLimitKg - selectedQuantityKg).toLocaleString()} kg seasonal capacity remains` : 'seasonal capacity remains unrestricted'}.
           </div>
         )}
 

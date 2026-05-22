@@ -39,6 +39,9 @@ export interface GrapeBuyer {
   relationshipMultiplier?: number;
   favoriteGrapes?: GrapeVariety[];
   buyerCategory?: 'bulk' | 'seasonal' | 'cooperative';
+  originTag?: 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
+  originReason?: string;
+  dealStyle?: 'spot' | 'quality_bonus' | 'volume_bonus' | 'relationship_bonus';
 }
 
 export interface GrapeSalePricing {
@@ -73,6 +76,9 @@ const BULK_FALLBACK_BUYER: GrapeBuyer = {
   priceMultiplier: 1.0,
   floorPricePerKg: 0,
   buyerCategory: 'bulk',
+  originTag: 'Country special',
+  originReason: 'Always available fallback buyer for immediate liquidity.',
+  dealStyle: 'spot',
 };
 
 export async function getAvailableBuyers(startingCountry?: string): Promise<GrapeBuyer[]> {

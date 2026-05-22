@@ -15,8 +15,8 @@ import {
   createBuyerRow,
   getBuyerRow,
   getBuyerSeasonStateRow,
-  getKnownCountryBuyerRows,
-  getSeasonBuyerRows,
+  getKnownCountryBuyerRowsForCountries,
+  getSeasonBuyerRowsForCountries,
   updateBuyerRow,
 } from '../../database/sales/grapeBuyerMarketDB';
 import { getBuyerPriorityRows } from '../../database/sales/grapeBuyerLoyaltyDB';
@@ -57,6 +57,7 @@ export const BUYER_ECONOMY_LIMIT_MULTIPLIERS: Record<EconomyPhase, number> = {
 };
 
 export type CountryKey = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
+type BuyerOriginTag = 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
 
 interface BuyerMarketRow {
   buyer_id: string;
@@ -100,6 +101,13 @@ function toCountryKey(country?: string): CountryKey {
     return country;
   }
   return 'France';
+}
+
+function parseCountryKey(country?: string): CountryKey | null {
+  if (country === 'France' || country === 'Germany' || country === 'Italy' || country === 'Spain' || country === 'United States') {
+    return country;
+  }
+  return null;
 }
 
 function generateBuyerId(country: CountryKey, year: number, season: string): string {
@@ -184,6 +192,31 @@ async function getBuyerMultiplierBonusFromResearch(): Promise<number> {
     return sum + (Number.isFinite(parsed) ? parsed : 0);
   }, 0);
   return Math.max(0, bonus);
+}
+
+async function getUnlockedBuyerCountriesFromResearch(homeCountry: CountryKey): Promise<CountryKey[]> {
+  const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_country_access');
+  const allowed = new Set<CountryKey>([homeCountry]);
+
+  for (const value of unlocked) {
+    const parsed = parseCountryKey(String(value));
+    if (parsed) {
+      allowed.add(parsed);
+    }
+  }
+
+  return Array.from(allowed);
+}
+
+function chooseMarketBuyerCountry(homeCountry: CountryKey, eligibleCountries: CountryKey[]): CountryKey {
+  const pool = eligibleCountries.length > 0 ? eligibleCountries : [homeCountry];
+  const foreignPool = pool.filter(country => country !== homeCountry);
+
+  if (foreignPool.length > 0 && Math.random() < 0.35) {
+    return foreignPool[Math.floor(Math.random() * foreignPool.length)] || homeCountry;
+  }
+
+  return homeCountry;
 }
 
 async function createMarketBuyer(
@@ -355,7 +388,9 @@ function rowToBuyer(
   currentSeason: Season,
   economyPhase: EconomyPhase,
   limitResearchMultiplier: number,
-  multiplierResearchBonus: number
+  multiplierResearchBonus: number,
+  originTag: BuyerOriginTag,
+  originReason: string
 ): GrapeBuyer {
   const relationshipMultiplier = getBuyerRelationshipPriceMultiplier(loyaltyLevel);
   const relationshipLimitBonus = getBuyerRelationshipYearlyLimitBonus(loyaltyLevel);
@@ -392,6 +427,9 @@ function rowToBuyer(
     relationshipMultiplier,
     favoriteGrapes,
     buyerCategory: row.is_germany_coop ? 'cooperative' : 'seasonal',
+    originTag,
+    originReason,
+    dealStyle: 'spot',
   };
 }
 
@@ -400,15 +438,16 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
   if (!companyId || !startingCountry) return [];
 
   const country = toCountryKey(startingCountry);
+  const eligibleCountries = await getUnlockedBuyerCountriesFromResearch(country);
   const gameState = getGameState();
   const currentYear = gameState.currentYear ?? 2024;
   const currentSeason = gameState.season ?? 'Spring';
   const economyPhase = (gameState.economyPhase ?? 'Stable') as EconomyPhase;
   const seasonalBuyerCount = await getSeasonalBuyerCountFromResearch();
 
-  const { data: currentSeasonRowsRaw } = await getSeasonBuyerRows(
+  const { data: currentSeasonRowsRaw } = await getSeasonBuyerRowsForCountries(
     companyId,
-    country,
+    eligibleCountries,
     currentYear,
     currentSeason,
     BULK_BUYER_ID,
@@ -416,6 +455,14 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
   );
 
   let seasonRows = (currentSeasonRowsRaw || []) as BuyerMarketRow[];
+  const buyerOrigins = new Map<string, { tag: BuyerOriginTag; reason: string }>();
+
+  for (const row of seasonRows) {
+    buyerOrigins.set(row.buyer_id, {
+      tag: 'Seasonal rotation',
+      reason: `Active seasonal buyer for ${currentSeason} ${currentYear}.`,
+    });
+  }
 
   if (seasonRows.length < seasonalBuyerCount) {
     const prioritizedIds = await getRelationshipPriorityBuyerIds(companyId, country);
@@ -423,10 +470,16 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
 
     if (country === 'Germany') {
       const coop = await ensureGermanyCoop(companyId, currentYear, currentSeason);
-      if (coop) selectedRows.push(coop);
+      if (coop) {
+        selectedRows.push(coop);
+        buyerOrigins.set(coop.buyer_id, {
+          tag: 'Country special',
+          reason: 'German cooperative buyer available as a country-specific channel.',
+        });
+      }
     }
 
-    const { data: knownRowsRaw } = await getKnownCountryBuyerRows(companyId, country, BULK_BUYER_ID, 40);
+    const { data: knownRowsRaw } = await getKnownCountryBuyerRowsForCountries(companyId, eligibleCountries, BULK_BUYER_ID, 40);
     const knownRows = (knownRowsRaw || []) as BuyerMarketRow[];
 
     for (const buyerId of prioritizedIds) {
@@ -435,12 +488,21 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
       const row = knownRows.find(r => r.buyer_id === buyerId);
       if (!row) continue;
       selectedRows.push(row);
+      buyerOrigins.set(row.buyer_id, {
+        tag: 'Relationship carry-over',
+        reason: 'Selected because this buyer has an existing relationship with your winery.',
+      });
     }
 
     while (selectedRows.length < seasonalBuyerCount) {
-      const created = await createMarketBuyer(companyId, country, currentYear, currentSeason);
+      const marketCountry = chooseMarketBuyerCountry(country, eligibleCountries);
+      const created = await createMarketBuyer(companyId, marketCountry, currentYear, currentSeason);
       if (!created) break;
       selectedRows.push(created);
+      buyerOrigins.set(created.buyer_id, {
+        tag: 'Seasonal rotation',
+        reason: `New seasonal buyer rotation for ${currentSeason} ${currentYear}.`,
+      });
     }
 
     for (const row of selectedRows) {
@@ -465,7 +527,28 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
   for (const row of seasonRows.slice(0, seasonalBuyerCount)) {
     const loyalty = await getBuyerLoyalty(row.buyer_id);
     const loyaltyLevel = (loyalty?.level ?? 0) as BuyerLoyaltyLevel;
-    buyers.push(rowToBuyer(row, loyaltyLevel, companyValue, currentSeason, economyPhase, limitResearchMultiplier, multiplierResearchBonus));
+    const baseOrigin = buyerOrigins.get(row.buyer_id) || {
+      tag: 'Seasonal rotation' as BuyerOriginTag,
+      reason: `Active seasonal buyer for ${currentSeason} ${currentYear}.`,
+    };
+    const hasRelationship = (loyalty?.loyaltyScore ?? 0) > 0;
+    const origin = hasRelationship && baseOrigin.tag !== 'Country special'
+      ? {
+          tag: 'Relationship carry-over' as BuyerOriginTag,
+          reason: 'Selected because this buyer has an existing relationship with your winery.',
+        }
+      : baseOrigin;
+    buyers.push(rowToBuyer(
+      row,
+      loyaltyLevel,
+      companyValue,
+      currentSeason,
+      economyPhase,
+      limitResearchMultiplier,
+      multiplierResearchBonus,
+      origin.tag,
+      origin.reason
+    ));
   }
 
   return buyers;
@@ -526,6 +609,9 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     relationshipMultiplier,
     favoriteGrapes: [],
     buyerCategory: 'bulk',
+    originTag: 'Country special',
+    originReason: 'Always available bulk channel for immediate liquidity.',
+    dealStyle: 'spot',
   };
 }
 

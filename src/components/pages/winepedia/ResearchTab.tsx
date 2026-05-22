@@ -34,6 +34,8 @@ function unlockTypeLabel(type: UnlockType): string {
       return 'buyer limit multiplier';
     case 'grape_buyer_multiplier_bonus':
       return 'buyer multiplier bonus';
+    case 'grape_buyer_country_access':
+      return 'buyer country access';
     default:
       return type;
   }

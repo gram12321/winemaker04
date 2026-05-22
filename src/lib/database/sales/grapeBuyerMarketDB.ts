@@ -72,6 +72,50 @@ export async function getKnownCountryBuyerRows(
   return query;
 }
 
+export async function getSeasonBuyerRowsForCountries(
+  companyId: string,
+  countries: string[],
+  currentYear: number,
+  currentSeason: string,
+  excludeBuyerId?: string,
+  limit = 12
+) {
+  let query = supabase
+    .from(TABLE)
+    .select(BUYER_SELECT)
+    .eq('company_id', companyId)
+    .in('country', countries)
+    .eq('last_active_year', currentYear)
+    .eq('last_active_season', currentSeason)
+    .limit(limit);
+
+  if (excludeBuyerId) {
+    query = query.neq('buyer_id', excludeBuyerId);
+  }
+
+  return query;
+}
+
+export async function getKnownCountryBuyerRowsForCountries(
+  companyId: string,
+  countries: string[],
+  excludeBuyerId?: string,
+  limit = 40
+) {
+  let query = supabase
+    .from(TABLE)
+    .select(BUYER_SELECT)
+    .eq('company_id', companyId)
+    .in('country', countries)
+    .limit(limit);
+
+  if (excludeBuyerId) {
+    query = query.neq('buyer_id', excludeBuyerId);
+  }
+
+  return query;
+}
+
 export async function getBuyerSeasonStateRow(companyId: string, buyerId: string) {
   return supabase
     .from(TABLE)

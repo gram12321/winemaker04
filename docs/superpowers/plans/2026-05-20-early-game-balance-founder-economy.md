@@ -1,6 +1,6 @@
 # Early-Game Balance: Founder Economy & Starting Conditions
 **Created:** 2026-05-20  
-**Status:** Design / Open for implementation  
+**Status:** Design / Partially implemented (bulk grape sales shipped, founder-economy systems still open)  
 **Branch context:** taste  
 
 ---
@@ -329,23 +329,103 @@ Buying consistently from the same supplier builds a relationship (similar to coo
 
 
 
-## Work on Bulk grape sales, status as of 22-05-2026 10:55 
+## 9. Bulk Grape Sales Status (Updated 2026-05-22)
 
-What is left for later implementation
+### Implemented now (verified in code)
 
-Forward contracts / future delivery commitments (yes, added as high-priority future)
-Commit this-year terms for next harvest delivery.
-Include penalties/default handling and relationship impact.
-Reserved lots / reserved demand with true market competition
-Let buyers reserve capacity for trusted suppliers before season opens.
-Move from “static cap” to market-wide demand allocation.
-Seasonal demand and volatility model
-Buyer appetite changes by season/year/economy phase.
-Distinguish hard cap, soft demand, and overflow pricing.
-Multi-buyer strategic choices
-More buyer archetypes per country with different risk/reward curves.
-Not just multiplier/cap differences, but contract style and reliability profiles.
-AI/UX enhancements in modal
-Show why a buyer is in this season (relationship carry-over vs newly generated).
-Show projected loyalty gain for current sale before confirming.
-Late game reserach for opening up buyers from other countries. 
+- Sell-grapes flow is active with partial sale support, inventory split/removal, finance transaction logging, and notifications.
+- Dynamic buyer market is active:
+  - Persistent company-scoped bulk buyer (`bulk_buyer`)
+  - Seasonal rotating buyers by country
+  - Germany cooperative buyer (`winzergenossenschaft`)
+- Seasonal hard-cap enforcement is active per buyer (`effectiveSeasonLimitKg`, `remainingSeasonLimitKg`, and sell-time guardrails).
+- Buyer relationship/loyalty system is active:
+  - Persistent loyalty score and levels (0-10)
+  - Relationship price multiplier and seasonal limit bonus
+  - Yearly loyalty growth cap and relationship decay model
+- Cooperative membership progression is active with floor-price protection and streak-based levels.
+- Sell Grapes modal now includes:
+  - Buyer list with multipliers, limits, favorite grapes, and relationship cues
+  - Sale quantity slider constrained by buyer seasonal capacity
+  - Detailed pricing breakdown with relationship and favorite-grape effects
+  - Loyalty info panel and yearly-cap warning
+- Research integration is active for grape buyers:
+  - Additional seasonal buyer slots
+  - Seasonal hard-limit multiplier boosts
+  - Buyer multiplier bonus boosts
+- Database layer and migrations are in place for:
+  - `grape_market_buyers`
+  - `grape_buyer_loyalty`
+  - Seasonal limits and favorite grapes columns
+
+### What is left for later implementation (keep)
+
+- Forward contracts / future delivery commitments (high-priority future)
+  - Commit this-year terms for next harvest delivery.
+  - Include penalties/default handling and relationship impact.
+- Seasonal demand model
+  - Status: mostly implemented through season/year/economy scaling in buyer price and seasonal limits.
+  - Clarification: "volatility model" means optional random demand shocks (good/bad harvest years, logistics disruptions). This is optional and not required for the next implementation slice.
+- AI/UX enhancements in modal
+  - Show why a buyer is in this season (relationship carry-over vs newly generated).
+  - Show projected loyalty gain for current sale before confirming.
+- Late-game research for opening up buyers from other countries.
+
+### Design ideas for next implementation slice
+
+#### Multi-buyer strategic choices
+
+- Keep all active buyers available each season; differentiate them by profile instead of competing reservation mechanics.
+- Add buyer archetypes with clear trade-offs:
+  - High-volume / low-multiplier buyer (stable cashflow)
+  - Premium / low-cap buyer (best margins)
+  - Favorite-grape specialist (big bonus for 1-2 grapes)
+  - Relationship-growth buyer (lower immediate payout, higher loyalty gain)
+- Add one explicit "deal style" field per buyer row:
+  - `spot` (normal current behavior)
+  - `quality_bonus` (extra multiplier above quality threshold)
+  - `volume_bonus` (extra multiplier above kg threshold)
+  - `relationship_bonus` (extra loyalty points)
+- Present projected outcomes before confirming sale:
+  - Revenue now
+  - Loyalty gain now
+  - Remaining buyer seasonal capacity
+  - Whether sale triggers bonus threshold for that buyer
+- Keep formulas simple for first pass:
+  - `quality_bonus`: +0.05 multiplier when wineScore >= threshold
+  - `volume_bonus`: +0.03 multiplier when sold kg >= threshold
+  - `relationship_bonus`: +20% applied loyalty points (still capped by yearly cap)
+
+#### AI/UX enhancements in modal (straightforward)
+
+- Add buyer origin tags: `Relationship carry-over`, `Seasonal rotation`, `Country special`.
+- Add a "sale preview" line next to confirm button:
+  - `+X loyalty points` (after cap)
+  - `Y / Z seasonal kg remaining after sale`
+- Add compact reason tooltip per buyer card:
+  - Why this multiplier is current value (season/economy/research/relationship breakdown).
+- Add optional quick-sort toggles:
+  - Best price now
+  - Best loyalty growth
+  - Highest remaining capacity
+
+#### Late-game research for buyers from other countries (straightforward)
+
+- Add research unlock type: `grape_buyer_country_access` with country code payload.
+- Gate additional country pools behind progressive research:
+  - Stage 1: neighboring-country buyers
+  - Stage 2: regional export buyers
+  - Stage 3: global premium buyers
+- Use light balancing constraints to avoid early exploitation:
+  - Import friction multiplier (slight price penalty) until higher-tier research
+  - Higher loyalty requirement for cross-country premium buyers
+- UI behavior:
+  - Show locked country sections with research requirement text
+  - On unlock, show one-time notification and highlight newly available buyers
+
+### Still open from founder-economy plan
+
+- Founder profit-share conversion system
+- Story-triggered family/staff reveal flow
+- Starting setup bankruptcy advisor
+- Country archetype-specific founder economy systems beyond current grape-buyer market
