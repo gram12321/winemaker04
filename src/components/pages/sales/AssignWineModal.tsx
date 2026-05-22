@@ -117,7 +117,7 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
       case 'structureIndex':
         return `Structure >= ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
-        return `Land Value >= EUR ${(req.value / 1000).toFixed(0)}k/ha`;
+        return `Land Value >= €${(req.value / 1000).toFixed(0)}k/ha`;
       case 'country':
         return `Country: ${req.params?.targetCountry || 'Any'}`;
       case 'region':
@@ -171,9 +171,9 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                 <p className="text-xs text-gray-600">{contract.customerType} • {contract.customerCountry}</p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-green-600">${formatNumber(contract.totalValue, { decimals: 2 })}</p>
+                <p className="text-lg font-bold text-green-600">{formatNumber(contract.totalValue, { currency: true, decimals: 2 })}</p>
                 <p className="text-xs text-gray-600">
-                  {formatNumber(contract.requestedQuantity)} bottles @ ${formatNumber(contract.offeredPrice, { decimals: 2 })}/bottle
+                  {formatNumber(contract.requestedQuantity)} bottles @ {formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}/bottle
                 </p>
               </div>
             </div>
@@ -265,9 +265,9 @@ const AssignWineModal: React.FC<AssignWineModalProps> = ({
                               <span className="text-gray-600">
                                 {wine.askingPrice ? 'Asking' : 'Est. Value'}: 
                               </span>
-                              <span className="font-semibold text-gray-900"> ${formatNumber(wineAskingPrice, { decimals: 2 })}</span>
+                              <span className="font-semibold text-gray-900"> {formatNumber(wineAskingPrice, { currency: true, decimals: 2 })}</span>
                               <span className="text-gray-600"> vs </span>
-                              <span className="font-semibold text-green-700">${formatNumber(contract.offeredPrice, { decimals: 2 })}</span>
+                              <span className="font-semibold text-green-700">{formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}</span>
                               <span className={`ml-1 font-medium ${
                                 premiumPercent > 0 ? 'text-green-600' : 
                                 premiumPercent < 0 ? 'text-red-600' : 'text-gray-600'

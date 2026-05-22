@@ -61,7 +61,7 @@ export function formatNumber(value: number, options?: {
   percentIsDecimal?: boolean; // when percent is true: input is decimal (0-1) if true, else 0-100
 }): string {
   if (typeof value !== 'number' || isNaN(value)) {
-    return options?.currency ? 'EUR 0' : '0';
+    return options?.currency ? '€0' : '0';
   }
   
   const { 
@@ -106,7 +106,7 @@ export function formatNumber(value: number, options?: {
       compactValue = value.toFixed(compactDecimals);
     }
     
-    return currency ? 'EUR ' + compactValue : compactValue;
+    return currency ? `€${compactValue}` : compactValue;
   }
   
   // Handle currency formatting (non-compact)

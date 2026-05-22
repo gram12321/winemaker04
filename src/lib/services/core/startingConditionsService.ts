@@ -6,7 +6,7 @@ import { supabase } from '@/lib/database';
 import type { Aspect, Staff, GameDate } from '@/lib/types/types';
 import { getRandomAspect, getRandomAltitude, getRandomSoils, generateVineyardName, getPlantedVineyardStatus } from '../vineyard/vineyardService';
 import { DEFAULT_VINE_DENSITY, TRANSACTION_CATEGORIES, GAME_INITIALIZATION } from '@/lib/constants';
-import { getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
+import { formatNumber, getStoryImageSrc, getRandomFromArray } from '@/lib/utils';
 import { addTransaction } from '../finance/financeService';
 import { companyService } from '../user/companyService';
 import { insertPrestigeEvent } from '@/lib/database/customers/prestigeEventsDB';
@@ -190,7 +190,7 @@ export async function applyStartingConditions(
       if (playerBalance < playerCashRequirement) {
         return { 
           success: false, 
-          error: `Insufficient balance. You have ${playerBalance.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} but need ${playerCashRequirement.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })} in cash for this company.` 
+          error: `Insufficient balance. You have ${formatNumber(playerBalance, { currency: true })} but need ${formatNumber(playerCashRequirement, { currency: true })} in cash for this company.`
         };
       }
 

@@ -2,6 +2,7 @@ import { getTestLabScenario } from './testLabScenarios';
 import type { TestLabParamField, TestLabRunRequest, TestLabScenarioResult, TestLabScenarioStatus } from './types';
 import { createTestLabRunId } from './runId';
 import { cleanupTestLabRun } from './testLabCleanupService';
+import type { Season } from '@/lib/types/types';
 import {
   createBottledWine,
   createFermentingBatch,
@@ -211,7 +212,7 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
         const { adminSetGameDate } = await import('@/lib/services/admin/adminService');
         await adminSetGameDate({
           week: Number(params.week),
-          season: params.season as string,
+          season: params.season as Season,
           year: Number(params.year)
         });
         fixtureResult = await createHarvestReadyVineyard(runId, params);

@@ -32,6 +32,7 @@ npm run build
 | Constants | `src/lib/constants/` | Grapes, vineyards, economy, staff, wine features, taste labels. |
 | Wine structure | `src/lib/wineStructure/` | Structure index calculations, ranges, rules, and types. |
 | Tests | `tests/` | Vitest coverage for services and gameplay calculations. |
+| Admin Test Lab | `src/components/pages/admin/TestLabPage.tsx`, `src/lib/services/admin/testLab/`, `server/` | Dev-only gameflow setup UI, fixture orchestration, cleanup, and structured Vitest runner endpoint. |
 | Migrations | `migrations/` | SQL used for database updates. |
 
 ## Architecture Rules
@@ -55,6 +56,8 @@ npm run build
 | Taste Quality implementation plan | `docs/superpowers/plans/2026-05-20-taste-quality-index.md` |
 | Contract taste/site UI plan | `docs/superpowers/plans/2026-05-20-contract-taste-site-ui.md` |
 | Research mechanic design and rollout status | `docs/superpowers/specs/2026-05-21-research-mechanic-design.md` |
+| Admin Test Lab design | `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md` |
+| Admin Test Lab implementation plan | `docs/superpowers/plans/2026-05-21-admin-test-lab.md` |
 | Development prompt guidance | `docs/AIpromt_newpromt.md` |
 | Documentation maintenance guidance | `docs/AIpromt_docs.md` |
 | Cleanup/refactor guidance | `docs/AIpromt_codecleaning.md` |
@@ -73,6 +76,15 @@ npm run build
 The app uses Supabase. Local environment variables live in `.env.local`, which is gitignored.
 
 Apply database changes to the development database first, then update the appropriate SQL file under `migrations/` for staging or deployment workflows.
+
+## Admin Test Lab
+
+The active test UI now lives in the Admin Dashboard `Tests` tab and is development-only.
+
+- The Admin Dashboard menu entry is shown only on `localhost`, `127.0.0.1`, or `::1` while running in Vite development mode.
+- The Test Lab can run the current Vitest suite through `/api/test-run` and can create tagged gameflow fixtures for manual inspection.
+- Fixture cleanup is based on durable `testlab_...` run ids so cleanup still works after reloads.
+- `test-viewer/` is legacy reference material, not the primary testing surface.
 
 ## Current System Status
 

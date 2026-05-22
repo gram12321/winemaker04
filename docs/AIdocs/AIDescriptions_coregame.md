@@ -110,9 +110,9 @@ This document describes what has been **actually implemented** in the Winery Man
 ### 6. Player Interface ✅ **IMPLEMENTED**
 **What's Implemented**:
 - **Navigation**: `src/components/layout/Header.tsx` - Time display, advance button, player menu, prestige display, and top-level gameplay tabs including Research
-- **Player Menu**: Dropdown with Profile, Settings, Admin Dashboard, Achievements, Winepedia, Logout
+- **Player Menu**: Dropdown with Profile, Settings, Achievements, Winepedia, Logout, and a development-only Admin Dashboard entry on localhost/loopback hosts
 - **Notification System**: `src/lib/services/core/notificationService.ts` - Centralized notification system with database persistence
-- **Admin Dashboard**: `src/components/pages/AdminDashboard.tsx` - Data management tools, prestige management
+- **Admin Dashboard**: `src/components/pages/AdminDashboard.tsx` - Development-only admin tools, prestige/data controls, and the active Admin Test Lab `Tests` tab
 - **Settings**: `src/components/pages/Settings.tsx` - Company-specific settings and notification preferences
 - **Winepedia**: `src/components/pages/Winepedia.tsx` - Grape variety information with interactive tabs
 - **Profile**: `src/components/pages/Profile.tsx` - Company management and portfolio stats
@@ -122,6 +122,7 @@ This document describes what has been **actually implemented** in the Winery Man
 - **Login System**: `src/components/pages/Login.tsx` - Company creation, selection, and highscores
 - **Staff System**: `src/components/pages/Staff.tsx` - Staff management with teams, search, and recruitment
 - **Winepedia Tabs**: `DynamicRangeTab`, `CrossTraitPenaltyTab`, `YieldProjectionTab` - Interactive system visualization
+- **Admin Test Lab**: `src/components/pages/admin/TestLabPage.tsx` plus `src/lib/services/admin/testLab/` - Dev-only fixture setup and regression runner for testing gameflow states without waiting for natural ticks
 
 ### 7. Research System ✅ **IMPLEMENTED (Core + UI)**
 **What's Implemented**:

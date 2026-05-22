@@ -198,7 +198,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
       case 'structureIndex':
         return `Structure >= ${(req.value * 100).toFixed(0)}%`;
       case 'landValue':
-        return `Land Value >= EUR ${(req.value / 1000).toFixed(0)}k/ha`;
+        return `Land Value >= €${(req.value / 1000).toFixed(0)}k/ha`;
       case 'country':
         return `Country: ${req.params?.targetCountry || 'Any'}`;
       case 'region':
@@ -536,7 +536,7 @@ const ContractsTab: React.FC<ContractsTabProps> = ({
                     <TableCell className="text-right">{formatNumber(contract.requestedQuantity)}</TableCell>
                     <TableCell className="text-right">{formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}</TableCell>
                     <TableCell className="text-right font-semibold text-green-600">
-                      ${formatNumber(contract.totalValue, { decimals: 2 })}
+                      {formatNumber(contract.totalValue, { currency: true, decimals: 2 })}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-0.5">

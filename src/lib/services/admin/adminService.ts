@@ -411,7 +411,7 @@ export async function adminGenerateTestContract(): Promise<{ success: boolean; m
 
   return {
     success: true,
-    message: `Contract generated for ${customer.name}: ${contract.requestedQuantity} bottles @ $${contract.offeredPrice.toFixed(2)}/bottle`
+    message: `Contract generated for ${customer.name}: ${contract.requestedQuantity} bottles @ ${formatNumber(contract.offeredPrice, { currency: true, decimals: 2 })}/bottle`
   };
 }
 

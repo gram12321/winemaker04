@@ -12,7 +12,9 @@ let pendingUpdate = false;
 export const useGameUpdates = () => {
   const subscribe = useCallback((callback: () => void) => {
     listeners.add(callback);
-    return () => listeners.delete(callback);
+    return () => {
+      listeners.delete(callback);
+    };
   }, []);
 
   const subscribeTopic = useCallback((topic: string, callback: () => void) => {
