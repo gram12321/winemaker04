@@ -187,7 +187,13 @@ export async function completeResearch(activity: Activity): Promise<void> {
                                     unlockMessages.push(`${displayName} grape variety`);
                                     break;
                               case 'vineyard_size':
-                                    unlockMessages.push(`Vineyard size limit: ${unlock.value} hectares`);
+                                    unlockMessages.push(`Max size per vineyard: ${unlock.value} hectares`);
+                                    break;
+                              case 'total_vineyard_hectares':
+                                    unlockMessages.push(`Max total vineyard area: ${unlock.value} hectares`);
+                                    break;
+                              case 'vineyard_count':
+                                    unlockMessages.push(`Max vineyard count: ${unlock.value}`);
                                     break;
                               case 'fermentation_technology':
                                     unlockMessages.push(`${displayName} fermentation technology`);

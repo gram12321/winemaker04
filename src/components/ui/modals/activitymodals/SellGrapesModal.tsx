@@ -1,7 +1,7 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
 import { WineBatch } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Slider } from '@/components/ui';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Slider, UnifiedTooltip } from '@/components/ui';
 import {
   GrapeBuyer,
   GrapeSalePricing,
@@ -29,6 +29,24 @@ import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber } from '@/lib/utils/utils';
 
+const GRAPE_ICON_PATHS: Record<string, string> = {
+  'Barbera': '/assets/icons/grape/icon_barbera.png',
+  'Chardonnay': '/assets/icons/grape/icon_chardonnay.png',
+  'Pinot Noir': '/assets/icons/grape/icon_pinot_noir.png',
+  'Primitivo': '/assets/icons/grape/icon_primitivo.png',
+  'Sangiovese': '/assets/icons/grape/icon_sangiovese.png',
+  'Sauvignon Blanc': '/assets/icons/grape/icon_sauvignon_blanc.png',
+  'Tempranillo': '/assets/icons/grape/icon_tempranillo.png',
+};
+
+function getGrapeIconPath(grape: string): string {
+  return GRAPE_ICON_PATHS[grape] || '/assets/icons/grape/icon_pinot_noir.png';
+}
+
+function isSeasonalGeneratedDescription(description?: string): boolean {
+  if (!description) return false;
+  return /active for/i.test(description);
+}
 interface SellGrapesModalProps extends DialogProps {
   batch: WineBatch | null;
 }
@@ -216,6 +234,10 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
   const selectedBuyer: GrapeBuyer | undefined = buyers.find(b => b.id === selectedBuyerId);
   const buyerLoyalty = selectedBuyer ? (buyerLoyaltyById[selectedBuyer.id] ?? null) : null;
+  const selectedBuyerYearlyCap = useMemo(() => {
+    if (!selectedBuyer) return 0;
+    return getBuyerYearlyLoyaltyCap(Math.max(1, buyerLoyalty?.consecutiveYears ?? 1), companyValue);
+  }, [selectedBuyer, buyerLoyalty, companyValue]);
   const maxSelectableKg = useMemo(() => {
     if (!batch) return 0;
     if (!selectedBuyer || selectedBuyer.remainingSeasonLimitKg === undefined) return batch.quantity;
@@ -311,8 +333,42 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.16fr)_minmax(0,0.92fr)] gap-4 items-start">
           <div className="space-y-3">
+            {selectedBuyer && (
+              <div className="bg-gray-800 rounded p-3 text-xs space-y-1 border border-gray-700/70">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Selected buyer</span>
+                  <span className="text-cyan-300 font-medium">{selectedBuyer.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Final demand multiplier</span>
+                  <span className="text-white">
+                    price ×{selectedBuyer.demandFactors
+                      ? (
+                          selectedBuyer.demandFactors.seasonPriceMultiplier
+                          * selectedBuyer.demandFactors.economyPriceMultiplier
+                          * selectedBuyer.demandFactors.yearCyclePriceMultiplier
+                          * selectedBuyer.demandFactors.volatilityPriceMultiplier
+                        ).toFixed(2)
+                      : '1.00'}
+                    {' '}| limit ×{selectedBuyer.demandFactors
+                      ? (
+                          selectedBuyer.demandFactors.seasonLimitMultiplier
+                          * selectedBuyer.demandFactors.economyLimitMultiplier
+                          * selectedBuyer.demandFactors.yearCycleLimitMultiplier
+                          * selectedBuyer.demandFactors.volatilityLimitMultiplier
+                        ).toFixed(2)
+                      : '1.00'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Relationship growth cap</span>
+                  <span className="text-white">{Math.max(0, buyerLoyalty?.yearLoyaltyPoints ?? 0).toLocaleString()} / {selectedBuyerYearlyCap.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-800 rounded p-3 space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">Variety</span>
@@ -359,6 +415,12 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                 </div>
               )}
             </div>
+
+            {selectedBuyer && loyaltyPreview && (
+              <div className="rounded border border-cyan-900/70 bg-cyan-950/20 px-3 py-2 text-xs text-cyan-200">
+                Sale preview with {selectedBuyer.name}: +{loyaltyPreview.appliedPoints.toLocaleString()} loyalty points, then {selectedBuyer.remainingSeasonLimitKg !== undefined ? `${Math.max(0, selectedBuyer.remainingSeasonLimitKg - selectedQuantityKg).toLocaleString()} kg seasonal capacity remains` : 'seasonal capacity remains unrestricted'}.
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -366,6 +428,28 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             <div className="pr-1 space-y-2">
               {buyers.map(buyer => {
                 const hasRelationship = (buyerLoyaltyById[buyer.id]?.loyaltyScore ?? 0) > 0;
+                const loyaltyForBuyer = buyerLoyaltyById[buyer.id] ?? null;
+                const buyerYearlyCap = getBuyerYearlyLoyaltyCap(Math.max(1, loyaltyForBuyer?.consecutiveYears ?? 1), companyValue);
+                const finalPriceDemand = buyer.demandFactors
+                  ? (
+                      buyer.demandFactors.seasonPriceMultiplier
+                      * buyer.demandFactors.economyPriceMultiplier
+                      * buyer.demandFactors.yearCyclePriceMultiplier
+                      * buyer.demandFactors.volatilityPriceMultiplier
+                    )
+                  : 1;
+                const finalLimitDemand = buyer.demandFactors
+                  ? (
+                      buyer.demandFactors.seasonLimitMultiplier
+                      * buyer.demandFactors.economyLimitMultiplier
+                      * buyer.demandFactors.yearCycleLimitMultiplier
+                      * buyer.demandFactors.volatilityLimitMultiplier
+                    )
+                  : 1;
+                const showInlineDescription = Boolean(buyer.description) && !isSeasonalGeneratedDescription(buyer.description);
+                const topBadgeLabel = hasRelationship
+                  ? (buyer.originTag === 'Relationship carry-over' ? 'RELATIONSHIP CARRY-OVER • EXISTING' : 'EXISTING RELATIONSHIP')
+                  : buyer.originTag;
                 return (
                   <div key={buyer.id}>
                     <button
@@ -381,42 +465,79 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                       <div className="flex justify-between items-start gap-3">
                         <div>
                           <span className="font-medium text-sm">{buyer.name}</span>
-                          <p className="text-xs text-gray-400 mt-1">{buyer.description}</p>
+                          {topBadgeLabel && (
+                            <div className="mt-1">
+                              <UnifiedTooltip
+                                title="Buyer Context"
+                                content={
+                                  <div className="space-y-1">
+                                    {buyer.originReason ? <div className="text-gray-200">{buyer.originReason}</div> : null}
+                                    {buyer.description ? <div className="text-gray-400">{buyer.description}</div> : null}
+                                  </div>
+                                }
+                                side="top"
+                              >
+                                <span className="inline-flex rounded border border-gray-600 bg-gray-900/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300 cursor-help">
+                                  {topBadgeLabel}
+                                </span>
+                              </UnifiedTooltip>
+                            </div>
+                          )}
+                          {showInlineDescription && (
+                            <p className="text-xs text-gray-400 mt-1">{buyer.description}</p>
+                          )}
                         </div>
-                        <span className="text-xs text-amber-400 shrink-0">{buyer.priceMultiplier.toFixed(2)}×</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {buyer.favoriteGrapes && buyer.favoriteGrapes.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              {buyer.favoriteGrapes.map(grape => (
+                                <UnifiedTooltip
+                                  key={grape}
+                                  title="Favorite Grape"
+                                  content={<div className="text-gray-200">Favorite Grape - {grape}</div>}
+                                  side="top"
+                                >
+                                  <img
+                                    src={getGrapeIconPath(grape)}
+                                    alt={grape}
+                                    className="h-8 w-8 rounded border border-amber-700/60 bg-gray-900/70 object-cover cursor-help"
+                                  />
+                                </UnifiedTooltip>
+                              ))}
+                            </div>
+                          )}
+                          <span className="text-xs text-amber-400">{buyer.priceMultiplier.toFixed(2)}×</span>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-2 text-[11px] text-gray-300">
                         <div>
-                          Multiplier range: {buyer.multiplierRangeMin !== undefined && buyer.multiplierRangeMax !== undefined
+                          Multiplier: {buyer.multiplierRangeMin !== undefined && buyer.multiplierRangeMax !== undefined
                             ? `${buyer.multiplierRangeMin.toFixed(2)}× - ${buyer.multiplierRangeMax.toFixed(2)}×`
                             : 'Static'}
                         </div>
                         <div>
                           Relationship multiplier: ×{(buyer.relationshipMultiplier ?? 1).toFixed(2)}
                         </div>
-                        <div>
-                          Seasonal hard limit: {buyer.effectiveSeasonLimitKg !== undefined ? `${buyer.effectiveSeasonLimitKg.toLocaleString()} kg` : 'No hard cap'}
-                        </div>
-                        <div>
-                          Remaining this season: {buyer.remainingSeasonLimitKg !== undefined ? `${buyer.remainingSeasonLimitKg.toLocaleString()} kg` : 'Unlimited'}
+                        <div className="col-span-2 border-t border-gray-700/60 pt-2">
+                          Caps: seasonal {buyer.effectiveSeasonLimitKg !== undefined ? `${buyer.effectiveSeasonLimitKg.toLocaleString()} kg` : 'no hard cap'} • remaining {buyer.remainingSeasonLimitKg !== undefined ? `${buyer.remainingSeasonLimitKg.toLocaleString()} kg` : 'unlimited'} • relationship {Math.max(0, loyaltyForBuyer?.yearLoyaltyPoints ?? 0).toLocaleString()}/{buyerYearlyCap.toLocaleString()}
                         </div>
                       </div>
-                      {buyer.favoriteGrapes && buyer.favoriteGrapes.length > 0 && (
-                        <div className="mt-2 text-[11px] text-purple-300">
-                          Favorite grapes: {buyer.favoriteGrapes.join(', ')}
-                        </div>
-                      )}
-                      {hasRelationship && (
-                        <div className="mt-2 text-[11px] text-cyan-300">Existing relationship</div>
-                      )}
-                      {buyer.originTag && (
-                        <div className="mt-2 inline-flex rounded border border-gray-600 bg-gray-900/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
-                          {buyer.originTag}
-                        </div>
-                      )}
-                      {buyer.originReason && (
-                        <div className="mt-1 text-[11px] text-gray-400">
-                          {buyer.originReason}
+                      {buyer.demandFactors && (
+                        <div className="mt-2 border-t border-gray-700 pt-2 text-[11px] text-gray-300">
+                          <UnifiedTooltip
+                            title="Demand Multiplier Breakdown"
+                            content={
+                              <div className="space-y-1">
+                                <div>Price axis: season ×{buyer.demandFactors.seasonPriceMultiplier.toFixed(2)}, economy ×{buyer.demandFactors.economyPriceMultiplier.toFixed(2)}, year-cycle ×{buyer.demandFactors.yearCyclePriceMultiplier.toFixed(2)}, volatility ×{buyer.demandFactors.volatilityPriceMultiplier.toFixed(2)}</div>
+                                <div>Limit axis: season ×{buyer.demandFactors.seasonLimitMultiplier.toFixed(2)}, economy ×{buyer.demandFactors.economyLimitMultiplier.toFixed(2)}, year-cycle ×{buyer.demandFactors.yearCycleLimitMultiplier.toFixed(2)}, volatility ×{buyer.demandFactors.volatilityLimitMultiplier.toFixed(2)}</div>
+                              </div>
+                            }
+                            side="top"
+                          >
+                            <span className="cursor-help text-cyan-300">
+                              Final demand multiplier: price ×{finalPriceDemand.toFixed(2)} | limit ×{finalLimitDemand.toFixed(2)}
+                            </span>
+                          </UnifiedTooltip>
                         </div>
                       )}
                     </button>
@@ -431,15 +552,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
               })}
             </div>
           </div>
-        </div>
 
-        <BuyerLoyaltyPanel buyer={selectedBuyer} loyalty={buyerLoyalty} companyValue={companyValue} />
-
-        {exceedsBuyerCap && selectedBuyer?.remainingSeasonLimitKg !== undefined && (
-          <div className="rounded border border-red-800 bg-red-950/30 p-2 text-xs text-red-300">
-            Selected amount ({selectedQuantityKg.toLocaleString()} kg) exceeds this buyer's remaining seasonal capacity ({selectedBuyer.remainingSeasonLimitKg.toLocaleString()} kg).
-          </div>
-        )}
+          <div className="space-y-3">
+            <BuyerLoyaltyPanel buyer={selectedBuyer} loyalty={buyerLoyalty} companyValue={companyValue} />
 
         {/* Pricing Breakdown */}
         {pricing && (
@@ -498,11 +613,14 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
           </div>
         )}
 
-        {selectedBuyer && loyaltyPreview && (
-          <div className="rounded border border-cyan-900/70 bg-cyan-950/20 px-3 py-2 text-xs text-cyan-200">
-            Sale preview with {selectedBuyer.name}: +{loyaltyPreview.appliedPoints.toLocaleString()} loyalty points, then {selectedBuyer.remainingSeasonLimitKg !== undefined ? `${Math.max(0, selectedBuyer.remainingSeasonLimitKg - selectedQuantityKg).toLocaleString()} kg seasonal capacity remains` : 'seasonal capacity remains unrestricted'}.
+        {exceedsBuyerCap && selectedBuyer?.remainingSeasonLimitKg !== undefined && (
+          <div className="rounded border border-red-800 bg-red-950/30 p-2 text-xs text-red-300">
+            Selected amount ({selectedQuantityKg.toLocaleString()} kg) exceeds this buyer's remaining seasonal capacity ({selectedBuyer.remainingSeasonLimitKg.toLocaleString()} kg).
           </div>
         )}
+
+          </div>
+        </div>
 
         <DialogFooter className="gap-2">
           <Button

@@ -56,6 +56,17 @@ export const BUYER_ECONOMY_LIMIT_MULTIPLIERS: Record<EconomyPhase, number> = {
   Boom: 1.25,
 };
 
+const BUYER_ECONOMY_VOLATILITY_AMPLITUDE: Record<EconomyPhase, { price: number; limit: number }> = {
+  Crash: { price: 0.13, limit: 0.2 },
+  Recession: { price: 0.1, limit: 0.15 },
+  Stable: { price: 0.06, limit: 0.1 },
+  Expansion: { price: 0.08, limit: 0.12 },
+  Boom: { price: 0.11, limit: 0.16 },
+};
+
+const BUYER_YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
+const BUYER_YEAR_LIMIT_CYCLE = [0.94, 1.0, 1.08, 1.03] as const;
+
 export type CountryKey = 'France' | 'Germany' | 'Italy' | 'Spain' | 'United States';
 type BuyerOriginTag = 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
 
@@ -163,6 +174,95 @@ function getEconomyPriceMultiplier(phase: EconomyPhase): number {
 
 function getEconomyLimitMultiplier(phase: EconomyPhase): number {
   return BUYER_ECONOMY_LIMIT_MULTIPLIERS[phase];
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function seededCenteredUnit(seed: string): number {
+  const hash = hashString(seed);
+  const normalized = (hash % 10000) / 10000;
+  return normalized * 2 - 1;
+}
+
+function getYearCycleMultiplier(year: number, cycle: readonly number[]): number {
+  const index = Math.abs(year) % cycle.length;
+  return cycle[index] ?? 1;
+}
+
+function getDemandVolatilityMultipliers(
+  companyId: string,
+  buyerId: string,
+  currentYear: number,
+  currentSeason: Season,
+  economyPhase: EconomyPhase
+): { price: number; limit: number } {
+  const amplitude = BUYER_ECONOMY_VOLATILITY_AMPLITUDE[economyPhase];
+  const yearPriceCycle = getYearCycleMultiplier(currentYear, BUYER_YEAR_PRICE_CYCLE);
+  const yearLimitCycle = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
+
+  // Deterministic per company/buyer/year/season so values remain stable inside the same season.
+  const volatilitySeedBase = `${companyId}:${buyerId}:${currentYear}:${currentSeason}:${economyPhase}`;
+  const priceNoise = seededCenteredUnit(`${volatilitySeedBase}:price`);
+  const limitNoise = seededCenteredUnit(`${volatilitySeedBase}:limit`);
+  const priceVolatility = 1 + priceNoise * amplitude.price;
+  const limitVolatility = 1 + limitNoise * amplitude.limit;
+
+  return {
+    price: clamp(yearPriceCycle * priceVolatility, 0.7, 1.35),
+    limit: clamp(yearLimitCycle * limitVolatility, 0.65, 1.45),
+  };
+}
+
+function getDemandFactorComponents(
+  companyId: string,
+  buyerId: string,
+  currentYear: number,
+  currentSeason: Season,
+  economyPhase: EconomyPhase
+): {
+  seasonPriceMultiplier: number;
+  seasonLimitMultiplier: number;
+  economyPriceMultiplier: number;
+  economyLimitMultiplier: number;
+  yearCyclePriceMultiplier: number;
+  yearCycleLimitMultiplier: number;
+  volatilityPriceMultiplier: number;
+  volatilityLimitMultiplier: number;
+} {
+  const seasonPriceMultiplier = getSeasonPriceMultiplier(currentSeason);
+  const seasonLimitMultiplier = getSeasonLimitMultiplier(currentSeason);
+  const economyPriceMultiplier = getEconomyPriceMultiplier(economyPhase);
+  const economyLimitMultiplier = getEconomyLimitMultiplier(economyPhase);
+  const yearCyclePriceMultiplier = getYearCycleMultiplier(currentYear, BUYER_YEAR_PRICE_CYCLE);
+  const yearCycleLimitMultiplier = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
+  const demandVolatility = getDemandVolatilityMultipliers(
+    companyId,
+    buyerId,
+    currentYear,
+    currentSeason,
+    economyPhase
+  );
+
+  return {
+    seasonPriceMultiplier,
+    seasonLimitMultiplier,
+    economyPriceMultiplier,
+    economyLimitMultiplier,
+    yearCyclePriceMultiplier,
+    yearCycleLimitMultiplier,
+    volatilityPriceMultiplier: Number((demandVolatility.price / Math.max(0.01, yearCyclePriceMultiplier)).toFixed(3)),
+    volatilityLimitMultiplier: Number((demandVolatility.limit / Math.max(0.01, yearCycleLimitMultiplier)).toFixed(3)),
+  };
 }
 
 async function getSeasonalBuyerCountFromResearch(): Promise<number> {
@@ -383,6 +483,8 @@ async function getRelationshipPriorityBuyerIds(companyId: string, country: Count
 
 function rowToBuyer(
   row: BuyerMarketRow,
+  companyId: string,
+  currentYear: number,
   loyaltyLevel: BuyerLoyaltyLevel,
   companyValue: number,
   currentSeason: Season,
@@ -392,15 +494,26 @@ function rowToBuyer(
   originTag: BuyerOriginTag,
   originReason: string
 ): GrapeBuyer {
+  const demandComponents = getDemandFactorComponents(
+    companyId,
+    row.buyer_id,
+    currentYear,
+    currentSeason,
+    economyPhase
+  );
   const relationshipMultiplier = getBuyerRelationshipPriceMultiplier(loyaltyLevel);
   const relationshipLimitBonus = getBuyerRelationshipYearlyLimitBonus(loyaltyLevel);
   const scaledBaseLimit = computeScaledSeasonLimit(row.base_season_limit_kg, companyValue);
   const priceDemandMultiplier = computeCompanyValuePriceMultiplier(companyValue)
-    * getSeasonPriceMultiplier(currentSeason)
-    * getEconomyPriceMultiplier(economyPhase)
+    * demandComponents.seasonPriceMultiplier
+    * demandComponents.economyPriceMultiplier
+    * demandComponents.yearCyclePriceMultiplier
+    * demandComponents.volatilityPriceMultiplier
     * (1 + multiplierResearchBonus);
-  const limitDemandMultiplier = getSeasonLimitMultiplier(currentSeason)
-    * getEconomyLimitMultiplier(economyPhase)
+  const limitDemandMultiplier = demandComponents.seasonLimitMultiplier
+    * demandComponents.economyLimitMultiplier
+    * demandComponents.yearCycleLimitMultiplier
+    * demandComponents.volatilityLimitMultiplier
     * limitResearchMultiplier;
   const effectiveSeasonLimitKg = Math.max(
     200,
@@ -430,6 +543,7 @@ function rowToBuyer(
     originTag,
     originReason,
     dealStyle: 'spot',
+    demandFactors: demandComponents,
   };
 }
 
@@ -540,6 +654,8 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
       : baseOrigin;
     buyers.push(rowToBuyer(
       row,
+      companyId,
+      currentYear,
       loyaltyLevel,
       companyValue,
       currentSeason,
@@ -572,12 +688,21 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     getBuyerLimitMultiplierFromResearch(),
     getBuyerMultiplierBonusFromResearch(),
   ]);
+  const demandComponents = getDemandFactorComponents(
+    companyId,
+    BULK_BUYER_ID,
+    currentYear,
+    currentSeason,
+    economyPhase
+  );
   const effectiveSeasonLimitKg = Math.max(
     200,
     Math.round(
       computeScaledSeasonLimit(row.base_season_limit_kg, companyValue)
-      * getSeasonLimitMultiplier(currentSeason)
-      * getEconomyLimitMultiplier(economyPhase)
+      * demandComponents.seasonLimitMultiplier
+      * demandComponents.economyLimitMultiplier
+      * demandComponents.yearCycleLimitMultiplier
+      * demandComponents.volatilityLimitMultiplier
       * limitResearchMultiplier
     )
   );
@@ -585,8 +710,10 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
   const priceMultiplier = Number((
     row.base_multiplier
     * computeCompanyValuePriceMultiplier(companyValue)
-    * getSeasonPriceMultiplier(currentSeason)
-    * getEconomyPriceMultiplier(economyPhase)
+    * demandComponents.seasonPriceMultiplier
+    * demandComponents.economyPriceMultiplier
+    * demandComponents.yearCyclePriceMultiplier
+    * demandComponents.volatilityPriceMultiplier
     * (1 + multiplierResearchBonus)
   ).toFixed(2));
 
@@ -612,6 +739,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     originTag: 'Country special',
     originReason: 'Always available bulk channel for immediate liquidity.',
     dealStyle: 'spot',
+    demandFactors: demandComponents,
   };
 }
 

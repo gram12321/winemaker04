@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { VineyardPurchaseOption, getAllVineyards } from '@/lib/services';
 import { formatNumber, getFlagIcon, getBadgeColorClasses, setModalMinimized } from '@/lib/utils';
-import { Button, Badge } from '@/components/ui';
+import { Button, Badge, UnifiedTooltip } from '@/components/ui';
 import { X, Minimize2 } from 'lucide-react';
 import { purchaseVineyard } from '@/lib/services';
 import { getGameState } from '@/lib/services';
 import { WarningModal } from '@/components/ui';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
-
-const BASE_VINEYARD_SIZE_LIMIT_HA = 0.1;
+import {
+  BASE_MAX_HECTARES_PER_VINEYARD,
+  BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
+  BASE_VINEYARD_COUNT_LIMIT,
+  buildVineyardCapacityState,
+  getCapacityConstraintReason,
+  type VineyardCapacityState
+} from '@/lib/services/vineyard/vineyardCapacityService';
 
 interface LandSearchResultsModalProps {
   isOpen: boolean;
@@ -32,8 +38,13 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   // Track if modal is minimized
   const [isMinimized, setIsMinimized] = useState(false);
-  const [currentTotalHectares, setCurrentTotalHectares] = useState(0);
-  const [vineyardSizeLimit, setVineyardSizeLimit] = useState(BASE_VINEYARD_SIZE_LIMIT_HA);
+  const [vineyardCapacity, setVineyardCapacity] = useState<VineyardCapacityState>({
+    maxHectaresPerVineyard: BASE_MAX_HECTARES_PER_VINEYARD,
+    maxTotalHectares: BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
+    maxVineyardCount: BASE_VINEYARD_COUNT_LIMIT,
+    currentTotalHectares: 0,
+    currentVineyardCount: 0
+  });
   
   // Filter out properties that have already been purchased
   const availableProperties = options?.filter(p => !purchasedPropertyIds.has(p.id)) || [];
@@ -60,21 +71,22 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
     let isMounted = true;
     const loadCapacity = async () => {
       try {
-        const [vineyards, unlockedLimits] = await Promise.all([
+        const [vineyards, unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
           getAllVineyards(),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size')
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
         ]);
 
         if (!isMounted) return;
 
-        const totalHectares = vineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0);
-        const parsedLimits = unlockedLimits
-          .map(value => Number(value))
-          .filter(value => Number.isFinite(value) && value > 0);
-        const unlockedLimit = parsedLimits.length > 0 ? Math.max(...parsedLimits) : BASE_VINEYARD_SIZE_LIMIT_HA;
-
-        setCurrentTotalHectares(totalHectares);
-        setVineyardSizeLimit(Math.max(BASE_VINEYARD_SIZE_LIMIT_HA, unlockedLimit));
+        setVineyardCapacity(buildVineyardCapacityState({
+          currentTotalHectares: vineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0),
+          currentVineyardCount: vineyards.length,
+          unlockedPerVineyardValues,
+          unlockedTotalHectareValues,
+          unlockedVineyardCountValues
+        }));
       } catch (error) {
         console.error('Failed to load vineyard size limit:', error);
       }
@@ -89,20 +101,20 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
   if (!isOpen || !options || options.length === 0) return null;
 
   const handlePurchase = async (property: VineyardPurchaseOption) => {
-    const latestVineyards = await getAllVineyards();
-    const latestTotalHectares = latestVineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0);
-    const remainingHectares = Math.max(0, vineyardSizeLimit - latestTotalHectares);
-    if (property.hectares > remainingHectares) {
-      alert(`Purchase exceeds vineyard size cap (${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha). Remaining capacity: ${formatNumber(remainingHectares, { smartMaxDecimals: true })} ha.`);
-      setCurrentTotalHectares(latestTotalHectares);
+    const result = await purchaseVineyard(property);
+    if (result.success) {
+      // Mark this property as purchased (remove from available list)
+      setPurchasedPropertyIds(prev => new Set([...prev, property.id]));
+      setVineyardCapacity((previous) => ({
+        ...previous,
+        currentTotalHectares: previous.currentTotalHectares + property.hectares,
+        currentVineyardCount: previous.currentVineyardCount + 1
+      }));
       return;
     }
 
-    const success = await purchaseVineyard(property);
-    if (success) {
-      // Mark this property as purchased (remove from available list)
-      setPurchasedPropertyIds(prev => new Set([...prev, property.id]));
-      setCurrentTotalHectares(prev => prev + property.hectares);
+    if (result.error) {
+      alert(result.error);
     }
   };
 
@@ -338,33 +350,46 @@ export const LandSearchResultsModal: React.FC<LandSearchResultsModalProps> = ({
                     <h4 className="text-sm font-medium text-white mb-4">Purchase Information</h4>
                     {(() => {
                       const canAfford = (gameState.money || 0) >= selectedProperty.totalPrice;
-                      const fitsCapacity = (currentTotalHectares + selectedProperty.hectares) <= vineyardSizeLimit;
+                      const capacityReason = getCapacityConstraintReason({ propertyHectares: selectedProperty.hectares, capacity: vineyardCapacity });
+                      const fitsCapacity = capacityReason === null;
+                      const purchaseHint = !fitsCapacity
+                        ? capacityReason
+                        : ((gameState.money || 0) < selectedProperty.totalPrice
+                          ? `Need ${formatNumber(selectedProperty.totalPrice - (gameState.money || 0), { currency: true })} more to buy this property.`
+                          : null);
                       return (
-                        <button
-                          className={`w-full rounded-lg p-4 text-center transition-colors ${
-                            canAfford && fitsCapacity
-                              ? 'bg-green-600 hover:bg-green-700 text-white'
-                              : 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                          }`}
-                          onClick={() => canAfford && fitsCapacity && handlePurchase(selectedProperty)}
-                          disabled={!canAfford || !fitsCapacity}
-                          aria-disabled={!canAfford || !fitsCapacity}
+                        <UnifiedTooltip
+                          title={purchaseHint ? 'Purchase Locked' : undefined}
+                          content={purchaseHint ? <div className="text-xs">{purchaseHint}</div> : <div className="hidden" />}
                         >
-                          <div className="text-3xl font-bold">
-                            {formatNumber(selectedProperty.totalPrice, { currency: true })}
+                          <div>
+                            <button
+                              className={`w-full rounded-lg p-4 text-center transition-colors ${
+                                canAfford && fitsCapacity
+                                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                                  : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                              }`}
+                              onClick={() => canAfford && fitsCapacity && handlePurchase(selectedProperty)}
+                              disabled={!canAfford || !fitsCapacity}
+                              aria-disabled={!canAfford || !fitsCapacity}
+                            >
+                              <div className="text-3xl font-bold">
+                                {formatNumber(selectedProperty.totalPrice, { currency: true })}
+                              </div>
+                              <div className={`text-sm mt-2 ${canAfford ? 'text-green-100' : 'text-gray-200'}`}>
+                                Total purchase price for {selectedProperty.hectares} hectares
+                              </div>
+                              <div className={`text-xs mt-1 ${canAfford ? 'text-green-200' : 'text-gray-300'}`}>
+                                {formatNumber(selectedProperty.landValue, { currency: true })} per hectare
+                              </div>
+                              {!fitsCapacity && (
+                                <div className="text-xs mt-2 text-amber-200">
+                                  {capacityReason}
+                                </div>
+                              )}
+                            </button>
                           </div>
-                          <div className={`text-sm mt-2 ${canAfford ? 'text-green-100' : 'text-gray-200'}`}>
-                            Total purchase price for {selectedProperty.hectares} hectares
-                          </div>
-                          <div className={`text-xs mt-1 ${canAfford ? 'text-green-200' : 'text-gray-300'}`}>
-                            {formatNumber(selectedProperty.landValue, { currency: true })} per hectare
-                          </div>
-                          {!fitsCapacity && (
-                            <div className="text-xs mt-2 text-amber-200">
-                              Exceeds vineyard cap ({formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha)
-                            </div>
-                          )}
-                        </button>
+                        </UnifiedTooltip>
                       );
                     })()}
                   </div>

@@ -21,6 +21,8 @@ import { TRANSACTION_CATEGORIES } from '../../constants';
 import { getActivitiesByTarget, removeActivityFromDb, loadActivitiesFromDb } from '@/lib/database/activities/activityDB';
 import { updateGameState } from '@/lib/services/core/gameState';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
+import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import { buildVineyardCapacityState, getCapacityConstraintReason } from './vineyardCapacityService';
 
 
 // Helper functions for random vineyard generation
@@ -454,6 +456,35 @@ export async function purchaseVineyard(option: VineyardPurchaseOption): Promise<
       return {
         success: false,
         error: errorMsg
+      };
+    }
+
+    const existingVineyards = await getAllVineyards();
+    const [unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
+      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
+      getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
+      getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
+    ]);
+
+    const vineyardCapacity = buildVineyardCapacityState({
+      currentTotalHectares: existingVineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0),
+      currentVineyardCount: existingVineyards.length,
+      unlockedPerVineyardValues,
+      unlockedTotalHectareValues,
+      unlockedVineyardCountValues
+    });
+    const capacityError = getCapacityConstraintReason({ propertyHectares: option.hectares, capacity: vineyardCapacity });
+
+    if (capacityError) {
+      await notificationService.addMessage(
+        capacityError,
+        'vineyardService.purchaseVineyard',
+        'Vineyard Capacity Limit',
+        NotificationCategory.FINANCE_AND_STAFF
+      );
+      return {
+        success: false,
+        error: capacityError
       };
     }
 

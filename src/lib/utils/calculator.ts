@@ -338,6 +338,23 @@ export function probabilityMassInRange(minHa: number, maxHa: number): number {
   return Math.max(0, Math.min(1, mass));
 }
 
+/**
+ * Asymmetric range-restriction penalty helper for hectare filters.
+ * Very small maximum hectare ranges get a relief factor so early-game
+ * cap-constrained searches are not punished as hard as broad high-end filters.
+ */
+export function getAsymmetricHectareMassRemoved(minHa: number, maxHa: number): number {
+  const massKept = probabilityMassInRange(minHa, maxHa);
+  const massRemoved = 1 - massKept;
+
+  const cappedMaxHa = Math.max(0.05, Math.min(maxHa, 2000));
+  const reliefWindowMaxHa = 1;
+  const normalizedSmallRange = Math.max(0, Math.min(1, (cappedMaxHa - 0.05) / (reliefWindowMaxHa - 0.05)));
+  const reliefFactor = 0.2 + 0.8 * Math.pow(normalizedSmallRange, 0.6);
+
+  return Math.max(0, Math.min(1, massRemoved * reliefFactor));
+}
+
 
 /**
  * Generate random vineyard size in hectares with realistic distribution

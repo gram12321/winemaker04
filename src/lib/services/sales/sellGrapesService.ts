@@ -43,6 +43,16 @@ export interface GrapeBuyer {
   originTag?: 'Relationship carry-over' | 'Seasonal rotation' | 'Country special';
   originReason?: string;
   dealStyle?: 'spot' | 'quality_bonus' | 'volume_bonus' | 'relationship_bonus';
+  demandFactors?: {
+    seasonPriceMultiplier: number;
+    seasonLimitMultiplier: number;
+    economyPriceMultiplier: number;
+    economyLimitMultiplier: number;
+    yearCyclePriceMultiplier: number;
+    yearCycleLimitMultiplier: number;
+    volatilityPriceMultiplier: number;
+    volatilityLimitMultiplier: number;
+  };
 }
 
 export interface GrapeSalePricing {

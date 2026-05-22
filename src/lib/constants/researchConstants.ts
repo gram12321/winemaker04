@@ -15,7 +15,9 @@ import { type BuyerLoyaltyLevel } from '@/lib/services/sales/grapeBuyerLoyaltySe
  */
 export type UnlockType = 
       | 'grape'                    // Unlocks a grape variety for planting (enforced in PlantingOptionsModal)
-      | 'vineyard_size'            // Unlocks higher total vineyard hectares cap (enforced in LandSearchOptionsModal)
+      | 'vineyard_size'            // Unlocks higher max size per vineyard (enforced in LandSearch modals)
+      | 'total_vineyard_hectares'  // Unlocks higher total owned vineyard hectares cap
+      | 'vineyard_count'           // Unlocks higher total vineyard count cap
       | 'fermentation_technology'   // Unlocks a fermentation technology/method (enforce in FermentationOptionsModal)
       | 'staff_limit'              // Unlocks higher staff headcount cap (enforced in HireStaffModal)
       | 'wine_feature'             // Unlocks a wine feature capability (enforce in wine feature activation)
@@ -33,7 +35,7 @@ export interface ResearchUnlock {
       type: UnlockType;
       value: string | number; // Identifier for what's being unlocked (grape name, max hectares, tech name, etc.)
       displayName?: string;   // Optional display name for UI (defaults to value)
-      metadata?: Record<string, any>; // Additional data if needed (e.g., max hectares for vineyard_size)
+      metadata?: Record<string, any>; // Additional data if needed (e.g., cap metadata for vineyard unlocks)
 }
 
 export type ResearchWorkCurve =
@@ -196,6 +198,432 @@ function createGrapeResearchProject(grape: GrapeVariety): ResearchProject {
   };
 }
 
+interface UnlockResearchProjectConfig {
+      id: string;
+      title: string;
+      description: string;
+      complexity: number;
+      category: 'efficiency' | 'staff';
+      icon: string;
+      requiredPrestige?: number;
+      requiredCompanyValue?: number;
+      prerequisites?: string[];
+      unlockType: 'vineyard_size' | 'total_vineyard_hectares' | 'vineyard_count' | 'staff_limit';
+      unlockValue: number;
+      unlockDisplayName: string;
+      benefits: string[];
+      workProfile: ResearchWorkProfile;
+}
+
+interface CapacityResearchProjectConfig extends Omit<UnlockResearchProjectConfig, 'category' | 'unlockType' | 'unlockDisplayName'> {
+      unlockType: 'vineyard_size' | 'total_vineyard_hectares' | 'vineyard_count';
+}
+
+interface StaffLimitResearchProjectConfig extends Omit<UnlockResearchProjectConfig, 'category' | 'unlockType' | 'unlockDisplayName'> {}
+
+function createUnlockResearchProject(config: UnlockResearchProjectConfig): ResearchProject {
+      return {
+            id: config.id,
+            title: config.title,
+            description: config.description,
+            complexity: config.complexity,
+            benefits: [
+                  ...config.benefits,
+                  `+${calculateResearchPrestigeFromComplexity(config.complexity)} Prestige points`
+            ],
+            category: config.category,
+            icon: config.icon,
+            prestigeReward: calculateResearchPrestigeFromComplexity(config.complexity),
+            requiredPrestige: config.requiredPrestige,
+            requiredCompanyValue: config.requiredCompanyValue,
+            prerequisites: config.prerequisites,
+            unlocks: [{
+                  type: config.unlockType,
+                  value: config.unlockValue,
+                  displayName: config.unlockDisplayName
+            }],
+            workProfile: config.workProfile
+      };
+}
+
+function createCapacityResearchProject(config: CapacityResearchProjectConfig): ResearchProject {
+      return createUnlockResearchProject({
+            ...config,
+            category: 'efficiency',
+            unlockDisplayName: config.unlockType === 'vineyard_count'
+                  ? `${config.unlockValue} vineyard cap`
+                  : `${config.unlockValue} ha ${config.unlockType === 'vineyard_size' ? 'per-vineyard' : 'total-area'} cap`
+      });
+}
+
+function createStaffLimitResearchProject(config: StaffLimitResearchProjectConfig): ResearchProject {
+      return createUnlockResearchProject({
+            ...config,
+            category: 'staff',
+            unlockType: 'staff_limit',
+            unlockDisplayName: `${config.unlockValue} staff cap`
+      });
+}
+
+const VINEYARD_SIZE_RESEARCH_CHAIN: CapacityResearchProjectConfig[] = [
+      {
+            id: 'eff_microplot_management',
+            title: 'Microplot Management',
+            description: 'Establish operating discipline for very small vineyard parcels.',
+            complexity: 2,
+            icon: '🌱',
+            requiredPrestige: 2,
+            prerequisites: ['admin_basic'],
+            unlockType: 'vineyard_size',
+            unlockValue: 0.25,
+            benefits: ['Raises max size per vineyard to 0.25 hectares'],
+            workProfile: { scopeWorkAmount: 45, complexityCurve: { kind: 'linear', multiplier: 0.12 }, categoryModifier: 0.08, extraInitialWork: 8 }
+      },
+      {
+            id: 'eff_smallholding_operations',
+            title: 'Smallholding Operations',
+            description: 'Standardize small-estate routines for reliable half-hectare operations.',
+            complexity: 3,
+            icon: '🧺',
+            requiredPrestige: 5,
+            prerequisites: ['eff_microplot_management'],
+            unlockType: 'vineyard_size',
+            unlockValue: 0.5,
+            benefits: ['Raises max size per vineyard to 0.5 hectares'],
+            workProfile: { scopeWorkAmount: 65, complexityCurve: { kind: 'linear', multiplier: 0.13 }, categoryModifier: 0.1, extraInitialWork: 12 }
+      },
+      {
+            id: 'eff_estate_foundations',
+            title: 'Estate Foundations',
+            description: 'Build foundational workflows for full one-hectare estate management.',
+            complexity: 4,
+            icon: '🏡',
+            requiredPrestige: 9,
+            prerequisites: ['eff_smallholding_operations'],
+            unlockType: 'vineyard_size',
+            unlockValue: 1,
+            benefits: ['Raises max size per vineyard to 1 hectare'],
+            workProfile: { scopeWorkAmount: 85, complexityCurve: { kind: 'linear', multiplier: 0.15 }, categoryModifier: 0.12, extraInitialWork: 18 }
+      },
+      {
+            id: 'eff_operational',
+            title: 'Operational Efficiency',
+            description: 'Research methods to improve overall operational efficiency across the winery.',
+            complexity: 6,
+            icon: '⚡',
+            requiredPrestige: 20,
+            prerequisites: ['eff_estate_foundations'],
+            unlockType: 'vineyard_size',
+            unlockValue: 2,
+            benefits: ['Operational improvements across winery activities', 'Raises max size per vineyard to 2 hectares', 'Better resource planning'],
+            workProfile: { scopeWorkAmount: 120, complexityCurve: { kind: 'linear', multiplier: 0.2 }, categoryModifier: 0.15, extraInitialWork: 35 }
+      },
+      {
+            id: 'eff_site_expansion',
+            title: 'Estate Expansion Planning',
+            description: 'Professionalize expansion planning and utility layout to support larger individual vineyard sites.',
+            complexity: 7,
+            icon: '🗺️',
+            requiredPrestige: 28,
+            requiredCompanyValue: 900000,
+            prerequisites: ['eff_operational'],
+            unlockType: 'vineyard_size',
+            unlockValue: 4,
+            benefits: ['Raises max size per vineyard to 4 hectares', 'Improves long-term site expansion planning'],
+            workProfile: { scopeWorkAmount: 170, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.2, extraInitialWork: 45 }
+      },
+      {
+            id: 'eff_estate_scale',
+            title: 'Estate-Scale Infrastructure',
+            description: 'Coordinate roads, storage, and utility scaling to support full estate-size vineyards.',
+            complexity: 9,
+            icon: '🏗️',
+            requiredPrestige: 42,
+            requiredCompanyValue: 2400000,
+            prerequisites: ['eff_site_expansion'],
+            unlockType: 'vineyard_size',
+            unlockValue: 8,
+            benefits: ['Raises max size per vineyard to 8 hectares', 'Unlocks robust estate-scale operating capacity'],
+            workProfile: { scopeWorkAmount: 230, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 60 }
+      },
+      {
+            id: 'eff_regional_holdings',
+            title: 'Regional Holdings Blueprint',
+            description: 'Standardize planning for managing very large vineyard parcels within the same region.',
+            complexity: 9,
+            icon: '🧭',
+            requiredPrestige: 52,
+            requiredCompanyValue: 4500000,
+            prerequisites: ['eff_estate_scale'],
+            unlockType: 'vineyard_size',
+            unlockValue: 16,
+            benefits: ['Raises max size per vineyard to 16 hectares'],
+            workProfile: { scopeWorkAmount: 290, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 75 }
+      },
+      {
+            id: 'eff_networked_estates',
+            title: 'Networked Estate Operations',
+            description: 'Integrate logistics, storage, and staffing for distributed mega-sites.',
+            complexity: 10,
+            icon: '🔗',
+            requiredPrestige: 62,
+            requiredCompanyValue: 7000000,
+            prerequisites: ['eff_regional_holdings'],
+            unlockType: 'vineyard_size',
+            unlockValue: 32,
+            benefits: ['Raises max size per vineyard to 32 hectares'],
+            workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 90 }
+      },
+      {
+            id: 'eff_industrial_fleet_management',
+            title: 'Industrial Fleet Management',
+            description: 'Build tractor, transport, and intake fleet planning for very large vineyard sites.',
+            complexity: 10,
+            icon: '🚜',
+            requiredPrestige: 72,
+            requiredCompanyValue: 10000000,
+            prerequisites: ['eff_networked_estates'],
+            unlockType: 'vineyard_size',
+            unlockValue: 64,
+            benefits: ['Raises max size per vineyard to 64 hectares'],
+            workProfile: { scopeWorkAmount: 430, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.26, extraInitialWork: 100 }
+      },
+      {
+            id: 'eff_land_portfolio_management',
+            title: 'Land Portfolio Management',
+            description: 'Coordinate capital deployment and operating systems for massive individual vineyard assets.',
+            complexity: 10,
+            icon: '📈',
+            requiredPrestige: 84,
+            requiredCompanyValue: 16000000,
+            prerequisites: ['eff_industrial_fleet_management'],
+            unlockType: 'vineyard_size',
+            unlockValue: 128,
+            benefits: ['Raises max size per vineyard to 128 hectares'],
+            workProfile: { scopeWorkAmount: 520, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 120 }
+      },
+      {
+            id: 'eff_megavineyard_control',
+            title: 'Megavineyard Control Systems',
+            description: 'Deploy robust operating systems for monitoring and controlling immense vineyard footprints.',
+            complexity: 10,
+            icon: '🛰️',
+            requiredPrestige: 96,
+            requiredCompanyValue: 25000000,
+            prerequisites: ['eff_land_portfolio_management'],
+            unlockType: 'vineyard_size',
+            unlockValue: 256,
+            benefits: ['Raises max size per vineyard to 256 hectares'],
+            workProfile: { scopeWorkAmount: 620, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.28, extraInitialWork: 140 }
+      },
+      {
+            id: 'eff_agri_enterprise_planning',
+            title: 'Agri-Enterprise Planning Office',
+            description: 'Formalize enterprise-level planning for ultra-large vineyard sites.',
+            complexity: 10,
+            icon: '🏢',
+            requiredPrestige: 110,
+            requiredCompanyValue: 40000000,
+            prerequisites: ['eff_megavineyard_control'],
+            unlockType: 'vineyard_size',
+            unlockValue: 512,
+            benefits: ['Raises max size per vineyard to 512 hectares'],
+            workProfile: { scopeWorkAmount: 740, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.29, extraInitialWork: 165 }
+      },
+      {
+            id: 'eff_global_land_network',
+            title: 'Global Land Network',
+            description: 'Structure governance and resource control for global-scale flagship vineyard estates.',
+            complexity: 10,
+            icon: '🌐',
+            requiredPrestige: 125,
+            requiredCompanyValue: 65000000,
+            prerequisites: ['eff_agri_enterprise_planning'],
+            unlockType: 'vineyard_size',
+            unlockValue: 1000,
+            benefits: ['Raises max size per vineyard to 1000 hectares'],
+            workProfile: { scopeWorkAmount: 880, complexityCurve: { kind: 'exponential', base: 1.13 }, categoryModifier: 0.3, extraInitialWork: 190 }
+      },
+      {
+            id: 'eff_superestate_command',
+            title: 'Superestate Command Center',
+            description: 'Coordinate governance, logistics, and financial planning for ultra-large single vineyard holdings.',
+            complexity: 10,
+            icon: '🏛️',
+            requiredPrestige: 140,
+            requiredCompanyValue: 100000000,
+            prerequisites: ['eff_global_land_network'],
+            unlockType: 'vineyard_size',
+            unlockValue: 2000,
+            benefits: ['Raises max size per vineyard to 2000 hectares'],
+            workProfile: { scopeWorkAmount: 1040, complexityCurve: { kind: 'exponential', base: 1.13 }, categoryModifier: 0.31, extraInitialWork: 220 }
+      }
+];
+
+const VINEYARD_SIZE_RESEARCH_PROJECTS: ResearchProject[] = VINEYARD_SIZE_RESEARCH_CHAIN.map(createCapacityResearchProject);
+
+const TOTAL_VINEYARD_HECTARE_RESEARCH_PROJECTS: ResearchProject[] = [
+      createCapacityResearchProject({
+            id: 'eff_total_land_budgeting',
+            title: 'Total Land Budgeting',
+            description: 'Track and allocate land budget across your entire vineyard footprint.',
+            complexity: 3,
+            icon: '📏',
+            requiredPrestige: 5,
+            prerequisites: ['admin_basic'],
+            unlockType: 'total_vineyard_hectares',
+            unlockValue: 0.5,
+            benefits: ['Raises max total vineyard area to 0.5 hectares'],
+            workProfile: { scopeWorkAmount: 60, complexityCurve: { kind: 'linear', multiplier: 0.13 }, categoryModifier: 0.1, extraInitialWork: 12 }
+      }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_1', title: 'Total Estate Area 1 ha', description: 'Coordinate land use across a full one-hectare estate.', complexity: 4, icon: '🧮', requiredPrestige: 9, prerequisites: ['eff_total_land_budgeting'], unlockType: 'total_vineyard_hectares', unlockValue: 1, benefits: ['Raises max total vineyard area to 1 hectare'], workProfile: { scopeWorkAmount: 82, complexityCurve: { kind: 'linear', multiplier: 0.15 }, categoryModifier: 0.12, extraInitialWork: 16 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_2', title: 'Total Estate Area 2 ha', description: 'Expand oversight tools for multi-parcel land use.', complexity: 6, icon: '🗂️', requiredPrestige: 18, prerequisites: ['eff_total_estate_area_1'], unlockType: 'total_vineyard_hectares', unlockValue: 2, benefits: ['Raises max total vineyard area to 2 hectares'], workProfile: { scopeWorkAmount: 118, complexityCurve: { kind: 'linear', multiplier: 0.18 }, categoryModifier: 0.15, extraInitialWork: 30 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_4', title: 'Total Estate Area 4 ha', description: 'Manage planning and maintenance for a broader estate footprint.', complexity: 7, icon: '🧭', requiredPrestige: 26, requiredCompanyValue: 800000, prerequisites: ['eff_total_estate_area_2'], unlockType: 'total_vineyard_hectares', unlockValue: 4, benefits: ['Raises max total vineyard area to 4 hectares'], workProfile: { scopeWorkAmount: 168, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.18, extraInitialWork: 42 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_8', title: 'Total Estate Area 8 ha', description: 'Scale land planning for a full estate network.', complexity: 8, icon: '🗺️', requiredPrestige: 36, requiredCompanyValue: 1800000, prerequisites: ['eff_total_estate_area_4'], unlockType: 'total_vineyard_hectares', unlockValue: 8, benefits: ['Raises max total vineyard area to 8 hectares'], workProfile: { scopeWorkAmount: 220, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.2, extraInitialWork: 55 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_16', title: 'Total Estate Area 16 ha', description: 'Create governance systems for regional-scale vineyard land.', complexity: 9, icon: '🏞️', requiredPrestige: 48, requiredCompanyValue: 3200000, prerequisites: ['eff_total_estate_area_8'], unlockType: 'total_vineyard_hectares', unlockValue: 16, benefits: ['Raises max total vineyard area to 16 hectares'], workProfile: { scopeWorkAmount: 290, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 70 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_32', title: 'Total Estate Area 32 ha', description: 'Coordinate operations for a distributed land portfolio.', complexity: 9, icon: '🏘️', requiredPrestige: 58, requiredCompanyValue: 5000000, prerequisites: ['eff_total_estate_area_16'], unlockType: 'total_vineyard_hectares', unlockValue: 32, benefits: ['Raises max total vineyard area to 32 hectares'], workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.23, extraInitialWork: 86 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_64', title: 'Total Estate Area 64 ha', description: 'Centralize oversight for large vineyard holdings.', complexity: 10, icon: '🏗️', requiredPrestige: 68, requiredCompanyValue: 7600000, prerequisites: ['eff_total_estate_area_32'], unlockType: 'total_vineyard_hectares', unlockValue: 64, benefits: ['Raises max total vineyard area to 64 hectares'], workProfile: { scopeWorkAmount: 440, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 102 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_128', title: 'Total Estate Area 128 ha', description: 'Professionalize governance for a major vineyard estate group.', complexity: 10, icon: '🏢', requiredPrestige: 80, requiredCompanyValue: 12000000, prerequisites: ['eff_total_estate_area_64'], unlockType: 'total_vineyard_hectares', unlockValue: 128, benefits: ['Raises max total vineyard area to 128 hectares'], workProfile: { scopeWorkAmount: 530, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 120 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_256', title: 'Total Estate Area 256 ha', description: 'Build systems for massive regional vineyard portfolios.', complexity: 10, icon: '📈', requiredPrestige: 92, requiredCompanyValue: 18000000, prerequisites: ['eff_total_estate_area_128'], unlockType: 'total_vineyard_hectares', unlockValue: 256, benefits: ['Raises max total vineyard area to 256 hectares'], workProfile: { scopeWorkAmount: 635, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 138 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_512', title: 'Total Estate Area 512 ha', description: 'Extend planning into multi-region vineyard land management.', complexity: 10, icon: '🛰️', requiredPrestige: 106, requiredCompanyValue: 28000000, prerequisites: ['eff_total_estate_area_256'], unlockType: 'total_vineyard_hectares', unlockValue: 512, benefits: ['Raises max total vineyard area to 512 hectares'], workProfile: { scopeWorkAmount: 760, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.28, extraInitialWork: 160 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_1000', title: 'Total Estate Area 1000 ha', description: 'Coordinate global-scale vineyard area planning.', complexity: 10, icon: '🌐', requiredPrestige: 122, requiredCompanyValue: 45000000, prerequisites: ['eff_total_estate_area_512'], unlockType: 'total_vineyard_hectares', unlockValue: 1000, benefits: ['Raises max total vineyard area to 1000 hectares'], workProfile: { scopeWorkAmount: 900, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.29, extraInitialWork: 184 } }),
+      createCapacityResearchProject({ id: 'eff_total_estate_area_2000', title: 'Total Estate Area 2000 ha', description: 'Formalize super-estate governance across your entire land portfolio.', complexity: 10, icon: '🏛️', requiredPrestige: 138, requiredCompanyValue: 70000000, prerequisites: ['eff_total_estate_area_1000'], unlockType: 'total_vineyard_hectares', unlockValue: 2000, benefits: ['Raises max total vineyard area to 2000 hectares'], workProfile: { scopeWorkAmount: 1060, complexityCurve: { kind: 'exponential', base: 1.12 }, categoryModifier: 0.3, extraInitialWork: 210 } })
+];
+
+const VINEYARD_COUNT_RESEARCH_PROJECTS: ResearchProject[] = [
+      createCapacityResearchProject({ id: 'eff_vineyard_registry', title: 'Vineyard Registry', description: 'Introduce formal registry and oversight for more than one vineyard.', complexity: 3, icon: '📚', requiredPrestige: 6, prerequisites: ['admin_basic'], unlockType: 'vineyard_count', unlockValue: 2, benefits: ['Raises max vineyard count to 2'], workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.08, extraInitialWork: 14 } }),
+      createCapacityResearchProject({ id: 'eff_dual_estate_management', title: 'Dual Estate Management', description: 'Coordinate planning for a three-vineyard operation.', complexity: 4, icon: '🏷️', requiredPrestige: 10, prerequisites: ['eff_vineyard_registry'], unlockType: 'vineyard_count', unlockValue: 3, benefits: ['Raises max vineyard count to 3'], workProfile: { scopeWorkAmount: 92, complexityCurve: { kind: 'linear', multiplier: 0.15 }, categoryModifier: 0.1, extraInitialWork: 20 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_cluster_ops', title: 'Vineyard Cluster Operations', description: 'Run a small network of separate vineyard sites.', complexity: 5, icon: '🪴', requiredPrestige: 16, prerequisites: ['eff_dual_estate_management'], unlockType: 'vineyard_count', unlockValue: 5, benefits: ['Raises max vineyard count to 5'], workProfile: { scopeWorkAmount: 128, complexityCurve: { kind: 'linear', multiplier: 0.17 }, categoryModifier: 0.12, extraInitialWork: 28 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_dispatch', title: 'Multi-Vineyard Dispatch', description: 'Dispatch labor and logistics across a wider site network.', complexity: 6, icon: '🚚', requiredPrestige: 24, requiredCompanyValue: 900000, prerequisites: ['eff_vineyard_cluster_ops'], unlockType: 'vineyard_count', unlockValue: 8, benefits: ['Raises max vineyard count to 8'], workProfile: { scopeWorkAmount: 176, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.15, extraInitialWork: 40 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_support_grid', title: 'Vineyard Support Grid', description: 'Establish support teams for a 12-vineyard portfolio.', complexity: 7, icon: '🧰', requiredPrestige: 34, requiredCompanyValue: 1600000, prerequisites: ['eff_vineyard_dispatch'], unlockType: 'vineyard_count', unlockValue: 12, benefits: ['Raises max vineyard count to 12'], workProfile: { scopeWorkAmount: 226, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.17, extraInitialWork: 54 } }),
+      createCapacityResearchProject({ id: 'eff_regional_site_supervision', title: 'Regional Site Supervision', description: 'Supervise a 16-vineyard regional footprint.', complexity: 8, icon: '🧭', requiredPrestige: 44, requiredCompanyValue: 2600000, prerequisites: ['eff_vineyard_support_grid'], unlockType: 'vineyard_count', unlockValue: 16, benefits: ['Raises max vineyard count to 16'], workProfile: { scopeWorkAmount: 286, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.19, extraInitialWork: 66 } }),
+      createCapacityResearchProject({ id: 'eff_vineyard_network_coordination', title: 'Vineyard Network Coordination', description: 'Coordinate work across 24 separate vineyard sites.', complexity: 9, icon: '🔗', requiredPrestige: 56, requiredCompanyValue: 4200000, prerequisites: ['eff_regional_site_supervision'], unlockType: 'vineyard_count', unlockValue: 24, benefits: ['Raises max vineyard count to 24'], workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.21, extraInitialWork: 80 } }),
+      createCapacityResearchProject({ id: 'eff_estate_grid_management', title: 'Estate Grid Management', description: 'Maintain governance over a 32-vineyard operating grid.', complexity: 9, icon: '🕸️', requiredPrestige: 68, requiredCompanyValue: 6200000, prerequisites: ['eff_vineyard_network_coordination'], unlockType: 'vineyard_count', unlockValue: 32, benefits: ['Raises max vineyard count to 32'], workProfile: { scopeWorkAmount: 438, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.22, extraInitialWork: 96 } }),
+      createCapacityResearchProject({ id: 'eff_holdings_command', title: 'Holdings Command', description: 'Run a 48-vineyard estate command structure.', complexity: 10, icon: '🏭', requiredPrestige: 80, requiredCompanyValue: 9000000, prerequisites: ['eff_estate_grid_management'], unlockType: 'vineyard_count', unlockValue: 48, benefits: ['Raises max vineyard count to 48'], workProfile: { scopeWorkAmount: 530, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.24, extraInitialWork: 118 } }),
+      createCapacityResearchProject({ id: 'eff_regional_hub_admin', title: 'Regional Hub Administration', description: 'Govern a 64-vineyard network through regional hubs.', complexity: 10, icon: '🏢', requiredPrestige: 94, requiredCompanyValue: 14000000, prerequisites: ['eff_holdings_command'], unlockType: 'vineyard_count', unlockValue: 64, benefits: ['Raises max vineyard count to 64'], workProfile: { scopeWorkAmount: 630, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.25, extraInitialWork: 138 } }),
+      createCapacityResearchProject({ id: 'eff_multi_region_estate_control', title: 'Multi-Region Estate Control', description: 'Scale supervision to a 96-vineyard multi-region portfolio.', complexity: 10, icon: '🌍', requiredPrestige: 110, requiredCompanyValue: 22000000, prerequisites: ['eff_regional_hub_admin'], unlockType: 'vineyard_count', unlockValue: 96, benefits: ['Raises max vineyard count to 96'], workProfile: { scopeWorkAmount: 748, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.27, extraInitialWork: 162 } }),
+      createCapacityResearchProject({ id: 'eff_global_vineyard_registry', title: 'Global Vineyard Registry', description: 'Maintain a controlled register for 128 vineyard sites.', complexity: 10, icon: '🌐', requiredPrestige: 126, requiredCompanyValue: 36000000, prerequisites: ['eff_multi_region_estate_control'], unlockType: 'vineyard_count', unlockValue: 128, benefits: ['Raises max vineyard count to 128'], workProfile: { scopeWorkAmount: 884, complexityCurve: { kind: 'exponential', base: 1.11 }, categoryModifier: 0.28, extraInitialWork: 188 } })
+];
+
+const STAFF_LIMIT_RESEARCH_CHAIN: StaffLimitResearchProjectConfig[] = [
+      {
+            id: 'staff_onboarding_program',
+            title: 'Staff Onboarding Program',
+            description: 'Create hiring playbooks and role onboarding standards to safely grow the team.',
+            complexity: 3,
+            icon: '🧾',
+            requiredPrestige: 6,
+            unlockValue: 3,
+            benefits: ['Raises staff capacity to 3 employees', 'Improves onboarding consistency'],
+            workProfile: { scopeWorkAmount: 70, complexityCurve: { kind: 'linear', multiplier: 0.14 }, categoryModifier: 0.06, extraInitialWork: 10 }
+      },
+      {
+            id: 'staff_training',
+            title: 'Staff Training Programs',
+            description: 'Develop structured training programs for winery and vineyard staff',
+            complexity: 5,
+            icon: '👥',
+            requiredPrestige: 10,
+            prerequisites: ['staff_onboarding_program'],
+            unlockValue: 5,
+            benefits: ['Raises staff capacity to 5 employees', 'Structured staff development framework', 'Improved staff retention'],
+            workProfile: { scopeWorkAmount: 120, complexityCurve: { kind: 'linear', multiplier: 0.16 }, categoryModifier: 0.08, extraInitialWork: 20 }
+      },
+      {
+            id: 'staff_leadership_pipeline',
+            title: 'Leadership Pipeline',
+            description: 'Formalize lead roles and mentoring so larger teams remain effective and coordinated.',
+            complexity: 7,
+            icon: '🧑‍💼',
+            requiredPrestige: 26,
+            requiredCompanyValue: 1200000,
+            prerequisites: ['staff_training'],
+            unlockValue: 7,
+            benefits: ['Raises staff capacity to 7 employees', 'Improves team scaling and retention'],
+            workProfile: { scopeWorkAmount: 180, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.1, extraInitialWork: 40 }
+      },
+      {
+            id: 'staff_operational_management',
+            title: 'Operational Management Framework',
+            description: 'Define role responsibilities and shift coordination to support a larger operational team.',
+            complexity: 8,
+            icon: '📋',
+            requiredPrestige: 34,
+            requiredCompanyValue: 2200000,
+            prerequisites: ['staff_leadership_pipeline'],
+            unlockValue: 10,
+            benefits: ['Raises staff capacity to 10 employees'],
+            workProfile: { scopeWorkAmount: 230, complexityCurve: { kind: 'exponential', base: 1.07 }, categoryModifier: 0.11, extraInitialWork: 50 }
+      },
+      {
+            id: 'staff_department_structure',
+            title: 'Department Structure Program',
+            description: 'Establish specialist teams and reporting structures for multi-function operations.',
+            complexity: 8,
+            icon: '🗂️',
+            requiredPrestige: 44,
+            requiredCompanyValue: 3500000,
+            prerequisites: ['staff_operational_management'],
+            unlockValue: 15,
+            benefits: ['Raises staff capacity to 15 employees'],
+            workProfile: { scopeWorkAmount: 280, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.12, extraInitialWork: 60 }
+      },
+      {
+            id: 'staff_operations_hub',
+            title: 'Operations Hub Command',
+            description: 'Centralize scheduling and workforce assignment for high-output seasons.',
+            complexity: 9,
+            icon: '🏭',
+            requiredPrestige: 56,
+            requiredCompanyValue: 5500000,
+            prerequisites: ['staff_department_structure'],
+            unlockValue: 25,
+            benefits: ['Raises staff capacity to 25 employees'],
+            workProfile: { scopeWorkAmount: 360, complexityCurve: { kind: 'exponential', base: 1.08 }, categoryModifier: 0.13, extraInitialWork: 75 }
+      },
+      {
+            id: 'staff_enterprise_coordination',
+            title: 'Enterprise Coordination Office',
+            description: 'Coordinate large staffing pools with clear operating cadences and accountability.',
+            complexity: 9,
+            icon: '🏢',
+            requiredPrestige: 68,
+            requiredCompanyValue: 8500000,
+            prerequisites: ['staff_operations_hub'],
+            unlockValue: 40,
+            benefits: ['Raises staff capacity to 40 employees'],
+            workProfile: { scopeWorkAmount: 460, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.14, extraInitialWork: 95 }
+      },
+      {
+            id: 'staff_multiestate_hr',
+            title: 'Multi-Estate HR Systems',
+            description: 'Deploy enterprise hiring, retention, and role planning across multiple operating sites.',
+            complexity: 10,
+            icon: '🌍',
+            requiredPrestige: 84,
+            requiredCompanyValue: 13000000,
+            prerequisites: ['staff_enterprise_coordination'],
+            unlockValue: 60,
+            benefits: ['Raises staff capacity to 60 employees'],
+            workProfile: { scopeWorkAmount: 580, complexityCurve: { kind: 'exponential', base: 1.09 }, categoryModifier: 0.15, extraInitialWork: 120 }
+      },
+      {
+            id: 'staff_corporate_scale',
+            title: 'Corporate Scale Workforce',
+            description: 'Structure governance and workforce control systems for corporation-level staffing.',
+            complexity: 10,
+            icon: '🏛️',
+            requiredPrestige: 102,
+            requiredCompanyValue: 22000000,
+            prerequisites: ['staff_multiestate_hr'],
+            unlockValue: 100,
+            benefits: ['Raises staff capacity to 100 employees'],
+            workProfile: { scopeWorkAmount: 720, complexityCurve: { kind: 'exponential', base: 1.1 }, categoryModifier: 0.16, extraInitialWork: 150 }
+      }
+];
+
+const STAFF_LIMIT_RESEARCH_PROJECTS: ResearchProject[] = STAFF_LIMIT_RESEARCH_CHAIN.map(createStaffLimitResearchProject);
+
 // ===== AVAILABLE RESEARCH PROJECTS =====
 
 /**
@@ -353,328 +781,9 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       ...GRAPE_VARIETIES.map(grape => createGrapeResearchProject(grape)),
       
       // ===== EFFICIENCY =====
-      {
-            id: 'eff_microplot_management',
-            title: 'Microplot Management',
-            description: 'Establish operating discipline for very small vineyard parcels.',
-            complexity: 2,
-            benefits: [
-                  'Raises total vineyard capacity to 0.25 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(2)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🌱',
-            prestigeReward: calculateResearchPrestigeFromComplexity(2),
-            requiredPrestige: 2,
-            prerequisites: ['admin_basic'],
-            unlocks: [{ type: 'vineyard_size', value: 0.25, displayName: '0.25 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 45,
-                  complexityCurve: { kind: 'linear', multiplier: 0.12 },
-                  categoryModifier: 0.08,
-                  extraInitialWork: 8
-            }
-      },
-      {
-            id: 'eff_smallholding_operations',
-            title: 'Smallholding Operations',
-            description: 'Standardize small-estate routines for reliable half-hectare operations.',
-            complexity: 3,
-            benefits: [
-                  'Raises total vineyard capacity to 0.5 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(3)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🧺',
-            prestigeReward: calculateResearchPrestigeFromComplexity(3),
-            requiredPrestige: 5,
-            prerequisites: ['eff_microplot_management'],
-            unlocks: [{ type: 'vineyard_size', value: 0.5, displayName: '0.5 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 65,
-                  complexityCurve: { kind: 'linear', multiplier: 0.13 },
-                  categoryModifier: 0.1,
-                  extraInitialWork: 12
-            }
-      },
-      {
-            id: 'eff_estate_foundations',
-            title: 'Estate Foundations',
-            description: 'Build foundational workflows for full one-hectare estate management.',
-            complexity: 4,
-            benefits: [
-                  'Raises total vineyard capacity to 1 hectare',
-                  `+${calculateResearchPrestigeFromComplexity(4)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🏡',
-            prestigeReward: calculateResearchPrestigeFromComplexity(4),
-            requiredPrestige: 9,
-            prerequisites: ['eff_smallholding_operations'],
-            unlocks: [{ type: 'vineyard_size', value: 1, displayName: '1 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 85,
-                  complexityCurve: { kind: 'linear', multiplier: 0.15 },
-                  categoryModifier: 0.12,
-                  extraInitialWork: 18
-            }
-      },
-      {
-            id: 'eff_operational',
-            title: 'Operational Efficiency',
-            description: 'Research methods to improve overall operational efficiency across the winery',
-            complexity: 6,
-            benefits: [
-                  'Operational improvements across winery activities',
-                  'Raises total vineyard capacity to 2 hectares',
-                  'Better resource planning',
-                  `+${calculateResearchPrestigeFromComplexity(6)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '⚡',
-            prestigeReward: calculateResearchPrestigeFromComplexity(6),
-            requiredPrestige: 20,
-            prerequisites: ['eff_estate_foundations'],
-            unlocks: [{ type: 'vineyard_size', value: 2, displayName: '2 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 120,
-                  complexityCurve: { kind: 'linear', multiplier: 0.2 },
-                  categoryModifier: 0.15,
-                  extraInitialWork: 35
-            }
-      },
-      {
-            id: 'eff_site_expansion',
-            title: 'Estate Expansion Planning',
-            description: 'Professionalize expansion planning and utility layout to support a larger vineyard footprint.',
-            complexity: 7,
-            benefits: [
-                  'Raises total vineyard capacity to 4 hectares',
-                  'Improves long-term site expansion planning',
-                  `+${calculateResearchPrestigeFromComplexity(7)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🗺️',
-            prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 28,
-            requiredCompanyValue: 900000,
-            prerequisites: ['eff_operational'],
-            unlocks: [{ type: 'vineyard_size', value: 4, displayName: '4 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 170,
-                  complexityCurve: { kind: 'exponential', base: 1.07 },
-                  categoryModifier: 0.2,
-                  extraInitialWork: 45
-            }
-      },
-      {
-            id: 'eff_estate_scale',
-            title: 'Estate-Scale Infrastructure',
-            description: 'Coordinate roads, storage, and utility scaling to support full estate expansion.',
-            complexity: 9,
-            benefits: [
-                  'Raises total vineyard capacity to 8 hectares',
-                  'Unlocks robust estate-scale operating capacity',
-                  `+${calculateResearchPrestigeFromComplexity(9)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🏗️',
-            prestigeReward: calculateResearchPrestigeFromComplexity(9),
-            requiredPrestige: 42,
-            requiredCompanyValue: 2400000,
-            prerequisites: ['eff_site_expansion'],
-            unlocks: [{ type: 'vineyard_size', value: 8, displayName: '8 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 230,
-                  complexityCurve: { kind: 'exponential', base: 1.09 },
-                  categoryModifier: 0.22,
-                  extraInitialWork: 60
-            }
-      },
-      {
-            id: 'eff_regional_holdings',
-            title: 'Regional Holdings Blueprint',
-            description: 'Standardize planning for managing multiple large vineyard parcels across the same region.',
-            complexity: 9,
-            benefits: [
-                  'Raises total vineyard capacity to 16 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(9)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🧭',
-            prestigeReward: calculateResearchPrestigeFromComplexity(9),
-            requiredPrestige: 52,
-            requiredCompanyValue: 4500000,
-            prerequisites: ['eff_estate_scale'],
-            unlocks: [{ type: 'vineyard_size', value: 16, displayName: '16 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 290,
-                  complexityCurve: { kind: 'exponential', base: 1.1 },
-                  categoryModifier: 0.24,
-                  extraInitialWork: 75
-            }
-      },
-      {
-            id: 'eff_networked_estates',
-            title: 'Networked Estate Operations',
-            description: 'Integrate logistics, storage, and staffing between vineyards to run a distributed estate network.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 32 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🔗',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 62,
-            requiredCompanyValue: 7000000,
-            prerequisites: ['eff_regional_holdings'],
-            unlocks: [{ type: 'vineyard_size', value: 32, displayName: '32 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 360,
-                  complexityCurve: { kind: 'exponential', base: 1.1 },
-                  categoryModifier: 0.25,
-                  extraInitialWork: 90
-            }
-      },
-      {
-            id: 'eff_industrial_fleet_management',
-            title: 'Industrial Fleet Management',
-            description: 'Build tractor, transport, and intake fleet planning for high-throughput vineyard operations.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 64 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🚜',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 72,
-            requiredCompanyValue: 10000000,
-            prerequisites: ['eff_networked_estates'],
-            unlocks: [{ type: 'vineyard_size', value: 64, displayName: '64 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 430,
-                  complexityCurve: { kind: 'exponential', base: 1.11 },
-                  categoryModifier: 0.26,
-                  extraInitialWork: 100
-            }
-      },
-      {
-            id: 'eff_land_portfolio_management',
-            title: 'Land Portfolio Management',
-            description: 'Coordinate long-horizon planning and capital deployment for a large vineyard land portfolio.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 128 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '📈',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 84,
-            requiredCompanyValue: 16000000,
-            prerequisites: ['eff_industrial_fleet_management'],
-            unlocks: [{ type: 'vineyard_size', value: 128, displayName: '128 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 520,
-                  complexityCurve: { kind: 'exponential', base: 1.11 },
-                  categoryModifier: 0.27,
-                  extraInitialWork: 120
-            }
-      },
-      {
-            id: 'eff_megavineyard_control',
-            title: 'Megavineyard Control Systems',
-            description: 'Deploy robust operating systems for monitoring and controlling very large vineyard footprints.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 256 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🛰️',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 96,
-            requiredCompanyValue: 25000000,
-            prerequisites: ['eff_land_portfolio_management'],
-            unlocks: [{ type: 'vineyard_size', value: 256, displayName: '256 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 620,
-                  complexityCurve: { kind: 'exponential', base: 1.12 },
-                  categoryModifier: 0.28,
-                  extraInitialWork: 140
-            }
-      },
-      {
-            id: 'eff_agri_enterprise_planning',
-            title: 'Agri-Enterprise Planning Office',
-            description: 'Formalize enterprise-level planning for cross-region vineyard management and scaling.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 512 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🏢',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 110,
-            requiredCompanyValue: 40000000,
-            prerequisites: ['eff_megavineyard_control'],
-            unlocks: [{ type: 'vineyard_size', value: 512, displayName: '512 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 740,
-                  complexityCurve: { kind: 'exponential', base: 1.12 },
-                  categoryModifier: 0.29,
-                  extraInitialWork: 165
-            }
-      },
-      {
-            id: 'eff_global_land_network',
-            title: 'Global Land Network',
-            description: 'Structure governance and resource control for a global-scale vineyard asset network.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 1000 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🌐',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 125,
-            requiredCompanyValue: 65000000,
-            prerequisites: ['eff_agri_enterprise_planning'],
-            unlocks: [{ type: 'vineyard_size', value: 1000, displayName: '1000 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 880,
-                  complexityCurve: { kind: 'exponential', base: 1.13 },
-                  categoryModifier: 0.3,
-                  extraInitialWork: 190
-            }
-      },
-      {
-            id: 'eff_superestate_command',
-            title: 'Superestate Command Center',
-            description: 'Coordinate governance, logistics, and financial planning for ultra-large vineyard holdings.',
-            complexity: 10,
-            benefits: [
-                  'Raises total vineyard capacity to 2000 hectares',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'efficiency',
-            icon: '🏛️',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 140,
-            requiredCompanyValue: 100000000,
-            prerequisites: ['eff_global_land_network'],
-            unlocks: [{ type: 'vineyard_size', value: 2000, displayName: '2000 ha vineyard cap' }],
-            workProfile: {
-                  scopeWorkAmount: 1040,
-                  complexityCurve: { kind: 'exponential', base: 1.13 },
-                  categoryModifier: 0.31,
-                  extraInitialWork: 220
-            }
-      },
+      ...VINEYARD_SIZE_RESEARCH_PROJECTS,
+      ...TOTAL_VINEYARD_HECTARE_RESEARCH_PROJECTS,
+      ...VINEYARD_COUNT_RESEARCH_PROJECTS,
       
       // ===== MARKETING =====
       {
@@ -978,214 +1087,7 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
       },
       
       // ===== STAFF =====
-      {
-            id: 'staff_onboarding_program',
-            title: 'Staff Onboarding Program',
-            description: 'Create hiring playbooks and role onboarding standards to safely grow the team.',
-            complexity: 3,
-            benefits: [
-                  'Raises staff capacity to 3 employees',
-                  'Improves onboarding consistency',
-                  `+${calculateResearchPrestigeFromComplexity(3)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🧾',
-            prestigeReward: calculateResearchPrestigeFromComplexity(3),
-            requiredPrestige: 6,
-            unlocks: [{ type: 'staff_limit', value: 3, displayName: '3 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 70,
-                  complexityCurve: { kind: 'linear', multiplier: 0.14 },
-                  categoryModifier: 0.06,
-                  extraInitialWork: 10
-            }
-      },
-      {
-            id: 'staff_training',
-            title: 'Staff Training Programs',
-            description: 'Develop structured training programs for winery and vineyard staff',
-            complexity: 5,
-            benefits: [
-                  'Raises staff capacity to 5 employees',
-                  'Structured staff development framework',
-                  'Improved staff retention',
-                  `+${calculateResearchPrestigeFromComplexity(5)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '👥',
-            prestigeReward: calculateResearchPrestigeFromComplexity(5),
-            requiredPrestige: 10,
-            prerequisites: ['staff_onboarding_program'],
-            unlocks: [{ type: 'staff_limit', value: 5, displayName: '5 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 120,
-                  complexityCurve: { kind: 'linear', multiplier: 0.16 },
-                  categoryModifier: 0.08,
-                  extraInitialWork: 20
-            }
-      },
-      {
-            id: 'staff_leadership_pipeline',
-            title: 'Leadership Pipeline',
-            description: 'Formalize lead roles and mentoring so larger teams remain effective and coordinated.',
-            complexity: 7,
-            benefits: [
-                  'Raises staff capacity to 7 employees',
-                  'Improves team scaling and retention',
-                  `+${calculateResearchPrestigeFromComplexity(7)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🧑‍💼',
-            prestigeReward: calculateResearchPrestigeFromComplexity(7),
-            requiredPrestige: 26,
-            requiredCompanyValue: 1200000,
-            prerequisites: ['staff_training'],
-            unlocks: [{ type: 'staff_limit', value: 7, displayName: '7 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 180,
-                  complexityCurve: { kind: 'exponential', base: 1.07 },
-                  categoryModifier: 0.1,
-                  extraInitialWork: 40
-            }
-      },
-      {
-            id: 'staff_operational_management',
-            title: 'Operational Management Framework',
-            description: 'Define role responsibilities and shift coordination to support a larger operational team.',
-            complexity: 8,
-            benefits: [
-                  'Raises staff capacity to 10 employees',
-                  `+${calculateResearchPrestigeFromComplexity(8)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '📋',
-            prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 34,
-            requiredCompanyValue: 2200000,
-            prerequisites: ['staff_leadership_pipeline'],
-            unlocks: [{ type: 'staff_limit', value: 10, displayName: '10 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 230,
-                  complexityCurve: { kind: 'exponential', base: 1.07 },
-                  categoryModifier: 0.11,
-                  extraInitialWork: 50
-            }
-      },
-      {
-            id: 'staff_department_structure',
-            title: 'Department Structure Program',
-            description: 'Establish specialist teams and reporting structures for multi-function operations.',
-            complexity: 8,
-            benefits: [
-                  'Raises staff capacity to 15 employees',
-                  `+${calculateResearchPrestigeFromComplexity(8)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🗂️',
-            prestigeReward: calculateResearchPrestigeFromComplexity(8),
-            requiredPrestige: 44,
-            requiredCompanyValue: 3500000,
-            prerequisites: ['staff_operational_management'],
-            unlocks: [{ type: 'staff_limit', value: 15, displayName: '15 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 280,
-                  complexityCurve: { kind: 'exponential', base: 1.08 },
-                  categoryModifier: 0.12,
-                  extraInitialWork: 60
-            }
-      },
-      {
-            id: 'staff_operations_hub',
-            title: 'Operations Hub Command',
-            description: 'Centralize scheduling and workforce assignment for high-output seasons.',
-            complexity: 9,
-            benefits: [
-                  'Raises staff capacity to 25 employees',
-                  `+${calculateResearchPrestigeFromComplexity(9)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🏭',
-            prestigeReward: calculateResearchPrestigeFromComplexity(9),
-            requiredPrestige: 56,
-            requiredCompanyValue: 5500000,
-            prerequisites: ['staff_department_structure'],
-            unlocks: [{ type: 'staff_limit', value: 25, displayName: '25 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 360,
-                  complexityCurve: { kind: 'exponential', base: 1.08 },
-                  categoryModifier: 0.13,
-                  extraInitialWork: 75
-            }
-      },
-      {
-            id: 'staff_enterprise_coordination',
-            title: 'Enterprise Coordination Office',
-            description: 'Coordinate large staffing pools with clear operating cadences and accountability.',
-            complexity: 9,
-            benefits: [
-                  'Raises staff capacity to 40 employees',
-                  `+${calculateResearchPrestigeFromComplexity(9)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🏢',
-            prestigeReward: calculateResearchPrestigeFromComplexity(9),
-            requiredPrestige: 68,
-            requiredCompanyValue: 8500000,
-            prerequisites: ['staff_operations_hub'],
-            unlocks: [{ type: 'staff_limit', value: 40, displayName: '40 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 460,
-                  complexityCurve: { kind: 'exponential', base: 1.09 },
-                  categoryModifier: 0.14,
-                  extraInitialWork: 95
-            }
-      },
-      {
-            id: 'staff_multiestate_hr',
-            title: 'Multi-Estate HR Systems',
-            description: 'Deploy enterprise hiring, retention, and role planning across multiple operating sites.',
-            complexity: 10,
-            benefits: [
-                  'Raises staff capacity to 60 employees',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🌍',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 84,
-            requiredCompanyValue: 13000000,
-            prerequisites: ['staff_enterprise_coordination'],
-            unlocks: [{ type: 'staff_limit', value: 60, displayName: '60 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 580,
-                  complexityCurve: { kind: 'exponential', base: 1.09 },
-                  categoryModifier: 0.15,
-                  extraInitialWork: 120
-            }
-      },
-      {
-            id: 'staff_corporate_scale',
-            title: 'Corporate Scale Workforce',
-            description: 'Structure governance and workforce control systems for corporation-level staffing.',
-            complexity: 10,
-            benefits: [
-                  'Raises staff capacity to 100 employees',
-                  `+${calculateResearchPrestigeFromComplexity(10)} Prestige points`
-            ],
-            category: 'staff',
-            icon: '🏛️',
-            prestigeReward: calculateResearchPrestigeFromComplexity(10),
-            requiredPrestige: 102,
-            requiredCompanyValue: 22000000,
-            prerequisites: ['staff_multiestate_hr'],
-            unlocks: [{ type: 'staff_limit', value: 100, displayName: '100 staff cap' }],
-            workProfile: {
-                  scopeWorkAmount: 720,
-                  complexityCurve: { kind: 'exponential', base: 1.1 },
-                  categoryModifier: 0.16,
-                  extraInitialWork: 150
-            }
-      }
+      ...STAFF_LIMIT_RESEARCH_PROJECTS
 ];
 
 // ===== HELPER FUNCTIONS =====

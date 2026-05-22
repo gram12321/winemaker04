@@ -19,6 +19,111 @@ import { getUnlockedResearchIds } from '@/lib/database/core/researchUnlocksDB';
 import { getCurrentPrestige } from '@/lib/services/core/gameState';
 import { type ResearchEligibilityContext, getResearchRequirementReasons, isResearchProjectEligible, loadResearchEligibilityContext } from '@/lib/services';
 import { formatNumber } from '@/lib/utils/utils';
+import { CHAINED_VINEYARD_CAP_UNLOCK_TYPES, getBaseVineyardCapacityValue, getChainedVineyardResearchUnlockType, type VineyardCapUnlockType } from '@/lib/services/vineyard/vineyardCapacityService';
+
+const CHAINED_RESEARCH_UNLOCK_TYPES = new Set(['staff_limit', ...CHAINED_VINEYARD_CAP_UNLOCK_TYPES]);
+const BASE_STAFF_LIMIT = 2;
+
+function getChainedResearchUnlockType(project: ResearchProject): string | null {
+      const vineyardChainType = getChainedVineyardResearchUnlockType(project);
+      if (vineyardChainType) {
+            return vineyardChainType;
+      }
+
+      const chainedUnlock = project.unlocks?.find(unlock => CHAINED_RESEARCH_UNLOCK_TYPES.has(unlock.type));
+      return chainedUnlock?.type ?? null;
+}
+
+function getCurrentChainLimit(chainType: string, projects: ResearchProject[], completedResearch: Set<string>): number | null {
+      if (chainType === 'staff_limit') {
+            let currentLimit = BASE_STAFF_LIMIT;
+            for (const project of projects) {
+                  if (!completedResearch.has(project.id)) {
+                        continue;
+                  }
+
+                  const unlock = project.unlocks?.find((candidate) => candidate.type === 'staff_limit' && typeof candidate.value === 'number');
+                  if (unlock && typeof unlock.value === 'number') {
+                        currentLimit = Math.max(currentLimit, unlock.value);
+                  }
+            }
+            return currentLimit;
+      }
+
+      if (CHAINED_VINEYARD_CAP_UNLOCK_TYPES.has(chainType as VineyardCapUnlockType)) {
+            let currentLimit = getBaseVineyardCapacityValue(chainType as VineyardCapUnlockType);
+            for (const project of projects) {
+                  if (!completedResearch.has(project.id)) {
+                        continue;
+                  }
+
+                  const unlock = project.unlocks?.find((candidate) => candidate.type === chainType && typeof candidate.value === 'number');
+                  if (unlock && typeof unlock.value === 'number') {
+                        currentLimit = Math.max(currentLimit, unlock.value);
+                  }
+            }
+            return currentLimit;
+      }
+
+      return null;
+}
+
+export function getVisibleResearchProjects(
+      projects: ResearchProject[],
+      completedResearch: Set<string>,
+      activeResearch: Set<string>,
+      bypassGates = false
+): ResearchProject[] {
+      if (bypassGates) {
+            return projects;
+      }
+
+      const chainFrontierByType = new Map<string, string>();
+      const currentChainLimitByType = new Map<string, number | null>();
+
+      for (const project of projects) {
+            const chainType = getChainedResearchUnlockType(project);
+            if (!chainType || currentChainLimitByType.has(chainType)) {
+                  continue;
+            }
+
+            currentChainLimitByType.set(chainType, getCurrentChainLimit(chainType, projects, completedResearch));
+      }
+
+      for (const project of projects) {
+            const chainType = getChainedResearchUnlockType(project);
+            if (!chainType || chainFrontierByType.has(chainType) || completedResearch.has(project.id)) {
+                  continue;
+            }
+
+            if (activeResearch.has(project.id)) {
+                  chainFrontierByType.set(chainType, project.id);
+                  continue;
+            }
+
+            const currentLimit = currentChainLimitByType.get(chainType);
+            const unlock = project.unlocks?.find((candidate) => candidate.type === chainType && typeof candidate.value === 'number');
+            if (currentLimit !== undefined && currentLimit !== null && unlock && typeof unlock.value === 'number' && unlock.value <= currentLimit) {
+                  continue;
+            }
+
+            chainFrontierByType.set(chainType, project.id);
+      }
+
+      return projects.filter(project => {
+            const chainType = getChainedResearchUnlockType(project);
+            if (!chainType) {
+                  return true;
+            }
+
+            if (completedResearch.has(project.id) || activeResearch.has(project.id)) {
+                  return true;
+            }
+
+            return chainFrontierByType.get(chainType) === project.id;
+      });
+}
+
 
 interface ResearchPanelProps {
       bypassGates?: boolean;
@@ -312,7 +417,12 @@ export function ResearchPanel({ bypassGates = false }: ResearchPanelProps) {
       };
 
       const renderCategoryContent = (category: ResearchProject['category']) => {
-            const projects = categoryGroups[category];
+            const projects = getVisibleResearchProjects(
+                  categoryGroups[category],
+                  completedResearch,
+                  activeResearch,
+                  bypassGates
+            );
             const info = categoryInfo[category];
 
             if (projects.length === 0) {

@@ -2,14 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { LandSearchOptions, calculateLandSearchCost, getAccessibleRegions, calculateRegionDistribution, calculateLandSearchWork, getAllVineyards } from '@/lib/services';
 import { ASPECTS, GRAPE_VARIETIES } from '@/lib/types/types';
 import { formatNumber } from '@/lib/utils/utils';
-import { Button } from '@/components/ui';
+import { Button, UnifiedTooltip } from '@/components/ui';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import { X } from 'lucide-react';
 import { getGameState } from '@/lib/services';
 import { COUNTRY_REGION_MAP, ALL_SOIL_TYPES } from '@/lib/constants/vineyardConstants';
 import { getResearchUpgradeFeature } from '@/lib/features/researchUpgrade';
+import {
+  BASE_MAX_HECTARES_PER_VINEYARD,
+  BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
+  BASE_VINEYARD_COUNT_LIMIT,
+  buildVineyardCapacityState,
+  getNextVineyardCapacityHint,
+  getNextVineyardCapacityResearch,
+  getRemainingTotalHectares,
+  getRemainingVineyardSlots,
+  type VineyardCapacityState
+} from '@/lib/services/vineyard/vineyardCapacityService';
 
-const BASE_VINEYARD_SIZE_LIMIT_HA = 0.1;
+const MIN_SEARCHABLE_HECTARES = 0.05;
+const CAPACITY_EPSILON = 0.0001;
 
 // Two-thumb slider built on Radix Slider primitives
 const DualSlider: React.FC<{
@@ -80,8 +92,13 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
   });
 
   const [redistributedProbabilities, setRedistributedProbabilities] = useState<Array<{region: string, probability: number}>>([]);
-  const [currentTotalHectares, setCurrentTotalHectares] = useState(0);
-  const [vineyardSizeLimit, setVineyardSizeLimit] = useState(BASE_VINEYARD_SIZE_LIMIT_HA);
+  const [vineyardCapacity, setVineyardCapacity] = useState<VineyardCapacityState>({
+    maxHectaresPerVineyard: BASE_MAX_HECTARES_PER_VINEYARD,
+    maxTotalHectares: BASE_TOTAL_VINEYARD_HECTARES_LIMIT,
+    maxVineyardCount: BASE_VINEYARD_COUNT_LIMIT,
+    currentTotalHectares: 0,
+    currentVineyardCount: 0
+  });
   const [isLoadingVineyardLimit, setIsLoadingVineyardLimit] = useState(false);
 
   // Get company prestige for calculations
@@ -94,21 +111,22 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
     const loadVineyardLimit = async () => {
       setIsLoadingVineyardLimit(true);
       try {
-        const [vineyards, unlockedLimits] = await Promise.all([
+        const [vineyards, unlockedPerVineyardValues, unlockedTotalHectareValues, unlockedVineyardCountValues] = await Promise.all([
           getAllVineyards(),
-          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size')
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_size'),
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('total_vineyard_hectares'),
+          getResearchUpgradeFeature().unlocks.getUnlockedItems('vineyard_count')
         ]);
 
         if (!isMounted) return;
 
-        const totalHectares = vineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0);
-        const parsedLimits = unlockedLimits
-          .map(value => Number(value))
-          .filter(value => Number.isFinite(value) && value > 0);
-        const unlockedLimit = parsedLimits.length > 0 ? Math.max(...parsedLimits) : BASE_VINEYARD_SIZE_LIMIT_HA;
-
-        setCurrentTotalHectares(totalHectares);
-        setVineyardSizeLimit(Math.max(BASE_VINEYARD_SIZE_LIMIT_HA, unlockedLimit));
+        setVineyardCapacity(buildVineyardCapacityState({
+          currentTotalHectares: vineyards.reduce((sum, vineyard) => sum + (vineyard.hectares || 0), 0),
+          currentVineyardCount: vineyards.length,
+          unlockedPerVineyardValues,
+          unlockedTotalHectareValues,
+          unlockedVineyardCountValues
+        }));
       } catch (error) {
         console.error('Failed to load vineyard size limit:', error);
       } finally {
@@ -124,9 +142,38 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
     };
   }, [isOpen]);
 
-  const remainingHectares = Math.max(0, vineyardSizeLimit - currentTotalHectares);
-  const isAtVineyardSizeLimit = remainingHectares <= 0;
-  const minSearchExceedsRemaining = !isAtVineyardSizeLimit && options.hectareRange[0] > remainingHectares;
+  const remainingTotalHectares = getRemainingTotalHectares(vineyardCapacity);
+  const remainingVineyardSlots = getRemainingVineyardSlots(vineyardCapacity);
+  const maxSearchableHectares = Math.max(
+    MIN_SEARCHABLE_HECTARES,
+    Math.min(vineyardCapacity.maxHectaresPerVineyard, Math.max(remainingTotalHectares, 0))
+  );
+  const isAtTotalHectareLimit = remainingTotalHectares <= CAPACITY_EPSILON;
+  const isAtVineyardCountLimit = remainingVineyardSlots <= 0;
+  const hasSearchableAreaCapacity = remainingTotalHectares + CAPACITY_EPSILON >= MIN_SEARCHABLE_HECTARES;
+  const perVineyardHint = getNextVineyardCapacityHint('vineyard_size', vineyardCapacity.maxHectaresPerVineyard);
+  const totalAreaHint = getNextVineyardCapacityHint('total_vineyard_hectares', vineyardCapacity.maxTotalHectares);
+  const vineyardCountHint = getNextVineyardCapacityHint('vineyard_count', vineyardCapacity.maxVineyardCount);
+  const nextPerVineyardResearch = getNextVineyardCapacityResearch('vineyard_size', vineyardCapacity.maxHectaresPerVineyard);
+  const nextPerVineyardUnlock = nextPerVineyardResearch?.unlocks?.find((unlock) => unlock.type === 'vineyard_size');
+
+  useEffect(() => {
+    setOptions((previous) => {
+      const nextMin = Math.min(previous.hectareRange[0], maxSearchableHectares);
+      const nextMax = Math.min(previous.hectareRange[1], maxSearchableHectares);
+      const normalizedMin = Math.min(nextMin, nextMax);
+      const normalizedMax = Math.max(nextMin, nextMax);
+
+      if (normalizedMin === previous.hectareRange[0] && normalizedMax === previous.hectareRange[1]) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        hectareRange: [normalizedMin, normalizedMax]
+      };
+    });
+  }, [maxSearchableHectares]);
 
   // Calculate preview stats whenever options change
   useEffect(() => {
@@ -167,21 +214,23 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
 
   // Handle submit
   const handleSubmit = async () => {
-    if (isAtVineyardSizeLimit) {
-      alert(`Vineyard size cap reached (${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha). Complete vineyard-capacity research before searching for more land.`);
+    if (isAtVineyardCountLimit) {
+      alert(`Vineyard count cap reached (${formatNumber(vineyardCapacity.maxVineyardCount, { smartDecimals: true })}). ${vineyardCountHint || 'Complete more research to expand your vineyard network.'}`);
       return;
     }
 
-    if (minSearchExceedsRemaining) {
-      alert(`Your minimum search size (${formatNumber(options.hectareRange[0], { smartMaxDecimals: true })} ha) exceeds your remaining capacity (${formatNumber(remainingHectares, { smartMaxDecimals: true })} ha). Lower the minimum hectare range.`);
+    if (isAtTotalHectareLimit || !hasSearchableAreaCapacity) {
+      alert(`Remaining total area capacity is ${formatNumber(remainingTotalHectares, { smartMaxDecimals: true })} ha. ${totalAreaHint || 'Complete more research to expand total vineyard area.'}`);
       return;
     }
+
+    const clampedSearchLimit = Math.max(MIN_SEARCHABLE_HECTARES, maxSearchableHectares);
 
     const limitedOptions: LandSearchOptions = {
       ...options,
       hectareRange: [
-        Math.min(options.hectareRange[0], remainingHectares),
-        Math.min(options.hectareRange[1], remainingHectares)
+        Math.min(options.hectareRange[0], clampedSearchLimit),
+        Math.min(options.hectareRange[1], clampedSearchLimit)
       ]
     };
 
@@ -196,6 +245,14 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  const actionButtonHint = isLoadingVineyardLimit
+    ? 'Loading vineyard capacity...'
+    : isAtVineyardCountLimit
+      ? (vineyardCountHint || 'You need more vineyard-count research before searching for another property.')
+      : (!hasSearchableAreaCapacity || isAtTotalHectareLimit)
+        ? (totalAreaHint || 'You need more total-area research before searching for additional land.')
+        : null;
 
   // Get all available regions for the multi-select (removed unused variable)
 
@@ -403,7 +460,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                 {(() => {
                   // Log slider helpers: map slider [0,1000] to hectares [0.05,2000]
                   const MIN_HA = 0.05;
-                  const MAX_HA = 2000;
+                  const MAX_HA = maxSearchableHectares;
                   const SLIDER_MAX = 1000;
                   const toHa = (s: number) => MIN_HA * Math.pow(MAX_HA / MIN_HA, s / SLIDER_MAX);
                   const toSlider = (ha: number) => {
@@ -427,7 +484,7 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     />
                       <div className="flex justify-between text-xs text-gray-400 mt-1">
                         <span>{formatNumber(MIN_HA, { smartMaxDecimals: true })} ha</span>
-                        <span>{formatNumber(MAX_HA, { smartDecimals: true })} ha</span>
+                        <span>{formatNumber(MAX_HA, { smartDecimals: true, smartMaxDecimals: true })} ha</span>
                       </div>
                     </div>
                   );
@@ -666,18 +723,53 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
               <div>
                 <h3 className="text-lg font-medium text-white mb-4">Search Estimates</h3>
                 <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+                  <UnifiedTooltip
+                    title="Per-Vineyard Cap"
+                    content={<div className="text-xs">{perVineyardHint || 'This cap controls the maximum size of a single vineyard property.'}</div>}
+                  >
+                    <div className="flex justify-between text-sm cursor-help">
+                      <span className="text-gray-300">Max Size Per Vineyard:</span>
+                      <span className="text-white font-medium">
+                        {isLoadingVineyardLimit ? 'Loading...' : `${formatNumber(vineyardCapacity.maxHectaresPerVineyard, { smartMaxDecimals: true })} ha`}
+                      </span>
+                    </div>
+                  </UnifiedTooltip>
+                  <UnifiedTooltip
+                    title="Total Area Cap"
+                    content={<div className="text-xs">{totalAreaHint || 'This cap controls the sum of all owned vineyard hectares.'}</div>}
+                  >
+                    <div className="flex justify-between text-sm cursor-help">
+                      <span className="text-gray-300">Max Total Vineyard Area:</span>
+                      <span className="text-white font-medium">
+                        {isLoadingVineyardLimit
+                          ? 'Loading...'
+                          : `${formatNumber(vineyardCapacity.currentTotalHectares, { smartMaxDecimals: true })} / ${formatNumber(vineyardCapacity.maxTotalHectares, { smartMaxDecimals: true })} ha`}
+                      </span>
+                    </div>
+                  </UnifiedTooltip>
+                  <UnifiedTooltip
+                    title="Vineyard Count Cap"
+                    content={<div className="text-xs">{vineyardCountHint || 'This cap controls how many vineyard properties you can own.'}</div>}
+                  >
+                    <div className="flex justify-between text-sm cursor-help">
+                      <span className="text-gray-300">Max Vineyard Count:</span>
+                      <span className="text-white font-medium">
+                        {isLoadingVineyardLimit
+                          ? 'Loading...'
+                          : `${formatNumber(vineyardCapacity.currentVineyardCount, { smartDecimals: true })} / ${formatNumber(vineyardCapacity.maxVineyardCount, { smartDecimals: true })}`}
+                      </span>
+                    </div>
+                  </UnifiedTooltip>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-300">Vineyard Capacity:</span>
-                    <span className="text-white font-medium">
-                      {isLoadingVineyardLimit
-                        ? 'Loading...'
-                        : `${formatNumber(currentTotalHectares, { smartMaxDecimals: true })} / ${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha`}
+                    <span className="text-gray-300">Remaining Total Area:</span>
+                    <span className={`font-medium ${remainingTotalHectares > 0 ? 'text-green-300' : 'text-amber-300'}`}>
+                      {formatNumber(remainingTotalHectares, { smartMaxDecimals: true })} ha
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-300">Remaining Capacity:</span>
-                    <span className={`font-medium ${remainingHectares > 0 ? 'text-green-300' : 'text-amber-300'}`}>
-                      {formatNumber(remainingHectares, { smartMaxDecimals: true })} ha
+                    <span className="text-gray-300">Remaining Vineyard Slots:</span>
+                    <span className={`font-medium ${remainingVineyardSlots > 0 ? 'text-green-300' : 'text-amber-300'}`}>
+                      {formatNumber(remainingVineyardSlots, { smartDecimals: true })}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -692,6 +784,11 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
                     <span className="text-gray-300">Estimated Time:</span>
                     <span className="text-white font-medium">{previewStats.timeEstimate}</span>
                   </div>
+                  {nextPerVineyardResearch && typeof nextPerVineyardUnlock?.value === 'number' && (
+                    <div className="text-xs text-gray-400">
+                      Hover the cap rows for the next research hint.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -757,15 +854,24 @@ export const LandSearchOptionsModal: React.FC<LandSearchOptionsModalProps> = ({
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white"
-            disabled={isLoadingVineyardLimit || isAtVineyardSizeLimit || minSearchExceedsRemaining}
+          <UnifiedTooltip
+            title={actionButtonHint ? 'Search Locked' : undefined}
+            content={actionButtonHint ? <div className="text-xs">{actionButtonHint}</div> : <div className="hidden" />}
           >
-            {isAtVineyardSizeLimit
-              ? `Vineyard Limit Reached (${formatNumber(vineyardSizeLimit, { smartMaxDecimals: true })} ha)`
-              : `Start Search (${formatNumber(previewStats.totalCost, { currency: true })})`}
-          </Button>
+            <div>
+              <Button
+                onClick={handleSubmit}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={isLoadingVineyardLimit || isAtVineyardCountLimit || isAtTotalHectareLimit || !hasSearchableAreaCapacity}
+              >
+                {isAtVineyardCountLimit
+                  ? `Vineyard Count Limit Reached (${formatNumber(vineyardCapacity.maxVineyardCount, { smartDecimals: true })})`
+                  : (isAtTotalHectareLimit || !hasSearchableAreaCapacity)
+                    ? `Total Area Limit Reached (${formatNumber(vineyardCapacity.maxTotalHectares, { smartMaxDecimals: true })} ha)`
+                    : `Start Search (${formatNumber(previewStats.totalCost, { currency: true })})`}
+              </Button>
+            </div>
+          </UnifiedTooltip>
         </div>
       </div>
     </div>
