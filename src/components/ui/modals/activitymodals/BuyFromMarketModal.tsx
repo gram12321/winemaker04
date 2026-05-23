@@ -11,6 +11,13 @@ import {
   purchaseBuyGrapeOffer,
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
+import {
+  SUPPLIER_LOYALTY_LEVELS,
+  type SupplierLoyaltyLevel,
+  type SupplierLoyaltyRecord,
+  getSupplierYearlyTrustCap,
+} from '@/lib/services/sales/grapeSupplierLoyaltyService';
+import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber, getColorClass, getQualityCategory } from '@/lib/utils';
 
 type SortDirection = 'asc' | 'desc' | null;
@@ -74,6 +81,78 @@ function getVolatilityRiskIndex(offer: Pick<BuyGrapeMarketOffer, 'demandFactors'
   );
 }
 
+function getTrustIcon(level: SupplierLoyaltyLevel): string {
+  if (level === 0) return '○';
+  if (level <= 2) return '◔';
+  if (level <= 4) return '◕';
+  return '●';
+}
+
+function getTrustColor(level: SupplierLoyaltyLevel): string {
+  if (level === 0) return 'text-gray-400';
+  if (level <= 2) return 'text-blue-300';
+  if (level <= 4) return 'text-cyan-300';
+  return 'text-amber-300';
+}
+
+const SupplierTrustPanel: React.FC<{
+  supplierName?: string;
+  loyalty: SupplierLoyaltyRecord | null;
+  companyValue: number;
+}> = ({ supplierName, loyalty, companyValue }) => {
+  const level = (loyalty?.level ?? 0) as SupplierLoyaltyLevel;
+  const config = SUPPLIER_LOYALTY_LEVELS[level];
+  const nextLevel = level < 5 ? SUPPLIER_LOYALTY_LEVELS[(level + 1) as SupplierLoyaltyLevel] : null;
+  const score = loyalty?.loyaltyScore ?? 0;
+  const scoreToNext = nextLevel ? Math.max(0, nextLevel.minLoyaltyScore - score) : 0;
+  const yearlyCap = getSupplierYearlyTrustCap(Math.max(1, loyalty?.consecutiveYears ?? 1), companyValue);
+
+  return (
+    <div className="rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="font-semibold text-blue-300">{getTrustIcon(level)} Supplier Trust</span>
+        <span className={`font-bold ${getTrustColor(level)}`}>{config.name}</span>
+      </div>
+
+      <div className="flex gap-4 text-gray-400">
+        <span>Supplier: <strong className="text-white">{supplierName ?? loyalty?.supplierName ?? 'Unknown'}</strong></span>
+      </div>
+
+      <div className="flex gap-4 text-gray-400">
+        <span>Total purchases: <strong className="text-white">{(loyalty?.totalPurchases ?? 0)}</strong></span>
+        <span>Streak: <strong className="text-white">{(loyalty?.consecutiveYears ?? 0)} {(loyalty?.consecutiveYears ?? 0) === 1 ? 'year' : 'years'}</strong></span>
+        <span>Total bought: <strong className="text-white">{(loyalty?.totalKgPurchased ?? 0).toLocaleString()} kg</strong></span>
+      </div>
+
+      <div className="flex gap-4 text-gray-300">
+        <span>Trust score: <strong className="text-white">{score.toLocaleString()}</strong></span>
+        <span>Year cap: <strong className="text-white">{(loyalty?.yearLoyaltyPoints ?? 0).toLocaleString()} / {yearlyCap.toLocaleString()}</strong></span>
+      </div>
+
+      {config.benefits.length > 0 && (
+        <ul className="space-y-0.5 text-gray-300">
+          {config.benefits.map((benefit, i) => <li key={i}>• {benefit}</li>)}
+        </ul>
+      )}
+
+      {nextLevel && (
+        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
+          {scoreToNext === 0
+            ? `Ready to advance to ${nextLevel.name}!`
+            : `${scoreToNext.toLocaleString()} trust score to reach ${nextLevel.name}`
+          }
+        </div>
+      )}
+
+      {!loyalty && (
+        <div className="border-t border-blue-900/40 pt-2 text-amber-300">
+          First purchase from this supplier will establish this relationship.
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose }) => {
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,12 +164,16 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showAllOffers, setShowAllOffers] = useState(false);
   const [showFormulaDetails, setShowFormulaDetails] = useState(false);
+  const [companyValue, setCompanyValue] = useState(0);
+  const [purchaseQuantityByOfferId, setPurchaseQuantityByOfferId] = useState<Record<string, number>>({});
 
   const loadOffers = useCallback(async () => {
     setLoading(true);
     try {
       const nextOffers = await getBuyGrapeMarketOffers();
       setOffers(nextOffers);
+      const computedCompanyValue = await calculateCompanyValue().catch(() => 0);
+      setCompanyValue(computedCompanyValue);
     } finally {
       setLoading(false);
     }
@@ -214,9 +297,23 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     return filteredAndSortedOffers.find((offer) => offer.id === selectedOfferId) ?? filteredAndSortedOffers[0] ?? null;
   }, [filteredAndSortedOffers, selectedOfferId]);
 
+  const getOfferQuantity = useCallback((offer: BuyGrapeMarketOffer): number => {
+    const current = purchaseQuantityByOfferId[offer.id];
+    if (typeof current !== 'number') {
+      return Math.min(100, Math.max(1, offer.availableKg));
+    }
+
+    return Math.max(1, Math.min(current, offer.availableKg));
+  }, [purchaseQuantityByOfferId]);
+
+  const selectedPurchaseKg = useMemo(() => {
+    if (!selectedOffer) return 1;
+    return getOfferQuantity(selectedOffer);
+  }, [getOfferQuantity, selectedOffer]);
+
   const displayedOffers = useMemo(() => {
     if (showAllOffers) return filteredAndSortedOffers;
-    return filteredAndSortedOffers.slice(0, 6);
+    return filteredAndSortedOffers.slice(0, 5);
   }, [filteredAndSortedOffers, showAllOffers]);
 
   useEffect(() => {
@@ -253,10 +350,17 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       * priceBreakdown.yearCyclePriceMultiplier
       * priceBreakdown.volatilityPriceMultiplier
       * priceBreakdown.buyerSensitivityMultiplier
+      * priceBreakdown.supplierRelationshipMultiplier
       * priceBreakdown.statePremiumMultiplier
       * priceBreakdown.marketSpreadMultiplier
     );
   }, [priceBreakdown]);
+
+  const selectedTotalCost = useMemo(() => {
+    if (!priceBreakdown || !selectedOffer) return 0;
+    const safeQty = Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg));
+    return priceBreakdown.finalPricePerKg * safeQty;
+  }, [priceBreakdown, selectedOffer, selectedPurchaseKg]);
 
   const headerWithTooltip = useCallback((label: string, tooltip: string) => (
     <span className="inline-flex items-center gap-1">
@@ -296,6 +400,14 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               content={<span className="text-xs leading-snug">How many weeks this listing has been on the market. Older offers generally decay in quality over time.</span>}
             >
               <span className="rounded border border-gray-700 px-2 py-0.5 text-[10px] text-cyan-200">{offer.weeksOnMarket}w</span>
+            </UnifiedTooltip>
+            <UnifiedTooltip
+              title="Supplier Trust Level"
+              content={<span className="text-xs leading-snug">Persistent trust with this supplier can improve relationship pricing and listing persistence over time.</span>}
+            >
+              <span className={`rounded border border-gray-700 px-2 py-0.5 text-[10px] ${getTrustColor((offer.supplierLoyalty?.level ?? 0) as SupplierLoyaltyLevel)}`}>
+                Trust {offer.supplierLoyalty?.level ?? 0}
+              </span>
             </UnifiedTooltip>
           </div>
         </div>
@@ -365,9 +477,15 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       render: (offer) => (
         <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
           <MarketQuickBuyRowAction
-            offerId={offer.id}
+            quantity={getOfferQuantity(offer)}
             maxQuantity={offer.availableKg}
-            onBuy={handleBuy}
+            onQuantityChange={(quantity) => {
+              const safe = Math.max(1, Math.min(Math.round(quantity), offer.availableKg));
+              setPurchaseQuantityByOfferId((current) => ({
+                ...current,
+                [offer.id]: safe,
+              }));
+            }}
             disabled={loading}
           />
           {errorByOfferId[offer.id] && (
@@ -379,7 +497,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
         </div>
       ),
     },
-  ], [errorByOfferId, handleBuy, headerWithTooltip, loading]);
+  ], [errorByOfferId, getOfferQuantity, headerWithTooltip, loading]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -392,7 +510,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] gap-3 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
             {selectedOffer?.demandFactors ? (
               <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -443,6 +561,12 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
               </div>
             )}
 
+            <SupplierTrustPanel
+              supplierName={selectedOffer?.supplierName}
+              loyalty={selectedOffer?.supplierLoyalty ?? null}
+              companyValue={companyValue}
+            />
+
             {priceBreakdown && selectedOffer ? (
               <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70">
                 <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Price Summary</div>
@@ -452,8 +576,11 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">x{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">x{selectedDemandPressureIndex.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">x{selectedVolatilityRiskIndex.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Relationship Factor</span><span className="text-right">x{priceBreakdown.supplierRelationshipMultiplier.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">State Premium Factor</span><span className="text-right">x{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Final Price per kg</span><span className="text-right">{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Buy Quantity</span><span className="text-right">{Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg)).toLocaleString()} kg</span></div>
+                  <div className="flex justify-between gap-3 font-bold text-amber-400"><span>Total Cost</span><span>{formatNumber(selectedTotalCost, { currency: true, decimals: 0 })}</span></div>
                 </div>
 
                 <div className="mt-2 rounded border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-gray-300 space-y-1">
@@ -466,6 +593,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                     {' × '}{priceBreakdown.yearCyclePriceMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.volatilityPriceMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.supplierRelationshipMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.statePremiumMultiplier.toFixed(3)}
                     {' × '}{priceBreakdown.marketSpreadMultiplier.toFixed(3)}
                     {' = '}{formatNumber(selectedRawPricePerKg, { currency: true, decimals: 3 })}/kg
@@ -491,6 +619,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Cycle Factor</span><span className="text-right">x{priceBreakdown.yearCyclePriceMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Price Factor</span><span className="text-right">x{priceBreakdown.volatilityPriceMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">x{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Relationship Factor</span><span className="text-right">x{priceBreakdown.supplierRelationshipMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Market Margin Factor</span><span className="text-right">x{priceBreakdown.marketSpreadMultiplier.toFixed(3)}</span></div>
                     </div>
                   )}
@@ -550,7 +679,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             </div>
           </div>
 
-          {filteredAndSortedOffers.length > 6 && (
+          {filteredAndSortedOffers.length > 5 && (
             <div className="flex justify-center">
               <Button
                 type="button"
@@ -559,7 +688,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                 className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
                 onClick={() => setShowAllOffers((current) => !current)}
               >
-                {showAllOffers ? 'Show Less' : `Show More (${filteredAndSortedOffers.length - 6} more)`}
+                {showAllOffers ? 'Show Less' : `Show More (${filteredAndSortedOffers.length - 5} more)`}
               </Button>
             </div>
           )}
@@ -579,6 +708,19 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
           >
             Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (!selectedOffer) return;
+              const safeQty = Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg));
+              void handleBuy(selectedOffer.id, safeQty);
+            }}
+            disabled={loading || !selectedOffer || !priceBreakdown}
+            className="bg-amber-600 hover:bg-amber-500 text-white"
+          >
+            {loading
+              ? 'Buying…'
+              : `Buy for ${priceBreakdown ? formatNumber(selectedTotalCost, { currency: true, decimals: 0 }) : '—'}`}
           </Button>
         </DialogFooter>
       </DialogContent>

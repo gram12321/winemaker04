@@ -95,30 +95,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   return (
     <>
       <header className="w-full bg-red-800 text-white shadow-md">
-        <div className="max-w-7xl mx-auto relative flex justify-between items-center py-0.5 px-3 sm:px-4 md:px-6 lg:px-8 text-sm">
-          <div className="flex items-center">
-            <button onClick={() => handleNavigation('dashboard')} className="text-sm font-semibold">
-              🍷 Winery Management {appVersion}
-            </button>
-          </div>
+        <div className="max-w-7xl mx-auto py-0.5 px-3 sm:px-4 md:px-6 lg:px-8 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex items-center">
+              <button onClick={() => handleNavigation('dashboard')} className="text-sm font-semibold">
+                🍷 Winery Management {appVersion}
+              </button>
+            </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-1 absolute left-1/2 -translate-x-1/2">
-            {navItems.map((item) => (
-              <Button
-                key={item.id}
-                onClick={() => handleNavigation(item.id)}
-                variant={currentPage === item.id ? "secondary" : "ghost"}
-                size="sm"
-                className="bg-transparent hover:bg-red-700 text-white border-0"
-              >
-                <span className="mr-2">{item.icon}</span>
-                {item.label}
-              </Button>
-            ))}
-          </nav>
-          
-          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
             {/* Time display - responsive */}
             <div className="flex items-center space-x-2 mr-2">
               <CalendarDays className="h-3.5 w-3.5" />
@@ -401,7 +386,24 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden xl:flex items-center justify-center gap-1 pt-1 pb-0.5">
+            {navItems.map((item) => (
+              <Button
+                key={item.id}
+                onClick={() => handleNavigation(item.id)}
+                variant={currentPage === item.id ? "secondary" : "ghost"}
+                size="sm"
+                className="bg-transparent hover:bg-red-700 text-white border-0 px-2"
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.label}
+              </Button>
+            ))}
+          </nav>
         </div>
       </header>
       

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Compass, HeartPulse, Info, Mountain, Droplets, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Wind, ThermometerSun } from 'lucide-react';
+import { AlertTriangle, Compass, HeartPulse, Info, Mountain, Droplets, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Wind, ThermometerSun, Grape, Leaf } from 'lucide-react';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TooltipRow, TooltipSection, UnifiedTooltip, VineyardStatusBadge } from '@/components/ui';
 import { useGameState, useGameStateWithData } from '@/hooks';
 import { buildVineyardWeatherRows, buildWeatherContext, calculateWeatherImpactSummary, getAllVineyards, getCurrentCompany, getSoilResponseLabel, getWeatherIcon, type VineyardWeatherRow } from '@/lib/services';
@@ -63,8 +63,8 @@ type SortKey = 'name' | 'state' | 'ripenessDelta' | 'healthDelta' | 'siteRespons
 
 const SORTABLE_COLUMNS: Array<{ key: SortKey; label: string; description: string }> = [
   { key: 'state', label: 'Status', description: 'Sort by vineyard lifecycle state: Growing, Dormant, Harvested, and so on.' },
-  { key: 'ripenessDelta', label: 'Ripeness Delta', description: 'Sort by weather-driven ripeness movement for the current forecast window. Also shows projected movement from current value.' },
-  { key: 'healthDelta', label: 'Health Delta', description: 'Sort by how strongly weather is improving or stressing vine health. Also shows projected movement from current value.' },
+  { key: 'ripenessDelta', label: 'Ripeness', description: 'Sort by weather-driven ripeness movement for the current forecast window. Also shows current-to-projected movement.' },
+  { key: 'healthDelta', label: 'Health', description: 'Sort by how strongly weather is improving or stressing vine health. Also shows current-to-projected movement.' },
   { key: 'siteResponse', label: 'Site Response', description: 'Sort by site multiplier from aspect, altitude, terroir, and soil. 1.0 is neutral, above amplifies weather impact, below buffers it.' },
   { key: 'reason', label: 'Reason', description: 'Sort by the summary sentence explaining the weather pressure on this vineyard.' },
 ];
@@ -258,13 +258,13 @@ export function WeatherCenterPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div>
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Vineyard Weather Impact Preview</CardTitle>
             <CardDescription>Net weather deltas from the current week context. Site factors (aspect, altitude, terroir, soil) are included as bounded response modifiers.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -301,9 +301,17 @@ export function WeatherCenterPage() {
                 {sortedRows.map((row) => {
                   return (
                   <TableRow key={row.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium align-top">
                       <div className="space-y-1">
-                        <p>{row.name}</p>
+                        <UnifiedTooltip
+                          title="Vineyard"
+                          content={<p className="text-xs text-slate-200">{row.name}</p>}
+                          side="top"
+                          variant="panel"
+                          density="compact"
+                        >
+                          <p className="truncate max-w-[220px]">{row.name}</p>
+                        </UnifiedTooltip>
                         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                           <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getWeatherBadgeClass(row.breakdown.weatherState)}`}>
                             <span>{getWeatherIcon(row.breakdown.weatherState as any)}</span>
@@ -327,7 +335,7 @@ export function WeatherCenterPage() {
                         <VineyardStatusBadge status={row.state} />
                       </UnifiedTooltip>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right align-top">
                       <UnifiedTooltip
                         title="Ripeness Delta Breakdown"
                         content={(
@@ -344,8 +352,10 @@ export function WeatherCenterPage() {
                               <TooltipRow label="Combined site response" value={`x${formatNumber(row.siteResponse, { smartDecimals: true })}`} monospaced />
                             </TooltipSection>
                             <TooltipSection title="Result">
+                              <TooltipRow label="Current" value={`${formatNumber(row.ripenessCurrent * 100, { smartDecimals: true })}%`} monospaced />
                               <TooltipRow label="Raw delta" value={formatSigned(row.breakdown.ripenessRawDelta)} monospaced />
                               <TooltipRow label="Final delta" value={formatSigned(row.ripenessDelta)} monospaced valueRating={row.ripenessDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Projected" value={`${formatNumber(row.ripenessProjected * 100, { smartDecimals: true })}%`} monospaced />
                               <TooltipRow label="Clamp range" value={WEATHER_CENTER_RIPENESS_CLAMP_LABEL} monospaced />
                               {row.breakdown.ripenessClamped && <p className="text-[11px] text-amber-400">Value was clamped to keep simulation stable.</p>}
                             </TooltipSection>
@@ -353,16 +363,20 @@ export function WeatherCenterPage() {
                         )}
                         triggerClassName="inline-flex justify-end"
                       >
-                        <button type="button" className={`inline-flex items-center gap-1 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium ${getDeltaTextClass(row.ripenessDelta)}`}>
-                          <span>{formatSigned(row.ripenessDelta)}</span>
-                          <Info className="h-3 w-3 text-slate-500" />
+                        <button type="button" className="inline-flex flex-col items-end gap-0.5 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 min-w-[116px]">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+                            <Grape className="h-3.5 w-3.5 text-violet-600" />
+                            Ripeness
+                          </span>
+                          <span>{formatNumber(row.ripenessCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.ripenessProjected * 100, { smartDecimals: true })}%</span>
+                          <span className={`inline-flex items-center gap-1 ${getDeltaTextClass(row.ripenessDelta)}`}>
+                            {formatSigned(row.ripenessDelta)}
+                            <Info className="h-3 w-3 text-slate-500" />
+                          </span>
                         </button>
                       </UnifiedTooltip>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {formatNumber(row.ripenessCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.ripenessProjected * 100, { smartDecimals: true })}%
-                      </p>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right align-top">
                       <UnifiedTooltip
                         title="Health Delta Breakdown"
                         content={(
@@ -378,8 +392,10 @@ export function WeatherCenterPage() {
                               {row.breakdown.siteResponseClamped && <p className="text-[11px] text-amber-400">Raw site response was clamped to [0.8, 1.2].</p>}
                             </TooltipSection>
                             <TooltipSection title="Result">
+                              <TooltipRow label="Current" value={`${formatNumber(row.healthCurrent * 100, { smartDecimals: true })}%`} monospaced />
                               <TooltipRow label="Raw delta" value={formatSigned(row.breakdown.healthRawDelta)} monospaced />
                               <TooltipRow label="Final delta" value={formatSigned(row.healthDelta)} monospaced valueRating={row.healthDelta >= 0 ? 1 : 0} />
+                              <TooltipRow label="Projected" value={`${formatNumber(row.healthProjected * 100, { smartDecimals: true })}%`} monospaced />
                               <TooltipRow label="Clamp range" value={WEATHER_CENTER_HEALTH_CLAMP_LABEL} monospaced />
                               {row.breakdown.healthClamped && <p className="text-[11px] text-amber-400">Value was clamped to keep simulation stable.</p>}
                             </TooltipSection>
@@ -387,16 +403,20 @@ export function WeatherCenterPage() {
                         )}
                         triggerClassName="inline-flex justify-end"
                       >
-                        <button type="button" className={`inline-flex items-center gap-1 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium ${getDeltaTextClass(row.healthDelta)}`}>
-                          <span>{formatSigned(row.healthDelta)}</span>
-                          <Info className="h-3 w-3 text-slate-500" />
+                        <button type="button" className="inline-flex flex-col items-end gap-0.5 rounded border border-dashed border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 min-w-[116px]">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+                            <Leaf className="h-3.5 w-3.5 text-emerald-700" />
+                            Health
+                          </span>
+                          <span>{formatNumber(row.healthCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.healthProjected * 100, { smartDecimals: true })}%</span>
+                          <span className={`inline-flex items-center gap-1 ${getDeltaTextClass(row.healthDelta)}`}>
+                            {formatSigned(row.healthDelta)}
+                            <Info className="h-3 w-3 text-slate-500" />
+                          </span>
                         </button>
                       </UnifiedTooltip>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {formatNumber(row.healthCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.healthProjected * 100, { smartDecimals: true })}%
-                      </p>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right align-top">
                       <UnifiedTooltip
                         title="Site Response"
                         content={(
@@ -417,7 +437,7 @@ export function WeatherCenterPage() {
                         )}
                       >
                         <div className="space-y-1">
-                          <p className={`text-sm font-semibold ${getSiteResponseColorClass(row.siteResponse)}`}>x{formatNumber(row.siteResponse, { smartDecimals: true })}</p>
+                          <p className={`inline-flex items-center gap-1 text-sm font-semibold ${getSiteResponseColorClass(row.siteResponse)}`}><Compass className="h-3.5 w-3.5" />x{formatNumber(row.siteResponse, { smartDecimals: true })}</p>
                           <div className="relative h-2 overflow-hidden rounded-full bg-slate-200">
                             <div
                               className={`h-full rounded-full ${row.siteResponse >= WEATHER_CENTER_SITE_RESPONSE_NEUTRAL ? 'bg-emerald-500' : 'bg-sky-500'}`}
@@ -429,26 +449,22 @@ export function WeatherCenterPage() {
                         </div>
                       </UnifiedTooltip>
                     </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p className="leading-tight">{row.reason}</p>
-                        <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                            <Compass className="h-3 w-3" />
-                            x{formatNumber(row.breakdown.aspectResponse, { smartDecimals: true })}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                            <Mountain className="h-3 w-3" />
-                            x{formatNumber(row.breakdown.altitudeResponse, { smartDecimals: true })}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                            <Wind className="h-3 w-3" />
-                            x{formatNumber(row.breakdown.terroirResponse, { smartDecimals: true })}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                            <Droplets className="h-3 w-3" />
-                            x{formatNumber(row.breakdown.soilResponse, { smartDecimals: true })}
-                          </span>
+                    <TableCell className="align-top">
+                      <div className="max-w-[230px]">
+                        <p className="text-xs text-slate-700 leading-snug break-words">{row.reason}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <UnifiedTooltip title="Aspect" content={<p className="text-xs text-slate-200">Slope orientation effect on sun exposure.</p>} side="top" variant="panel" density="compact">
+                            <span className="inline-flex items-center gap-1 rounded border border-violet-200 bg-violet-50 px-2 py-0.5 text-violet-700"><Compass className="h-3 w-3" />x{formatNumber(row.breakdown.aspectResponse, { smartDecimals: true })}</span>
+                          </UnifiedTooltip>
+                          <UnifiedTooltip title="Altitude" content={<p className="text-xs text-slate-200">Elevation modifies heat/frost pressure.</p>} side="top" variant="panel" density="compact">
+                            <span className="inline-flex items-center gap-1 rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700"><Mountain className="h-3 w-3" />x{formatNumber(row.breakdown.altitudeResponse, { smartDecimals: true })}</span>
+                          </UnifiedTooltip>
+                          <UnifiedTooltip title="Terroir" content={<p className="text-xs text-slate-200">Region + grape suitability response.</p>} side="top" variant="panel" density="compact">
+                            <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700"><Wind className="h-3 w-3" />x{formatNumber(row.breakdown.terroirResponse, { smartDecimals: true })}</span>
+                          </UnifiedTooltip>
+                          <UnifiedTooltip title="Soil" content={<p className="text-xs text-slate-200">Thermal swing and water-retention response.</p>} side="top" variant="panel" density="compact">
+                            <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700"><Droplets className="h-3 w-3" />x{formatNumber(row.breakdown.soilResponse, { smartDecimals: true })}</span>
+                          </UnifiedTooltip>
                         </div>
                       </div>
                     </TableCell>
@@ -460,7 +476,9 @@ export function WeatherCenterPage() {
           </CardContent>
         </Card>
 
-        <Card>
+      </div>
+
+      <Card>
           <CardHeader>
             <CardTitle className="text-base">Alerts</CardTitle>
             <CardDescription>Prepared UI shell. Event damage and recommended actions are planned for later phases.</CardDescription>
@@ -488,8 +506,7 @@ export function WeatherCenterPage() {
               <p className="text-xs text-muted-foreground mt-1">Weather-driven achievements and mitigation research triggers are prepared, but not active yet.</p>
             </div>
           </CardContent>
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }

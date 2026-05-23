@@ -1,5 +1,6 @@
 ﻿
 import React, { useState, useMemo, useCallback } from 'react';
+import { BarChart3, Grape, HeartPulse } from 'lucide-react';
 import { useLoadingState, useGameState, useGameStateWithData } from '@/hooks';
 import { buildVineyardWeatherRows, buildWeatherContext, getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, getCurrentCompany, getWeatherIcon, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
@@ -21,42 +22,88 @@ const getVineYieldProgressColor = (vineYield: number): string => {
   return getRangeColor(normalizedYield, 0.02, 1.0, 'higher_better').bg;
 };
 
+const getExpectedYieldProgressPercent = (yieldKg: number): number => {
+  return Math.max(0, Math.min(100, (yieldKg / 10000) * 100));
+};
+
+const formatSignedPercentPoints = (value: number): string => `${formatSigned(value * 100)}%`;
+
 // Consolidated tooltip content builder
 const buildTooltipContent = (type: string, data: any) => {
-  const { vineyard, value, label, description } = data;
+  const { vineyard, value, label, description, weatherImpact, projectedValue, weatherBreakdown, siteResponse } = data;
   
   switch (type) {
     case 'health':
       const healthTrend = vineyard.healthTrend;
+      const hasWeatherProjection = typeof weatherImpact === 'number' && typeof projectedValue === 'number';
+      const hasWeatherBreakdown = !!weatherBreakdown;
+      const healthSeasonalNetChange = healthTrend?.netChange ?? 0;
       if (!healthTrend || (healthTrend.seasonalDecay === 0 && healthTrend.plantingImprovement === 0)) {
         return (
           <div className={tooltipStyles.text}>
             <TooltipSection>
               <p className={tooltipStyles.title}>Vineyard Health: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</p>
-              <p className={tooltipStyles.muted}>No significant changes this season</p>
+              <p className={tooltipStyles.muted}>No major season-to-date health drift is recorded.</p>
             </TooltipSection>
+            {hasWeatherProjection && (
+              <TooltipSection title="Next Week Forecast (Weather-Only)">
+                <TooltipRow label="Current" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}%`} monospaced />
+                {hasWeatherBreakdown && (
+                  <>
+                    <TooltipRow label="Weather" value={`${weatherBreakdown.weatherState} (${weatherBreakdown.weatherIntensity})`} />
+                    <TooltipRow label="Base health delta" value={formatSigned(weatherBreakdown.baseHealthDeviation)} monospaced />
+                    <TooltipRow label="Seasonal adjustment" value={`x${formatNumber(weatherBreakdown.seasonAdjustmentMultiplier, { smartDecimals: true })}`} monospaced />
+                    <TooltipRow label="Site parameters" value={`Aspect x${formatNumber(weatherBreakdown.aspectResponse, { smartDecimals: true })}, Altitude x${formatNumber(weatherBreakdown.altitudeResponse, { smartDecimals: true })}, Terroir x${formatNumber(weatherBreakdown.terroirResponse, { smartDecimals: true })}, Soil x${formatNumber(weatherBreakdown.soilResponse, { smartDecimals: true })}`} />
+                    <TooltipRow label="Site response" value={`x${formatNumber(siteResponse || 1, { smartDecimals: true })}`} monospaced />
+                  </>
+                )}
+                <TooltipRow label="Net expected change next week" value={formatSignedPercentPoints(weatherImpact)} monospaced valueRating={weatherImpact >= 0 ? 0.9 : 0.1} />
+                <TooltipRow label="Projected level (next week)" value={`${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
+                <TooltipRow label="Formula" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}% + ${formatSignedPercentPoints(weatherImpact)} = ${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
+                <p className={tooltipStyles.muted}>Projected level is the forecasted health after one week from weather effects only.</p>
+              </TooltipSection>
+            )}
           </div>
         );
       }
-      const netChange = healthTrend.netChange;
-      const hasPositiveChange = netChange > 0;
+      const hasPositiveChange = healthSeasonalNetChange > 0;
       return (
         <div className={tooltipStyles.text}>
           <TooltipSection>
             <p className={tooltipStyles.title}>Vineyard Health: {formatNumber(vineyard.vineyardHealth * 100, { smartDecimals: true })}%</p>
+            <p className={tooltipStyles.muted}>Season context and weekly weather forecast are separated below.</p>
           </TooltipSection>
-          <TooltipSection title="Health Changes This Season:">
-            {healthTrend.seasonalDecay > 0 && (
-              <TooltipRow label="Seasonal decay:" value={`-${formatNumber(healthTrend.seasonalDecay * 100, { smartDecimals: true })}%`} valueRating={0.1} />
+          <TooltipSection title="Season-to-Date Context (Not Next Week)">
+            {healthTrend.seasonalDecay !== 0 && (
+              <TooltipRow label="Seasonal decay" value={formatSignedPercentPoints(-Math.abs(healthTrend.seasonalDecay))} valueRating={0.1} />
             )}
             {healthTrend.plantingImprovement > 0 && (
-              <TooltipRow label="Recent planting:" value={`+${formatNumber(healthTrend.plantingImprovement * 100, { smartDecimals: true })}%`} valueRating={0.9} />
+              <TooltipRow label="Planting recovery" value={formatSignedPercentPoints(healthTrend.plantingImprovement)} valueRating={0.9} />
             )}
-            {(netChange !== 0) && (
-              <TooltipRow label="Net change:" value={`${hasPositiveChange ? '+' : ''}${formatNumber(netChange * 100, { smartDecimals: true })}%`} valueRating={hasPositiveChange ? 0.9 : 0.1} />
+            {(healthSeasonalNetChange !== 0) && (
+              <TooltipRow label="Net season trend" value={formatSignedPercentPoints(healthSeasonalNetChange)} valueRating={hasPositiveChange ? 0.9 : 0.1} />
             )}
+            <p className={tooltipStyles.muted}>These values are season-to-date context and are not the one-week weather delta.</p>
           </TooltipSection>
-          {vineyard.plantingHealthBonus && vineyard.plantingHealthBonus > 0 && (
+          {hasWeatherProjection && (
+            <TooltipSection title="Next Week Forecast (Weather-Only)">
+              <TooltipRow label="Current" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}%`} monospaced />
+              {hasWeatherBreakdown && (
+                <>
+                  <TooltipRow label="Weather" value={`${weatherBreakdown.weatherState} (${weatherBreakdown.weatherIntensity})`} />
+                  <TooltipRow label="Base health delta" value={formatSigned(weatherBreakdown.baseHealthDeviation)} monospaced />
+                  <TooltipRow label="Seasonal adjustment" value={`x${formatNumber(weatherBreakdown.seasonAdjustmentMultiplier, { smartDecimals: true })}`} monospaced />
+                  <TooltipRow label="Site parameters" value={`Aspect x${formatNumber(weatherBreakdown.aspectResponse, { smartDecimals: true })}, Altitude x${formatNumber(weatherBreakdown.altitudeResponse, { smartDecimals: true })}, Terroir x${formatNumber(weatherBreakdown.terroirResponse, { smartDecimals: true })}, Soil x${formatNumber(weatherBreakdown.soilResponse, { smartDecimals: true })}`} />
+                  <TooltipRow label="Site response" value={`x${formatNumber(siteResponse || 1, { smartDecimals: true })}`} monospaced />
+                </>
+              )}
+              <TooltipRow label="Net expected change next week" value={formatSignedPercentPoints(weatherImpact)} monospaced valueRating={weatherImpact >= 0 ? 0.9 : 0.1} />
+              <TooltipRow label="Projected level (next week)" value={`${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
+              <TooltipRow label="Formula" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}% + ${formatSignedPercentPoints(weatherImpact)} = ${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
+              <p className={tooltipStyles.muted}>Projected level is the forecasted health after one week from weather effects only.</p>
+            </TooltipSection>
+          )}
+          {(vineyard.plantingHealthBonus ?? 0) > 0 && (
             <TooltipSection>
               <p className={tooltipStyles.muted}>Gradual improvement: +{formatNumber(vineyard.plantingHealthBonus * 100, { smartDecimals: true })}% remaining</p>
             </TooltipSection>
@@ -79,6 +126,23 @@ const buildTooltipContent = (type: string, data: any) => {
                : 'Good ripeness provides optimal yield and quality grapes.'}
             </p>
           </TooltipSection>
+          {typeof weatherImpact === 'number' && typeof projectedValue === 'number' && (
+            <TooltipSection title="Next Week Forecast (Weather-Only)">
+              <TooltipRow label="Current" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}%`} monospaced />
+              {weatherBreakdown && (
+                <>
+                  <TooltipRow label="Weather" value={`${weatherBreakdown.weatherState} (${weatherBreakdown.weatherIntensity})`} />
+                  <TooltipRow label="Base ripeness delta" value={formatSigned(weatherBreakdown.baseRipenessDeviation)} monospaced />
+                  <TooltipRow label="Site parameters" value={`Aspect x${formatNumber(weatherBreakdown.aspectResponse, { smartDecimals: true })}, Altitude x${formatNumber(weatherBreakdown.altitudeResponse, { smartDecimals: true })}, Terroir x${formatNumber(weatherBreakdown.terroirResponse, { smartDecimals: true })}, Soil x${formatNumber(weatherBreakdown.soilResponse, { smartDecimals: true })}`} />
+                  <TooltipRow label="Site response" value={`x${formatNumber(siteResponse || 1, { smartDecimals: true })}`} monospaced />
+                </>
+              )}
+              <TooltipRow label="Net expected change next week" value={formatSignedPercentPoints(weatherImpact)} monospaced valueRating={weatherImpact >= 0 ? 0.9 : 0.1} />
+              <TooltipRow label="Projected level (next week)" value={`${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
+              <TooltipRow label="Formula" value={`${formatNumber((value || 0) * 100, { smartDecimals: true })}% + ${formatSignedPercentPoints(weatherImpact)} = ${formatNumber(projectedValue * 100, { smartDecimals: true })}%`} monospaced />
+              <p className={tooltipStyles.muted}>Projected level is the forecasted ripeness after one week from weather effects only.</p>
+            </TooltipSection>
+          )}
         </div>
       );
 
@@ -218,8 +282,12 @@ const buildTooltipContent = (type: string, data: any) => {
 const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }) => {
   if (!vineyard.grape) {
     return (
-      <div className="text-xs text-gray-500">
-        Expected Yield: <span className="font-medium">0 kg</span>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span className="inline-flex items-center gap-1"><BarChart3 className="h-3.5 w-3.5" />Expected Yield</span>
+          <span className="font-medium">0 kg</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative" />
       </div>
     );
   }
@@ -228,13 +296,19 @@ const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }
 
   if (!yieldBreakdown) {
     return (
-      <div className="text-xs text-gray-500">
-        Expected Yield: <span className="font-medium">Calculating...</span>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span className="inline-flex items-center gap-1"><BarChart3 className="h-3.5 w-3.5" />Expected Yield</span>
+          <span className="font-medium">Calculating...</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative" />
       </div>
     );
   }
 
   const { totalYield } = yieldBreakdown;
+  const expectedYieldPercent = getExpectedYieldProgressPercent(totalYield);
+  const expectedYieldBarClass = getRangeColor(totalYield, 0, 10000, 'higher_better').bg;
 
   return (
     <UnifiedTooltip
@@ -244,10 +318,19 @@ const ExpectedYieldTooltip: React.FC<{ vineyard: VineyardType }> = ({ vineyard }
       className="max-w-sm"
       variant="panel"
       density="compact"
-      triggerClassName="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors"
+      triggerClassName="w-full cursor-help"
     >
-      <div className="text-xs text-gray-500 cursor-help hover:text-blue-600 transition-colors">
-        Expected Yield: <span className="font-medium">{formatNumber(totalYield, { smartDecimals: true })} kg</span>
+      <div className="space-y-1 text-xs text-gray-600 hover:text-blue-600 transition-colors">
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center gap-1"><BarChart3 className="h-3.5 w-3.5" />Expected Yield</span>
+          <span className="font-medium">{formatNumber(totalYield, { smartDecimals: true })} kg</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${expectedYieldBarClass}`}
+            style={{ width: `${expectedYieldPercent}%`, minWidth: totalYield > 0 ? '2px' : '0px' }}
+          ></div>
+        </div>
       </div>
     </UnifiedTooltip>
   );
@@ -660,8 +743,8 @@ const Vineyard: React.FC = () => {
 
       {/* Vineyards Table - Desktop */}
       <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+        <div>
+          <table className="w-full table-fixed">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase">Vineyard & Location</th>
@@ -881,99 +964,123 @@ const Vineyard: React.FC = () => {
                     </td>
 
                     {/* Progress */}
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 align-top">
                       <div className="space-y-2">
-                        {/* Vineyard Health Progress Bar - Always show */}
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">
-                            Health: {formatNumber((vineyard.vineyardHealth || 1.0) * 100, { smartDecimals: true })}%
-                          </div>
-                          <UnifiedTooltip
-                            content={buildTooltipContent('health', { vineyard })}
-                            title="Vineyard Health Details"
-                            side="top"
-                            className="max-w-sm"
-                            variant="panel"
-                            density="compact"
-                            triggerClassName="w-full cursor-help"
-                          >
-                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
-                              <div 
-                                className={`h-full rounded-full transition-all duration-300 ${getHealthProgressColor(vineyard.vineyardHealth || 1.0)}`}
-                                style={{ 
-                                  width: `${Math.min(100, Math.max(0, (vineyard.vineyardHealth || 1.0) * 100))}%`,
-                                  minWidth: (vineyard.vineyardHealth || 1.0) > 0 ? '2px' : '0px'
-                                }}
-                              ></div>
-                            </div>
-                          </UnifiedTooltip>
-                        </div>
+                        {(() => {
+                          const weatherRow = vineyardWeatherById.get(vineyard.id);
+                          const currentHealth = vineyard.vineyardHealth || 1.0;
+                          const currentRipeness = vineyard.ripeness || 0;
+                          return (
+                            <>
+                              {weatherRow && (
+                                <div className="flex justify-end mb-1">
+                                  <UnifiedTooltip
+                                    title="Weather Impact Snapshot"
+                                    content={
+                                      <div className={tooltipStyles.text}>
+                                        <TooltipSection title="Current Weather">
+                                          <TooltipRow label="State" value={`${weatherRow.breakdown.weatherState} (${weatherRow.breakdown.weatherIntensity})`} />
+                                          <TooltipRow label="Site response" value={`x${formatNumber(weatherRow.siteResponse, { smartDecimals: true })}`} monospaced />
+                                        </TooltipSection>
+                                        <TooltipSection title="Site Parameters">
+                                          <TooltipRow label="Aspect" value={`x${formatNumber(weatherRow.breakdown.aspectResponse, { smartDecimals: true })}`} monospaced />
+                                          <TooltipRow label="Altitude" value={`x${formatNumber(weatherRow.breakdown.altitudeResponse, { smartDecimals: true })}`} monospaced />
+                                          <TooltipRow label="Terroir" value={`x${formatNumber(weatherRow.breakdown.terroirResponse, { smartDecimals: true })}`} monospaced />
+                                          <TooltipRow label="Soil" value={`x${formatNumber(weatherRow.breakdown.soilResponse, { smartDecimals: true })}`} monospaced />
+                                        </TooltipSection>
+                                        <TooltipSection title="Weather Deltas">
+                                          <TooltipRow label="Ripeness" value={formatSigned(weatherRow.ripenessDelta)} monospaced />
+                                          <TooltipRow label="Health" value={formatSigned(weatherRow.healthDelta)} monospaced />
+                                        </TooltipSection>
+                                      </div>
+                                    }
+                                    side="top"
+                                    className="max-w-sm"
+                                    variant="panel"
+                                    density="compact"
+                                  >
+                                    <span className="cursor-help text-[18px] leading-none">{getWeatherIcon(weatherRow.breakdown.weatherState)}</span>
+                                  </UnifiedTooltip>
+                                </div>
+                              )}
 
-                        {vineyard.grape ? (
-                          <>
-                            {/* Ripeness Progress Bar */}
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">
-                                Ripeness: {formatNumber((vineyard.ripeness || 0) * 100, { smartDecimals: true })}%
-                              </div>
-                              <UnifiedTooltip
-                                content={buildTooltipContent('ripeness', { value: vineyard.ripeness || 0 })}
-                                title="Ripeness Details"
-                                side="top"
-                                className="max-w-sm"
-                                variant="panel"
-                                density="compact"
-                                triggerClassName="w-full cursor-help"
-                              >
-                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-300 ${getRipenessProgressColor(vineyard.ripeness || 0)}`}
-                                    style={{ 
-                                      width: `${Math.min(100, Math.max(0, (vineyard.ripeness || 0) * 100))}%`,
-                                      minWidth: (vineyard.ripeness || 0) > 0 ? '2px' : '0px'
-                                    }}
-                                  ></div>
+                              <div>
+                                <div className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1.5">
+                                  <HeartPulse className="h-3.5 w-3.5" />
+                                  <span>Health: {formatNumber(currentHealth * 100, { smartDecimals: true })}%</span>
                                 </div>
-                              </UnifiedTooltip>
-                            </div>
-                            
-                            {/* Vine Yield Progress Bar */}
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">
-                                Vine Yield: {(() => {
-                                  const yieldValue = (vineyard.vineYield || 0.02) * 100;
-                                  return yieldValue >= 100 ? `${formatNumber(yieldValue, { smartDecimals: true })}%` : `${formatNumber(yieldValue, { smartDecimals: true })}%`;
-                                })()}
+                                <UnifiedTooltip
+                                  content={buildTooltipContent('health', {
+                                    vineyard,
+                                    value: currentHealth,
+                                    weatherImpact: weatherRow?.healthDelta,
+                                    projectedValue: weatherRow?.healthProjected,
+                                    weatherBreakdown: weatherRow?.breakdown,
+                                    siteResponse: weatherRow?.siteResponse
+                                  })}
+                                  title="Vineyard Health Details"
+                                  side="top"
+                                  className="max-w-sm"
+                                  variant="panel"
+                                  density="compact"
+                                  triggerClassName="w-full cursor-help"
+                                >
+                                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-300 ${getHealthProgressColor(currentHealth)}`}
+                                      style={{
+                                        width: `${Math.min(100, Math.max(0, currentHealth * 100))}%`,
+                                        minWidth: currentHealth > 0 ? '2px' : '0px'
+                                      }}
+                                    ></div>
+                                  </div>
+                                </UnifiedTooltip>
                               </div>
-                              <UnifiedTooltip
-                                content={buildTooltipContent('vineYield', { value: vineyard.vineYield || 0.02 })}
-                                title="Vine Yield Details"
-                                side="top"
-                                className="max-w-sm"
-                                variant="panel"
-                                density="compact"
-                                triggerClassName="w-full cursor-help"
-                              >
-                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-300 ${getVineYieldProgressColor(vineyard.vineYield || 0.02)}`}
-                                    style={{ 
-                                      width: `${Math.min(100, Math.max(0, (vineyard.vineYield || 0.02) * 100))}%`,
-                                      minWidth: (vineyard.vineYield || 0.02) > 0 ? '2px' : '0px'
-                                    }}
-                                  ></div>
-                                </div>
-                              </UnifiedTooltip>
-                            </div>
-                            
-                            {/* Expected Yield Tooltip */}
-                            <div className="text-xs">
-                              <ExpectedYieldTooltip vineyard={vineyard} />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-xs text-gray-400">No grape planted</div>
-                        )}
+
+                              {vineyard.grape ? (
+                                <>
+                                  <div>
+                                    <div className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1.5">
+                                      <Grape className="h-3.5 w-3.5" />
+                                      <span>Ripeness: {formatNumber(currentRipeness * 100, { smartDecimals: true })}%</span>
+                                    </div>
+                                    <UnifiedTooltip
+                                      content={buildTooltipContent('ripeness', {
+                                        value: currentRipeness,
+                                        weatherImpact: weatherRow?.ripenessDelta,
+                                        projectedValue: weatherRow?.ripenessProjected,
+                                        weatherBreakdown: weatherRow?.breakdown,
+                                        siteResponse: weatherRow?.siteResponse
+                                      })}
+                                      title="Ripeness Details"
+                                      side="top"
+                                      className="max-w-sm"
+                                      variant="panel"
+                                      density="compact"
+                                      triggerClassName="w-full cursor-help"
+                                    >
+                                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-300 ${getRipenessProgressColor(currentRipeness)}`}
+                                          style={{
+                                            width: `${Math.min(100, Math.max(0, currentRipeness * 100))}%`,
+                                            minWidth: currentRipeness > 0 ? '2px' : '0px'
+                                          }}
+                                        ></div>
+                                      </div>
+                                    </UnifiedTooltip>
+                                  </div>
+
+                                  <div className="text-xs">
+                                    <ExpectedYieldTooltip vineyard={vineyard} />
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-xs text-gray-400">No grape planted</div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
 
@@ -981,24 +1088,6 @@ const Vineyard: React.FC = () => {
                     <td className="px-4 py-4">
                       <div className="space-y-2">
                         <VineyardStatusBadge status={vineyard.status} />
-                        {(() => {
-                          const weatherRow = vineyardWeatherById.get(vineyard.id);
-                          if (!weatherRow) return null;
-                          return (
-                            <div className="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] text-sky-700">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="inline-flex items-center gap-1">
-                                  <span>{getWeatherIcon(liveGameState.weatherState)}</span>
-                                  {liveGameState.weatherState || 'Clear'} ({liveGameState.weatherIntensity || 'Mild'})
-                                </span>
-                                <span className="font-medium">Site x{formatNumber(weatherRow.siteResponse, { smartDecimals: true })}</span>
-                              </div>
-                              <div className="mt-0.5 text-sky-800/90">
-                                Impact: Ripeness {formatSigned(weatherRow.ripenessDelta)} | Health {formatSigned(weatherRow.healthDelta)}
-                              </div>
-                            </div>
-                          );
-                        })()}
                         <div className="flex flex-col space-y-1">
                           {getActionButtons(vineyard)}
                         </div>
@@ -1067,22 +1156,6 @@ const Vineyard: React.FC = () => {
               
               {/* Card Body */}
               <div className="p-4 space-y-4">
-                {(() => {
-                  const weatherRow = vineyardWeatherById.get(vineyard.id);
-                  if (!weatherRow) return null;
-                  return (
-                    <div className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center gap-1">
-                          <span>{getWeatherIcon(liveGameState.weatherState)}</span>
-                          {liveGameState.weatherState || 'Clear'} ({liveGameState.weatherIntensity || 'Mild'})
-                        </span>
-                        <span className="font-medium">Site x{formatNumber(weatherRow.siteResponse, { smartDecimals: true })}</span>
-                      </div>
-                      <div className="mt-0.5 text-sky-800/90">Impact: Ripeness {formatSigned(weatherRow.ripenessDelta)} | Health {formatSigned(weatherRow.healthDelta)}</div>
-                    </div>
-                  );
-                })()}
                 {/* Characteristics and Vine Details - 2 Column Grid */}
                 <div className="border-t pt-3">
                   <div className="grid grid-cols-2 gap-4">
