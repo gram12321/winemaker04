@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
 import { MarketQuickBuyRowAction } from '../../market/MarketQuickBuyRowAction';
@@ -351,6 +351,9 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Buy from Market</DialogTitle>
+          <DialogDescription className="sr-only">
+            Browse and purchase grape market offers, compare quality and pricing pressure, and buy directly from each row.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
