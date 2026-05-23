@@ -85,6 +85,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
     { id: 'dashboard', label: 'Company', icon: NAVIGATION_EMOJIS.dashboard },
     { id: 'finance', label: 'Finance', icon: NAVIGATION_EMOJIS.finance },
     { id: 'research', label: 'Research', icon: NAVIGATION_EMOJIS.research },
+    { id: 'weather-center', label: 'Weather', icon: '🌦' },
     { id: 'staff', label: 'Staff', icon: '👥' },
     { id: 'vineyard', label: 'Vineyard', icon: NAVIGATION_EMOJIS.vineyard },
     { id: 'winery', label: 'Winery', icon: NAVIGATION_EMOJIS.winery },
@@ -241,8 +242,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               density="compact"
               className="max-w-sm"
               onClick={() => {
-                try { localStorage.setItem('winepedia_view', 'weather'); } catch {}
-                handleNavigation('winepedia');
+                handleNavigation('weather-center');
               }}
             >
               <Badge
@@ -250,8 +250,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 className="px-2 py-0.5 hidden sm:flex items-center cursor-pointer bg-red-700 text-white border-red-500 hover:bg-red-600"
                 onClick={(e) => {
                   e.stopPropagation();
-                  try { localStorage.setItem('winepedia_view', 'weather'); } catch {}
-                  handleNavigation('winepedia');
+                  handleNavigation('weather-center');
                 }}
               >
                 <span className="mr-1.5">{getWeatherIcon(gameState.weatherState)}</span>
@@ -263,8 +262,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               variant="outline"
               className="px-1.5 py-0.5 sm:hidden flex items-center cursor-pointer bg-red-700 text-white border-red-500 hover:bg-red-600"
               onClick={() => {
-                try { localStorage.setItem('winepedia_view', 'weather'); } catch {}
-                handleNavigation('winepedia');
+                handleNavigation('weather-center');
               }}
             >
               <span className="mr-1">{getWeatherIcon(gameState.weatherState)}</span>

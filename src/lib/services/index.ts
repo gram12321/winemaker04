@@ -29,6 +29,7 @@ export * from './admin/adminService';
 // Vineyard services
 export * from './vineyard/vineyardService';
 export * from './vineyard/vineyardManager';
+export * from './vineyard/weatherImpactService';
 export * from './vineyard/clearingManager';
 export * from './vineyard/vineyardValueCalc';
 
@@ -68,6 +69,8 @@ export * from './prestige/prestigeService';
 export * from '@/lib/features/researchUpgrade/services/research/researchEnforcer';
 export * from './research/researchEligibilityService';
 export * from './research/researchPermanentEffectsService';
+export * from './research/researchViewService';
+export * from './vineyard/weatherCenterService';
 
 // Activity system
 export * from './activity';

@@ -29,6 +29,14 @@ export function clamp01(value: number): number {
   return clamp(value, 0, 1);
 }
 
+export function formatSigned(value: number): string {
+  return `${value >= 0 ? '+' : ''}${formatNumber(value, { smartDecimals: true })}`;
+}
+
+export function formatSignedPercent(value: number): string {
+  return `${value >= 0 ? '+' : ''}${formatNumber(value * 100, { smartDecimals: true })}%`;
+}
+
 // ========================================
 // SECTION 2: NUMBER & CURRENCY FORMATTING
 // ========================================

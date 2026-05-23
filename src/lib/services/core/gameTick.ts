@@ -106,6 +106,15 @@ const executeGameTick = async (): Promise<void> => {
     previousState: currentState.weatherState,
   });
 
+  const weatherContext = {
+    companyId,
+    year: currentYear,
+    season: season as any,
+    week,
+    weatherState: weatherBundle.currentState,
+    weatherIntensity: weatherBundle.currentIntensity,
+  };
+
   // Update game state with new time values and weekly weather context
   await updateGameState({
     week,
@@ -139,10 +148,10 @@ const executeGameTick = async (): Promise<void> => {
   }
 
   // Update vineyard ripeness and status based on current season and week
-  await updateVineyardRipeness(season, week);
+  await updateVineyardRipeness(season, week, weatherContext);
 
   // Apply health degradation to vineyards
-  await updateVineyardHealthDegradation(season, week);
+  await updateVineyardHealthDegradation(season, week, weatherContext);
 
   // Log the time advancement
   await notificationService.addMessage(`Time advanced to Week ${week}, ${season}, ${currentYear}`, 'time.advancement', 'Time Advancement', NotificationCategory.TIME_CALENDAR);

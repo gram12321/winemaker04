@@ -57,6 +57,23 @@ function getOriginLabel(originTag: BuyGrapeMarketOffer['originTag']): string {
   return 'Seasonal Rotation';
 }
 
+function getDemandPressureIndex(offer: Pick<BuyGrapeMarketOffer, 'demandFactors'>): number {
+  return (
+    offer.demandFactors.seasonPriceMultiplier
+    * offer.demandFactors.economyPriceMultiplier
+    * offer.demandFactors.yearCyclePriceMultiplier
+    * offer.demandFactors.volatilityPriceMultiplier
+    * (offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1)
+  );
+}
+
+function getVolatilityRiskIndex(offer: Pick<BuyGrapeMarketOffer, 'demandFactors'>): number {
+  return (
+    offer.demandFactors.volatilityPriceMultiplier
+    * (offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1)
+  );
+}
+
 const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose }) => {
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +84,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
   const [sortKey, setSortKey] = useState<string>('quality');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showAllOffers, setShowAllOffers] = useState(false);
+  const [showFormulaDetails, setShowFormulaDetails] = useState(false);
 
   const loadOffers = useCallback(async () => {
     setLoading(true);
@@ -86,6 +104,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
   useEffect(() => {
     if (isOpen) {
       setShowAllOffers(false);
+      setShowFormulaDetails(false);
     }
   }, [isOpen]);
 
@@ -129,21 +148,10 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     }
 
     const sorted = [...filtered].sort((left, right) => {
-      const leftDemand =
-        left.demandFactors.seasonPriceMultiplier
-        * left.demandFactors.economyPriceMultiplier
-        * left.demandFactors.yearCyclePriceMultiplier
-        * left.demandFactors.volatilityPriceMultiplier
-        * (left.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
-      const rightDemand =
-        right.demandFactors.seasonPriceMultiplier
-        * right.demandFactors.economyPriceMultiplier
-        * right.demandFactors.yearCyclePriceMultiplier
-        * right.demandFactors.volatilityPriceMultiplier
-        * (right.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
-
-      const leftVolatility = left.demandFactors.volatilityPriceMultiplier * (left.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
-      const rightVolatility = right.demandFactors.volatilityPriceMultiplier * (right.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
+      const leftDemand = getDemandPressureIndex(left);
+      const rightDemand = getDemandPressureIndex(right);
+      const leftVolatility = getVolatilityRiskIndex(left);
+      const rightVolatility = getVolatilityRiskIndex(right);
 
       const leftValue =
         sortKey === 'offer' ? left.supplierName
@@ -225,6 +233,31 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     return getBuyOfferPriceBreakdown(selectedOffer);
   }, [selectedOffer]);
 
+  const selectedDemandPressureIndex = useMemo(() => {
+    if (!selectedOffer) return 1;
+    return getDemandPressureIndex(selectedOffer);
+  }, [selectedOffer]);
+
+  const selectedVolatilityRiskIndex = useMemo(() => {
+    if (!selectedOffer) return 1;
+    return getVolatilityRiskIndex(selectedOffer);
+  }, [selectedOffer]);
+
+  const selectedRawPricePerKg = useMemo(() => {
+    if (!priceBreakdown) return 0;
+    return (
+      priceBreakdown.basePricePerKg
+      * priceBreakdown.qualityMultiplier
+      * priceBreakdown.seasonPriceMultiplier
+      * priceBreakdown.economyPriceMultiplier
+      * priceBreakdown.yearCyclePriceMultiplier
+      * priceBreakdown.volatilityPriceMultiplier
+      * priceBreakdown.buyerSensitivityMultiplier
+      * priceBreakdown.statePremiumMultiplier
+      * priceBreakdown.marketSpreadMultiplier
+    );
+  }, [priceBreakdown]);
+
   const headerWithTooltip = useCallback((label: string, tooltip: string) => (
     <span className="inline-flex items-center gap-1">
       <span>{label}</span>
@@ -296,27 +329,29 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     },
     {
       key: 'market',
-      header: headerWithTooltip('Market', 'Combined demand and volatility pressure from season, economy, year cycle, weather, and seller sensitivity.'),
+      header: headerWithTooltip('Market', 'Price context summary. Pressure is the combined market index, and Risk is volatility-sensitive pressure.'),
       sortable: true,
       className: 'w-[16%] text-right min-w-[150px]',
       render: (offer) => {
-        const demandMultiplier =
-          offer.demandFactors.seasonPriceMultiplier
-          * offer.demandFactors.economyPriceMultiplier
-          * offer.demandFactors.yearCyclePriceMultiplier
-          * offer.demandFactors.volatilityPriceMultiplier
-          * (offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
-
-        const volatilityMultiplier =
-          offer.demandFactors.volatilityPriceMultiplier
-          * (offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
+        const demandMultiplier = getDemandPressureIndex(offer);
+        const volatilityMultiplier = getVolatilityRiskIndex(offer);
 
         return (
           <div className="space-y-0.5">
             <div className="text-[11px] whitespace-nowrap">
-              <span className="text-blue-300 font-medium">D {demandMultiplier.toFixed(2)}x</span>
+              <UnifiedTooltip
+                title="Market Pressure Index"
+                content={<span className="text-xs leading-snug">Pressure = Season × Economy × Cycle × Volatility Price × Supplier Sensitivity.</span>}
+              >
+                <span className="text-blue-300 font-medium">Pressure {demandMultiplier.toFixed(2)}x</span>
+              </UnifiedTooltip>
               <span className="text-gray-500"> · </span>
-              <span className="text-purple-300 font-medium">V {volatilityMultiplier.toFixed(2)}x</span>
+              <UnifiedTooltip
+                title="Volatility Risk Index"
+                content={<span className="text-xs leading-snug">Risk = Volatility Price × Supplier Sensitivity.</span>}
+              >
+                <span className="text-purple-300 font-medium">Risk {volatilityMultiplier.toFixed(2)}x</span>
+              </UnifiedTooltip>
             </div>
             <div className="text-[11px] text-gray-400 whitespace-nowrap">{offer.demandFactors.volatilityEconomyPhase} / {offer.demandFactors.volatilityWeatherState}</div>
           </div>
@@ -374,14 +409,24 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                     <span>{getWeatherVolatilityIcon(selectedOffer.demandFactors.volatilityWeatherState)}</span>
                     <span>{selectedOffer.demandFactors.volatilityWeatherState} ({selectedOffer.demandFactors.volatilityWeatherIntensity})</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
-                    <span>💶</span>
-                    <span>Price {formatVolatilityDelta(selectedOffer.demandFactors.volatilityPriceMultiplier)}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
-                    <span>📦</span>
-                    <span>Supply {formatVolatilityDelta(selectedOffer.demandFactors.volatilityLimitMultiplier)}</span>
-                  </span>
+                  <UnifiedTooltip
+                    title="Price Volatility Factor"
+                    content={<span className="text-xs leading-snug">This is the volatility price multiplier. It flows into Risk, and then into Pressure with season, economy, and cycle factors.</span>}
+                  >
+                    <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
+                      <span>💶</span>
+                      <span>Price {formatVolatilityDelta(selectedOffer.demandFactors.volatilityPriceMultiplier)}</span>
+                    </span>
+                  </UnifiedTooltip>
+                  <UnifiedTooltip
+                    title="Supply Volatility Factor"
+                    content={<span className="text-xs leading-snug">This is the volatility supply multiplier. It signals market tightness and availability pressure, but it is not multiplied directly into final price/kg.</span>}
+                  >
+                    <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
+                      <span>📦</span>
+                      <span>Supply {formatVolatilityDelta(selectedOffer.demandFactors.volatilityLimitMultiplier)}</span>
+                    </span>
+                  </UnifiedTooltip>
                 </div>
                 <div className="mt-2 space-y-1 text-[11px] text-gray-300">
                   {selectedOffer.demandFactors.volatilityPriceReason && (
@@ -400,19 +445,55 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
 
             {priceBreakdown && selectedOffer ? (
               <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70">
-                <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Price Breakdown</div>
+                <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Price Summary</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier</span><span className="text-right">{selectedOffer.supplierName}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Base price</span><span className="text-right">{formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}/kg</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Quality ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">x{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Season pressure</span><span className="text-right">x{priceBreakdown.seasonPriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Economy pressure</span><span className="text-right">x{priceBreakdown.economyPriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Year cycle</span><span className="text-right">x{priceBreakdown.yearCyclePriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility</span><span className="text-right">x{priceBreakdown.volatilityPriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Seller sensitivity</span><span className="text-right">x{priceBreakdown.buyerSensitivityMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">State premium</span><span className="text-right">x{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market spread</span><span className="text-right">x{priceBreakdown.marketSpreadMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Price per kg</span><span className="text-right">{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Base Price</span><span className="text-right">{formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}/kg</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">x{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">x{selectedDemandPressureIndex.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">x{selectedVolatilityRiskIndex.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">State Premium Factor</span><span className="text-right">x{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Final Price per kg</span><span className="text-right">{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
+                </div>
+
+                <div className="mt-2 rounded border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-gray-300 space-y-1">
+                  <div className="text-gray-400">Exact calculation (raw)</div>
+                  <div className="leading-snug break-words">
+                    {formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}
+                    {' × '}{priceBreakdown.qualityMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.seasonPriceMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.economyPriceMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.yearCyclePriceMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.volatilityPriceMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.statePremiumMultiplier.toFixed(3)}
+                    {' × '}{priceBreakdown.marketSpreadMultiplier.toFixed(3)}
+                    {' = '}{formatNumber(selectedRawPricePerKg, { currency: true, decimals: 3 })}/kg
+                  </div>
+                  <div className="text-[11px] text-gray-400">
+                    Rounded display price: {formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}/kg
+                  </div>
+                </div>
+
+                <div className="mt-3 border-t border-gray-700/70 pt-2">
+                  <button
+                    type="button"
+                    className="text-xs text-cyan-300 hover:text-cyan-200"
+                    onClick={() => setShowFormulaDetails((current) => !current)}
+                  >
+                    {showFormulaDetails ? 'Hide detailed formula factors' : 'Show detailed formula factors'}
+                  </button>
+
+                  {showFormulaDetails && (
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Season Factor</span><span className="text-right">x{priceBreakdown.seasonPriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Economy Factor</span><span className="text-right">x{priceBreakdown.economyPriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Cycle Factor</span><span className="text-right">x{priceBreakdown.yearCyclePriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Price Factor</span><span className="text-right">x{priceBreakdown.volatilityPriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">x{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Market Margin Factor</span><span className="text-right">x{priceBreakdown.marketSpreadMultiplier.toFixed(3)}</span></div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

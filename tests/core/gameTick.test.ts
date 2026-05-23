@@ -45,6 +45,8 @@ const mocks = vi.hoisted(() => {
     processWeeklyFeatureRisks: vi.fn(async () => undefined),
     processWeeklyFermentation: vi.fn(async () => undefined),
     processSeasonalWages: vi.fn(async () => 'Seasonal wages paid'),
+    processWeeklyBuyGrapeOfferDecay: vi.fn(async () => undefined),
+    refreshBuyGrapeMarketForSeason: vi.fn(async () => undefined),
     generateContracts: vi.fn(async () => undefined),
     expireOldContracts: vi.fn(async () => undefined),
     expireOldOrders: vi.fn(async () => undefined),
@@ -85,7 +87,9 @@ vi.mock('@/lib/services', () => ({
   getAllStaff: mocks.getAllStaff,
   processWeeklyFeatureRisks: mocks.processWeeklyFeatureRisks,
   processWeeklyFermentation: mocks.processWeeklyFermentation,
-  processSeasonalWages: mocks.processSeasonalWages
+  processSeasonalWages: mocks.processSeasonalWages,
+  processWeeklyBuyGrapeOfferDecay: mocks.processWeeklyBuyGrapeOfferDecay,
+  refreshBuyGrapeMarketForSeason: mocks.refreshBuyGrapeMarketForSeason
 }));
 
 vi.mock('@/lib/services/wine/features/featureService', () => ({
@@ -185,11 +189,17 @@ describe('processGameTick', () => {
 
     await processGameTick();
 
-    expect(mocks.updateGameState).toHaveBeenCalledWith({
+    expect(mocks.updateGameState).toHaveBeenCalledWith(expect.objectContaining({
       week: 1,
       season: 'Spring',
-      currentYear: 2027
-    });
+      currentYear: 2027,
+      weatherForecastPattern: expect.any(String),
+      weatherForecastConfidence: expect.any(String),
+      weatherState: expect.any(String),
+      weatherIntensity: expect.any(String),
+      nextWeekForecastState: expect.any(String),
+      nextWeekForecastIntensity: expect.any(String),
+    }));
     expect(mocks.updateVineyardAges).toHaveBeenCalledOnce();
     expect(mocks.updateVineyardVineYields).toHaveBeenCalledOnce();
     expect(mocks.boardYearStart).toHaveBeenCalledWith({ week: 1, season: 'Spring', year: 2027 });
@@ -211,8 +221,18 @@ describe('processGameTick', () => {
       'Economy phase changed',
       'Seasonal wages paid'
     );
-    expect(mocks.updateVineyardRipeness).toHaveBeenCalledWith('Spring', 1);
-    expect(mocks.updateVineyardHealthDegradation).toHaveBeenCalledWith('Spring', 1);
+    expect(mocks.updateVineyardRipeness).toHaveBeenCalledWith('Spring', 1, expect.objectContaining({
+      season: 'Spring',
+      week: 1,
+      weatherState: expect.any(String),
+      weatherIntensity: expect.any(String),
+    }));
+    expect(mocks.updateVineyardHealthDegradation).toHaveBeenCalledWith('Spring', 1, expect.objectContaining({
+      season: 'Spring',
+      week: 1,
+      weatherState: expect.any(String),
+      weatherIntensity: expect.any(String),
+    }));
     expect(mocks.submitCompanyHighscores).toHaveBeenCalledWith(
       'company-1',
       'Tick Winery',

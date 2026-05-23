@@ -12,7 +12,8 @@ import { Settings } from './components/pages/Settings';
 import { AdminDashboard } from './components/pages/AdminDashboard';
 import { Achievements } from './components/pages/Achievements';
 import { WineLog } from './components/pages/WineLog';
-import Winepedia from './components/pages/Winepedia';
+import Winepedia from './components/pages/Winepedia.tsx';
+import { WeatherCenterPage } from './components/pages/WeatherCenter';
 import { Login } from './components/pages/Login';
 import { Highscores } from './components/pages/Highscores';
 import { Toaster } from './components/ui/shadCN/toaster';
@@ -197,6 +198,8 @@ function App() {
         return <Winepedia />;
       case 'winepedia-customers':
         return <Winepedia view="customers" />;
+      case 'weather-center':
+        return <WeatherCenterPage />;
       default:
         return currentCompany ? <CompanyOverview onNavigate={handleNavigate} /> : <Login onCompanySelected={handleCompanySelected} />;
     }
