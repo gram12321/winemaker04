@@ -63,6 +63,15 @@ function getEconomyVolatilityIcon(phase?: string): string {
   return '⚖';
 }
 
+function getWeatherVolatilityIcon(state?: string): string {
+  if (state === 'Rain') return '🌧';
+  if (state === 'Heat') return '🌡';
+  if (state === 'Frost') return '🧊';
+  if (state === 'Storm') return '⛈';
+  if (state === 'Snow') return '❄';
+  return '☀';
+}
+
 function formatVolatilityDelta(multiplier: number): string {
   const deltaPercent = (multiplier - 1) * 100;
   const rounded = Math.round(deltaPercent * 10) / 10;
@@ -351,6 +360,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   const seasonIcon = getSeasonVolatilityIcon(volatilitySeason);
   const volatilityEconomyPhase = selectedBuyer?.demandFactors?.volatilityEconomyPhase;
   const economyIcon = getEconomyVolatilityIcon(volatilityEconomyPhase);
+  const volatilityWeatherState = selectedBuyer?.demandFactors?.volatilityWeatherState;
+  const volatilityWeatherIntensity = selectedBuyer?.demandFactors?.volatilityWeatherIntensity;
+  const weatherIcon = getWeatherVolatilityIcon(volatilityWeatherState);
   const volatilityPrice = selectedBuyer?.demandFactors?.volatilityPriceMultiplier ?? 1;
   const volatilityLimit = selectedBuyer?.demandFactors?.volatilityLimitMultiplier ?? 1;
 
@@ -373,6 +385,10 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                 <span>{economyIcon}</span>
                 <span>{volatilityEconomyPhase ?? 'Economy'}</span>
               </span>
+              <span className="inline-flex items-center gap-1 rounded border border-blue-700/70 bg-blue-900/30 px-2 py-1 text-blue-200">
+                <span>{weatherIcon}</span>
+                <span>{volatilityWeatherState ?? 'Weather'} {volatilityWeatherIntensity ? `(${volatilityWeatherIntensity})` : ''}</span>
+              </span>
               <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
                 <span>💶</span>
                 <span>Price {formatVolatilityDelta(volatilityPrice)}</span>
@@ -388,6 +404,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
               )}
               {selectedBuyer.demandFactors.volatilityLimitReason && (
                 <div><span className="text-amber-200">Demand outlook:</span> {selectedBuyer.demandFactors.volatilityLimitReason}</div>
+              )}
+              {selectedBuyer.demandFactors.volatilityBuyerSensitivityReason && (
+                <div><span className="text-blue-200">Buyer profile:</span> {selectedBuyer.demandFactors.volatilityBuyerSensitivityReason}</div>
               )}
             </div>
           </div>

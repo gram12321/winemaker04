@@ -7,7 +7,7 @@ import { NotificationCenter, useNotifications } from '@/components/layout/Notifi
 import { useGameState, useGameStateWithData, useLoadingState } from '@/hooks';
 import { CalendarDays, MessageSquareText, LogOut, MenuIcon, X } from 'lucide-react';
 import { PrestigeModal } from '@/components/ui';
-import { calculateCurrentPrestige, getCurrentCompany } from '@/lib/services';
+import { calculateCurrentPrestige, getCurrentCompany, getWeatherIcon } from '@/lib/services';
 import { NavigationProps, CompanyProps } from '@/lib/types/UItypes';
 import { getEconomyPhaseColorClass } from '@/lib/utils';
 import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
@@ -225,6 +225,50 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
                 handleNavigation('winepedia');
               }}>
               <span className="font-medium text-xs">{gameState.economyPhase}</span>
+            </Badge>
+
+            <UnifiedTooltip
+              content={
+                <div className="space-y-1">
+                  <p className="font-semibold">Weather Outlook</p>
+                  <p className="text-xs text-gray-300">Now: {gameState.weatherState || 'Clear'} ({gameState.weatherIntensity || 'Mild'})</p>
+                  <p className="text-xs text-gray-300">Week-ahead: {gameState.nextWeekForecastState || 'Clear'} ({gameState.nextWeekForecastIntensity || 'Mild'})</p>
+                  <p className="text-xs text-gray-400">Seasonal forecast: {gameState.weatherForecastPattern || 'Stable'} ({gameState.weatherForecastConfidence || 'Medium'} confidence)</p>
+                </div>
+              }
+              side="bottom"
+              variant="panel"
+              density="compact"
+              className="max-w-sm"
+              onClick={() => {
+                try { localStorage.setItem('winepedia_view', 'weather'); } catch {}
+                handleNavigation('winepedia');
+              }}
+            >
+              <Badge
+                variant="outline"
+                className="px-2 py-0.5 hidden sm:flex items-center cursor-pointer bg-red-700 text-white border-red-500 hover:bg-red-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  try { localStorage.setItem('winepedia_view', 'weather'); } catch {}
+                  handleNavigation('winepedia');
+                }}
+              >
+                <span className="mr-1.5">{getWeatherIcon(gameState.weatherState)}</span>
+                <span className="font-medium">{gameState.weatherState || 'Clear'}</span>
+              </Badge>
+            </UnifiedTooltip>
+
+            <Badge
+              variant="outline"
+              className="px-1.5 py-0.5 sm:hidden flex items-center cursor-pointer bg-red-700 text-white border-red-500 hover:bg-red-600"
+              onClick={() => {
+                try { localStorage.setItem('winepedia_view', 'weather'); } catch {}
+                handleNavigation('winepedia');
+              }}
+            >
+              <span className="mr-1">{getWeatherIcon(gameState.weatherState)}</span>
+              <span className="font-medium text-xs">{gameState.weatherState || 'Clear'}</span>
             </Badge>
             
             {/* Console button - responsive */}

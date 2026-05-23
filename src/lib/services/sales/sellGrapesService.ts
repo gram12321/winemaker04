@@ -1,4 +1,4 @@
-﻿import { EconomyPhase, Season, WineBatch } from '../../types/types';
+﻿import { EconomyPhase, Season, WeatherIntensity, WeatherState, WineBatch } from '../../types/types';
 import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -46,6 +46,8 @@ export interface GrapeBuyer {
   demandFactors?: {
     volatilitySeason?: Season;
     volatilityEconomyPhase?: EconomyPhase;
+    volatilityWeatherState?: WeatherState;
+    volatilityWeatherIntensity?: WeatherIntensity;
     seasonPriceMultiplier: number;
     seasonLimitMultiplier: number;
     economyPriceMultiplier: number;
@@ -56,8 +58,14 @@ export interface GrapeBuyer {
     volatilityLimitMultiplier: number;
     volatilitySeasonPressureMultiplier?: number;
     volatilityEconomyPressureMultiplier?: number;
+    volatilityWeatherPricePressureMultiplier?: number;
+    volatilityWeatherLimitPressureMultiplier?: number;
     volatilitySentimentPriceMultiplier?: number;
     volatilitySentimentLimitMultiplier?: number;
+    volatilityBuyerPriceSensitivityMultiplier?: number;
+    volatilityBuyerLimitSensitivityMultiplier?: number;
+    volatilityBuyerSensitivityReason?: string;
+    volatilityWeatherReason?: string;
     volatilityPriceReason?: string;
     volatilityLimitReason?: string;
   };

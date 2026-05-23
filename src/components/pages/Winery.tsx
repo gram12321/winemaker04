@@ -3,7 +3,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useLoadingState, useGameStateWithData, useWineBatchStructureIndex, useFormattedStructureIndex, useStructureIndexQuality } from '@/hooks';
 import { getAllWineBatches, bottleWine, isActionAvailable, getWineBatchDisplayName } from '@/lib/services';
 import { WineBatch } from '@/lib/types/types';
-import { Button, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
+import { Button, BuyFromMarketModal, CrushingOptionsModal, WineModal, SellGrapesModal } from '../ui';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
 import { UnifiedTooltip, tooltipStyles, TooltipSection } from '../ui/shadCN/tooltip';
 import { FermentationOptionsModal } from '../ui/modals/activitymodals/FermentationOptionsModal';
@@ -126,6 +126,7 @@ const FermentationEffectsDisplay: React.FC<{ batch: WineBatch }> = ({ batch }) =
 const Winery: React.FC = () => {
   const { withLoading } = useLoadingState();
   const wineBatches = useGameStateWithData(getAllWineBatches, [] as WineBatch[]);
+  const [isBuyMarketOpen, setIsBuyMarketOpen] = useState(false);
   
   // Unified modal state
   const [modals, setModals] = useState({
@@ -175,7 +176,14 @@ const Winery: React.FC = () => {
               <p className="text-white/90 text-xs mt-0.5">Transform grapes into fine wines</p>
             </div>
             <div className="text-white/80 text-xs">
-              {activeBatches.length} Active Batches
+              <div>{activeBatches.length} Active Batches</div>
+              <Button
+                size="sm"
+                className="mt-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={() => setIsBuyMarketOpen(true)}
+              >
+                Buy Grapes
+              </Button>
             </div>
           </div>
         </div>
@@ -380,6 +388,11 @@ const Winery: React.FC = () => {
         isOpen={!!modals.sellGrapes}
         onClose={() => closeModal('sellGrapes')}
         batch={modals.sellGrapes}
+      />
+
+      <BuyFromMarketModal
+        isOpen={isBuyMarketOpen}
+        onClose={() => setIsBuyMarketOpen(false)}
       />
     </div>
   );

@@ -27,7 +27,7 @@ The current suite is useful, but the documentation and viewer are out of date:
 The Admin Test Lab should support these workflows:
 
 1. Run existing regression tests from the admin UI and show accurate structured results.
-2. Create isolated test companies or test runs so fixture data never pollutes normal saves.
+2. Create active-company test runs with durable tags so fixture data is easy to identify and clean up.
 3. Seed game state directly for important milestones, such as harvest-ready vineyard, grapes in winery, must ready for fermentation, fermenting wine, bottled wine, active customer order, and active contract.
 4. Execute gameflow steps without waiting for natural activity completion.
 5. Allow parameters for each test setup, especially vineyard, grape, wine batch, quality, price, customer, date, staff, and activity values.
@@ -129,7 +129,9 @@ Each scenario result should include:
 - warnings
 - cleanup status
 
-## Fixture Isolation
+## Fixture Tagging And Active-Company Execution
+
+Update on 2026-05-22: Test Lab scenarios intentionally run against the currently active company. The Admin Dashboard is opened after selecting a company, and switching to a parallel hidden company would make the UI state harder to reason about. Dedicated test-company creation remains available as an explicit scenario, but it is not the default model for vineyard, winery, sales, finance, research, or staff scenarios.
 
 Every mutating scenario must create or reuse a test run id:
 
@@ -143,7 +145,7 @@ All created records should carry the run id in a durable field:
 - Otherwise use a predictable name prefix, such as `[TESTLAB:testlab_...]`.
 - Keep a central run manifest in memory for the current session and persist enough tags on records that cleanup still works after page reload.
 
-Cleanup must not depend only on React state. A cleanup operation should find all entities with the run id and delete them in dependency order:
+Cleanup must not depend only on React state. A cleanup operation should find all entities with the run id and delete them in dependency order where durable tags exist:
 
 1. orders and contracts
 2. wine log entries and highscores created by scenario runs
@@ -151,9 +153,9 @@ Cleanup must not depend only on React state. A cleanup operation should find all
 4. activities
 5. vineyards
 6. staff, teams, loans, research unlocks, transactions, notifications, prestige events
-7. company and user, when the scenario created an isolated company
+7. company and user, when the scenario explicitly created an isolated company
 
-The safest default is to create a dedicated test company per run. Reusing the active company should be an explicit mode labeled as destructive or polluting.
+Active-company scenarios should make their write behavior clear in the UI. The safest operational pattern is to tag every created object with the run id, show the run id in recent runs, and keep cleanup available after reload.
 
 ## Core Test Lab Capabilities
 
@@ -239,6 +241,19 @@ Required scenario examples:
 - create staff search result and hire without waiting
 - start and immediately complete research
 - set loans, trigger seasonal payment, and inspect transactions
+
+### Active-Company Admin Scenarios
+
+The first expansion beyond vineyard/winery fixtures should expose existing active-company admin shortcuts through the same typed scenario registry:
+
+- generate test orders
+- generate a test contract
+- set company money
+- set player balance
+- add company prestige
+- set game date
+- grant or remove all research
+- set staff XP by category
 
 ## UI Design
 
@@ -348,7 +363,7 @@ Phase 5: Expand coverage.
 - A developer can create a harvest-ready vineyard without advancing from Spring to Autumn.
 - A developer can create or progress a wine batch to grapes, must-ready, fermenting, and bottled states through explicit scenario actions.
 - A developer can set parameters for wine price and quality mechanisms and inspect the resulting wine batch.
-- Every mutating scenario returns created entity ids and can clean up after page reload using durable tags.
+- Every mutating fixture scenario returns created entity ids and can clean up after page reload using durable tags where the created records can be tagged.
 - Existing `npm test` remains the source of truth for regression tests.
 
 ## Implementation Risks

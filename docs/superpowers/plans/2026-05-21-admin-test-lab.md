@@ -1,12 +1,12 @@
 # Admin Test Lab Implementation Plan
 
-Status: Planned. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md`.
+Status: Partially implemented. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admin-test-lab-design.md`; updated 2026-05-22 to use active-company scenarios as the default Test Lab model.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a development-only Admin Test Lab that accurately runs the current regression suite, lets developers create targeted gameflow states without waiting for natural ticks, and cleans up all generated fixture data.
+**Goal:** Build a development-only Admin Test Lab that accurately runs the current regression suite, lets developers create targeted gameflow states against the active company without waiting for natural ticks, and cleans up tagged generated fixture data.
 
-**Architecture:** Keep Vitest as the regression source of truth, replace hard-coded viewer data with a typed scenario registry, add browser-side admin test-lab services for gameflow fixture creation, and keep Vite middleware only for filesystem/test-runner endpoints. Gate the UI and middleware to dev localhost/loopback only.
+**Architecture:** Keep Vitest as the regression source of truth, replace hard-coded viewer data with a typed scenario registry, add browser-side admin test-lab services for active-company gameflow fixture creation, and keep Vite middleware only for filesystem/test-runner endpoints. Gate the UI and middleware to dev localhost/loopback only.
 
 **Tech Stack:** TypeScript, React, Vite middleware, Vitest, Supabase client services, existing shadCN UI primitives.
 
@@ -60,7 +60,8 @@ Status: Planned. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admi
 - The repo is currently on branch `main`, and this is not an isolated git worktree.
 - The existing worktree already has unrelated modified docs. Do not revert them.
 - Admin authorization is intentionally out of scope. The only gate is dev mode plus localhost/loopback.
-- Fixture cleanup cannot depend only on React state. Every mutating scenario must persist a durable run tag in names, params, or company-scoped records.
+- Fixture cleanup cannot depend only on React state. Every mutating fixture scenario must persist a durable run tag in names, params, or company-scoped records where the created record can be tagged.
+- Active-company execution is intentional. Dedicated test companies remain an explicit scenario, but vineyard, winery, sales, finance, research, and staff Test Lab flows should operate on the company the admin user is currently inspecting.
 
 ## Tasks
 
@@ -123,6 +124,14 @@ Status: Planned. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admi
   - create fermenting wine batch
   - create bottled wine
   - cleanup by run id
+  - generate test orders
+  - generate test contract
+  - set company money
+  - set player balance
+  - add prestige
+  - set game date
+  - grant/remove all research
+  - set staff XP
 - [ ] Export `getTestLabScenarios()` and `getTestLabScenario(id)`.
 - [ ] Do not duplicate this metadata in React components.
 
@@ -158,7 +167,8 @@ Status: Planned. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admi
 
 - [ ] Create `src/lib/services/admin/testLab/testLabFixtureService.ts`.
 - [ ] Implement `createTestLabCompany(params)` using `companyService.createCompany`.
-- [ ] Set the active company when a dedicated test company is created so existing company-scoped services work.
+- [ ] Keep active-company mode as the default for gameflow scenarios.
+- [ ] Set the active company when a dedicated test company is explicitly created so existing company-scoped services work.
 - [ ] Implement `createHarvestReadyVineyard(params)` by saving a tagged vineyard with selected country, region, grape, hectares, density, health, ripeness, vine age, soil, aspect, altitude, and Autumn date.
 - [ ] Implement `createGrapeBatch(params)` using `createWineBatchFromHarvest`.
 - [ ] Implement `createMustReadyBatch(params)` by creating grapes, starting crushing through `startCrushingActivity`, then completing it with `completeActivityNow`.
@@ -227,4 +237,4 @@ Status: Planned. Created 2026-05-21 from `docs/superpowers/specs/2026-05-20-admi
 
 - Remote production authorization and production admin roles remain out of scope.
 - Browser-level Playwright smoke tests can be added after the Test Lab UI exists.
-- Broad sales, finance, research, staff, achievement, and wine-log scenario coverage should follow the vineyard/winery vertical slice once fixture isolation is proven.
+- Deeper fulfillment/expiration scenarios for sales, finance, research, staff, achievement, and wine-log systems should follow the current active-company shortcut coverage.

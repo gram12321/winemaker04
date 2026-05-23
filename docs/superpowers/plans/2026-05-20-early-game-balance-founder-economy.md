@@ -1,6 +1,6 @@
 # Early-Game Balance: Founder Economy & Starting Conditions
 **Created:** 2026-05-20  
-**Status:** Design / Partially implemented (bulk grape sales shipped, founder-economy systems still open)  
+**Status:** Design / Partially implemented (bulk grape sales + dynamic buyer market shipped, founder-economy systems still open)  
 **Branch context:** taste  
 
 ---
@@ -353,6 +353,7 @@ Buying consistently from the same supplier builds a relationship (similar to coo
   - Additional seasonal buyer slots
   - Seasonal hard-limit multiplier boosts
   - Buyer multiplier bonus boosts
+  - Cross-country buyer pool unlocks via research (`grape_buyer_country_access`)
 - Database layer and migrations are in place for:
   - `grape_market_buyers`
   - `grape_buyer_loyalty`
@@ -370,7 +371,7 @@ Buying consistently from the same supplier builds a relationship (similar to coo
 - AI/UX enhancements in modal
   - Show why a buyer is in this season (relationship carry-over vs newly generated).
   - Show projected loyalty gain for current sale before confirming.
-- Late-game research for opening up buyers from other countries.
+- Country-access UX surfacing (locked/available market-country sections in UI).
 
 ### Design ideas for next implementation slice
 
@@ -410,13 +411,13 @@ Buying consistently from the same supplier builds a relationship (similar to coo
   - Best loyalty growth
   - Highest remaining capacity
 
-#### Late-game research for buyers from other countries (straightforward)
+#### Country-access progression UX and balancing (follow-up)
 
-- Add research unlock type: `grape_buyer_country_access` with country code payload.
-- Gate additional country pools behind progressive research:
-  - Stage 1: neighboring-country buyers
-  - Stage 2: regional export buyers
-  - Stage 3: global premium buyers
+- Keep current research unlock type `grape_buyer_country_access` and expose clearer progression in UI copy.
+- Expand progression tuning for country pools behind research tiers:
+  - Stage 1: neighboring-country buyers (already supported through unlock payloads)
+  - Stage 2: regional export buyers (balancing + pool curation)
+  - Stage 3: global premium buyers (balancing + pool curation)
 - Use light balancing constraints to avoid early exploitation:
   - Import friction multiplier (slight price penalty) until higher-tier research
   - Higher loyalty requirement for cross-country premium buyers

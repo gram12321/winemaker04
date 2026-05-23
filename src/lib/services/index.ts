@@ -16,6 +16,7 @@ export * from './user/wineLogService';
 
 // Finance services
 export * from './finance/economyService';
+export * from './finance/weatherService';
 export * from './finance/financeService';
 export * from '@/lib/features/loanLender/services/finance/creditRatingService';
 export * from '@/lib/features/loanLender/services/finance/lenderService';
@@ -58,6 +59,7 @@ export * from './sales/relationshipService';
 export * from './sales/contractGenerationService';
 export * from './sales/contractService';
 export * from './sales/expirationService';
+export * from './sales/buyGrapeMarketService';
 
 // Prestige services
 export * from './prestige/prestigeService';

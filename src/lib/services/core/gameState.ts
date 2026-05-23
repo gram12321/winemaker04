@@ -9,6 +9,7 @@ import { initializeStaffSystem } from '../user/staffService';
 import { initializeTeamsSystem } from '../user/teamService';
 import { triggerGameUpdate } from '../../../hooks/useGameUpdates';
 import { initializeEconomyPhase } from '../finance/economyService';
+import { buildWeeklyWeatherBundle, rollSeasonalWeatherForecast } from '../finance/weatherService';
 
 // Current active company and game state
 let currentCompany: Company | null = null;
@@ -21,7 +22,13 @@ let gameState: Partial<GameState> = {
   money: 0,
   prestige: GAME_INITIALIZATION.STARTING_PRESTIGE,
   creditRating: CREDIT_RATING.DEFAULT_RATING,
-  economyPhase: 'Stable'
+  economyPhase: 'Stable',
+  weatherForecastPattern: 'Stable',
+  weatherForecastConfidence: 'Medium',
+  weatherState: 'Clear',
+  weatherIntensity: 'Mild',
+  nextWeekForecastState: 'Clear',
+  nextWeekForecastIntensity: 'Mild',
 };
 
 // Persistence key
@@ -149,6 +156,19 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
   }
 
   // Update local game state to match company and DB (no fallback defaults here)
+  const initialSeason = company.currentSeason;
+  const initialYear = company.currentYear;
+  const initialWeek = company.currentWeek;
+  const seasonalForecast = rollSeasonalWeatherForecast(company.id, initialYear, initialSeason);
+  const weatherBundle = buildWeeklyWeatherBundle({
+    companyId: company.id,
+    year: initialYear,
+    season: initialSeason,
+    week: initialWeek,
+    pattern: seasonalForecast.pattern,
+    confidence: seasonalForecast.confidence,
+  });
+
   gameState = {
     week: company.currentWeek,
     season: company.currentSeason,
@@ -157,7 +177,13 @@ export const setActiveCompany = async (company: Company): Promise<void> => {
     foundedYear: company.foundedYear,
     money: company.money,
     prestige: company.prestige,
-    economyPhase: ensuredEconomyPhase
+    economyPhase: ensuredEconomyPhase,
+    weatherForecastPattern: seasonalForecast.pattern,
+    weatherForecastConfidence: seasonalForecast.confidence,
+    weatherState: weatherBundle.currentState,
+    weatherIntensity: weatherBundle.currentIntensity,
+    nextWeekForecastState: weatherBundle.nextForecastState,
+    nextWeekForecastIntensity: weatherBundle.nextForecastIntensity,
   };
   
   // Initialize prestige system for this company
@@ -237,7 +263,13 @@ export const resetGameState = (): void => {
     companyName: '',
     foundedYear: GAME_INITIALIZATION.STARTING_YEAR,
     money: 0,
-    prestige: GAME_INITIALIZATION.STARTING_PRESTIGE
+    prestige: GAME_INITIALIZATION.STARTING_PRESTIGE,
+    weatherForecastPattern: 'Stable',
+    weatherForecastConfidence: 'Medium',
+    weatherState: 'Clear',
+    weatherIntensity: 'Mild',
+    nextWeekForecastState: 'Clear',
+    nextWeekForecastIntensity: 'Mild',
   };
   prestigeCache = null;
   

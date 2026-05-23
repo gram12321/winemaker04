@@ -13,6 +13,7 @@ import {
   DynamicRangeTab,
   CrossTraitPenaltyTab,
   EconomyTab,
+  WeatherTab,
   GrapeBuyersTab,
   ResearchTab
 } from '@/components/pages/winepedia/index';
@@ -51,6 +52,7 @@ export default function Winepedia({ view }: WinepediaProps) {
       { id: 'research', label: 'Research', component: ResearchTab },
       { id: 'grapeBuyers', label: 'Grape Buyers', component: GrapeBuyersTab },
       { id: 'economy', label: 'Economy', component: EconomyTab },
+      { id: 'weather', label: 'Weather', component: WeatherTab },
       ...loanLenderTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component })),
       ...boardShareTabs.map((tab) => ({ id: tab.id, label: tab.label, component: tab.component }))
     ];

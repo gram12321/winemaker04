@@ -613,6 +613,10 @@ export interface Transaction {
 
 // ===== ECONOMY TYPES =====
 export type EconomyPhase = 'Crash' | 'Recession' | 'Stable' | 'Expansion' | 'Boom';
+export type WeatherState = 'Clear' | 'Rain' | 'Heat' | 'Frost' | 'Storm' | 'Snow';
+export type WeatherIntensity = 'Mild' | 'Moderate' | 'Severe';
+export type WeatherForecastPattern = 'Stable' | 'Wet' | 'Dry' | 'Cold' | 'Heat' | 'Storm-prone';
+export type WeatherForecastConfidence = 'Low' | 'Medium' | 'High';
 
 export type LenderType = 'Bank' | 'Investment Fund' | 'Private Lender' | 'QuickLoan';
 
@@ -1068,6 +1072,12 @@ export interface GameState {
   prestige: number; // Company prestige for order generation scaling
   creditRating: number; // NEW: 0-100 scale, affects loan availability
   economyPhase: EconomyPhase; // NEW: Current economy phase
+  weatherForecastPattern?: WeatherForecastPattern;
+  weatherForecastConfidence?: WeatherForecastConfidence;
+  weatherState?: WeatherState;
+  weatherIntensity?: WeatherIntensity;
+  nextWeekForecastState?: WeatherState;
+  nextWeekForecastIntensity?: WeatherIntensity;
   activities?: Activity[]; // Active activities
   staff?: Staff[]; // Active staff members
   teams?: StaffTeam[]; // Staff teams

@@ -2,7 +2,7 @@ import { NAMES, GRAPE_MERCHANT_SUFFIXES } from '../../constants/namesConstants';
 import { calculateCompanyValue } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { getCurrentCompanyId } from '../../utils/companyUtils';
-import { GRAPE_VARIETIES, type GrapeVariety, type EconomyPhase, type Nationality, type Season } from '../../types/types';
+import { GRAPE_VARIETIES, type GrapeVariety, type EconomyPhase, type Nationality, type Season, type WeatherIntensity, type WeatherState } from '../../types/types';
 import {
   getBuyerLoyalty,
   getBuyerRelationshipPriceMultiplier,
@@ -57,7 +57,7 @@ export const BUYER_ECONOMY_LIMIT_MULTIPLIERS: Record<EconomyPhase, number> = {
   Boom: 1.25,
 };
 
-const BUYER_ECONOMY_VOLATILITY_AMPLITUDE: Record<EconomyPhase, { price: number; limit: number }> = {
+export const BUYER_ECONOMY_VOLATILITY_AMPLITUDE: Record<EconomyPhase, { price: number; limit: number }> = {
   Crash: { price: 0.13, limit: 0.2 },
   Recession: { price: 0.1, limit: 0.15 },
   Stable: { price: 0.06, limit: 0.1 },
@@ -75,12 +75,27 @@ const BUYER_SEASON_VOLATILITY_PRESSURE: Record<Season, number> = {
   Winter: 1.15,
 };
 
-const BUYER_ECONOMY_VOLATILITY_PRESSURE: Record<EconomyPhase, number> = {
+export const BUYER_ECONOMY_VOLATILITY_PRESSURE: Record<EconomyPhase, number> = {
   Crash: 1.26,
   Recession: 1.14,
   Stable: 1.0,
   Expansion: 1.08,
   Boom: 1.16,
+};
+
+export const BUYER_WEATHER_VOLATILITY_PRESSURE: Record<WeatherState, { price: number; limit: number }> = {
+  Clear: { price: 1.0, limit: 1.0 },
+  Rain: { price: 1.04, limit: 1.06 },
+  Heat: { price: 1.07, limit: 1.11 },
+  Frost: { price: 1.09, limit: 1.14 },
+  Storm: { price: 1.13, limit: 1.2 },
+  Snow: { price: 1.1, limit: 1.17 },
+};
+
+export const WEATHER_INTENSITY_MULTIPLIER: Record<WeatherIntensity, number> = {
+  Mild: 0.96,
+  Moderate: 1.0,
+  Severe: 1.08,
 };
 
 const PRICE_SEASON_THEME: Record<Season, string> = {
@@ -95,6 +110,15 @@ const LIMIT_SEASON_THEME: Record<Season, string> = {
   Summer: 'Heat-related handling constraints reduce intake appetite.',
   Fall: 'Cellar congestion during harvest tightens intake limits.',
   Winter: 'Off-season replenishment programs increase buyer intake plans.',
+};
+
+const WEATHER_THEME: Record<WeatherState, string> = {
+  Clear: 'Stable weather keeps logistics predictable this week.',
+  Rain: 'Rainfall variability introduces moderate logistics friction.',
+  Heat: 'Heat pressure increases handling and spoilage risk.',
+  Frost: 'Frost risk tightens procurement timing and flexibility.',
+  Storm: 'Storm disruptions create sharp short-term buying uncertainty.',
+  Snow: 'Snowy transport constraints amplify delivery uncertainty.',
 };
 
 export type CountryKey = Nationality;
@@ -223,14 +247,19 @@ function getDemandVolatilityMultipliers(
   companyId: string,
   currentYear: number,
   currentSeason: Season,
-  economyPhase: EconomyPhase
+  economyPhase: EconomyPhase,
+  weatherState?: WeatherState,
+  weatherIntensity?: WeatherIntensity
 ): {
   price: number;
   limit: number;
   seasonPressure: number;
   economyPressure: number;
+  weatherPricePressure: number;
+  weatherLimitPressure: number;
   sentimentPriceMultiplier: number;
   sentimentLimitMultiplier: number;
+  weatherReason: string;
   priceReason: string;
   limitReason: string;
 } {
@@ -239,6 +268,12 @@ function getDemandVolatilityMultipliers(
   const yearLimitCycle = getYearCycleMultiplier(currentYear, BUYER_YEAR_LIMIT_CYCLE);
   const seasonPressure = BUYER_SEASON_VOLATILITY_PRESSURE[currentSeason];
   const economyPressure = BUYER_ECONOMY_VOLATILITY_PRESSURE[economyPhase];
+  const resolvedWeatherState: WeatherState = weatherState ?? 'Clear';
+  const resolvedWeatherIntensity: WeatherIntensity = weatherIntensity ?? 'Moderate';
+  const weatherBase = BUYER_WEATHER_VOLATILITY_PRESSURE[resolvedWeatherState];
+  const weatherIntensityScale = WEATHER_INTENSITY_MULTIPLIER[resolvedWeatherIntensity] ?? 1;
+  const weatherPricePressure = weatherBase.price * weatherIntensityScale;
+  const weatherLimitPressure = weatherBase.limit * weatherIntensityScale;
 
   // Deterministic per company/year/season so volatility stays stable for all buyers within the season.
   const volatilitySeedBase = `${companyId}:${currentYear}:${currentSeason}:${economyPhase}`;
@@ -246,8 +281,8 @@ function getDemandVolatilityMultipliers(
   const limitNoise = seededCenteredUnit(`${volatilitySeedBase}:limit`);
   const sentimentPriceMultiplier = 1 + priceNoise * amplitude.price;
   const sentimentLimitMultiplier = 1 + limitNoise * amplitude.limit;
-  const priceVolatility = seasonPressure * economyPressure * sentimentPriceMultiplier;
-  const limitVolatility = seasonPressure * economyPressure * sentimentLimitMultiplier;
+  const priceVolatility = seasonPressure * economyPressure * weatherPricePressure * sentimentPriceMultiplier;
+  const limitVolatility = seasonPressure * economyPressure * weatherLimitPressure * sentimentLimitMultiplier;
   const priceShock = priceNoise >= 0
     ? 'Buyer sentiment shock favors higher bids this season.'
     : 'Buyer sentiment shock favors lower bid discipline this season.';
@@ -260,16 +295,20 @@ function getDemandVolatilityMultipliers(
   const limitCycleTheme = yearLimitCycle >= 1
     ? 'Cycle timing points to stronger replenishment demand.'
     : 'Cycle timing points to softer replenishment demand.';
-  const priceReason = `${PRICE_SEASON_THEME[currentSeason]} ${priceCycleTheme} ${priceShock}`;
-  const limitReason = `${LIMIT_SEASON_THEME[currentSeason]} ${limitCycleTheme} ${limitShock}`;
+  const weatherReason = `${WEATHER_THEME[resolvedWeatherState]} Intensity is ${resolvedWeatherIntensity.toLowerCase()}.`;
+  const priceReason = `${PRICE_SEASON_THEME[currentSeason]} ${weatherReason} ${priceCycleTheme} ${priceShock}`;
+  const limitReason = `${LIMIT_SEASON_THEME[currentSeason]} ${weatherReason} ${limitCycleTheme} ${limitShock}`;
 
   return {
     price: clamp(yearPriceCycle * priceVolatility, 0.7, 1.35),
     limit: clamp(yearLimitCycle * limitVolatility, 0.65, 1.45),
     seasonPressure,
     economyPressure,
+    weatherPricePressure,
+    weatherLimitPressure,
     sentimentPriceMultiplier,
     sentimentLimitMultiplier,
+    weatherReason,
     priceReason,
     limitReason,
   };
@@ -279,10 +318,14 @@ function getDemandFactorComponents(
   companyId: string,
   currentYear: number,
   currentSeason: Season,
-  economyPhase: EconomyPhase
+  economyPhase: EconomyPhase,
+  weatherState?: WeatherState,
+  weatherIntensity?: WeatherIntensity
 ): {
   volatilitySeason: Season;
   volatilityEconomyPhase: EconomyPhase;
+  volatilityWeatherState: WeatherState;
+  volatilityWeatherIntensity: WeatherIntensity;
   seasonPriceMultiplier: number;
   seasonLimitMultiplier: number;
   economyPriceMultiplier: number;
@@ -293,8 +336,11 @@ function getDemandFactorComponents(
   volatilityLimitMultiplier: number;
   volatilitySeasonPressureMultiplier: number;
   volatilityEconomyPressureMultiplier: number;
+  volatilityWeatherPricePressureMultiplier: number;
+  volatilityWeatherLimitPressureMultiplier: number;
   volatilitySentimentPriceMultiplier: number;
   volatilitySentimentLimitMultiplier: number;
+  volatilityWeatherReason: string;
   volatilityPriceReason: string;
   volatilityLimitReason: string;
 } {
@@ -308,12 +354,18 @@ function getDemandFactorComponents(
     companyId,
     currentYear,
     currentSeason,
-    economyPhase
+    economyPhase,
+    weatherState,
+    weatherIntensity
   );
+  const resolvedWeatherState: WeatherState = weatherState ?? 'Clear';
+  const resolvedWeatherIntensity: WeatherIntensity = weatherIntensity ?? 'Moderate';
 
   return {
     volatilitySeason: currentSeason,
     volatilityEconomyPhase: economyPhase,
+    volatilityWeatherState: resolvedWeatherState,
+    volatilityWeatherIntensity: resolvedWeatherIntensity,
     seasonPriceMultiplier,
     seasonLimitMultiplier,
     economyPriceMultiplier,
@@ -324,10 +376,54 @@ function getDemandFactorComponents(
     volatilityLimitMultiplier: Number((demandVolatility.limit / Math.max(0.01, yearCycleLimitMultiplier)).toFixed(3)),
     volatilitySeasonPressureMultiplier: Number(demandVolatility.seasonPressure.toFixed(3)),
     volatilityEconomyPressureMultiplier: Number(demandVolatility.economyPressure.toFixed(3)),
+    volatilityWeatherPricePressureMultiplier: Number(demandVolatility.weatherPricePressure.toFixed(3)),
+    volatilityWeatherLimitPressureMultiplier: Number(demandVolatility.weatherLimitPressure.toFixed(3)),
     volatilitySentimentPriceMultiplier: Number(demandVolatility.sentimentPriceMultiplier.toFixed(3)),
     volatilitySentimentLimitMultiplier: Number(demandVolatility.sentimentLimitMultiplier.toFixed(3)),
+    volatilityWeatherReason: demandVolatility.weatherReason,
     volatilityPriceReason: demandVolatility.priceReason,
     volatilityLimitReason: demandVolatility.limitReason,
+  };
+}
+
+function getBuyerVolatilitySensitivity(
+  buyerCategory: NonNullable<GrapeBuyer['buyerCategory']>,
+  dealStyle: NonNullable<GrapeBuyer['dealStyle']>,
+  originTag: BuyerOriginTag
+): { price: number; limit: number; reason: string } {
+  let price = 1;
+  let limit = 1;
+
+  if (buyerCategory === 'bulk') {
+    price *= 1.08;
+    limit *= 1.05;
+  } else if (buyerCategory === 'cooperative') {
+    price *= 0.94;
+    limit *= 0.96;
+  }
+
+  if (dealStyle === 'spot') {
+    price *= 1.06;
+    limit *= 1.04;
+  } else if (dealStyle === 'volume_bonus') {
+    limit *= 1.08;
+  } else if (dealStyle === 'relationship_bonus') {
+    price *= 0.97;
+    limit *= 0.96;
+  }
+
+  if (originTag === 'Relationship carry-over') {
+    price *= 0.97;
+    limit *= 0.95;
+  } else if (originTag === 'Seasonal rotation') {
+    price *= 1.03;
+    limit *= 1.02;
+  }
+
+  return {
+    price: Number(price.toFixed(3)),
+    limit: Number(limit.toFixed(3)),
+    reason: `Buyer profile response (${buyerCategory}, ${dealStyle}, ${originTag}).`,
   };
 }
 
@@ -559,16 +655,23 @@ function rowToBuyer(
   companyValue: number,
   currentSeason: Season,
   economyPhase: EconomyPhase,
+  weatherState: WeatherState | undefined,
+  weatherIntensity: WeatherIntensity | undefined,
   limitResearchMultiplier: number,
   multiplierResearchBonus: number,
   originTag: BuyerOriginTag,
   originReason: string
 ): GrapeBuyer {
+  const buyerCategory: NonNullable<GrapeBuyer['buyerCategory']> = row.is_germany_coop ? 'cooperative' : 'seasonal';
+  const dealStyle: NonNullable<GrapeBuyer['dealStyle']> = row.is_germany_coop ? 'relationship_bonus' : 'spot';
+  const volatilitySensitivity = getBuyerVolatilitySensitivity(buyerCategory, dealStyle, originTag);
   const demandComponents = getDemandFactorComponents(
     companyId,
     currentYear,
     currentSeason,
-    economyPhase
+    economyPhase,
+    weatherState,
+    weatherIntensity
   );
   const relationshipMultiplier = getBuyerRelationshipPriceMultiplier(loyaltyLevel);
   const relationshipLimitBonus = getBuyerRelationshipYearlyLimitBonus(loyaltyLevel);
@@ -578,11 +681,13 @@ function rowToBuyer(
     * demandComponents.economyPriceMultiplier
     * demandComponents.yearCyclePriceMultiplier
     * demandComponents.volatilityPriceMultiplier
+    * volatilitySensitivity.price
     * (1 + multiplierResearchBonus);
   const limitDemandMultiplier = demandComponents.seasonLimitMultiplier
     * demandComponents.economyLimitMultiplier
     * demandComponents.yearCycleLimitMultiplier
     * demandComponents.volatilityLimitMultiplier
+    * volatilitySensitivity.limit
     * limitResearchMultiplier;
   const effectiveSeasonLimitKg = Math.max(
     200,
@@ -608,11 +713,16 @@ function rowToBuyer(
     remainingSeasonLimitKg,
     relationshipMultiplier,
     favoriteGrapes,
-    buyerCategory: row.is_germany_coop ? 'cooperative' : 'seasonal',
+    buyerCategory,
     originTag,
     originReason,
-    dealStyle: 'spot',
-    demandFactors: demandComponents,
+    dealStyle,
+    demandFactors: {
+      ...demandComponents,
+      volatilityBuyerPriceSensitivityMultiplier: volatilitySensitivity.price,
+      volatilityBuyerLimitSensitivityMultiplier: volatilitySensitivity.limit,
+      volatilityBuyerSensitivityReason: volatilitySensitivity.reason,
+    },
   };
 }
 
@@ -626,6 +736,8 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
   const currentYear = gameState.currentYear ?? 2024;
   const currentSeason = gameState.season ?? 'Spring';
   const economyPhase = (gameState.economyPhase ?? 'Stable') as EconomyPhase;
+  const weatherState = gameState.weatherState as WeatherState | undefined;
+  const weatherIntensity = gameState.weatherIntensity as WeatherIntensity | undefined;
   const seasonalBuyerCount = await getSeasonalBuyerCountFromResearch();
 
   const { data: currentSeasonRowsRaw } = await getSeasonBuyerRowsForCountries(
@@ -729,6 +841,8 @@ export async function getSeasonalBuyers(startingCountry?: string): Promise<Grape
       companyValue,
       currentSeason,
       economyPhase,
+      weatherState,
+      weatherIntensity,
       limitResearchMultiplier,
       multiplierResearchBonus,
       origin.tag,
@@ -748,6 +862,8 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
   const currentYear = gameState.currentYear ?? 2024;
   const currentSeason = gameState.season ?? 'Spring';
   const economyPhase = (gameState.economyPhase ?? 'Stable') as EconomyPhase;
+  const weatherState = gameState.weatherState as WeatherState | undefined;
+  const weatherIntensity = gameState.weatherIntensity as WeatherIntensity | undefined;
 
   const row = await ensureBulkBuyer(companyId, country, currentYear, currentSeason);
   if (!row) return null;
@@ -761,8 +877,11 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     companyId,
     currentYear,
     currentSeason,
-    economyPhase
+    economyPhase,
+    weatherState,
+    weatherIntensity
   );
+  const volatilitySensitivity = getBuyerVolatilitySensitivity('bulk', 'spot', 'Country special');
   const effectiveSeasonLimitKg = Math.max(
     200,
     Math.round(
@@ -771,6 +890,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
       * demandComponents.economyLimitMultiplier
       * demandComponents.yearCycleLimitMultiplier
       * demandComponents.volatilityLimitMultiplier
+      * volatilitySensitivity.limit
       * limitResearchMultiplier
     )
   );
@@ -782,6 +902,7 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     * demandComponents.economyPriceMultiplier
     * demandComponents.yearCyclePriceMultiplier
     * demandComponents.volatilityPriceMultiplier
+    * volatilitySensitivity.price
     * (1 + multiplierResearchBonus)
   ).toFixed(2));
 
@@ -807,7 +928,12 @@ export async function getBulkBuyer(startingCountry?: string): Promise<GrapeBuyer
     originTag: 'Country special',
     originReason: 'Always available bulk channel for immediate liquidity.',
     dealStyle: 'spot',
-    demandFactors: demandComponents,
+    demandFactors: {
+      ...demandComponents,
+      volatilityBuyerPriceSensitivityMultiplier: volatilitySensitivity.price,
+      volatilityBuyerLimitSensitivityMultiplier: volatilitySensitivity.limit,
+      volatilityBuyerSensitivityReason: volatilitySensitivity.reason,
+    },
   };
 }
 

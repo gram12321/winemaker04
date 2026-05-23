@@ -1,5 +1,5 @@
 import { getGameState, updateGameState, getCurrentCompany } from '@/lib/services';
-import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages } from '@/lib/services';
+import { generateSophisticatedWineOrders, notificationService, progressActivities, checkAndTriggerBookkeeping, processEconomyPhaseTransition, highscoreService, checkAllAchievements, updateCellarCollectionPrestige, calculateCompanyValue, updateVineyardRipeness, updateVineyardAges, updateVineyardVineYields, updateVineyardHealthDegradation, getAllStaff, processWeeklyFeatureRisks, processWeeklyFermentation, processSeasonalWages, processWeeklyBuyGrapeOfferDecay, refreshBuyGrapeMarketForSeason } from '@/lib/services';
 import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
 import { resolveWineAnchors, WINE_ANCHOR_KEYS } from '@/lib/services/wine/anchors/wineAnchorService';
 import { applyFeatureLayerAnchors } from '@/lib/services/wine/anchors/wineAnchorProcess';
@@ -12,6 +12,7 @@ import { WineBatch } from '@/lib/types/types';
 import { bulkUpdateWineBatches, loadWineBatches } from '@/lib/database/activities/inventoryDB';
 import { getBoardShareFeature } from '@/lib/features/boardShare';
 import { getLoanLenderFeature } from '@/lib/features/loanLender';
+import { buildWeeklyWeatherBundle, rollSeasonalWeatherForecast } from '@/lib/services/finance/weatherService';
 
 // Prevent concurrent game tick execution
 let isProcessingGameTick = false;
@@ -62,6 +63,7 @@ const executeGameTick = async (): Promise<void> => {
   const previousYear = currentYear;
   let newSeason: string | undefined;
   let economyPhaseMessage: string | null = null;
+  const companyId = getCurrentCompany()?.id || 'default-company';
 
   // Increment week
   week += 1;
@@ -86,8 +88,36 @@ const executeGameTick = async (): Promise<void> => {
     // Season change notification will be combined with bookkeeping notification below
   }
 
-  // Update game state with new time values
-  await updateGameState({ week, season, currentYear });
+  const shouldRefreshForecast = !!newSeason || !currentState.weatherForecastPattern || !currentState.weatherForecastConfidence;
+  const seasonalForecast = shouldRefreshForecast
+    ? rollSeasonalWeatherForecast(companyId, currentYear, season as any)
+    : {
+        pattern: currentState.weatherForecastPattern!,
+        confidence: currentState.weatherForecastConfidence!,
+      };
+
+  const weatherBundle = buildWeeklyWeatherBundle({
+    companyId,
+    year: currentYear,
+    season: season as any,
+    week,
+    pattern: seasonalForecast.pattern,
+    confidence: seasonalForecast.confidence,
+    previousState: currentState.weatherState,
+  });
+
+  // Update game state with new time values and weekly weather context
+  await updateGameState({
+    week,
+    season,
+    currentYear,
+    weatherForecastPattern: seasonalForecast.pattern,
+    weatherForecastConfidence: seasonalForecast.confidence,
+    weatherState: weatherBundle.currentState,
+    weatherIntensity: weatherBundle.currentIntensity,
+    nextWeekForecastState: weatherBundle.nextForecastState,
+    nextWeekForecastIntensity: weatherBundle.nextForecastIntensity,
+  });
 
   // Progress all activities based on assigned staff work contribution
   await progressActivities();
@@ -270,6 +300,15 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
       }
     })(),
 
+    // Apply weekly decay to buy market offers.
+    (async () => {
+      try {
+        await processWeeklyBuyGrapeOfferDecay();
+      } catch (error) {
+        console.warn('Error processing buy market weekly decay:', error);
+      }
+    })(),
+
     // Run board/share weekly hooks (e.g. price adjustment + board snapshots)
     (async () => {
       try {
@@ -309,6 +348,12 @@ const processWeeklyEffects = async (suppressWageNotification: boolean = false): 
   // Process seasonal wage payments (at the start of each season - week 1)
   let wageMessage: string | null = null;
   if (currentWeek === 1) {
+    try {
+      await refreshBuyGrapeMarketForSeason();
+    } catch (error) {
+      console.warn('Error refreshing buy market for season:', error);
+    }
+
     // Process wages synchronously if we need to capture the notification
     if (suppressWageNotification) {
       try {
