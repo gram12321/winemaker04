@@ -1,5 +1,6 @@
 import { GAME_INITIALIZATION } from '@/lib/constants';
 import { type GameState, type Vineyard } from '@/lib/types/types';
+import { clamp01 } from '@/lib/utils';
 import { calculateVineyardWeatherImpact, type VineyardWeatherContext, type VineyardWeatherImpactBreakdown } from './weatherImpactService';
 
 const WEATHER_CENTER_HEALTH_STRESS_THRESHOLD = -0.0025;
@@ -9,7 +10,11 @@ export interface VineyardWeatherRow {
   id: string;
   name: string;
   state: string;
+  ripenessCurrent: number;
+  ripenessProjected: number;
   ripenessDelta: number;
+  healthCurrent: number;
+  healthProjected: number;
   healthDelta: number;
   siteResponse: number;
   reason: string;
@@ -39,11 +44,17 @@ export function buildVineyardWeatherRows(vineyards: Vineyard[], weatherContext: 
     .filter((vineyard) => vineyard.grape)
     .map((vineyard) => {
       const impact = calculateVineyardWeatherImpact(vineyard, weatherContext);
+      const ripenessCurrent = vineyard.ripeness || 0;
+      const healthCurrent = vineyard.vineyardHealth || 0;
       return {
         id: vineyard.id,
         name: vineyard.name,
         state: vineyard.status,
+        ripenessCurrent,
+        ripenessProjected: clamp01(ripenessCurrent + impact.ripenessDelta),
         ripenessDelta: impact.ripenessDelta,
+        healthCurrent,
+        healthProjected: clamp01(healthCurrent + impact.healthDelta),
         healthDelta: impact.healthDelta,
         siteResponse: impact.siteResponse,
         reason: impact.reason,

@@ -1,13 +1,13 @@
 ﻿
 import React, { useState, useMemo, useCallback } from 'react';
-import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
+import { useLoadingState, useGameState, useGameStateWithData } from '@/hooks';
+import { buildVineyardWeatherRows, buildWeatherContext, getAllVineyards, getGameState, getAspectRating, getAltitudeRating, getAllActivities, getCurrentCompany, getWeatherIcon, sellVineyard, calculateAdjustedLandValueBreakdown } from '@/lib/services';
 import { Vineyard as VineyardType, WorkCategory } from '@/lib/types/types';
-import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal } from '../ui';
+import { LandSearchOptionsModal, LandSearchResultsModal, PlantingOptionsModal, HarvestOptionsModal, VineyardModal, VineyardStatusBadge } from '../ui';
 import { WarningModal } from '@/components/ui/modals/UImodals/WarningModal';
 import ClearingOptionsModal from '../ui/modals/activitymodals/ClearingOptionsModal';
 import { FeatureDisplay } from '../ui/components/FeatureDisplay';
-import { formatNumber, getBadgeColorClasses, getRatingForRange, getRangeColor } from '@/lib/utils/utils';
+import { formatNumber, formatSigned, getBadgeColorClasses, getRatingForRange, getRangeColor } from '@/lib/utils/utils';
 import { getFlagIcon } from '@/lib/utils';
 import { clearPendingLandSearchResults, calculateVineyardExpectedYield } from '@/lib/services';
 import { UnifiedTooltip, TooltipSection, TooltipRow, tooltipStyles } from '../ui/shadCN/tooltip';
@@ -266,6 +266,23 @@ const Vineyard: React.FC = () => {
   const vineyards = useGameStateWithData(getAllVineyards, []);
   const activities = useGameStateWithData(getAllActivities, []);
   const gameState = useGameStateWithData(() => Promise.resolve(getGameState()), { money: 0, season: 'Spring' });
+  const liveGameState = useGameState();
+  const currentCompany = getCurrentCompany();
+
+  const weatherContext = useMemo(() => {
+    if (!currentCompany?.id) {
+      return null;
+    }
+    return buildWeatherContext(liveGameState, currentCompany.id);
+  }, [liveGameState, currentCompany?.id]);
+
+  const vineyardWeatherById = useMemo(() => {
+    if (!weatherContext) {
+      return new Map<string, ReturnType<typeof buildVineyardWeatherRows>[number]>();
+    }
+    const rows = buildVineyardWeatherRows(vineyards, weatherContext);
+    return new Map(rows.map((row) => [row.id, row]));
+  }, [vineyards, weatherContext]);
 
   // Get vineyards with active activities from game state
   const vineyardsWithActiveActivities = useMemo(() => {
@@ -574,20 +591,6 @@ const Vineyard: React.FC = () => {
     const activeVineyards = vineyards.filter(v => v.status === 'Growing').length;
     return { totalHectares, totalValue, plantedVineyards, activeVineyards };
   }, [vineyards]);
-
-  // Status color mapping
-  const getStatusColor = (status: string) => {
-    const statusColors: Record<string, string> = {
-      'Barren': 'text-gray-500',
-      'Planting': 'text-emerald-500',
-      'Planted': 'text-green-500',
-      'Growing': 'text-blue-500',
-      'Harvested': 'text-purple-500',
-      'Dormant': 'text-orange-500'
-    };
-    return statusColors[status] || 'text-gray-500';
-  };
-
 
   return (
     <div className="space-y-6">
@@ -977,9 +980,25 @@ const Vineyard: React.FC = () => {
                     {/* Status & Actions */}
                     <td className="px-4 py-4">
                       <div className="space-y-2">
-                        <div className={`text-sm font-medium ${getStatusColor(vineyard.status)}`}>
-                          {vineyard.status}
-                        </div>
+                        <VineyardStatusBadge status={vineyard.status} />
+                        {(() => {
+                          const weatherRow = vineyardWeatherById.get(vineyard.id);
+                          if (!weatherRow) return null;
+                          return (
+                            <div className="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] text-sky-700">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="inline-flex items-center gap-1">
+                                  <span>{getWeatherIcon(liveGameState.weatherState)}</span>
+                                  {liveGameState.weatherState || 'Clear'} ({liveGameState.weatherIntensity || 'Mild'})
+                                </span>
+                                <span className="font-medium">Site x{formatNumber(weatherRow.siteResponse, { smartDecimals: true })}</span>
+                              </div>
+                              <div className="mt-0.5 text-sky-800/90">
+                                Impact: Ripeness {formatSigned(weatherRow.ripenessDelta)} | Health {formatSigned(weatherRow.healthDelta)}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         <div className="flex flex-col space-y-1">
                           {getActionButtons(vineyard)}
                         </div>
@@ -1024,9 +1043,7 @@ const Vineyard: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <div className={`text-sm font-medium ${getStatusColor(vineyard.status)}`}>
-                    {vineyard.status}
-                  </div>
+                  <VineyardStatusBadge status={vineyard.status} />
                 </div>
                 
                 {/* Location and Size/Value */}
@@ -1050,6 +1067,22 @@ const Vineyard: React.FC = () => {
               
               {/* Card Body */}
               <div className="p-4 space-y-4">
+                {(() => {
+                  const weatherRow = vineyardWeatherById.get(vineyard.id);
+                  if (!weatherRow) return null;
+                  return (
+                    <div className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1">
+                          <span>{getWeatherIcon(liveGameState.weatherState)}</span>
+                          {liveGameState.weatherState || 'Clear'} ({liveGameState.weatherIntensity || 'Mild'})
+                        </span>
+                        <span className="font-medium">Site x{formatNumber(weatherRow.siteResponse, { smartDecimals: true })}</span>
+                      </div>
+                      <div className="mt-0.5 text-sky-800/90">Impact: Ripeness {formatSigned(weatherRow.ripenessDelta)} | Health {formatSigned(weatherRow.healthDelta)}</div>
+                    </div>
+                  );
+                })()}
                 {/* Characteristics and Vine Details - 2 Column Grid */}
                 <div className="border-t pt-3">
                   <div className="grid grid-cols-2 gap-4">

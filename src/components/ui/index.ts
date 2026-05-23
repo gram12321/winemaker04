@@ -27,6 +27,7 @@ export * from './components/landValueModifierBreakdown';
 export * from './components/CharacteristicSlider';
 export * from './components/StaffSkillBar';
 export * from './components/FeatureDisplay';
+export * from './components/VineyardStatusBadge';
 export * from './components/WineTasteProfilePanel';
 export * from './components/WineTasteWheel';
 export * from './constraints/ConstraintDisplay';

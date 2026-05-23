@@ -1,13 +1,16 @@
-import { useMemo } from 'react';
-import { AlertTriangle, Gauge, HeartPulse, Info, TrendingUp } from 'lucide-react';
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TooltipRow, TooltipSection, UnifiedTooltip } from '@/components/ui';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Compass, HeartPulse, Info, Mountain, Droplets, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Wind, ThermometerSun } from 'lucide-react';
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TooltipRow, TooltipSection, UnifiedTooltip, VineyardStatusBadge } from '@/components/ui';
 import { useGameState, useGameStateWithData } from '@/hooks';
-import { buildVineyardWeatherRows, buildWeatherContext, calculateWeatherImpactSummary, getAllVineyards, getCurrentCompany, getImpactMeterWidth, getSoilResponseLabel, getWeatherIcon } from '@/lib/services';
-import { formatNumber, formatSigned, formatSignedPercent } from '@/lib/utils';
+import { buildVineyardWeatherRows, buildWeatherContext, calculateWeatherImpactSummary, getAllVineyards, getCurrentCompany, getSoilResponseLabel, getWeatherIcon, type VineyardWeatherRow } from '@/lib/services';
+import { formatNumber, formatSigned } from '@/lib/utils';
 
 const WEATHER_CENTER_HERO_IMAGE_URL = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1400&h=500&fit=crop';
 const WEATHER_CENTER_RIPENESS_CLAMP_LABEL = '[-0.0100, +0.0100]';
 const WEATHER_CENTER_HEALTH_CLAMP_LABEL = '[-0.0120, +0.0040]';
+const WEATHER_CENTER_SITE_RESPONSE_MIN = 0.8;
+const WEATHER_CENTER_SITE_RESPONSE_MAX = 1.2;
+const WEATHER_CENTER_SITE_RESPONSE_NEUTRAL = 1.0;
 
 function getDeltaTextClass(value: number): string {
   if (value > 0) return 'text-emerald-700';
@@ -15,10 +18,86 @@ function getDeltaTextClass(value: number): string {
   return 'text-slate-600';
 }
 
+function getSortIcon(active: boolean, direction: 'asc' | 'desc') {
+  if (!active) {
+    return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />;
+  }
+  return direction === 'asc'
+    ? <ArrowUp className="h-3.5 w-3.5 text-slate-700" />
+    : <ArrowDown className="h-3.5 w-3.5 text-slate-700" />;
+}
+
+function getSiteResponseLabel(value: number): string {
+  if (value > 1.05) return 'Amplified';
+  if (value < 0.95) return 'Buffered';
+  return 'Neutral';
+}
+
+function getSiteResponseColorClass(value: number): string {
+  if (value > 1.05) return 'text-emerald-700';
+  if (value < 0.95) return 'text-sky-700';
+  return 'text-amber-700';
+}
+
+function getSiteResponseFillWidth(value: number): number {
+  const normalized = (value - WEATHER_CENTER_SITE_RESPONSE_MIN) / (WEATHER_CENTER_SITE_RESPONSE_MAX - WEATHER_CENTER_SITE_RESPONSE_MIN);
+  return Math.max(0, Math.min(100, normalized * 100));
+}
+
+function getWeatherBadgeClass(state?: string): string {
+  if (state === 'Frost') return 'border-cyan-700/70 bg-cyan-900/30 text-cyan-200';
+  if (state === 'Rain') return 'border-blue-700/70 bg-blue-900/30 text-blue-200';
+  if (state === 'Storm') return 'border-indigo-700/70 bg-indigo-900/30 text-indigo-200';
+  if (state === 'Heat') return 'border-amber-700/70 bg-amber-900/30 text-amber-200';
+  if (state === 'Snow') return 'border-slate-700/70 bg-slate-800/50 text-slate-200';
+  return 'border-sky-700/70 bg-sky-900/30 text-sky-200';
+}
+
+function getIntensityBadgeClass(intensity?: string): string {
+  if (intensity === 'Severe') return 'border-red-700/70 bg-red-900/30 text-red-200';
+  if (intensity === 'Moderate') return 'border-amber-700/70 bg-amber-900/30 text-amber-200';
+  return 'border-emerald-700/70 bg-emerald-900/30 text-emerald-200';
+}
+
+type SortKey = 'name' | 'state' | 'ripenessDelta' | 'healthDelta' | 'siteResponse' | 'reason';
+
+const SORTABLE_COLUMNS: Array<{ key: SortKey; label: string; description: string }> = [
+  { key: 'state', label: 'Status', description: 'Sort by vineyard lifecycle state: Growing, Dormant, Harvested, and so on.' },
+  { key: 'ripenessDelta', label: 'Ripeness Delta', description: 'Sort by weather-driven ripeness movement for the current forecast window. Also shows projected movement from current value.' },
+  { key: 'healthDelta', label: 'Health Delta', description: 'Sort by how strongly weather is improving or stressing vine health. Also shows projected movement from current value.' },
+  { key: 'siteResponse', label: 'Site Response', description: 'Sort by site multiplier from aspect, altitude, terroir, and soil. 1.0 is neutral, above amplifies weather impact, below buffers it.' },
+  { key: 'reason', label: 'Reason', description: 'Sort by the summary sentence explaining the weather pressure on this vineyard.' },
+];
+
+function getSortValue(row: VineyardWeatherRow, key: SortKey): string | number {
+  switch (key) {
+    case 'name': return row.name.toLowerCase();
+    case 'state': return row.state.toLowerCase();
+    case 'ripenessDelta': return row.ripenessDelta;
+    case 'healthDelta': return row.healthDelta;
+    case 'siteResponse': return row.siteResponse;
+    case 'reason': return row.reason.toLowerCase();
+  }
+}
+
+function compareSortValues(left: string | number, right: string | number): number {
+  if (typeof left === 'number' && typeof right === 'number') {
+    return left - right;
+  }
+  return String(left).localeCompare(String(right));
+}
+
+function getModifierAverage(rows: VineyardWeatherRow[], key: 'aspectResponse' | 'altitudeResponse' | 'terroirResponse' | 'soilResponse'): number {
+  if (rows.length === 0) return 1;
+  return rows.reduce((total, row) => total + row.breakdown[key], 0) / rows.length;
+}
+
 export function WeatherCenterPage() {
   const gameState = useGameState();
   const vineyards = useGameStateWithData(getAllVineyards, [], { topic: 'vineyard' });
   const currentCompany = getCurrentCompany();
+  const [sortKey, setSortKey] = useState<SortKey>('siteResponse');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const weatherContext = useMemo(() => {
     if (!currentCompany?.id) {
@@ -27,7 +106,7 @@ export function WeatherCenterPage() {
     return buildWeatherContext(gameState, currentCompany.id);
   }, [gameState, currentCompany?.id]);
 
-  const vineyardRows = useMemo(() => {
+  const vineyardRows = useMemo<VineyardWeatherRow[]>(() => {
     if (!weatherContext) {
       return [];
     }
@@ -35,6 +114,33 @@ export function WeatherCenterPage() {
   }, [vineyards, weatherContext]);
 
   const impactSummary = useMemo(() => calculateWeatherImpactSummary(vineyardRows), [vineyardRows]);
+
+  const sortedRows = useMemo(() => {
+    const rows = [...vineyardRows];
+    rows.sort((left, right) => {
+      const leftValue = getSortValue(left, sortKey);
+      const rightValue = getSortValue(right, sortKey);
+      const comparison = compareSortValues(leftValue, rightValue);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+    return rows;
+  }, [vineyardRows, sortDirection, sortKey]);
+
+  const modifierSummary = useMemo(() => ({
+    aspect: getModifierAverage(vineyardRows, 'aspectResponse'),
+    altitude: getModifierAverage(vineyardRows, 'altitudeResponse'),
+    terroir: getModifierAverage(vineyardRows, 'terroirResponse'),
+    soil: getModifierAverage(vineyardRows, 'soilResponse'),
+  }), [vineyardRows]);
+
+  function handleSort(nextKey: SortKey) {
+    if (sortKey === nextKey) {
+      setSortDirection((currentDirection) => (currentDirection === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(nextKey);
+    setSortDirection(nextKey === 'reason' ? 'asc' : 'desc');
+  }
 
   return (
     <div className="mx-auto max-w-[1120px] py-4 text-sm space-y-4">
@@ -106,7 +212,7 @@ export function WeatherCenterPage() {
                 <p className="text-lg font-semibold text-slate-800">x{formatNumber(impactSummary.avgSiteResponse, { smartDecimals: true })}</p>
               </div>
               <div className="rounded-lg bg-sky-50 p-2 text-sky-700">
-                <Gauge className="h-4 w-4" />
+                <Wind className="h-4 w-4" />
               </div>
             </div>
           </CardContent>
@@ -126,6 +232,32 @@ export function WeatherCenterPage() {
         </Card>
       </div>
 
+      <Card className="border-slate-200 bg-white/90 backdrop-blur">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Site Modifier Forecast</CardTitle>
+          <CardDescription>These are the actual site multipliers shaping each vineyard forecast. They are surfaced here so the table reads like a weather page, not a math sheet.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-4">
+          {[
+            { label: 'Aspect', value: modifierSummary.aspect, icon: <Compass className="h-4 w-4" />, detail: 'Slope orientation and sun exposure' },
+            { label: 'Altitude', value: modifierSummary.altitude, icon: <Mountain className="h-4 w-4" />, detail: 'Elevation pressure on heat and frost' },
+            { label: 'Terroir', value: modifierSummary.terroir, icon: <Wind className="h-4 w-4" />, detail: 'Grape + region suitability response' },
+            { label: 'Soil', value: modifierSummary.soil, icon: <Droplets className="h-4 w-4" />, detail: 'Water retention / thermal swing response' },
+          ].map((modifier) => (
+            <div key={modifier.label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">{modifier.label}</p>
+                  <p className={`text-base font-semibold ${getSiteResponseColorClass(modifier.value)}`}>x{formatNumber(modifier.value, { smartDecimals: true })}</p>
+                </div>
+                <div className="rounded-full bg-white p-2 text-slate-700 shadow-sm">{modifier.icon}</div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{modifier.detail}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -133,30 +265,68 @@ export function WeatherCenterPage() {
             <CardDescription>Net weather deltas from the current week context. Site factors (aspect, altitude, terroir, soil) are included as bounded response modifiers.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="rounded-md border bg-muted/30 p-2.5 text-xs text-muted-foreground">
-              Tip: hover or tap each delta value for a full modifier breakdown (weather base value, seasonal adjustment, site multipliers, and clamp boundaries).
-            </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vineyard</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ripeness Delta</TableHead>
-                  <TableHead className="text-right">Health Delta</TableHead>
-                  <TableHead className="text-right">Site Response</TableHead>
-                  <TableHead>Reason</TableHead>
+                  <TableHead>
+                    <button type="button" className="flex items-center gap-1 font-medium text-slate-700" onClick={() => handleSort('name')}>
+                      Vineyard
+                      {getSortIcon(sortKey === 'name', sortDirection)}
+                    </button>
+                  </TableHead>
+                  {SORTABLE_COLUMNS.map((column) => (
+                    <TableHead key={column.key} className={column.key === 'ripenessDelta' || column.key === 'healthDelta' || column.key === 'siteResponse' ? 'text-right' : undefined}>
+                      <UnifiedTooltip
+                        title={column.label}
+                        content={<p className="text-xs text-slate-200">{column.description}</p>}
+                        side="top"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <button type="button" className={`flex items-center gap-1 font-medium text-slate-700 ${column.key === 'ripenessDelta' || column.key === 'healthDelta' || column.key === 'siteResponse' ? 'ml-auto' : ''}`} onClick={() => handleSort(column.key)}>
+                          {column.label}
+                          {getSortIcon(sortKey === column.key, sortDirection)}
+                        </button>
+                      </UnifiedTooltip>
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vineyardRows.length === 0 && (
+                {sortedRows.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">No planted vineyards available for weather preview.</TableCell>
                   </TableRow>
                 )}
-                {vineyardRows.map((row) => (
+                {sortedRows.map((row) => {
+                  return (
                   <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell>{row.state}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="space-y-1">
+                        <p>{row.name}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getWeatherBadgeClass(row.breakdown.weatherState)}`}>
+                            <span>{getWeatherIcon(row.breakdown.weatherState as any)}</span>
+                            {row.breakdown.weatherState}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${getIntensityBadgeClass(row.breakdown.weatherIntensity)}`}>
+                            <ThermometerSun className="h-3 w-3" />
+                            {row.breakdown.weatherIntensity}
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <UnifiedTooltip
+                        title="Vineyard Status"
+                        content={<p className="text-xs text-slate-200">Lifecycle state of the vineyard. This is a display label, but also helps the forecast read like a real operations board.</p>}
+                        side="top"
+                        variant="panel"
+                        density="compact"
+                      >
+                        <VineyardStatusBadge status={row.state} />
+                      </UnifiedTooltip>
+                    </TableCell>
                     <TableCell className="text-right">
                       <UnifiedTooltip
                         title="Ripeness Delta Breakdown"
@@ -188,6 +358,9 @@ export function WeatherCenterPage() {
                           <Info className="h-3 w-3 text-slate-500" />
                         </button>
                       </UnifiedTooltip>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {formatNumber(row.ripenessCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.ripenessProjected * 100, { smartDecimals: true })}%
+                      </p>
                     </TableCell>
                     <TableCell className="text-right">
                       <UnifiedTooltip
@@ -219,30 +392,71 @@ export function WeatherCenterPage() {
                           <Info className="h-3 w-3 text-slate-500" />
                         </button>
                       </UnifiedTooltip>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {formatNumber(row.healthCurrent * 100, { smartDecimals: true })}% → {formatNumber(row.healthProjected * 100, { smartDecimals: true })}%
+                      </p>
                     </TableCell>
-                    <TableCell className="text-right font-medium text-slate-700">x{formatNumber(row.siteResponse, { smartDecimals: true })}</TableCell>
-                    <TableCell>{row.reason}</TableCell>
+                    <TableCell className="text-right">
+                      <UnifiedTooltip
+                        title="Site Response"
+                        content={(
+                          <div className="space-y-2">
+                            <TooltipSection>
+                              <p className="text-xs text-slate-200">Site Response is a multiplier on weather impact built from aspect, altitude, terroir, and soil response.</p>
+                              <TooltipRow label="Meaning" value="1.0 neutral, >1 amplifies, <1 buffers" />
+                            </TooltipSection>
+                            <TooltipSection title="How It Is Built">
+                              <TooltipRow label="Aspect" value={`x${formatNumber(row.breakdown.aspectResponse, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label="Altitude" value={`x${formatNumber(row.breakdown.altitudeResponse, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label="Terroir" value={`x${formatNumber(row.breakdown.terroirResponse, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label={`Soil (${getSoilResponseLabel(row.breakdown.soilResponseSource)})`} value={`x${formatNumber(row.breakdown.soilResponse, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label="Raw" value={`x${formatNumber(row.breakdown.siteResponseRaw, { smartDecimals: true })}`} monospaced />
+                              <TooltipRow label="Final" value={`x${formatNumber(row.siteResponse, { smartDecimals: true })}`} monospaced />
+                            </TooltipSection>
+                          </div>
+                        )}
+                      >
+                        <div className="space-y-1">
+                          <p className={`text-sm font-semibold ${getSiteResponseColorClass(row.siteResponse)}`}>x{formatNumber(row.siteResponse, { smartDecimals: true })}</p>
+                          <div className="relative h-2 overflow-hidden rounded-full bg-slate-200">
+                            <div
+                              className={`h-full rounded-full ${row.siteResponse >= WEATHER_CENTER_SITE_RESPONSE_NEUTRAL ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                              style={{ width: `${getSiteResponseFillWidth(row.siteResponse)}%` }}
+                            />
+                            <div className="absolute left-1/2 top-0 h-full w-px bg-slate-500/60" />
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">{getSiteResponseLabel(row.siteResponse)}</p>
+                        </div>
+                      </UnifiedTooltip>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <p className="leading-tight">{row.reason}</p>
+                        <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                            <Compass className="h-3 w-3" />
+                            x{formatNumber(row.breakdown.aspectResponse, { smartDecimals: true })}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                            <Mountain className="h-3 w-3" />
+                            x{formatNumber(row.breakdown.altitudeResponse, { smartDecimals: true })}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                            <Wind className="h-3 w-3" />
+                            x{formatNumber(row.breakdown.terroirResponse, { smartDecimals: true })}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                            <Droplets className="h-3 w-3" />
+                            x{formatNumber(row.breakdown.soilResponse, { smartDecimals: true })}
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              {vineyardRows.slice(0, 4).map((row) => (
-                <div key={`${row.id}-meter`} className="rounded-md border bg-slate-50 p-2.5">
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700">{row.name}</span>
-                    <span className={getDeltaTextClass(row.healthDelta)}>{formatSignedPercent(row.healthDelta)}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className={`h-full rounded-full ${row.healthDelta >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                      style={{ width: `${getImpactMeterWidth(row.healthDelta)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
 

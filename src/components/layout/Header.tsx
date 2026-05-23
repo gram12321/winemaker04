@@ -95,28 +95,28 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
   return (
     <>
       <header className="w-full bg-red-800 text-white shadow-md">
-        <div className="max-w-7xl mx-auto flex justify-between items-center py-0.5 px-3 sm:px-4 md:px-6 lg:px-8 text-sm">
-          <div className="flex items-center space-x-4">
+        <div className="max-w-7xl mx-auto relative flex justify-between items-center py-0.5 px-3 sm:px-4 md:px-6 lg:px-8 text-sm">
+          <div className="flex items-center">
             <button onClick={() => handleNavigation('dashboard')} className="text-sm font-semibold">
               🍷 Winery Management {appVersion}
             </button>
-            
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex space-x-1">
-              {navItems.map((item) => (
-                <Button
-                  key={item.id}
-                  onClick={() => handleNavigation(item.id)}
-                  variant={currentPage === item.id ? "secondary" : "ghost"}
-                  size="sm"
-                  className="bg-transparent hover:bg-red-700 text-white border-0"
-                >
-                  <span className="mr-2">{item.icon}</span>
-                  {item.label}
-                </Button>
-              ))}
-            </nav>
           </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center space-x-1 absolute left-1/2 -translate-x-1/2">
+            {navItems.map((item) => (
+              <Button
+                key={item.id}
+                onClick={() => handleNavigation(item.id)}
+                variant={currentPage === item.id ? "secondary" : "ghost"}
+                size="sm"
+                className="bg-transparent hover:bg-red-700 text-white border-0"
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.label}
+              </Button>
+            ))}
+          </nav>
           
           <div className="flex items-center space-x-2">
             {/* Time display - responsive */}
@@ -154,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             {/* Money display - responsive */}
             <Badge 
               variant="outline" 
-              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
+              className="bg-red-700 text-white border-red-500 px-2 py-0.5 items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
               onClick={() => handleNavigation('finance')}
               title="View Finance"
             >
@@ -173,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             {/* Prestige display - responsive */}
             <Badge 
               variant="outline" 
-              className="bg-red-700 text-white border-red-500 px-2 py-0.5 flex items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
+              className="bg-red-700 text-white border-red-500 px-2 py-0.5 items-center cursor-pointer hover:bg-red-600 transition-colors hidden sm:flex"
               onClick={handlePrestigeClick}
             >
               <span className="font-medium">⭐ {currentPrestige >= 1000 ? formatNumber(currentPrestige, { compact: true, decimals: 1 }) : formatNumber(currentPrestige, { decimals: 1, forceDecimals: true })}</span>
@@ -206,7 +206,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             >
               <Badge 
                 variant="outline" 
-                className={`px-2 py-0.5 flex items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Stable')}`}
+                className={`px-2 py-0.5 items-center cursor-pointer transition-colors hidden sm:flex ${getEconomyPhaseColorClass(gameState.economyPhase || 'Stable')}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   try { localStorage.setItem('winepedia_view', 'economy'); } catch {}
@@ -274,7 +274,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
               variant="ghost" 
               size="icon"
               onClick={() => consoleHook.openHistory()}
-              className="rounded-full h-8 w-8 flex items-center justify-center text-white hover:bg-red-700 relative hidden sm:flex"
+              className="rounded-full h-8 w-8 items-center justify-center text-white hover:bg-red-700 relative hidden sm:flex"
             >
               <MessageSquareText className="h-4 w-4" />
               {consoleHook.unreadCount > 0 && (
@@ -312,7 +312,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onTimeAdvance,
             {/* Desktop user menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2 p-1 rounded-full h-8 w-8 text-white hover:bg-red-700 hidden lg:flex">
+                <Button variant="ghost" className="items-center space-x-2 p-1 rounded-full h-8 w-8 text-white hover:bg-red-700 hidden lg:flex">
                   <Avatar>
                     <AvatarImage src="/assets/icon/winery-icon.png" alt="Winery" />
                     <AvatarFallback className="bg-red-600 text-white">
