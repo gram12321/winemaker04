@@ -242,9 +242,11 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                 : sortKey === 'quality' ? left.qualityScore
                   : sortKey === 'price' ? left.effectivePricePerKg
                 : sortKey === 'market' ? leftDemand + leftVolatility
-                  : sortKey === 'demand' ? leftDemand
-                    : sortKey === 'volatility' ? leftVolatility
-                          : left.qualityScore;
+                    : sortKey === 'demand' ? leftDemand
+                      : sortKey === 'volatility' ? leftVolatility
+                        : sortKey === 'caps' ? (left.supplierLoyalty?.yearLoyaltyPoints ?? 0)
+                          : sortKey === 'quantity' ? getOfferQuantity(left)
+                            : left.qualityScore;
 
       const rightValue =
         sortKey === 'offer' ? right.supplierName
@@ -252,9 +254,11 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                 : sortKey === 'quality' ? right.qualityScore
                   : sortKey === 'price' ? right.effectivePricePerKg
                 : sortKey === 'market' ? rightDemand + rightVolatility
-                  : sortKey === 'demand' ? rightDemand
-                    : sortKey === 'volatility' ? rightVolatility
-                          : right.qualityScore;
+                    : sortKey === 'demand' ? rightDemand
+                      : sortKey === 'volatility' ? rightVolatility
+                        : sortKey === 'caps' ? (right.supplierLoyalty?.yearLoyaltyPoints ?? 0)
+                          : sortKey === 'quantity' ? getOfferQuantity(right)
+                            : right.qualityScore;
 
       if (leftValue === rightValue) return 0;
       const result = leftValue > rightValue ? 1 : -1;
@@ -340,6 +344,11 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     return getVolatilityRiskIndex(selectedOffer);
   }, [selectedOffer]);
 
+  const selectedSupplierYearlyCap = useMemo(() => {
+    if (!selectedOffer?.supplierLoyalty) return 0;
+    return getSupplierYearlyTrustCap(Math.max(1, selectedOffer.supplierLoyalty.consecutiveYears ?? 1), companyValue);
+  }, [selectedOffer, companyValue]);
+
   const selectedRawPricePerKg = useMemo(() => {
     if (!priceBreakdown) return 0;
     return (
@@ -384,7 +393,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       key: 'offer',
       header: 'Offer',
       sortable: true,
-      className: 'w-[31%] min-w-[230px]',
+      className: 'w-[26%] min-w-[220px]',
       render: (offer) => (
         <div className="space-y-1">
           <div className="font-medium text-white leading-tight">{offer.supplierName}</div>
@@ -415,16 +424,16 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     },
     {
       key: 'available',
-      header: 'Available',
+      header: 'Supply',
       sortable: true,
-      className: 'w-[11%] text-right text-gray-200 whitespace-nowrap min-w-[84px]',
+      className: 'w-[9%] text-right text-gray-200 whitespace-nowrap min-w-[78px]',
       render: (offer) => `${offer.availableKg.toLocaleString()} kg`,
     },
     {
       key: 'quality',
       header: headerWithTooltip('Quality', 'Grape quality score. Higher quality increases effective price and usually means better processing potential.'),
       sortable: true,
-      className: 'w-[14%] text-right min-w-[118px]',
+      className: 'w-[12%] text-right min-w-[110px]',
       render: (offer) => (
         <div>
           <div className={`font-medium ${getColorClass(offer.qualityScore)}`}>{Math.round(offer.qualityScore * 100)}%</div>
@@ -434,16 +443,16 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     },
     {
       key: 'price',
-      header: 'Price/kg',
+      header: 'Price per kg',
       sortable: true,
-      className: 'w-[10%] text-right text-amber-300 whitespace-nowrap min-w-[84px]',
+      className: 'w-[9%] text-right text-amber-300 whitespace-nowrap min-w-[80px]',
       render: (offer) => formatNumber(offer.effectivePricePerKg, { currency: true, decimals: 2 }),
     },
     {
       key: 'market',
       header: headerWithTooltip('Market', 'Price context summary. Pressure is the combined market index, and Risk is volatility-sensitive pressure.'),
       sortable: true,
-      className: 'w-[16%] text-right min-w-[150px]',
+      className: 'w-[14%] text-right min-w-[140px]',
       render: (offer) => {
         const demandMultiplier = getDemandPressureIndex(offer);
         const volatilityMultiplier = getVolatilityRiskIndex(offer);
@@ -471,9 +480,28 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       },
     },
     {
+      key: 'caps',
+      header: 'Caps',
+      sortable: true,
+      className: 'w-[14%] text-right min-w-[150px]',
+      render: (offer) => {
+        const yearPoints = Math.max(0, offer.supplierLoyalty?.yearLoyaltyPoints ?? 0);
+        const yearCap = getSupplierYearlyTrustCap(Math.max(1, offer.supplierLoyalty?.consecutiveYears ?? 1), companyValue);
+
+        return (
+          <div className="space-y-0.5 text-[11px]">
+            <div className="text-gray-300">Offer {offer.availableKg.toLocaleString()} kg</div>
+            <div className="text-gray-400">Streak {Math.max(0, offer.supplierLoyalty?.consecutiveYears ?? 0)}y</div>
+            <div className="text-cyan-300">Growth {yearPoints.toLocaleString()}/{yearCap.toLocaleString()}</div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'action',
-      header: 'Action',
-      className: 'w-[18%] text-right min-w-[160px]',
+      header: headerWithTooltip('Quantity', 'Purchase quantity selected for this offer. You can sort by the amount you plan to buy.'),
+      sortable: true,
+      className: 'w-[16%] text-right min-w-[150px]',
       render: (offer) => (
         <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
           <MarketQuickBuyRowAction
@@ -497,7 +525,7 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
         </div>
       ),
     },
-  ], [errorByOfferId, getOfferQuantity, headerWithTooltip, loading]);
+  ], [companyValue, errorByOfferId, getOfferQuantity, headerWithTooltip, loading]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -553,6 +581,37 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                   {selectedOffer.demandFactors.volatilityLimitReason && (
                     <div><span className="text-amber-300 font-medium">Supply outlook:</span> {selectedOffer.demandFactors.volatilityLimitReason}</div>
                   )}
+                  {selectedOffer.demandFactors.volatilityBuyerSensitivityReason && (
+                    <div><span className="text-blue-300 font-medium">Supplier profile:</span> {selectedOffer.demandFactors.volatilityBuyerSensitivityReason}</div>
+                  )}
+                </div>
+
+                <div className="mt-3 rounded border border-gray-700/70 bg-gray-900/40 p-2 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Selected supplier</span>
+                    <span className="text-cyan-300 font-medium">{selectedOffer.supplierName}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Market indices</span>
+                    <span className="text-white text-right">
+                      <span className="text-blue-300">Pressure {selectedDemandPressureIndex.toFixed(2)}x</span>
+                      <span className="text-gray-500"> · </span>
+                      <span className="text-purple-300">Risk {selectedVolatilityRiskIndex.toFixed(2)}x</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Supply</span>
+                    <span className="text-white">×{(
+                      selectedOffer.demandFactors.seasonLimitMultiplier
+                      * selectedOffer.demandFactors.economyLimitMultiplier
+                      * selectedOffer.demandFactors.yearCycleLimitMultiplier
+                      * selectedOffer.demandFactors.volatilityLimitMultiplier
+                    ).toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Relationship growth cap</span>
+                    <span className="text-white">{Math.max(0, selectedOffer.supplierLoyalty?.yearLoyaltyPoints ?? 0).toLocaleString()} / {selectedSupplierYearlyCap.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ) : (

@@ -1,4 +1,4 @@
-﻿import { EconomyPhase, Season, WeatherIntensity, WeatherState, WineBatch } from '../../types/types';
+﻿import { EconomyPhase, Season, WeatherIntensity, WeatherState, WineBatch, type WineBatchState } from '../../types/types';
 import { NotificationCategory } from '../../types/types';
 import { calculateWineScore } from '../wine/winescore/wineScoreCalculation';
 import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
@@ -20,6 +20,17 @@ export const BASE_GRAPE_PRICE_PER_KG = 3.0;
 export const GRAPE_SALE_PRESTIGE_MAX_BONUS = 0.3; // max +30% from prestige (vs wine's +250%)
 export const FAVORITE_GRAPE_PRIMARY_BONUS = 0.18;
 export const FAVORITE_GRAPE_SECONDARY_BONUS = 0.1;
+export const SELLABLE_BATCH_STATES: Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>[] = [
+  'grapes',
+  'must_ready',
+  'must_fermenting',
+];
+
+const SELL_STATE_PRICE_MULTIPLIERS: Record<Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>, number> = {
+  grapes: 1.0,
+  must_ready: 1.08,
+  must_fermenting: 1.15,
+};
 
 // ===== TYPES =====
 
@@ -75,6 +86,7 @@ export interface GrapeSalePricing {
   wineScore: number;
   qualityMultiplier: number;
   prestigeBonus: number;
+  stateMultiplier: number;
   buyerMultiplier: number;
   relationshipMultiplier: number;
   favoriteGrapeBonusMultiplier: number;
@@ -128,12 +140,13 @@ export function calculateGrapeSalePrice(
 
   const normalizedPrestige = NormalizeScrewed1000To01WithTail(companyPrestige);
   const prestigeBonus = 1 + normalizedPrestige * GRAPE_SALE_PRESTIGE_MAX_BONUS;
+  const stateMultiplier = SELL_STATE_PRICE_MULTIPLIERS[batch.state as Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>] ?? 1;
 
   const relationshipMultiplier = buyer.relationshipMultiplier ?? 1;
   const favoriteGrapeBonusMultiplier = getFavoriteGrapeBonusMultiplier(buyer, batch);
   const effectiveBuyerMultiplier = buyer.priceMultiplier * (1 + favoriteGrapeBonusMultiplier);
 
-  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * effectiveBuyerMultiplier * relationshipMultiplier;
+  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * stateMultiplier * effectiveBuyerMultiplier * relationshipMultiplier;
   const effectiveFloorPrice = floorPriceOverride !== undefined ? floorPriceOverride : buyer.floorPricePerKg;
   const appliedFloor = rawPricePerKg < effectiveFloorPrice;
   const finalPricePerKg = Math.max(rawPricePerKg, effectiveFloorPrice);
@@ -143,6 +156,7 @@ export function calculateGrapeSalePrice(
     wineScore,
     qualityMultiplier,
     prestigeBonus,
+    stateMultiplier,
     buyerMultiplier: effectiveBuyerMultiplier,
     relationshipMultiplier,
     favoriteGrapeBonusMultiplier,
@@ -164,7 +178,9 @@ export async function sellGrapes(
 ): Promise<{ success: boolean; revenue: number; error?: string }> {
   const batch = await getWineBatchById(batchId);
   if (!batch) return { success: false, revenue: 0, error: 'Batch not found' };
-  if (batch.state !== 'grapes') return { success: false, revenue: 0, error: 'Batch is not in grape state' };
+  if (!SELLABLE_BATCH_STATES.includes(batch.state as Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>)) {
+    return { success: false, revenue: 0, error: 'Batch is not in a sellable state' };
+  }
   if (batch.quantity <= 0) return { success: false, revenue: 0, error: 'No grapes to sell' };
   const quantityKg = Math.max(1, Math.min(batch.quantity, Math.round(quantityKgOverride ?? batch.quantity)));
 

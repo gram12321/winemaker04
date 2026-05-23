@@ -12,6 +12,12 @@ import { completeActivityNow, getAllActivities } from '@/lib/services/activity/a
 import { loadWineLogByVineyard } from '@/lib/database';
 import type { CrushingOptions } from '@/lib/services/wine/characteristics/crushingCharacteristics';
 import type { FermentationOptions } from '@/lib/services/wine/characteristics/fermentationCharacteristics';
+import { applyFeatureEffectsToBatch } from '@/lib/services/wine/features/featureService';
+import { calculateEstimatedPrice, getTasteQualityIndex } from '@/lib/services/wine/winescore/wineScoreCalculation';
+import { calculateCurrentPrestige } from '@/lib/services/prestige/prestigeService';
+import { calculateStructureIndex, RANGE_ADJUSTMENTS, RULES } from '@/lib/wineStructure';
+import { BASE_BALANCED_RANGES } from '@/lib/constants/grapeConstants';
+import { getAnchorAdjustedStructureRanges } from '@/lib/services/wine/anchors/wineAnchorCharacteristicBridge';
 import { withTestLabPrefix } from './runId';
 
 export interface TestLabCompanyResult {
@@ -57,6 +63,229 @@ const booleanParam = (
   if (typeof value === 'string') return value === 'true';
   return fallback;
 };
+
+const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+
+const optionalNumberParam = (
+  params: Record<string, string | number | boolean>,
+  key: string
+): number | null => {
+  const value = params[key];
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+type TestLabFeaturePreset =
+  | 'none'
+  | 'terroir-forward'
+  | 'oxidation-risk'
+  | 'noble-rot-risk'
+  | 'cellar-evolution';
+
+const getFeatureIndex = (batch: WineBatch, featureId: string): number =>
+  (batch.features || []).findIndex(feature => feature.id === featureId);
+
+const setFeatureRisk = (batch: WineBatch, featureId: string, risk: number): WineBatch => {
+  const nextFeatures = [...(batch.features || [])];
+  const featureIndex = getFeatureIndex(batch, featureId);
+  if (featureIndex === -1) return batch;
+  nextFeatures[featureIndex] = {
+    ...nextFeatures[featureIndex],
+    risk: clamp01(risk)
+  };
+  return { ...batch, features: nextFeatures };
+};
+
+const setFeatureSeverity = (
+  batch: WineBatch,
+  featureId: string,
+  severity: number,
+  isPresent: boolean = true
+): WineBatch => {
+  const nextFeatures = [...(batch.features || [])];
+  const featureIndex = getFeatureIndex(batch, featureId);
+  if (featureIndex === -1) return batch;
+  nextFeatures[featureIndex] = {
+    ...nextFeatures[featureIndex],
+    isPresent,
+    severity: clamp01(severity)
+  };
+  return { ...batch, features: nextFeatures };
+};
+
+const applyPresetOverrides = (batch: WineBatch, preset: TestLabFeaturePreset): WineBatch => {
+  if (preset === 'none') return batch;
+
+  let nextBatch = {
+    ...batch,
+    wineAnchors: { ...batch.wineAnchors }
+  };
+
+  switch (preset) {
+    case 'terroir-forward':
+      nextBatch.wineAnchors.terroirExpression = Math.max(nextBatch.wineAnchors.terroirExpression, 0.88);
+      nextBatch.wineAnchors.aromaticPotential = Math.max(nextBatch.wineAnchors.aromaticPotential, 0.74);
+      nextBatch = setFeatureSeverity(nextBatch, 'terroir', 0.62);
+      return nextBatch;
+    case 'oxidation-risk':
+      nextBatch.wineAnchors.oxidationPressure = Math.max(nextBatch.wineAnchors.oxidationPressure, 0.82);
+      nextBatch = setFeatureRisk(nextBatch, 'oxidation', 0.45);
+      return nextBatch;
+    case 'noble-rot-risk':
+      nextBatch.wineAnchors.sugarPotential = Math.max(nextBatch.wineAnchors.sugarPotential, 0.8);
+      nextBatch.wineAnchors.terroirExpression = Math.max(nextBatch.wineAnchors.terroirExpression, 0.7);
+      nextBatch = setFeatureRisk(nextBatch, 'noble_rot', 0.55);
+      return nextBatch;
+    case 'cellar-evolution':
+      nextBatch.wineAnchors.maturationState = Math.max(nextBatch.wineAnchors.maturationState, 0.75);
+      nextBatch.wineAnchors.processFootprint = Math.max(nextBatch.wineAnchors.processFootprint, 0.58);
+      nextBatch = setFeatureSeverity(nextBatch, 'terroir', 0.55);
+      nextBatch = setFeatureSeverity(nextBatch, 'bottle_aging', 0.55);
+      if (nextBatch.state === 'bottled') {
+        nextBatch.agingProgress = Math.max(nextBatch.agingProgress || 0, 52);
+      }
+      return nextBatch;
+  }
+};
+
+const getAnchorTargets = (
+  params: Record<string, string | number | boolean>
+): Partial<WineBatch['wineAnchors']> => {
+  const preset = stringParam(params, 'featurePreset', 'none') as TestLabFeaturePreset;
+  const targets: Partial<WineBatch['wineAnchors']> = {};
+
+  switch (preset) {
+    case 'terroir-forward':
+      targets.terroirExpression = 0.88;
+      targets.aromaticPotential = 0.74;
+      break;
+    case 'oxidation-risk':
+      targets.oxidationPressure = 0.82;
+      break;
+    case 'noble-rot-risk':
+      targets.sugarPotential = 0.8;
+      targets.terroirExpression = 0.7;
+      break;
+    case 'cellar-evolution':
+      targets.maturationState = 0.75;
+      targets.processFootprint = 0.58;
+      break;
+  }
+
+  const terroirExpressionOverride = optionalNumberParam(params, 'terroirExpressionOverride');
+  const oxidationPressureOverride = optionalNumberParam(params, 'oxidationPressureOverride');
+  const maturationStateOverride = optionalNumberParam(params, 'maturationStateOverride');
+
+  if (terroirExpressionOverride !== null) {
+    targets.terroirExpression = clamp01(terroirExpressionOverride);
+  }
+  if (oxidationPressureOverride !== null) {
+    targets.oxidationPressure = clamp01(oxidationPressureOverride);
+  }
+  if (maturationStateOverride !== null) {
+    targets.maturationState = clamp01(maturationStateOverride);
+  }
+
+  return targets;
+};
+
+export function applyTestLabBatchOverrides(
+  batch: WineBatch,
+  params: Record<string, string | number | boolean>
+): WineBatch {
+  const preset = stringParam(params, 'featurePreset', 'none') as TestLabFeaturePreset;
+  const anchorTargets = getAnchorTargets(params);
+  let nextBatch = applyPresetOverrides(batch, preset);
+  const terroirSeverityOverride = optionalNumberParam(params, 'terroirSeverityOverride');
+  const oxidationRiskOverride = optionalNumberParam(params, 'oxidationRiskOverride');
+  const nobleRotRiskOverride = optionalNumberParam(params, 'nobleRotRiskOverride');
+  const greyRotRiskOverride = optionalNumberParam(params, 'greyRotRiskOverride');
+  const agingProgressWeeksOverride = optionalNumberParam(params, 'agingProgressWeeksOverride');
+
+  nextBatch = {
+    ...nextBatch,
+    wineAnchors: {
+      ...nextBatch.wineAnchors,
+      ...anchorTargets
+    }
+  };
+
+  if (terroirSeverityOverride !== null) {
+    nextBatch = setFeatureSeverity(nextBatch, 'terroir', terroirSeverityOverride);
+  }
+  if (oxidationRiskOverride !== null) {
+    nextBatch = setFeatureRisk(nextBatch, 'oxidation', oxidationRiskOverride);
+  }
+  if (nobleRotRiskOverride !== null) {
+    nextBatch = setFeatureRisk(nextBatch, 'noble_rot', nobleRotRiskOverride);
+  }
+  if (greyRotRiskOverride !== null) {
+    nextBatch = setFeatureRisk(nextBatch, 'grey_rot', greyRotRiskOverride);
+  }
+  if (agingProgressWeeksOverride !== null && nextBatch.state === 'bottled') {
+    nextBatch = {
+      ...nextBatch,
+      agingProgress: Math.max(0, Math.floor(agingProgressWeeksOverride))
+    };
+  }
+
+  const batchWithFeatureEffects = applyFeatureEffectsToBatch(nextBatch);
+  const finalAnchors = {
+    ...batchWithFeatureEffects.wineAnchors,
+    ...anchorTargets
+  };
+  const structureRanges = getAnchorAdjustedStructureRanges(BASE_BALANCED_RANGES, finalAnchors);
+  const structureIndexResult = calculateStructureIndex(
+    batchWithFeatureEffects.characteristics,
+    structureRanges,
+    RANGE_ADJUSTMENTS,
+    RULES
+  );
+  const finalBatch = {
+    ...batchWithFeatureEffects,
+    wineAnchors: finalAnchors,
+    structureIndex: structureIndexResult.score
+  };
+
+  return {
+    ...finalBatch,
+    tasteQualityIndex: getTasteQualityIndex(finalBatch)
+  };
+}
+
+async function applyAndPersistBatchOverrides(
+  batch: WineBatch,
+  vineyard: Vineyard,
+  params: Record<string, string | number | boolean>
+): Promise<WineBatch> {
+  const overriddenBatch = applyTestLabBatchOverrides(batch, params);
+  const prestigeData = await calculateCurrentPrestige();
+  const estimatedPrice = calculateEstimatedPrice(
+    overriddenBatch,
+    vineyard,
+    prestigeData.companyPrestige,
+    vineyard.vineyardPrestige
+  );
+  const persistedBatch = {
+    ...overriddenBatch,
+    estimatedPrice
+  };
+
+  await updateInventoryBatch(batch.id, {
+    characteristics: persistedBatch.characteristics,
+    breakdown: persistedBatch.breakdown,
+    features: persistedBatch.features,
+    wineAnchors: persistedBatch.wineAnchors,
+    structureIndex: persistedBatch.structureIndex,
+    tasteQualityIndex: persistedBatch.tasteQualityIndex,
+    estimatedPrice: persistedBatch.estimatedPrice,
+    agingProgress: persistedBatch.agingProgress
+  });
+
+  return getBatchById(batch.id);
+}
 
 async function getBatchById(batchId: string): Promise<WineBatch> {
   const batches = await getAllWineBatches();
@@ -181,8 +410,9 @@ export async function createGrapeBatch(
     harvestDate,
     harvestDate
   );
+  const hydratedBatch = await applyAndPersistBatchOverrides(batch, result.vineyard, params);
 
-  return { ...result, batch };
+  return { ...result, batch: hydratedBatch };
 }
 
 export async function createMustReadyBatch(
@@ -243,12 +473,17 @@ export async function createBottledWine(
     throw new Error('Failed to bottle wine batch');
   }
 
+  const bottledBatch = await getBatchById(result.batch.id);
+  const adjustedBottledBatch = await applyAndPersistBatchOverrides(bottledBatch, result.vineyard, params);
+
   const askingPrice = numberParam(params, 'askingPrice', 0);
   if (askingPrice > 0) {
     await updateInventoryBatch(result.batch.id, { askingPrice });
   }
 
-  const batch = await getBatchById(result.batch.id);
+  const batch = askingPrice > 0
+    ? await getBatchById(result.batch.id)
+    : adjustedBottledBatch;
   const wineLogEntries = await loadWineLogByVineyard(result.vineyard.id);
   const wineLogEntry = wineLogEntries.find(entry =>
     entry.vineyardId === result.vineyard.id &&

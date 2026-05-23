@@ -29,7 +29,30 @@ const runnerMocks = vi.hoisted(() => ({
   adminSetGameDate: vi.fn(async () => undefined),
   adminGrantAllResearch: vi.fn(async () => ({ success: true, unlocked: 3, alreadyUnlocked: 1 })),
   adminRemoveAllResearch: vi.fn(async () => ({ success: true, removed: 4 })),
-  adminSetStaffXP: vi.fn(async () => ({ success: true, message: 'Set staff XP' }))
+  adminSetStaffXP: vi.fn(async () => ({ success: true, message: 'Set staff XP' })),
+  getAllActivities: vi.fn(async () => ([
+    {
+      id: 'activity-1',
+      title: 'Harvest North Block',
+      category: 'harvesting',
+      totalWork: 120,
+      completedWork: 40,
+      status: 'active',
+      params: {}
+    }
+  ])),
+  completeActivityNow: vi.fn(async (activityId: string) => ({
+    success: true,
+    activity: {
+      id: activityId,
+      title: 'Harvest North Block',
+      category: 'harvesting',
+      totalWork: 120,
+      completedWork: 120,
+      status: 'active',
+      params: {}
+    }
+  }))
 }));
 
 vi.mock('@/lib/services/admin/testLab/runId', () => ({
@@ -61,6 +84,11 @@ vi.mock('@/lib/services/admin/adminService', () => ({
   adminGrantAllResearch: runnerMocks.adminGrantAllResearch,
   adminRemoveAllResearch: runnerMocks.adminRemoveAllResearch,
   adminSetStaffXP: runnerMocks.adminSetStaffXP
+}));
+
+vi.mock('@/lib/services/activity/activitymanagers/activityManager', () => ({
+  getAllActivities: runnerMocks.getAllActivities,
+  completeActivityNow: runnerMocks.completeActivityNow
 }));
 
 describe('Admin Test Lab behavior', () => {
@@ -174,10 +202,16 @@ describe('Admin Test Lab behavior', () => {
       group: 'Research and Staff',
       mutatesData: true
     }));
+    expect(getTestLabScenario('activity.complete-now')).toEqual(expect.objectContaining({
+      group: 'Activity Lifecycle',
+      mutatesData: true
+    }));
     expect(getTestLabScenario('staff.set-xp')).toEqual(expect.objectContaining({
       group: 'Research and Staff',
       mutatesData: true
     }));
+    expect(getTestLabScenario('winery.bottled-wine')?.params.some(field => field.key === 'featurePreset')).toBe(true);
+    expect(getTestLabScenario('winery.bottled-wine')?.params.some(field => field.key === 'terroirExpressionOverride')).toBe(true);
   });
 
   it('runs sales shortcut scenarios through the active company admin services', async () => {
@@ -257,6 +291,37 @@ describe('Admin Test Lab behavior', () => {
     expect(result.status).toBe('passed');
     expect(result.summary).toBe('Set staff XP');
     expect(runnerMocks.adminSetStaffXP).toHaveBeenCalledWith('staff_1', 'skill:winery', 750);
+  });
+
+  it('completes an existing activity immediately through the shared activity manager', async () => {
+    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+
+    const result = await runTestLabScenario({
+      scenarioId: 'activity.complete-now',
+      mode: 'run',
+      params: { activityId: 'activity-1' }
+    });
+
+    expect(result.status).toBe('passed');
+    expect(result.summary).toBe('Completed activity Harvest North Block');
+    expect(runnerMocks.completeActivityNow).toHaveBeenCalledWith('activity-1');
+    expect(result.createdEntities).toEqual([
+      { type: 'activity', id: 'activity-1', label: 'Harvest North Block' }
+    ]);
+  });
+
+  it('blocks instant completion when no activity is selected', async () => {
+    const { runTestLabScenario } = await import('@/lib/services/admin/testLab/testLabRunner');
+
+    const result = await runTestLabScenario({
+      scenarioId: 'activity.complete-now',
+      mode: 'run',
+      params: { activityId: 'none' }
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.summary).toBe('Activity completion requires an activity');
+    expect(runnerMocks.completeActivityNow).not.toHaveBeenCalled();
   });
 });
 

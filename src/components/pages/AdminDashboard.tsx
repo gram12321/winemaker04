@@ -1,16 +1,33 @@
 import { useState } from 'react';
-import { useLoadingState, useGameStateWithData } from '@/hooks';
-import { SimpleCard, Button, Label, Input, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardDescription, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui';
-import { Settings, Users, AlertTriangle, Trash2 } from 'lucide-react';
+import { useLoadingState } from '@/hooks';
+import {
+  SimpleCard,
+  Button,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '../ui';
+import { Settings, Users, AlertTriangle, Trash2, TestTube2 } from 'lucide-react';
 import { PageProps, NavigationProps } from '../../lib/types/UItypes';
 import TestLabPage from './admin/TestLabPage';
 import { ResearchPanel } from '@/components/finance/ResearchPanel';
 import {
-  adminSetGoldToCompany, adminSetPlayerBalance, adminAddPrestigeToCompany, adminClearAllHighscores, adminClearCompanyValueHighscores, adminClearCompanyValuePerWeekHighscores, adminClearAllCompanies, adminClearAllUsers, adminClearAllCompaniesAndUsers, adminRecreateCustomers, adminGenerateTestOrders, adminGenerateTestContract, adminClearAllAchievements, adminFullDatabaseReset, adminSetGameDate, adminGrantAllResearch, adminRemoveAllResearch, adminSetStaffXP
+  adminClearAllAchievements,
+  adminClearAllCompanies,
+  adminClearAllCompaniesAndUsers,
+  adminClearAllHighscores,
+  adminClearAllUsers,
+  adminClearCompanyValueHighscores,
+  adminClearCompanyValuePerWeekHighscores,
+  adminFullDatabaseReset,
+  adminRecreateCustomers
 } from '@/lib/services';
-import { getAllStaff } from '@/lib/services/user/staffService';
-import { GAME_INITIALIZATION, SEASONS, WEEKS_PER_SEASON } from '@/lib/constants';
-import type { Season } from '@/lib/types/types';
 
 interface AdminDashboardProps extends PageProps, NavigationProps {
   // Inherits onBack and onNavigateToLogin from shared interfaces
@@ -18,91 +35,7 @@ interface AdminDashboardProps extends PageProps, NavigationProps {
 
 export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProps) {
   const { isLoading, withLoading } = useLoadingState();
-  const [goldAmount, setGoldAmount] = useState('10000');
-  const [playerBalanceAmount, setPlayerBalanceAmount] = useState('10000');
-  const [prestigeAmount, setPrestigeAmount] = useState('100');
-  const [gameWeek, setGameWeek] = useState(String(GAME_INITIALIZATION.STARTING_WEEK));
-  const [gameSeason, setGameSeason] = useState<Season>(GAME_INITIALIZATION.STARTING_SEASON);
-  const [gameYear, setGameYear] = useState(String(GAME_INITIALIZATION.STARTING_YEAR));
-
-  // Staff XP state
-  const [selectedStaffId, setSelectedStaffId] = useState('');
-  const [xpCategory, setXpCategory] = useState('skill:field');
-  const [xpAmount, setXpAmount] = useState('1000');
-
-  const weekOptions = Array.from({ length: WEEKS_PER_SEASON }, (_, index) => index + 1);
-  const allStaff = useGameStateWithData(() => getAllStaff(), []);
   const [showAllResearch, setShowAllResearch] = useState(false);
-
-  // Cheat functions (for development/testing)
-  const handleSetGold = () => withLoading(async () => {
-    const amount = parseFloat(goldAmount) || 10000;
-    await adminSetGoldToCompany(amount);
-  });
-
-  const handleSetPlayerBalance = () => withLoading(async () => {
-    const amount = parseFloat(playerBalanceAmount) || 10000;
-    const result = await adminSetPlayerBalance(amount);
-    if (result.success) {
-      console.log(result.message);
-    } else {
-      console.error(result.error || 'Failed to set player balance');
-      alert(result.error || 'Failed to set player balance');
-    }
-  });
-
-  const handleAddPrestige = () => withLoading(async () => {
-    const amount = parseFloat(prestigeAmount) || 100;
-    await adminAddPrestigeToCompany(amount);
-  });
-
-  const handleSetStaffXP = () => withLoading(async () => {
-    if (!selectedStaffId) {
-      alert('Please select a staff member');
-      return;
-    }
-    const amount = parseFloat(xpAmount) || 1000;
-    const result = await adminSetStaffXP(selectedStaffId, xpCategory, amount);
-    if (result.success) {
-      console.log(result.message);
-      alert(result.message);
-    } else {
-      console.error(result.error);
-      alert(result.error);
-    }
-  });
-
-  const handleSetGameDate = () => withLoading(async () => {
-    const parsedWeek = Number.parseInt(gameWeek, 10);
-    const safeWeek = Number.isNaN(parsedWeek)
-      ? GAME_INITIALIZATION.STARTING_WEEK
-      : Math.min(Math.max(parsedWeek, 1), WEEKS_PER_SEASON);
-
-    const parsedYear = Number.parseInt(gameYear, 10);
-    const minimumYear = GAME_INITIALIZATION.STARTING_YEAR;
-    const safeYear = Number.isNaN(parsedYear)
-      ? minimumYear
-      : Math.max(parsedYear, minimumYear);
-
-    await adminSetGameDate({
-      week: safeWeek,
-      season: gameSeason,
-      year: safeYear
-    });
-
-    setGameWeek(String(safeWeek));
-    setGameYear(String(safeYear));
-  });
-
-  const handleGrantAllResearch = () => withLoading(async () => {
-    const result = await adminGrantAllResearch();
-    console.log(`Research granted: ${result.unlocked} unlocked, ${result.alreadyUnlocked} already unlocked`);
-  });
-
-  const handleRemoveAllResearch = () => withLoading(async () => {
-    const result = await adminRemoveAllResearch();
-    console.log(`Research removed: ${result.removed} unlocks removed`);
-  });
 
   const handleClearAllHighscores = () => withLoading(async () => {
     await adminClearAllHighscores();
@@ -116,11 +49,8 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     await adminClearCompanyValuePerWeekHighscores();
   });
 
-
-  // Database cleanup functions
   const handleClearAllCompanies = () => withLoading(async () => {
     await adminClearAllCompanies();
-    // Navigate to login and refresh browser
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -131,7 +61,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
   const handleClearAllUsers = () => withLoading(async () => {
     await adminClearAllUsers();
-    // Navigate to login and refresh browser
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -142,7 +71,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
   const handleClearAllCompaniesAndUsers = () => withLoading(async () => {
     await adminClearAllCompaniesAndUsers();
-    // Navigate to login and refresh browser
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -151,28 +79,16 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
     }, 1000);
   });
 
-
-
   const handleRecreateCustomers = () => withLoading(async () => {
     await adminRecreateCustomers();
-  });
-
-  const handleGenerateTestOrder = () => withLoading(async () => {
-    await adminGenerateTestOrders();
-  });
-
-  const handleGenerateTestContract = () => withLoading(async () => {
-    await adminGenerateTestContract();
   });
 
   const handleClearAllAchievements = () => withLoading(async () => {
     await adminClearAllAchievements();
   });
 
-
   const handleFullDatabaseReset = () => withLoading(async () => {
     await adminFullDatabaseReset();
-    // Navigate to login and refresh browser
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
@@ -183,14 +99,13 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+          <h2 className="flex items-center gap-3 text-3xl font-bold text-gray-800">
             <Settings className="h-8 w-8" />
             Admin Dashboard
           </h2>
-          <p className="text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground">
             Advanced game management and administrative tools
           </p>
         </div>
@@ -201,7 +116,6 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
         )}
       </div>
 
-
       <Tabs defaultValue="database" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="database">Database</TabsTrigger>
@@ -209,12 +123,9 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
           <TabsTrigger value="tests">Test Systems</TabsTrigger>
         </TabsList>
 
-        {/* Database Management */}
         <TabsContent value="database">
           <div className="space-y-6">
-
-            {/* Game Data Cleanup */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <SimpleCard
                 title="Game Data"
                 description="Clear game-related data and progression"
@@ -225,7 +136,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Clear All Companies
                 </Button>
 
@@ -235,7 +146,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  <Users className="h-4 w-4 mr-2" />
+                  <Users className="mr-2 h-4 w-4" />
                   Clear All Users
                 </Button>
 
@@ -245,7 +156,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Clear All Companies & Users
                 </Button>
               </SimpleCard>
@@ -260,7 +171,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Clear All Highscores
                 </Button>
 
@@ -284,8 +195,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
               </SimpleCard>
             </div>
 
-            {/* System Data Cleanup */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <SimpleCard
                 title="System Data"
                 description="Clear system and progression data"
@@ -296,7 +206,7 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  👥 Clear & Recreate All Customers
+                  Clear & Recreate All Customers
                 </Button>
 
                 <Button
@@ -305,20 +215,19 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  🏆 Clear All Achievements
+                  Clear All Achievements
                 </Button>
               </SimpleCard>
             </div>
 
-            {/* Full Database Reset */}
             <Card className="border-destructive bg-destructive/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-5 w-5" />
-                  NUCLEAR OPTION
+                  Nuclear Option
                 </CardTitle>
                 <CardDescription className="text-destructive/80">
-                  Complete database wipe - removes ALL data from ALL tables
+                  Complete database wipe. Removes all data from all tables.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -329,193 +238,52 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                   disabled={isLoading}
                   className="w-full"
                 >
-                  <AlertTriangle className="h-5 w-5 mr-2" />
-                  FULL DATABASE RESET
+                  <AlertTriangle className="mr-2 h-5 w-5" />
+                  Full Database Reset
                 </Button>
-                <p className="text-xs text-destructive/70 mt-2 text-center">
-                  This will delete EVERYTHING and cannot be undone!
+                <p className="mt-2 text-center text-xs text-destructive/70">
+                  This removes everything and cannot be undone.
                 </p>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-
-        {/* Cheat Tools */}
         <TabsContent value="cheats">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <SimpleCard
-              title="Financial Cheats"
-              description="Set money and resources for the active company"
+              title="Mutation Controls"
+              description="Use the Test Lab for active-company mutations so there is one path per action"
             >
-              <div className="space-y-2">
-                <Label htmlFor="goldAmount">Company Gold Amount to Set</Label>
-                <Input
-                  id="goldAmount"
-                  type="number"
-                  value={goldAmount}
-                  onChange={(e) => setGoldAmount(e.target.value)}
-                  placeholder="10000"
-                />
-                <Button
-                  onClick={handleSetGold}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  Set Gold for Active Company
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="playerBalanceAmount">Player Balance Amount to Set</Label>
-                <Input
-                  id="playerBalanceAmount"
-                  type="number"
-                  value={playerBalanceAmount}
-                  onChange={(e) => setPlayerBalanceAmount(e.target.value)}
-                  placeholder="10000"
-                />
-                <Button
-                  onClick={handleSetPlayerBalance}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  Set Player Balance
-                </Button>
-                <p className="text-xs text-gray-500">
-                  Sets the cash balance for the user associated with the active company
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prestigeAmount">Prestige Amount</Label>
-                <Input
-                  id="prestigeAmount"
-                  type="number"
-                  value={prestigeAmount}
-                  onChange={(e) => setPrestigeAmount(e.target.value)}
-                  placeholder="100"
-                />
-                <Button
-                  onClick={handleAddPrestige}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  Add Prestige to Active Company
-                </Button>
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                Money, player balance, prestige, game date, sales shortcuts, staff XP, and instant activity completion now live under the Test Systems tab.
               </div>
             </SimpleCard>
 
             <SimpleCard
-              title="Game Date Control"
-              description="Adjust the current in-game timeline"
+              title="Research Visibility"
+              description="Keep the bypass panel here for inspecting research content without mutating through the old admin buttons"
             >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="game-season-select">Season</Label>
-                  <Select
-                    value={gameSeason}
-                    onValueChange={(value) => setGameSeason(value as Season)}
-                  >
-                    <SelectTrigger id="game-season-select">
-                      <SelectValue placeholder="Select season" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SEASONS.map(season => (
-                        <SelectItem key={season} value={season}>
-                          {season}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="game-week-select">Week</Label>
-                  <Select
-                    value={gameWeek}
-                    onValueChange={(value) => setGameWeek(value)}
-                  >
-                    <SelectTrigger id="game-week-select">
-                      <SelectValue placeholder="Select week" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {weekOptions.map(week => (
-                        <SelectItem key={week} value={String(week)}>
-                          Week {week}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="game-year-input">Year</Label>
-                  <Input
-                    id="game-year-input"
-                    type="number"
-                    value={gameYear}
-                    onChange={(e) => setGameYear(e.target.value)}
-                    min={GAME_INITIALIZATION.STARTING_YEAR}
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSetGameDate}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  Set Game Date
-                </Button>
-              </div>
-            </SimpleCard>
-
-            <SimpleCard
-              title="Research Management"
-              description="Grant or remove all research projects"
-            >
-              <Button
-                onClick={handleGrantAllResearch}
-                disabled={isLoading}
-                className="w-full"
-              >
-                🔬 Grant All Research
-              </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                Unlocks all research projects for the active company
-              </p>
-
-              <Button
-                variant="destructive"
-                onClick={handleRemoveAllResearch}
-                disabled={isLoading}
-                className="w-full mt-4"
-              >
-                🗑️ Remove All Research
-              </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                Removes all research unlocks from the active company
-              </p>
-
               <Button
                 variant="outline"
-                onClick={() => setShowAllResearch(v => !v)}
-                className="w-full mt-4"
+                onClick={() => setShowAllResearch(value => !value)}
+                className="w-full"
               >
-                {showAllResearch ? '🔓 Hide Research Panel' : '🔓 Show All Research (Bypass Gates)'}
+                {showAllResearch ? 'Hide Research Panel' : 'Show All Research'}
               </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                Shows research panel with all projects visible, ignoring prestige/prerequisite locks
+              <p className="mt-2 text-xs text-gray-500">
+                Shows research projects without prestige or prerequisite gates.
               </p>
             </SimpleCard>
 
-            {/* Inline research panel with gates bypassed */}
             {showAllResearch && (
               <div className="md:col-span-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>All Research Projects (Admin View)</CardTitle>
-                    <CardDescription>Gates bypassed — all projects visible and startable regardless of prestige or prerequisites</CardDescription>
+                    <CardTitle>All Research Projects</CardTitle>
+                    <CardDescription>
+                      Gates bypassed for inspection.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ResearchPanel bypassGates={true} />
@@ -523,122 +291,22 @@ export function AdminDashboard({ onBack, onNavigateToLogin }: AdminDashboardProp
                 </Card>
               </div>
             )}
-
-            <SimpleCard
-              title="Staff XP Management"
-              description="Set experience points for staff members"
-            >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="staff-select">Select Staff Member</Label>
-                  <Select
-                    value={selectedStaffId}
-                    onValueChange={(value) => setSelectedStaffId(value)}
-                  >
-                    <SelectTrigger id="staff-select">
-                      <SelectValue placeholder="Select a staff member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allStaff.length === 0 ? (
-                        <SelectItem value="none" disabled>No staff members found</SelectItem>
-                      ) : (
-                        allStaff.map(staff => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="xp-category-select">XP Category</Label>
-                  <Select
-                    value={xpCategory}
-                    onValueChange={(value) => setXpCategory(value)}
-                  >
-                    <SelectTrigger id="xp-category-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="skill:field">Skill: Field</SelectItem>
-                      <SelectItem value="skill:winery">Skill: Winery</SelectItem>
-                      <SelectItem value="skill:financeAndStaff">Skill: Finance & Staff</SelectItem>
-                      <SelectItem value="skill:sales">Skill: Sales</SelectItem>
-                      <SelectItem value="skill:administrationAndResearch">Skill: Admin & Research</SelectItem>
-                      <SelectItem value="grape:Chardonnay">Grape: Chardonnay</SelectItem>
-                      <SelectItem value="grape:Pinot Noir">Grape: Pinot Noir</SelectItem>
-                      <SelectItem value="grape:Sauvignon Blanc">Grape: Sauvignon Blanc</SelectItem>
-                      <SelectItem value="grape:Sangiovese">Grape: Sangiovese</SelectItem>
-                      <SelectItem value="grape:Tempranillo">Grape: Tempranillo</SelectItem>
-                      <SelectItem value="grape:Barbera">Grape: Barbera</SelectItem>
-                      <SelectItem value="grape:Primitivo">Grape: Primitivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="xp-amount">XP Amount</Label>
-                  <Input
-                    id="xp-amount"
-                    type="number"
-                    value={xpAmount}
-                    onChange={(e) => setXpAmount(e.target.value)}
-                    placeholder="1000"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSetStaffXP}
-                  disabled={isLoading || !selectedStaffId}
-                  className="w-full"
-                >
-                  ⭐ Set Staff XP
-                </Button>
-                <p className="text-xs text-gray-500">
-                  Sets the XP value for the selected skill or grape variety (replaces current XP)
-                </p>
-              </div>
-            </SimpleCard>
           </div>
         </TabsContent>
-        {/* Test Systems */}
+
         <TabsContent value="tests">
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SimpleCard
-                title="Gameflow Shortcuts"
-                description="Create targeted sales artifacts without waiting for normal progression"
-              >
-                <Button
-                  onClick={handleGenerateTestOrder}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  🛒 Generate Test Order
-                </Button>
-                <p className="text-xs text-gray-500 mt-2">
-                  Bypasses prestige checks to force order generation
-                </p>
-              </SimpleCard>
-
-              <SimpleCard
-                title="Contract Shortcuts"
-                description="Force a contract artifact for manual gameplay inspection"
-              >
-                <Button
-                  onClick={handleGenerateTestContract}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  📋 Generate Test Contract
-                </Button>
-                <p className="text-xs text-gray-500 mt-2">
-                  Bypasses relationship/prestige checks to force contract generation
-                </p>
-              </SimpleCard>
-            </div>
+            <Card className="border-slate-200 bg-slate-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TestTube2 className="h-4 w-4" />
+                  Test Lab
+                </CardTitle>
+                <CardDescription>
+                  Automated test runs, active-company mutations, fixture scenarios, and instant activity completion live here.
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
             <TestLabPage />
           </div>

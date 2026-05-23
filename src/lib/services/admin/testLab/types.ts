@@ -3,6 +3,7 @@ import type { Vineyard, WineBatch } from '@/lib/types/types';
 export type TestLabScenarioGroup =
   | 'Regression Tests'
   | 'Company Setup'
+  | 'Activity Lifecycle'
   | 'Vineyard Lifecycle'
   | 'Winery Flow'
   | 'Sales Flow'

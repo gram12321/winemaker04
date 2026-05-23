@@ -37,6 +37,14 @@ const fermentationMethodOptions = ['Basic', 'Temperature Controlled', 'Extended 
 const fermentationTemperatureOptions = ['Ambient', 'Cool', 'Warm']
   .map(value => ({ label: value, value }));
 
+const featurePresetOptions = [
+  { label: 'Natural only', value: 'none' },
+  { label: 'Terroir forward', value: 'terroir-forward' },
+  { label: 'Oxidation risk', value: 'oxidation-risk' },
+  { label: 'Noble rot risk', value: 'noble-rot-risk' },
+  { label: 'Cellar evolution', value: 'cellar-evolution' }
+];
+
 const staffXpCategoryOptions = [
   { label: 'Skill: Field', value: 'skill:field' },
   { label: 'Skill: Winery', value: 'skill:winery' },
@@ -102,11 +110,24 @@ const vineyardPickerParam: TestLabParamField = {
 };
 
 // Only params relevant to creating a grapes-stage batch (harvest quantity).
+const batchHistoryOverrideParams: TestLabParamField[] = [
+  { key: 'featurePreset', label: 'History preset', type: 'select', defaultValue: 'none', options: featurePresetOptions },
+  { key: 'terroirExpressionOverride', label: 'Terroir expression override', type: 'string', defaultValue: '' },
+  { key: 'oxidationPressureOverride', label: 'Oxidation pressure override', type: 'string', defaultValue: '' },
+  { key: 'maturationStateOverride', label: 'Maturation state override', type: 'string', defaultValue: '' },
+  { key: 'terroirSeverityOverride', label: 'Terroir severity override', type: 'string', defaultValue: '' },
+  { key: 'oxidationRiskOverride', label: 'Oxidation risk override', type: 'string', defaultValue: '' },
+  { key: 'nobleRotRiskOverride', label: 'Noble rot risk override', type: 'string', defaultValue: '' },
+  { key: 'greyRotRiskOverride', label: 'Grey rot risk override', type: 'string', defaultValue: '' },
+  { key: 'agingProgressWeeksOverride', label: 'Bottle aging weeks override', type: 'string', defaultValue: '' }
+];
+
 const grapesStageParams: TestLabParamField[] = [
   vineyardPickerParam,
   ...vineyardConfigParams,
   ...harvestDateParams,
-  { key: 'quantityKg', label: 'Grape quantity kg', type: 'number', defaultValue: 1200, min: 1, max: 100000, step: 50 }
+  { key: 'quantityKg', label: 'Grape quantity kg', type: 'number', defaultValue: 1200, min: 1, max: 100000, step: 50 },
+  ...batchHistoryOverrideParams
 ];
 
 // Crushing params only shown when crushing is actually performed.
@@ -144,6 +165,10 @@ const staffXpParams: TestLabParamField[] = [
   { key: 'staffId', label: 'Staff member', type: 'select', defaultValue: 'none', options: [] },
   { key: 'xpCategory', label: 'XP category', type: 'select', defaultValue: 'skill:field', options: staffXpCategoryOptions },
   { key: 'xpAmount', label: 'XP amount', type: 'number', defaultValue: 1000, min: 0, max: 1000000, step: 100 }
+];
+
+const activityParams: TestLabParamField[] = [
+  { key: 'activityId', label: 'Activity', type: 'select', defaultValue: 'none', options: [] }
 ];
 
 const makeDefaults = (params: TestLabParamField[]): Record<string, string | number | boolean> =>
@@ -209,6 +234,15 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     defaultParams: makeDefaults(gameDateParams)
   },
   {
+    id: 'activity.complete-now',
+    title: 'Complete Activity Now',
+    group: 'Activity Lifecycle',
+    description: 'Selects an active company activity and marks all remaining work complete through the shared completion handler.',
+    mutatesData: true,
+    params: activityParams,
+    defaultParams: makeDefaults(activityParams)
+  },
+  {
     id: 'vineyard.harvest-ready',
     title: 'Create Harvest-Ready Vineyard',
     group: 'Vineyard Lifecycle',
@@ -221,7 +255,7 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     id: 'winery.grapes-batch',
     title: 'Create Grapes-Stage Batch',
     group: 'Winery Flow',
-    description: 'Creates a harvest-ready vineyard and uses harvest services to create a grapes-stage wine batch.',
+    description: 'Creates a grapes-stage wine batch through the real harvest service. Selecting an existing vineyard preserves its current pending-feature history; optional overrides can seed anchors, features, and risk.',
     mutatesData: true,
     params: grapesStageParams,
     defaultParams: makeDefaults(grapesStageParams)
@@ -230,7 +264,7 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     id: 'winery.must-ready-batch',
     title: 'Create Must-Ready Batch',
     group: 'Winery Flow',
-    description: 'Creates grapes, starts crushing with selected parameters, and completes the activity immediately.',
+    description: 'Creates grapes, starts crushing with selected parameters, and completes the activity immediately while keeping any seeded anchor and feature state.',
     mutatesData: true,
     params: crushingStageParams,
     defaultParams: makeDefaults(crushingStageParams)
@@ -239,7 +273,7 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     id: 'winery.fermenting-batch',
     title: 'Create Fermenting Batch',
     group: 'Winery Flow',
-    description: 'Creates must, starts fermentation setup, and completes the setup activity immediately.',
+    description: 'Creates must, starts fermentation setup, and completes the setup activity immediately while preserving seeded batch history.',
     mutatesData: true,
     params: fermentingStageParams,
     defaultParams: makeDefaults(fermentingStageParams)
@@ -248,7 +282,7 @@ export const TEST_LAB_SCENARIOS: TestLabScenarioDefinition[] = [
     id: 'winery.bottled-wine',
     title: 'Create Bottled Wine',
     group: 'Winery Flow',
-    description: 'Creates fermenting wine, applies selected fermentation weeks, bottles it, and records wine log output.',
+    description: 'Creates fermenting wine, applies selected fermentation weeks, bottles it, and records wine log output. Use existing vineyards or explicit overrides when you need non-baseline terroir, feature, or risk states.',
     mutatesData: true,
     params: bottledStageParams,
     defaultParams: makeDefaults(bottledStageParams)

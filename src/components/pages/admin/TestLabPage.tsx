@@ -35,7 +35,8 @@ import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, Test
 import { COUNTRY_REGION_MAP, REGION_ALTITUDE_RANGES } from '@/lib/constants/vineyardConstants';
 import { loadVineyards } from '@/lib/database/activities/vineyardDB';
 import { getAllStaff } from '@/lib/services/user/staffService';
-import type { Staff, Vineyard } from '@/lib/types/types';
+import { getAllActivities } from '@/lib/services/activity/activitymanagers/activityManager';
+import type { Activity, Staff, Vineyard } from '@/lib/types/types';
 
 interface RecentRun {
   runId: string;
@@ -125,13 +126,25 @@ export default function TestLabPage() {
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
   const [existingVineyards, setExistingVineyards] = useState<Vineyard[]>([]);
   const [existingStaff, setExistingStaff] = useState<Staff[]>([]);
+  const [existingActivities, setExistingActivities] = useState<Activity[]>([]);
   const { isLoading, withLoading } = useLoadingState();
   const devAvailable = isDevAdminSurfaceAvailable();
 
+  const refreshDynamicOptions = async () => {
+    const [vineyards, staff, activities] = await Promise.all([
+      loadVineyards().catch(() => []),
+      getAllStaff().catch(() => []),
+      getAllActivities().catch(() => [])
+    ]);
+
+    setExistingVineyards(vineyards);
+    setExistingStaff(staff);
+    setExistingActivities(activities);
+  };
+
   useEffect(() => {
     setRecentRuns(readRecentRuns());
-    loadVineyards().then(setExistingVineyards).catch(() => {});
-    getAllStaff().then(setExistingStaff).catch(() => {});
+    refreshDynamicOptions().catch(() => {});
   }, []);
 
   const selectScenario = (scenario: TestLabScenarioDefinition) => {
@@ -163,6 +176,7 @@ export default function TestLabPage() {
       params,
       mode
     });
+    await refreshDynamicOptions();
     setResult(scenarioResult);
     rememberRun(scenarioResult);
   });
@@ -185,6 +199,7 @@ export default function TestLabPage() {
       mode: 'run',
       params: { runId }
     });
+    await refreshDynamicOptions();
     setResult(cleanupResult);
     rememberRun(cleanupResult);
   });
@@ -217,6 +232,7 @@ export default function TestLabPage() {
       const isRegionField = field.key === 'region';
       const isVineyardPickerField = field.key === 'vineyardId';
       const isStaffPickerField = field.key === 'staffId';
+      const isActivityPickerField = field.key === 'activityId';
 
       const rawOptions = field.options || [];
       const selectedCountry = String(params.country ?? '');
@@ -226,7 +242,7 @@ export default function TestLabPage() {
       const vineyardPickerOptions = isVineyardPickerField
         ? [
             { label: 'Create test vineyard', value: 'new' },
-            ...existingVineyards.map(v => ({ label: v.name, value: v.id }))
+            ...existingVineyards.map(v => ({ label: `Use existing vineyard: ${v.name}`, value: v.id }))
           ]
         : null;
       const staffPickerOptions = isStaffPickerField
@@ -235,9 +251,19 @@ export default function TestLabPage() {
             ...existingStaff.map(staff => ({ label: staff.name, value: staff.id }))
           ]
         : null;
+      const activityPickerOptions = isActivityPickerField
+        ? [
+            { label: 'Select activity', value: 'none' },
+            ...existingActivities.map(activity => ({
+              label: `${activity.title} (${Math.round(activity.completedWork)}/${Math.round(activity.totalWork)})`,
+              value: activity.id
+            }))
+          ]
+        : null;
 
       const selectOptions = vineyardPickerOptions
         ?? staffPickerOptions
+        ?? activityPickerOptions
         ?? (isRegionField ? rawOptions.filter(option => allowedRegions.includes(String(option.value))) : rawOptions);
 
       return (
@@ -305,6 +331,7 @@ export default function TestLabPage() {
           min={resolvedMin}
           max={resolvedMax}
           step={field.step}
+          placeholder={field.type === 'string' && field.key.endsWith('Override') ? 'Leave blank to keep natural value' : undefined}
           onChange={(event) => {
             const nextValue = field.type === 'number'
               ? Number(event.target.value)
@@ -339,7 +366,7 @@ export default function TestLabPage() {
           <ShieldCheck className="mt-0.5 h-4 w-4 text-green-700" />
           <div>
             <p className="text-sm font-semibold text-green-900">Development localhost mode</p>
-            <p className="text-xs text-green-800">Automated Tests reuse the same Vitest suite as `tests/`. Gameflow Lab scenarios run against the active company and tag fixture data where cleanup is available.</p>
+            <p className="text-xs text-green-800">Automated Tests reuse the same Vitest suite as `tests/`. Gameflow Lab scenarios run against the active company and tag fixture data where cleanup is available. Existing vineyards preserve their current pending-feature history; winery scenarios now also expose direct anchor, feature, and risk overrides.</p>
           </div>
         </div>
       </div>

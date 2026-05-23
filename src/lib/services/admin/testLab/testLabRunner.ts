@@ -294,6 +294,45 @@ async function runStaffXpScenario(
   };
 }
 
+async function runCompleteActivityScenario(
+  runId: string,
+  scenarioId: string,
+  params: Record<string, string | number | boolean>,
+  warnings: string[]
+): Promise<TestLabScenarioResult> {
+  const activityId = String(params.activityId || '').trim();
+
+  if (!activityId || activityId === 'none') {
+    return {
+      runId,
+      scenarioId,
+      status: 'blocked',
+      summary: 'Activity completion requires an activity',
+      assertions: [{ name: 'Activity selected', passed: false }],
+      createdEntities: [],
+      warnings
+    };
+  }
+
+  const { completeActivityNow } = await import('@/lib/services/activity/activitymanagers/activityManager');
+  const data = await completeActivityNow(activityId);
+
+  return {
+    runId,
+    scenarioId,
+    status: data.success ? 'passed' : 'blocked',
+    summary: data.success
+      ? `Completed activity ${data.activity?.title || activityId}`
+      : data.error || 'Failed to complete activity',
+    assertions: [{ name: 'Activity completed', passed: data.success, details: data.activity?.id || activityId }],
+    createdEntities: data.activity
+      ? [{ type: 'activity', id: data.activity.id, label: data.activity.title }]
+      : [],
+    warnings,
+    data
+  };
+}
+
 export async function runTestLabScenario(request: TestLabRunRequest): Promise<TestLabScenarioResult> {
   const scenario = getTestLabScenario(request.scenarioId);
   const runId = request.scenarioId === 'cleanup.by-run-id'
@@ -357,6 +396,10 @@ export async function runTestLabScenario(request: TestLabRunRequest): Promise<Te
 
     if (scenario.id === 'staff.set-xp') {
       return await runStaffXpScenario(runId, scenario.id, params, warnings);
+    }
+
+    if (scenario.id === 'activity.complete-now') {
+      return await runCompleteActivityScenario(runId, scenario.id, params, warnings);
     }
 
     if (scenario.id === 'cleanup.by-run-id') {

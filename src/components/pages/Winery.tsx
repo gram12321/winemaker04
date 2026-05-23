@@ -265,11 +265,12 @@ const Winery: React.FC = () => {
                           <Button onClick={() => openModal('crushing', batch.id)} size="sm" className="bg-orange-600 hover:bg-orange-700">
                             Crush Grapes
                           </Button>
-                          <Button onClick={() => openModal('sellGrapes', batch.id)} size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
-                            Sell Grapes
-                          </Button>
                         </>
                       )}
+
+                      <Button onClick={() => openModal('sellGrapes', batch.id)} size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50">
+                        Sell Grapes
+                      </Button>
                       
                       {isFermentationActionAvailable(batch, 'ferment') && (
                         <Button onClick={() => openModal('fermentation', batch.id)} size="sm" className="bg-purple-600 hover:bg-purple-700">
