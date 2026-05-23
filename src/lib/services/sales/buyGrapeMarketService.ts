@@ -3,6 +3,7 @@ import { addTransaction } from '../finance/financeService';
 import { getGameState } from '../core/gameState';
 import { notificationService } from '../core/notificationService';
 import { companyService } from '../user/companyService';
+import { calculateCompanyValue } from '../finance/financeService';
 import { saveWineBatch } from '../../database/activities/inventoryDB';
 import {
   BuyMarketOfferRow,
@@ -35,6 +36,7 @@ import {
   recordSupplierPurchase,
 } from './grapeSupplierLoyaltyService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
+import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 
 export type BuyOfferBatchState = Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>;
 
@@ -108,6 +110,11 @@ const BUY_MARKET_MIN_PRICE = 0.8;
 const BUY_MARKET_MAX_PRICE = 14;
 const MIN_SEASONAL_OFFERS = 8;
 const MAX_SEASONAL_OFFERS = 12;
+const BUY_OFFER_MIN_AVAILABLE_KG = 120;
+const BUY_OFFER_MAX_AVAILABLE_KG = 6000;
+const BUY_OFFER_COMPANY_VALUE_REFERENCE = 10000;
+const BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER = 2.1;
+const BUY_OFFER_PRESTIGE_MAX_MULTIPLIER = 1.3;
 
 const YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
 
@@ -162,6 +169,33 @@ const DEFAULT_DEMAND_FACTORS: BuyMarketDemandFactors = {
 function getYearCycleMultiplier(year: number): number {
   const index = Math.abs(year) % YEAR_PRICE_CYCLE.length;
   return YEAR_PRICE_CYCLE[index] ?? 1;
+}
+
+function getBuyOfferCompanyValueMultiplier(companyValue: number): number {
+  if (companyValue <= 0) return 1;
+
+  const normalized = Math.max(0, Math.log10(Math.max(BUY_OFFER_COMPANY_VALUE_REFERENCE, companyValue)) - 4);
+  return clamp(1 + normalized * 0.45, 1, BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER);
+}
+
+function getBuyOfferPrestigeMultiplier(prestige: number): number {
+  if (prestige <= 0) return 1;
+
+  const normalizedPrestige = NormalizeScrewed1000To01WithTail(prestige);
+  const scaledPrestige = Math.max(0, (normalizedPrestige - 0.1) / 0.899);
+  return clamp(1 + scaledPrestige * 0.3, 1, BUY_OFFER_PRESTIGE_MAX_MULTIPLIER);
+}
+
+function computeBuyOfferAvailableKg(companyValue: number, prestige: number): number {
+  const baseQuantity = randomInt(BUY_OFFER_MIN_AVAILABLE_KG, 1800);
+  const companyValueMultiplier = getBuyOfferCompanyValueMultiplier(companyValue);
+  const prestigeMultiplier = getBuyOfferPrestigeMultiplier(prestige);
+
+  return clamp(
+    Math.round(baseQuantity * companyValueMultiplier * prestigeMultiplier),
+    BUY_OFFER_MIN_AVAILABLE_KG,
+    BUY_OFFER_MAX_AVAILABLE_KG
+  );
 }
 
 function toNationality(country?: string): Nationality {
@@ -322,6 +356,8 @@ function buildNewOffer(
   offerIndex: number,
   country: Nationality,
   demandFactors: BuyMarketDemandFactors,
+  companyValue: number,
+  prestige: number,
   preferredSupplier?: { supplierId: string; supplierName: string; level: number }
 ): BuyMarketOfferRow {
   const { week, season, year, economyPhase } = getCurrentTime();
@@ -354,7 +390,7 @@ function buildNewOffer(
     origin_tag: 'seasonal_rotation',
     batch_state: batchState,
     grape_variety: getRandomFromArray(Object.keys(GRAPE_CONST)) as GrapeVariety,
-    available_kg: randomInt(120, 1800),
+    available_kg: computeBuyOfferAvailableKg(companyValue, prestige),
     quality_score: qualityScore,
     base_price_per_kg: BASE_BUY_MARKET_PRICE_PER_KG,
     effective_price_per_kg: effectivePricePerKg,
@@ -392,6 +428,8 @@ async function ensureOffers(companyId: string): Promise<void> {
   if (rows.length > 0) return;
 
   const { country, demandFactors } = await getMarketContext(companyId);
+  const companyValue = await calculateCompanyValue().catch(() => 0);
+  const prestige = getGameState().prestige ?? 0;
   const preferredSuppliers = await getSupplierPriorityProfiles(10);
 
   const targetCount = randomInt(MIN_SEASONAL_OFFERS, MAX_SEASONAL_OFFERS);
@@ -400,6 +438,8 @@ async function ensureOffers(companyId: string): Promise<void> {
     index,
     country,
     demandFactors,
+    companyValue,
+    prestige,
     pickPreferredSupplier(preferredSuppliers, index)
   ));
   await upsertBuyOfferRows(generated);
@@ -433,6 +473,8 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
   if (error) return;
 
   const { country, demandFactors } = await getMarketContext(companyId);
+  const companyValue = await calculateCompanyValue().catch(() => 0);
+  const prestige = getGameState().prestige ?? 0;
   const preferredSuppliers = await getSupplierPriorityProfiles(10);
 
   const existingRows = ((data || []) as unknown) as BuyMarketOfferRow[];
@@ -453,6 +495,8 @@ export async function refreshBuyGrapeMarketForSeason(): Promise<void> {
     index + persistentRows.length,
     country,
     demandFactors,
+    companyValue,
+    prestige,
     pickPreferredSupplier(preferredSuppliers, index)
   ));
 

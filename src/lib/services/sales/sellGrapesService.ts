@@ -11,6 +11,7 @@ import { getGameState } from '../core/gameState';
 import { getCooperativeMembership, recordCooperativeSale, getCooperativeFloorPrice } from './cooperativeService';
 import { recordBuyerSale } from '@/lib/services';
 import { getBulkBuyer, getSeasonalBuyers, recordMarketBuyerSale } from './grapeBuyerMarketService';
+import { BUY_MARKET_FIXED_SPREAD } from './buyGrapeMarketService';
 import { GrapeVariety } from '../../types/types';
 import { formatNumber } from '../../utils/utils';
 
@@ -18,6 +19,7 @@ import { formatNumber } from '../../utils/utils';
 
 export const BASE_GRAPE_PRICE_PER_KG = 3.0;
 export const GRAPE_SALE_PRESTIGE_MAX_BONUS = 0.3; // max +30% from prestige (vs wine's +250%)
+export const GRAPE_SALE_FIXED_MARKET_PENALTY = 1 / (1 + BUY_MARKET_FIXED_SPREAD); // mirror the buy-side spread to prevent arbitrage
 export const FAVORITE_GRAPE_PRIMARY_BONUS = 0.18;
 export const FAVORITE_GRAPE_SECONDARY_BONUS = 0.1;
 export const SELLABLE_BATCH_STATES: Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>[] = [
@@ -87,6 +89,7 @@ export interface GrapeSalePricing {
   qualityMultiplier: number;
   prestigeBonus: number;
   stateMultiplier: number;
+  marketPenaltyMultiplier: number;
   buyerMultiplier: number;
   relationshipMultiplier: number;
   favoriteGrapeBonusMultiplier: number;
@@ -141,12 +144,13 @@ export function calculateGrapeSalePrice(
   const normalizedPrestige = NormalizeScrewed1000To01WithTail(companyPrestige);
   const prestigeBonus = 1 + normalizedPrestige * GRAPE_SALE_PRESTIGE_MAX_BONUS;
   const stateMultiplier = SELL_STATE_PRICE_MULTIPLIERS[batch.state as Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>] ?? 1;
+  const marketPenaltyMultiplier = GRAPE_SALE_FIXED_MARKET_PENALTY;
 
   const relationshipMultiplier = buyer.relationshipMultiplier ?? 1;
   const favoriteGrapeBonusMultiplier = getFavoriteGrapeBonusMultiplier(buyer, batch);
   const effectiveBuyerMultiplier = buyer.priceMultiplier * (1 + favoriteGrapeBonusMultiplier);
 
-  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * stateMultiplier * effectiveBuyerMultiplier * relationshipMultiplier;
+  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * stateMultiplier * marketPenaltyMultiplier * effectiveBuyerMultiplier * relationshipMultiplier;
   const effectiveFloorPrice = floorPriceOverride !== undefined ? floorPriceOverride : buyer.floorPricePerKg;
   const appliedFloor = rawPricePerKg < effectiveFloorPrice;
   const finalPricePerKg = Math.max(rawPricePerKg, effectiveFloorPrice);
@@ -157,6 +161,7 @@ export function calculateGrapeSalePrice(
     qualityMultiplier,
     prestigeBonus,
     stateMultiplier,
+    marketPenaltyMultiplier,
     buyerMultiplier: effectiveBuyerMultiplier,
     relationshipMultiplier,
     favoriteGrapeBonusMultiplier,
