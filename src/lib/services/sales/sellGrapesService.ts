@@ -41,6 +41,8 @@ export interface GrapeBuyer {
   name: string;
   description: string;
   priceMultiplier: number;
+  marketContextMultiplier?: number;
+  marketSensitivityMultiplier?: number;
   floorPricePerKg: number;
   exclusiveCountry?: string;
   specialMechanic?: string;
@@ -89,6 +91,8 @@ export interface GrapeSalePricing {
   qualityMultiplier: number;
   prestigeBonus: number;
   stateMultiplier: number;
+  marketContextMultiplier: number;
+  marketSensitivityMultiplier: number;
   marketPenaltyMultiplier: number;
   buyerMultiplier: number;
   relationshipMultiplier: number;
@@ -116,6 +120,7 @@ const BULK_FALLBACK_BUYER: GrapeBuyer = {
   name: 'Bulk Grape Merchant',
   description: 'A generic merchant buying grapes for blended bulk production. Available everywhere, no minimums.',
   priceMultiplier: 1.0,
+  marketSensitivityMultiplier: 1.0,
   floorPricePerKg: 0,
   buyerCategory: 'bulk',
   originTag: 'Country special',
@@ -145,12 +150,14 @@ export function calculateGrapeSalePrice(
   const prestigeBonus = 1 + normalizedPrestige * GRAPE_SALE_PRESTIGE_MAX_BONUS;
   const stateMultiplier = SELL_STATE_PRICE_MULTIPLIERS[batch.state as Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>] ?? 1;
   const marketPenaltyMultiplier = GRAPE_SALE_FIXED_MARKET_PENALTY;
+  const marketContextMultiplier = buyer.marketContextMultiplier ?? 1;
+  const marketSensitivityMultiplier = buyer.marketSensitivityMultiplier ?? 1;
 
   const relationshipMultiplier = buyer.relationshipMultiplier ?? 1;
   const favoriteGrapeBonusMultiplier = getFavoriteGrapeBonusMultiplier(buyer, batch);
   const effectiveBuyerMultiplier = buyer.priceMultiplier * (1 + favoriteGrapeBonusMultiplier);
 
-  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * stateMultiplier * marketPenaltyMultiplier * effectiveBuyerMultiplier * relationshipMultiplier;
+  const rawPricePerKg = BASE_GRAPE_PRICE_PER_KG * qualityMultiplier * prestigeBonus * stateMultiplier * marketContextMultiplier * marketSensitivityMultiplier * marketPenaltyMultiplier * effectiveBuyerMultiplier * relationshipMultiplier;
   const effectiveFloorPrice = floorPriceOverride !== undefined ? floorPriceOverride : buyer.floorPricePerKg;
   const appliedFloor = rawPricePerKg < effectiveFloorPrice;
   const finalPricePerKg = Math.max(rawPricePerKg, effectiveFloorPrice);
@@ -161,6 +168,8 @@ export function calculateGrapeSalePrice(
     qualityMultiplier,
     prestigeBonus,
     stateMultiplier,
+    marketContextMultiplier,
+    marketSensitivityMultiplier,
     marketPenaltyMultiplier,
     buyerMultiplier: effectiveBuyerMultiplier,
     relationshipMultiplier,

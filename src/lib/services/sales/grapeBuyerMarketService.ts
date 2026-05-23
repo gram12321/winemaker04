@@ -676,13 +676,12 @@ function rowToBuyer(
   const relationshipMultiplier = getBuyerRelationshipPriceMultiplier(loyaltyLevel);
   const relationshipLimitBonus = getBuyerRelationshipYearlyLimitBonus(loyaltyLevel);
   const scaledBaseLimit = computeScaledSeasonLimit(row.base_season_limit_kg, companyValue);
-  const priceDemandMultiplier = computeCompanyValuePriceMultiplier(companyValue)
+  const marketContextMultiplier = computeCompanyValuePriceMultiplier(companyValue)
     * demandComponents.seasonPriceMultiplier
     * demandComponents.economyPriceMultiplier
     * demandComponents.yearCyclePriceMultiplier
-    * demandComponents.volatilityPriceMultiplier
-    * volatilitySensitivity.price
-    * (1 + multiplierResearchBonus);
+    * demandComponents.volatilityPriceMultiplier;
+  const buyerSpecificPriceMultiplier = 1 + multiplierResearchBonus;
   const limitDemandMultiplier = demandComponents.seasonLimitMultiplier
     * demandComponents.economyLimitMultiplier
     * demandComponents.yearCycleLimitMultiplier
@@ -693,7 +692,7 @@ function rowToBuyer(
     200,
     Math.round(scaledBaseLimit * limitDemandMultiplier * (1 + relationshipLimitBonus))
   );
-  const effectiveMultiplier = Number((row.base_multiplier * priceDemandMultiplier).toFixed(2));
+  const effectiveMultiplier = Number((row.base_multiplier * buyerSpecificPriceMultiplier).toFixed(2));
   const soldThisSeasonKg = Math.max(0, row.sold_this_season_kg || 0);
   const remainingSeasonLimitKg = Math.max(0, effectiveSeasonLimitKg - soldThisSeasonKg);
   const favoriteGrapes = [row.favorite_grape_1, row.favorite_grape_2].filter(Boolean) as GrapeVariety[];
@@ -703,6 +702,7 @@ function rowToBuyer(
     name: row.display_name,
     description: row.description || 'Seasonal grape buyer',
     priceMultiplier: effectiveMultiplier,
+    marketSensitivityMultiplier: volatilitySensitivity.price,
     floorPricePerKg: row.is_germany_coop ? 1.0 : 0,
     exclusiveCountry: row.country,
     multiplierRangeMin: row.multiplier_min,
@@ -712,6 +712,7 @@ function rowToBuyer(
     soldThisSeasonKg,
     remainingSeasonLimitKg,
     relationshipMultiplier,
+    marketContextMultiplier,
     favoriteGrapes,
     buyerCategory,
     originTag,

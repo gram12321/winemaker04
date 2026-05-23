@@ -30,6 +30,7 @@ import { companyService } from '@/lib/services';
 import { getCurrentCompanyId } from '@/lib/utils/companyUtils';
 import { calculateCompanyValue } from '@/lib/services/finance/financeService';
 import { formatNumber } from '@/lib/utils/utils';
+import { GrapeIcon } from '@/lib/utils/icons';
 
 function isSeasonalGeneratedDescription(description?: string): boolean {
   if (!description) return false;
@@ -239,7 +240,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   const [isSelling, setIsSelling] = useState(false);
   const [salePercentageByBuyerId, setSalePercentageByBuyerId] = useState<Record<string, number>>({});
   const [grapeFilter, setGrapeFilter] = useState<'all' | string>('all');
-  const [stateFilter, setStateFilter] = useState<'all' | WineBatch['state']>('all');
   const [sortKey, setSortKey] = useState<string>('price');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>('desc');
   const [membership, setMembership] = useState<CooperativeMembership | null>(null);
@@ -300,7 +300,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
   const filteredAndSortedBuyers = useMemo(() => {
     const filtered = buyers.filter((buyer) => {
       if (grapeFilter !== 'all' && buyer.favoriteGrapes && !buyer.favoriteGrapes.includes(grapeFilter as GrapeVariety)) return false;
-      if (stateFilter !== 'all' && batch && batch.state !== stateFilter) return false;
       return true;
     });
 
@@ -320,6 +319,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
       const leftValue = sortKey === 'offer' ? left.name
         : sortKey === 'batch' ? (batch?.state ?? '')
+          : sortKey === 'favorite' ? (left.favoriteGrapes?.join(', ') ?? '')
           : sortKey === 'state' ? (batch?.state ?? '')
             : sortKey === 'trust' ? leftTrust
               : sortKey === 'market' ? leftMarket
@@ -331,6 +331,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
 
       const rightValue = sortKey === 'offer' ? right.name
         : sortKey === 'batch' ? (batch?.state ?? '')
+          : sortKey === 'favorite' ? (right.favoriteGrapes?.join(', ') ?? '')
           : sortKey === 'state' ? (batch?.state ?? '')
             : sortKey === 'trust' ? rightTrust
               : sortKey === 'market' ? rightMarket
@@ -346,7 +347,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
     });
 
     return sorted;
-  }, [batch, buyers, grapeFilter, getBuyerPriceBreakdown, getBuyerTrustLevel, sortDirection, sortKey, stateFilter]);
+  }, [batch, buyers, grapeFilter, getBuyerPriceBreakdown, getBuyerTrustLevel, sortDirection, sortKey]);
 
   useEffect(() => {
     if (filteredAndSortedBuyers.length === 0) {
@@ -524,6 +525,29 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
             <div className="text-gray-500">State {batch.state}</div>
           </div>
         ),
+      },
+      {
+        key: 'favorite',
+        header: columnHeader('Favorite Grape', 'Buyer preferred grapes. Matching grapes can grant a favorite-grape bonus.'),
+        sortable: true,
+        className: 'w-[12%] min-w-[140px]',
+        render: (buyer) => {
+          const favorites = buyer.favoriteGrapes ?? [];
+
+          if (favorites.length === 0) {
+            return <span className="text-[11px] text-gray-500">No preference</span>;
+          }
+
+          return (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {favorites.slice(0, 2).map((grape) => (
+                <div key={`${buyer.id}-${grape}`} className="inline-flex items-center rounded border border-gray-700 px-1.5 py-1">
+                  <GrapeIcon variety={grape as GrapeVariety} size="xs" tooltip={grape} />
+                </div>
+              ))}
+            </div>
+          );
+        },
       },
       {
         key: 'state',
@@ -709,6 +733,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                     <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">×{selectedDemandPressureIndex.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">×{selectedVolatilityRiskIndex.toFixed(3)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Market Context Factor</span><span className="text-right">×{pricing.marketContextMultiplier.toFixed(3)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{pricing.marketSensitivityMultiplier.toFixed(3)}</span></div>
+                    <div className="flex justify-between gap-3"><span className="text-gray-400">Anti-Arbitrage Penalty</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer Market Multiplier</span><span className="text-right">×{pricing.buyerMultiplier.toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{(pricing.relationshipMultiplier ?? 1).toFixed(3)}</span></div>
                     <div className="flex justify-between gap-3"><span className="text-gray-400">Favorite Grape Bonus</span><span className="text-right">+{(pricing.favoriteGrapeBonusMultiplier ?? 0).toFixed(3)}×</span></div>
@@ -728,6 +755,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                       {' × '}{pricing.qualityMultiplier.toFixed(3)}
                       {' × '}{pricing.prestigeBonus.toFixed(3)}
                       {' × '}{pricing.stateMultiplier.toFixed(3)}
+                      {' × '}{pricing.marketContextMultiplier.toFixed(3)}
+                      {' × '}{pricing.marketSensitivityMultiplier.toFixed(3)}
+                      {' × '}{pricing.marketPenaltyMultiplier.toFixed(3)}
                       {' × '}{pricing.buyerMultiplier.toFixed(3)}
                       {' × '}{pricing.relationshipMultiplier.toFixed(3)}
                       {' = '}{formatNumber(pricing.rawPricePerKg, { currency: true, decimals: 3 })}/kg
@@ -754,6 +784,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Factor</span><span className="text-right">×{pricing.qualityMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Prestige Factor</span><span className="text-right">×{pricing.prestigeBonus.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{pricing.stateMultiplier.toFixed(3)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-400">Market Context Factor</span><span className="text-right">×{pricing.marketContextMultiplier.toFixed(3)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{pricing.marketSensitivityMultiplier.toFixed(3)}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-400">Anti-Arbitrage Penalty</span><span className="text-right">×{pricing.marketPenaltyMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Buyer Market Multiplier</span><span className="text-right">×{pricing.buyerMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{pricing.relationshipMultiplier.toFixed(3)}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-400">Favorite Grape Bonus</span><span className="text-right">+{pricing.favoriteGrapeBonusMultiplier.toFixed(3)}×</span></div>
@@ -789,16 +822,6 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                 {grapeFilterOptions.map((grape) => (
                   <option key={grape} value={grape}>{grape}</option>
                 ))}
-              </select>
-              <select
-                className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white"
-                value={stateFilter}
-                onChange={(event) => setStateFilter(event.target.value as 'all' | WineBatch['state'])}
-              >
-                <option value="all">All States</option>
-                <option value="grapes">Grapes</option>
-                <option value="must_ready">Must</option>
-                <option value="must_fermenting">Fermenting</option>
               </select>
             </div>
           </div>

@@ -99,8 +99,10 @@ export interface BuyOfferPriceBreakdown {
   volatilityPriceMultiplier: number;
   buyerSensitivityMultiplier: number;
   supplierRelationshipMultiplier: number;
+  companyPrestigeMultiplier: number;
   statePremiumMultiplier: number;
   marketSpreadMultiplier: number;
+  marketFloorPrice: number;
   finalPricePerKg: number;
 }
 
@@ -114,7 +116,7 @@ const BUY_OFFER_MIN_AVAILABLE_KG = 120;
 const BUY_OFFER_MAX_AVAILABLE_KG = 6000;
 const BUY_OFFER_COMPANY_VALUE_REFERENCE = 10000;
 const BUY_OFFER_COMPANY_VALUE_MAX_MULTIPLIER = 2.1;
-const BUY_OFFER_PRESTIGE_MAX_MULTIPLIER = 1.3;
+const BUY_OFFER_PRESTIGE_MAX_DISCOUNT = 0.3;
 
 const YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
 
@@ -183,7 +185,7 @@ function getBuyOfferPrestigeMultiplier(prestige: number): number {
 
   const normalizedPrestige = NormalizeScrewed1000To01WithTail(prestige);
   const scaledPrestige = Math.max(0, (normalizedPrestige - 0.1) / 0.899);
-  return clamp(1 + scaledPrestige * 0.3, 1, BUY_OFFER_PRESTIGE_MAX_MULTIPLIER);
+  return clamp(1 + scaledPrestige * 0.3, 1, 1.3);
 }
 
 function computeBuyOfferAvailableKg(companyValue: number, prestige: number): number {
@@ -258,6 +260,7 @@ export function computeBuyOfferPricePerKg(input: {
   season: Season;
   economyPhase: EconomyPhase;
   year: number;
+  companyPrestige?: number;
   volatilityMultiplier: number;
   supplierRelationshipPriceMultiplier?: number;
   demandFactors?: BuyMarketDemandFactors;
@@ -269,6 +272,7 @@ export function computeBuyOfferPricePerKg(input: {
   const volatilityMultiplier = input.demandFactors?.volatilityPriceMultiplier ?? input.volatilityMultiplier;
   const buyerSensitivityMultiplier = input.demandFactors?.volatilityBuyerPriceSensitivityMultiplier ?? 1;
   const supplierRelationshipPriceMultiplier = input.supplierRelationshipPriceMultiplier ?? 1;
+  const companyPrestigeMultiplier = clamp(1 - NormalizeScrewed1000To01WithTail(input.companyPrestige ?? 0) * BUY_OFFER_PRESTIGE_MAX_DISCOUNT, 0.7, 1);
   const mirroredBaseline = input.basePrice
     * qualityMultiplier
     * seasonMultiplier
@@ -276,12 +280,14 @@ export function computeBuyOfferPricePerKg(input: {
     * yearCycleMultiplier
     * volatilityMultiplier
     * buyerSensitivityMultiplier
-    * supplierRelationshipPriceMultiplier;
+    * supplierRelationshipPriceMultiplier
+    * companyPrestigeMultiplier;
   const withStatePremium = mirroredBaseline * STATE_PREMIUMS[input.state];
   return clamp(withStatePremium * (1 + BUY_MARKET_FIXED_SPREAD), BUY_MARKET_MIN_PRICE, BUY_MARKET_MAX_PRICE);
 }
 
 export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'basePricePerKg' | 'qualityScore' | 'batchState' | 'effectivePricePerKg' | 'demandFactors' | 'supplierLoyalty'>): BuyOfferPriceBreakdown {
+  const companyPrestige = getGameState().prestige ?? 0;
   const qualityMultiplier = toPriceQualityMultiplier(offer.qualityScore);
   const qualityAdjustedPricePerKg = offer.basePricePerKg * qualityMultiplier;
   const seasonPriceMultiplier = offer.demandFactors.seasonPriceMultiplier ?? 1;
@@ -290,6 +296,7 @@ export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'base
   const volatilityPriceMultiplier = offer.demandFactors.volatilityPriceMultiplier ?? 1;
   const buyerSensitivityMultiplier = offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1;
   const supplierRelationshipMultiplier = getSupplierRelationshipPriceMultiplier((offer.supplierLoyalty?.level ?? 0) as SupplierLoyaltyLevel);
+  const companyPrestigeMultiplier = clamp(1 - NormalizeScrewed1000To01WithTail(companyPrestige) * BUY_OFFER_PRESTIGE_MAX_DISCOUNT, 0.7, 1);
   const statePremiumMultiplier = STATE_PREMIUMS[offer.batchState] ?? 1;
   const marketSpreadMultiplier = 1 + BUY_MARKET_FIXED_SPREAD;
 
@@ -303,8 +310,10 @@ export function getBuyOfferPriceBreakdown(offer: Pick<BuyGrapeMarketOffer, 'base
     volatilityPriceMultiplier,
     buyerSensitivityMultiplier,
     supplierRelationshipMultiplier,
+    companyPrestigeMultiplier,
     statePremiumMultiplier,
     marketSpreadMultiplier,
+    marketFloorPrice: BUY_MARKET_MIN_PRICE,
     finalPricePerKg: offer.effectivePricePerKg,
   };
 }
@@ -374,6 +383,7 @@ function buildNewOffer(
     season,
     economyPhase,
     year,
+    companyPrestige: prestige,
     volatilityMultiplier: demandFactors.volatilityPriceMultiplier,
     supplierRelationshipPriceMultiplier: supplierRelationshipMultiplier,
     demandFactors,
@@ -521,6 +531,7 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
   const rows = (data as unknown) as BuyMarketOfferRow[];
   const { season, year, economyPhase } = getCurrentTime();
   const { demandFactors } = await getMarketContext(companyId);
+  const prestige = getGameState().prestige ?? 0;
   const supplierIds = Array.from(new Set(rows.map((row) => row.supplier_id)));
   const supplierLoyaltyById = await getSupplierLoyalties(supplierIds);
 
@@ -538,6 +549,7 @@ export async function processWeeklyBuyGrapeOfferDecay(): Promise<void> {
       season,
       economyPhase,
       year,
+      companyPrestige: prestige,
       volatilityMultiplier: demandFactors.volatilityPriceMultiplier,
       supplierRelationshipPriceMultiplier: getSupplierRelationshipPriceMultiplier((supplierLoyaltyById[row.supplier_id]?.level ?? 0) as SupplierLoyaltyLevel),
       demandFactors,
