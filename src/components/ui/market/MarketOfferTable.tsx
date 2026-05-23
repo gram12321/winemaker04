@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export interface MarketOfferTableColumn<RowType> {
   key: string;
-  header: string;
+  header: React.ReactNode;
   className?: string;
   sortable?: boolean;
   render: (row: RowType) => React.ReactNode;
@@ -13,6 +13,7 @@ interface MarketOfferTableProps<RowType> {
   rows: RowType[];
   columns: MarketOfferTableColumn<RowType>[];
   rowKey: (row: RowType) => string;
+  className?: string;
   sortKey?: string;
   sortDirection?: 'asc' | 'desc' | null;
   onSort?: (columnKey: string) => void;
@@ -24,6 +25,7 @@ export function MarketOfferTable<RowType>({
   rows,
   columns,
   rowKey,
+  className,
   sortKey,
   sortDirection,
   onSort,
@@ -38,8 +40,8 @@ export function MarketOfferTable<RowType>({
   };
 
   return (
-    <Table>
-      <TableHeader>
+    <Table className={className}>
+      <TableHeader className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-sm">
         <TableRow>
           {columns.map((column) => (
             <TableHead key={column.key} className={column.className}>
@@ -47,10 +49,10 @@ export function MarketOfferTable<RowType>({
                 <button
                   type="button"
                   onClick={() => onSort(column.key)}
-                  className="inline-flex items-center gap-1 hover:text-gray-900"
+                  className="inline-flex items-center gap-1 text-gray-200 hover:text-white"
                 >
                   <span>{column.header}</span>
-                  <span className="text-[10px] text-gray-500">{getSortIndicator(column.key)}</span>
+                  <span className="text-[10px] text-gray-400">{getSortIndicator(column.key)}</span>
                 </button>
               ) : (
                 column.header
@@ -65,17 +67,18 @@ export function MarketOfferTable<RowType>({
           const isSelected = selectedRowKey === key;
 
           return (
-          <TableRow
-            key={key}
-            data-state={isSelected ? 'selected' : undefined}
-            className={onRowClick ? 'cursor-pointer hover:bg-slate-800/60' : undefined}
-            onClick={onRowClick ? () => onRowClick(row) : undefined}
-          >
-            {columns.map((column) => (
-              <TableCell key={column.key} className={column.className}>{column.render(row)}</TableCell>
-            ))}
-          </TableRow>
-        )})}
+            <TableRow
+              key={key}
+              data-state={isSelected ? 'selected' : undefined}
+              className={onRowClick ? 'cursor-pointer hover:bg-slate-800/60 data-[state=selected]:bg-slate-700/55 data-[state=selected]:hover:bg-slate-700/70' : undefined}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+            >
+              {columns.map((column) => (
+                <TableCell key={column.key} className={column.className}>{column.render(row)}</TableCell>
+              ))}
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

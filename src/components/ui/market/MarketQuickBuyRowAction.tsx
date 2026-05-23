@@ -34,8 +34,8 @@ export const MarketQuickBuyRowAction: React.FC<MarketQuickBuyRowActionProps> = (
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="min-w-[180px] max-w-[220px]">
+    <div className="w-[132px] space-y-1 ml-auto">
+      <div>
         <Slider
           value={[Math.min(parsedQuantity, Math.max(1, maxQuantity))]}
           min={1}
@@ -45,10 +45,12 @@ export const MarketQuickBuyRowAction: React.FC<MarketQuickBuyRowActionProps> = (
           disabled={disabled || isSubmitting || maxQuantity <= 0}
         />
       </div>
-      <span className="text-xs text-gray-600 w-16 text-right">{parsedQuantity} kg</span>
-      <Button size="sm" onClick={handleBuyClick} disabled={disabled || hasError || isSubmitting}>
-        {isSubmitting ? 'Buying...' : 'Buy'}
-      </Button>
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[11px] text-gray-400 whitespace-nowrap">{parsedQuantity} kg</span>
+        <Button size="sm" className="h-6 px-2 text-[11px]" onClick={handleBuyClick} disabled={disabled || hasError || isSubmitting}>
+          {isSubmitting ? '...' : 'Buy'}
+        </Button>
+      </div>
     </div>
   );
 };

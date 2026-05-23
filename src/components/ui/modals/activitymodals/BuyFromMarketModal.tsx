@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Slider } from '@/components/ui';
-import { MarketOfferTable, type MarketOfferTableColumn } from '@/components/ui/market/MarketOfferTable';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui';
+import { UnifiedTooltip } from '@/components/ui/shadCN/tooltip';
+import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
+import { MarketQuickBuyRowAction } from '../../market/MarketQuickBuyRowAction';
 import {
   getBuyGrapeMarketOffers,
   getBuyOfferPriceBreakdown,
@@ -55,44 +57,16 @@ function getOriginLabel(originTag: BuyGrapeMarketOffer['originTag']): string {
   return 'Seasonal Rotation';
 }
 
-function getSellerStanding(offer: BuyGrapeMarketOffer | null): { title: string; detail: string } {
-  if (!offer) {
-    return {
-      title: 'No Seller Selected',
-      detail: 'Choose an offer to inspect seller context and pricing details.',
-    };
-  }
-
-  if (offer.originTag === 'trusted_carryover' || offer.isPersistent) {
-    return {
-      title: 'Returning Contact',
-      detail: 'This supplier survived the last market rotation and carries more stable stock discipline.',
-    };
-  }
-
-  if (offer.originTag === 'country_special') {
-    return {
-      title: 'Regional Specialist',
-      detail: 'This supplier represents a country-specific supply lane with more distinct profile signals.',
-    };
-  }
-
-  return {
-    title: 'Market Spot Seller',
-    detail: 'This is a seasonal spot offer. Good for opportunistic buys, but not a persistent lane yet.',
-  };
-}
-
 const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose }) => {
   const [offers, setOffers] = useState<BuyGrapeMarketOffer[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorByOfferId, setErrorByOfferId] = useState<Record<string, string>>({});
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
-  const [purchasePercentage, setPurchasePercentage] = useState(100);
   const [grapeFilter, setGrapeFilter] = useState<'all' | string>('all');
   const [stateFilter, setStateFilter] = useState<'all' | BuyGrapeMarketOffer['batchState']>('all');
   const [sortKey, setSortKey] = useState<string>('quality');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [showAllOffers, setShowAllOffers] = useState(false);
 
   const loadOffers = useCallback(async () => {
     setLoading(true);
@@ -111,13 +85,13 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
 
   useEffect(() => {
     if (isOpen) {
-      setPurchasePercentage(100);
+      setShowAllOffers(false);
     }
   }, [isOpen]);
 
   useEffect(() => {
-    setPurchasePercentage(100);
-  }, [selectedOfferId]);
+    setShowAllOffers(false);
+  }, [grapeFilter, stateFilter, sortKey, sortDirection]);
 
   const handleBuy = useCallback(async (offerId: string, quantityKg: number) => {
     const result = await purchaseBuyGrapeOffer(offerId, quantityKg);
@@ -172,27 +146,23 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       const rightVolatility = right.demandFactors.volatilityPriceMultiplier * (right.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
 
       const leftValue =
-        sortKey === 'supplier' ? left.supplierName
-          : sortKey === 'state' ? getBuyOfferStateLabel(left.batchState)
-            : sortKey === 'grape' ? left.grapeVariety
+        sortKey === 'offer' ? left.supplierName
               : sortKey === 'available' ? left.availableKg
                 : sortKey === 'quality' ? left.qualityScore
                   : sortKey === 'price' ? left.effectivePricePerKg
-                    : sortKey === 'freshness' ? left.weeksOnMarket
-                      : sortKey === 'demand' ? leftDemand
-                        : sortKey === 'volatility' ? leftVolatility
+                : sortKey === 'market' ? leftDemand + leftVolatility
+                  : sortKey === 'demand' ? leftDemand
+                    : sortKey === 'volatility' ? leftVolatility
                           : left.qualityScore;
 
       const rightValue =
-        sortKey === 'supplier' ? right.supplierName
-          : sortKey === 'state' ? getBuyOfferStateLabel(right.batchState)
-            : sortKey === 'grape' ? right.grapeVariety
+        sortKey === 'offer' ? right.supplierName
               : sortKey === 'available' ? right.availableKg
                 : sortKey === 'quality' ? right.qualityScore
                   : sortKey === 'price' ? right.effectivePricePerKg
-                    : sortKey === 'freshness' ? right.weeksOnMarket
-                      : sortKey === 'demand' ? rightDemand
-                        : sortKey === 'volatility' ? rightVolatility
+                : sortKey === 'market' ? rightDemand + rightVolatility
+                  : sortKey === 'demand' ? rightDemand
+                    : sortKey === 'volatility' ? rightVolatility
                           : right.qualityScore;
 
       if (leftValue === rightValue) return 0;
@@ -236,95 +206,80 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     return filteredAndSortedOffers.find((offer) => offer.id === selectedOfferId) ?? filteredAndSortedOffers[0] ?? null;
   }, [filteredAndSortedOffers, selectedOfferId]);
 
-  const maxSelectablePercent = useMemo(() => {
-    if (!selectedOffer || selectedOffer.availableKg <= 0) return 1;
-    return 100;
-  }, [selectedOffer]);
+  const displayedOffers = useMemo(() => {
+    if (showAllOffers) return filteredAndSortedOffers;
+    return filteredAndSortedOffers.slice(0, 6);
+  }, [filteredAndSortedOffers, showAllOffers]);
 
   useEffect(() => {
-    setPurchasePercentage((current) => Math.max(1, Math.min(current, maxSelectablePercent)));
-  }, [maxSelectablePercent]);
-
-  const selectedQuantityKg = useMemo(() => {
-    if (!selectedOffer || selectedOffer.availableKg <= 0) return 0;
-    return Math.max(1, Math.min(selectedOffer.availableKg, Math.round((selectedOffer.availableKg * purchasePercentage) / 100)));
-  }, [purchasePercentage, selectedOffer]);
+    if (displayedOffers.length === 0) return;
+    if (!selectedOffer) return;
+    const inVisibleRows = displayedOffers.some((offer) => offer.id === selectedOffer.id);
+    if (!inVisibleRows) {
+      setSelectedOfferId(displayedOffers[0].id);
+    }
+  }, [displayedOffers, selectedOffer]);
 
   const priceBreakdown = useMemo(() => {
     if (!selectedOffer) return null;
     return getBuyOfferPriceBreakdown(selectedOffer);
   }, [selectedOffer]);
 
-  const totalCost = useMemo(() => {
-    if (!selectedOffer || selectedQuantityKg <= 0) return 0;
-    return selectedOffer.effectivePricePerKg * selectedQuantityKg;
-  }, [selectedOffer, selectedQuantityKg]);
-
-  const selectedDemandMultiplier = useMemo(() => {
-    if (!selectedOffer) return 1;
-    return (
-      selectedOffer.demandFactors.seasonPriceMultiplier
-      * selectedOffer.demandFactors.economyPriceMultiplier
-      * selectedOffer.demandFactors.yearCyclePriceMultiplier
-      * selectedOffer.demandFactors.volatilityPriceMultiplier
-      * (selectedOffer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1)
-    );
-  }, [selectedOffer]);
-
-  const selectedVolatilityMultiplier = useMemo(() => {
-    if (!selectedOffer) return 1;
-    return selectedOffer.demandFactors.volatilityPriceMultiplier * (selectedOffer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
-  }, [selectedOffer]);
-
-  const handlePurchaseSelected = useCallback(async () => {
-    if (!selectedOffer || selectedQuantityKg <= 0) return;
-    await handleBuy(selectedOffer.id, selectedQuantityKg);
-  }, [handleBuy, selectedOffer, selectedQuantityKg]);
-
-  const sellerStanding = useMemo(() => getSellerStanding(selectedOffer), [selectedOffer]);
-
-  const qualityColor = selectedOffer ? getColorClass(selectedOffer.qualityScore) : 'text-gray-300';
+  const headerWithTooltip = useCallback((label: string, tooltip: string) => (
+    <span className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <UnifiedTooltip
+        title={label}
+        content={<span className="text-xs leading-snug">{tooltip}</span>}
+      >
+        <span
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-600 text-[10px] text-gray-300"
+          onClick={(event) => event.stopPropagation()}
+        >
+          ?
+        </span>
+      </UnifiedTooltip>
+    </span>
+  ), []);
 
   const columns = useMemo<MarketOfferTableColumn<BuyGrapeMarketOffer>[]>(() => [
     {
-      key: 'supplier',
-      header: 'Supplier',
+      key: 'offer',
+      header: 'Offer',
       sortable: true,
+      className: 'w-[31%] min-w-[230px]',
       render: (offer) => (
-        <div>
-          <div className="font-medium text-white">{offer.supplierName}</div>
-          <div className="text-[11px] text-gray-400">{getOriginLabel(offer.originTag)}</div>
+        <div className="space-y-1">
+          <div className="font-medium text-white leading-tight">{offer.supplierName}</div>
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-gray-400">
+            <span>{getOriginLabel(offer.originTag)}</span>
+            <span className="text-gray-600">•</span>
+            <span>{offer.grapeVariety}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="rounded border border-gray-700 px-2 py-0.5 text-[10px] text-gray-300">{getBuyOfferStateLabel(offer.batchState)}</span>
+            <UnifiedTooltip
+              title="Weeks On Market"
+              content={<span className="text-xs leading-snug">How many weeks this listing has been on the market. Older offers generally decay in quality over time.</span>}
+            >
+              <span className="rounded border border-gray-700 px-2 py-0.5 text-[10px] text-cyan-200">{offer.weeksOnMarket}w</span>
+            </UnifiedTooltip>
+          </div>
         </div>
       ),
-    },
-    {
-      key: 'state',
-      header: 'State',
-      sortable: true,
-      render: (offer) => (
-        <span className="rounded border border-gray-700 px-2 py-1 text-[11px] text-gray-300">
-          {getBuyOfferStateLabel(offer.batchState)}
-        </span>
-      ),
-    },
-    {
-      key: 'grape',
-      header: 'Variety',
-      sortable: true,
-      render: (offer) => <span className="text-gray-200">{offer.grapeVariety}</span>,
     },
     {
       key: 'available',
       header: 'Available',
       sortable: true,
-      className: 'text-right text-gray-200 whitespace-nowrap',
+      className: 'w-[11%] text-right text-gray-200 whitespace-nowrap min-w-[84px]',
       render: (offer) => `${offer.availableKg.toLocaleString()} kg`,
     },
     {
       key: 'quality',
-      header: 'Quality',
+      header: headerWithTooltip('Quality', 'Grape quality score. Higher quality increases effective price and usually means better processing potential.'),
       sortable: true,
-      className: 'text-right',
+      className: 'w-[14%] text-right min-w-[118px]',
       render: (offer) => (
         <div>
           <div className={`font-medium ${getColorClass(offer.qualityScore)}`}>{Math.round(offer.qualityScore * 100)}%</div>
@@ -336,21 +291,14 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
       key: 'price',
       header: 'Price/kg',
       sortable: true,
-      className: 'text-right text-amber-300 whitespace-nowrap',
+      className: 'w-[10%] text-right text-amber-300 whitespace-nowrap min-w-[84px]',
       render: (offer) => formatNumber(offer.effectivePricePerKg, { currency: true, decimals: 2 }),
     },
     {
-      key: 'freshness',
-      header: 'Weeks',
+      key: 'market',
+      header: headerWithTooltip('Market', 'Combined demand and volatility pressure from season, economy, year cycle, weather, and seller sensitivity.'),
       sortable: true,
-      className: 'text-right text-gray-200',
-      render: (offer) => offer.weeksOnMarket,
-    },
-    {
-      key: 'demand',
-      header: 'Demand',
-      sortable: true,
-      className: 'text-right',
+      className: 'w-[16%] text-right min-w-[150px]',
       render: (offer) => {
         const demandMultiplier =
           offer.demandFactors.seasonPriceMultiplier
@@ -359,28 +307,18 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
           * offer.demandFactors.volatilityPriceMultiplier
           * (offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
 
-        return (
-          <div>
-            <div className="font-medium text-blue-300">{demandMultiplier.toFixed(2)}x</div>
-            <div className="text-[11px] text-gray-400 whitespace-nowrap">{offer.demandFactors.volatilityEconomyPhase}</div>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'volatility',
-      header: 'Volatility',
-      sortable: true,
-      className: 'text-right',
-      render: (offer) => {
         const volatilityMultiplier =
           offer.demandFactors.volatilityPriceMultiplier
           * (offer.demandFactors.volatilityBuyerPriceSensitivityMultiplier ?? 1);
 
         return (
-          <div>
-            <div className="font-medium text-purple-300">{volatilityMultiplier.toFixed(2)}x</div>
-            <div className="text-[11px] text-gray-400 whitespace-nowrap">{offer.demandFactors.volatilityWeatherState}</div>
+          <div className="space-y-0.5">
+            <div className="text-[11px] whitespace-nowrap">
+              <span className="text-blue-300 font-medium">D {demandMultiplier.toFixed(2)}x</span>
+              <span className="text-gray-500"> · </span>
+              <span className="text-purple-300 font-medium">V {volatilityMultiplier.toFixed(2)}x</span>
+            </div>
+            <div className="text-[11px] text-gray-400 whitespace-nowrap">{offer.demandFactors.volatilityEconomyPhase} / {offer.demandFactors.volatilityWeatherState}</div>
           </div>
         );
       },
@@ -388,75 +326,102 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     {
       key: 'action',
       header: 'Action',
-      className: 'text-right',
+      className: 'w-[18%] text-right min-w-[160px]',
       render: (offer) => (
-        <Button
-          type="button"
-          size="sm"
-          variant={offer.id === selectedOffer?.id ? 'default' : 'outline'}
-          className={offer.id === selectedOffer?.id ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-gray-800 text-white border-gray-600 hover:bg-gray-700'}
-          onClick={(event) => {
-            event.stopPropagation();
-            setSelectedOfferId(offer.id);
-          }}
-        >
-          {offer.id === selectedOffer?.id ? 'Selected' : 'Inspect'}
-        </Button>
+        <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
+          <MarketQuickBuyRowAction
+            offerId={offer.id}
+            maxQuantity={offer.availableKg}
+            onBuy={handleBuy}
+            disabled={loading}
+          />
+          {errorByOfferId[offer.id] && (
+            <div className="text-[11px] text-red-300 flex items-center justify-end gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              <span>{errorByOfferId[offer.id]}</span>
+            </div>
+          )}
+        </div>
       ),
     },
-  ], [selectedOffer?.id]);
+  ], [errorByOfferId, handleBuy, headerWithTooltip, loading]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="w-[96vw] max-w-7xl max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
+      <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Buy from Market</DialogTitle>
         </DialogHeader>
 
-        {selectedOffer?.demandFactors && (
-          <div className="mb-3 rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-cyan-200 font-medium">Market volatility outlook</span>
-              <span className="inline-flex items-center gap-1 rounded border border-emerald-700/70 bg-emerald-900/30 px-2 py-1 text-emerald-200">
-                <span>{getSeasonVolatilityIcon(selectedOffer.demandFactors.volatilitySeason)}</span>
-                <span>{selectedOffer.demandFactors.volatilitySeason}</span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded border border-indigo-700/70 bg-indigo-900/30 px-2 py-1 text-indigo-200">
-                <span>{getEconomyVolatilityIcon(selectedOffer.demandFactors.volatilityEconomyPhase)}</span>
-                <span>{selectedOffer.demandFactors.volatilityEconomyPhase}</span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded border border-blue-700/70 bg-blue-900/30 px-2 py-1 text-blue-200">
-                <span>{getWeatherVolatilityIcon(selectedOffer.demandFactors.volatilityWeatherState)}</span>
-                <span>{selectedOffer.demandFactors.volatilityWeatherState} ({selectedOffer.demandFactors.volatilityWeatherIntensity})</span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
-                <span>💶</span>
-                <span>Price {formatVolatilityDelta(selectedOffer.demandFactors.volatilityPriceMultiplier)}</span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
-                <span>📦</span>
-                <span>Supply {formatVolatilityDelta(selectedOffer.demandFactors.volatilityLimitMultiplier)}</span>
-              </span>
-            </div>
-            <div className="mt-2 space-y-1 text-[11px] text-gray-300">
-              {selectedOffer.demandFactors.volatilityPriceReason && (
-                <div><span className="text-cyan-300 font-medium">Price outlook:</span> {selectedOffer.demandFactors.volatilityPriceReason}</div>
-              )}
-              {selectedOffer.demandFactors.volatilityLimitReason && (
-                <div><span className="text-amber-300 font-medium">Supply outlook:</span> {selectedOffer.demandFactors.volatilityLimitReason}</div>
-              )}
-              {selectedOffer.demandFactors.volatilityBuyerSensitivityReason && (
-                <div><span className="text-blue-300 font-medium">Seller profile:</span> {selectedOffer.demandFactors.volatilityBuyerSensitivityReason}</div>
-              )}
-            </div>
-          </div>
-        )}
-
         <div className="space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] gap-3 items-start">
+            {selectedOffer?.demandFactors ? (
+              <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-cyan-200 font-medium">Market volatility outlook</span>
+                  <span className="inline-flex items-center gap-1 rounded border border-emerald-700/70 bg-emerald-900/30 px-2 py-1 text-emerald-200">
+                    <span>{getSeasonVolatilityIcon(selectedOffer.demandFactors.volatilitySeason)}</span>
+                    <span>{selectedOffer.demandFactors.volatilitySeason}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded border border-indigo-700/70 bg-indigo-900/30 px-2 py-1 text-indigo-200">
+                    <span>{getEconomyVolatilityIcon(selectedOffer.demandFactors.volatilityEconomyPhase)}</span>
+                    <span>{selectedOffer.demandFactors.volatilityEconomyPhase}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded border border-blue-700/70 bg-blue-900/30 px-2 py-1 text-blue-200">
+                    <span>{getWeatherVolatilityIcon(selectedOffer.demandFactors.volatilityWeatherState)}</span>
+                    <span>{selectedOffer.demandFactors.volatilityWeatherState} ({selectedOffer.demandFactors.volatilityWeatherIntensity})</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded border border-cyan-700/70 bg-cyan-900/30 px-2 py-1 text-cyan-200">
+                    <span>💶</span>
+                    <span>Price {formatVolatilityDelta(selectedOffer.demandFactors.volatilityPriceMultiplier)}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded border border-amber-700/70 bg-amber-900/30 px-2 py-1 text-amber-200">
+                    <span>📦</span>
+                    <span>Supply {formatVolatilityDelta(selectedOffer.demandFactors.volatilityLimitMultiplier)}</span>
+                  </span>
+                </div>
+                <div className="mt-2 space-y-1 text-[11px] text-gray-300">
+                  {selectedOffer.demandFactors.volatilityPriceReason && (
+                    <div><span className="text-cyan-300 font-medium">Price outlook:</span> {selectedOffer.demandFactors.volatilityPriceReason}</div>
+                  )}
+                  {selectedOffer.demandFactors.volatilityLimitReason && (
+                    <div><span className="text-amber-300 font-medium">Supply outlook:</span> {selectedOffer.demandFactors.volatilityLimitReason}</div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded border border-cyan-800/70 bg-cyan-950/20 p-3 text-xs text-gray-300">
+                Select an offer to inspect market volatility details.
+              </div>
+            )}
+
+            {priceBreakdown && selectedOffer ? (
+              <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70">
+                <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Price Breakdown</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier</span><span className="text-right">{selectedOffer.supplierName}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Base price</span><span className="text-right">{formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}/kg</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Quality ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">x{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Season pressure</span><span className="text-right">x{priceBreakdown.seasonPriceMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Economy pressure</span><span className="text-right">x{priceBreakdown.economyPriceMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Year cycle</span><span className="text-right">x{priceBreakdown.yearCyclePriceMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility</span><span className="text-right">x{priceBreakdown.volatilityPriceMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Seller sensitivity</span><span className="text-right">x{priceBreakdown.buyerSensitivityMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">State premium</span><span className="text-right">x{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market spread</span><span className="text-right">x{priceBreakdown.marketSpreadMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Price per kg</span><span className="text-right">{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-800 rounded p-3 text-sm border border-gray-700/70 text-gray-300">
+                Select an offer to inspect price breakdown.
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-2 items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-white">Waregroup: Grapes</p>
-              <p className="text-xs text-gray-400">One row per offer. Click a row to inspect deeper market details below.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
@@ -486,11 +451,12 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
           </div>
 
           <div className="rounded border border-gray-700 bg-gray-800/60 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[56vh]">
               <MarketOfferTable
-                rows={filteredAndSortedOffers}
+                rows={displayedOffers}
                 columns={columns}
                 rowKey={(offer) => offer.id}
+                className="table-fixed"
                 sortKey={sortKey}
                 sortDirection={sortDirection}
                 onSort={handleSort}
@@ -500,147 +466,25 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             </div>
           </div>
 
+          {filteredAndSortedOffers.length > 6 && (
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
+                onClick={() => setShowAllOffers((current) => !current)}
+              >
+                {showAllOffers ? 'Show Less' : `Show More (${filteredAndSortedOffers.length - 6} more)`}
+              </Button>
+            </div>
+          )}
+
           {filteredAndSortedOffers.length === 0 && (
             <div className="rounded border border-gray-700 bg-gray-800/90 p-4 text-sm text-gray-300">
               No offers match the current filters.
             </div>
           )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(0,1.1fr)] gap-4 items-start">
-            <div className="space-y-3">
-              <div className="bg-gray-800 rounded p-3 text-xs space-y-2 border border-gray-700/70">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 uppercase tracking-wide">Selected Seller</span>
-                  <span className="text-cyan-300 font-semibold">{sellerStanding.title}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-white text-sm">{selectedOffer?.supplierName ?? 'No offer selected'}</div>
-                    <div className="text-gray-400">{selectedOffer ? getOriginLabel(selectedOffer.originTag) : 'Choose an offer from the table.'}</div>
-                  </div>
-                  {selectedOffer && (
-                    <span className="rounded border border-cyan-800/70 bg-cyan-950/30 px-2 py-1 text-cyan-200">
-                      {selectedOffer.isPersistent ? 'Persistent lane' : 'Spot lane'}
-                    </span>
-                  )}
-                </div>
-                <div className="text-gray-300">{sellerStanding.detail}</div>
-                {selectedOffer && (
-                  <div className="grid grid-cols-2 gap-2 pt-1 text-gray-300">
-                    <div className="rounded bg-gray-900/60 p-2">
-                      <div className="text-gray-500">Demand multiplier</div>
-                      <div className="font-semibold text-blue-300">{selectedDemandMultiplier.toFixed(2)}x</div>
-                    </div>
-                    <div className="rounded bg-gray-900/60 p-2">
-                      <div className="text-gray-500">Volatility</div>
-                      <div className="font-semibold text-purple-300">{selectedVolatilityMultiplier.toFixed(2)}x</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-gray-800 rounded p-3 space-y-1 text-sm border border-gray-700/70">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Variety</span>
-                  <span className="font-medium text-white">{selectedOffer?.grapeVariety ?? '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">State</span>
-                  <span className="font-medium text-white">{selectedOffer ? getBuyOfferStateLabel(selectedOffer.batchState) : '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Available</span>
-                  <span className="font-medium text-white">{selectedOffer ? `${selectedOffer.availableKg.toLocaleString()} kg` : '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Quality</span>
-                  <span className={`font-medium ${qualityColor}`}>{selectedOffer ? `${Math.round(selectedOffer.qualityScore * 100)}%` : '—'}</span>
-                </div>
-                {selectedOffer && (
-                  <div className="text-right text-xs text-gray-400">{getQualityCategory(selectedOffer.qualityScore)}</div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="bg-gray-800 rounded p-3 space-y-3 text-sm border border-gray-700/70">
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-400 font-medium uppercase tracking-wide text-xs">Purchase Amount</p>
-                  <span className="text-cyan-300 font-semibold">{purchasePercentage}%</span>
-                </div>
-                <Slider
-                  value={[purchasePercentage]}
-                  onValueChange={([value]) => setPurchasePercentage(value ?? 100)}
-                  min={1}
-                  max={maxSelectablePercent}
-                  step={1}
-                  className="py-1"
-                  disabled={!selectedOffer || selectedOffer.availableKg <= 0}
-                />
-                <div className="flex justify-between text-gray-300">
-                  <span>Buying now</span>
-                  <span className="font-semibold text-white">{selectedQuantityKg.toLocaleString()} kg</span>
-                </div>
-                <div className="flex justify-between text-gray-300">
-                  <span>Remaining in listing</span>
-                  <span className="font-semibold text-white">{Math.max(0, (selectedOffer?.availableKg ?? 0) - selectedQuantityKg).toLocaleString()} kg</span>
-                </div>
-                <div className="text-[11px] text-gray-400 border-t border-gray-700 pt-2">
-                  Market offers are one-off listings. Buying reduces this listing directly instead of reserving future seller capacity.
-                </div>
-                {selectedOffer && errorByOfferId[selectedOffer.id] && (
-                  <div className="rounded border border-red-800 bg-red-950/30 p-2 text-xs text-red-300 flex items-center gap-2">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>{errorByOfferId[selectedOffer.id]}</span>
-                  </div>
-                )}
-              </div>
-
-              {selectedOffer && (
-                <div className="rounded border border-cyan-900/70 bg-cyan-950/20 px-3 py-2 text-xs text-cyan-200">
-                  Buy preview from {selectedOffer.supplierName}: {formatNumber(totalCost, { currency: true, decimals: 0 })} total for {selectedQuantityKg.toLocaleString()} kg at {formatNumber(selectedOffer.effectivePricePerKg, { currency: true, decimals: 2 })}/kg.
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded border border-blue-900/60 bg-blue-950/30 p-3 text-xs space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-blue-300">Seller Profile</span>
-                  <span className="font-bold text-cyan-300">{selectedOffer ? getOriginLabel(selectedOffer.originTag) : 'No selection'}</span>
-                </div>
-                <div className="flex gap-4 text-gray-400">
-                  <span>Lane type: <strong className="text-white">{selectedOffer?.isPersistent ? 'Persistent' : 'Spot'}</strong></span>
-                  <span>Freshness: <strong className="text-white">{selectedOffer?.weeksOnMarket ?? 0} weeks</strong></span>
-                </div>
-                <div className="flex gap-4 text-gray-300">
-                  <span>Quality floor: <strong className="text-white">{selectedOffer ? `${Math.round(selectedOffer.minQualityFloor * 100)}%` : '—'}</strong></span>
-                  <span>Decay / week: <strong className="text-white">{selectedOffer ? `${Math.round(selectedOffer.qualityDecayPerWeek * 1000) / 10}%` : '—'}</strong></span>
-                </div>
-                <div className="border-t border-blue-900/40 pt-2 text-amber-300">
-                  Supplier relationship tracking is not persistent yet. This panel shows current lane quality and reliability signals for the selected offer.
-                </div>
-              </div>
-
-              {priceBreakdown && selectedOffer && (
-                <div className="bg-gray-800 rounded p-3 space-y-1 text-sm border border-gray-700/70">
-                  <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Price Breakdown</div>
-                  <div className="flex justify-between"><span className="text-gray-400">Base price</span><span>{formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}/kg</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Quality ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span>x{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Season pressure</span><span>x{priceBreakdown.seasonPriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Economy pressure</span><span>x{priceBreakdown.economyPriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Year cycle</span><span>x{priceBreakdown.yearCyclePriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Volatility</span><span>x{priceBreakdown.volatilityPriceMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Seller sensitivity</span><span>x{priceBreakdown.buyerSensitivityMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">State premium</span><span>x{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Market spread</span><span>x{priceBreakdown.marketSpreadMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between border-t border-gray-700 pt-2"><span className="text-gray-400">Price per kg</span><span>{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Purchase quantity</span><span>{selectedQuantityKg.toLocaleString()} kg</span></div>
-                  <div className="flex justify-between text-amber-300 font-semibold pt-1"><span>Total Cost</span><span>{formatNumber(totalCost, { currency: true, decimals: 0 })}</span></div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         <DialogFooter className="gap-2">
@@ -651,13 +495,6 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
             className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
           >
             Cancel
-          </Button>
-          <Button
-            onClick={() => void handlePurchaseSelected()}
-            disabled={loading || !selectedOffer || selectedQuantityKg <= 0}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white"
-          >
-            {loading ? 'Buying…' : `Buy for ${formatNumber(totalCost, { currency: true, decimals: 0 })}`}
           </Button>
         </DialogFooter>
       </DialogContent>
