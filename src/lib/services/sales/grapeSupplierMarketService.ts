@@ -98,6 +98,7 @@ function computeScaledSeasonSupply(baseSeasonSupplyKg: number, companyValue: num
 }
 
 async function getSeasonalSupplierCountFromResearch(): Promise<number> {
+  // Intentionally shared with buyer market progression.
   const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_slots');
   const additional = unlocked.reduce((sum, value) => {
     const parsed = Number(value);
@@ -109,6 +110,7 @@ async function getSeasonalSupplierCountFromResearch(): Promise<number> {
 }
 
 async function getUnlockedSupplierCountriesFromResearch(homeCountry: CountryKey): Promise<CountryKey[]> {
+  // Intentionally shared with buyer market progression.
   const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_country_access');
   const allowed = new Set<CountryKey>([homeCountry]);
 

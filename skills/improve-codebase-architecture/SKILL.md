@@ -1,11 +1,44 @@
 ---
 name: improve-codebase-architecture
-description: Find deepening opportunities in a codebase, informed by the domain language in CONTEXT.md and the decisions in docs/adr/. Use when the user wants to improve architecture, find refactoring opportunities, consolidate tightly-coupled modules, or make a codebase more testable and AI-navigable.
+description: Find deepening opportunities and run architecture-level sanitation sweeps in winemaker04, informed by domain language in CONTEXT.md and decisions in docs/adr/.
 ---
 
 # Improve Codebase Architecture
 
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this skill is used both for architecture deepening and as the default subskill for completion sanitation sweeps.
+
 Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
+
+## Sanitary Sweep Mode (Winemaker)
+
+When invoked as a completion gate, run this focused sanitation scan:
+
+1. **Service logic in UI check**
+	- Find business/service functions implemented directly in UI layers (`src/components/`, `src/components/pages/`, UI-only modules).
+	- Propose extraction to `src/lib/services/`.
+
+2. **CRUD location check**
+	- Find CRUD/persistence logic outside `src/lib/database/`.
+	- Propose relocation to the database layer and keep callers service-first.
+
+3. **Game constants extraction check**
+	- Find tunable gameplay values hardcoded in UI/services that should live in `src/lib/constants/`.
+	- Propose constant extraction with domain naming.
+
+4. **Import/export hygiene check**
+	- Find imports that bypass existing barrel paths when a barrel exists.
+	- Find modules missing `index.ts` barrel exports where appropriate.
+	- Prefer wildcard barrel exports when safe and appropriate for the module.
+
+For sweep output, provide:
+
+- Files and concrete findings
+- Required fix vs optional cleanup
+- Suggested target module/location for each move
 
 ## Glossary
 

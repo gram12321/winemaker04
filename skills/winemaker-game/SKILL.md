@@ -59,6 +59,7 @@ After classifying the user request, route to the matching specialist skills.
 | User explicitly asks for isolated worktree setup | `../using-git-worktrees/SKILL.md` | none |
 | User explicitly asks to wrap up merge or PR branch flow | `../finishing-a-development-branch/SKILL.md` | `../requesting-code-review/SKILL.md` |
 | User explicitly asks for agent-skill tracker bootstrap | `../setup-matt-pocock-skills/SKILL.md` | none |
+| Agent is about to claim task completion | `../improve-codebase-architecture/SKILL.md` (sanitary sweep mode) | `../verification-before-completion/SKILL.md` |
 
 ## Non-Default Skills In This Repo
 
@@ -112,6 +113,7 @@ The following are optional mode skills (never mandatory by default):
 - Do not run `npm run build` by default; use only when asked or when change risk justifies it.
 - After major updates, ask whether `readme.md` and `docs/versionlog.md` should be updated.
 - For schema changes, update SQL under `migrations/` after validating intended DB changes.
+- Keep `docs/AIdocs/AIpromt_codecleaning.md` as the detailed cleanup playbook. The completion sanitary gate below runs in parallel and does not supersede it.
 
 ## Key Locations
 
@@ -169,6 +171,40 @@ After implementation:
 - Update `docs/AIdocs/AIDescriptions_coregame.md` when implementation status changes.
 - Update `docs/WineSystem_VariableRelationshipMap.md` when variable relationships change.
 - Keep `readme.md` concise.
+
+## Completion Sanitary Gate (Required)
+
+Before claiming a task is done, run a sanitation sweep through a subagent.
+
+Default sweep path:
+
+1. Spawn an `Explore` subagent for a repo scan.
+2. Check and report these violations:
+	- Service or business functions inside UI files (not allowed): `src/components/`, `src/components/pages/`, and UI-only modules.
+	- CRUD or direct data persistence logic outside `src/lib/database/` (not allowed).
+	- Tunable gameplay numbers hardcoded in services or UI when they should live in `src/lib/constants/`.
+	- Import/export hygiene drift:
+	  - Imports should use project barrel paths where available.
+	  - Exports should use `index.ts` barrel exports.
+	  - Prefer wildcard barrel exports when safe and appropriate for the module.
+3. Apply fixes immediately or document explicit exceptions.
+4. Run verification checks before completion claims.
+
+This gate is mandatory for meaningful code changes.
+
+## Version Log Sync Gate (Frequent)
+
+Frequently check whether new commits are missing entries in `docs/versionlog.md`, and always check before release-style completion claims.
+
+Default versionlog path:
+
+1. Spawn an `Explore` subagent to compare recent commits with current `docs/versionlog.md` coverage.
+2. If missing entries exist, update `docs/versionlog.md`.
+3. Follow the rules at the top of `docs/versionlog.md` strictly:
+	- Use MCP GitHub evidence tools (`mcp_github_list_commits`, `mcp_github_get_commit` with diffs).
+	- Group related commits into one logical version entry when appropriate.
+	- Keep claims tied to verified diffs.
+4. If no meaningful unlogged commits exist, state that explicitly.
 
 ## Verification Minimum
 

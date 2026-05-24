@@ -428,6 +428,7 @@ function getBuyerVolatilitySensitivity(
 }
 
 async function getSeasonalBuyerCountFromResearch(): Promise<number> {
+  // Intentionally shared with supplier market progression.
   const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_slots');
   const additional = unlocked.reduce((sum, value) => {
     const parsed = Number(value);
@@ -457,6 +458,7 @@ async function getBuyerMultiplierBonusFromResearch(): Promise<number> {
 }
 
 async function getUnlockedBuyerCountriesFromResearch(homeCountry: CountryKey): Promise<CountryKey[]> {
+  // Intentionally shared with supplier market progression.
   const unlocked = await researchEnforcer.getUnlockedItems('grape_buyer_country_access');
   const allowed = new Set<CountryKey>([homeCountry]);
 

@@ -40,7 +40,7 @@ import {
   recordSupplierPurchase,
 } from './grapeSupplierLoyaltyService';
 import { triggerTopicUpdate } from '@/hooks/useGameUpdates';
-import { NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
+import { calculateAsymmetricalMultiplier, NormalizeScrewed1000To01WithTail } from '../../utils/calculator';
 
 export type BuyOfferBatchState = Extract<WineBatchState, 'grapes' | 'must_ready' | 'must_fermenting'>;
 
@@ -126,8 +126,8 @@ const YEAR_PRICE_CYCLE = [0.96, 1.0, 1.05, 1.02] as const;
 
 const STATE_PREMIUMS: Record<BuyOfferBatchState, number> = {
   grapes: 1.0,
-  must_ready: 1.12,
-  must_fermenting: 1.2,
+  must_ready: 1.08,
+  must_fermenting: 1.15,
 };
 
 const STATE_QUALITY_DECAY_PER_WEEK: Record<BuyOfferBatchState, number> = {
@@ -248,7 +248,24 @@ function toOfferModel(
 }
 
 function toPriceQualityMultiplier(qualityScore: number): number {
-  return clamp(0.55 + qualityScore * 1.05, 0.52, 1.7);
+  return qualityScore * calculateAsymmetricalMultiplier(qualityScore);
+}
+
+async function getSupplierRemainingSeasonCapKg(companyId: string, supplierId: string): Promise<number | null> {
+  const company = await companyService.getCompany(companyId).catch(() => null);
+  const startingCountry = company?.startingCountry;
+  const [bulkSupplier, seasonalSuppliers] = await Promise.all([
+    getBulkSupplier(startingCountry),
+    getSeasonalSuppliers(startingCountry),
+  ]);
+
+  const supplierProfile = [bulkSupplier, ...seasonalSuppliers]
+    .filter((profile): profile is BuyMarketSupplierProfile => Boolean(profile))
+    .find((profile) => profile.supplierId === supplierId);
+
+  if (!supplierProfile) return null;
+
+  return Math.max(0, supplierProfile.effectiveSeasonSupplyKg - supplierProfile.suppliedThisSeasonKg);
 }
 
 export function computeBuyOfferPricePerKg(input: {
@@ -638,6 +655,14 @@ export async function purchaseBuyGrapeOffer(offerId: string, quantityKg: number)
   const offer = (data as unknown) as BuyMarketOfferRow;
   if (roundedQuantity > offer.available_kg) {
     return { success: false, error: `Requested quantity exceeds available offer volume (${offer.available_kg.toLocaleString()} kg).` };
+  }
+
+  const remainingSupplierCapacityKg = await getSupplierRemainingSeasonCapKg(companyId, offer.supplier_id);
+  if (remainingSupplierCapacityKg !== null && roundedQuantity > remainingSupplierCapacityKg) {
+    return {
+      success: false,
+      error: `Requested quantity exceeds ${offer.supplier_name}'s remaining seasonal supply (${remainingSupplierCapacityKg.toLocaleString()} kg).`,
+    };
   }
 
   const totalCost = Number((offer.effective_price_per_kg * roundedQuantity).toFixed(2));

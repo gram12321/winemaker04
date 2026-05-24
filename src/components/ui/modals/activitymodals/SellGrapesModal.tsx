@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { WineBatch, type GrapeVariety } from '@/lib/types/types';
 import { DialogProps } from '@/lib/types/UItypes';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Slider, UnifiedTooltip } from '@/components/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Slider, UnifiedTooltip } from '@/components/ui';
 import { MarketOfferTable, type MarketOfferTableColumn } from '../../market/MarketOfferTable';
 import {
   BASE_GRAPE_PRICE_PER_KG,
@@ -653,6 +653,9 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
       <DialogContent className="w-[98vw] max-w-[96rem] max-h-[90vh] overflow-y-auto scrollbar-styled bg-gray-900 border border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-amber-400 text-lg">Sell Grapes</DialogTitle>
+          <DialogDescription className="sr-only">
+            Compare grape buyers, inspect market pressure and pricing factors, then sell part or all of the selected batch.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -700,7 +703,7 @@ const SellGrapesModal: React.FC<SellGrapesModalProps> = ({ isOpen, onClose, batc
                     <div><span className="text-amber-200">Supply outlook:</span> {selectedBuyer.demandFactors.volatilityLimitReason}</div>
                   )}
                   {selectedBuyer.demandFactors.volatilityBuyerSensitivityReason && (
-                    <div><span className="text-blue-200">Buyer profile:</span> {selectedBuyer.demandFactors.volatilityBuyerSensitivityReason}</div>
+                    <div><span className="text-blue-300 font-medium">Buyer profile:</span> {selectedBuyer.demandFactors.volatilityBuyerSensitivityReason}</div>
                   )}
                 </div>
               </div>

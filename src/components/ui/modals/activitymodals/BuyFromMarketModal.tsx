@@ -12,6 +12,7 @@ import {
   type BuyGrapeMarketOffer,
 } from '@/lib/services/sales/buyGrapeMarketService';
 import {
+  estimateSupplierTrustPointGain,
   SUPPLIER_LOYALTY_LEVELS,
   type SupplierLoyaltyLevel,
   type SupplierLoyaltyRecord,
@@ -315,6 +316,22 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
     return getOfferQuantity(selectedOffer);
   }, [getOfferQuantity, selectedOffer]);
 
+  const trustPreview = useMemo(() => {
+    if (!selectedOffer || selectedPurchaseKg <= 0) return null;
+    const loyalty = selectedOffer.supplierLoyalty;
+    const consecutiveYears = Math.max(1, loyalty?.consecutiveYears ?? 1);
+    const yearPoints = Math.max(0, loyalty?.yearLoyaltyPoints ?? 0);
+    const preview = estimateSupplierTrustPointGain(selectedPurchaseKg, consecutiveYears, yearPoints, companyValue);
+
+    return {
+      rawPoints: preview.rawPoints,
+      appliedPoints: preview.appliedPoints,
+      cappedPoints: Math.max(0, preview.rawPoints - preview.appliedPoints),
+      yearPoints,
+      yearlyCap: preview.yearlyCap,
+    };
+  }, [companyValue, selectedOffer, selectedPurchaseKg]);
+
   const displayedOffers = useMemo(() => {
     if (showAllOffers) return filteredAndSortedOffers;
     return filteredAndSortedOffers.slice(0, 5);
@@ -601,13 +618,13 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier</span><span className="text-right">{selectedOffer.supplierName}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Base Price</span><span className="text-right">{formatNumber(priceBreakdown.basePricePerKg, { currency: true, decimals: 2 })}/kg</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">x{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">x{selectedDemandPressureIndex.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">x{selectedVolatilityRiskIndex.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">x{priceBreakdown.supplierRelationshipMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">x{priceBreakdown.companyPrestigeMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">x{priceBreakdown.marketSpreadMultiplier.toFixed(2)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">x{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Quality Impact ({Math.round(selectedOffer.qualityScore * 100)}%)</span><span className="text-right">×{priceBreakdown.qualityMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market Pressure Index</span><span className="text-right text-blue-300">×{selectedDemandPressureIndex.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Risk Index</span><span className="text-right text-purple-300">×{selectedVolatilityRiskIndex.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{priceBreakdown.supplierRelationshipMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">×{priceBreakdown.companyPrestigeMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{priceBreakdown.marketSpreadMultiplier.toFixed(2)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-gray-400">State Factor</span><span className="text-right">×{priceBreakdown.statePremiumMultiplier.toFixed(2)}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Market Floor</span><span className="text-right">{formatNumber(priceBreakdown.marketFloorPrice, { currency: true, decimals: 2 })}/kg</span></div>
                   <div className="flex justify-between gap-3 sm:col-span-2 border-t border-gray-700 pt-2 mt-1"><span className="text-gray-400">Final Price per kg</span><span className="text-right">{formatNumber(priceBreakdown.finalPricePerKg, { currency: true, decimals: 2 })}</span></div>
                   <div className="flex justify-between gap-3"><span className="text-gray-400">Buy Quantity</span><span className="text-right">{Math.max(1, Math.min(selectedPurchaseKg, selectedOffer.availableKg)).toLocaleString()} kg</span></div>
@@ -635,6 +652,13 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
                   </div>
                 </div>
 
+                {trustPreview && (
+                  <div className="mt-2 border border-gray-700/70 bg-gray-900/40 p-2 text-xs text-cyan-300">
+                    Trust preview: +{trustPreview.appliedPoints.toLocaleString()} points this purchase
+                    {trustPreview.cappedPoints > 0 ? ` (${trustPreview.rawPoints.toLocaleString()} raw, ${trustPreview.cappedPoints.toLocaleString()} capped by yearly limit)` : ''}
+                  </div>
+                )}
+
                 <div className="mt-3 border-t border-gray-700/70 pt-2">
                   <button
                     type="button"
@@ -646,14 +670,14 @@ const BuyFromMarketModal: React.FC<BuyFromMarketModalProps> = ({ isOpen, onClose
 
                   {showFormulaDetails && (
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Season Factor</span><span className="text-right">x{priceBreakdown.seasonPriceMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Economy Factor</span><span className="text-right">x{priceBreakdown.economyPriceMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Cycle Factor</span><span className="text-right">x{priceBreakdown.yearCyclePriceMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Price Factor</span><span className="text-right">x{priceBreakdown.volatilityPriceMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">x{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">x{priceBreakdown.supplierRelationshipMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">x{priceBreakdown.companyPrestigeMultiplier.toFixed(3)}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">x{priceBreakdown.marketSpreadMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Season Factor</span><span className="text-right">×{priceBreakdown.seasonPriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Economy Factor</span><span className="text-right">×{priceBreakdown.economyPriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Cycle Factor</span><span className="text-right">×{priceBreakdown.yearCyclePriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Volatility Price Factor</span><span className="text-right">×{priceBreakdown.volatilityPriceMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Supplier Sensitivity Factor</span><span className="text-right">×{priceBreakdown.buyerSensitivityMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Relationship Factor</span><span className="text-right">×{priceBreakdown.supplierRelationshipMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Company Prestige Factor</span><span className="text-right">×{priceBreakdown.companyPrestigeMultiplier.toFixed(3)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-400">Market Friction Factor</span><span className="text-right">×{priceBreakdown.marketSpreadMultiplier.toFixed(3)}</span></div>
                       <div className="flex justify-between gap-3"><span className="text-gray-400">Market Floor</span><span className="text-right">{formatNumber(priceBreakdown.marketFloorPrice, { currency: true, decimals: 2 })}/kg</span></div>
                     </div>
                   )}
