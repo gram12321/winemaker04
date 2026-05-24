@@ -1,9 +1,17 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: "Use whenever user ask for creative work, brainstorming, feature creation, or feature or mechanic ideas or evaluation, or when requirements are unclear and need structured clarification."
 ---
 
 # Brainstorming Ideas Into Designs
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this skill is not mandatory for every code change. Use it when design exploration is explicitly requested or genuinely needed due to unclear requirements.
+
+Do not auto-commit generated spec files unless the user explicitly asks for commits.
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 

@@ -1,9 +1,15 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: Use when the user explicitly asks to finish a branch, decide merge or PR path, or clean up implementation branches after verification.
 ---
 
 # Finishing a Development Branch
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, use this as an explicit end-of-workflow helper, not a default per-task behavior.
 
 ## Overview
 

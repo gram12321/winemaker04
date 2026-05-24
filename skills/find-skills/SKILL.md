@@ -1,9 +1,17 @@
 ---
 name: find-skills
-description: Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.
+description: Use only when the user explicitly asks to discover, compare, or install additional external skills beyond the current repo skill set.
 ---
 
 # Find Skills
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this is non-default and only for explicit skill-discovery requests.
+
+Before suggesting external installs, evaluate whether the request is already covered by local `skills/` content.
 
 This skill helps you discover and install skills from the open agent skills ecosystem.
 

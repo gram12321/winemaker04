@@ -5,6 +5,12 @@ description: Use when completing tasks, implementing major features, or before m
 
 # Requesting Code Review
 
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, use this skill for meaningful feature slices, risk-heavy refactors, and before merge readiness checks.
+
 Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
 
 **Core principle:** Review early, review often.

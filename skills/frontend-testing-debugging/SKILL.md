@@ -1,9 +1,15 @@
 ---
 name: frontend-testing-debugging
-description: "Use when testing, debugging, or making targeted improvements to rendered frontend apps through the Build Web Apps or web dev plugin: local dev servers, UI regressions, interaction bugs, console errors, responsive layout, and visual QA. Check whether the Browser plugin is available and use it first when it is; otherwise use regular Playwright with the recorded reason."
+description: "Use for rendered frontend QA and UI debugging in winemaker04 when validating interaction bugs, responsive issues, visual regressions, and browser behavior."
 ---
 
 # Frontend Testing Debugging
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+Use this skill when a task requires rendered frontend validation. For non-UI logic bugs, route to `../systematic-debugging/SKILL.md`.
 
 ## Invocation Contract
 

@@ -1,13 +1,19 @@
 ---
 name: to-issues
-description: Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices. Use when user wants to convert a plan into issues, create implementation tickets, or break down work into issues.
+description: Use only when the user explicitly asks to convert a plan/spec/PRD into issue-tracker tickets with dependency-aware vertical slices.
 ---
 
 # To Issues
 
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this is non-default and should be used only for explicit issue-breakdown publishing requests.
+
 Break a plan into independently-grabbable issues using vertical slices (tracer bullets).
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+The issue tracker and triage label vocabulary should have been provided to you. If missing, ask the user whether to run `../setup-matt-pocock-skills/SKILL.md` first.
 
 ## Process
 

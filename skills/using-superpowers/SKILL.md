@@ -1,7 +1,15 @@
 ---
 name: using-superpowers
-description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
+description: Use when user ask difficault or extensive task. Use for tasks that require multiple steps, complex reasoning, or deep codebase interaction. Use when user explicitly mentions "superpowers" or "use skills".
 ---
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this is non-default. Do not auto-route to this skill for ordinary feature work.
+
+Use it only on explicit user request for superpowers-style governance.
 
 <SUBAGENT-STOP>
 If you were dispatched as a subagent to execute a specific task, skip this skill.

@@ -1,10 +1,16 @@
 ---
 name: setup-matt-pocock-skills
-description: Sets up an `## Agent skills` block in AGENTS.md/CLAUDE.md and `docs/agents/` so the engineering skills know this repo's issue tracker (GitHub or local markdown), triage label vocabulary, and domain doc layout. Run before first use of `to-issues`, `to-prd`, `triage`, `diagnose`, `tdd`, `improve-codebase-architecture`, or `zoom-out` — or if those skills appear to be missing context about the issue tracker, triage labels, or domain docs.
+description: Use only when the user explicitly asks to bootstrap or reconfigure docs/agents issue-tracker and triage-label setup for skill workflows.
 disable-model-invocation: true
 ---
 
 # Setup Matt Pocock's Skills
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this is non-default and should be used only for explicit setup or reconfiguration requests.
 
 Scaffold the per-repo configuration that the engineering skills assume:
 

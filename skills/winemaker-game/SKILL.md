@@ -38,15 +38,27 @@ After classifying the user request, route to the matching specialist skills.
 
 | Task type | Primary skill(s) | Secondary skill(s) |
 |---|---|---|
+| User asks for ideation, option analysis, or design-first discussion | `../brainstorming/SKILL.md` | `../writing-plans/SKILL.md` |
 | Feature design, option exploration, unclear requirements | `../brainstorming/SKILL.md` | `../writing-plans/SKILL.md` |
 | Multi-step implementation from an approved plan | `../executing-plans/SKILL.md` | `../subagent-driven-development/SKILL.md` |
 | React or TypeScript implementation details | `../javascript-typescript/SKILL.md` | `../react-best-practices/SKILL.md` |
 | ShadCN component composition and UI consistency | `../shadcn-best-practices/SKILL.md` | `../react-best-practices/SKILL.md` |
+| Rendered frontend QA, UI regression reproduction, interaction checks | `../frontend-testing-debugging/SKILL.md` | `../systematic-debugging/SKILL.md` |
 | Bug reports, regressions, failing tests, unexpected behavior | `../systematic-debugging/SKILL.md` | `../diagnose/SKILL.md` |
 | Database query, schema, index, or RLS performance concerns | `../supabase-best-practices/SKILL.md` | repo migration/database tooling guidance |
 | About to claim completion or fixed status | `../verification-before-completion/SKILL.md` | `../requesting-code-review/SKILL.md` |
 | Writing or fixing skills | `../writing-skills/SKILL.md` | `../write-a-skill/SKILL.md` |
 | Architecture-level refactor opportunities | `../improve-codebase-architecture/SKILL.md` | `../zoom-out/SKILL.md` |
+| User explicitly asks for a grill/interview challenge | `../grill-me/SKILL.md` | `../grill-with-docs/SKILL.md` |
+| User explicitly asks for compressed/terse style | `../caveman/SKILL.md` | none |
+| User explicitly asks to discover/install external skills | `../find-skills/SKILL.md` | `../write-a-skill/SKILL.md` |
+| User explicitly asks for full frontend redesign/new UI from scratch | `../frontend-app-builder/SKILL.md` | `../frontend-testing-debugging/SKILL.md` |
+| User explicitly asks to break spec into issue tickets | `../to-issues/SKILL.md` | `../triage/SKILL.md` |
+| User explicitly asks for PRD publication to tracker | `../to-prd/SKILL.md` | `../to-issues/SKILL.md` |
+| User explicitly asks for issue triage/state management | `../triage/SKILL.md` | `../grill-with-docs/SKILL.md` |
+| User explicitly asks for isolated worktree setup | `../using-git-worktrees/SKILL.md` | none |
+| User explicitly asks to wrap up merge or PR branch flow | `../finishing-a-development-branch/SKILL.md` | `../requesting-code-review/SKILL.md` |
+| User explicitly asks for agent-skill tracker bootstrap | `../setup-matt-pocock-skills/SKILL.md` | none |
 
 ## Non-Default Skills In This Repo
 
@@ -61,6 +73,21 @@ The following are non-default here and should only be used when explicitly reque
 - `../web-game-foundations/SKILL.md`
 - `../game-ui-frontend/SKILL.md`
 - `../game-playtest/SKILL.md`
+- `../frontend-app-builder/SKILL.md`
+- `../find-skills/SKILL.md`
+- `../grill-me/SKILL.md`
+- `../grill-with-docs/SKILL.md`
+- `../to-issues/SKILL.md`
+- `../to-prd/SKILL.md`
+- `../triage/SKILL.md`
+- `../using-superpowers/SKILL.md`
+- `../using-git-worktrees/SKILL.md`
+- `../finishing-a-development-branch/SKILL.md`
+- `../setup-matt-pocock-skills/SKILL.md`
+
+The following are optional mode skills (never mandatory by default):
+
+- `../caveman/SKILL.md` (only when the user requests terse mode)
 
 ## Core Winemaker Rules
 
@@ -153,123 +180,3 @@ git diff --check
 ```
 
 For docs passes, also search for stale names across `docs`, `readme.md`, `CONTEXT.md`, `src`, and `tests`.
-
-## Core Rules
-
-- Keep business logic in `src/lib/services/`.
-- Keep Supabase reads and writes in `src/lib/database/`.
-- Keep React components focused on UI state, display, and user interaction.
-- Prefer existing barrel exports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
-- Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
-- Follow current wine terminology: `structureIndex`, `tasteQualityIndex`, `wineScore`, and compact `WineAnchorValues`.
-- Database parsing only accepts current compact wine anchor keys. Do not add legacy data-shape support unless explicitly requested.
-- Scope persisted gameplay data by company and follow the current `getCurrentCompanyId()` database flow.
-- Services should trigger global updates when state changes; components should refresh through existing reactive hooks.
-- Use `calculateTotalWork()` and established activity managers/work calculators for activity work.
-- Use ES module imports, named imports where practical, and imports at the top of files.
-- Use shared hooks such as `useLoadingState()`, `useGameStateWithData()`, and `useGameState()` where they fit the local pattern.
-- Use shared interfaces such as `PageProps`, `NavigationProps`, and `CompanyProps` where applicable.
-- Extract meaningful tunable gameplay numbers into named constants with design intent.
-
-## Project Preferences
-
-- Do not commit changes unless the user explicitly asks.
-- Do not start `npm run dev` unless the user asks.
-- Do not run `npm run build` by default; use it when asked or when build-risk justifies it.
-- After major updates, ask whether `readme.md` and `docs/versionlog.md` should be updated.
-- For schema changes, update the relevant SQL under `migrations/` after validating the intended database change.
-
-## Key Locations
-
-| Area | Path |
-|---|---|
-| Core types | `src/lib/types/types.ts` |
-| UI types | `src/components/UItypes.ts` |
-| Core services | `src/lib/services/core/` |
-| Vineyard services | `src/lib/services/vineyard/` |
-| Wine services | `src/lib/services/wine/` |
-| Structure index | `src/lib/wineStructure/` |
-| Sales services | `src/lib/services/sales/` |
-| Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
-| Activity services | `src/lib/services/activity/` |
-| Database layer | `src/lib/database/` |
-| Game constants | `src/lib/constants/` |
-| Wine feature constants | `src/lib/constants/wineFeatures/` |
-| Taste constants | `src/lib/constants/taste/` |
-
-## Workflows
-
-### New Development Session
-
-1. Read `readme.md`, `CONTEXT.md`, `docs/AIdocs/AIDescriptions_coregame.md`, `docs/PROJECT_INFO.md`, and the relevant domain docs.
-2. Inspect current code before making assumptions from docs.
-3. Keep new logic aligned with existing services, constants, types, and barrel exports.
-4. Run focused tests for the changed area, then broader checks when risk justifies it.
-
-### Weekly Game Tick Changes
-
-Winemaker uses manual week advancement. When adding systems that progress over time:
-
-1. Inspect `src/lib/services/core/gameTick.ts`.
-2. Place new work where its dependencies are already available.
-3. Keep substantial calculations in domain services, not in `gameTick.ts`.
-4. Preserve company-scoped state and global update behavior.
-
-### Gameplay System Changes
-
-- Add or update shared types first when the domain shape changes.
-- Add constants before wiring magic numbers into services.
-- Implement calculations in the relevant service domain.
-- Add database access only through `src/lib/database/`.
-- Keep page components orchestration-focused and push complex UI logic into hooks or focused components.
-- Update docs when terminology, variable relationships, or implementation status changes.
-
-### Wine Feature Changes
-
-1. Add feature constants/config under `src/lib/constants/wineFeatures/`.
-2. Update behavior under `src/lib/services/wine/features/`.
-3. Update wine batch types if new persisted state is needed.
-4. Update display components under `src/components/ui/wine/` or shared wine UI components.
-5. Add focused tests for feature risk, lifecycle, scoring, or display behavior.
-
-### Contract Requirement Changes
-
-1. Update `ContractRequirement` typing and requirement constants.
-2. Implement validation in the sales/contracts service layer.
-3. Keep taste, structure, and site requirements separate unless a design explicitly combines them.
-4. Update UI labels, filters, and breakdowns.
-5. Update `CONTEXT.md` and `docs/WineSystem_VariableRelationshipMap.md` if the requirement introduces a new variable relationship.
-
-### Documentation Maintenance
-
-After implementation work:
-
-- Update `CONTEXT.md` when terminology, constants, parameters, variables, or naming policy changes.
-- Update `docs/PROJECT_INFO.md` when files move, modules are renamed, or ownership boundaries change.
-- Update `docs/AIdocs/AIDescriptions_coregame.md` when implementation status changes.
-- Update `docs/WineSystem_VariableRelationshipMap.md` when variable dependencies or game-flow relationships change.
-- Keep `readme.md` concise. Do not turn it into a second system-status document.
-- Remove stale names instead of documenting compatibility branches that no longer exist.
-
-### Cleanup And Refactoring
-
-Look for:
-
-- Business logic in the wrong layer.
-- Duplicate services, helpers, hooks, types, constants, or UI patterns.
-- Dead code, unused imports, placeholder functions, and redundant implementations.
-- Obvious comments that restate code behavior.
-- Inefficient loops, unnecessary database calls, or poor algorithms.
-
-Keep cleanup behavior-preserving unless the user explicitly asks for behavior changes.
-
-## Verification
-
-Use the smallest useful verification set for the change:
-
-```bash
-npm test
-git diff --check
-```
-
-For documentation passes, also search for stale feature-specific names across `docs`, `readme.md`, `CONTEXT.md`, `src`, and `tests`.

@@ -5,6 +5,12 @@ description: Use when receiving code review feedback, before implementing sugges
 
 # Code Review Reception
 
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+Use this skill when actively addressing review comments in winemaker04.
+
 ## Overview
 
 Code review requires technical evaluation, not emotional performance.
@@ -125,8 +131,6 @@ Push back when:
 - Ask specific questions
 - Reference working tests/code
 - Involve your human partner if architectural
-
-**Signal if uncomfortable pushing back out loud:** "Strange things are afoot at the Circle K"
 
 ## Acknowledging Correct Feedback
 

@@ -1,8 +1,12 @@
 ---
 name: grill-with-docs
-description: Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise. Use when user wants to stress-test a plan against their project's language and documented decisions.
+description: Use when user ask assistant for major updates, usually assisted by design documentation. Use for improving exsisting domain model, sharpen terminology, and align on ADRs. Use for design discussions grounded in the codebase and documentation, especially when resolving ambiguity or disagreement about domain concepts, relationships, or boundaries. 
+
 ---
 
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this is non-default and should be used only on explicit user request. Prefer base grill-me skill for general design discussions, and reserve grill-with-docs for Domain awareness, CONTEXT, adrs, and codebase-grounded design discussions.
 <what-to-do>
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.

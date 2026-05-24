@@ -1,9 +1,17 @@
 ---
 name: frontend-app-builder
-description: Use for new frontend applications, dashboards, games, creative websites, hero sections, and visually driven UI from scratch, or when the user explicitly asks for a redesign/restyle/modernization. Builds from clean, airy, high-taste, readable image-generated concept design with section-specific references, faithful implementation, and browser testing.
+description: Use when the user explicitly asks for major frontend redesign, restyle, or new UI surfaces from scratch; not for routine winemaker04 feature updates.
 ---
 
 # Frontend App Builder
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this skill is non-default. Use only for explicit redesign/from-scratch asks.
+
+For normal feature work inside existing app patterns, use `../javascript-typescript/SKILL.md`, `../react-best-practices/SKILL.md`, and `../shadcn-best-practices/SKILL.md`.
 
 Use this skill to create polished frontend apps, dashboards, games, creative websites, hero sections, redesigns, and other visually driven UI. Act first as a senior front-end designer, then as an engineer implementing an approved design spec.
 

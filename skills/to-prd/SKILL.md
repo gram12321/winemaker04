@@ -1,11 +1,17 @@
 ---
 name: to-prd
-description: Turn the current conversation context into a PRD and publish it to the project issue tracker. Use when user wants to create a PRD from the current context.
+description: Use only when the user explicitly asks to synthesize a PRD and publish it to the issue tracker.
 ---
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+In winemaker04, this is non-default and should be used only for explicit PRD publication requests.
 
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+The issue tracker and triage label vocabulary should have been provided to you. If missing, ask the user whether to run `../setup-matt-pocock-skills/SKILL.md` first.
 
 ## Process
 

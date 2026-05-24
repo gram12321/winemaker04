@@ -1,12 +1,20 @@
 ---
 name: react-best-practices
-description: React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements.
+description: Use for React performance and refactor guidance in winemaker04 when improving component behavior, render performance, and data-flow efficiency.
 metadata:
   author: vercel
   version: "1.0.0"
 ---
 
 # Vercel React Best Practices
+
+## Winemaker Routing Note
+
+Default repo router: `../winemaker-game/SKILL.md`
+
+These guidelines are advisory. If any rule conflicts with repo conventions in `winemaker-game`, repo conventions win.
+
+Specific override for this repo: do not replace established barrel import patterns (`@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`) solely to satisfy generic bundle-import rules.
 
 Comprehensive performance optimization guide for React and Next.js applications, maintained by Vercel. Contains 64 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.
 
