@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import {
-  normalizeVitestTarget,
+  normalizeVitestTargets,
   parseVitestJsonOutput,
   type VitestRunSummary
 } from './test-runner-parser';
@@ -8,10 +8,10 @@ import {
 export * from './test-runner-parser';
 
 export async function runVitestSuite(options: { target?: string } = {}): Promise<VitestRunSummary> {
-  const target = normalizeVitestTarget(options.target);
+  const targets = normalizeVitestTargets(options.target);
   const args = ['test', '--', '--reporter=json'];
-  if (target) {
-    args.push(target);
+  if (targets.length > 0) {
+    args.push(...targets);
   }
 
   const testProcess = spawn('npm', args, {

@@ -98,9 +98,7 @@ const extractJsonPayload = (output: string): VitestJsonRunResult | null => {
   }
 };
 
-export function normalizeVitestTarget(target: string | undefined): string | undefined {
-  if (!target) return undefined;
-
+const normalizeSingleVitestTarget = (target: string): string => {
   const normalized = target.trim().replace(/\\/g, '/').replace(/^\.\//, '');
   if (
     normalized.includes('..') ||
@@ -111,6 +109,27 @@ export function normalizeVitestTarget(target: string | undefined): string | unde
   }
 
   return normalized;
+};
+
+export function normalizeVitestTargets(target: string | undefined): string[] {
+  if (!target) return [];
+
+  const rawTargets = target
+    .trim()
+    .split(/[\s,]+/)
+    .filter(Boolean);
+
+  return Array.from(new Set(rawTargets.map(normalizeSingleVitestTarget)));
+}
+
+export function normalizeVitestTarget(target: string | undefined): string | undefined {
+  const targets = normalizeVitestTargets(target);
+  if (targets.length === 0) return undefined;
+  if (targets.length > 1) {
+    throw new Error('Test target must be a single tests/**/*.test.ts path');
+  }
+
+  return targets[0];
 }
 
 export function parseVitestJsonOutput(

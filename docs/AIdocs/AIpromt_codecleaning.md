@@ -35,6 +35,9 @@ We have implemented comprehensive systems across multiple files and may need cle
 4. **Verify Functionality**: Ensure all systems continue to work
 5. **Update Documentation**: Reflect changes in documentation
 
+### **Versionlog Governance Sync**
+- Versionlog updates are handled by a dedicated versionlog subagent only, only after human-created commits exist (AI commits only if explicitly requested).
+
 ### **basic cleanups (Lowest priority)**
 1. Fix import/export to use barrel export
 2. Fix import one line per file

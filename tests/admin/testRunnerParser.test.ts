@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeVitestTarget, parseVitestJsonOutput } from '../../server/test-runner-parser';
+import { normalizeVitestTarget, normalizeVitestTargets, parseVitestJsonOutput } from '../../server/test-runner-parser';
 
 const buildVitestJson = () => JSON.stringify({
   success: true,
@@ -78,5 +78,23 @@ describe('normalizeVitestTarget', () => {
     expect(() => normalizeVitestTarget('../package.json')).toThrow();
     expect(() => normalizeVitestTarget('src/App.tsx')).toThrow();
     expect(() => normalizeVitestTarget('tests/example.ts')).toThrow();
+  });
+});
+
+describe('normalizeVitestTargets', () => {
+  it('accepts multiple safe test file targets for UI presets', () => {
+    expect(normalizeVitestTargets([
+      'tests\\prestige\\prestigeCalculator.test.ts',
+      'tests/prestige/prestigeEventScenarioArchetypes.test.ts',
+      'tests/user/achievementPrestigeBalance.test.ts'
+    ].join(' '))).toEqual([
+      'tests/prestige/prestigeCalculator.test.ts',
+      'tests/prestige/prestigeEventScenarioArchetypes.test.ts',
+      'tests/user/achievementPrestigeBalance.test.ts'
+    ]);
+  });
+
+  it('rejects unsafe paths in multi-file target lists', () => {
+    expect(() => normalizeVitestTargets('tests/prestige/prestigeCalculator.test.ts ../package.json')).toThrow();
   });
 });

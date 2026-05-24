@@ -109,6 +109,8 @@ The following are optional mode skills (never mandatory by default):
 ## Project Preferences
 
 - Do not commit changes unless explicitly asked.
+- Human owns git commits by default.
+- No AI git commit unless the user explicitly requests it.
 - Do not start `npm run dev` unless explicitly asked.
 - Do not run `npm run build` by default; use only when asked or when change risk justifies it.
 - After major updates, ask whether `readme.md` and `docs/versionlog.md` should be updated.
@@ -195,6 +197,13 @@ This gate is mandatory for meaningful code changes.
 ## Version Log Sync Gate (Frequent)
 
 Frequently check whether new commits are missing entries in `docs/versionlog.md`, and always check before release-style completion claims.
+
+Versionlog ownership rules:
+
+1. `docs/versionlog.md` is updated by a dedicated versionlog subagent only.
+2. Do not let implementation agents write or append versionlog entries as part of routine feature completion.
+3. Versionlog updates happen only after commit(s) exist.
+4. Commits are created by the human by default; AI must not commit unless explicitly requested.
 
 Default versionlog path:
 

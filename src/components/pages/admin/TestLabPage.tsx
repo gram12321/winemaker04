@@ -29,6 +29,10 @@ import {
 } from '@/components/ui';
 import { useLoadingState } from '@/hooks';
 import { isDevAdminSurfaceAvailable } from '@/lib/services/admin/testLab/devAdminGate';
+import {
+  AUTOMATED_TEST_TARGET_PRESETS,
+  getAutomatedTestTargetPreset
+} from '@/lib/services/admin/testLab/automatedTestTargets';
 import { getTestLabScenarios, VINEYARD_CONFIG_PARAM_KEYS } from '@/lib/services/admin/testLab/testLabScenarios';
 import { runTestLabScenario } from '@/lib/services/admin/testLab/testLabRunner';
 import type { TestLabParamField, TestLabRunMode, TestLabScenarioDefinition, TestLabScenarioResult } from '@/lib/services/admin/testLab/types';
@@ -47,6 +51,7 @@ interface RecentRun {
 }
 
 const RECENT_RUNS_KEY = 'adminTestLabRecentRuns';
+const CUSTOM_AUTOMATED_TARGET_PRESET_ID = 'custom';
 
 const statusIcon = (status: string) => {
   if (status === 'passed') return <CheckCircle2 className="h-4 w-4 text-green-600" />;
@@ -121,6 +126,11 @@ export default function TestLabPage() {
   );
   const [automatedTarget, setAutomatedTarget] = useState(
     regressionScenario?.defaultParams.target ? String(regressionScenario.defaultParams.target) : ''
+  );
+  const [automatedPresetId, setAutomatedPresetId] = useState('all');
+  const selectedAutomatedPreset = useMemo(
+    () => getAutomatedTestTargetPreset(automatedPresetId),
+    [automatedPresetId]
   );
   const [result, setResult] = useState<TestLabScenarioResult | null>(null);
   const [recentRuns, setRecentRuns] = useState<RecentRun[]>([]);
@@ -403,18 +413,46 @@ export default function TestLabPage() {
             <CardHeader>
               <CardTitle>Automated Test Suite</CardTitle>
               <CardDescription>
-                Runs the same Vitest files discovered under `tests/**/*.test.ts`. The CLI remains the source of truth; this page is a development UI wrapper around that suite.
+                Runs the same Vitest files discovered under `tests/**/*.test.ts`. Use a preset for known balance suites, or enter one or more safe test files manually.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_auto_auto] lg:items-end">
                 <div className="space-y-1.5">
-                  <Label htmlFor="test-lab-automated-target" className="text-xs">Target test file</Label>
+                  <Label htmlFor="test-lab-automated-preset" className="text-xs">Target preset</Label>
+                  <Select
+                    value={automatedPresetId}
+                    onValueChange={(presetId) => {
+                      setAutomatedPresetId(presetId);
+                      const preset = getAutomatedTestTargetPreset(presetId);
+                      if (preset) {
+                        setAutomatedTarget(preset.target);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="test-lab-automated-preset">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AUTOMATED_TEST_TARGET_PRESETS.map(preset => (
+                        <SelectItem key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CUSTOM_AUTOMATED_TARGET_PRESET_ID}>Custom target</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="test-lab-automated-target" className="text-xs">Target test file(s)</Label>
                   <Input
                     id="test-lab-automated-target"
                     value={automatedTarget}
-                    onChange={(event) => setAutomatedTarget(event.target.value)}
-                    placeholder="tests/admin/testRunnerParser.test.ts"
+                    onChange={(event) => {
+                      setAutomatedPresetId(CUSTOM_AUTOMATED_TARGET_PRESET_ID);
+                      setAutomatedTarget(event.target.value);
+                    }}
+                    placeholder="tests/prestige/prestigeCalculator.test.ts tests/user/achievementPrestigeBalance.test.ts"
                   />
                 </div>
                 <Button onClick={() => runAutomatedSuite('run')} disabled={isLoading} className="gap-2">
@@ -426,7 +464,7 @@ export default function TestLabPage() {
                 </Button>
               </div>
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                Use this when you want the current automated suite totals inside the Admin UI. Use Gameflow Lab when you need to create a specific in-game state and inspect the result manually.
+                {selectedAutomatedPreset?.description || 'Run a manually entered target list. Separate multiple test files with spaces or commas.'}
               </div>
             </CardContent>
           </Card>
